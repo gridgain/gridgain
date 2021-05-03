@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.client.GridClient;
+import org.apache.ignite.internal.client.GridClientBeforeNodeStart;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
@@ -69,6 +70,38 @@ public interface Command<T> {
             GridClientException lastErr = client.checkLastError();
 
             client.close();
+
+            throw lastErr;
+        } else
+            printClusterInfoBanner(client.state(), log);
+
+
+        return client;
+    }
+
+    /**
+     * Method to create thin client for communication with node before it starts.
+     * If node has already started, there will be an error.
+     *
+     * @param clientCfg Thin client configuration.
+     * @return Grid thin client instance which is already connected to node before it starts.
+     * @throws Exception If error occur.
+     */
+    public static GridClientBeforeNodeStart startClientBeforeNodeStart(
+        GridClientConfiguration clientCfg
+    ) throws Exception {
+        GridClientBeforeNodeStart client = GridClientFactory.startBeforeNodeStart(clientCfg);
+
+        // If connection is unsuccessful, fail before doing any operations:
+        if (!client.connected()) {
+            GridClientException lastErr = client.checkLastError();
+
+            try {
+                client.close();
+            }
+            catch (Throwable e) {
+                lastErr.addSuppressed(e);
+            }
 
             throw lastErr;
         } else

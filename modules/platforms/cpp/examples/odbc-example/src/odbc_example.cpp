@@ -30,12 +30,7 @@
 #include "ignite/ignite.h"
 #include "ignite/ignition.h"
 
-#include "ignite/examples/person.h"
-#include "ignite/examples/organization.h"
-
 using namespace ignite;
-
-using namespace examples;
 
 /**
  * This example populates cache with sample data and runs several SQL queries
@@ -184,8 +179,8 @@ void PopulatePerson(SQLHDBC dbc)
     try
     {
         SQLCHAR query[] =
-            "INSERT INTO Person (_key, orgId, firstName, lastName, resume, salary) "
-            "VALUES (?, ?, ?, ?, ?, ?)";
+            "INSERT INTO Person (id, orgIdAff, orgId, firstName, lastName, resume, salary) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         ret = SQLPrepare(stmt, query, static_cast<SQLSMALLINT>(sizeof(query)));
 
@@ -194,7 +189,9 @@ void PopulatePerson(SQLHDBC dbc)
 
         // Binding columns.
 
-        int64_t key = 0;
+        int64_t keyId = 0;
+        int64_t keyOrgIdAff = 0;
+
         int64_t orgId = 0;
         char firstName[1024] = { 0 };
         SQLLEN firstNameLen = SQL_NTS;
@@ -204,43 +201,49 @@ void PopulatePerson(SQLHDBC dbc)
         SQLLEN resumeLen = SQL_NTS;
         double salary = 0.0;
 
-        ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &key, 0, 0);
+        ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &keyId, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
-        ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &orgId, 0, 0);
+        ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &keyOrgIdAff, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
-        ret = SQLBindParameter(stmt, 3, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR,
-            sizeof(firstName), sizeof(firstName), firstName, 0, &firstNameLen);
+        ret = SQLBindParameter(stmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &orgId, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
         ret = SQLBindParameter(stmt, 4, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR,
-            sizeof(lastName), sizeof(lastName), lastName, 0, &lastNameLen);
+            sizeof(firstName), sizeof(firstName), firstName, 0, &firstNameLen);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
         ret = SQLBindParameter(stmt, 5, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR,
+            sizeof(lastName), sizeof(lastName), lastName, 0, &lastNameLen);
+
+        if (!SQL_SUCCEEDED(ret))
+            ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
+
+        ret = SQLBindParameter(stmt, 6, SQL_PARAM_INPUT, SQL_C_CHAR, SQL_VARCHAR,
             sizeof(resume), sizeof(resume), resume, 0, &resumeLen);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
-        ret = SQLBindParameter(stmt, 6, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &salary, 0, 0);
+        ret = SQLBindParameter(stmt, 7, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &salary, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
         // Filling cache.
+        keyId = 1;
+        keyOrgIdAff = 1;
 
-        key = 1;
-        orgId = 1;
+        orgId = keyOrgIdAff;
         strncpy(firstName, "John", sizeof(firstName));
         strncpy(lastName, "Doe", sizeof(lastName));
         strncpy(resume, "Master Degree.", sizeof(resume));
@@ -256,8 +259,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 1;
+        ++keyId;
+        keyOrgIdAff = 1;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "Jane", sizeof(firstName));
         strncpy(lastName, "Doe", sizeof(lastName));
         strncpy(resume, "Bachelor Degree.", sizeof(resume));
@@ -274,8 +279,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 2;
+        ++keyId;
+        keyOrgIdAff = 2;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "John", sizeof(firstName));
         strncpy(lastName, "Smith", sizeof(lastName));
         strncpy(resume, "Bachelor Degree.", sizeof(resume));
@@ -291,8 +298,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 2;
+        ++keyId;
+        keyOrgIdAff = 2;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "Jane", sizeof(firstName));
         strncpy(lastName, "Smith", sizeof(lastName));
         strncpy(resume, "Master Degree.", sizeof(resume));
@@ -308,8 +317,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 2;
+        ++keyId;
+        keyOrgIdAff = 2;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "John", sizeof(firstName));
         strncpy(lastName, "Roe", sizeof(lastName));
         strncpy(resume, "Bachelor Degree.", sizeof(resume));
@@ -325,8 +336,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 2;
+        ++keyId;
+        keyOrgIdAff = 2;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "Jane", sizeof(firstName));
         strncpy(lastName, "Roe", sizeof(lastName));
         strncpy(resume, "Bachelor Degree.", sizeof(resume));
@@ -342,8 +355,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 1;
+        ++keyId;
+        keyOrgIdAff = 1;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "Richard", sizeof(firstName));
         strncpy(lastName, "Miles", sizeof(lastName));
         strncpy(resume, "Master Degree.", sizeof(resume));
@@ -359,8 +374,10 @@ void PopulatePerson(SQLHDBC dbc)
         if (ret != SQL_NO_DATA)
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "No more data expected");
 
-        ++key;
-        orgId = 2;
+        ++keyId;
+        keyOrgIdAff = 2;
+
+        orgId = keyOrgIdAff;
         strncpy(firstName, "Mary", sizeof(firstName));
         strncpy(lastName, "Major", sizeof(lastName));
         strncpy(resume, "Bachelor Degree.", sizeof(resume));
@@ -434,10 +451,10 @@ void PopulateOrganization(SQLHDBC dbc)
  * Adjust salary for specified employee.
  *
  * @param dbc Database connection.
- * @param key Person key.
+ * @param id Person id.
  * @param salary New salary.
  */
-void AdjustSalary(SQLHDBC dbc, int64_t key, double salary)
+void AdjustSalary(SQLHDBC dbc, int64_t id, double salary)
 {
     SQLHSTMT stmt;
 
@@ -449,14 +466,14 @@ void AdjustSalary(SQLHDBC dbc, int64_t key, double salary)
 
     try
     {
-        SQLCHAR query[] = "UPDATE Person SET salary=? WHERE _key=?";
+        SQLCHAR query[] = "UPDATE Person SET salary=? WHERE id=?";
 
         ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &salary, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
 
-        ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &key, 0, 0);
+        ret = SQLBindParameter(stmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &id, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
@@ -483,9 +500,9 @@ void AdjustSalary(SQLHDBC dbc, int64_t key, double salary)
  * Remove specified person.
  *
  * @param dbc Database connection.
- * @param key Person key.
+ * @param id Person id.
  */
-void DeletePerson(SQLHDBC dbc, int64_t key)
+void DeletePerson(SQLHDBC dbc, int64_t id)
 {
     SQLHSTMT stmt;
 
@@ -497,9 +514,9 @@ void DeletePerson(SQLHDBC dbc, int64_t key)
 
     try
     {
-        SQLCHAR query[] = "DELETE FROM Person WHERE _key=?";
+        SQLCHAR query[] = "DELETE FROM Person WHERE id=?";
 
-        ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &key, 0, 0);
+        ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_BIGINT, 0, 0, &id, 0, 0);
 
         if (!SQL_SUCCEEDED(ret))
             ThrowOdbcError(SQL_HANDLE_STMT, stmt, "Failed to bind parameter");
@@ -532,18 +549,20 @@ void QueryData(SQLHDBC dbc)
     std::cout << std::endl;
     std::cout << ">>> Getting list of persons:" << std::endl;
 
-    GetDataWithOdbc(dbc, "SELECT firstName, lastName, resume, salary FROM Person");
+    GetDataWithOdbc(dbc, "SELECT firstName, lastName, resume, salary FROM Person ORDER BY id");
 
     std::cout << std::endl;
     std::cout << ">>> Getting average salary by degree:" << std::endl;
 
-    GetDataWithOdbc(dbc, "SELECT resume, AVG(salary) FROM Person GROUP BY resume");
+    GetDataWithOdbc(dbc, "SELECT resume, AVG(salary) FROM Person GROUP BY resume ORDER BY resume");
 
     std::cout << std::endl;
     std::cout << ">>> Getting people with organizations:" << std::endl;
 
-    GetDataWithOdbc(dbc, "SELECT firstName, lastName, Organization.name FROM Person "
-        "INNER JOIN \"Organization\".Organization ON Person.orgId = Organization._KEY");
+    GetDataWithOdbc(dbc,
+        "SELECT firstName, lastName, Organization.name FROM Person "
+        "INNER JOIN \"Organization\".Organization ON Person.orgId = Organization._KEY "
+        "ORDER BY Person.id");
 }
 
 /**

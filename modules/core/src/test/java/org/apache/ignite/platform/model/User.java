@@ -1,0 +1,66 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.platform.model;
+
+/** Test value object. */
+public class User {
+    /** */
+    private int id;
+
+    /** */
+    private ACL acl;
+
+    /** */
+    private Role role;
+
+    /** */
+    public User(int id, ACL acl, Role role) {
+        this.id = id;
+        this.acl = acl;
+        this.role = role;
+    }
+
+    /** */
+    public int getId() {
+        return id;
+    }
+
+    /** */
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    /** */
+    public ACL getAcl() {
+        return acl;
+    }
+
+    /** */
+    public void setAcl(ACL acl) {
+        this.acl = acl;
+    }
+
+    /** */
+    public Role getRole() {
+        return role;
+    }
+
+    /** */
+    public void setRole(Role role) {
+        this.role = role;
+    }
+}

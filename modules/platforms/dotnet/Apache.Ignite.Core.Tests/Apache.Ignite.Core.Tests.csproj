@@ -111,11 +111,15 @@
     <Compile Include="Binary\Serializable\GenericCollectionsTest.cs" />
     <Compile Include="Binary\Serializable\DynamicFieldSetTest.cs" />
     <Compile Include="Cache\Affinity\AffinityAttributeTest.cs" />
+    <Compile Include="Cache\Affinity\AffinityBackupFilterTest.cs" />
     <Compile Include="Cache\CacheCreateTest.cs" />
+    <Compile Include="Cache\CacheNodeFilterTest.cs" />
     <Compile Include="Cache\CacheQueryMetricsTest.cs" />
     <Compile Include="Cache\CacheTimeoutOnPmeTransactionalTest.cs" />
+    <Compile Include="Cache\CacheTransactionGridStopTest.cs" />
     <Compile Include="Cache\DataRegionMetricsTest.cs" />
     <Compile Include="Cache\DataStorageMetricsTest.cs" />
+    <Compile Include="Cache\CacheLocalActiveTransactionsTest.cs" />
     <Compile Include="Cache\NearCacheTest.cs" />
     <Compile Include="Cache\OptimisticTransactionTest.cs" />
     <Compile Include="Cache\Platform\PlatformCacheTestCreateDestroy.cs" />
@@ -134,6 +138,7 @@
     <Compile Include="Cache\Query\Linq\CacheLinqTest.CompiledQuery.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.DateTime.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Aggregates.cs" />
+    <Compile Include="Cache\Query\Linq\CacheLinqTest.GroupBy.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Join.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Join.LocalCollection.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Strings.cs" />
@@ -145,8 +150,14 @@
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Contains.cs" />
     <Compile Include="Cache\Store\CacheStoreSessionTestCodeConfig.cs" />
     <Compile Include="Cache\Store\CacheStoreSessionTestSharedFactory.cs" />
+    <Compile Include="Client\Binary\BinaryConfigurationRetrievalTest.cs" />
     <Compile Include="Client\Cache\ContinuousQueryTest.cs" />
+    <Compile Include="Client\Cache\CacheClientAbstractTxTest.cs" />
+    <Compile Include="Client\Cache\CacheClientLocalTxTest.cs" />
+    <Compile Include="Client\Cache\CacheClientPartitionedTxDisconnectTest.cs" />
+    <Compile Include="Client\Cache\CacheClientPartitionedTxTest.cs" />
     <Compile Include="Client\Cache\DynamicFieldSetTest.cs" />
+    <Compile Include="Client\Cache\CacheClientOptimisticTxTest.cs" />
     <Compile Include="Client\Cache\SerializableObjectsTest.cs" />
     <Compile Include="Client\Cache\PartitionAwarenessTest.cs" />
     <Compile Include="Client\Cache\BinaryBuilderTest.cs" />
@@ -189,7 +200,18 @@
     <Compile Include="Client\RawSocketTest.cs" />
     <Compile Include="Client\ClientConnectionTest.cs" />
     <Compile Include="Client\IgniteClientConfigurationTest.cs" />
+    <Compile Include="Client\Services\ITestService.cs" />
+    <Compile Include="Client\Services\ITestServiceClient.cs" />
+    <Compile Include="Client\Services\ITestServiceDataTypes.cs" />
+    <Compile Include="Client\Services\ITestServiceGenericMethods.cs" />
+    <Compile Include="Client\Services\ITestServiceOverloads.cs" />
+    <Compile Include="Client\Services\ServicesClientTest.cs" />
+    <Compile Include="Client\Services\TestService.cs" />
+    <Compile Include="Client\Services\TestServiceDataTypes.cs" />
+    <Compile Include="Client\Services\TestServiceGenericMethods.cs" />
+    <Compile Include="Client\Services\TestServiceOverloads.cs" />
     <Compile Include="Common\IgniteProductVersionTests.cs" />
+    <Compile Include="Common\MemoryInfoTest.cs" />
     <Compile Include="Compute\ComputeApiTest.JavaTask.cs" />
     <Compile Include="Compute\ComputeWithExecutorTest.cs" />
     <Compile Include="Deployment\CacheGetFunc.cs" />
@@ -264,6 +286,10 @@
     <Compile Include="Plugin\TestIgnitePluginConfiguration.cs" />
     <Compile Include="Plugin\TestIgnitePluginException.cs" />
     <Compile Include="Plugin\TestIgnitePluginProvider.cs" />
+    <Compile Include="Services\Model.cs" />
+    <Compile Include="Services\IJavaService.cs" />
+    <Compile Include="Services\JavaServiceDynamicProxy.cs" />
+    <Compile Include="Services\PlatformTestService.cs" />
     <Compile Include="Ssl\SslConfigurationTest.cs" />
     <Compile Include="TaskExtensions.cs" />
     <Compile Include="TestAppConfig.cs" />
@@ -314,6 +340,7 @@
     <Compile Include="Compute\AbstractTaskTest.cs" />
     <Compile Include="Compute\ClosureTaskTest.cs" />
     <Compile Include="Compute\ComputeApiTest.cs" />
+    <Compile Include="Compute\ComputeApiTypeAutoRegisterTest.cs" />
     <Compile Include="Compute\ComputeMultithreadedTest.cs" />
     <Compile Include="Compute\IgniteExceptionTaskSelfTest.cs" />
     <Compile Include="Compute\FailoverTaskSelfTest.cs" />
@@ -333,10 +360,6 @@
     <Compile Include="DataStructures\AtomicSequenceTest.cs" />
     <Compile Include="DeploymentTest.cs" />
     <Compile Include="EventsTest.cs" />
-    <Compile Include="Examples\Example.cs" />
-    <Compile Include="Examples\ExamplesTest.cs" />
-    <Compile Include="Examples\PathUtil.cs" />
-    <Compile Include="Examples\ProjectFilesTest.cs" />
     <Compile Include="ExceptionsTest.cs" />
     <Compile Include="ExecutableTest.cs" />
     <Compile Include="FutureTest.cs" />
@@ -370,17 +393,25 @@
     <Compile Include="Query\ImplicitBinarizablePerson.cs" />
     <Compile Include="Query\NoDefBinarizablePerson.cs" />
     <Compile Include="Query\BinarizablePerson.cs" />
+    <Compile Include="Services\CallPlatformServiceTest.cs" />
     <Compile Include="Services\ServicesTest.cs" />
     <Compile Include="Services\ServicesTestAsync.cs" />
     <Compile Include="Services\ServiceProxyTest.cs" />
     <Compile Include="Services\ServicesAsyncWrapper.cs" />
+    <Compile Include="Services\ServicesTypeAutoResolveTest.cs" />
     <Compile Include="TestRunner.cs" />
     <Compile Include="TestUtils.cs" />
+    <Compile Include="TestUtilsJni.cs" />
     <Compile Include="Unmanaged\JniThreadDetachTest.cs" />
     <Compile Include="Unmanaged\UnmanagedThreadTest.cs" />
     <Compile Include="WindowsServiceTest.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Apache.Ignite.Core.Tests.TestDll2\Apache.Ignite.Core.Tests.TestDll2.csproj">
+      <Project>{f4a69e2d-908e-4f0f-a794-84d508d60e5f}</Project>
+      <Name>Apache.Ignite.Core.Tests.TestDll2</Name>
+      <Aliases>TestDll2</Aliases>
+    </ProjectReference>
     <ProjectReference Include="..\Apache.Ignite.Core\Apache.Ignite.Core.csproj">
       <Project>{4CD2F726-7E2B-46C4-A5BA-057BB82EECB6}</Project>
       <Name>Apache.Ignite.Core</Name>
@@ -401,21 +432,21 @@
       <Project>{27F7F3C6-BDDE-43A9-B565-856F8395A04B}</Project>
       <Name>Apache.Ignite</Name>
     </ProjectReference>
-    <ProjectReference Include="..\examples\Apache.Ignite.ExamplesDll\Apache.Ignite.ExamplesDll.csproj">
-      <Project>{dfb08363-202e-412d-8812-349ef10a8702}</Project>
-      <Name>Apache.Ignite.ExamplesDll</Name>
-      <Aliases>ExamplesDll</Aliases>
-    </ProjectReference>
-    <ProjectReference Include="..\examples\Apache.Ignite.Examples\Apache.Ignite.Examples.csproj">
-      <Project>{069fa680-3c4d-43a9-b84f-e67513b87827}</Project>
-      <Name>Apache.Ignite.Examples</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Apache.Ignite.Core.Tests.TestDll\Apache.Ignite.Core.Tests.TestDll.csproj">
       <Project>{F4A69E2D-908E-4F0F-A794-84D508D60E5F}</Project>
       <Name>Apache.Ignite.Core.Tests.TestDll</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Config\binary-custom-name-mapper.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\binary-custom-name-mapper2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\cache-attribute-node-filter.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Config\cache-binarizables.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -580,7 +611,7 @@
   <Target Name="AfterBuild">
     <Copy SourceFiles="$(SolutionDir)Apache.Ignite\bin\$(ConfigurationName)\Apache.Ignite.exe;$(SolutionDir)Apache.Ignite\bin\$(ConfigurationName)\Apache.Ignite.exe.config" DestinationFolder="$(ProjectDir)$(OutDir)" SkipUnchangedFiles="false" />
   </Target>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

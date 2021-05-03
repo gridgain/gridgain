@@ -33,7 +33,7 @@ namespace ignite
         struct BinaryType;
 
         template<>
-        struct BinaryType<IgniteError>
+        struct IGNITE_IMPORT_EXPORT BinaryType<IgniteError>
         {
             static int32_t GetTypeId();
 

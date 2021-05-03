@@ -52,6 +52,7 @@ namespace Apache.Ignite.BenchmarkDotNet
                     "-Xms1g",
                     "-Xmx4g",
                     "-DIGNITE_QUIET=true",
+                    "-DIGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED=true"
                 },
                 ClientConnectorConfiguration = new ClientConnectorConfiguration
                 {

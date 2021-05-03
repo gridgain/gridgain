@@ -28,6 +28,7 @@
 
 #include <ignite/thin/ignite_client_configuration.h>
 #include <ignite/thin/cache/cache_client.h>
+#include <ignite/thin/transactions/transactions.h>
 
 namespace ignite
 {
@@ -39,9 +40,9 @@ namespace ignite
          * This is an entry point for Thin C++ Ignite client. Its main purpose is to establish connection to the remote
          * server nodes.
          *
-         * This class implemented as a reference to an implementation so copying of this class instance will only
-         * create another reference to the same underlying object. Underlying object released automatically once all
-         * the instances are destructed.
+         * This class is implemented as a reference to an implementation so copying of this class instance will only
+         * create another reference to the same underlying object. Underlying object will be released automatically once
+         * all the instances are destructed.
          */
         class IGNITE_IMPORT_EXPORT IgniteClient
         {
@@ -120,6 +121,14 @@ namespace ignite
              */
             void GetCacheNames(std::vector<std::string>& cacheNames);
 
+            /**
+             * Starts transactions.
+             */
+            transactions::ClientTransactions ClientTransactions()
+            {
+                return transactions::ClientTransactions(InternalTransactions());
+            }
+
         private:
             /**
              * Get cache.
@@ -147,6 +156,9 @@ namespace ignite
              * @return Cache.
              */
             SP_Void InternalCreateCache(const char* name);
+
+            /** */
+            SP_Void InternalTransactions();
 
             /**
              * Constructor.

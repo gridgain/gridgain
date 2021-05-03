@@ -18,6 +18,8 @@ package org.apache.ignite.client;
 
 import java.nio.file.Paths;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
@@ -28,6 +30,7 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -133,9 +136,28 @@ public class SecurityTest {
         }
     }
 
-    /** Test valid user authentication. */
+    /** Test invalid user authentication. */
     @Test
     public void testInvalidUserAuthentication() {
+        testInvalidUserAuthentication(client -> client.getOrCreateCache("testAuthentication"));
+    }
+
+    /** Test invalid user authentication with async method. */
+    @Test
+    public void testInvalidUserAuthenticationAsync() {
+        testInvalidUserAuthentication(client -> {
+            try {
+                client.getOrCreateCacheAsync("testAuthentication").get();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException e) {
+                throw (IgniteClientException) e.getCause();
+            }
+        });
+    }
+
+    /** Test valid user authentication. */
+    private void testInvalidUserAuthentication(Consumer<IgniteClient> action) {
         Exception authError = null;
 
         try (Ignite ignored = igniteWithAuthentication();
@@ -144,7 +166,7 @@ public class SecurityTest {
                  .setUserPassword("password")
              )
         ) {
-            client.getOrCreateCache("testAuthentication");
+            action.accept(client);
         }
         catch (Exception e) {
             authError = e;

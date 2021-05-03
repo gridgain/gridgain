@@ -138,7 +138,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -210,6 +209,7 @@ import org.apache.ignite.internal.compute.ComputeTaskTimeoutCheckedException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
@@ -217,6 +217,7 @@ import org.apache.ignite.internal.processors.cache.CacheClassLoaderMarker;
 import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgnitePeerToPeerClassLoadingException;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.transactions.IgniteTxAlreadyCompletedCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
@@ -363,9 +364,6 @@ public abstract class IgniteUtils {
 
     /** Default user version. */
     public static final String DFLT_USER_VERSION = "0";
-
-    /** Lock hold message. */
-    public static final String LOCK_HOLD_MESSAGE = "ReadLock held the lock more than ";
 
     /** Cache for {@link GridPeerDeployAware} fields to speed up reflection. */
     private static final ConcurrentMap<String, IgniteBiTuple<Class<?>, Collection<Field>>> p2pFields =
@@ -522,6 +520,9 @@ public abstract class IgniteUtils {
 
     /** Cached local host address to make sure that every time the same local host is returned. */
     private static InetAddress locHost;
+
+    /** Supplier of network interfaces. Could be used for tests purposes, must not be changed in production code. */
+    public static InterfaceSupplier INTERFACE_SUPPLIER = NetworkInterface::getNetworkInterfaces;
 
     /** */
     static volatile long curTimeMillis = System.currentTimeMillis();
@@ -1507,22 +1508,6 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Dumps stack trace of the thread to the given log at warning level.
-     *
-     * @param t Thread to be dumped.
-     * @param log Logger.
-     */
-    public static void dumpThread(Thread t, @Nullable IgniteLogger log) {
-        ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
-
-        GridStringBuilder sb = new GridStringBuilder();
-
-        printThreadInfo(mxBean.getThreadInfo(t.getId()), sb, Collections.emptySet());
-
-        warn(log, sb.toString());
-    }
-
-    /**
      * Get deadlocks from the thread bean.
      * @param mxBean the bean
      * @return the set of deadlocked threads (may be empty Set, but never null).
@@ -2069,7 +2054,7 @@ public abstract class IgniteUtils {
         try {
             InetAddress inetAddr = InetAddress.getByName(addr);
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
+            for (NetworkInterface itf : asIterable(INTERFACE_SUPPLIER.getInterfaces()))
                 for (InetAddress itfAddr : asIterable(itf.getInetAddresses()))
                     if (itfAddr.equals(inetAddr))
                         return itf.getDisplayName();
@@ -2181,10 +2166,9 @@ public abstract class IgniteUtils {
      * @param locAddr Local address to resolve.
      * @return Resolved available addresses of given local address.
      * @throws IOException If failed.
-     * @throws IgniteCheckedException If no network interfaces found.
      */
     public static IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(InetAddress locAddr)
-        throws IOException, IgniteCheckedException {
+        throws IOException {
         return resolveLocalAddresses(locAddr, false);
     }
 
@@ -2197,10 +2181,9 @@ public abstract class IgniteUtils {
      * @param allHostNames If {@code true} then include host names for all addresses.
      * @return Resolved available addresses and host names of given local address.
      * @throws IOException If failed.
-     * @throws IgniteCheckedException If no network interfaces found.
      */
     public static IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(InetAddress locAddr,
-        boolean allHostNames) throws IOException, IgniteCheckedException {
+        boolean allHostNames) throws IOException {
         assert locAddr != null;
 
         Collection<String> addrs = new ArrayList<>();
@@ -2213,7 +2196,7 @@ public abstract class IgniteUtils {
             if (res == null) {
                 List<InetAddress> locAddrs = new ArrayList<>();
 
-                for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces())) {
+                for (NetworkInterface itf : asIterable(INTERFACE_SUPPLIER.getInterfaces())) {
                     for (InetAddress addr : asIterable(itf.getInetAddresses())) {
                         if (!addr.isLinkLocalAddress())
                             locAddrs.add(addr);
@@ -2226,7 +2209,7 @@ public abstract class IgniteUtils {
                     addresses(addr, addrs, hostNames, allHostNames);
 
                 if (F.isEmpty(addrs))
-                    throw new IgniteCheckedException("No network addresses found (is networking enabled?).");
+                    return F.t(Collections.emptyList(), Collections.emptyList());
 
                 res = F.t(addrs, hostNames);
 
@@ -2299,7 +2282,7 @@ public abstract class IgniteUtils {
         else {
             List<NetworkInterface> itfs = new ArrayList<>();
 
-            for (NetworkInterface itf : asIterable(NetworkInterface.getNetworkInterfaces()))
+            for (NetworkInterface itf : asIterable(INTERFACE_SUPPLIER.getInterfaces()))
                 itfs.add(itf);
 
             Collections.sort(itfs, new Comparator<NetworkInterface>() {
@@ -2403,7 +2386,7 @@ public abstract class IgniteUtils {
         List<String> ips = new ArrayList<>(4);
 
         try {
-            Enumeration<NetworkInterface> itfs = NetworkInterface.getNetworkInterfaces();
+            Enumeration<NetworkInterface> itfs = INTERFACE_SUPPLIER.getInterfaces();
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
@@ -2468,7 +2451,7 @@ public abstract class IgniteUtils {
         List<String> macs = new ArrayList<>(3);
 
         try {
-            Enumeration<NetworkInterface> itfs = NetworkInterface.getNetworkInterfaces();
+            Enumeration<NetworkInterface> itfs = INTERFACE_SUPPLIER.getInterfaces();
 
             if (itfs != null) {
                 for (NetworkInterface itf : asIterable(itfs)) {
@@ -6047,6 +6030,20 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Gets resource name.
+     * Returns a task name {@see getTaskName} if it is a Compute task or a class name otherwise.
+     *
+     * @param rscCls Class of resource.
+     * @return Name of resource.
+     */
+    public static String getResourceName(Class rscCls) {
+        if (ComputeTask.class.isAssignableFrom(rscCls))
+            return getTaskName(rscCls);
+
+        return rscCls.getName();
+    }
+
+    /**
      * Creates SPI attribute name by adding prefix to the attribute name.
      * Prefix is an SPI name + '.'.
      *
@@ -7741,6 +7738,72 @@ public abstract class IgniteUtils {
      */
     public static boolean p2pLoader(ClassLoader ldr) {
         return ldr instanceof GridDeploymentInfo;
+    }
+
+    /**
+     * Returns Deployment class loader id if method was invoked in the job context
+     * (it may be the context of a cache's operation which was triggered by the distributed job)
+     * or {@code null} if no context was found or Deployment is switched off.
+     *
+     * @param ctx Kernal context.
+     * @return Deployment class loader id or {@code null}.
+     */
+    public static IgniteUuid contextDeploymentClassLoaderId(GridKernalContext ctx) {
+        if (ctx == null || !ctx.deploy().enabled())
+            return null;
+
+        if (ctx.job() != null && ctx.job().currentDeployment() != null)
+            return ctx.job().currentDeployment().classLoaderId();
+
+        if (ctx.cache() != null && ctx.cache().context() != null)
+            return ctx.cache().context().deploy().locLoaderId();
+
+        return null;
+    }
+
+    /**
+     * Gets that deployment class loader matching by the specific id, or {@code null}
+     * if the class loader was not found.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     * @return Deployment class loader or {@code null}.
+     */
+    public static ClassLoader deploymentClassLoader(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ldrId == null || !ctx.deploy().enabled())
+            return null;
+
+        GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+        return dep == null ? null : dep.classLoader();
+    }
+
+    /**
+     * Restores a deployment context for cache deployment.
+     *
+     * @param ctx Kernal context.
+     * @param ldrId Class loader id.
+     */
+    public static void restoreDeploymentContext(GridKernalContext ctx, IgniteUuid ldrId) {
+        if (ctx.deploy().enabled() && ldrId != null) {
+            GridDeployment dep = ctx.deploy().getDeployment(ldrId);
+
+            if (dep != null) {
+                try {
+                    ctx.cache().context().deploy().p2pContext(
+                        dep.classLoaderId().globalId(),
+                        dep.classLoaderId(),
+                        dep.userVersion(),
+                        dep.deployMode(),
+                        dep.participants()
+                    );
+                }
+                catch (IgnitePeerToPeerClassLoadingException e) {
+                    ctx.log(ctx.cache().context().deploy().getClass())
+                        .error("Could not restore P2P context [ldrId=" + ldrId + ']', e);
+                }
+            }
+        }
     }
 
     /**
@@ -11674,180 +11737,6 @@ public abstract class IgniteUtils {
         };
     }
 
-    /** */
-    public static class ReentrantReadWriteLockTracer extends ReentrantReadWriteLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Read lock. */
-        private final ReadLockTracer readLock;
-
-        /** Write lock. */
-        private final WriteLockTracer writeLock;
-
-        /** Lock print threshold. */
-        private long readLockThreshold;
-
-        /** */
-        private IgniteLogger log;
-
-        /**
-         * @param delegate RWLock delegate.
-         * @param kctx Kernal context.
-         * @param readLockThreshold ReadLock threshold timeout.
-         *
-         */
-        public ReentrantReadWriteLockTracer(ReentrantReadWriteLock delegate, GridKernalContext kctx, long readLockThreshold) {
-            log = kctx.cache().context().logger(getClass());
-
-            readLock = new ReadLockTracer(delegate, log, readLockThreshold);
-
-            writeLock = new WriteLockTracer(delegate);
-
-            this.readLockThreshold = readLockThreshold;
-        }
-
-        /** {@inheritDoc} */
-        @Override public ReadLock readLock() {
-            return readLock;
-        }
-
-        /** {@inheritDoc} */
-        @Override public WriteLock writeLock() {
-            return writeLock;
-        }
-
-        /** */
-        public long lockWaitThreshold() {
-            return readLockThreshold;
-        }
-    }
-
-    /** */
-    private static class ReadLockTracer extends ReentrantReadWriteLock.ReadLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Delegate. */
-        private final ReentrantReadWriteLock.ReadLock delegate;
-
-        /** */
-        private static final ThreadLocal<T2<Integer, Long>> READ_LOCK_HOLDER_TS =
-            ThreadLocal.withInitial(() -> new T2<>(0, 0L));
-
-        /** */
-        private IgniteLogger log;
-
-        /** */
-        private long readLockThreshold;
-
-        /** */
-        public ReadLockTracer(ReentrantReadWriteLock lock, IgniteLogger log, long readLockThreshold) {
-            super(lock);
-
-            delegate = lock.readLock();
-
-            this.log = log;
-
-            this.readLockThreshold = readLockThreshold;
-        }
-
-        /** */
-        private void inc() {
-            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
-
-            int cntr = val.get1();
-
-            if (cntr == 0)
-                val.set2(U.currentTimeMillis());
-
-            val.set1(++cntr);
-
-            READ_LOCK_HOLDER_TS.set(val);
-        }
-
-        /** */
-        private void dec() {
-            T2<Integer, Long> val = READ_LOCK_HOLDER_TS.get();
-
-            int cntr = val.get1();
-
-            if (--cntr == 0) {
-                long timeout = U.currentTimeMillis() - val.get2();
-
-                if (timeout > readLockThreshold) {
-                    GridStringBuilder sb = new GridStringBuilder();
-
-                    sb.a(LOCK_HOLD_MESSAGE + timeout + " ms." + nl());
-
-                    U.printStackTrace(Thread.currentThread().getId(), sb);
-
-                    U.warn(log, sb.toString());
-                }
-            }
-
-            val.set1(cntr);
-
-            READ_LOCK_HOLDER_TS.set(val);
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
-        @Override public void lock() {
-            delegate.lock();
-
-            inc();
-        }
-
-        /** {@inheritDoc} */
-        @SuppressWarnings("LockAcquiredButNotSafelyReleased")
-        @Override public void lockInterruptibly() throws InterruptedException {
-            delegate.lockInterruptibly();
-
-            inc();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryLock() {
-            if (delegate.tryLock()) {
-                inc();
-
-                return true;
-            }
-            else
-                return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryLock(long time, @NotNull TimeUnit unit) throws InterruptedException {
-            if (delegate.tryLock(time, unit)) {
-                inc();
-
-                return true;
-            }
-            else
-                return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unlock() {
-            delegate.unlock();
-
-            dec();
-        }
-    }
-
-    /** */
-    private static class WriteLockTracer extends ReentrantReadWriteLock.WriteLock {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** */
-        public WriteLockTracer(ReentrantReadWriteLock lock) {
-            super(lock);
-        }
-    }
-
     /**
      * @param key Cipher Key.
      * @param encMode Enc mode see {@link Cipher#ENCRYPT_MODE}, {@link Cipher#DECRYPT_MODE}, etc.
@@ -12464,5 +12353,24 @@ public abstract class IgniteUtils {
         }
 
         return sb.toString();
+    }
+
+    /** Explicit class for {@code Supplier<Enumeration<NetworkInterface>>}. */
+    @FunctionalInterface
+    public interface InterfaceSupplier {
+        /** Return collection of local network interfaces. */
+        Enumeration<NetworkInterface> getInterfaces() throws SocketException;
+    }
+    
+    /**
+     * @param ctx Kernel context.
+     * @param depInfo Deployment info.
+     * @param clsName Class name.
+     * @return Whether the {@code depObj} is valid for the {@code clsName} in the current context.
+     */
+    public static boolean validateDeploymentInfo(GridKernalContext ctx, GridDeploymentInfo depInfo, String clsName) {
+        GridDeployment dep = ctx.deploy().getDeployment(clsName);
+
+        return dep == null || dep.classLoaderId().equals(depInfo.classLoaderId());
     }
 }

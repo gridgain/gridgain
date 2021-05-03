@@ -36,9 +36,9 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
     /// </summary>
     [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", 0)]
     [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", 1)]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.5.9", 1)]
     [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", 1)]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", 2)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.8.0", 6)]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", 2)]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", 2)]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", 4)]
@@ -83,7 +83,10 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
         [TestFixtureTearDown]
         public void FixtureTearDown()
         {
-            _server.Dispose();
+            if (_server != null)
+            {
+                _server.Dispose();
+            }
         }
 
         /// <summary>

@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheLongRunningTransacti
 import org.apache.ignite.internal.processors.cache.GridCacheVersionGenerationWithCacheStorageTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheGetCustomCollectionsSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLoadRebalanceEvictionSelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteOOMWithoutNodeFailureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheAtomicPrimarySyncBackPressureTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheOperationsInterruptTest;
 import org.apache.ignite.internal.processors.cache.distributed.FailBackupOnAtomicOperationTest;
@@ -61,6 +62,8 @@ import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCount
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStatePutTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateTwoPrimaryTwoBackupsTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateWithFilterTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxRecoveryOnCoordniatorFailTest;
+import org.apache.ignite.internal.processors.cluster.ClusterNameBeforeActivation;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -149,6 +152,12 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, GridCacheVersionGenerationWithCacheStorageTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, HistoricalRebalanceRemovesConsistencyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, IgniteOOMWithoutNodeFailureTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TxRecoveryOnCoordniatorFailTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, ClusterNameBeforeActivation.class, ignoredTests);
 
         return suite;
     }

@@ -139,7 +139,7 @@ namespace Apache.Ignite.Core.Tests.Log
 
                 var errFromJava = TestLogger.Entries.Single(x => x.Exception != null);
                 Assert.IsNotNull(errFromJava.Exception.InnerException);
-                Assert.AreEqual("Error in func.", 
+                Assert.AreEqual("Error in func.",
                     ((ArithmeticException) errFromJava.Exception.InnerException).Message);
             }
         }
@@ -398,7 +398,7 @@ namespace Apache.Ignite.Core.Tests.Log
         /// <summary>
         /// Checks the last message.
         /// </summary>
-        private static void CheckLastMessage(LogLevel level, string message, object[] args = null, 
+        private static void CheckLastMessage(LogLevel level, string message, object[] args = null,
             IFormatProvider formatProvider = null, string category = null, string nativeErr = null, Exception e = null)
         {
             var msg = TestLogger.Entries.Last();
@@ -439,7 +439,7 @@ namespace Apache.Ignite.Core.Tests.Log
             public override string ToString()
             {
                 return string.Format("Level: {0}, Message: {1}, Args: {2}, FormatProvider: {3}, Category: {4}, " +
-                                     "NativeErrorInfo: {5}, Exception: {6}", Level, Message, Args, FormatProvider, 
+                                     "NativeErrorInfo: {5}, Exception: {6}", Level, Message, Args, FormatProvider,
                                      Category, NativeErrorInfo, Exception);
             }
         }
@@ -469,7 +469,7 @@ namespace Apache.Ignite.Core.Tests.Log
                 }
             }
 
-            public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, 
+            public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider,
                 string category, string nativeErrorInfo, Exception ex)
             {
                 if (!IsEnabled(level))

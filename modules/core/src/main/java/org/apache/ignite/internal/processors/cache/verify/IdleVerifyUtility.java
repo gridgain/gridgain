@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
@@ -39,6 +38,10 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_AUX;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 
 /**
  * Utility class for idle verify command.
@@ -72,7 +75,8 @@ public class IdleVerifyUtility {
      * @param pageStore Page store.
      * @param grpCtx Passed cache group context.
      * @param partId Partition id.
-     * @param pageType Page type. Possible types {@link PageIdAllocator#FLAG_DATA}, {@link PageIdAllocator#FLAG_IDX}.
+     * @param pageType Page type. Possible types {@link PageIdAllocator#FLAG_DATA}, {@link PageIdAllocator#FLAG_IDX}
+     *      and {@link PageIdAllocator#FLAG_AUX}.
      * @throws IgniteCheckedException If reading page failed.
      * @throws GridNotIdleException If cluster not idle.
      */
@@ -80,11 +84,11 @@ public class IdleVerifyUtility {
         FilePageStore pageStore,
         CacheGroupContext grpCtx,
         int partId,
-        byte pageType
+        @Deprecated byte pageType
     ) throws IgniteCheckedException, GridNotIdleException {
-        assert pageType == PageIdAllocator.FLAG_DATA || pageType == PageIdAllocator.FLAG_IDX : pageType;
+        assert pageType == FLAG_DATA || pageType == FLAG_IDX || pageType == FLAG_AUX : pageType;
 
-        long pageId = PageIdUtils.pageId(partId, pageType, 0);
+        long pageId = PageIdUtils.pageId(partId, (byte)0, 0);
 
         ByteBuffer buf = ByteBuffer.allocateDirect(grpCtx.dataRegion().pageMemory().pageSize());
 

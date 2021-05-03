@@ -388,7 +388,7 @@ public interface GridDhtPartitionTopology {
      * @param part Evicted partition.
      * @return {@code True} if a partition was destroyed by this call.
      */
-    public boolean tryEvict(GridDhtLocalPartition part);
+    public boolean tryFinishEviction(GridDhtLocalPartition part);
 
     /**
      * @param nodeId Node to get partitions for.
@@ -442,4 +442,13 @@ public interface GridDhtPartitionTopology {
      * @param updateRebalanceVer {@code True} if need check rebalance state.
      */
     public void onExchangeDone(GridDhtPartitionsExchangeFuture fut, AffinityAssignment assignment, boolean updateRebalanceVer);
+
+    /**
+     * Rents a partition and updates a partition map if the partition was switched to RENTING.
+     *
+     * @param p Partition ID.
+     *
+     * @return {@code True} if the partition was switched to RENTING.
+     */
+    public boolean rent(int p);
 }

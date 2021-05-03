@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ import org.apache.ignite.internal.mem.DirectMemoryRegion;
 import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mem.file.MappedFileMemoryProvider;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -74,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFre
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
@@ -290,7 +292,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 true,
                 lsnr,
                 cctx.kernalContext(),
-                null
+                null,
+                PageIdAllocator.FLAG_IDX
             );
 
             freeListMap.put(memPlcCfg.getName(), freeList);
@@ -389,10 +392,25 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param dataRegionCfg Data region config.
      * @throws IgniteCheckedException If failed to initialize swap path.
      */
-    public void addDataRegion(
+    public DataRegion addDataRegion(
         DataStorageConfiguration dataStorageCfg,
         DataRegionConfiguration dataRegionCfg,
         boolean trackable
+    ) throws IgniteCheckedException {
+        return addDataRegion(dataStorageCfg, dataRegionCfg, trackable, cctx.pageStore());
+    }
+
+    /**
+     * @param dataStorageCfg Database config.
+     * @param dataRegionCfg Data region config.
+     * @param pmPageMgr Page manager.
+     * @throws IgniteCheckedException If failed to initialize swap path.
+     */
+    protected DataRegion addDataRegion(
+        DataStorageConfiguration dataStorageCfg,
+        DataRegionConfiguration dataRegionCfg,
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) throws IgniteCheckedException {
         String dataRegionName = dataRegionCfg.getName();
 
@@ -406,7 +424,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             cctx.kernalContext().metric(),
             dataRegionMetricsProvider(dataRegionCfg));
 
-        DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable);
+        DataRegion region = initMemory(dataStorageCfg, dataRegionCfg, memMetrics, trackable, pmPageMgr);
 
         dataRegionMap.put(dataRegionName, region);
 
@@ -417,6 +435,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         else if (dataRegionName.equals(DFLT_DATA_REG_DEFAULT_NAME))
             U.warn(log, "Data Region with name 'default' isn't used as a default. " +
                     "Please, check Data Region configuration.");
+
+        return region;
     }
 
     /**
@@ -939,7 +959,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Clean checkpoint directory {@code GridCacheDatabaseSharedManager#cpDir}. The operation
+     * Clean checkpoint directory
+     * {@code CheckpointMarkersStorage#cpDir}. The operation
      * is necessary when local node joined to baseline topology with different consistentId.
      */
     public void cleanupCheckpointDirectory() throws IgniteCheckedException {
@@ -1034,12 +1055,14 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Performs indexes rebuild for all cache contexts from {@code contexts}.
+     * Initiate an asynchronous forced index rebuild for caches.
      *
-     * @param contexts List of cache contexts.
+     * @param contexts Cache contexts.
+     * @return Cache contexts for which index rebuilding is not initiated by
+     *      this call because they are already in the process of rebuilding.
      */
-    public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
-        // No-op.
+    public Collection<GridCacheContext> forceRebuildIndexes(Collection<GridCacheContext> contexts) {
+        return Collections.emptyList();
     }
 
     /**
@@ -1054,13 +1077,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      */
     public void onCacheGroupsStopped(Collection<IgniteBiTuple<CacheGroupContext, Boolean>> stoppedGrps) {
         // No-op.
-    }
-
-    /**
-     * @return Future that will be completed when indexes for given cache are restored.
-     */
-    @Nullable public IgniteInternalFuture indexRebuildFuture(int cacheId) {
-        return null;
     }
 
     /**
@@ -1094,6 +1110,15 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      */
     public void releaseHistoryForPreloading() {
         // No-op
+    }
+
+    /**
+     * Returns the latest WAL pointer that reserved for preloading or {@code null}.
+     *
+     * @return WAL pointer or {@code null} if nothing reserved.
+     */
+    public WALPointer latestWalPointerReservedForPreloading() {
+        return null;
     }
 
     /**
@@ -1208,6 +1233,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memCfg memory configuration with common parameters.
      * @param plcCfg data region with PageMemory specific parameters.
      * @param memMetrics {@link DataRegionMetrics} object to collect memory usage metrics.
+     * @param pmPageMgr Page manager.
      * @return data region instance.
      *
      * @throws IgniteCheckedException If failed to initialize swap path.
@@ -1216,9 +1242,10 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         DataStorageConfiguration memCfg,
         DataRegionConfiguration plcCfg,
         DataRegionMetricsImpl memMetrics,
-        boolean trackable
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) throws IgniteCheckedException {
-        PageMemory pageMem = createPageMemory(createOrReuseMemoryProvider(plcCfg), memCfg, plcCfg, memMetrics, trackable);
+        PageMemory pageMem = createPageMemory(createOrReuseMemoryProvider(plcCfg), memCfg, plcCfg, memMetrics, trackable, pmPageMgr);
 
         return new DataRegion(pageMem, plcCfg, memMetrics, createPageEvictionTracker(plcCfg, pageMem));
     }
@@ -1317,6 +1344,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memCfg Memory configuartion.
      * @param memPlcCfg data region configuration.
      * @param memMetrics DataRegionMetrics to collect memory usage metrics.
+     * @param pmPageMgr Page manager.
      * @return PageMemory instance.
      */
     protected PageMemory createPageMemory(
@@ -1324,7 +1352,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         DataStorageConfiguration memCfg,
         DataRegionConfiguration memPlcCfg,
         DataRegionMetricsImpl memMetrics,
-        boolean trackable
+        boolean trackable,
+        PageReadWriteManager pmPageMgr
     ) {
         memMetrics.persistenceEnabled(false);
 
@@ -1457,7 +1486,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param memMetrics Memory metrics.
      * @return Wrapped memory provider.
      */
-    protected DirectMemoryProvider wrapMetricsMemoryProvider(
+    private DirectMemoryProvider wrapMetricsMemoryProvider(
         final DirectMemoryProvider memoryProvider0,
         final DataRegionMetricsImpl memMetrics
     ) {

@@ -253,12 +253,12 @@ public class JdbcDatabaseMetadata implements DatabaseMetaData {
 
     /** {@inheritDoc} */
     @Override public boolean supportsAlterTableWithAddColumn() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean supportsAlterTableWithDropColumn() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -268,7 +268,7 @@ public class JdbcDatabaseMetadata implements DatabaseMetaData {
 
     /** {@inheritDoc} */
     @Override public boolean nullPlusNonNullIsNull() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -353,7 +353,7 @@ public class JdbcDatabaseMetadata implements DatabaseMetaData {
 
     /** {@inheritDoc} */
     @Override public boolean supportsANSI92EntryLevelSQL() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1194,6 +1194,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         return (firstDiscoEvt.type() == EVT_NODE_LEFT || firstDiscoEvt.type() == EVT_NODE_FAILED) &&
             !firstDiscoEvt.eventNode().isClient() &&
             top != null &&
+            !cctx.kernalContext().state().inMemoryClusterWithoutBlt() &&
             top.consistentIds().contains(firstDiscoEvt.eventNode().consistentId());
     }
 
@@ -1981,7 +1982,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 cctx.exchange().exchangerBlockingSectionBegin();
 
                 try {
-                    locksFut.get(waitTimeout, TimeUnit.MILLISECONDS);
+                    locksFut.get(50, TimeUnit.MILLISECONDS);
 
                     break;
                 }
@@ -2009,6 +2010,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         if (getBoolean(IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT, false))
                             U.dumpThreads(log);
                     }
+
+                    // Sometimes FinishLockFuture is not rechecked causing frozen PME.
+                    // Will recheck every 50 milliseconds.
+                    cctx.mvcc().recheckPendingLocks();
                 }
                 finally {
                     cctx.exchange().exchangerBlockingSectionEnd();
@@ -2425,6 +2430,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             span.addTag(SpanTags.ERROR, errf::toString);
         }
 
+        boolean cleanIdxRebuildFutures = true;
+
         try {
             waitUntilNewCachesAreRegistered();
 
@@ -2525,6 +2532,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (err == null) {
                 cctx.database().rebuildIndexesIfNeeded(this);
 
+                cleanIdxRebuildFutures = false;
+
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
                         grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res), false);
@@ -2543,6 +2552,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         final Throwable err0 = err;
+
+        if (err0 != null && cleanIdxRebuildFutures)
+            cctx.kernalContext().query().removeIndexRebuildFuturesOnExchange(this, null);
 
         // Should execute this listener first, before any external listeners.
         // Listeners use stack as data structure.
@@ -2629,6 +2641,19 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         return false;
+    }
+
+    /**
+     * @param grp Cache group.
+     */
+    public void validate(CacheGroupContext grp) {
+        if (grpValidRes == null)
+            grpValidRes = new ConcurrentHashMap<>();
+
+        CacheGroupValidation valRes = validateCacheGroup(grp, events().lastEvent().topologyNodes());
+
+        if (!valRes.isValid() || valRes.hasLostPartitions())
+            grpValidRes.put(grp.groupId(), valRes);
     }
 
     /**
@@ -3495,7 +3520,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             long maxCntr = maxCntrObj != null ? maxCntrObj.cnt : 0;
 
             NavigableSet<Long> nonMaxCntrs = e.getValue().headSet(maxCntr, false)
-                //Empty partition cannot be rebalanced by history effectively.
+                // Empty partition cannot be rebalanced by history effectively.
                 .tailSet(0L, false);
 
             // If minimal counter equals maximum then historical supplier does not necessary.

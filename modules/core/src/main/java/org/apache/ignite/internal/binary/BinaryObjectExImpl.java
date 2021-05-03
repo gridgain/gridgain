@@ -29,12 +29,17 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshallerInaccessibleClassException;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Internal binary object interface.
@@ -73,6 +78,15 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
      * @throws org.apache.ignite.binary.BinaryObjectException In case of any other error.
      */
     @Nullable public abstract <F> F field(int fieldId) throws BinaryObjectException;
+
+    /**
+     * Gets field value and ignore value if it is a recursive link.
+     *
+     * @param fieldId Field ID.
+     * @return Field value or null if the field is handle (recursive link).
+     * @throws org.apache.ignite.binary.BinaryObjectException In case of any other error.
+     */
+    @Nullable public abstract <F> F fieldNoHandle(int fieldId) throws BinaryObjectException;
 
     /** {@inheritDoc} */
     @Override public int enumOrdinal() throws BinaryObjectException {
@@ -180,16 +194,23 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        try {
-            BinaryReaderHandles ctx = new BinaryReaderHandles();
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
 
-            ctx.put(start(), this);
+        if (sensitiveDataLogging == PLAIN) {
+            try {
+                BinaryReaderHandles ctx = new BinaryReaderHandles();
 
-            return toString(ctx, new IdentityHashMap<BinaryObject, Integer>());
+                ctx.put(start(), this);
+
+                return toString(ctx, new IdentityHashMap<BinaryObject, Integer>());
+            } catch (BinaryObjectException e) {
+                throw new IgniteException("Failed to create string representation of binary object.", e);
+            }
         }
-        catch (BinaryObjectException e) {
-            throw new IgniteException("Failed to create string representation of binary object.", e);
-        }
+        if (sensitiveDataLogging == HASH)
+            return String.valueOf(IgniteUtils.hash(this));
+        else
+            return "BinaryObject";
     }
 
     /**

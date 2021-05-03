@@ -23,6 +23,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -46,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -172,6 +174,48 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         this.keepBinary = keepBinary;
         this.forceLocal = forceLocal;
         this.dataPageScanEnabled = dataPageScanEnabled;
+
+        log = cctx.logger(getClass());
+
+        incMeta = false;
+        clsName = null;
+        clause = null;
+    }
+
+    /**
+     * @param cctx Context.
+     * @param type Query type.
+     * @param filter Scan filter.
+     * @param part Partition.
+     * @param keepBinary Keep binary flag.
+     * @param forceLocal Flag to force local query.
+     * @param dataPageScanEnabled Flag to enable data page scan.
+     * @param timeout Timeout or zero if no timeout.
+     */
+    public GridCacheQueryAdapter(
+            GridCacheContext<?, ?> cctx,
+            GridCacheQueryType type,
+            @Nullable IgniteBiPredicate<Object, Object> filter,
+            @Nullable IgniteClosure<Map.Entry, Object> transform,
+            @Nullable Integer part,
+            boolean keepBinary,
+            boolean forceLocal,
+            Boolean dataPageScanEnabled,
+            long timeout
+    ) {
+        assert cctx != null;
+        assert type != null;
+        assert part == null || part >= 0;
+
+        this.cctx = cctx;
+        this.type = type;
+        this.filter = filter;
+        this.transform = transform;
+        this.part = part;
+        this.keepBinary = keepBinary;
+        this.forceLocal = forceLocal;
+        this.dataPageScanEnabled = dataPageScanEnabled;
+        this.timeout = timeout;
 
         log = cctx.logger(getClass());
 
@@ -634,12 +678,31 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
                 if (prj != null || part != null)
                     return nodes(cctx, prj, part);
 
-                if (cctx.affinityNode())
+                GridDhtPartitionTopology topology = cctx.topology();
+
+                if (cctx.affinityNode() && !topology.localPartitionMap().hasMovingPartitions())
                     return Collections.singletonList(cctx.localNode());
 
-                Collection<ClusterNode> affNodes = nodes(cctx, null, null);
+                topology.readLock();
 
-                return affNodes.isEmpty() ? affNodes : Collections.singletonList(F.rand(affNodes));
+                try {
+
+                    Collection<ClusterNode> affNodes = nodes(cctx, null, null);
+
+                    List<ClusterNode> nodes = new ArrayList<>(affNodes);
+
+                    Collections.shuffle(nodes);
+
+                    for (ClusterNode node : nodes) {
+                        if (!topology.partitions(node.id()).hasMovingPartitions())
+                            return Collections.singletonList(node);
+                    }
+
+                    return affNodes;
+                }
+                finally {
+                    topology.readUnlock();
+                }
 
             case PARTITIONED:
                 return nodes(cctx, prj, part);

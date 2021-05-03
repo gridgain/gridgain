@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -34,6 +35,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -44,6 +46,7 @@ import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_
 /**
  * Abstract thin client affinity awareness test.
  */
+@SuppressWarnings("rawtypes")
 public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommonAbstractTest {
     /** Wait timeout. */
     private static final long WAIT_TIMEOUT = 5_000L;
@@ -180,11 +183,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
      * @param chIdxs Channels to wait for initialization.
      */
     protected void initClient(ClientConfiguration clientCfg, int... chIdxs) throws IgniteInterruptedCheckedException {
-        client = new TcpIgniteClient(cfg -> {
+        client = new TcpIgniteClient((cfg, hnd) -> {
             try {
                 log.info("Establishing connection to " + cfg.getAddress());
 
-                TcpClientChannel ch = new TestTcpClientChannel(cfg);
+                TcpClientChannel ch = new TestTcpClientChannel(cfg, hnd);
 
                 log.info("Channel initialized: " + ch);
 
@@ -318,8 +321,8 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         /**
          * @param cfg Config.
          */
-        public TestTcpClientChannel(ClientChannelConfiguration cfg) {
-            super(cfg);
+        public TestTcpClientChannel(ClientChannelConfiguration cfg, ClientConnectionMultiplexer hnd) {
+            super(cfg, hnd);
 
             this.cfg = cfg;
 
@@ -341,6 +344,19 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 opsQueue.offer(new T2<>(this, op));
 
             return res;
+        }
+
+        /** {@inheritDoc} */
+        @Override public <T> CompletableFuture<T> serviceAsync(
+                ClientOperation op,
+                Consumer<PayloadOutputChannel> payloadWriter,
+                Function<PayloadInputChannel, T> payloadReader)
+                throws ClientException {
+            // Store all operations except binary type registration in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+                opsQueue.offer(new T2<>(this, op));
+
+            return super.serviceAsync(op, payloadWriter, payloadReader);
         }
 
         /** {@inheritDoc} */

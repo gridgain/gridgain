@@ -64,6 +64,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
@@ -75,7 +76,6 @@ import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
@@ -6197,6 +6197,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 boolean aliveCheck = clientNode.isClientAlive();
 
                                 if (!aliveCheck && isLocalNodeCoordinator()) {
+                                    if (log.isInfoEnabled())
+                                        log.info("Client node failed liveness check. Node: " + clientNode);
+
                                     boolean failedNode;
 
                                     synchronized (mux) {
@@ -6208,7 +6211,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                                             "from client node within " +
                                             "'IgniteConfiguration.clientFailureDetectionTimeout' " +
                                             "(consider increasing configuration property) " +
-                                            "[timeout=" + spi.clientFailureDetectionTimeout() + ", node=" + clientNode + ']');
+                                            "[timeout=" + spi.clientFailureDetectionTimeout() +
+                                            ", timeSinceClientLivenessCheckFailed: " +
+                                            U.nanosToMillis(System.nanoTime() - clientNode.aliveCheckTimeNanos()) +
+                                            ", node=" + clientNode + ']');
 
                                         TcpDiscoveryNodeFailedMessage nodeFailedMsg = new TcpDiscoveryNodeFailedMessage(
                                             locNodeId, clientNode.id(), clientNode.internalOrder());
@@ -6898,9 +6904,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             log.debug("Unknown connection detected (is some other software connecting to " +
                                 "this Ignite port?" +
                                 (!spi.isSslEnabled() ? " missed SSL configuration?" : "" ) +
-                                ") " +
-                                "[rmtAddr=" + rmtAddr +
-                                ", locAddr=" + sock.getLocalSocketAddress() + ']');
+                                ") [rmtAddr=" + rmtAddr + ", locAddr=" + sock.getLocalSocketAddress() + ']');
 
                         LT.warn(log, "Unknown connection detected (is some other software connecting to " +
                             "this Ignite port?" +
@@ -7452,11 +7456,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                     U.interrupt(clientMsgWrk.runner());
                 }
 
-                U.closeQuiet(sock);
+                U.close(sock, log);
 
                 if (log.isInfoEnabled())
                     log.info("Finished serving remote node connection [rmtAddr=" + rmtAddr +
-                        ", rmtPort=" + sock.getPort());
+                        ", rmtPort=" + sock.getPort() + ", rmtNodeId=" + nodeId + ']');
 
                 if (isLocalNodeCoordinator() && !ring.hasRemoteServerNodes())
                     U.enhanceThreadName(msgWorkerThread, "crd");
@@ -7917,7 +7921,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     U.interrupt(runner());
 
-                    U.closeQuiet(sock);
+                    U.close(sock, log);
                 }
             }
         }

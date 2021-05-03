@@ -211,7 +211,7 @@ public class TracingConfigurationCommand implements Command<TracingConfiguration
                                 "values can be used: " + Arrays.toString(Scope.values()) + '.');
 
                         try {
-                            scope = Scope.valueOf(strVal);
+                            scope = Scope.valueOf(strVal.toUpperCase());
                         }
                         catch (IllegalArgumentException e) {
                             throw new IllegalArgumentException(

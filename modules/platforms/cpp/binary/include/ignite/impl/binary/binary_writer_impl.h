@@ -901,7 +901,7 @@ namespace ignite
                 /** Writing start position. */
                 int32_t start;
 
-                IGNITE_NO_COPY_ASSIGNMENT(BinaryWriterImpl)
+                IGNITE_NO_COPY_ASSIGNMENT(BinaryWriterImpl);
 
                 /**
                  * Write a primitive value to stream in raw mode.
@@ -913,13 +913,7 @@ namespace ignite
                 void WritePrimitiveRaw(
                     const T val, 
                     void(*func)(interop::InteropOutputStream*, T)
-                )
-                {
-                    CheckRawMode(true);
-                    CheckSingleMode(true);
-
-                    func(stream, val);
-                }
+                );
 
                 /**
                  * Write a primitive array to stream in raw mode.
@@ -935,20 +929,7 @@ namespace ignite
                     const int32_t len,
                     void(*func)(interop::InteropOutputStream*, const T*, const int32_t),
                     const int8_t hdr
-                )
-                {
-                    CheckRawMode(true);
-                    CheckSingleMode(true);
-
-                    if (val)
-                    {
-                        stream->WriteInt8(hdr);
-                        stream->WriteInt32(len);
-                        func(stream, val, len);
-                    }
-                    else
-                        stream->WriteInt8(IGNITE_HDR_NULL);
-                }
+                );
 
                 /**
                  * Write a primitive value to stream.
@@ -966,17 +947,7 @@ namespace ignite
                     void(*func)(interop::InteropOutputStream*, T), 
                     const int8_t typ, 
                     const int32_t len
-                )
-                {
-                    CheckRawMode(false);
-                    CheckSingleMode(true);
-
-                    WriteFieldId(fieldName, typ);
-
-                    stream->WriteInt8(typ);
-
-                    func(stream, val);
-                }
+                );
 
                 /**
                  * Write a primitive array to stream.
@@ -996,24 +967,7 @@ namespace ignite
                     void(*func)(interop::InteropOutputStream*, const T*, const int32_t), 
                     const int8_t hdr, 
                     const int32_t lenShift
-                )
-                {
-                    CheckRawMode(false);
-                    CheckSingleMode(true);
-
-                    WriteFieldId(fieldName, hdr);
-
-                    if (val)
-                    {
-                        stream->WriteInt8(hdr);
-                        stream->WriteInt32(len);
-                        func(stream, val, len);
-                    }
-                    else
-                    {
-                        stream->WriteInt8(IGNITE_HDR_NULL);
-                    }
-                }
+                );
 
                 /**
                  * Write values in interval [first, last).

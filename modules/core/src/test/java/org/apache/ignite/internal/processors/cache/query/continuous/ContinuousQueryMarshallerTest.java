@@ -46,7 +46,13 @@ import org.junit.Test;
  */
 public class ContinuousQueryMarshallerTest extends GridCommonAbstractTest {
     /** */
-    public static final String CACHE_NAME = "test-cache";
+    private static final String CACHE_NAME = "test-cache";
+
+    /** */
+    private static final int CACHE_SIZE = 100_000;
+
+    /** */
+    private static final int NUM_OF_UPDATES = 100;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(final String gridName) throws Exception {
@@ -87,10 +93,12 @@ public class ContinuousQueryMarshallerTest extends GridCommonAbstractTest {
 
         final IgniteCache<Integer, MarshallerCheckingEntry> cache = node1.getOrCreateCache(CACHE_NAME);
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < CACHE_SIZE; i++)
             cache.put(i, new MarshallerCheckingEntry(String.valueOf(i)));
 
         final Ignite node2 = startGrid(node2Name);
+
+        awaitPartitionMapExchange(true, true, null);
 
         final ContinuousQuery<Integer, MarshallerCheckingEntry> qry = new ContinuousQuery<>();
 
@@ -104,14 +112,12 @@ public class ContinuousQueryMarshallerTest extends GridCommonAbstractTest {
 
         qry.setRemoteFilterFactory(new DummyEventFilterFactory<>());
 
-        final CountDownLatch latch = new CountDownLatch(15);
+        final CountDownLatch latch = new CountDownLatch(NUM_OF_UPDATES);
 
         qry.setLocalListener(new CacheEntryUpdatedListener<Integer, MarshallerCheckingEntry>() {
             @Override public void onUpdated(
                 final Iterable<CacheEntryEvent<? extends Integer, ? extends MarshallerCheckingEntry>> evts)
                 throws CacheEntryListenerException {
-
-                System.out.println(">> Client 1 events " + evts);
 
                 for (CacheEntryEvent<? extends Integer, ? extends MarshallerCheckingEntry> evt : evts)
                     latch.countDown();
@@ -120,15 +126,17 @@ public class ContinuousQueryMarshallerTest extends GridCommonAbstractTest {
 
         final IgniteCache<Integer, MarshallerCheckingEntry> cache1 = node2.cache(CACHE_NAME);
 
-        for (Cache.Entry<Integer, MarshallerCheckingEntry> entry : cache1.query(qry)) {
-            latch.countDown();
-            System.out.println(">> Initial entry " + entry);
-        }
+        int cnt = 0;
+        for (Cache.Entry<Integer, MarshallerCheckingEntry> entry : cache1.query(qry))
+            cnt++;
 
-        for (int i = 10; i < 20; i++)
+        assertEquals("Unexpected number of entries scanned", CACHE_SIZE / 2, cnt);
+
+        for (int i = CACHE_SIZE; i < CACHE_SIZE + NUM_OF_UPDATES; i++)
             cache1.put(i, new MarshallerCheckingEntry(i));
 
-        assertTrue(Long.toString(latch.getCount()), latch.await(5, TimeUnit.SECONDS));
+        assertTrue("Haven't received all CQ events in 5 seconds, remaining: " + latch.getCount(),
+            latch.await(5, TimeUnit.SECONDS));
     }
 
     /** Checks that OptimizedMarshaller is never used (BinaryMarshaller is OK) */

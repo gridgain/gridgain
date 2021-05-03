@@ -103,4 +103,11 @@ public class BinaryReaderHandles {
                 data0.put(pos, obj);
         }
     }
+
+    /**
+     * @return {@code true} if the handles (links) must be ignored.
+     */
+    public boolean ignoreHandle() {
+        return false;
+    }
 }

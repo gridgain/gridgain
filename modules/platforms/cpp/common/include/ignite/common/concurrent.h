@@ -50,7 +50,7 @@ namespace ignite
              * @param obj Object to be deleted.
              */
             template<typename T>
-            IGNITE_IMPORT_EXPORT void SharedPointerEmptyDeleter(T* obj)
+            IGNITE_IMPORT_EXPORT void SharedPointerEmptyDeleter(T*)
             {
                 // No-op.
             }
@@ -111,7 +111,7 @@ namespace ignite
                 /** Reference count. */
                 int32_t refCnt;
 
-                IGNITE_NO_COPY_ASSIGNMENT(SharedPointerImpl)
+                IGNITE_NO_COPY_ASSIGNMENT(SharedPointerImpl);
             };
 
             /* Forward declaration. */

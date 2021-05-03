@@ -40,4 +40,9 @@ public class BinaryReaderHandlesHolderImpl implements BinaryReaderHandlesHolder 
 
         return hnds;
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean ignoreHandle() {
+        return handles().ignoreHandle();
+    }
 }

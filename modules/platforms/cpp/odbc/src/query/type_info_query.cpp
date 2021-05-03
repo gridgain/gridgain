@@ -28,7 +28,7 @@ namespace
     {
         enum Type
         {
-            /** Data source�dependent data-type name. */
+            /** Data source-dependent data-type name. */
             TYPE_NAME = 1,
 
             /** SQL data type. */
@@ -68,11 +68,11 @@ namespace
             /** Whether the data type has predefined fixed precision and scale. */
             FIXED_PREC_SCALE,
 
-            /** Whether the data type is autoincrementing. */
+            /** Whether the data type is auto-incrementing. */
             AUTO_UNIQUE_VALUE,
 
             /**
-             * Localized version of the data source�dependent name of the data
+             * Localized version of the data source–dependent name of the data
              * type.
              */
             LOCAL_TYPE_NAME,
@@ -91,7 +91,7 @@ namespace
 
             /**
              * When the value of SQL_DATA_TYPE is SQL_DATETIME or SQL_INTERVAL,
-             * this column contains the datetime/interval subcode.
+             * this column contains the datetime/interval sub-code.
              */
             SQL_DATETIME_SUB,
 
@@ -132,8 +132,8 @@ namespace ignite
 
                 columnsMeta.reserve(19);
 
-                const std::string sch("");
-                const std::string tbl("");
+                const std::string sch;
+                const std::string tbl;
 
                 columnsMeta.push_back(ColumnMeta(sch, tbl, "TYPE_NAME",          IGNITE_TYPE_STRING));
                 columnsMeta.push_back(ColumnMeta(sch, tbl, "DATA_TYPE",          IGNITE_TYPE_SHORT));
@@ -326,12 +326,6 @@ namespace ignite
                     }
 
                     case ResultColumn::FIXED_PREC_SCALE:
-                    {
-                        buffer.PutInt16(SQL_FALSE);
-
-                        break;
-                    }
-
                     case ResultColumn::AUTO_UNIQUE_VALUE:
                     {
                         buffer.PutInt16(SQL_FALSE);

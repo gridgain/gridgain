@@ -129,7 +129,7 @@ namespace ignite
             return ostr;
         }
 
-        unsigned GetRandSeed()
+        IGNITE_IMPORT_EXPORT unsigned GetRandSeed()
         {
             return static_cast<unsigned>(GetTickCount() ^ GetCurrentProcessId());
         }

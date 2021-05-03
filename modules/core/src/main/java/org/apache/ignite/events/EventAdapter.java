@@ -62,7 +62,7 @@ public class EventAdapter implements Event {
      * @param msg Optional message.
      * @param type Event type.
      */
-    public EventAdapter(ClusterNode node, String msg, int type) {
+    public EventAdapter(ClusterNode node, @Nullable String msg, int type) {
         assert tstamp > 0;
 
         A.ensure(type > 0, "Event type ID must be greater than zero.");

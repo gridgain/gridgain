@@ -34,9 +34,12 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 
 /**
  * Tests that reconciliation works with binary objects that are absent in the nodes classpath.
@@ -136,6 +139,7 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testReconciliationOfColdKeysUnderLoad() throws Exception {
         useExtendedClasses = true;
 

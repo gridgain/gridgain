@@ -206,6 +206,15 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
     }
 
     /** {@inheritDoc} */
+    @Override public <F> @Nullable F fieldNoHandle(int fieldId) throws BinaryObjectException {
+        return (F) reader(new BinaryReaderHandles() {
+            @Override public boolean ignoreHandle() {
+                return true;
+            }
+        }, false).unmarshalField(fieldId);
+    }
+
+    /** {@inheritDoc} */
     @Override public BinarySerializedFieldComparator createFieldComparator() {
         int schemaOff = BinaryPrimitives.readInt(ptr, start + GridBinaryMarshaller.SCHEMA_OR_RAW_OFF_POS);
 
@@ -455,7 +464,12 @@ public class BinaryObjectOffheapImpl extends BinaryObjectExImpl implements Exter
 
     /** {@inheritDoc} */
     @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy) {
-        return (T)deserializeValue();
+        return value(ctx, cpy, null);
+    }
+
+    /** {@inheritDoc} */
+    @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
+        return deserialize(ldr);
     }
 
     /** {@inheritDoc} */

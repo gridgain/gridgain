@@ -108,12 +108,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Property for update policy of shutdown. */
     private DistributedEnumProperty<ShutdownPolicy> shutdown = new DistributedEnumProperty<>(
         "shutdown.policy",
-        (ordinal) -> {
-            return ordinal == null ? null : ShutdownPolicy.fromOrdinal(ordinal);
-        },
-        (policy) -> {
-            return policy == null ? null : policy.index();
-        }
+        (ordinal) -> ordinal == null ? null : ShutdownPolicy.fromOrdinal(ordinal),
+        (policy) -> policy == null ? null : policy.index(),
+        ShutdownPolicy.class
     );
 
     /**
@@ -158,7 +155,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            return new ClusterGroupAdapter(ctx, null, Collections.singleton(cfg.getNodeId()));
+            return new ClusterGroupAdapter(ctx, null, Collections.singleton(ctx.discovery().localNode().id()));
         }
         finally {
             unguard();
@@ -379,7 +376,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
             if (newState == ACTIVE_READ_ONLY)
                 verifyReadOnlyModeSupport();
 
-            ctx.state().changeGlobalState(newState, serverNodes(), false).get();
+            ctx.state().changeGlobalState(newState, true, serverNodes(), false).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

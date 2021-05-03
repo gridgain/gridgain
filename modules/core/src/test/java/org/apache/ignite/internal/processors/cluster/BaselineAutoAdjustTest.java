@@ -16,13 +16,17 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -30,7 +34,17 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lifecycle.LifecycleBean;
+import org.apache.ignite.lifecycle.LifecycleEventType;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -40,7 +54,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -59,6 +78,9 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
     /** */
     private static int autoAdjustTimeout = 5000;
+
+    /** Lifecycle bean. */
+    private LifecycleBean lifecycleBean;
 
     /**
      * @throws Exception if failed.
@@ -100,6 +122,10 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         cfg.setDataStorageConfiguration(storageCfg);
 
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setLifecycleBeans(lifecycleBean);
+
         return cfg;
     }
 
@@ -109,29 +135,151 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Tests that merging exchanges properly triggers baseline changing.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testExchangeMerge() throws Exception {
+        // Latch that waits for PME (intTopVer == 3.0)
+        CountDownLatch exchangeWorkerLatch = new CountDownLatch(1);
+
+        // Lyficycle bean is needed in order to register EVT_NODE_JOIN lister that is called
+        // right after GridCachePartitionExchangeManager and before GridClusterStateProcessor.
+        lifecycleBean = new LifecycleBean() {
+            /** Ignite instance. */
+            @IgniteInstanceResource
+            IgniteEx ignite;
+
+            /** {@inheritDoc} */
+            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
+                if (evt == LifecycleEventType.BEFORE_NODE_START) {
+                    ignite.context().internalSubscriptionProcessor()
+                        .registerDistributedMetastorageListener(new DistributedMetastorageLifecycleListener() {
+                            @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
+                                ignite.context().event().addDiscoveryEventListener((evt, disco) -> {
+                                    if (evt.type() == EVT_NODE_JOINED && evt.topologyVersion() == 3) {
+                                        try {
+                                            // Let's wait for exchange worker starts PME
+                                            // that related to the first node joined the cluster.
+                                            exchangeWorkerLatch.await(getTestTimeout(), MILLISECONDS);
+                                        }
+                                        catch (InterruptedException e) {
+                                            throw new IgniteException("exchangeWorkerLatch has been interrupted.", e);
+                                        }
+                                    }
+                                }, EVT_NODE_JOINED);
+                            }
+                        });
+                }
+            }
+        };
+
+        // Start the coordinator node.
+        IgniteEx crd = startGrid(0);
+
+        // This bean is only required on the coordinator node.
+        lifecycleBean = null;
+
+        // Latch indicates that EVT_NODE_JOINED (topVer == 4.0) was processed by all listeners.
+        CountDownLatch nodeJoinLatch = new CountDownLatch(1);
+
+        // This listener is the last one in the queue of handlers.
+        crd.context().event().addDiscoveryEventListener((evt, disco) -> {
+            if (evt.type() == EVT_NODE_JOINED && evt.topologyVersion() == 4)
+                nodeJoinLatch.countDown();
+        }, EVT_NODE_JOINED);
+
+        IgniteEx nonCrd = startGrid(1);
+
+        crd.cluster().state(ACTIVE);
+
+        crd.cluster().baselineAutoAdjustEnabled(true);
+        crd.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
+
+        awaitPartitionMapExchange(false, true, null);
+
+        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(nonCrd);
+        spi1.blockMessages((node, msg) -> msg instanceof GridDhtPartitionsSingleMessage);
+
+        // Target major topology version (4 nodes)
+        long targetTopVer = 4;
+
+        // Let's block exchange process in order to merge two following exchanges (3.0 && 4.0).
+        crd.context()
+            .cache()
+            .context()
+            .exchange()
+            .mergeExchangesTestWaitVersion(new AffinityTopologyVersion(targetTopVer, 0), null);
+
+        AtomicInteger cnt = new AtomicInteger(G.allGrids().size());
+        runMultiThreadedAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(cnt.getAndIncrement());
+
+                return null;
+            }
+        }, 2, "async-grid-starter");
+
+        // Make sure that PME is in progress.
+        assertTrue("Failed to wait for PME [topVer=3]", spi1.waitForBlocked(1, getTestTimeout()));
+
+        assertTrue(
+            "Failed to wait for the first started exchange.",
+            waitForCondition(() -> {
+                GridDhtPartitionsExchangeFuture fut = crd.context().cache().context().exchange().lastTopologyFuture();
+                return fut.initialVersion().topologyVersion() == 3;
+            }, getTestTimeout()));
+
+        // This guarantees that BaselineAutoAdjustData listens to real GridDhtPartitionsExchangeFuture
+        // instead of readyAffinityFuture.
+        exchangeWorkerLatch.countDown();
+
+        assertTrue(
+            "Failed to wait for processing node join event [topVer=3]",
+            nodeJoinLatch.await(getTestTimeout(), MILLISECONDS));
+
+        // Unblock PME
+        spi1.stopBlock();
+
+        assertTrue(
+            "Failed to wait for changing baseline in " + autoAdjustTimeout * 2 + " ms.",
+            waitForCondition(() -> crd.cluster().currentBaselineTopology().size() == targetTopVer, autoAdjustTimeout * 2));
+    }
+
+    /**
      * @throws Exception if failed.
      */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testBaselineAutoAdjustDisableBecauseFlagIsSetToFalse() throws Exception {
-        IgniteEx ignite0 = startGrids(1);
+        IgniteEx ignite0 = startGrids(2);
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         int timeout = 100;
         ignite0.cluster().baselineAutoAdjustTimeout(timeout);
 
-        Collection<BaselineNode> bltNodes = ignite0.cluster().currentBaselineTopology();
+        Set<Object> initBaseline = ignite0.cluster().currentBaselineTopology() == null ? null :
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .collect(Collectors.toSet());
 
-        log.info("GG-25084: " + bltNodes);
+        stopGrid(1);
 
-        Set<Object> initBaseline = bltNodes.stream()
-            .map(BaselineNode::consistentId)
-            .collect(Collectors.toSet());
+        Set<Object> nodeLeftBaseline = ignite0.cluster().currentBaselineTopology() == null ? null :
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .collect(Collectors.toSet());
 
-        log.error("8.7-master: " + initBaseline);
+        assertEquals(initBaseline, nodeLeftBaseline);
+
+        assertFalse(waitForCondition(
+            () -> isCurrentBaselineFromOneNode(ignite0),
+            timeout * 20
+        ));
     }
 
     /**
@@ -143,7 +291,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -174,7 +322,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -211,7 +359,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -250,7 +398,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -270,11 +418,11 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(3000L);
 
-        ignite0.cluster().active(false);
+        ignite0.cluster().state(INACTIVE);
 
         startGrid(1);
 
@@ -292,7 +440,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -313,9 +461,10 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
      * @return {@code true} if current baseline consist from one node.
      */
     private boolean isCurrentBaselineFromOneNode(Ignite ignite0) {
-        return ignite0.cluster().currentBaselineTopology().stream()
-            .map(BaselineNode::consistentId)
-            .allMatch(((IgniteEx)ignite0).localNode().consistentId()::equals);
+        return ignite0.cluster().currentBaselineTopology() != null &&
+            ignite0.cluster().currentBaselineTopology().stream()
+                .map(BaselineNode::consistentId)
+                .allMatch(((IgniteEx)ignite0).localNode().consistentId()::equals);
     }
 
     /**
@@ -327,7 +476,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         IgniteEx ignite0 = startGrids(2);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         Set<Object> initBaseline = ignite0.cluster().currentBaselineTopology().stream()
             .map(BaselineNode::consistentId)
@@ -369,7 +518,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -379,7 +528,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         stopGrid(1);
 
-        ignite0.cluster().setBaselineTopology(Arrays.asList(((IgniteEx)ignite0).localNode()));
+        ignite0.cluster().setBaselineTopology(Collections.singletonList(ignite0.localNode()));
     }
 
     /**
@@ -395,7 +544,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -409,7 +558,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0 = startGrids(2);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         Set<Object> baselineNodesAfterRestart = ignite0.cluster().currentBaselineTopology().stream()
             .map(BaselineNode::consistentId)
@@ -438,7 +587,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         startGrid(1);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
@@ -470,7 +619,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
             ignite0.cluster().baselineAutoAdjustEnabled(false);
 
             //This activation guarantee that baseline would be set.
-            ignite0.cluster().active(true);
+            ignite0.cluster().state(ACTIVE);
 
             ignite0.cluster().baselineAutoAdjustTimeout(0);
 
@@ -510,7 +659,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         IgniteEx ignite0 = startGrid(inMemoryConfiguration(0));
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
@@ -524,7 +673,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void shouldNodeWithPersistenceSuccessfullyJoinedToClusterWhenTimeoutGreaterThanZero() throws Exception {
         IgniteEx ignite0 = startGrid(inMemoryConfiguration(0));
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustTimeout(1);
 
@@ -540,7 +689,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         startGrid(inMemoryConfiguration(1));
 
@@ -556,7 +705,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void shouldJoinSuccessBecauseClusterHasPersistentNode() throws Exception {
         IgniteEx ignite0 = startGrid(inMemoryConfiguration(0));
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
@@ -575,7 +724,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
         IgniteEx ignite0 = startGrid(inMemoryConfiguration(0));
         startGrid(inMemoryConfiguration(1));
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         try {
             startGrid(persistentRegionConfiguration(2));
@@ -604,7 +753,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         startGrid(1);
 

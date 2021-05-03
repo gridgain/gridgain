@@ -90,7 +90,8 @@ public class Company {
                     .addQueryField("id", Long.class.getName(), null)
                     .setIndexes(Arrays.asList(
                         new QueryIndex(Collections.singletonList("name"), QueryIndexType.SORTED),
-                        new QueryIndex(Arrays.asList("cityId", "addr"), QueryIndexType.SORTED)
+                        new QueryIndex(Arrays.asList("cityId", "addr"), QueryIndexType.SORTED),
+                        new QueryIndex(Arrays.asList("id", "cityId", "addr"), QueryIndexType.SORTED)
                     ))
                     .setTableName(TABLE_NAME)
             );

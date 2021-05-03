@@ -502,10 +502,10 @@ public final class GridTestUtils {
      *      and this message should be equal.
      * @return Thrown throwable.
      */
-    public static Throwable assertThrows(
+    public static <T extends Throwable> T assertThrows(
         @Nullable IgniteLogger log,
         RunnableX run,
-        Class<? extends Throwable> cls,
+        Class<? extends T> cls,
         @Nullable String msg
     ) {
         return assertThrows(log, () -> {
@@ -525,8 +525,12 @@ public final class GridTestUtils {
      *      and this message should be equal.
      * @return Thrown throwable.
      */
-    public static Throwable assertThrows(@Nullable IgniteLogger log, Callable<?> call,
-        Class<? extends Throwable> cls, @Nullable String msg) {
+    public static <T extends Throwable> T assertThrows(
+        @Nullable IgniteLogger log,
+        Callable<?> call,
+        Class<? extends T> cls,
+        @Nullable String msg
+    ) {
         assert call != null;
         assert cls != null;
 
@@ -557,7 +561,7 @@ public final class GridTestUtils {
             else
                 X.println("Caught expected exception: " + e.getMessage());
 
-            return e;
+            return (T) e;
         }
 
         throw new AssertionError("Exception has not been thrown.");

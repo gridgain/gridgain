@@ -40,11 +40,11 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
@@ -93,6 +93,7 @@ import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConfigIn
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationSpiMBeanImpl;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage;
+import org.apache.ignite.spi.communication.tcp.internal.TcpHandshakeExecutor;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.ShmemAcceptWorker;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
@@ -347,6 +348,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Received messages by node consistent id metric description. */
     public static final String RECEIVED_MESSAGES_BY_NODE_CONSISTENT_ID_METRIC_DESC =
         "Total number of messages received by current node from the given node";
+
+    /** Client nodes might have port {@code 0} if they have no server socket opened. */
+    public static final Integer DISABLED_CLIENT_PORT = 0;
 
     /** Connect gate. */
     private final ConnectGateway connectGate = new ConnectGateway();
@@ -698,12 +702,15 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             }
         ));
 
-        GridTimeoutProcessor timeoutProcessor = ignite instanceof IgniteKernal ? ((IgniteKernal)ignite).context().timeout() : null;
+        TcpHandshakeExecutor tcpHandshakeExecutor = resolve(ignite, new TcpHandshakeExecutor(
+            log,
+            stateProvider,
+            cfg.directBuffer()
+        ));
 
         this.nioSrvWrapper = resolve(ignite, new GridNioServerWrapper(
             log,
             cfg,
-            timeoutProcessor,
             attributeNames,
             tracing,
             nodeGetter,
@@ -717,7 +724,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getName(),
             getWorkersRegistry(ignite),
             ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
-            this::createTcpClient
+            this::createTcpClient,
+            tcpHandshakeExecutor
         ));
 
         this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
@@ -732,10 +740,10 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             null,
             getWorkersRegistry(ignite),
             this,
-            timeoutProcessor,
             stateProvider,
             nioSrvWrapper,
-            connectionRequestor
+            connectionRequestor,
+            getName()
         ));
 
         this.srvLsnr.setClientPool(clientPool);
@@ -758,6 +766,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         }
         catch (IgniteCheckedException e) {
             throw new IgniteSpiException("Failed to initialize TCP server: " + cfg.localHost(), e);
+        }
+
+        boolean forceClientToSrvConnections = forceClientToServerConnections() || cfg.localPort() == -1;
+
+        if (cfg.usePairedConnections() && forceClientToSrvConnections) {
+            throw new IgniteSpiException("Node using paired connections " +
+                "is not allowed to start in forced client to server connections mode.");
         }
 
         assert cfg.localHost() != null;
@@ -904,7 +919,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} } */
     @Override public void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
-        spiCtx.registerPort(cfg.boundTcpPort(), IgnitePortProtocol.TCP);
+        if (cfg.boundTcpPort() > 0)
+            spiCtx.registerPort(cfg.boundTcpPort(), IgnitePortProtocol.TCP);
 
         // SPI can start without shmem port.
         if (cfg.boundTcpShmemPort() > 0)
@@ -1117,8 +1133,10 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
             int connIdx;
 
-            if (msg instanceof TcpConnectionIndexAwareMessage) {
-                int msgConnIdx = ((TcpConnectionIndexAwareMessage)msg).connectionIndex();
+            Message connIdxMsg = msg instanceof GridIoMessage ? ((GridIoMessage)msg).message() : msg;
+
+            if (connIdxMsg instanceof TcpConnectionIndexAwareMessage) {
+                int msgConnIdx = ((TcpConnectionIndexAwareMessage)connIdxMsg).connectionIndex();
 
                 connIdx = msgConnIdx == UNDEFINED_CONNECTION_INDEX ? connPlc.connectionIndex() : msgConnIdx;
             }

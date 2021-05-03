@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -166,18 +167,20 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
     ) {
         cctx.kernalContext().gateway().readLock();
 
-        MTC.supportInitial(cctx.kernalContext().tracing().create(
+        Span span = cctx.kernalContext().tracing().create(
             TX,
             null,
             lb,
-            tracingEnabled));
+            tracingEnabled);
 
-        MTC.span().addTag("isolation", isolation::name);
-        MTC.span().addTag("concurrency", concurrency::name);
-        MTC.span().addTag("timeout", () -> String.valueOf(timeout));
+        MTC.supportInitial(span);
+
+        span.addTag("isolation", isolation::name);
+        span.addTag("concurrency", concurrency::name);
+        span.addTag("timeout", () -> String.valueOf(timeout));
 
         if (lb != null)
-            MTC.span().addTag("label", () -> lb);
+            span.addTag("label", () -> lb);
 
         try {
             GridNearTxLocal tx = cctx.tm().userTx(sysCacheCtx);

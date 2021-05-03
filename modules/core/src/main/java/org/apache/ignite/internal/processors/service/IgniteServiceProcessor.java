@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -61,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.internal.processors.platform.services.PlatformService;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -945,11 +947,12 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 Service srvc = ctx.service();
 
                 if (srvc != null) {
-                    if (!srvcCls.isAssignableFrom(srvc.getClass()))
-                        throw new IgniteException("Service does not implement specified interface [srvcCls=" +
-                            srvcCls.getName() + ", srvcCls=" + srvc.getClass().getName() + ']');
-
-                    return (T)srvc;
+                    if (srvcCls.isAssignableFrom(srvc.getClass()))
+                        return (T)srvc;
+                    else if (!PlatformService.class.isAssignableFrom(srvc.getClass())) {
+                        throw new IgniteException("Service does not implement specified interface [srvcCls="
+                                + srvcCls.getName() + ", srvcCls=" + srvc.getClass().getName() + ']');
+                    }
                 }
             }
         }
@@ -1686,7 +1689,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
                 registeredServices.entrySet().removeIf(e -> {
                     ServiceInfo desc = e.getValue();
 
-                    if (desc.cacheName().equals(chReq.cacheName())) {
+                    if (Objects.equals(desc.cacheName(), chReq.cacheName())) {
                         toUndeploy.put(desc.serviceId(), desc);
 
                         return true;

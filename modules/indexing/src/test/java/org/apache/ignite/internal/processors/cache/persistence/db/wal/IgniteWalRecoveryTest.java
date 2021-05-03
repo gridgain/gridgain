@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
@@ -128,6 +129,7 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
@@ -569,8 +571,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 try {
                     CheckpointEntry cpEntry = dbMgr.checkpointHistory().lastCheckpoint();
 
-                    String cpEndFileName = GridCacheDatabaseSharedManager.checkpointFileName(cpEntry,
-                        CheckpointEntryType.END);
+                    String cpEndFileName = CheckpointMarkersStorage.checkpointFileName(cpEntry, CheckpointEntryType.END);
 
                     Files.delete(Paths.get(dbMgr.checkpointDirectory().getAbsolutePath(), cpEndFileName));
 
@@ -1802,7 +1803,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * Tests a scenario when a coordinator has failed after recovery during activation.
      */
     @Test
-    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
+    @WithSystemProperty(key = IGNITE_DISABLE_WAL_DURING_REBALANCING, value = "false")
     public void testRecoveryAfterRestart_Activate() throws Exception {
         IgniteEx crd = startGrid(1);
         crd.cluster().active(true);

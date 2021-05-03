@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Cache;
-    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -76,11 +75,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         private const int OpPartitions = 15;
 
         /** */
-        private const int OpIsAssignmentValid = 16;
-
-        /** */
         private readonly bool _keepBinary;
-        
+
         /** Grid. */
         private readonly IIgniteInternal _ignite;
 
@@ -114,7 +110,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         public bool IsPrimary<TK>(IClusterNode n, TK key)
         {
             IgniteArgumentCheck.NotNull(n, "n");
-            
+
             IgniteArgumentCheck.NotNull(key, "key");
 
             return DoOutOp(OpIsPrimary, n.Id, key) == True;
@@ -217,19 +213,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         public IList<IClusterNode> MapPartitionToPrimaryAndBackups(int part)
         {
             return DoOutInOp(OpMapPartitionToPrimaryAndBackups, w => w.WriteObject(part), r => ReadNodes(r));
-        }
-
-        /// <summary>
-        /// Checks whether given partition is still assigned to the same node as in specified version.
-        /// </summary>
-        internal bool IsAssignmentValid(AffinityTopologyVersion version, int partition)
-        {
-            return DoOutOp(OpIsAssignmentValid, (IBinaryStream s) =>
-            {
-                s.WriteLong(version.Version);
-                s.WriteInt(version.MinorVersion);
-                s.WriteInt(partition);
-            }) != 0;
         }
 
         /** <inheritDoc /> */

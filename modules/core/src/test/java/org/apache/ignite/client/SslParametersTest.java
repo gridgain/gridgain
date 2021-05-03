@@ -287,7 +287,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
             cipherSuites,
             protocols,
             ClientConnectionException.class,
-            "Ignite cluster is unavailable"
+            "SSL handshake failed"
         );
     }
 
@@ -306,7 +306,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
         this.cipherSuites = F.isEmpty(cipherSuites) ? null : cipherSuites;
         this.protocols = F.isEmpty(protocols) ? null : protocols;
 
-        GridTestUtils.assertThrows(
+        GridTestUtils.assertThrowsAnyCause(
             null,
             new Callable<Object>() {
                 @Override public Object call() {

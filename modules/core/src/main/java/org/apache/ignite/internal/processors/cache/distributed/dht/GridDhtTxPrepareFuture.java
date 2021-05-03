@@ -61,6 +61,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxMapping;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
@@ -79,9 +81,11 @@ import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.transactions.IgniteTxOptimisticCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.GridLeanSet;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgnitePair;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
@@ -102,17 +106,18 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_PUT;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_READ;
 import static org.apache.ignite.events.EventType.EVT_CACHE_OBJECT_REMOVED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_LOADED;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOOP;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRANSFORM;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
-import static org.apache.ignite.transactions.TransactionState.PREPARED;
 import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import static org.apache.ignite.internal.processors.tracing.SpanType.TX_DHT_PREPARE;
+import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+import static org.apache.ignite.transactions.TransactionState.PREPARED;
 
 /**
  *
@@ -225,6 +230,10 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /** */
     private CountDownLatch timeoutAddedLatch;
 
+    /** Deployment class loader id which will be used for deserialization of entries on a distributed task. */
+    @GridToStringExclude
+    protected final IgniteUuid deploymentLdrId;
+
     /**
      * @param cctx Context.
      * @param tx Transaction.
@@ -249,6 +258,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         this.tx = tx;
         this.dhtVerMap = dhtVerMap;
         this.last = last;
+        this.deploymentLdrId = U.contextDeploymentClassLoaderId(cctx.kernalContext());
 
         futId = IgniteUuid.randomUuid();
 
@@ -358,7 +368,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      *
      */
     private void onEntriesLocked() {
-        ret = new GridCacheReturn(null, tx.localResult(), true, null, true);
+        ret = new GridCacheReturn(null, tx.localResult(), true, null, null, true);
 
         for (IgniteTxEntry writeEntry : req.writes()) {
             IgniteTxEntry txEntry = tx.entry(writeEntry.txKey());
@@ -445,11 +455,17 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                 CacheInvokeEntry<Object, Object> invokeEntry = new CacheInvokeEntry<>(key, val,
                                     txEntry.cached().version(), keepBinary, txEntry.cached());
 
+                                EntryProcessor<Object, Object, Object> processor = t.get1();
+
                                 IgniteThread.onEntryProcessorEntered(false);
 
-                                try {
-                                    EntryProcessor<Object, Object, Object> processor = t.get1();
+                                if (cctx.kernalContext().deploy().enabled() &&
+                                    cctx.kernalContext().deploy().isGlobalLoader(processor.getClass().getClassLoader())) {
+                                    U.restoreDeploymentContext(cctx.kernalContext(), cctx.kernalContext()
+                                        .deploy().getClassLoaderId(processor.getClass().getClassLoader()));
+                                }
 
+                                try {
                                     procRes = processor.process(invokeEntry, t.get2());
 
                                     val = cacheCtx.toCacheObject(invokeEntry.getValue(true));
@@ -500,7 +516,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                             }
                         }
                         else if (retVal)
-                            ret.value(cacheCtx, val, keepBinary);
+                            ret.value(cacheCtx, val, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
                     }
 
                     if (hasFilters && !cacheCtx.isAll(cached, txEntry.filters())) {
@@ -933,7 +949,9 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 res.completedVersions(versPair.get1(), versPair.get2());
             }
 
-            res.pending(localDhtPendingVersions(tx.writeEntries(), min));
+            // Pending versions are required for near caches only.
+            if (req.near())
+                res.pending(localDhtPendingVersions(tx.writeEntries(), min));
 
             tx.implicitSingleResult(ret);
         }
@@ -1024,7 +1042,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @return {@code True} if {@code done} flag was changed as a result of this call.
      */
     private boolean onComplete(@Nullable GridNearTxPrepareResponse res) {
-        if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
+        if (res.error() != null) {
+            if (log.isDebugEnabled())
+                log.debug("Transaction marked for rollback because of error on dht prepare [tx=" + tx + ", error=" + res.error() + "]");
+
+            tx.setRollbackOnly();
+        }
+        else if (!tx.onePhaseCommit() && ((last || tx.isSystemInvalidate()) && !(tx.near() && tx.local())))
             tx.state(PREPARED);
 
         if (super.onDone(res, res == null ? err : null)) {
@@ -1070,9 +1094,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             ClusterNode node = cctx.discovery().node(tx.topologyVersion(), tx.nearNodeId());
 
-            boolean validateCache = needCacheValidation(node);
-
-            if (validateCache) {
+            if (node != null) {
                 GridDhtTopologyFuture topFut = cctx.exchange().lastFinishedFuture();
 
                 if (topFut != null) {
@@ -1113,22 +1135,6 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             mapIfLocked();
         }
-    }
-
-    /**
-     * Returns {@code true} if cache validation needed.
-     *
-     * @param node Originating node.
-     * @return {@code True} if cache should be validated, {@code false} - otherwise.
-     */
-    private boolean needCacheValidation(ClusterNode node) {
-        if (node == null) {
-            // The originating (aka near) node has left the topology
-            // and therefore the cache validation doesn't make sense.
-            return false;
-        }
-
-        return Boolean.TRUE.equals(node.attribute(ATTR_VALIDATE_CACHE_REQUESTS));
     }
 
     /**
@@ -1239,13 +1245,18 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
         GridCacheContext cctx = entry.context();
 
+        GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
         try {
-            Object key = cctx.unwrapBinaryIfNeeded(entry.key(), entry.keepBinary(), false);
+            Object key = cctx.unwrapBinaryIfNeeded(entry.key(), entry.keepBinary(), false, null);
 
             assert key != null : entry.key();
 
-            if (S.includeSensitive())
+            if (sensitiveDataLogging == PLAIN)
                 msg.append("key=").append(key.toString()).append(", keyCls=").append(key.getClass().getName());
+            else if (sensitiveDataLogging == HASH)
+                msg.append("key=").append(IgniteUtils.hash(key));
+
         }
         catch (Exception e) {
             msg.append("key=<failed to get key: ").append(e.toString()).append(">");
@@ -1256,11 +1267,13 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             CacheObject cacheVal = entryEx != null ? entryEx.rawGet() : null;
 
-            Object val = cacheVal != null ? cctx.unwrapBinaryIfNeeded(cacheVal, entry.keepBinary(), false) : null;
+            Object val = cacheVal != null ? cctx.unwrapBinaryIfNeeded(cacheVal, entry.keepBinary(), false, null) : null;
 
             if (val != null) {
-                if (S.includeSensitive())
+                if (sensitiveDataLogging == PLAIN)
                     msg.append(", val=").append(val.toString()).append(", valCls=").append(val.getClass().getName());
+                else if (sensitiveDataLogging == HASH)
+                    msg.append(", val=").append(IgniteUtils.hash(val));
             }
             else
                 msg.append(", val=null");
@@ -1632,7 +1645,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
     /**
      * @param entry Transaction entry.
      */
-    private void map(IgniteTxEntry entry) {
+    private void map(IgniteTxEntry entry) throws IgniteTxRollbackCheckedException {
         if (entry.cached().isLocal())
             return;
 
@@ -1653,6 +1666,21 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
         while (true) {
             try {
                 List<ClusterNode> dhtNodes = dht.topology().nodes(cached.partition(), tx.topologyVersion());
+
+                GridDhtPartitionTopology top = cacheCtx.topology();
+
+                GridDhtLocalPartition part = top.localPartition(cached.partition());
+
+                if (part != null && !part.primary(top.readyTopologyVersion())) {
+                    log.warning("Failed to map a transaction on outdated topology, rolling back " +
+                        "[tx=" + CU.txString(tx) +
+                        ", readyTopVer=" + top.readyTopologyVersion() +
+                        ", lostParts=" + top.lostPartitions() +
+                        ", part=" + part.toString() + ']');
+
+                    throw new IgniteTxRollbackCheckedException("Failed to map a transaction on outdated " +
+                        "topology, please try again [timeout=" + tx.timeout() + ", tx=" + CU.txString(tx) + ']');
+                }
 
                 assert !dhtNodes.isEmpty() && dhtNodes.get(0).id().equals(cctx.localNodeId()) :
                     "cacheId=" + cacheCtx.cacheId() + ", localNode = " + cctx.localNodeId() + ", dhtNodes = " + dhtNodes;
@@ -1744,15 +1772,21 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
      * @param baseVer Base version.
      * @return Collection of pending candidates versions.
      */
-    private Collection<GridCacheVersion> localDhtPendingVersions(Iterable<IgniteTxEntry> entries,
-        GridCacheVersion baseVer) {
-        Collection<GridCacheVersion> lessPending = new GridLeanSet<>(5);
+    private Collection<GridCacheVersion> localDhtPendingVersions(
+        Iterable<IgniteTxEntry> entries,
+        GridCacheVersion baseVer
+    ) {
+        Collection<GridCacheVersion> lessPending = null;
 
         for (IgniteTxEntry entry : entries) {
             try {
                 for (GridCacheMvccCandidate cand : entry.cached().localCandidates()) {
-                    if (cand.version().isLess(baseVer))
+                    if (cand.version().isLess(baseVer)) {
+                        if (lessPending == null)
+                            lessPending = new GridLeanSet<>(5);
+
                         lessPending.add(cand.version());
+                    }
                 }
             }
             catch (GridCacheEntryRemovedException ignored) {
@@ -1984,8 +2018,14 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                                         null, null, EVT_CACHE_REBALANCE_OBJECT_LOADED, info.value(), true, null,
                                         false, null, null, null, false);
 
-                                if (retVal && !invoke)
-                                    ret.value(cacheCtx, info.value(), false);
+                                if (retVal && !invoke) {
+                                    ret.value(
+                                        cacheCtx,
+                                        info.value(),
+                                        false,
+                                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+                                    );
+                                }
                             }
 
                             break;

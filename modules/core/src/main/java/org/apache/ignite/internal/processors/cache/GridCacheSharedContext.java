@@ -379,8 +379,7 @@ public class GridCacheSharedContext<K, V> {
      * @throws IgniteCheckedException If failed.
      */
     void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
-        for (ListIterator<? extends GridCacheSharedManager<?, ?>> it = mgrs.listIterator(mgrs.size());
-            it.hasPrevious();) {
+        for (ListIterator<? extends GridCacheSharedManager<?, ?>> it = mgrs.listIterator(mgrs.size()); it.hasPrevious();) {
             GridCacheSharedManager<?, ?> mgr = it.previous();
 
             mgr.onDisconnected(reconnectFut);
@@ -727,7 +726,7 @@ public class GridCacheSharedContext<K, V> {
     /**
      * @return Write ahead log manager.
      */
-    public IgniteWriteAheadLogManager wal() {
+    @Nullable public IgniteWriteAheadLogManager wal() {
         return walMgr;
     }
 

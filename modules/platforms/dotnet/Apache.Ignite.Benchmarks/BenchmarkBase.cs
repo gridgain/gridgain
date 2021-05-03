@@ -399,6 +399,7 @@ namespace Apache.Ignite.Benchmarks
 
             try
             {
+                // ReSharper disable once NonAtomicCompoundOperator (in a Monitor)
                 _finishedThreads++;
 
                 Monitor.PulseAll(this);

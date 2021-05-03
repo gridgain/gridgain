@@ -94,7 +94,7 @@ public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexL
                     continue;
 
                 for (GridQueryTypeDescriptor type : qry.types(cacheName)) {
-                    GridH2Table gridH2Tbl = indexing.schemaManager().dataTable(cacheName, type.tableName());
+                    GridH2Table gridH2Tbl = indexing.schemaManager().dataTable(type.schemaName(), type.tableName());
 
                     if (gridH2Tbl == null)
                         continue;

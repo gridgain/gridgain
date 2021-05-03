@@ -248,12 +248,12 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
 
     /** {@inheritDoc} */
     @Override public boolean supportsAlterTableWithAddColumn() throws SQLException {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean supportsAlterTableWithDropColumn() throws SQLException {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -263,7 +263,7 @@ public class JdbcThinDatabaseMetadata implements DatabaseMetaData {
 
     /** {@inheritDoc} */
     @Override public boolean nullPlusNonNullIsNull() throws SQLException {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */

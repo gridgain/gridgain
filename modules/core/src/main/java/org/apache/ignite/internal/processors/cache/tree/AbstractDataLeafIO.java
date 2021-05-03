@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,7 +166,7 @@ public abstract class AbstractDataLeafIO extends BPlusLeafIO<CacheSearchRow> imp
 
     /** {@inheritDoc} */
     @Override public final long getLink(long pageAddr, int idx) {
-        assert idx < getCount(pageAddr) : idx;
+        assert idx < getCount(pageAddr) : "idx=" + idx + ", cnt=" + getCount(pageAddr);
 
         return PageUtils.getLong(pageAddr, offset(idx));
     }

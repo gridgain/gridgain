@@ -62,6 +62,7 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -116,12 +117,15 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
+import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
+import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATION;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 
 /**
  *
@@ -132,6 +136,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
+
+    /** Warning of unsafe cluster deactivation. */
+    public static final String DATA_LOST_ON_DEACTIVATION_WARNING = "Deactivation stopped. Deactivation clears " +
+        "in-memory caches (without persistence) including the system caches. Use '--force' flag if you`re still sure.";
 
     /**
      * Error message for join node validation, if cluster in {@link ClusterState#ACTIVE_READ_ONLY} and joining node not
@@ -554,7 +562,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 && !inMemoryMode
                 && isBaselineSatisfied(state.baselineTopology(), discoCache.serverNodes())
             )
-                changeGlobalState(targetState, state.baselineTopology().currentBaseline(), false);
+                changeGlobalState(targetState, true, state.baselineTopology().currentBaseline(), false);
         }
 
         return null;
@@ -710,100 +718,112 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 }
             }
         }
-        else {
-            if (isApplicable(msg, state)) {
-                ExchangeActions exchangeActions;
+        else if (isApplicable(msg, state)) {
+            List<String> inMemCaches = listInMemoryUserCaches();
 
-                try {
-                    exchangeActions = ctx.cache().onStateChangeRequest(msg, topVer, state);
-                }
-                catch (IgniteCheckedException e) {
-                    GridChangeGlobalStateFuture fut = changeStateFuture(msg);
+            if (msg.state() == INACTIVE && !msg.forceDeactivation() && !inMemCaches.isEmpty() &&
+                allNodesSupportSafeDeactivationMode()) {
+                GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
 
-                    if (fut != null)
-                        fut.onDone(e);
-
-                    return false;
+                if (stateFut != null) {
+                    stateFut.onDone(new IgniteException(DATA_LOST_ON_DEACTIVATION_WARNING
+                        + " In memory caches: " + inMemCaches + " .To deactivate cluster pass '--force' flag."));
                 }
 
-                Set<UUID> nodeIds = U.newHashSet(discoCache.allNodes().size());
+                return false;
+            }
 
-                for (ClusterNode node : discoCache.allNodes())
-                    nodeIds.add(node.id());
+            ExchangeActions exchangeActions;
 
+            try {
+                exchangeActions = ctx.cache().onStateChangeRequest(msg, topVer, state);
+            }
+            catch (IgniteCheckedException e) {
                 GridChangeGlobalStateFuture fut = changeStateFuture(msg);
 
                 if (fut != null)
-                    fut.setRemaining(nodeIds, topVer.nextMinorVersion());
+                    fut.onDone(e);
 
-                if (log.isInfoEnabled())
-                    log.info("Started state transition: " + prettyString(msg.state()));
+                return false;
+            }
 
-                BaselineTopologyHistoryItem bltHistItem = BaselineTopologyHistoryItem.fromBaseline(
-                    state.baselineTopology());
+            Set<UUID> nodeIds = U.newHashSet(discoCache.allNodes().size());
 
-                transitionFuts.put(msg.requestId(), new GridFutureAdapter<>());
+            for (ClusterNode node : discoCache.allNodes())
+                nodeIds.add(node.id());
 
-                BaselineTopology blt;
+            GridChangeGlobalStateFuture fut = changeStateFuture(msg);
 
-                // We must use BLT from the message if it's activation request, or flag force change BLT is set, or
-                // clusterin-memory and new cluster state is active.
-                if (activateTransition(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
-                    blt = msg.baselineTopology();
-                else
-                    blt = state.baselineTopology();
+            if (fut != null)
+                fut.setRemaining(nodeIds, topVer.nextMinorVersion());
 
-                DiscoveryDataClusterState newState = globalState = DiscoveryDataClusterState.createTransitionState(
-                    msg.state(),
-                    state,
-                    blt,
-                    msg.requestId(),
-                    topVer,
-                    !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
-                    nodeIds
-                );
+            if (log.isInfoEnabled())
+                log.info("Started state transition: " + prettyString(msg.state()));
 
-                ctx.durableBackgroundTasksProcessor().onStateChange(msg);
+            BaselineTopologyHistoryItem bltHistItem = BaselineTopologyHistoryItem.fromBaseline(
+                state.baselineTopology());
 
-                if (msg.forceChangeBaselineTopology())
-                    globalState.setTransitionResult(msg.requestId(), msg.state());
+            transitionFuts.put(msg.requestId(), new GridFutureAdapter<>());
 
-                AffinityTopologyVersion stateChangeTopVer = topVer.nextMinorVersion();
+            BaselineTopology blt;
 
-                StateChangeRequest req = new StateChangeRequest(
-                    msg,
-                    bltHistItem,
-                    state.state(),
-                    stateChangeTopVer
-                );
+            // We must use BLT from the message if it's activation request, or flag force change BLT is set, or
+            // clusterin-memory and new cluster state is active.
+            if (activateTransition(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
+                blt = msg.baselineTopology();
+            else
+                blt = state.baselineTopology();
 
-                exchangeActions.stateChangeRequest(req);
+            DiscoveryDataClusterState newState = globalState = DiscoveryDataClusterState.createTransitionState(
+                msg.state(),
+                state,
+                blt,
+                msg.requestId(),
+                topVer,
+                !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
+                nodeIds
+            );
 
-                msg.exchangeActions(exchangeActions);
+            ctx.durableBackgroundTasksProcessor().onStateChange(msg);
 
-                if (state.state() != newState.state()) {
-                    if (ctx.event().isRecordable(EventType.EVT_CLUSTER_STATE_CHANGE_STARTED)) {
-                        ctx.getStripedExecutorService().execute(
-                            CLUSTER_ACTIVATION_EVT_STRIPE_ID,
-                            () -> ctx.event().record(new ClusterStateChangeStartedEvent(
-                                state.state(),
-                                newState.state(),
-                                ctx.discovery().localNode(),
-                                "Cluster state change started."
-                            ))
-                        );
-                    }
+            if (msg.forceChangeBaselineTopology())
+                globalState.setTransitionResult(msg.requestId(), msg.state());
+
+            AffinityTopologyVersion stateChangeTopVer = topVer.nextMinorVersion();
+
+            StateChangeRequest req = new StateChangeRequest(
+                msg,
+                bltHistItem,
+                state.state(),
+                stateChangeTopVer
+            );
+
+            exchangeActions.stateChangeRequest(req);
+
+            msg.exchangeActions(exchangeActions);
+
+            if (state.state() != newState.state()) {
+                if (ctx.event().isRecordable(EventType.EVT_CLUSTER_STATE_CHANGE_STARTED)) {
+                    ctx.getStripedExecutorService().execute(
+                        CLUSTER_ACTIVATION_EVT_STRIPE_ID,
+                        () -> ctx.event().record(new ClusterStateChangeStartedEvent(
+                            state.state(),
+                            newState.state(),
+                            ctx.discovery().localNode(),
+                            "Cluster state change started."
+                        ))
+                    );
                 }
-
-                return true;
             }
-            else {
-                // State already changed.
-                GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
 
-                if (stateFut != null)
-                    stateFut.onDone();
-            }
+            return true;
+        }
+        else {
+            // State already changed.
+            GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
+
+            if (stateFut != null)
+                stateFut.onDone();
         }
 
         return false;
@@ -1042,6 +1062,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** {@inheritDoc} */
+    @Deprecated
     @Override public IgniteInternalFuture<?> changeGlobalState(
         final boolean activate,
         Collection<? extends BaselineNode> baselineNodes,
@@ -1057,6 +1078,20 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean forceChangeBaselineTopology
     ) {
         return changeGlobalState(state, baselineNodes, forceChangeBaselineTopology, false);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> changeGlobalState(
+        ClusterState state,
+        boolean forceDeactivation,
+        Collection<? extends BaselineNode> baselineNodes,
+        boolean forceChangeBaselineTopology
+    ) {
+        BaselineTopology newBlt =
+            (compatibilityMode && !forceChangeBaselineTopology) || inMemoryClusterWithoutBlt() || ctx.clientNode() ?
+            null : calculateNewBaselineTopology(state, baselineNodes, forceChangeBaselineTopology);
+
+        return changeGlobalState0(state, forceDeactivation, newBlt, forceChangeBaselineTopology, false);
     }
 
     /**
@@ -1090,11 +1125,21 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean forceChangeBaselineTopology,
         boolean isAutoAdjust
     ) {
-        BaselineTopology newBlt = (compatibilityMode && !forceChangeBaselineTopology) ?
+        BaselineTopology newBlt = (compatibilityMode && !forceChangeBaselineTopology) || inMemoryClusterWithoutBlt() ?
             null :
             calculateNewBaselineTopology(state, baselineNodes, forceChangeBaselineTopology);
 
-        return changeGlobalState0(state, newBlt, forceChangeBaselineTopology, isAutoAdjust);
+        return changeGlobalState0(state, true, newBlt, forceChangeBaselineTopology, isAutoAdjust);
+    }
+
+    /**
+     * Returns a positive result when the cluster in memory and does not support baseline auto adjustment feature.
+     * In the latest versions this method will return always true.
+     *
+     * @return True in a compatibility mode of cluster, false otherwise.
+     */
+    public boolean inMemoryClusterWithoutBlt() {
+        return isInMemoryCluster() && !allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT);
     }
 
     /** */
@@ -1163,6 +1208,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /** */
     private IgniteInternalFuture<?> changeGlobalState0(
         ClusterState state,
+        boolean forceDeactivation,
         BaselineTopology blt,
         boolean forceChangeBaselineTop,
         boolean isAutoAdjust
@@ -1178,21 +1224,23 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             );
         }
 
+        DiscoveryDataClusterState curState = globalState;
+
+        // Should to send always a message from Demon node, because it doesn't get Discovery Data Packege on local join
+        // and doesn't know a cluster state properly.
+        if (!ctx.isDaemon() && !curState.transition() && curState.state() == state) {
+            if (!ClusterState.active(state) || inMemoryClusterWithoutBlt() || BaselineTopology.equals(curState.baselineTopology(), blt))
+                return new GridFinishedFuture<>();
+        }
+
         if (ctx.isDaemon() || ctx.clientNode())
-            return sendComputeChangeGlobalState(state, blt, forceChangeBaselineTop);
+            return sendComputeChangeGlobalState(state, forceDeactivation, blt, forceChangeBaselineTop);
 
         if (cacheProc.transactions().tx() != null || sharedCtx.lockedTopologyVersion(null) != null) {
             return new GridFinishedFuture<>(
                 new IgniteCheckedException("Failed to " + prettyString(state) +
                     " (must invoke the method outside of an active transaction).")
             );
-        }
-
-        DiscoveryDataClusterState curState = globalState;
-
-        if (!curState.transition() && curState.state() == state) {
-            if (!ClusterState.active(state) || BaselineTopology.equals(curState.baselineTopology(), blt))
-                return new GridFinishedFuture<>();
         }
 
         GridChangeGlobalStateFuture startedFut = null;
@@ -1259,6 +1307,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             ctx.localNodeId(),
             storedCfgs,
             state,
+            forceDeactivation,
             blt,
             forceChangeBaselineTop,
             System.currentTimeMillis()
@@ -1431,11 +1480,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /**
      * @param state New cluster state.
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
      * @param blt New cluster state.
      * @param forceBlt New cluster state.
      */
     private IgniteInternalFuture<Void> sendComputeChangeGlobalState(
         ClusterState state,
+        boolean forceDeactivation,
         BaselineTopology blt,
         boolean forceBlt
     ) {
@@ -1444,8 +1495,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         U.log(
             log,
             "Sending " + prettyString(state) +
+                ", forceDeactivation=" + forceDeactivation +
                 " request from node [id=" + ctx.localNodeId() +
                 ", topVer=" + topVer +
+                ", forceDeactivation=" + forceDeactivation +
                 ", client=" + ctx.clientNode() +
                 ", daemon=" + ctx.isDaemon() + "]"
         );
@@ -1455,7 +1508,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         IgniteFuture<Void> fut;
 
         if (allNodesSupportsReadOnlyMode())
-            fut = servers.compute().runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
+            if (allNodesSupportSafeDeactivationMode())
+                fut = servers.compute().runAsync(new ClientSetGlobalStateComputeRequestV2(state, forceDeactivation, blt,
+                    forceBlt));
+            else
+                fut = servers.compute().runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
         else {
             assert state != ACTIVE_READ_ONLY : "No one server node doesn't supports this feature.";
 
@@ -2078,6 +2135,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         return allNodesSupport(ctx, CLUSTER_READ_ONLY_MODE, IgniteDiscoverySpi.SRV_NODES);
     }
 
+    /** Checks that all server nodes supports {@link IgniteFeatures#SAFE_CLUSTER_DEACTIVATION}. */
+    private boolean allNodesSupportSafeDeactivationMode() {
+        return allNodesSupport(ctx, SAFE_CLUSTER_DEACTIVATION, IgniteDiscoverySpi.SRV_NODES);
+    }
+
     /**
      * Gets cluster state with less features of {@code state1} and {@code state2}.
      * <br/>
@@ -2111,6 +2173,16 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridClusterStateProcessor.class, this);
+    }
+
+    /**
+     * @return Lists in-memory user defined caches.
+     */
+    private List<String> listInMemoryUserCaches() {
+        return ctx.cache().cacheDescriptors().values().stream()
+            .filter(desc -> !isPersistentCache(desc.cacheConfiguration(), ctx.config().getDataStorageConfiguration())
+                && (!desc.cacheConfiguration().isWriteThrough() || !desc.cacheConfiguration().isReadThrough())
+                && !CU.isSystemCache(desc.cacheName())).map(DynamicCacheDescriptor::cacheName).collect(Collectors.toList());
     }
 
     /**

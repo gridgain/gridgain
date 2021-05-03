@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.binary.BinaryRawReader;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientResponse;
  */
 public class ClientClusterChangeStateRequest extends ClientRequest {
     /** Next state. */
-    private final boolean isActive;
+    private final ClusterState state;
 
     /**
      * Constructor.
@@ -36,13 +36,14 @@ public class ClientClusterChangeStateRequest extends ClientRequest {
      */
     public ClientClusterChangeStateRequest(BinaryRawReader reader) {
         super(reader);
-        isActive = reader.readBoolean();
+
+        state = ClusterState.fromOrdinal(reader.readByte());
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        IgniteCluster cluster = ctx.kernalContext().grid().cluster();
-        cluster.active(isActive);
+        ctx.kernalContext().grid().cluster().state(state);
+
         return new ClientResponse(requestId());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -333,9 +333,10 @@ public interface GridQueryIndexing {
      * Rebuild indexes for the given cache if necessary.
      *
      * @param cctx Cache context.
+     * @param force Force rebuild indexes.
      * @return Future completed when index rebuild finished.
      */
-    IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx);
+    @Nullable IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force);
 
     /**
      * Mark as rebuild needed for the given cache.

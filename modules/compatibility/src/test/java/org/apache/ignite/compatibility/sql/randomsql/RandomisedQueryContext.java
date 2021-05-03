@@ -18,34 +18,35 @@ package org.apache.ignite.compatibility.sql.randomsql;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.apache.ignite.compatibility.sql.randomsql.ast.TableRef;
 
 /**
  * Context for building randomised query.
  */
+@SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
 class RandomisedQueryContext {
+    /** Context of parent query. Used to build current query as a subquery. */
+    private final RandomisedQueryContext parentCtx;
+
     /** Table available for column references. */
-    private final List<TableRef> scopeTbls;
+    private final List<TableRef> scopeTbls = new ArrayList<>();
 
-    /** Current schema. */
-    private Schema schema;
+    /** Query params. */
+    private final List<Object> params = new ArrayList<>();
 
-    /**
-     * @param schema Schema.
-     */
-    public RandomisedQueryContext(Schema schema) {
-        this.schema = schema;
-
-        scopeTbls = new ArrayList<>();
+    /** */
+    public RandomisedQueryContext() {
+        parentCtx = null;
     }
 
     /**
-     * Returns current schema this context were created with.
+     * Use this constructor to create context for subquery.
      *
-     * @return Schema of this context.
+     * @param parentCtx Parent context.
      */
-    public Schema schema() {
-        return schema;
+    public RandomisedQueryContext(RandomisedQueryContext parentCtx) {
+        this.parentCtx = Objects.requireNonNull(parentCtx, "parentCtx");
     }
 
     /**
@@ -64,5 +65,28 @@ class RandomisedQueryContext {
      */
     public void addScopeTable(TableRef tblRef) {
         scopeTbls.add(tblRef);
+    }
+
+    /**
+     * Add param to the query.
+     *
+     * @param obj Object.
+     */
+    public void addQueryParam(Object obj) {
+        params.add(obj);
+    }
+
+    /**
+     * @return Params for prepared statement.
+     */
+    public List<Object> queryParams() {
+        return params;
+    }
+
+    /**
+     * @return Context of parent query.
+     */
+    public RandomisedQueryContext parentContext() {
+        return parentCtx;
     }
 }

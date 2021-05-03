@@ -45,6 +45,7 @@ import org.apache.ignite.internal.GridReleaseTypeSelfTest;
 import org.apache.ignite.internal.GridSelfTest;
 import org.apache.ignite.internal.GridStartStopSelfTest;
 import org.apache.ignite.internal.GridStopWithCancelSelfTest;
+import org.apache.ignite.internal.GridStopWithCollisionSpiTest;
 import org.apache.ignite.internal.IgniteLocalNodeMapBeforeStartTest;
 import org.apache.ignite.internal.IgniteSlowClientDetectionSelfTest;
 import org.apache.ignite.internal.IgniteThreadGroupNodeRestartTest;
@@ -181,6 +182,7 @@ import org.junit.runners.Suite;
     GridSpiLocalHostInjectionTest.class,
     GridLifecycleBeanSelfTest.class,
     GridStopWithCancelSelfTest.class,
+    GridStopWithCollisionSpiTest.class,
     GridReduceSelfTest.class,
     GridEventConsumeSelfTest.class,
     GridSuppressedExceptionSelfTest.class,

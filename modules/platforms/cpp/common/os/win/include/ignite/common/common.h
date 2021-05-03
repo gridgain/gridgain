@@ -40,4 +40,6 @@
 #   define IGNITE_NO_THROW throw()
 #endif
 
+#define IGNITE_UNUSED(x) ((void) x)
+
 #endif //_IGNITE_COMMON_COMMON

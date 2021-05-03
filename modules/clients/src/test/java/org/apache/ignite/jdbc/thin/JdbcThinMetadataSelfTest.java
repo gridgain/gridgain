@@ -729,6 +729,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_MAX.null.19",
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_TOTAL_MIN.null.19",
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISK_ALLOCATION_TOTAL_MAX.null.19",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.ENFORCE_JOIN_ORDER.null.1",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.DISTRIBUTED_JOINS.null.1",
+                "IGNITE.LOCAL_SQL_QUERY_HISTORY.LAZY.null.1",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.QUERY_ID.null.2147483647",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.SQL.null.2147483647",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.SCHEMA_NAME.null.2147483647",
@@ -741,6 +744,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_MAX.null.19",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_TOTAL.null.19",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.INITIATOR_ID.null.2147483647",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.ENFORCE_JOIN_ORDER.null.1",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISTRIBUTED_JOINS.null.1",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.LAZY.null.1",
                 "IGNITE.NODES.NODE_ID.null.16",
                 "IGNITE.NODES.CONSISTENT_ID.null.2147483647",
                 "IGNITE.NODES.VERSION.null.2147483647",
@@ -1188,6 +1194,21 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 conn.getMetaData().getDatabaseProductVersion(), IgniteVersionUtils.VER.toString());
             assertEquals("Unexpected ignite driver version.",
                 conn.getMetaData().getDriverVersion(), IgniteVersionUtils.VER.toString());
+        }
+    }
+
+    /**
+     * Check JDBC support flags.
+     */
+    @Test
+    public void testCheckSupports() throws SQLException {
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            DatabaseMetaData meta = conn.getMetaData();
+
+            assertTrue(meta.supportsANSI92EntryLevelSQL());
+            assertTrue(meta.supportsAlterTableWithAddColumn());
+            assertTrue(meta.supportsAlterTableWithDropColumn());
+            assertTrue(meta.nullPlusNonNullIsNull());
         }
     }
 

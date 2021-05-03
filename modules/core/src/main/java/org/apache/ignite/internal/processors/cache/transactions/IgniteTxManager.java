@@ -32,7 +32,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
@@ -135,9 +134,9 @@ import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
-import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_TX_COLLISIONS_DUMP;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
@@ -3207,7 +3206,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     ? new GridCompoundFuture<>() : null;
 
                 for (final IgniteInternalTx tx : activeTransactions()) {
-                    if ((tx.near() && !tx.local()) || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
+                    if ((tx.near() && !tx.local() && tx.originatingNodeId().equals(evtNodeId))
+                        || (tx.storeWriteThrough() && tx.masterNodeIds().contains(evtNodeId))) {
                         // Invalidate transactions.
                         salvageTx(tx, RECOVERY_FINISH);
                     }
@@ -3228,8 +3228,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                                             tx.rollbackAsync();
                                     });
                                 }
-                                // If we could not mark tx as rollback, it means that transaction is being committed.
-                                else if (tx.setRollbackOnly())
+                                // If we could not mark tx as rollback, it means that transaction
+                                // is either being committed or already marked as rollback.
+                                else if (tx.setRollbackOnly() || tx.state() == MARKED_ROLLBACK)
                                     tx.rollbackAsync();
                             }
                         }
@@ -3297,9 +3298,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
          * @return True if message required, false otherwise.
          */
         private boolean isMvccRecoveryMessageRequired() {
-            return node.isClient() && mvccCrd != null && mvccCrd.nodeId() != null &&
-                (cctx.kernalContext().coordinators().mvccEnabled() ||
-                !IgniteFeatures.nodeSupports(cctx.kernalContext(), cctx.node(mvccCrd.nodeId()), IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
+            ClusterNode mvccCrdNode = null;
+
+            if (mvccCrd != null && mvccCrd.nodeId() != null)
+                mvccCrdNode = cctx.node(mvccCrd.nodeId());
+
+            return node.isClient() && mvccCrdNode != null && (cctx.kernalContext().coordinators().mvccEnabled() ||
+                !IgniteFeatures.nodeSupports(cctx.kernalContext(), mvccCrdNode, IgniteFeatures.MVCC_TX_RECOVERY_PROTOCOL_V2));
         }
     }
 

@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -101,9 +102,9 @@ import org.apache.ignite.internal.processors.cache.mvcc.DeadlockDetectionManager
 import org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.DbCheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
@@ -142,7 +143,6 @@ import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
 import org.apache.ignite.internal.util.InitializationProtector;
-import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -294,8 +294,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         jCacheProxies = new ConcurrentHashMap<>();
 
         marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
-        splitter = new CacheConfigurationSplitterImpl(marsh);
-        enricher = new CacheConfigurationEnricher(marsh, U.resolveClassLoader(ctx.config()));
+        splitter = new CacheConfigurationSplitterImpl(ctx, marsh);
+        enricher = new CacheConfigurationEnricher(ctx, marsh, U.resolveClassLoader(ctx.config()));
     }
 
     /**
@@ -416,7 +416,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             CacheGroupContext grp = cacheGroup(task0.groupId());
 
             if (grp != null)
-                grp.preloader().finishPreloading(task0.topologyVersion());
+                grp.preloader().finishPreloading(task0.topologyVersion(), task0.rebalanceId());
         }
         else
             U.warn(log, "Unsupported custom exchange task: " + task);
@@ -516,6 +516,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         grp.metrics().remove();
+
+        sharedCtx.evict().cleanupRemovedGroup(grp.groupId());
 
         cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
@@ -2809,7 +2811,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 if (gctx != null && gctx.persistenceEnabled() && sharedCtx.database() instanceof GridCacheDatabaseSharedManager) {
                     GridCacheDatabaseSharedManager mngr = (GridCacheDatabaseSharedManager)sharedCtx.database();
-                    mngr.removeCheckpointListener((DbCheckpointListener)gctx.offheap());
+                    mngr.removeCheckpointListener((CheckpointListener)gctx.offheap());
                 }
             });
         }
@@ -5241,12 +5243,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             AtomicReference<IgniteCheckedException> restoreStateError = new AtomicReference<>();
 
-            StripedExecutor stripedExec = ctx.getStripedExecutorService();
+            ExecutorService sysPool = ctx.getSystemExecutorService();
 
-            int roundRobin = 0;
+            CountDownLatch completionLatch = new CountDownLatch(forGroups.size());
 
             for (CacheGroupContext grp : forGroups) {
-                stripedExec.execute(roundRobin % stripedExec.stripes(), () -> {
+                sysPool.execute(() -> {
                     try {
                         long processed = grp.offheap().restorePartitionStates(partitionStates);
 
@@ -5263,14 +5265,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 : new IgniteCheckedException(e)
                         );
                     }
+                    finally {
+                        completionLatch.countDown();
+                    }
                 });
-
-                roundRobin++;
             }
 
             try {
                 // Await completion restore state tasks in all stripes.
-                stripedExec.awaitComplete();
+                completionLatch.await();
             }
             catch (InterruptedException e) {
                 throw new IgniteInterruptedException(e);

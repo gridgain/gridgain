@@ -21,10 +21,10 @@ package org.apache.ignite.compatibility.sql.randomsql.ast;
  */
 public class BiCondition implements Ast {
     /** */
-    public final Ast left;
+    private final Ast left;
 
     /** */
-    public final Ast right;
+    private final Ast right;
 
     /** */
     private final Operator op;

@@ -192,8 +192,22 @@ public final class IgniteSystemProperties {
 
     /**
      * Setting to {@code true} enables writing sensitive information in {@code toString()} output.
+     *
+     * @deprecated Use {@link #IGNITE_SENSITIVE_DATA_LOGGING} instead.
      */
+    @Deprecated
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
+
+    /**
+     * Setting to {@code "plain"} enables writing sensitive information in {@code toString()} output.
+     * Setting to {@code "hash"} enables writing hash of sensitive information in {@code toString()} output.
+     * Setting to {@code "none"} disables writing sensitive information in {@code toString()} output.
+     *
+     * {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} has higher priority. If it is explicitly set, then it is converted:
+     * "true" -> "plain",
+     * "false" -> "none".
+     */
+    public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
@@ -351,6 +365,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_MARSHAL_BUFFERS_RECHECK = "IGNITE_MARSHAL_BUFFERS_RECHECK";
 
     /**
+     * System property to specify per thread binary allocator chunk pool size. Default value is {@code 32}.
+     */
+    public static final String IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = "IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE";
+
+    /**
      * System property to disable {@link HostnameVerifier} for SSL connections.
      * Can be used for development with self-signed certificates. Default value is {@code false}.
      */
@@ -452,7 +471,10 @@ public final class IgniteSystemProperties {
 
     /**
      * Flag indicating whether validation of keys put to cache should be disabled.
+     *
+     * @deprecated Since 2.7.26. Obsolete because of common use of binary marshaller.
      */
+    @Deprecated
     public static final String IGNITE_CACHE_KEY_VALIDATION_DISABLED = "IGNITE_CACHE_KEY_VALIDATION_DISABLED";
 
     /**
@@ -777,16 +799,6 @@ public final class IgniteSystemProperties {
      * WAL rebalance threshold.
      */
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
-
-    /**
-     * Margin for WAL iterator, that used for historical rebalance on atomic cache.
-     * It is intended for prevent  partition divergence due to reordering in WAL.
-     * <p>
-     * Default is {@code 5}. Iterator starts from 5 updates earlier than expected.
-     *
-     */
-    public static final String WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE =
-        "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE";
 
     /**
      * Prefer historical rebalance if there's enough history regardless off all heuristics.
@@ -1443,6 +1455,14 @@ public final class IgniteSystemProperties {
      * all system actions will be prohibited.
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
+
+    /**
+     * There can be background tasks that can be interrupted due to node stop, node fail, or cluster deactivation,
+     * but need to be completed, so they start after node start or cluster activation. If this option is set to
+     * {@code false}, then tasks will not be started.
+     */
+    public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
+        "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
 
     /**
      * Enforces singleton.

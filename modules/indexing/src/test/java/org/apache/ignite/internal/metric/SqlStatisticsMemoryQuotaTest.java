@@ -35,21 +35,6 @@ import org.junit.Test;
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
-    /**
-     * This callback validates that some memory is reserved.
-     */
-    private static final MemValidator MEMORY_IS_USED = (freeMem, maxMem) -> {
-        if (freeMem == maxMem)
-            fail("Expected some memory reserved.");
-    };
-
-    /**
-     * This callback validates that no "sql" memory is reserved.
-     */
-    private static final MemValidator MEMORY_IS_FREE = (freeMem, maxMem) -> {
-        if (freeMem < maxMem)
-            fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
-    };
 
     /**
      * Clean up.
@@ -309,17 +294,5 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      */
     private boolean almostEquals(long l1, long l2, long error) {
         return Math.max(l1, l2) - Math.min(l1, l2) <= Math.abs(error);
-    }
-
-    /**
-     * Functional interface to validate memory metrics values.
-     */
-    private static interface MemValidator {
-        /**
-         *
-         * @param free freeMem metric value.
-         * @param max maxMem metric value.
-         */
-        void validate(long free, long max);
     }
 }

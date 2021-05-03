@@ -46,6 +46,9 @@ public class ConnectionAndSslParameters {
     /** Ping interval for grid client. See {@link GridClientConfiguration#getPingInterval()}. */
     private long pingInterval;
 
+    /** Connection timeout for grid client. See {@link GridClientConfiguration#getConnectTimeout()} }. */
+    private int connTimeout;
+
     /** Verbose mode. */
     private boolean verbose;
 
@@ -102,7 +105,7 @@ public class ConnectionAndSslParameters {
      * @param sslTrustStoreType Truststore Type.
      */
     public ConnectionAndSslParameters(Command command, String host, String port, String user, String pwd,
-        Long pingTimeout, Long pingInterval, boolean autoConfirmation, boolean verbose,
+        Long pingTimeout, Long pingInterval, Integer connTimeout, boolean autoConfirmation, boolean verbose,
         String sslProtocol, String sslCipherSuites, String sslKeyAlgorithm,
         String sslKeyStorePath, char[] sslKeyStorePassword, String sslKeyStoreType,
         String sslTrustStorePath, char[] sslTrustStorePassword, String sslTrustStoreType
@@ -115,6 +118,7 @@ public class ConnectionAndSslParameters {
 
         this.pingTimeout = pingTimeout;
         this.pingInterval = pingInterval;
+        this.connTimeout = connTimeout;
 
         this.autoConfirmation = autoConfirmation;
         this.verbose = verbose;
@@ -197,6 +201,13 @@ public class ConnectionAndSslParameters {
      */
     public long pingInterval() {
         return pingInterval;
+    }
+
+    /**
+     * @return Connection timeout for grid client. See  }.
+     */
+    public int connectionTimeout() {
+        return connTimeout;
     }
 
     /**
@@ -302,6 +313,6 @@ public class ConnectionAndSslParameters {
             "password", pwd == null ? null : "*****",
             "sslKeyStorePassword", sslKeyStorePassword == null ? null : "*****",
             "sslTrustStorePassword", sslTrustStorePassword == null ? null : "*****"
-            );
+        );
     }
 }

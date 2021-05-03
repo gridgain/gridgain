@@ -123,7 +123,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public T Deserialize<T>()
         {
-            return Deserialize<T>(BinaryMode.Deserialize);
+            return Deserialize<T>(BinaryMode.KeepBinary);
         }
 
         /** <inheritdoc /> */

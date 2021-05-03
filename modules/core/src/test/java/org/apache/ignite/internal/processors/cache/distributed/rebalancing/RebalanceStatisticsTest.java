@@ -50,6 +50,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
@@ -179,7 +180,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
                 };
 
                 assertTrue(
-                    supplierMsgs.toString(),
+                    "msgs=" + supplierMsgs.toString() + ", checVals=" + asList(checVals).toString(),
                     supplierMsgs.stream().anyMatch(s -> Stream.of(checVals).allMatch(s::contains))
                 );
             }

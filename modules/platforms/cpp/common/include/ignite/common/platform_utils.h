@@ -115,7 +115,7 @@ namespace ignite
          *
          * @return Random seed.
          */
-        unsigned GetRandSeed();
+        IGNITE_IMPORT_EXPORT unsigned GetRandSeed();
     }
 }
 

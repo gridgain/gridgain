@@ -126,7 +126,7 @@ namespace ignite
             /** Blocking flag. */
             bool blocking;
 
-            IGNITE_NO_COPY_ASSIGNMENT(TcpSocketClient)
+            IGNITE_NO_COPY_ASSIGNMENT(TcpSocketClient);
         };
     }
 }

@@ -16,7 +16,19 @@
 
 package org.apache.ignite.client;
 
-import org.apache.ignite.internal.client.thin.*;
+import org.apache.ignite.internal.client.thin.CacheAsyncTest;
+import org.apache.ignite.internal.client.thin.CacheEntryListenersTest;
+import org.apache.ignite.internal.client.thin.ClusterApiTest;
+import org.apache.ignite.internal.client.thin.ClusterGroupTest;
+import org.apache.ignite.internal.client.thin.ComputeTaskTest;
+import org.apache.ignite.internal.client.thin.ReliableChannelTest;
+import org.apache.ignite.internal.client.thin.ServicesTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessConnectionTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessStableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessUnstableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
+import org.apache.ignite.internal.client.thin.TimeoutTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -32,6 +44,9 @@ import org.junit.runners.Suite;
     IgniteBinaryTest.class,
     LoadTest.class,
     ReliabilityTest.class,
+    ReliabilityTestAsync.class,
+    ReliabilityTestPartitionAware.class,
+    ReliabilityTestPartitionAwareAsync.class,
     SecurityTest.class,
     FunctionalQueryTest.class,
     IgniteBinaryQueryTest.class,
@@ -40,11 +55,19 @@ import org.junit.runners.Suite;
     ConnectToStartingNodeTest.class,
     AsyncChannelTest.class,
     ComputeTaskTest.class,
+    ClusterApiTest.class,
+    ClusterGroupTest.class,
+    ServicesTest.class,
+    CacheEntryListenersTest.class,
     ThinClientTxMissingBackupsFailover.class,
     ThinClientAffinityAwarenessConnectionTest.class,
     ThinClientAffinityAwarenessStableTopologyTest.class,
     ThinClientAffinityAwarenessUnstableTopologyTest.class,
-    ThinClientPartitionAwarenessResourceReleaseTest.class
+    ThinClientPartitionAwarenessResourceReleaseTest.class,
+    ThinClientPartitionAwarenessDiscoveryTest.class,
+    ReliableChannelTest.class,
+    CacheAsyncTest.class,
+    TimeoutTest.class
 })
 public class ClientTestSuite {
     // No-op.

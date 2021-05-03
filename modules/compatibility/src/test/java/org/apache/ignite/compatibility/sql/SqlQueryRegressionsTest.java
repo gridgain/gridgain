@@ -24,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
@@ -43,21 +45,28 @@ import org.apache.ignite.compatibility.sql.randomsql.Table;
 import org.apache.ignite.compatibility.sql.runner.PredefinedQueriesSupplier;
 import org.apache.ignite.compatibility.sql.runner.QueryDuelBenchmark;
 import org.apache.ignite.compatibility.sql.runner.QueryDuelResult;
+import org.apache.ignite.compatibility.sql.runner.QueryWithParams;
 import org.apache.ignite.compatibility.testframework.junits.Dependency;
 import org.apache.ignite.compatibility.testframework.junits.IgniteCompatibilityAbstractTest;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.unmodifiableList;
 
 /**
  * Test for SQL queries regressions detection.
@@ -88,7 +97,7 @@ import org.junit.Test;
 @SuppressWarnings("TypeMayBeWeakened")
 public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /*
-    If you are wanted to troubleshoot particular run, you have to set following defaults to the required values
+     * If you are wanted to troubleshoot particular run, you have to set following defaults to the required values
      */
     /**
      * If set to non-null value, it will be used in random generator, otherwise generator will be
@@ -97,16 +106,28 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static final Integer DEFAULT_SEED = null;
 
     /** */
-    private static final String DEFAULT_BASE_VERSION = "8.7.22";
+    private static final String DEFAULT_BASE_VERSION = IgniteProperties.get("ignite.version");
+
+    /** */
+    private static final String DEFAULT_TARGET_VERSION = IgniteProperties.get("ignite.version");
 
     /** */
     private static final boolean DEFAULT_BASE_IS_IGNITE = false;
 
     /** */
+    private static final boolean DEFAULT_TARGET_IS_IGNITE = false;
+
+    /** */
     private static final String BASE_VERSION_PARAM = "BASE_VERSION";
 
     /** */
+    private static final String TARGET_VERSION_PARAM = "TARGET_VERSION";
+
+    /** */
     private static final String BASE_IS_IGNITE_PARAM = "BASE_IS_IGNITE";
+
+    /** */
+    private static final String TARGET_IS_IGNITE_PARAM = "TARGET_IS_IGNITE";
 
     /** */
     private static final String SEED_PARAM = "SEED";
@@ -118,23 +139,28 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static final int NEW_JDBC_PORT = 10802;
 
     /** */
-    private static final long BENCHMARK_TIMEOUT = 60_000;
+    private static final long BENCHMARK_TIMEOUT = SF.applyLB(60 * 60 * 1000, 60 * 1000);
 
     /** */
     private static final long WARM_UP_TIMEOUT = 5_000;
 
     /** */
-    private static final String JDBC_URL = "jdbc:ignite:thin://127.0.0.1:";
+    private static final int REREUN_COUNT = 10;
 
     /** */
-    private static final TcpDiscoveryIpFinder BASE_VER_FINDER = new TcpDiscoveryVmIpFinder(true) {{
-        setAddresses(Collections.singleton("127.0.0.1:47500..47509"));
-    }};
+    private static final int REREUN_SUCCESS_COUNT = Math.max((int)(REREUN_COUNT * 0.8), 1);
 
-    /**  */
-    private static final TcpDiscoveryVmIpFinder NEW_VER_FINDER = new TcpDiscoveryVmIpFinder(true) {{
-        setAddresses(Collections.singleton("127.0.0.1:47510..47519"));
-    }};
+    /** */
+    private static final String JDBC_URL = "jdbc:ignite:thin://127.0.0.1:";
+
+    /** Amount of discovery ports. */
+    private static final int DISCOVERY_PORT_RANGE = 9;
+
+    /** The very first discovery port in the range for base cluster. */
+    private static final int BASE_DISCOVERY_PORT = 47500;
+
+    /** The very first discovery port in the range for target cluster. */
+    private static final int TARGET_DISCOVERY_PORT = BASE_DISCOVERY_PORT + DISCOVERY_PORT_RANGE + 1;
 
     /** Model factories. */
     private static final List<ModelFactory<?>> MODEL_FACTORIES = Arrays.asList(
@@ -157,26 +183,35 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      */
     private boolean baseIsIgnite;
 
+    /**
+     * {@code true} if target is Ignite, {@code false} if it is GG
+     */
+    private boolean targetIsIgnite;
+
     /** */
-    private String ver;
+    private String baseVer;
+
+    /** */
+    private String targetVer;
 
     /** */
     private int seed;
 
+    /** Current context for start external JVM. */
+    private ExternalJvmContext currCtx;
+
     /** {@inheritDoc} */
     @Override protected Collection<Dependency> getDependencies(String igniteVer) {
-        Collection<Dependency> dependencies = new ArrayList<>();
+        assert currCtx != null;
 
-        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, false));
-        dependencies.add(new Dependency("core", groupId(), "ignite-core", igniteVer, true));
-        dependencies.add(new Dependency("indexing", groupId(), "ignite-indexing", igniteVer, false));
+        return currCtx.deps();
+    }
 
-        if (baseIsIgnite)
-            dependencies.add(new Dependency("h2", "com.h2database", "h2", "1.4.197", false));
-        else
-            dependencies.add(new Dependency("h2", groupId(), "ignite-h2", igniteVer, false));
+    /** {@inheritDoc} */
+    @Override protected Collection<String> getJvmParams() {
+        assert currCtx != null;
 
-        return dependencies;
+        return currCtx.jvmArgs();
     }
 
     /** {@inheritDoc} */
@@ -194,40 +229,57 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         initParam();
 
         try {
-            Supplier<String> qrySupplier = new RandomQuerySupplier(SCHEMA, seed);
+            Supplier<QueryWithParams> qrySupplier = new RandomQuerySupplier(SCHEMA, seed);
 
             startBaseAndNewClusters(seed);
 
-            try (Connection oldConn = createConnection(BASE_JDBC_PORT);
-                 Connection newConn = createConnection(NEW_JDBC_PORT)
+            try (Connection baseConn = createConnection(BASE_JDBC_PORT);
+                 Connection targetConn = createConnection(NEW_JDBC_PORT)
             ) {
-                QueryDuelBenchmark benchmark = new QueryDuelBenchmark(log, oldConn, newConn);
+                QueryDuelBenchmark benchmark = new QueryDuelBenchmark(log, baseConn, targetConn);
 
-                // 0. Warm-up.IgniteCompatibilityNodeRunner
-                benchmark.runBenchmark(WARM_UP_TIMEOUT, qrySupplier, 0, 1);
+                // 0. Warm-up.
+                benchmark.runBenchmark(WARM_UP_TIMEOUT, qrySupplier);
 
                 // 1. Initial run.
-                Collection<QueryDuelResult> suspiciousQrys =
-                    benchmark.runBenchmark(BENCHMARK_TIMEOUT, qrySupplier, 1, 1);
+                List<QueryDuelResult> suspiciousQrys = benchmark.runBenchmark(BENCHMARK_TIMEOUT, qrySupplier).stream()
+                    .filter(this::isResultUnsuccessful)
+                    .collect(Collectors.toList());
 
                 if (suspiciousQrys.isEmpty())
                     return; // No suspicious queries - no problem.
 
-                Set<String> suspiciousQrysSet = suspiciousQrys.stream()
-                    .map(QueryDuelResult::query)
-                    .collect(Collectors.toSet());
-
                 if (log.isInfoEnabled())
-                    log.info("Problematic queries number: " + suspiciousQrysSet.size());
-
-                Supplier<String> problematicQrysSupplier = new PredefinedQueriesSupplier(suspiciousQrysSet, true);
+                    log.info("Problematic queries number: " + suspiciousQrys.size());
 
                 // 2. Rerun problematic queries to ensure they are not outliers.
-                Collection<QueryDuelResult> failedQueries =
-                    benchmark.runBenchmark(getTestTimeout(), problematicQrysSupplier, 7, 10);
+                Map<QueryWithParams, AtomicInteger> qryToSuccessExecCnt = suspiciousQrys.stream()
+                    .collect(Collectors.toMap(QueryDuelResult::query, r -> new AtomicInteger()));
+
+                int i = 0;
+                do {
+                    if (qryToSuccessExecCnt.isEmpty())
+                        break;
+
+                    List<QueryDuelResult> rerunRes = benchmark.runBenchmark(getTestTimeout(),
+                        new PredefinedQueriesSupplier(qryToSuccessExecCnt.keySet(), true));
+
+                    Set<QueryWithParams> failedQrys = rerunRes.stream()
+                        .filter(this::isResultUnsuccessful)
+                        .map(QueryDuelResult::query)
+                        .collect(Collectors.toSet());
+
+                    qryToSuccessExecCnt.entrySet().stream()
+                        .filter(e -> !failedQrys.contains(e.getKey()))
+                        .forEach(e -> e.getValue().incrementAndGet());
+
+                    qryToSuccessExecCnt.values().removeIf(v -> v.get() == REREUN_SUCCESS_COUNT);
+                } while (i++ < REREUN_COUNT);
+
+                suspiciousQrys.removeIf(r -> !qryToSuccessExecCnt.containsKey(r.query()));
 
                 assertTrue("Found SQL performance regression for queries (seed is " + seed + "): "
-                        + formatPretty(failedQueries), failedQueries.isEmpty());
+                        + formatPretty(suspiciousQrys), suspiciousQrys.isEmpty());
             }
         }
         finally {
@@ -240,36 +292,74 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      *
      * @param seed Random seed.
      */
-    public void startBaseAndNewClusters(int seed) throws Exception {
+    private void startBaseAndNewClusters(int seed) throws Exception {
         // Base cluster.
-        startGrid(2, ver, new NodeConfigurationClosure("0"),
-            ignite -> createTablesAndPopulateData(ignite, seed));
-        startGrid(3, ver, new NodeConfigurationClosure("1"));
+        try (ExternalJvmContext ignored = createContext(baseVer, baseIsIgnite)) {
+            startGrid(3, baseVer, new NodeConfigurationClosure("1", BASE_DISCOVERY_PORT, BASE_JDBC_PORT),
+                ignite -> createTablesAndPopulateData(ignite, seed));
+            startGrid(4, baseVer, new NodeConfigurationClosure("2", BASE_DISCOVERY_PORT, BASE_JDBC_PORT));
+        }
 
-        // New cluster
-        Ignite ignite = IgnitionEx.start(prepareNodeConfig(
-            getConfiguration(getTestIgniteInstanceName(0)), NEW_VER_FINDER, NEW_JDBC_PORT, "0"));
-        IgnitionEx.start(prepareNodeConfig(
-            getConfiguration(getTestIgniteInstanceName(1)), NEW_VER_FINDER, NEW_JDBC_PORT, "1"));
+        rmJvmInstance = null; // clear remote instance because we are going to start separate cluster now
 
-        createTablesAndPopulateData(ignite, seed);
+        // Target cluster
+        try (ExternalJvmContext ignored = createContext(targetVer, targetIsIgnite)) {
+            startGrid(1, targetVer, new NodeConfigurationClosure("1", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT),
+                ignite -> createTablesAndPopulateData(ignite, seed));
+            startGrid(2, targetVer, new NodeConfigurationClosure("2", TARGET_DISCOVERY_PORT, NEW_JDBC_PORT));
+        }
+    }
+
+    /**
+     * @param res Query duel result.
+     * @return {@code true} if a query execution time in the target engine
+     * is not much longer than in the base one.
+     */
+    private boolean isResultUnsuccessful(QueryDuelResult res) {
+        if (res.targetError() != null)
+            return true;
+
+        if (res.baseError() != null)
+            return false;
+
+        long baseRes = res.baseExecutionTimeNanos();
+        long targetRes = res.targetExecutionTimeNanos();
+        final double epsilon = 500_000; // Let's say 0.5ms is about statistical error.
+
+        if (targetRes < baseRes || targetRes < epsilon)
+            // execution is faster than on the base version
+            // or both times not greater than epsilon
+            return false;
+
+        double target = Math.max(targetRes, epsilon);
+        double base = Math.max(baseRes, epsilon);
+
+        return target / base > 2;
     }
 
     /** */
     private void initParam() {
-        String verParam = System.getProperty(BASE_VERSION_PARAM);
+        String baseVerParam = System.getProperty(BASE_VERSION_PARAM);
+        String targetVerParam = System.getProperty(TARGET_VERSION_PARAM);
         String baseIsIgniteParam = System.getProperty(BASE_IS_IGNITE_PARAM);
+        String targetIsIgniteParam = System.getProperty(TARGET_IS_IGNITE_PARAM);
         String seedParam = System.getProperty(SEED_PARAM);
 
-        ver = !F.isEmpty(verParam) ? verParam : DEFAULT_BASE_VERSION;
+        baseVer = !F.isEmpty(baseVerParam) ? baseVerParam : DEFAULT_BASE_VERSION;
+        targetVer = !F.isEmpty(targetVerParam) ? targetVerParam : DEFAULT_TARGET_VERSION;
+
         baseIsIgnite = !F.isEmpty(baseIsIgniteParam) ? Boolean.parseBoolean(baseIsIgniteParam) : DEFAULT_BASE_IS_IGNITE;
+        targetIsIgnite = !F.isEmpty(targetIsIgniteParam) ? Boolean.parseBoolean(targetIsIgniteParam) : DEFAULT_TARGET_IS_IGNITE;
+
         seed = DEFAULT_SEED != null ? DEFAULT_SEED : !F.isEmpty(seedParam) ? Integer.parseInt(seedParam) : ThreadLocalRandom.current().nextInt();
 
         if (log.isInfoEnabled()) {
             log.info("Test was started with params:\n"
                 + "\tseed=" + seed + "\n"
-                + "\tversion=" + ver + "\n"
+                + "\tbaseVersion=" + baseVer + "\n"
                 + "\tbaseIsIgnite=" + baseIsIgnite + "\n"
+                + "\ttargetVersion=" + targetVer + "\n"
+                + "\ttargetIsIgnite=" + targetIsIgnite + "\n"
             );
         }
     }
@@ -278,10 +368,9 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
      * Stops both new and old clusters.
      */
     public void stopClusters() {
-        // Old cluster.
         IgniteProcessProxy.killAll();
 
-        // New cluster.
+        // Just in case
         for (Ignite ignite : G.allGrids())
             U.close(ignite, log);
     }
@@ -308,11 +397,6 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     private static void createTablesAndPopulateData(Ignite ignite, int seed) {
         for (ModelFactory<?> mdlFactory : MODEL_FACTORIES)
             createAndPopulateTable(ignite, mdlFactory, seed);
-    }
-
-    /** */
-    private String groupId() {
-        return baseIsIgnite ? "org.apache.ignite" : "org.gridgain";
     }
 
     /** */
@@ -344,19 +428,30 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
     /**
      * Prepares ignite nodes configuration.
      */
-    private static IgniteConfiguration prepareNodeConfig(IgniteConfiguration cfg, TcpDiscoveryIpFinder ipFinder,
-        int jdbcPort, String consistentId) {
-        cfg.setLocalHost("127.0.0.1");
-        cfg.setPeerClassLoadingEnabled(false);
-        cfg.setConsistentId(consistentId);
-
-        TcpDiscoverySpi disco = new TcpDiscoverySpi();
-        disco.setIpFinder(ipFinder);
-        cfg.setDiscoverySpi(disco);
-
-        ClientConnectorConfiguration clientCfg = new ClientConnectorConfiguration();
-        clientCfg.setPort(jdbcPort);
-        return cfg;
+    private static IgniteConfiguration prepareNodeConfig(
+        IgniteConfiguration cfg,
+        int discoPort,
+        int jdbcPort,
+        String consistentId
+    ) {
+        return cfg
+            .setLocalHost("127.0.0.1")
+            .setPeerClassLoadingEnabled(false)
+            .setConsistentId(consistentId)
+            .setDiscoverySpi(
+                new TcpDiscoverySpi()
+                    .setLocalPort(discoPort)
+                    .setLocalPortRange(DISCOVERY_PORT_RANGE)
+                    .setIpFinder(
+                        new TcpDiscoveryVmIpFinder(true)
+                            .setAddresses(
+                                singletonList("127.0.0.1:" + discoPort + ".." + (discoPort + DISCOVERY_PORT_RANGE))
+                            )
+                    )
+            )
+            .setClientConnectorConfiguration(
+                new ClientConnectorConfiguration().setPort(jdbcPort)
+            );
     }
 
     /**
@@ -366,14 +461,104 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         /** */
         private final String consistentId;
 
+        /** Lower port for discovery port range. */
+        private final int discoPort;
+
+        /** Port for JDBC client connection. */
+        private final int jdbcPort;
+
         /** */
-        public NodeConfigurationClosure(String consistentId) {
+        public NodeConfigurationClosure(String consistentId, int discoPort, int jdbcPort) {
             this.consistentId = consistentId;
+            this.discoPort = discoPort;
+            this.jdbcPort = jdbcPort;
         }
 
         /** {@inheritDoc} */
         @Override public void apply(IgniteConfiguration cfg) {
-            prepareNodeConfig(cfg, BASE_VER_FINDER, BASE_JDBC_PORT, consistentId);
+            prepareNodeConfig(cfg, discoPort, jdbcPort, consistentId);
+        }
+    }
+
+    /**
+     * @param ver Version.
+     * @param isIgnite Is ignite.
+     * @param jvmArgs Additional args for JVM.
+     */
+    private ExternalJvmContext createContext(String ver, boolean isIgnite, @Nullable List<String> jvmArgs) {
+        List<Dependency> dependencies = new ArrayList<>();
+
+        String grpId = groupId(isIgnite);
+
+        dependencies.add(new Dependency("core", grpId, "ignite-core", ver, false));
+        dependencies.add(new Dependency("core", grpId, "ignite-core", ver, true));
+        dependencies.add(new Dependency("indexing", grpId, "ignite-indexing", ver, false));
+
+        dependencies.add(h2Dependency(ver, isIgnite));
+
+        return (currCtx = new ExternalJvmContext(dependencies, jvmArgs));
+    }
+
+    /**
+     * @param ver Version.
+     * @param isIgnite Is ignite.
+     */
+    private ExternalJvmContext createContext(String ver, boolean isIgnite) {
+        return createContext(ver, isIgnite, null);
+    }
+
+    /**
+     * @param verStr Version string.
+     * @param isIgnite Is ignite.
+     */
+    private Dependency h2Dependency(String verStr, boolean isIgnite) {
+        IgniteProductVersion ver = IgniteProductVersion.fromString(verStr);
+
+        if (isIgnite || ver.compareTo(IgniteProductVersion.fromString("8.7.6")) <= 0)
+            return new Dependency("h2", "com.h2database", "h2", "1.4.197", false);
+
+        return new Dependency("h2", groupId(isIgnite), "ignite-h2", verStr, false);
+    }
+
+    /**
+     * @param isIgnite Is ignite.
+     */
+    private String groupId(boolean isIgnite) {
+        return isIgnite ? "org.apache.ignite" : "org.gridgain";
+    }
+
+    /** */
+    private class ExternalJvmContext implements AutoCloseable {
+        /** */
+        private final List<Dependency> deps;
+
+        /** */
+        private final List<String> jvmArgs;
+
+        /**
+         * @param deps Deps.
+         */
+        public ExternalJvmContext(
+            @Nullable List<Dependency> deps,
+            @Nullable List<String> jvmArgs
+        ) {
+            this.deps = F.isEmpty(deps) ? emptyList() : unmodifiableList(deps);
+            this.jvmArgs = F.isEmpty(jvmArgs) ? emptyList() : unmodifiableList(jvmArgs);
+        }
+
+        /** */
+        public List<Dependency> deps() {
+            return deps;
+        }
+
+        /** */
+        public List<String> jvmArgs() {
+            return jvmArgs;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() throws Exception {
+            currCtx = null;
         }
     }
 }

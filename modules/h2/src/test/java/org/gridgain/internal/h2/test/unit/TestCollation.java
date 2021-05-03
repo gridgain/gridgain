@@ -35,7 +35,7 @@ public class TestCollation extends TestDb {
                 execute("set collation xyz");
         stat.execute("set collation en");
         stat.execute("set collation default_en");
-        assertThrows(ErrorCode.CLASS_NOT_FOUND_1, stat).
+        assertThrows(ErrorCode.INVALID_VALUE_2, stat).
                 execute("set collation icu4j_en");
 
         stat.execute("set collation ge");

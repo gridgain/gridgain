@@ -62,10 +62,12 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientCache
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeMetricsBean;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientPingPacket;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientResponse;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientStateRequest;
@@ -502,6 +504,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
                     sndFut.get();
                 }
                 catch (Exception e) {
+                    System.err.println("!!! ses.send3 " + e.toString());
                     throw new GridClientConnectionResetException("Failed to send message over connection " +
                         "(will try to reconnect): " + serverAddress(), e);
                 }
@@ -846,6 +849,17 @@ public class GridClientNioTcpConnection extends GridClientConnection {
     /** {@inheritDoc} */
     @Override public GridClientFuture<?> changeState(
         ClusterState state,
+        UUID destNodeId,
+        boolean forceDeactivation
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        GridArgumentCheck.notNull(state, "state");
+
+        return makeRequest(GridClientClusterStateRequestV2.state(state, forceDeactivation), destNodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<?> changeState(
+        ClusterState state,
         UUID destNodeId
     ) throws GridClientClosedException, GridClientConnectionResetException {
         GridArgumentCheck.notNull(state, "state");
@@ -1097,6 +1111,13 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         }
 
         return nodeBuilder.build();
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFutureAdapter<?> messageBeforeStart(Object msg) throws GridClientException {
+        assert msg instanceof GridClientNodeStateBeforeStartRequest;
+
+        return makeRequest((GridClientMessage)msg, new TcpClientFuture<>());
     }
 
     /**

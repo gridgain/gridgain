@@ -1156,6 +1156,11 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
+    /** {@inheritDoc} */
     @Override public void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         reads = in.readLong();
         puts = in.readLong();
@@ -1231,6 +1236,8 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         isEmpty = in.readBoolean();
         size = in.readInt();
         keySize = in.readInt();
-        txKeyCollisions = U.readLongString(in);
+
+        if (protoVer >= V2)
+            txKeyCollisions = U.readLongString(in);
     }
 }

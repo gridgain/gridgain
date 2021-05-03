@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisito
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
 import org.apache.ignite.internal.util.IgniteTree;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -128,6 +129,8 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MA
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Adapter for cache entry.
@@ -1511,7 +1514,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 intercept = !skipInterceptor(explicitVer);
 
             if (intercept) {
-                val0 = cctx.unwrapBinaryIfNeeded(val, keepBinary, false);
+                val0 = cctx.unwrapBinaryIfNeeded(val, keepBinary, false, null);
 
                 CacheLazyEntry e = new CacheLazyEntry(cctx, key, old, keepBinary);
 
@@ -1996,7 +1999,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         updateTtl(expiryPlc);
 
                     Object val = retval ?
-                        cctx.cacheObjectContext().unwrapBinaryIfNeeded(CU.value(old, cctx, false), keepBinary, false)
+                        cctx.cacheObjectContext().unwrapBinaryIfNeeded(CU.value(old, cctx, false), keepBinary, false, null)
                         : null;
 
                     return new T3<>(false, val, null);
@@ -2235,7 +2238,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         return new GridTuple3<>(res,
             cctx.unwrapTemporary(interceptorRes != null ?
                 interceptorRes.get2() :
-                cctx.cacheObjectContext().unwrapBinaryIfNeeded(old, keepBinary, false)),
+                cctx.cacheObjectContext().unwrapBinaryIfNeeded(old, keepBinary, false, null)),
             invokeRes);
     }
 
@@ -2556,7 +2559,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (val != null)
             return val;
 
-        return cctx.unwrapBinaryIfNeeded(cacheObj, keepBinary, cpy);
+        return cctx.unwrapBinaryIfNeeded(cacheObj, keepBinary, cpy, null);
     }
 
     /**
@@ -5180,7 +5183,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
         }
         else {
-            String keySens = GridToStringBuilder.includeSensitive() ? ", key=" + key : "";
+            GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
+            String keySens;
+
+            if (sensitiveDataLogging == PLAIN)
+                keySens = ", key=" + key;
+            else if (sensitiveDataLogging == HASH)
+                keySens = ", key=" + (key == null ? "null" : String.valueOf(IgniteUtils.hash(key)));
+            else
+                keySens = "";
 
             return "GridCacheMapEntry [err='Partial result represented because entry lock wasn't acquired."
                 + " Waiting time elapsed.'"
@@ -5770,12 +5782,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         /** {@inheritDoc} */
         @Override public K getKey() {
-            return (K)cctx.cacheObjectContext().unwrapBinaryIfNeeded(key, keepBinary, true);
+            return (K)cctx.cacheObjectContext().unwrapBinaryIfNeeded(key, keepBinary, true, null);
         }
 
         /** {@inheritDoc} */
         @Override public V getValue() {
-            return (V)cctx.cacheObjectContext().unwrapBinaryIfNeeded(peekVisibleValue(), keepBinary, true);
+            return (V)cctx.cacheObjectContext().unwrapBinaryIfNeeded(peekVisibleValue(), keepBinary, true, null);
         }
 
         /** {@inheritDoc} */
@@ -5831,6 +5843,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         /** */
         private CacheDataRow oldRow;
+
+        /** */
+        private boolean oldRowExpiredFlag;
 
         /** */
         private IgniteTree.OperationType treeOp = IgniteTree.OperationType.PUT;
@@ -5903,6 +5918,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return oldRow;
         }
 
+        /** {@inheritDoc} */
+        @Override public boolean oldRowExpiredFlag() {
+            return oldRowExpiredFlag;
+        }
+
         /**
          * @return {@code True} if update was filtered by predicate.
          */
@@ -5955,6 +5975,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
 
             entry.updatePlatformCache(null, null);
+
+            oldRowExpiredFlag = true;
 
             return null;
         }
@@ -6106,6 +6128,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         /** {@inheritDoc} */
         @Nullable @Override public CacheDataRow oldRow() {
             return oldRow;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean oldRowExpiredFlag() {
+            return oldRowExpiredFlag;
         }
 
         /** {@inheritDoc} */
@@ -6537,7 +6564,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
 
             if (intercept && (conflictVer == null || !skipInterceptorOnConflict)) {
-                Object updated0 = cctx.unwrapBinaryIfNeeded(updated, keepBinary, false);
+                Object updated0 = cctx.unwrapBinaryIfNeeded(updated, keepBinary, false, null);
 
                 CacheLazyEntry<Object, Object> interceptEntry =
                     new CacheLazyEntry<>(cctx, entry.key, null, oldVal, null, keepBinary);
@@ -6888,6 +6915,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             EntryProcessor<Object, Object, ?> entryProcessor = (EntryProcessor<Object, Object, ?>)writeObj;
 
             IgniteThread.onEntryProcessorEntered(true);
+
+            if (invokeEntry.cctx.kernalContext().deploy().enabled() &&
+                invokeEntry.cctx.kernalContext().deploy().isGlobalLoader(entryProcessor.getClass().getClassLoader())) {
+                U.restoreDeploymentContext(invokeEntry.cctx.kernalContext(), invokeEntry.cctx.kernalContext()
+                    .deploy().getClassLoaderId(entryProcessor.getClass().getClassLoader()));
+            }
 
             try {
                 Object computed = entryProcessor.process(invokeEntry, invokeArgs);

@@ -352,6 +352,8 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
 
         TestRecordingCommunicationSpi.spi(g1).stopBlock();
 
+        TestRecordingCommunicationSpi.spi(g1).stopBlock();
+
         final GridDhtLocalPartition part = g1.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(partId);
 
         assertTrue("Unexpected partition state [p=" + partId +

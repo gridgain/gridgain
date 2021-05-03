@@ -2455,6 +2455,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         U.warn(log, "Partitions have been scheduled for rebalancing due to outdated update counter "
                             + "[grp=" + grp.cacheOrGroupName()
+                            + ", readyTopVer=" + readyTopVer
                             + ", topVer=" + exchFut.initialVersion()
                             + ", nodeId=" + nodeId
                             + ", partsFull=" + S.compact(rebalancedParts)
@@ -2507,14 +2508,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         // Prevent renting.
         if (part.state() == RENTING) {
-            if (part.reserve()) {
-                part.moving();
-                part.release();
-            }
-            else {
+            if (!part.moving()) {
                 assert part.state() == EVICTED : part;
 
                 part = getOrCreatePartition(p);
+
+                if (part.state() == LOST)
+                    return part;
             }
         }
 
@@ -2793,7 +2793,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean tryEvict(GridDhtLocalPartition part) {
+    @Override public boolean tryFinishEviction(GridDhtLocalPartition part) {
         ctx.database().checkpointReadLock();
 
         try {
@@ -2830,15 +2830,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 List<GridDhtLocalPartition> parts = localPartitions();
 
-                int renting = 0;
+                boolean renting = false;
 
                 for (GridDhtLocalPartition part0 : parts) {
-                    if (part0.state() == RENTING)
-                        renting++;
+                    if (part0.state() == RENTING) {
+                        renting = true;
+
+                        break;
+                    }
                 }
 
                 // Refresh partitions when all is evicted and local map is updated.
-                if (renting == 0)
+                if (!renting)
                     ctx.exchange().scheduleResendPartitions();
 
                 return true;
@@ -3197,6 +3200,48 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         }
 
         return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean rent(int p) {
+        ctx.database().checkpointReadLock();
+
+        try {
+            lock.writeLock().lock();
+
+            try {
+                // Do not rent if PME in progress, will be rented later if applicable.
+                if (lastTopChangeVer.after(readyTopVer))
+                    return false;
+
+                GridDhtLocalPartition locPart = localPartition(p);
+
+                GridDhtPartitionState state0 = locPart.state();
+
+                if (locPart == null || state0 == RENTING || state0 == EVICTED || partitionLocalNode(p, readyTopVer))
+                    return false;
+
+                locPart.rent();
+
+                GridDhtPartitionState state = locPart.state();
+
+                if (state == RENTING && state != state0) {
+                    long updateSeq = this.updateSeq.incrementAndGet();
+
+                    updateLocal(p, state0, updateSeq, readyTopVer);
+
+                    ctx.exchange().scheduleResendPartitions();
+                }
+
+                return true;
+            }
+            finally {
+                lock.writeLock().unlock();
+            }
+        }
+        finally {
+            ctx.database().checkpointReadUnlock();
+        }
     }
 
     /**

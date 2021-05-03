@@ -46,6 +46,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHan
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
+
 /**
  */
 public abstract class AbstractFreeList<T extends Storable> extends PagesList implements FreeList<T>, ReuseList {
@@ -343,6 +345,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
      * @param wal Write ahead log manager.
      * @param metaPageId Metadata page ID.
      * @param initNew {@code True} if new metadata should be initialized.
+     * @param pageFlag Default flag value for allocated pages.
      * @throws IgniteCheckedException If failed.
      */
     public AbstractFreeList(
@@ -356,9 +359,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         boolean initNew,
         PageLockListener lockLsnr,
         GridKernalContext ctx,
-        AtomicLong pageListCacheLimit
+        AtomicLong pageListCacheLimit,
+        byte pageFlag
     ) throws IgniteCheckedException {
-        super(cacheId, name, memPlc.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx);
+        super(cacheId, name, memPlc.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
 
         rmvRow = new RemoveRowHandler(cacheId == 0);
 
@@ -483,9 +487,8 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
      */
     private long allocateDataPage(int part) throws IgniteCheckedException {
         assert part <= PageIdAllocator.MAX_PARTITION_ID;
-        assert part != PageIdAllocator.INDEX_PARTITION;
 
-        return pageMem.allocatePage(grpId, part, PageIdAllocator.FLAG_DATA);
+        return pageMem.allocatePage(grpId, part, FLAG_DATA);
     }
 
     /** {@inheritDoc} */
@@ -515,8 +518,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 if (pageId == 0L) { // Handle reuse bucket.
                     if (reuseList == this)
                         pageId = takeEmptyPage(REUSE_BUCKET, row.ioVersions(), statHolder);
-                    else
+                    else {
                         pageId = reuseList.takeRecycledPage();
+
+                        if (pageId != 0)
+                            pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
+                    }
                 }
 
                 AbstractDataPageIO initIo = null;
@@ -525,11 +532,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                     pageId = allocateDataPage(row.partition());
 
                     initIo = row.ioVersions().latest();
+                } else {
+                    assert PageIdUtils.flag(pageId) == FLAG_DATA
+                        : "rowVersions=" + row.ioVersions() + ", pageId=" + PageIdUtils.toDetailString(pageId);
+
+                    pageId = PageIdUtils.changePartitionId(pageId, row.partition());
                 }
-                else if (PageIdUtils.tag(pageId) != PageIdAllocator.FLAG_DATA) // Page is taken from reuse bucket.
-                    pageId = initReusedPage(row, pageId, row.partition(), statHolder);
-                else // Page is taken from free space bucket. For in-memory mode partition must be changed.
-                    pageId = PageIdUtils.changePartitionId(pageId, (row.partition()));
 
                 written = write(pageId, writeRow, initIo, row, written, FAIL_I, statHolder);
 
@@ -738,6 +746,11 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         catch (Throwable t) {
             throw new CorruptedFreeListException("Failed to count recycled pages", t);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public long initRecycledPage(long pageId, byte flag, PageIO initIO) throws IgniteCheckedException {
+        return initRecycledPage0(pageId, flag, initIO);
     }
 
     /** {@inheritDoc} */

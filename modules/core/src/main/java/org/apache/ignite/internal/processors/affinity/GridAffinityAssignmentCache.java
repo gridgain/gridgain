@@ -353,7 +353,7 @@ public class GridAffinityAssignmentCache {
         if (discoCache != null) {
             blt = discoCache.state().baselineTopology();
 
-            hasBaseline = blt != null;
+            hasBaseline = !ctx.state().inMemoryClusterWithoutBlt() && blt != null;
 
             if (!persistentCache && hasBaseline)
                 hasBaseline = bltForInMemoryCachesSup;

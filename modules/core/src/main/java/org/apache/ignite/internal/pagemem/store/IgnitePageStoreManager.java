@@ -18,6 +18,7 @@ package org.apache.ignite.internal.pagemem.store;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -26,13 +27,13 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManager;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 
 /**
  *
  */
-public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteChangeGlobalStateSupport {
+public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteChangeGlobalStateSupport, PageReadWriteManager {
     /**
      * Invoked before starting checkpoint recover.
      */
@@ -52,7 +53,7 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @param tracker Allocation tracker.
      * @throws IgniteCheckedException If failed.
      */
-    void initialize(int cacheId, int partitions, String workingDir, LongAdderMetric tracker)
+    void initialize(int cacheId, int partitions, String workingDir, LongConsumer tracker)
         throws IgniteCheckedException;
 
     /**
@@ -101,16 +102,6 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
     public void onPartitionDestroyed(int grpId, int partId, int tag) throws IgniteCheckedException;
 
     /**
-     * Reads a page for the given cache ID. Cache ID may be {@code 0} if the page is a meta page.
-     *
-     * @param grpId Cache group ID.
-     * @param pageId PageID to read.
-     * @param pageBuf Page buffer to write to.
-     * @throws IgniteCheckedException If failed to read the page.
-     */
-    public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException;
-
-    /**
      * Checks if partition store exists.
      *
      * @param grpId Cache group ID.
@@ -138,7 +129,7 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @param pageBuf Page buffer to write.
      * @throws IgniteCheckedException If failed to write page.
      */
-    public void write(int grpId, long pageId, ByteBuffer pageBuf, int tag) throws IgniteCheckedException;
+    @Override public PageStore write(int grpId, long pageId, ByteBuffer pageBuf, int tag, boolean calculateCrc) throws IgniteCheckedException;
 
     /**
      * Gets page offset within the page store file.
@@ -170,12 +161,12 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * Allocates a page for the given page space.
      *
      * @param grpId Cache group ID.
-     * @param partId Partition ID. Used only if {@code flags} is equal to {@link PageMemory#FLAG_DATA}.
+     * @param partId Partition ID. Used only if {@code flags} is not equal to {@link PageMemory#FLAG_IDX}.
      * @param flags Page allocation flags.
      * @return Allocated page ID.
      * @throws IgniteCheckedException If IO exception occurred while allocating a page ID.
      */
-    public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException;
+    @Override public long allocatePage(int grpId, int partId, byte flags) throws IgniteCheckedException;
 
     /**
      * Gets total number of allocated pages for the given space.
@@ -186,14 +177,6 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @throws IgniteCheckedException If failed.
      */
     public int pages(int grpId, int partId) throws IgniteCheckedException;
-
-    /**
-     * Gets meta page ID for specified cache.
-     *
-     * @param grpId Cache group ID.
-     * @return Meta page ID.
-     */
-    public long metaPageId(int grpId);
 
     /**
      * @return Saved cache configurations.

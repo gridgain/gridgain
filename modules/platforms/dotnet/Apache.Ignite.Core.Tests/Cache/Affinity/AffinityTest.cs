@@ -16,9 +16,13 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Affinity
 {
+    using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Affinity;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cluster;
     using NUnit.Framework;
 
@@ -33,15 +37,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
         [TestFixtureSetUp]
         public void StartGrids()
         {
-            for (int i = 0; i < 3; i++)
+            for (var i = 0; i < 3; i++)
             {
-                var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
-                {
-                    SpringConfigUrl = Path.Combine("Config", "native-client-test-cache-affinity.xml"),
-                    IgniteInstanceName = "grid-" + i
-                };
-
-                Ignition.Start(cfg);
+                Ignition.Start(GetConfig(i, client: i == 2));
             }
         }
 
@@ -71,6 +69,21 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
         }
 
         /// <summary>
+        /// Tests that affinity can be retrieved from client node right after the cache has been started on server node.
+        /// </summary>
+        [Test]
+        public void TestAffinityRetrievalForNewCache()
+        {
+            var server = Ignition.GetIgnite("grid-0");
+            var client = Ignition.GetIgnite("grid-2");
+
+            var serverCache = server.CreateCache<int, int>(TestUtils.TestName);
+            var clientAff = client.GetAffinity(serverCache.Name);
+
+            Assert.IsNotNull(clientAff);
+        }
+
+        /// <summary>
         /// Test affinity with binary flag.
         /// </summary>
         [Test]
@@ -78,7 +91,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
         {
             IIgnite g = Ignition.GetIgnite("grid-0");
 
-            ICacheAffinity aff = g.GetAffinity("default");  
+            ICacheAffinity aff = g.GetAffinity("default");
 
             IBinaryObject affKey = g.GetBinary().ToBinary<IBinaryObject>(new AffinityTestKey(0, 1));
 
@@ -91,6 +104,59 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
 
                 Assert.AreEqual(node.Id, aff.MapKeyToNode(otherAffKey).Id);
             }
+        }
+
+        /// <summary>
+        /// Tests that <see cref="AffinityKey"/> works when used as <see cref="QueryEntity.KeyType"/>.
+        /// </summary>
+        [Test]
+        public void TestAffinityKeyWithQueryEntity()
+        {
+            var cacheCfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                QueryEntities = new List<QueryEntity>
+                {
+                    new QueryEntity(typeof(AffinityKey), typeof(QueryEntityValue))
+                }
+            };
+
+            var ignite = Ignition.GetIgnite("grid-0");
+            var cache = ignite.GetOrCreateCache<AffinityKey, QueryEntityValue>(cacheCfg);
+            var aff = ignite.GetAffinity(cache.Name);
+
+            var ignite2 = Ignition.GetIgnite("grid-1");
+            var cache2 = ignite2.GetOrCreateCache<AffinityKey, QueryEntityValue>(cacheCfg);
+            var aff2 = ignite2.GetAffinity(cache2.Name);
+
+            // Check mapping.
+            for (var i = 0; i < 100; i++)
+            {
+                Assert.AreEqual(aff.GetPartition(i), aff.GetPartition(new AffinityKey("foo" + i, i)));
+                Assert.AreEqual(aff2.GetPartition(i), aff2.GetPartition(new AffinityKey("bar" + i, i)));
+                Assert.AreEqual(aff.GetPartition(i), aff2.GetPartition(i));
+            }
+
+            // Check put/get.
+            var key = new AffinityKey("x", 123);
+            var expected = new QueryEntityValue {Name = "y", AffKey = 321};
+            cache[key] = expected;
+
+            var val = cache2[key];
+            Assert.AreEqual(expected.Name, val.Name);
+            Assert.AreEqual(expected.AffKey, val.AffKey);
+        }
+
+        /// <summary>
+        /// Checks affinity mapping.
+        /// </summary>
+        private static IgniteConfiguration GetConfig(int idx, bool client = false)
+        {
+            return new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                SpringConfigUrl = Path.Combine("Config", "native-client-test-cache-affinity.xml"),
+                IgniteInstanceName = "grid-" + idx,
+                ClientMode = client
+            };
         }
 
         /// <summary>
@@ -129,6 +195,21 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
             {
                 return _id;
             }
+        }
+
+        /// <summary>
+        /// Query entity key.
+        /// </summary>
+        [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
+        private class QueryEntityValue
+        {
+            /** */
+            [QuerySqlField]
+            public string Name { get; set; }
+
+            /** */
+            [AffinityKeyMapped]
+            public long AffKey { get; set; }
         }
     }
 }

@@ -1,12 +1,12 @@
 ::
 :: Copyright 2019 GridGain Systems, Inc. and Contributors.
-:: 
+::
 :: Licensed under the GridGain Community Edition License (the "License");
 :: you may not use this file except in compliance with the License.
 :: You may obtain a copy of the License at
-:: 
+::
 ::     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
-:: 
+::
 :: Unless required by applicable law or agreed to in writing, software
 :: distributed under the License is distributed on an "AS IS" BASIS,
 :: WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -136,36 +136,6 @@ set RESTART_SUCCESS_FILE="%IGNITE_HOME%\work\ignite_success_%RANDOM_NUMBER%"
 set RESTART_SUCCESS_OPT=-DIGNITE_SUCCESS_FILE=%RESTART_SUCCESS_FILE%
 
 ::
-:: Find available port for JMX
-::
-:: You can specify IGNITE_JMX_PORT environment variable for overriding automatically found JMX port
-::
-:: This is executed if -nojmx is not specified
-::
-if not "%NO_JMX%" == "1" (
-    set JMX_PORT="!JAVA_HOME!\bin\java.exe" -cp "%CP%" org.apache.ignite.internal.util.portscanner.GridJmxPortFinder
-    for /f "usebackq tokens=*" %%A in (`"!JMX_PORT!"`) do (
-        set JMX_PORT=%%A
-    )
-)
-
-::
-:: This variable defines necessary parameters for JMX
-:: monitoring and management.
-::
-:: This enables remote unsecure access to JConsole or VisualVM.
-::
-:: ADD YOUR ADDITIONAL PARAMETERS/OPTIONS HERE
-::
-if "%JMX_PORT%" == "" (
-    echo %0, WARN: Failed to resolve JMX host. JMX will be disabled.
-    set JMX_MON=
-) else (
-    set JMX_MON=-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=%JMX_PORT% ^
-    -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false
-)
-
-::
 :: JVM options. See http://java.sun.com/javase/technologies/hotspot/vmoptions.jsp for more details.
 ::
 :: ADD YOUR/CHANGE ADDITIONAL OPTIONS HERE
@@ -258,11 +228,11 @@ if %MAJOR_JAVA_VER% GEQ 11 (
 )
 
 if "%INTERACTIVE%" == "1" (
-    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% %JMX_MON% ^
+    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS%
 ) else (
-    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% %JMX_MON% ^
+    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% "%CONFIG%"
 )

@@ -21,13 +21,13 @@ package org.apache.ignite.compatibility.sql.randomsql.ast;
  */
 public class InnerJoin implements Ast {
     /** */
-    public final Ast left;
+    private final Ast left;
 
     /** */
-    public final Ast right;
+    private final Ast right;
 
     /** */
-    public final Ast cond;
+    private final Ast cond;
 
     /**
      * @param left Left table.

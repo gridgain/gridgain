@@ -53,9 +53,11 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
+import static org.apache.ignite.internal.commandline.CommandList.WARM_UP;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
@@ -70,6 +72,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -374,16 +377,28 @@ public class CommandHandlerParsingTest {
 
             ConnectionAndSslParameters args;
 
-                if (cmdL == CLUSTER_CHANGE_TAG)
-                    args = parseArgs(asList(cmdL.text(), "test_tag"));
-                else if (cmdL == SET_STATE)
-                    args = parseArgs(asList(cmdL.text(), "ACTIVE"));
-                else
-                    args = parseArgs(asList(cmdL.text()));
+            if (cmdL == CLUSTER_CHANGE_TAG)
+                args = parseArgs(asList(cmdL.text(), "test_tag"));
+            else if (cmdL == SET_STATE)
+                args = parseArgs(asList(cmdL.text(), "ACTIVE"));
+            else if (cmdL == ROLLING_UPGRADE)
+                args = parseArgs(asList(cmdL.text(), "start"));
+            else if (cmdL == WARM_UP)
+                args = parseArgs(asList(cmdL.text(), "--stop"));
+            else
+                args = parseArgs(asList(cmdL.text()));
 
             checkCommonParametersCorrectlyParsed(cmdL, args, false);
 
             switch (cmdL) {
+                case ROLLING_UPGRADE: {
+                    args = parseArgs(asList(cmdL.text(), "start", "--yes"));
+
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    break;
+                }
+
                 case DEACTIVATE: {
                     args = parseArgs(asList(cmdL.text(), "--yes"));
 
@@ -443,6 +458,14 @@ public class CommandHandlerParsingTest {
                     break;
                 }
 
+                case WARM_UP: {
+                    args = parseArgs(asList(cmdL.text(), "--stop", "--yes"));
+
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    break;
+                }
+
                 default:
                     fail("Unknown command: " + cmdL);
             }
@@ -478,17 +501,20 @@ public class CommandHandlerParsingTest {
             assertEquals(DFLT_PORT, args.port());
 
             args = parseArgs(asList("--port", "12345", "--host", "test-host", "--ping-interval", "5000",
-                "--ping-timeout", "40000", cmd.text()));
+                "--ping-timeout", "40000", "--connection-timeout", "1000", cmd.text()));
 
             assertEquals(cmd.command(), args.command());
             assertEquals("test-host", args.host());
             assertEquals("12345", args.port());
             assertEquals(5000, args.pingInterval());
             assertEquals(40000, args.pingTimeout());
+            assertEquals(1_000, args.connectionTimeout());
 
             assertParseArgsThrows("Invalid value for port: wrong-port", "--port", "wrong-port", cmd.text());
             assertParseArgsThrows("Invalid value for ping interval: -10", "--ping-interval", "-10", cmd.text());
             assertParseArgsThrows("Invalid value for ping timeout: -20", "--ping-timeout", "-20", cmd.text());
+            assertParseArgsThrows("Invalid value for connection timeout: -30", "--connection-timeout",
+                "-30", cmd.text());
         }
     }
 
@@ -575,7 +601,6 @@ public class CommandHandlerParsingTest {
     }
 
     /** */
-    @SuppressWarnings("ThrowableNotThrown")
     @Test
     public void testIndexForceRebuildWrongArgs() {
         String nodeId = UUID.randomUUID().toString();
@@ -638,7 +663,6 @@ public class CommandHandlerParsingTest {
     }
 
     /** */
-    @SuppressWarnings("ThrowableNotThrown")
     @Test
     public void testIndexListWrongArgs() {
         String nodeId = UUID.randomUUID().toString();
@@ -694,7 +718,6 @@ public class CommandHandlerParsingTest {
     }
 
     /** */
-    @SuppressWarnings("ThrowableNotThrown")
     @Test
     public void testIndexRebuildStatusWrongArgs() {
         GridTestUtils.assertThrows(
@@ -992,6 +1015,18 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set");
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "DISCOVERY"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "discovery"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "Discovery"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "TX"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "tx"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "Tx"));
     }
 
     /**
@@ -1008,6 +1043,29 @@ public class CommandHandlerParsingTest {
             assertFalse(cmd.toString(), parseArgs(singletonList(cmd.text())).verbose());
             assertTrue(cmd.toString(), parseArgs(asList(cmd.text(), CMD_VERBOSE)).verbose());
         }
+    }
+
+    /**
+     * Test verifies correctness of parsing of arguments --warm-up command.
+     */
+    @Test
+    public void testWarmUpArgs() {
+        String[][] args = {
+            {"--warm-up"},
+            {"--warm-up", "1"},
+            {"--warm-up", "stop"}
+        };
+
+        for (String[] arg : args) {
+            GridTestUtils.assertThrows(
+                null,
+                () -> parseArgs(asList(arg)),
+                IllegalArgumentException.class,
+                "--stop argument is missing."
+            );
+        }
+
+        assertNotNull(parseArgs(asList("--warm-up", "--stop")));
     }
 
     /**
@@ -1056,6 +1114,8 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
-            cmd == CommandList.METADATA;
+            cmd == CommandList.METADATA ||
+            cmd == CommandList.WARM_UP ||
+            cmd == CommandList.PROPERTY;
     }
 }

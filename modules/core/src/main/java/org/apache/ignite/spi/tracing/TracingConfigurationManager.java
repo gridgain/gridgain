@@ -28,7 +28,13 @@ import org.jetbrains.annotations.Nullable;
  */
 @IgniteExperimental
 public interface TracingConfigurationManager {
-    // TODO: 04.05.20 After implementing GG-21041 and GG-21042 default TX config will include Scope.CACHE_GET, etc.
+    /** Default SQL tracing configuration. */
+    static final TracingConfigurationParameters DEFAULT_SQL_CONFIGURATION =
+        new TracingConfigurationParameters.Builder().
+            withSamplingRate(0d).
+            withIncludedScopes(Collections.emptySet()).
+            build();
+
     /** Default transaction tracing configuration. */
     static final TracingConfigurationParameters DEFAULT_TX_CONFIGURATION =
         new TracingConfigurationParameters.Builder().
@@ -135,6 +141,9 @@ public interface TracingConfigurationManager {
 
             case CACHE_API_READ:
                 return DEFAULT_CACHE_API_READ_CONFIGURATION;
+
+            case SQL:
+                return DEFAULT_SQL_CONFIGURATION;
 
             default:
                 return NOOP_CONFIGURATION;

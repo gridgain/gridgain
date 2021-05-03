@@ -68,7 +68,7 @@ namespace ignite
                 COMPUTE_TASK_LOCAL_JOB_RESULT = 60,
                 COMPUTE_JOB_EXECUTE_LOCAL = 61,
                 COMPUTE_OUT_FUNC_EXECUTE = 74,
-                COMPUTE_ACTION_EXECUTE = 75,
+                COMPUTE_ACTION_EXECUTE = 75
             };
         };
 
@@ -143,13 +143,80 @@ namespace ignite
         };
 
         /**
+         * Get log level from int.
+         * @param level Int log level.
+         * @return Log level.
+         */
+        LogLevel::Type LogLevelFromInt(int level)
+        {
+            assert(level >= LogLevel::LEVEL_TRACE && level <= LogLevel::LEVEL_ERROR);
+
+            return static_cast<LogLevel::Type>(level);
+        }
+
+        /**
+         * Logger.log java method handler. Used to implement native logging handling.
+         * @param target Target IgniteEnvironment pointer.
+         * @param level Log level.
+         * @param messageChars Message.
+         * @param messageCharsLen Message string length.
+         * @param categoryChars Category.
+         * @param categoryCharsLen Category string length.
+         * @param errorInfoChars Error information.
+         * @param errorInfoCharsLen Error information string length.
+         * @param memPtr Memory pointer.
+         */
+        void JNICALL LoggerLogHandler(
+            void* target,
+            int level,
+            const char* messageChars,
+            int messageCharsLen,
+            const char* categoryChars,
+            int categoryCharsLen,
+            const char* errorInfoChars,
+            int errorInfoCharsLen,
+            int64_t memPtr)
+        {
+            (void) memPtr;
+
+            SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
+
+            if (!env)
+                return;
+
+            std::string message;
+            if (messageChars)
+                message.assign(messageChars, messageCharsLen);
+
+            std::string category;
+            if (categoryChars)
+                category.assign(categoryChars, categoryCharsLen);
+
+            std::string errorInfo;
+            if (errorInfoChars)
+                errorInfo.assign(errorInfoChars, errorInfoCharsLen);
+
+            env->Get()->Log(LogLevelFromInt(level), message, category, errorInfo);
+        }
+
+        bool JNICALL LoggerIsLevelEnabledHandler(void* target, int level)
+        {
+            SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
+
+            if (!env)
+                return false;
+
+            return env->Get()->IsLogLevelEnabled(LogLevelFromInt(level));
+        }
+
+        /**
          * InLongOutLong callback.
          * 
          * @param target Target environment.
          * @param type Operation type.
          * @param val Value.
          */
-        long long IGNITE_CALL InLongOutLong(void* target, int type, long long val)
+        int64_t IGNITE_CALL InLongOutLong(void* target, int type, int64_t val)
         {
             int64_t res = 0;
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
@@ -163,10 +230,13 @@ namespace ignite
                 {
                     SharedPointer<InteropMemory> mem = env->Get()->GetMemory(val);
                     SharedPointer<InteropMemory> memCopy(new InteropUnpooledMemory(mem.Get()->Capacity()));
+
                     memCopy.Get()->Length(mem.Get()->Length());
                     memcpy(memCopy.Get()->Data(), mem.Get()->Data(), mem.Get()->Capacity());
+
                     SP_ClusterNodeImpl node = (new impl::cluster::ClusterNodeImpl(memCopy));
                     env->Get()->nodes.Get()->AddNode(node);
+
                     break;
                 }
 
@@ -299,9 +369,11 @@ namespace ignite
          * @param val3 Value3.
          * @param arg Object arg.
          */
-        long long IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, long long val1, long long val2, 
-            long long val3, void* arg)
+        int64_t IGNITE_CALL InLongLongLongObjectOutLong(void* target, int type, int64_t val1, int64_t val2,
+            int64_t val3, void* arg)
         {
+            IGNITE_UNUSED(val3);
+
             int64_t res = 0;
             SharedPointer<IgniteEnvironment>* env = static_cast<SharedPointer<IgniteEnvironment>*>(target);
 
@@ -371,7 +443,7 @@ namespace ignite
             return res;
         }
 
-        IgniteEnvironment::IgniteEnvironment(const IgniteConfiguration& cfg) :
+        IgniteEnvironment::IgniteEnvironment(const IgniteConfiguration& cfg, Logger* logger) :
             cfg(new IgniteConfiguration(cfg)),
             ctx(SharedPointer<JniContext>()),
             latch(),
@@ -383,7 +455,8 @@ namespace ignite
             binding(),
             moduleMgr(),
             nodes(new ClusterNodesHolder()),
-            ignite(NULL)
+            ignite(0),
+            logger(logger)
         {
             binding = SharedPointer<IgniteBindingImpl>(new IgniteBindingImpl(*this));
 
@@ -414,6 +487,9 @@ namespace ignite
             memset(&hnds, 0, sizeof(hnds));
 
             hnds.target = target;
+
+            hnds.loggerIsLevelEnabled = LoggerIsLevelEnabledHandler;
+            hnds.loggerLog = LoggerLogHandler;
 
             hnds.inLongOutLong = InLongOutLong;
             hnds.inLongLongLongObjectOutLong = InLongLongLongObjectOutLong;
@@ -581,6 +657,18 @@ namespace ignite
             return ignite;
         }
 
+        void IgniteEnvironment::Log(LogLevel::Type level, const std::string& message, const std::string& category,
+            const std::string& errorInfo)
+        {
+            if (logger)
+                logger->Log(level, message, category, errorInfo);
+        }
+
+        bool IgniteEnvironment::IsLogLevelEnabled(LogLevel::Type level)
+        {
+            return logger && logger->IsEnabled(level);
+        }
+
         void IgniteEnvironment::ComputeTaskReduce(int64_t taskHandle)
         {
             SharedPointer<compute::ComputeTaskHolder> task0 =
@@ -715,7 +803,7 @@ namespace ignite
             return registry;
         }
 
-        void IgniteEnvironment::OnStartCallback(long long memPtr, jobject proc)
+        void IgniteEnvironment::OnStartCallback(int64_t memPtr, jobject proc)
         {
             this->proc = jni::JavaGlobalRef(*ctx.Get(), proc);
 

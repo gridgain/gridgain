@@ -17,11 +17,10 @@
 package org.apache.ignite.compatibility.sql.runner;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.ignite.IgniteLogger;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,35 +55,25 @@ class QueryDuelRunner {
 
     /**
      * @param qry Query.
-     * @param successCnt Success count.
-     * @param attemptsCnt Attempts count.
      */
-    QueryDuelResult run(String qry, int successCnt, int attemptsCnt) {
-        List<Long> baseExecTimes = new ArrayList<>(attemptsCnt);
-        List<Long> targetExecTimes = new ArrayList<>(attemptsCnt);
-
-        log.info("Started duel for qry=" + qry);
-
-        while (attemptsCnt-- > 0) {
-            QueryExecutionResult baseRes = executeQuery(baseConn, qry);
-            QueryExecutionResult targetRes = executeQuery(targetConn, qry);
-
-            if (!baseRes.success() || !targetRes.success())
-                return QueryDuelResult.failedResult(qry, baseRes.error(), targetRes.error());
-
-            baseExecTimes.add(baseRes.execTime());
-            targetExecTimes.add(targetRes.execTime());
-
-            if (isSuccessfulRun(baseRes.execTime(), targetRes.execTime()))
-                successCnt--;
-
-            if (successCnt == 0)
-                break;
+    QueryDuelResult run(QueryWithParams qry) {
+        log.info("Started duel for query: " + qry);
+        QueryExecutionResult baseRes, targetRes;
+        if (qry.parametrized()) {
+            baseRes = executeQueryPrepared(baseConn, qry);
+            targetRes = executeQueryPrepared(targetConn, qry);
+        }
+        else {
+            baseRes = executeQuerySimple(baseConn, qry);
+            targetRes = executeQuerySimple(targetConn, qry);
         }
 
-        return successCnt > 0
-            ? QueryDuelResult.verificationFailedResult(qry, baseExecTimes, targetExecTimes)
-            : QueryDuelResult.successfulResult(qry, baseExecTimes, targetExecTimes);
+        return QueryDuelResult.builder(qry)
+            .baseExecTime(baseRes.execTime())
+            .baseErr(baseRes.error())
+            .targetExecTime(targetRes.execTime())
+            .targetErr(targetRes.error())
+            .build();
     }
 
     /**
@@ -93,7 +82,9 @@ class QueryDuelRunner {
      * @param conn Connection.
      * @param qry Query.
      */
-    private QueryExecutionResult executeQuery(Connection conn, String qry) {
+    private QueryExecutionResult executeQuerySimple(Connection conn, QueryWithParams qry) {
+        assert !qry.parametrized();
+
         int cnt = 0;
         long start = 0, end = 0;
 
@@ -101,7 +92,7 @@ class QueryDuelRunner {
         try (Statement stmt = conn.createStatement()) {
             start = System.nanoTime();
 
-            try (ResultSet rs = stmt.executeQuery(qry)) {
+            try (ResultSet rs = stmt.executeQuery(qry.query())) {
                 while (rs.next()) {
                     // Just read the full result set.
                     cnt++;
@@ -117,27 +108,58 @@ class QueryDuelRunner {
             ? new QueryExecutionResult(cnt, end - start)
             : new QueryExecutionResult(ex);
 
-        log.info((conn == baseConn ? "Base" : "Target") + " execution result: qry=" + qry + ", " + res.resultString());
+        printResult(conn, res);
 
         return res;
     }
 
     /**
-     * @param baseRes Query execution time in the base engine.
-     * @param targetRes Query execution time in the target engine.
-     * @return {@code true} if a query execution time in the target engine is not much longer than in the base one.
+     * Executes given query on Ignite through given connection.
+     *
+     * @param conn Connection.
+     * @param qry Query.
      */
-    private boolean isSuccessfulRun(long baseRes, long targetRes) {
-        final double epsilon = 2.0 * 1_000_000; // Let's say 2 ms is about statistical error.
+    private QueryExecutionResult executeQueryPrepared(Connection conn, QueryWithParams qry) {
+        assert qry.parametrized();
 
-        if (baseRes < targetRes && (baseRes > epsilon || targetRes > epsilon)) {
-            double target = Math.max(targetRes, epsilon);
-            double base = Math.max(baseRes, epsilon);
+        int cnt = 0;
+        long start = 0, end = 0;
 
-            return target / base <= 2;
+        Exception ex = null;
+        try (PreparedStatement stmt = conn.prepareStatement(qry.query())) {
+            int i = 1;
+            for (Object param : qry.params())
+                stmt.setObject(i++, param);
+
+            start = System.nanoTime();
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    // Just read the full result set.
+                    cnt++;
+                }
+            }
+            end = System.nanoTime();
+        }
+        catch (SQLException e) {
+            ex = e;
         }
 
-        return true;
+        QueryExecutionResult res = ex == null
+            ? new QueryExecutionResult(cnt, end - start)
+            : new QueryExecutionResult(ex);
+
+        printResult(conn, res);
+
+        return res;
+    }
+
+    /**
+     * @param conn Connection.
+     * @param res Response.
+     */
+    private void printResult(Connection conn, QueryExecutionResult res) {
+        log.info("\t" + (conn == baseConn ? "Base" : "Target") + " execution result: " + res.resultString());
     }
 
     /**

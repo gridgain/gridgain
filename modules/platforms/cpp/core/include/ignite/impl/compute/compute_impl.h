@@ -54,7 +54,7 @@ namespace ignite
 
                         AFFINITY_CALL = 13,
 
-                        AFFINITY_RUN = 14,
+                        AFFINITY_RUN = 14
                     };
                 };
 

@@ -30,8 +30,23 @@ public enum ProtocolBitmaskFeature {
     /** Compute tasks (execute by task name). */
     EXECUTE_TASK_BY_NAME(1),
 
+    /**
+     * Cluster operations (state and WAL). In addition to {@link ProtocolVersionFeature#CLUSTER_API} this feature
+     * also allows to use other cluster states beside ACTIVE and INACTIVE.
+     */
+    CLUSTER_API(2),
+
+    /** Cluster groups. */
+    CLUSTER_GROUPS(4),
+
+    /** Invoke service methods. */
+    SERVICE_INVOKE(5),
+
     /** Feature for use default query timeout if the qry timeout isn't set explicitly. */
-    DEFAULT_QRY_TIMEOUT(6);
+    DEFAULT_QRY_TIMEOUT(6),
+
+    /** Additional SqlFieldsQuery properties: partitions, updateBatchSize */
+    QRY_PARTITIONS_BATCH_SIZE(7);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

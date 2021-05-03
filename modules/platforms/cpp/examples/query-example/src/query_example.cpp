@@ -73,7 +73,10 @@ void DoSqlQueryWithDistributedJoin()
     {
         QueryFieldsRow row = cursor.GetNext();
 
-        std::cout << row.GetNext<std::string>() << " " << row.GetNext<std::string>() << std::endl;
+        std::string firstName = row.GetNext<std::string>();
+        std::string lastName = row.GetNext<std::string>();
+
+        std::cout << firstName << " " << lastName << std::endl;
     }
 
     std::cout << std::endl;
@@ -91,7 +94,10 @@ void DoSqlQueryWithDistributedJoin()
     {
         QueryFieldsRow row = cursor.GetNext();
 
-        std::cout << row.GetNext<std::string>() << " " << row.GetNext<std::string>() << std::endl;
+        std::string firstName = row.GetNext<std::string>();
+        std::string lastName = row.GetNext<std::string>();
+
+        std::cout << firstName << " " << lastName << std::endl;
     }
 
     std::cout << std::endl;
@@ -110,8 +116,8 @@ void DoSqlQueryWithJoin()
     // Execute query to get names of all employees.
     std::string sql(
         "select concat(firstName, ' ', lastName), org.name "
-        "from Person, \"Organization\".Organization as org "
-        "where Person.orgId = org._key");
+        "from Person inner join \"Organization\".Organization as org "
+        "on Person.orgId = org._key");
 
     QueryFieldsCursor cursor = cache.Query(SqlFieldsQuery(sql));
 
@@ -124,8 +130,10 @@ void DoSqlQueryWithJoin()
     {
         QueryFieldsRow row = cursor.GetNext();
 
-        std::cout << row.GetNext<std::string>() << " is working in ";
-        std::cout << row.GetNext<std::string>() << std::endl;
+        std::string person = row.GetNext<std::string>();
+        std::string organization = row.GetNext<std::string>();
+
+        std::cout << person << " is working in " << organization << std::endl;
     }
 
     std::cout << std::endl;
@@ -150,7 +158,11 @@ void DoSqlQueryWithFunction()
 
     // In this particular case each row will have one element with full name of an employees.
     while (cursor.HasNext())
-        std::cout << cursor.GetNext().GetNext<std::string>() << std::endl;
+    {
+        std::string person = cursor.GetNext().GetNext<std::string>();
+
+        std::cout << person << std::endl;
+    }
 
     std::cout << std::endl;
 }
@@ -181,7 +193,11 @@ void DoSqlQueryWithAggregation()
     std::cout << "Average salary for 'ApacheIgnite' employees: " << std::endl;
 
     while (cursor.HasNext())
-        std::cout << cursor.GetNext().GetNext<double>() << std::endl;
+    {
+        double salary = cursor.GetNext().GetNext<double>();
+
+        std::cout << salary << std::endl;
+    }
 
     std::cout << std::endl;
 }
@@ -214,11 +230,11 @@ void DoSqlQuery()
     {
         QueryFieldsRow row = cursor.GetNext();
 
-        std::cout
-            << row.GetNext<std::string>() << " "
-            << row.GetNext<std::string>() << " : "
-            << row.GetNext<double>()
-            << std::endl;
+        std::string firstName = row.GetNext<std::string>();
+        std::string lastName = row.GetNext<std::string>();
+        double salary = row.GetNext<double>();
+
+        std::cout << firstName << " " << lastName << " : " << salary << std::endl;
     }
 
     std::cout << std::endl;
@@ -237,11 +253,11 @@ void DoSqlQuery()
     {
         QueryFieldsRow row = cursor.GetNext();
 
-        std::cout
-            << row.GetNext<std::string>() << " "
-            << row.GetNext<std::string>() << " : "
-            << row.GetNext<double>()
-            << std::endl;
+        std::string firstName = row.GetNext<std::string>();
+        std::string lastName = row.GetNext<std::string>();
+        double salary = row.GetNext<double>();
+
+        std::cout << firstName << " " << lastName << " : " << salary << std::endl;
     }
 
     std::cout << std::endl;

@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDa
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
@@ -541,6 +542,13 @@ public interface IgniteCacheOffheapManager {
      * @param idxName Index name.
      * @throws IgniteCheckedException If failed.
      */
+    public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * @param cacheId Cache ID.
+     * @param idxName Index name.
+     * @throws IgniteCheckedException If failed.
+     */
     public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
@@ -578,12 +586,24 @@ public interface IgniteCacheOffheapManager {
          * @return Old row.
          */
         @Nullable public CacheDataRow oldRow();
+
+        /**
+         * Flag that indicates if oldRow was expired during invoke.
+         * @return {@code true} if old row was expired, {@code false} otherwise.
+         */
+        public boolean oldRowExpiredFlag();
     }
 
     /**
      *
      */
     interface CacheDataStore {
+
+        /**
+         * @return Cache data tree object.
+         */
+        public CacheDataTree tree();
+
         /**
          * Initialize data store if it exists.
          *

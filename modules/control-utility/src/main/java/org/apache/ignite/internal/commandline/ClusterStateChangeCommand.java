@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.util.typedef.F;
 
@@ -32,6 +33,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
+import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATION;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
@@ -41,11 +43,17 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
  * Command to change cluster state.
  */
 public class ClusterStateChangeCommand implements Command<ClusterState> {
+    /** Flag of forced cluster deactivation. */
+    public static final String FORCE_COMMAND = "--force";
+
     /** New cluster state */
     private ClusterState state;
 
     /** Cluster name. */
     private String clusterName;
+
+    /** If {@code true}, cluster deactivation will be forced. */
+    private boolean forceDeactivation;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
@@ -55,7 +63,8 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
         params.put(INACTIVE.toString(), "Deactivate cluster.");
         params.put(ACTIVE_READ_ONLY.toString(), "Activate cluster. Cache updates are denied.");
 
-        Command.usage(log, "Change cluster state:", SET_STATE, params, or((Object[])ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(log, "Change cluster state:", SET_STATE, params, or((Object[])ClusterState.values()),
+            optional(FORCE_COMMAND), optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */
@@ -81,13 +90,27 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
                 .filter(n -> n.supports(CLUSTER_READ_ONLY_MODE))
                 .collect(toSet());
 
-            if (state == ACTIVE_READ_ONLY && !supportedServerNodes.equals(serverNodes))
+            Set<GridClientNode> notSupportedSafeDeactivation = supportedServerNodes.stream()
+                .filter(n -> !n.supports(SAFE_CLUSTER_DEACTIVATION))
+                .collect(toSet());
+
+            if (!supportedServerNodes.equals(serverNodes) && state == ACTIVE_READ_ONLY)
                 throw new IgniteException("Not all nodes in cluster supports cluster state " + state);
+
+            if (!notSupportedSafeDeactivation.isEmpty() && state == INACTIVE && !forceDeactivation) {
+                throw new GridClientException("Deactivation stopped. Found a nodes that do not support the " +
+                    "correctness checking of this operation: " + notSupportedSafeDeactivation + ". Deactivation " +
+                    "clears in-memory caches (without persistence) including the system caches. " +
+                    "To deactivate cluster pass '--force' flag.");
+            }
 
             if (F.isEmpty(supportedServerNodes))
                 client.state().active(ClusterState.active(state));
             else
-                client.state().state(state);
+                if (notSupportedSafeDeactivation.isEmpty())
+                    client.state().state(state, forceDeactivation);
+                else
+                    client.state().state(state);
 
             log.info("Cluster state changed to " + state);
 
@@ -109,6 +132,18 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
         }
         catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Can't parse new cluster state. State: " + s, e);
+        }
+
+        forceDeactivation = false;
+
+        if (argIter.hasNextArg()) {
+            String arg = argIter.peekNextArg();
+
+            if (FORCE_COMMAND.equalsIgnoreCase(arg)) {
+                forceDeactivation = true;
+
+                argIter.nextArg("");
+            }
         }
     }
 

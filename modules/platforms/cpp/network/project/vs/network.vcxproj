@@ -191,6 +191,7 @@
     <ClInclude Include="..\..\src\network\ssl\secure_socket_client.h" />
     <ClInclude Include="..\..\src\network\ssl\ssl_gateway.h" />
     <ClInclude Include="..\..\src\network\tcp_socket_client.h" />
+    <ClInclude Include="..\..\src\network\internal_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\os\win\src\network\sockets.cpp" />

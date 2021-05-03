@@ -285,7 +285,6 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLI
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.BUILD_TSTAMP_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
@@ -1748,8 +1747,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         add(ATTR_CONSISTENCY_CHECK_SKIPPED, getBoolean(IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK));
 
-        add(ATTR_VALIDATE_CACHE_REQUESTS, Boolean.TRUE);
-
         if (cfg.getConsistentId() != null)
             add(ATTR_NODE_CONSISTENT_ID, cfg.getConsistentId());
 
@@ -2104,9 +2101,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             log.info(str);
         }
 
-        if (!ctx.state().clusterState().active()) {
-            U.quietAndInfo(log, ">>> Ignite cluster is not active (limited functionality available). " +
-                "Use control.(sh|bat) script or IgniteCluster interface to activate.");
+        if (!ClusterState.active(ctx.state().clusterState().state())) {
+            U.quietAndInfo(log, ">>> Ignite cluster is in " + ClusterState.INACTIVE + " state (limited functionality available). " +
+                "Use control.(sh|bat) script or IgniteCluster.state(ClusterState.ACTIVE) or " +
+                "IgniteCluster.state(ClusterState.ACTIVE_READ_ONLY) interface to activate.");
         }
     }
 

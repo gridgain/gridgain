@@ -17,9 +17,11 @@
 namespace Apache.Ignite.Core.Impl.Transactions
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Threading;
     using System.Threading.Tasks;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Transactions;
 
@@ -31,10 +33,10 @@ namespace Apache.Ignite.Core.Impl.Transactions
         /** Metadatas. */
         private object[] _metas;
 
-        /** Unique  transaction ID.*/
+        /** Unique transaction ID.*/
         private readonly long _id;
 
-        /** Cache. */
+        /** Transactions facade. */
         private readonly TransactionsImpl _txs;
 
         /** TX concurrency. */
@@ -395,11 +397,17 @@ namespace Apache.Ignite.Core.Impl.Transactions
         }
 
         /** <inheritdoc /> */
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+            Justification = "Dispose should not throw.")]
         public void Dispose()
         {
             try
             {
                 Close();
+            }
+            catch(IgniteIllegalStateException)
+            {
+                _state = new StateHolder(TransactionState.Unknown);
             }
             finally
             {

@@ -36,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -189,6 +191,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FU
  * Partition exchange manager.
  */
 public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedManagerAdapter<K, V> {
+    /** Prefix of error message for dumping long running operations. */
+    public static final String FAILED_DUMP_MSG = "Failed to dump debug information: ";
+
     /** Exchange history size. */
     private final int EXCHANGE_HISTORY_SIZE =
         IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, 1_000);
@@ -287,7 +292,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     private ExchangeLatchManager latchMgr;
 
     /** List of exchange aware components. */
-    private final List<PartitionsExchangeAware> exchangeAwareComps = new ArrayList<>();
+    private final List<PartitionsExchangeAware> exchangeAwareComps = new CopyOnWriteArrayList<>();
 
     /** Histogram of PME durations. */
     private volatile HistogramMetric durationHistogram;
@@ -303,6 +308,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** */
     private final ReentrantLock dumpLongRunningOpsLock = new ReentrantLock();
+
+    /** Latch that is used to guarantee that this manager fully started and all variables initialized. */
+    private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /** Discovery listener. */
     private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
@@ -521,6 +529,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         durationHistogram = mreg.findMetric(PME_DURATION_HISTOGRAM);
         blockingDurationHistogram = mreg.findMetric(PME_OPS_BLOCKED_DURATION_HISTOGRAM);
+
+        startLatch.countDown();
     }
 
     /**
@@ -602,8 +612,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         baselineChanging = true;
                     else {
                         DiscoveryDataClusterState state = cctx.kernalContext().state().clusterState();
-
-                        assert state.transition() : state + " evt: " + evt + " msg: " + customMsg;
 
                         baselineChanging = state.baselineChanging()
                             // Or it is the first activation.
@@ -979,6 +987,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         U.join(exchWorker, log);
 
+        if (cctx.kernalContext().clientDisconnected())
+            cctx.affinity().removeGroupHolders();
+
         // Finish all exchange futures.
         ExchangeFutureSet exchFuts0 = exchFuts;
 
@@ -1273,9 +1284,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /**
      * @param topVer Topology version.
      * @param grpId Group id.
+     * @param rebalanceId Rebalance id.
      */
-    public void finishPreloading(AffinityTopologyVersion topVer, int grpId) {
-        exchWorker.finishPreloading(topVer, grpId);
+    public void finishPreloading(AffinityTopologyVersion topVer, int grpId, long rebalanceId) {
+        exchWorker.finishPreloading(topVer, grpId, rebalanceId);
     }
 
     /**
@@ -2443,6 +2455,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             if (!dumpLongRunningOpsLock.tryLock())
                 return;
 
+            startLatch.await();
+
             try {
                 if (U.currentTimeMillis() < nextLongRunningOpsDumpTime)
                     return;
@@ -2475,7 +2489,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             }
         }
         catch (Exception e) {
-            U.error(diagnosticLog, "Failed to dump debug information: " + e, e);
+            U.error(diagnosticLog, FAILED_DUMP_MSG + e, e);
         }
     }
 
@@ -3034,9 +3048,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         /**
          * @param topVer Topology version.
          * @param grpId Group id.
+         * @param rebalanceId Rebalance id.
          */
-        void finishPreloading(AffinityTopologyVersion topVer, int grpId) {
-            futQ.add(new FinishPreloadingTask(topVer, grpId));
+        void finishPreloading(AffinityTopologyVersion topVer, int grpId, long rebalanceId) {
+            futQ.add(new FinishPreloadingTask(topVer, grpId, rebalanceId));
         }
 
         /**
@@ -3426,7 +3441,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         dumpDebugInfo(exchFut);
                                     }
                                     catch (Exception e) {
-                                        U.error(diagnosticLog, "Failed to dump debug information: " + e, e);
+                                        U.error(diagnosticLog, FAILED_DUMP_MSG + e, e);
                                     }
 
                                     nextDumpTime = U.currentTimeMillis() + nextDumpTimeout(dumpCnt++, dumpTimeout);

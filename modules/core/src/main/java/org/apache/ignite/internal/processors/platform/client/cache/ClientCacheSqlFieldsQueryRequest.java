@@ -24,11 +24,11 @@ import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcStatementType;
-import org.apache.ignite.internal.processors.platform.cache.PlatformCache;
 import org.apache.ignite.internal.processors.platform.client.ClientBitmaskFeature;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
+import org.apache.ignite.internal.processors.platform.client.ClientSqlUtils;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxAwareRequest;
@@ -47,6 +47,12 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
     /** Include field names flag. */
     private final boolean includeFieldNames;
 
+    /** Partitions. */
+    private final int[] partitions;
+
+    /** Update batch size. */
+    private final Integer updateBatchSize;
+
     /**
      * Ctor.
      *
@@ -62,7 +68,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
         int pageSize = reader.readInt();
         reader.readInt();  // maxRows
         String sql = reader.readString();
-        Object[] args = PlatformCache.readQueryArgs(reader);
+        Object[] args = ClientSqlUtils.readQueryArgs(reader, protocolCtx);
         JdbcStatementType stmtType = JdbcStatementType.fromOrdinal(reader.readByte());
         boolean distributedJoins = reader.readBoolean();
         boolean loc = reader.readBoolean();
@@ -94,10 +100,33 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
             QueryUtils.withQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         this.qry = qry;
+
+        if (protocolCtx.isFeatureSupported(ClientBitmaskFeature.QRY_PARTITIONS_BATCH_SIZE)) {
+            // Set qry values in process method so that validation errors are reported to the client.
+            int partCnt = reader.readInt();
+
+            if (partCnt >= 0) {
+                partitions = new int[partCnt];
+
+                for (int i = 0; i < partCnt; i++)
+                    partitions[i] = reader.readInt();
+            } else
+                partitions = null;
+
+            updateBatchSize = reader.readInt();
+        } else {
+            partitions = null;
+            updateBatchSize = null;
+        }
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
+        qry.setPartitions(partitions);
+
+        if (updateBatchSize != null)
+            qry.setUpdateBatchSize(updateBatchSize);
+
         ctx.incrementCursors();
 
         try {

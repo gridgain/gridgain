@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
                 var ex = Assert.Throws<TransactionOptimisticException>(() => tx.Commit());
                 StringAssert.StartsWith(
-                    "Failed to prepare transaction, read/write conflict [key=1, keyCls=java.lang.Integer, val=-1",
+                    "Failed to prepare transaction, read/write conflict [key=1262722378, val=-1399925094",
                     ex.Message);
             }
 
@@ -80,10 +80,11 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual(TransactionIsolation.Serializable, transactions.Tx.Isolation);
 
             Task.Factory.StartNew(() =>
-            {
-                Assert.IsNull(transactions.Tx);
-                cache[1] = -1;
-            }).Wait();
+                {
+                    Assert.IsNull(transactions.Tx);
+                    cache[1] = -1;
+                }, TaskCreationOptions.LongRunning)
+                .Wait();
 
             Assert.AreEqual(old, cache[1]);
             cache[1] = old + 1;
@@ -93,7 +94,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             var ex = Assert.Throws<TransactionOptimisticException>(() => scope.Dispose());
             StringAssert.StartsWith(
-                "Failed to prepare transaction, read/write conflict [key=1, keyCls=java.lang.Integer, val=-1",
+                "Failed to prepare transaction, read/write conflict [key=1262722378, val=-1399925094",
                 ex.Message);
 
             Assert.AreEqual(-1, cache[1]);

@@ -22,6 +22,7 @@ import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,7 +35,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
@@ -159,6 +162,19 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         metastorage.remove("key");
 
         assertNull(metastorage.read("key"));
+
+        stopGrid(0);
+
+        try {
+            metastorage.writeAsync("key", "value").get(10, TimeUnit.SECONDS);
+
+            fail("Exception is expected");
+        }
+        catch (Exception e) {
+            assertTrue(X.hasCause(e, NodeStoppingException.class));
+
+            assertTrue(e.getMessage().contains("Node is stopping."));
+        }
     }
 
     /**

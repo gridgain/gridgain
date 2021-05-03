@@ -54,11 +54,11 @@ public class WalModeChangeAdvancedSelfTest extends WalModeChangeCommonAbstractSe
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        super.afterTest();
     }
 
     /**

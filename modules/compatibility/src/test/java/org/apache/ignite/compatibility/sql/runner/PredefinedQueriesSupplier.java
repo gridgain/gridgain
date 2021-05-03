@@ -25,15 +25,15 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 /**
  * Simple query supplier that returns preconfigured queries one by one.
  */
-public class PredefinedQueriesSupplier implements Supplier<String> {
+public class PredefinedQueriesSupplier implements Supplier<QueryWithParams> {
     /** */
-    private final Collection<String> qrys;
+    private final Collection<QueryWithParams> qrys;
 
     /** */
     private final boolean runOnce;
 
     /** */
-    private Iterator<String> it;
+    private Iterator<QueryWithParams> it;
 
     /**
      * @param qrys Collection of the queries this supplier would return.
@@ -41,7 +41,7 @@ public class PredefinedQueriesSupplier implements Supplier<String> {
      * provided collection only once or it should iterates on manner of cyclic
      * buffer.
      */
-    public PredefinedQueriesSupplier(Collection<String> qrys, boolean runOnce) {
+    public PredefinedQueriesSupplier(Collection<QueryWithParams> qrys, boolean runOnce) {
         A.notEmpty(qrys, "qrys");
 
         this.qrys = new ArrayList<>(qrys);
@@ -51,7 +51,7 @@ public class PredefinedQueriesSupplier implements Supplier<String> {
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized String get() {
+    @Override public synchronized QueryWithParams get() {
         if (!it.hasNext()) {
             if (runOnce)
                 return null;
