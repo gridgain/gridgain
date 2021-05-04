@@ -119,7 +119,7 @@ public class StatisticsColumnPartitionDataView {
      * @return Percent of nulls values.
      */
     @Order(8)
-    public int nulls() {
+    public long nulls() {
         return statistics.columnStatistics(column).nulls();
     }
 

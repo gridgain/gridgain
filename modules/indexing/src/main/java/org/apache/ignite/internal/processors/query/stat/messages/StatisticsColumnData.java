@@ -38,8 +38,8 @@ public class StatisticsColumnData implements Message {
     /** Max value in column. */
     private GridH2ValueMessage max;
 
-    /** Percent of null values in column. */
-    private int nulls;
+    /** Number of null values in column. */
+    private long nulls;
 
     /** Percent of distinct values in column (except nulls). */
     private long distinct;
@@ -70,7 +70,7 @@ public class StatisticsColumnData implements Message {
      *
      * @param min Min value in column.
      * @param max Max value in column.
-     * @param nulls Percent of null values in column.
+     * @param nulls Number of null values in column.
      * @param distinct Total distinct values in column.
      * @param total Total values in column.
      * @param size Average size, for variable size types (in bytes).
@@ -81,7 +81,7 @@ public class StatisticsColumnData implements Message {
     public StatisticsColumnData(
         GridH2ValueMessage min,
         GridH2ValueMessage max,
-        int nulls,
+        long nulls,
         long distinct,
         long total,
         int size,
@@ -117,7 +117,7 @@ public class StatisticsColumnData implements Message {
     /**
      * @return Percent of null values in column.
      */
-    public int nulls() {
+    public long nulls() {
         return nulls;
     }
 
@@ -200,7 +200,7 @@ public class StatisticsColumnData implements Message {
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeInt("nulls", nulls))
+                if (!writer.writeLong("nulls", nulls))
                     return false;
 
                 writer.incrementState();
@@ -275,7 +275,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 4:
-                nulls = reader.readInt("nulls");
+                nulls = reader.readLong("nulls");
 
                 if (!reader.isLastRead())
                     return false;

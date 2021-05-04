@@ -31,8 +31,8 @@ public class ColumnStatistics {
     /** Maximum value in column or {@code null} if there are no non null values in the column. */
     private final Value max;
 
-    /** Percent of null values in column. */
-    private final int nulls;
+    /** Number of null values in column. */
+    private final long nulls;
 
     /** Number of distinct values in column. */
     private final long distinct;
@@ -57,7 +57,7 @@ public class ColumnStatistics {
      *
      * @param min Min value in column or {@code null}.
      * @param max Max value in column or {@code null}.
-     * @param nulls Percent of null values in column.
+     * @param nulls Number of null values in column.
      * @param distinct Number of distinct values in column.
      * @param total Total number of values in column.
      * @param size Average size in bytes, for variable size only.
@@ -68,7 +68,7 @@ public class ColumnStatistics {
     public ColumnStatistics(
         Value min,
         Value max,
-        int nulls,
+        long nulls,
         long distinct,
         long total,
         int size,
@@ -102,9 +102,9 @@ public class ColumnStatistics {
     }
 
     /**
-     * @return Percent of null values.
+     * @return Number of null values in column.
      */
-    public int nulls() {
+    public long nulls() {
         return nulls;
     }
 

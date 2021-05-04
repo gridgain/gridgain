@@ -49,9 +49,9 @@ public class ManagerStatisticsTypesTest extends StatisticsTypesAbstractTest {
             assertNotNull(colStat);
 
             if (colName.equals("COL_GEOMETRY"))
-                assertEquals("Unexpected nulls count for column " + colName, 100, colStat.nulls());
+                assertEquals("Unexpected nulls count for column " + colName, SMALL_SIZE * 1.5 - 1, colStat.nulls());
             else
-                assertEquals("Unexpected nulls count for column " + colName, 33, colStat.nulls());
+                assertEquals("Unexpected nulls count for column " + colName, 50, colStat.nulls());
 
             assertEquals(dtypesStat.rowCount(), colStat.total());
             assertNotNull(colStat.raw());
