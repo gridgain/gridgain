@@ -198,4 +198,29 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
     }
+
+    /**
+     */
+    @Test
+    public void testEnforceStatisticValues() throws Exception {
+        long size = SMALL_SIZE;
+        ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+
+        assertNotNull(smallStat);
+
+        Timestamp tsA = new Timestamp(smallStat.columnStatistics("A").createdAt());
+        Timestamp tsB = new Timestamp(smallStat.columnStatistics("B").createdAt());
+        Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
+
+        List<List<Object>> localData = Arrays.asList(
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0, size, 4, 1L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0, size, 4, 1L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
+        );
+
+        sql("ANALYZE SMALL(A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7\"");
+        sql("ANALYZE SMALL(B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
+    }
 }
