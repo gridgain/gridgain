@@ -190,9 +190,9 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
 
         assertEquals(nullsPercent, res.nulls());
 
-        int card = (vals.length == 0) ? 0 : (100 * new HashSet<>(Arrays.asList(vals)).size()) / vals.length;
+        int distinct = (vals.length == 0) ? 0 : (100 * new HashSet<>(Arrays.asList(vals)).size()) / vals.length;
 
-        assertEquals(card, res.cardinality());
+        assertEquals(distinct, res.distinct());
         assertEquals(vals.length + nulls, res.total());
         assertNotNull(res.raw());
     }

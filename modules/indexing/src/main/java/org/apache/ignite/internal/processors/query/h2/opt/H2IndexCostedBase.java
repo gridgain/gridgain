@@ -89,7 +89,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-        
+
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
                 constFunc = this::getCostRangeIndex_8_7_12;
@@ -745,7 +745,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 long rowCount,
                 ObjectStatisticsImpl locTblStats
         ) {
-            int totalCardinality = 0;
+            double totalCardinality = 0;
 
             long rowsCost = rowCount;
 
@@ -778,11 +778,23 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         if (colStats != null && equalNull == Boolean.FALSE)
                             rowsCost = rowsCost * (100 - colStats.nulls()) / 100;
 
-                        int cardinality = getColumnCardinality(colStats, column);
+                        long distinctRows;
+                        if (colStats == null) {
+                            double cardinality = (double)column.getSelectivity() / 100;
+                            totalCardinality = (1 - totalCardinality) * (1 - cardinality);
+                            distinctRows = Math.round((double) rowCount * totalCardinality);
+                        }
+                        else {
+                            // TODO: here nulls is a number of null values, not a percent. But only here.
+                            double cardinality = colStats.distinct() / (colStats.total() - colStats.nulls());
+                            totalCardinality = (1 - totalCardinality) * (1 - cardinality);
+                            distinctRows = Math.round(colStats.distinct() * totalCardinality);
+                        }
+                        //double cardinality = getColumnCardinality(colStats, column);
 
-                        totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
+                        //totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
 
-                        long distinctRows = Math.round((double) rowCount * totalCardinality / 100);
+                        //long distinctRows = Math.round((double) rowCount * totalCardinality / 100);
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
@@ -817,17 +829,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 }
             }
             return rowsCost;
-        }
-
-        /**
-         * Try to get column cardinality from statistics, if there is no such - fall back to H2 column selectivity.
-         *
-         * @param colStats Column statistics.
-         * @param column Column.
-         * @return Column cardinality in percents.
-         */
-        private int getColumnCardinality(@Nullable ColumnStatistics colStats, Column column) {
-            return (colStats == null) ? column.getSelectivity() : colStats.cardinality();
         }
 
         /**
