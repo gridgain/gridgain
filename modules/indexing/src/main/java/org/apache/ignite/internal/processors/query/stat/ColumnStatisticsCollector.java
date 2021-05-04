@@ -228,8 +228,8 @@ public class ColumnStatisticsCollector {
             }
 
             total += partStat.total();
-            nullsCnt += (partStat.total() * partStat.nulls()) / 100;
-            totalSize += (long)partStat.size() * (partStat.total() * (double)(100 - partStat.nulls()) / 100);
+            nullsCnt +=  partStat.nulls();
+            totalSize += (long)partStat.size() * (partStat.total() - partStat.nulls());
 
             if (min == null || (partStat.min() != null && comp.compare(partStat.min(), min) < 0))
                 min = partStat.min();
