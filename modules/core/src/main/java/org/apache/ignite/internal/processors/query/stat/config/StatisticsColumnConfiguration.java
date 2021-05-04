@@ -137,7 +137,7 @@ public class StatisticsColumnConfiguration implements Serializable {
             return newCfg;
 
         if (oldCfg.collectionAwareEqual(newCfg))
-            return new StatisticsColumnConfiguration(newCfg, oldCfg.ver, oldCfg.tombstone, oldCfg.overrides);
+            return new StatisticsColumnConfiguration(newCfg, oldCfg.ver, oldCfg.tombstone, newCfg.overrides);
 
         return new StatisticsColumnConfiguration(newCfg, oldCfg.ver + 1, false, newCfg.overrides);
     }
