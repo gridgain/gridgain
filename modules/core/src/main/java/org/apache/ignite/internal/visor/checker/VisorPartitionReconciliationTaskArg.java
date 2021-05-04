@@ -82,7 +82,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
-    Set<ReconType> reconTypes;
+    private Set<ReconType> reconTypes;
 
     /**
      * Default constructor.
