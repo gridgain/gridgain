@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.datastructures.GridCacheSetItemKey;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -189,18 +190,13 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
             cacheName = ctx.name();
         }
 
+        Constructor<GridCacheSetItemKey> ctor = getGridCacheSetItemKeyCtor();
         for (int i = firstBrokenKey; i < firstBrokenKey + BROKEN_KEYS_CNT; i++) {
-            Class<?> aCls = Class.forName(GridCacheSetItemKey.class.getCanonicalName());
-            for (Constructor<?> constructor : aCls.getDeclaredConstructors()) {
-                constructor.setAccessible(true);
-                if (constructor.getParameterCount() == 2) {
-                    Object brokenKey = constructor.newInstance(null, i);
-                    if (i % 3 == 0)
-                        simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
-                    else
-                        simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
-                }
-            }
+            Object brokenKey = ctor.newInstance(null, i);
+            if (i % 3 == 0)
+                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
+            else
+                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
         }
 
         forceCheckpoint();
@@ -236,5 +232,19 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
                 keyMatched
             );
         }
+    }
+
+    /** */
+    private static Constructor<GridCacheSetItemKey> getGridCacheSetItemKeyCtor() throws ClassNotFoundException {
+        Class<?> aCls = Class.forName(GridCacheSetItemKey.class.getCanonicalName());
+        for (Constructor<?> constructor : aCls.getDeclaredConstructors()) {
+            constructor.setAccessible(true);
+            Class<?>[] types = constructor.getParameterTypes();
+            if (types.length == 2 && types[0] == IgniteUuid.class && types[1] == Object.class)
+                return (Constructor<GridCacheSetItemKey>)constructor;
+        }
+
+        throw new NullPointerException("Unable to locate constructor of type " + GridCacheSetItemKey.class +
+            "with arguments: [" + IgniteUuid.class + ", " + Object.class + "]");
     }
 }

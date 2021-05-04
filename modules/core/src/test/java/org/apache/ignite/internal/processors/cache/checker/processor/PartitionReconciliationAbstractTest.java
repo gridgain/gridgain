@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
@@ -100,6 +102,20 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     /**
      *
      */
+    public static <T> Set<T> conflictKeys(ReconciliationResult res, String cacheName, Function<String, T> map) {
+        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .map(k -> (String)U.field(k, "strView"))
+            .map(map)
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     *
+     */
     public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
             .values()
@@ -117,8 +133,22 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         String cacheName,
         Set<Integer> keys
     ) {
+        Pattern p = Pattern.compile("name=(\\d+)");
         for (Integer key : keys)
             assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName).contains(key));
+    }
+
+    /**
+     *
+     */
+    public static <T> void assertResultContainsConflictKeys(
+        ReconciliationResult res,
+        String cacheName,
+        Function<String, T> map,
+        Set<T> keys
+    ) {
+        for (T key : keys)
+            assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName, map).contains(key));
     }
 
     /**

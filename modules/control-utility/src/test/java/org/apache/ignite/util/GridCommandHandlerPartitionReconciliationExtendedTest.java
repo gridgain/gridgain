@@ -280,6 +280,8 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertTrue(lsnr.check(10_000));
 
+        log.unregisterListener(lsnr);
+
         return usedCaches;
     }
 

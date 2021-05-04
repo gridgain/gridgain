@@ -17,7 +17,6 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,6 +76,8 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -84,6 +85,8 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -131,17 +134,11 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
             nodeCacheCtxs[i] = grid(i).cachex(cacheName).context();
 
         for (int i = firstBrokenKey; i < firstBrokenKey + BROKEN_KEYS_CNT; i++) {
-            Class<?> aCls = Class.forName(GridCacheInternalKeyImpl.class.getCanonicalName());
-            for (Constructor<?> constructor : aCls.getDeclaredConstructors()) {
-                constructor.setAccessible(true);
-                if (constructor.getParameterCount() == 2) {
-                    Object brokenKey = constructor.newInstance(DS_NAME + i, "default-ds-group");
-                    if (i % 3 == 0)
-                        simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
-                    else
-                        simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
-                }
-            }
+            GridCacheInternalKeyImpl brokenKey = new GridCacheInternalKeyImpl(DS_NAME + i, "default-ds-group");
+            if (i % 3 == 0)
+                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
+            else
+                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], brokenKey);
         }
 
         forceCheckpoint();
@@ -176,5 +173,8 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
                 keyMatched
             );
         }
+
+        if (fixMode)
+            assertFalse(idleVerify(ig, cacheName).hasConflicts());
     }
 }
