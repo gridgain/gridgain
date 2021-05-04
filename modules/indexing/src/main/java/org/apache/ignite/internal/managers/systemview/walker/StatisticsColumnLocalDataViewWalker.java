@@ -74,7 +74,7 @@ public class StatisticsColumnLocalDataViewWalker implements SystemViewRowAttribu
         v.accept(3, "column", String.class, row.column());
         v.acceptLong(4, "rowsCount", row.rowsCount());
         v.acceptLong(5, "distinct", row.distinct());
-        v.acceptInt(6, "nulls", row.nulls());
+        v.acceptLong(6, "nulls", row.nulls());
         v.acceptLong(7, "total", row.total());
         v.acceptInt(8, "size", row.size());
         v.acceptLong(9, "version", row.version());

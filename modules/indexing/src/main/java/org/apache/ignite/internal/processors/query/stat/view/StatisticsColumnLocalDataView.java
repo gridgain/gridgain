@@ -104,7 +104,7 @@ public class StatisticsColumnLocalDataView {
      * @return Percent of nulls values.
      */
     @Order(6)
-    public int nulls() {
+    public long nulls() {
         return statistics.columnStatistics(column).nulls();
     }
 

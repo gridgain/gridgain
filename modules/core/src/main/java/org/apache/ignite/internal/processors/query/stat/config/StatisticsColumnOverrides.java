@@ -1,9 +1,27 @@
+/*
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.ignite.internal.processors.query.stat.config;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.Objects;
 
+/**
+ * Configuration overrides.
+ */
 public class StatisticsColumnOverrides {
     /** Percent of null values in column. If {@code null} - use calculated value. */
     private final Long nulls;
@@ -17,7 +35,14 @@ public class StatisticsColumnOverrides {
     /** Average size in bytes, for variable size only. If {@code null} - use calculated value. */
     private final Integer size;
 
-
+    /**
+     * Constructor.
+     *
+     * @param nulls Number of null values or {@code null} to keep calculated value.
+     * @param distinct Number of distinct values or {@code null} to keep calculated value.
+     * @param total Total number of values in column or {@code null} to keep calculated value.
+     * @param size Average size in bytes or {@code null} to keep calculated value.
+     */
     public StatisticsColumnOverrides(Long nulls, Long distinct, Long total, Integer size) {
         this.nulls = nulls;
         this.distinct = distinct;
@@ -41,6 +66,7 @@ public class StatisticsColumnOverrides {
         return size;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -49,10 +75,12 @@ public class StatisticsColumnOverrides {
             Objects.equals(total, that.total) && Objects.equals(size, that.size);
     }
 
+    /** {@inheritDoc} */
     @Override public int hashCode() {
         return Objects.hash(nulls, distinct, total, size);
     }
 
+    /** {@inheritDoc} */
     @Override public String toString(){
         return S.toString(StatisticsColumnOverrides.class, this);
     }

@@ -469,14 +469,8 @@ public class IgniteStatisticsRepository {
 
         assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
 
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(
-            cfg.key().schema(),
-            cfg.key().obj(),
-            new ArrayList<>(cfg.columns().keySet())
-        );
-
         ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-            keyMsg,
+            cfg,
             statsToAgg
         );
 

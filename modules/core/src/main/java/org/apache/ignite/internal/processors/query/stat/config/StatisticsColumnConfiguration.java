@@ -36,6 +36,7 @@ public class StatisticsColumnConfiguration implements Serializable {
     /** Tombstone flag: {@code true} statistic for this column is dropped, otherwise {@code false}. */
     private final boolean tombstone;
 
+    /** Overrides or {@code null} if all calculated values should be kept. */
     private final StatisticsColumnOverrides overrides;
 
     /**
@@ -109,6 +110,15 @@ public class StatisticsColumnConfiguration implements Serializable {
      */
     public boolean tombstone() {
         return tombstone;
+    }
+
+    /**
+     * Overrides values.
+     *
+     * @return Statistics column overrides or {@code null} if there are no overrides.
+     */
+    public StatisticsColumnOverrides overrides() {
+        return overrides;
     }
 
     /**
