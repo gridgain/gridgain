@@ -34,11 +34,8 @@ public class ColumnStatistics {
     /** Percent of null values in column. */
     private final int nulls;
 
-    /**
-     * Percent of different values in column, i.e. 100 means that all values are unique, 0% means that all values
-     * are the same.
-     */
-    private final int cardinality;
+    /** Number of distinct values in column. */
+    private final long distinct;
 
     /** Total number of values in column. */
     private final long total;
@@ -61,7 +58,7 @@ public class ColumnStatistics {
      * @param min Min value in column or {@code null}.
      * @param max Max value in column or {@code null}.
      * @param nulls Percent of null values in column.
-     * @param cardinality Percent of unique value in column.
+     * @param distinct Number of distinct values in column.
      * @param total Total number of values in column.
      * @param size Average size in bytes, for variable size only.
      * @param raw Raw data to aggregate statistics.
@@ -72,7 +69,7 @@ public class ColumnStatistics {
         Value min,
         Value max,
         int nulls,
-        int cardinality,
+        long distinct,
         long total,
         int size,
         byte[] raw,
@@ -82,7 +79,7 @@ public class ColumnStatistics {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
-        this.cardinality = cardinality;
+        this.distinct = distinct;
         this.total = total;
         this.size = size;
         this.raw = raw;
@@ -112,10 +109,10 @@ public class ColumnStatistics {
     }
 
     /**
-     * @return Percent of unique not null values.
+     * @return Number of null values in column.
      */
-    public int cardinality() {
-        return cardinality;
+    public long distinct() {
+        return distinct;
     }
 
     /**
@@ -159,7 +156,7 @@ public class ColumnStatistics {
         if (o == null || getClass() != o.getClass()) return false;
         ColumnStatistics that = (ColumnStatistics) o;
         return nulls == that.nulls &&
-                cardinality == that.cardinality &&
+                distinct == that.distinct &&
                 total == that.total &&
                 size == that.size &&
                 ver == that.ver &&
@@ -171,7 +168,7 @@ public class ColumnStatistics {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(min, max, nulls, cardinality, total, size, ver, createdAt);
+        int result = Objects.hash(min, max, nulls, distinct, total, size, ver, createdAt);
         result = 31 * result + Arrays.hashCode(raw);
         return result;
     }

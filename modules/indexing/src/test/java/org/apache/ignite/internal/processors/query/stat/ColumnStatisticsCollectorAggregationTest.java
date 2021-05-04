@@ -73,7 +73,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         assertNull(res.min());
         assertNull(res.max());
         assertEquals(100, res.nulls());
-        assertEquals(0, res.cardinality());
+        assertEquals(0, res.distinct());
         assertEquals(110, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
@@ -99,7 +99,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         assertEquals(ValueDecimal.get(BigDecimal.ZERO), res.min());
         assertEquals(ValueDecimal.get(BigDecimal.TEN), res.max());
         assertEquals(49, res.nulls());
-        assertEquals(11, res.cardinality());
+        assertEquals(11, res.distinct());
         assertEquals(1010, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
