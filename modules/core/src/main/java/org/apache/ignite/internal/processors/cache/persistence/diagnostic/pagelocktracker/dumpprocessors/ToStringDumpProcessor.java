@@ -308,7 +308,6 @@ class ToStringDumpProcessor {
         threadPageLockStates.sort(Comparator.comparing(state -> state.threadName));
 
         for (ThreadPageLockState ths : threadPageLockStates) {
-
             PageLockDump pageLockDump0;
 
             if (ths.invalidContext == null)
@@ -320,9 +319,9 @@ class ToStringDumpProcessor {
             }
 
             processDump(pageLockDump0, ths);
-
-            sb.append(U.nl());
         }
+
+        sb.append(U.nl());
     }
 
     /** */
