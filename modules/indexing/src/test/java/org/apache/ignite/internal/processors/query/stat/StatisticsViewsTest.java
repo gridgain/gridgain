@@ -165,7 +165,9 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         );
 
 
-        System.out.println("+++ " + sql("select * from SYS.STATISTICS_LOCAL_DATA"));
+        System.out.println("+++ ");
+
+        sql("select * from SYS.STATISTICS_LOCAL_DATA");
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
     }
