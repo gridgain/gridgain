@@ -36,4 +36,13 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         oldSize = in.readLong();
         newSize = in.readLong();
     }
+
+    @Override public String toString() {
+        return "NodePartitionSize{" +
+            "inProgress=" + inProgress +
+            ", lastKey=" + lastKey +
+            ", oldSize=" + oldSize +
+            ", newSize=" + newSize +
+            '}';
+    }
 }

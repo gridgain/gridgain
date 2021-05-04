@@ -264,7 +264,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
 //            collector()
 
-            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
+//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
+//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size() + " ||| " + collector.partSizesMap() + " ||| " + Thread.currentThread().getName());
 
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
