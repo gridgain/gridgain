@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -12020,7 +12020,11 @@ public abstract class IgniteUtils {
      * @param cancel Wheter should cancel workers.
      * @param log Logger.
      */
-    public static void awaitForWorkersStop(Collection<GridWorker> workers, boolean cancel, IgniteLogger log) {
+    public static void awaitForWorkersStop(
+        Collection<GridWorker> workers,
+        boolean cancel,
+        @Nullable IgniteLogger log
+    ) {
         for (GridWorker worker : workers) {
             try {
                 if (cancel)
@@ -12029,7 +12033,8 @@ public abstract class IgniteUtils {
                 worker.join();
             }
             catch (Exception e) {
-                log.warning(String.format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
+                if (log != null)
+                    log.warning("Failed to cancel grid runnable [" + worker.toString() + "]: " + e.getMessage());
             }
         }
     }
@@ -12361,7 +12366,7 @@ public abstract class IgniteUtils {
         /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
     }
-    
+
     /**
      * @param ctx Kernel context.
      * @param depInfo Deployment info.
