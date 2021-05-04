@@ -43,9 +43,10 @@ public class StatisticsColumnConfiguration implements Serializable {
      * Constructor.
      *
      * @param name Column name.
+     * @param overrides If set - contains statistics overrides for local statistics.
      */
-    public StatisticsColumnConfiguration(String name) {
-        this(name, 1, false, null);
+    public StatisticsColumnConfiguration(String name, StatisticsColumnOverrides overrides) {
+        this(name, 1, false, overrides);
     }
 
     /**

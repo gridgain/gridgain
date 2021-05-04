@@ -17,12 +17,13 @@ package org.apache.ignite.internal.processors.query.stat.config;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Configuration overrides.
  */
-public class StatisticsColumnOverrides {
+public class StatisticsColumnOverrides implements Serializable {
     /** Percent of null values in column. If {@code null} - use calculated value. */
     private final Long nulls;
 
@@ -50,18 +51,38 @@ public class StatisticsColumnOverrides {
         this.size = size;
     }
 
+    /**
+     * Get number of {@code null} values in column.
+     *
+     * @return Number of null values in column.
+     */
     public Long nulls() {
         return nulls;
     }
 
+    /**
+     * Get number of distinct values in column.
+     *
+     * @return Number of distinct values in column.
+     */
     public Long distinct() {
         return distinct;
     }
 
+    /**
+     * Get total number of values in column.
+     *
+     * @return Total number of values in column (including {@code null}'s)
+     */
     public Long total() {
         return total;
     }
 
+    /**
+     * Get average size in bytes.
+     *
+     * @return Average size in bytes.
+     */
     public Integer size() {
         return size;
     }

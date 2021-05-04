@@ -167,7 +167,7 @@ public class IgniteStatisticsHelper {
                 if (t.columns() == null)
                     colCfgs = Collections.emptyList();
                 else
-                    colCfgs = Arrays.stream(t.columns()).map(StatisticsColumnConfiguration::new)
+                    colCfgs = Arrays.stream(t.columns()).map(name -> new StatisticsColumnConfiguration(name, null))
                         .collect(Collectors.toList());
 
                 return new StatisticsObjectConfiguration(t.key(), colCfgs,
