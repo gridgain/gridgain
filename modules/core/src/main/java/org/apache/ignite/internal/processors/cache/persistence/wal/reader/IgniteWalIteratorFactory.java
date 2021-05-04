@@ -67,7 +67,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.serial
  */
 public class IgniteWalIteratorFactory {
     /** Logger. */
-    private final IgniteLogger log;
+    protected final IgniteLogger log;
 
     /** */
     private final SegmentFileInputFactory segmentFileInputFactory = new SimpleSegmentFileInputFactory();
@@ -380,7 +380,7 @@ public class IgniteWalIteratorFactory {
     /**
      * @return Fake shared context required for create minimal services for record reading.
      */
-    @NotNull private GridCacheSharedContext prepareSharedCtx(
+    @NotNull protected GridCacheSharedContext prepareSharedCtx(
         IteratorParametersBuilder iteratorParametersBuilder
     ) throws IgniteCheckedException {
         GridKernalContext kernalCtx = new StandaloneGridKernalContext(log,
@@ -624,6 +624,71 @@ public class IgniteWalIteratorFactory {
             this.strictBoundsCheck = flag;
 
             return this;
+        }
+
+        /** */
+        public IgniteLogger getLog() {
+            return log;
+        }
+
+        /** */
+        public File[] getFilesOrDirs() {
+            return filesOrDirs;
+        }
+
+        /** */
+        public int getPageSize() {
+            return pageSize;
+        }
+
+        /** */
+        public int getBufferSize() {
+            return bufferSize;
+        }
+
+        /** */
+        public boolean isKeepBinary() {
+            return keepBinary;
+        }
+
+        /** */
+        public FileIOFactory getIoFactory() {
+            return ioFactory;
+        }
+
+        /** */
+        public File getBinaryMetadataFileStoreDir() {
+            return binaryMetadataFileStoreDir;
+        }
+
+        /** */
+        public File getMarshallerMappingFileStoreDir() {
+            return marshallerMappingFileStoreDir;
+        }
+
+        /** */
+        public GridCacheSharedContext getSharedCtx() {
+            return sharedCtx;
+        }
+
+        /** */
+        public IgniteBiPredicate<RecordType, WALPointer> getFilter() {
+            return filter;
+        }
+
+        /** */
+        public FileWALPointer getLowBound() {
+            return lowBound;
+        }
+
+        /** */
+        public FileWALPointer getHighBound() {
+            return highBound;
+        }
+
+        /** */
+        public boolean isStrictBoundsCheck() {
+            return strictBoundsCheck;
         }
 
         /**

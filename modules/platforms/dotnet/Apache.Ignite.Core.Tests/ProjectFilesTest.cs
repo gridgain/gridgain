@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Tests
         {
             var projFiles = TestUtils.GetDotNetSourceDir()
                 .GetFiles("*.csproj", SearchOption.AllDirectories)
-                .Where(x => !x.FullName.ToLower().Contains("dotnetcore") && 
+                .Where(x => !x.FullName.ToLower().Contains("dotnetcore") &&
                             !x.FullName.Contains("Benchmark") &&
                             !x.FullName.Contains("templates") &&
                             !x.FullName.Contains("examples"))
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Tests
         {
             var excluded = new[]
             {
-                "ProjectFilesTest.cs", 
+                "ProjectFilesTest.cs",
                 "CopyOnWriteConcurrentDictionary.cs",
                 "IgniteArgumentCheck.cs",
                 "DelegateConverter.cs",
@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Tests
                 "HandleRegistry.cs",
                 "BinaryObjectHeader.cs"
             };
-            
+
             var csFiles = TestUtils.GetDotNetSourceDir().GetFiles("*.cs", SearchOption.AllDirectories);
 
             foreach (var csFile in csFiles)
@@ -141,10 +141,10 @@ namespace Apache.Ignite.Core.Tests
         public void TestAllCsharpFilesAreIncludedInProject()
         {
             var projFiles = TestUtils.GetDotNetSourceDir().GetFiles("*.csproj", SearchOption.AllDirectories)
-                .Where(x => 
+                .Where(x =>
                     !x.Name.Contains("DotNetCore") &&
-                    !x.Name.Contains("Benchmark") && 
-                    !x.FullName.Contains("templates") && 
+                    !x.Name.Contains("Benchmark") &&
+                    !x.FullName.Contains("templates") &&
                     !x.FullName.Contains("examples"));
 
             var excludedFiles = new[]
@@ -152,7 +152,9 @@ namespace Apache.Ignite.Core.Tests
                 "IgnitionStartTest.cs",
                 "Common\\TestFixtureSetUp.cs",
                 "Common\\TestFixtureTearDown.cs",
-                "Client\\Cache\\CacheTestAsyncAwait.cs"
+                "Client\\Cache\\CacheTestAsyncAwait.cs",
+                "Cache\\CacheTestAsyncAwait.cs",
+                "Compute\\ComputeTestAsyncAwait.cs"
             };
 
             Assert.Multiple(() =>

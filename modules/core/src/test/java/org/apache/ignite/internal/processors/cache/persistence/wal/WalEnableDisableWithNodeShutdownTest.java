@@ -110,16 +110,12 @@ public class WalEnableDisableWithNodeShutdownTest extends GridCommonAbstractTest
                 if (ex.getMessage().contains("Operation result is unknown because nodes reported different results")) {
                     log.warning("Expected exception thrown", ex);
 
-                    recreateCacheCheckValid(client);
-
-                    return;
+                    fail("WAL is in inconsistent state");
                 }
                 else
                     throw ex;
             }
         }
-
-        fail("Expected exception not thrown");
     }
 
     /**
@@ -176,16 +172,12 @@ public class WalEnableDisableWithNodeShutdownTest extends GridCommonAbstractTest
                 if (ex.getMessage().contains("Operation result is unknown because nodes reported different results")) {
                     log.warning("Expected exception thrown", ex);
 
-                    recreateCacheCheckValid(client);
-
-                    return;
+                    fail("WAL is in inconsistent state");
                 }
                 else
                     throw ex;
             }
         }
-
-        fail("Expected exception not thrown");
     }
 
     /**
