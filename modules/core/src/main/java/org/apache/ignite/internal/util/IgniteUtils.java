@@ -12501,10 +12501,10 @@ public abstract class IgniteUtils {
      */
     @Nullable public static IgniteCheckedException preventOutOfMemoryOperationFailure(GridCacheContext ctx, Exception e) {
         if (!ctx.dataRegion().increaseEmptyPagesPool()) {
-            return new IgniteCheckedException("Failed to increase empty pool size [" +
+            return new IgniteCheckedException("Failed to increase empty pages pool size [" +
                 "currentSize=" + ctx.dataRegion().emptyPagesPoolSize() +
                 ", dataRegion=" + ctx.dataRegion().config().getName() +
-                ", emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() +
+                ", emptyPoolSize=" + ctx.dataRegion().config().getEmptyPagesPoolSize() +
                 ", memoryMaxSize=" + ctx.dataRegion().config().getMaxSize() +
                 ", pageSize=" + ctx.dataRegion().pageMemory().systemPageSize() +
                 ", evictionThreshold=" + ctx.dataRegion().config().getEvictionThreshold() +
@@ -12514,7 +12514,7 @@ public abstract class IgniteUtils {
 
         try {
             if (!ctx.shared().database().ensureFreeSpace(ctx.dataRegion())) {
-                return new IgniteCheckedException("Nothing evicted [" +
+                return new IgniteCheckedException("Failed to evict any pages [" +
                     "pageEvictionMode=" + ctx.dataRegion().config().getPageEvictionMode() +
                     ", dataRegion=" + ctx.dataRegion().config().getName() +
                     ", emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() +

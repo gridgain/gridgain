@@ -94,9 +94,11 @@ public class DataRegion {
      * @return {@code true} if increased.
      */
     public synchronized boolean increaseEmptyPagesPool() {
-        if (cfg != null && pageMem != null
-            && emptyPagesPoolSize < (cfg.getMaxSize() / pageMem.systemPageSize() * (1 - cfg.getEvictionThreshold()))) {
-            emptyPagesPoolSize *= 2;
+        // Can't make empty pages pool bigger than 10% of total pages count.
+        int rightBorder = (int) Long.min(cfg.getMaxSize() / pageMem.systemPageSize() / 10, Integer.MAX_VALUE);
+
+        if (cfg != null && pageMem != null && emptyPagesPoolSize < rightBorder) {
+            emptyPagesPoolSize = Integer.min(emptyPagesPoolSize * 2, rightBorder);
 
             return true;
         }
