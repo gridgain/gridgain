@@ -225,9 +225,6 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
             Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
         );
 
-
-        System.out.println("+++ " + sql("select * from SYS.STATISTICS_LOCAL_DATA"));
-
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
     }
 }
