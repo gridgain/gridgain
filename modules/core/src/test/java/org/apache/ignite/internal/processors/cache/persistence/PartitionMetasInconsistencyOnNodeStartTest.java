@@ -28,6 +28,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureHandlerWithCallback;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
@@ -52,10 +53,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
-import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
- *
+ * Tests that grid with corrupted partitions, where meta page is corrupted, fails on start with correct error.
  */
 public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstractTest {
     /** */
@@ -63,6 +63,9 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
     /** */
     private static final int PAGE_STORE_VER = 2;
+
+    /** */
+    private volatile boolean correctFailure = false;
 
     /** */
     private FilePageStoreFactory storeFactory = new FileVersionCheckingFactory(
@@ -81,7 +84,10 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         return super.getConfiguration(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
-            );
+            )
+            .setFailureHandler(new FailureHandlerWithCallback(failureCtx -> {
+                correctFailure = failureCtx.error() instanceof CorruptedPartitionMetaPageException;
+            }));
     }
 
     /** {@inheritDoc} */
@@ -139,7 +145,14 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
         writeLongToFileByOffset(store.getFileAbsolutePath(), offset, 0L);
 
-        assertThrowsWithCause(() -> startGrid(0), AssertionError.class);
+        try {
+            startGrid(0);
+        }
+        catch (Exception ignored) {
+            /* No-op. */
+        }
+
+        assertTrue(correctFailure);
     }
 
     /**
