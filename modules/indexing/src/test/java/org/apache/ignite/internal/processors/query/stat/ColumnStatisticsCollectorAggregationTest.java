@@ -48,7 +48,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
             getHLL(-1).toBytes(), 0, U.currentTimeMillis());
         statistics.add(stat1);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertEquals(stat1, res);
     }
@@ -68,12 +68,12 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertNull(res.min());
         assertNull(res.max());
         assertEquals(100, res.nulls());
-        assertEquals(0, res.cardinality());
+        assertEquals(0, res.distinct());
         assertEquals(110, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
@@ -94,12 +94,12 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertEquals(ValueDecimal.get(BigDecimal.ZERO), res.min());
         assertEquals(ValueDecimal.get(BigDecimal.TEN), res.max());
         assertEquals(49, res.nulls());
-        assertEquals(11, res.cardinality());
+        assertEquals(11, res.distinct());
         assertEquals(1010, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
