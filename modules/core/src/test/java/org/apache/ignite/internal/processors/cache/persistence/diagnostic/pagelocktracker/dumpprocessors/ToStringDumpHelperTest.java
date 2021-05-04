@@ -64,7 +64,7 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
             "Locked pages = [32[0000000000000020](r=1|w=0)]" + U.nl() +
             "Locked pages log: name=async-lock-unlock time=(1596173397167, " +
             ToStringDumpHelper.DATE_FMT.format(new java.util.Date(TIME)) + ")" + U.nl() +
-            "L=1 -> Read lock pageId=32, structureId=null [pageIdHex=0000000000000020, partId=0, pageIdx=32, flags=00000000]" + U.nl() +
+            "L=1 -> Read lock pageId=32, structureId=null [pageIdHex=0000000000000020, partId=0, pageIdx=32, flags=00000000]" +
             U.nl() +
             U.nl() +
             U.nl();
