@@ -22,18 +22,18 @@ public class NodePartitionSize extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.writeObject(inProgress);
+        out.writeBoolean(inProgress);
         out.writeObject(lastKey);
-        out.writeObject(oldSize);
-        out.writeObject(newSize);
+        out.writeLong(oldSize);
+        out.writeLong(newSize);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
-        inProgress = (boolean)in.readObject();
+        inProgress = in.readBoolean();
         lastKey = (KeyCacheObject)in.readObject();
-        oldSize = (long)in.readObject();
-        newSize = (long)in.readObject();
+        oldSize = in.readLong();
+        newSize = in.readLong();
     }
 }

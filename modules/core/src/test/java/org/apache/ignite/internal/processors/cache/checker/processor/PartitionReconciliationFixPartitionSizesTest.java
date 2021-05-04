@@ -43,10 +43,12 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -160,13 +162,18 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 //
 //        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
 //        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
-//        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});//падал
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+//
+//        params.add(new Object[] {2, 0, 100, ATOMIC,        REPLICATED,  0, 1, null, 1,   1, 1, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
+//        params.add(new Object[] {1, 0, 1000, ATOMIC,        PARTITIONED,  0, 1, null, 1,   1, 8, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
+//        params.add(new Object[] {2, 0, 100, ATOMIC,        PARTITIONED,  1, 1, null, 1,   1, 1, false});//зависает в org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.execute Важно наличие бекап копий
 
         return params;
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void test() throws Exception {
         ig = startGrids(nodesCnt);
 
@@ -182,9 +189,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
-            if (i < endKey)
+            if (i < endKey) {
                 cache.put(i, i);
+                System.out.print(i + " ");
+            }
         }
+
+//        System.out.println();
 
         int startSize = cache.size();
 
@@ -222,23 +233,34 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
-        System.out.println("qvsdhntsd partitionReconciliation stop");
+//        System.out.println("qvsdhntsd partitionReconciliation stop");
 
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
+//        for (long i = startKey; i < endKey; i++)
+//            if (grid(0).cache(DEFAULT_CACHE_NAME).containsKey(i))
+//                System.out.println("cache contains key: " + i);
+
         for (long i = startKey; i < endKey; i++)
                 grid(0).cache(DEFAULT_CACHE_NAME).put(i, i);
-
-        assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 
         long allKeysCountForCacheGroup = 0;
         long allKeysCountForCache = 0;
 
         for (int i = 0; i < nodesCnt; i++) {
-            allKeysCountForCacheGroup += getFullPartitionsSizeForCacheGroup(grid(i), DEFAULT_CACHE_NAME);
-            allKeysCountForCache += getPartitionsSizeForCache(grid(i), DEFAULT_CACHE_NAME);
+//            System.out.println("jhsdaidfgh " + i);
+
+            long i0 = getFullPartitionsSizeForCacheGroup(grid(i), DEFAULT_CACHE_NAME);
+//            System.out.println("asdhubd " + i0);
+            allKeysCountForCacheGroup += i0;
+
+            long i1 = getPartitionsSizeForCache(grid(i), DEFAULT_CACHE_NAME);
+//            System.out.println("kjkhdfdf " + i1);
+            allKeysCountForCache += i1;
         }
+
+        assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size());
 
         if (cacheMode == REPLICATED) {
             assertEquals((long)endKey * nodesCnt, allKeysCountForCacheGroup);

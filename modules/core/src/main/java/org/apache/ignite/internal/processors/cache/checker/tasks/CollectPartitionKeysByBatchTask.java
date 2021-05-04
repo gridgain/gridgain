@@ -264,7 +264,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
-            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl cacheDataStore = (IgniteCacheOffheapManagerImpl.CacheDataStoreImpl) grpCtx.offheap().dataStore(part);
 
             assert part != null;
 
@@ -283,12 +283,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             Map<KeyCacheObject, Boolean> tempMap = null;
 
             if (reconSize) {
-                try {
+//                try {
                     partReconciliationCtx = cacheDataStore.reconciliationCtx();
-                }
-                catch (IgniteCheckedException e) {
-                    throw new RuntimeException(e);
-                }
+//                }
+//                catch (IgniteCheckedException e) {
+//                    throw new RuntimeException(e);
+//                }
 
                 if (partReconciliationCtx != null &&
                     !partReconciliationCtx.isReconciliationInProgress(cacheId) &&
@@ -349,7 +349,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
                     List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-                    for (int i = 0; (i < batchSize && cursor.next()); i++) {
+                    boolean hasNext = true;
+
+                    hasNext = cursor.next();
+
+                    for (int i = 0; (i < batchSize && hasNext); i++) {
 //                    try {
 //                        sleep(1);
 //                    }
@@ -373,13 +377,15 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                                 row.version()
                             ));
                         }
+
+                        hasNext = cursor.next();
                     }
 
 //                    System.out.println("wfgsbfdgb reconSize " + reconSize);
 //                    System.out.println("fsgbfdgnhn partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId));
 //                    System.out.println("fgnnytnjm partReconciliationCtx.isReconciliationInProgress(cacheId) " + partReconciliationCtx.isReconciliationInProgress(cacheId));
 
-                    if (reconSize && ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && (lowerKey == null || lowerKey.equals(newLowerKey))) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
+                    if (reconSize && !hasNext/*partReconciliationCtx.endOfPart.get(cacheId) != null*/ && ((partReconciliationCtx.lastKey(cacheId) == null || /*oldBorderKey == null ||*/ partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) && (lowerKey == null || lowerKey.equals(newLowerKey))) && partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 
 //                        System.out.println("qvdrftga2 after iteration partSize " + partSize.get());
 
@@ -396,24 +402,24 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                        *******************************************
                             Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
-//                        System.out.println("tempMap " + part.tempMap.size() + part.tempMap);
+//                        System.out.println("tempMap " + partReconciliationCtx.tempMap.size() + partReconciliationCtx.tempMap);
 
                             while (tempMapIter.hasNext()) {
                                 Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
 
-                                partSize.addAndGet(1);
+                                partSize.incrementAndGet();
 
-//                                System.out.println("qkoplstfo in recon final: tempMap iter add delta and remove key: key " + entry.getKey() + " reconSize " + partSize);
+//                                System.out.println("qkoplstfo in recon final: increment reconSize tempMap iter add delta and remove key: key " + ((KeyCacheObjectImpl)entry.getKey()).value() + " reconSize " + partSize);
 
                             }
 
                             partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 
-//                            i++;
-//                            System.out.println("qfvdiohiodf " + i + " " + Thread.currentThread().getName());
-//                            System.out.println("qhopluindh old size ************************* partBatch.partitionId() " + partBatch.partitionId() + " cacheId " + cacheId + " " + part);
-//                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
-//                            System.out.println("qpooikjgns partSize ************************* " + partSize);
+                            i++;
+                            System.out.println("qfvdiohiodf " + i + " " + Thread.currentThread().getName());
+                            System.out.println("qhopluindh old size ************************* partBatch.partitionId() " + partBatch.partitionId() + " cacheId " + cacheId + " " + part);
+                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
+                            System.out.println("qpooikjgns partSize ************************* " + partSize);
 
                             nodeSize.oldSize = partSize.get();
                             cacheDataStore.flushReconciliationResult(cacheId);

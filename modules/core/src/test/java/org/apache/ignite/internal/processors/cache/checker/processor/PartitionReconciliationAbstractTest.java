@@ -53,7 +53,7 @@ import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
  * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
-    static final long BROKEN_PART_SIZE = 666;
+    static final long BROKEN_PART_SIZE = 10;
 
     /**
      *
@@ -222,15 +222,16 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         Random rnd = new Random();
 
         return GridTestUtils.runAsync(() -> {
+                int op = -1;
+
+                long n = -1;
+
                 while(reconResult.get() == null) {
-                    int op;
 
                     if (clear)
                         op = rnd.nextInt(8);
                     else
                         op = rnd.nextInt(7);
-
-                    long n;
 
                     switch (op) {
                         case 0:
@@ -323,6 +324,8 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
 
                 }
+
+                System.out.println("dfjklkvfod last op: " + op + ", n: "  + n + ", thread: " + Thread.currentThread().getName());
             },
             "LoadThread");
     }

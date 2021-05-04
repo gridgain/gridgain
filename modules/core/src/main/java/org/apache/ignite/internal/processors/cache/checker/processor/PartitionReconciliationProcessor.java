@@ -227,7 +227,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (isEmpty() && live) {
                     U.sleep(100);
-
+//                    System.out.println("HELP!!!!!!!!!!!!");
                     continue;
                 }
 

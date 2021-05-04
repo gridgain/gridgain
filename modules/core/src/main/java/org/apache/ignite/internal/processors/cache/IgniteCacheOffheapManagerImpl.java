@@ -3207,6 +3207,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //            private volatile boolean isReconciliationInProgress;
             private final Map<Integer, Boolean> isReconciliationInProgress = new ConcurrentHashMap<>();
             public final Map<Integer, Boolean> isReconciliationIsFinished = new ConcurrentHashMap<>();
+            public final Map<Integer, Boolean> endOfPart = new ConcurrentHashMap<>();
 
             /** */
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();

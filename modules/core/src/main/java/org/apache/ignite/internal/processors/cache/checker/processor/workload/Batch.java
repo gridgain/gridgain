@@ -55,7 +55,6 @@ public class Batch extends PipelineWorkload {
      */
     public Batch(boolean reconConsist, boolean reconSize, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
         super(sesId, workloadChainId);
-
         this.reconConsist = reconConsist;
         this.reconSize = reconSize;
 
@@ -64,6 +63,8 @@ public class Batch extends PipelineWorkload {
         this.cacheId = cacheId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
+
+//        System.out.println("ijsdfidf new Batch: " + this);
     }
 
     /**
@@ -97,5 +98,17 @@ public class Batch extends PipelineWorkload {
      */
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
+    }
+
+    @Override public String toString() {
+        return "Batch{" +
+            "reconConsist=" + reconConsist +
+            ", reconSize=" + reconSize +
+            ", cacheName='" + cacheName + '\'' +
+            ", cacheId=" + cacheId +
+            ", partId=" + partId +
+            ", lowerKey=" + lowerKey +
+            ", partSizesMap=" + partSizesMap +
+            '}';
     }
 }
