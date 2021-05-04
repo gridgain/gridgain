@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.checker.ConsistencyCheckUtilsTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationAtomicLongDataStructureTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationAtomicLongStressTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationBinaryObjectsTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationCompactCollectorTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFastCheckTest;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PartitionRe
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationRecheckAttemptsTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationSetDataStructureTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationStressTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationSystemFastCheckTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResourceLimitedJobTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTaskTest;
@@ -78,6 +80,8 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationCompactCollectorTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationAtomicLongDataStructureTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationSetDataStructureTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationAtomicLongStressTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationSystemFastCheckTest.class, ignoredTests);
 
         return suite;
     }
