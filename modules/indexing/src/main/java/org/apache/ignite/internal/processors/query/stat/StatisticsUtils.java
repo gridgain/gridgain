@@ -180,14 +180,13 @@ public class StatisticsUtils {
         return new ColumnStatistics(
             colStat.min(),
             colStat.max(),
-            colStat.nulls(),
-            colStat.distinct(),
-            colStat.total(),
-            colStat.size(),
+            overrides.nulls() == null ? colStat.nulls() : (int)(long)overrides.nulls(),
+            overrides.distinct() == null ? colStat.distinct() : overrides.distinct(),
+            overrides.total() == null ? colStat.total() : overrides.total(),
+            overrides.size() == null ? colStat.size() : overrides.size(),
             colStat.raw(),
             colStat.version(),
             colStat.createdAt()
         );
-
     }
 }

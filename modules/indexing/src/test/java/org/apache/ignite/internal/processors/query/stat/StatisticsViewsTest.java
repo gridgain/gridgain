@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import java.sql.Timestamp;
@@ -213,13 +214,16 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
 
         List<List<Object>> localData = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0, size, 4, 1L, tsA.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0, size, 4, 1L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 7, size, 0, size, 4, 1L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", 8, size, 0, size, 4, 1L, tsB.toString()),
             Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
         );
 
         sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
         sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+
+        U.sleep(10000);
+        System.out.println("+++ " + sql("select * from SYS.STATISTICS_LOCAL_DATA"));
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
     }
