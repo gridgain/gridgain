@@ -3677,6 +3677,15 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         return igniteIterator(keepBinary, p);
     }
 
+    /** {inheritDoc} */
+    @Override public Iterator<Cache.Entry<K, V>> scanIterator(
+        boolean keepBinary,
+        @Nullable IgniteBiPredicate<Object, Object> p,
+        long timeout
+    ) throws IgniteCheckedException {
+        return igniteIterator(keepBinary, p, timeout);
+    }
+
     /**
      * @return Distributed ignite cache iterator.
      * @throws IgniteCheckedException If failed.
@@ -3720,13 +3729,27 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @throws IgniteCheckedException If failed.
      */
     private Iterator<Cache.Entry<K, V>> igniteIterator(boolean keepBinary,
-        @Nullable IgniteBiPredicate<Object, Object> p)
+                                                       @Nullable IgniteBiPredicate<Object, Object> p)
+            throws IgniteCheckedException {
+        return igniteIterator(keepBinary, p, 0);
+    }
+
+    /**
+     * @param keepBinary Keep binary flag.
+     * @param p Optional predicate.
+     * @param timeout Timeout or zero if no timeout.
+     * @return Distributed ignite cache iterator.
+     * @throws IgniteCheckedException If failed.
+     */
+    private Iterator<Cache.Entry<K, V>> igniteIterator(boolean keepBinary,
+        @Nullable IgniteBiPredicate<Object, Object> p, long timeout)
         throws IgniteCheckedException {
         GridCacheContext ctx0 = ctx.isNear() ? ctx.near().dht().context() : ctx;
 
         final CacheOperationContext opCtx = ctx.operationContextPerCall();
 
-        final GridCloseableIterator<Map.Entry<K, V>> iter = ctx0.queries().createScanQuery(p, null, keepBinary, null)
+        final GridCloseableIterator<Map.Entry<K, V>> iter = ctx0.queries()
+            .createScanQuery(p, null, keepBinary, null, timeout)
             .executeScanQuery();
 
         return ctx.itHolder().iterator(iter, new CacheIteratorConverter<Cache.Entry<K, V>, Map.Entry<K, V>>() {

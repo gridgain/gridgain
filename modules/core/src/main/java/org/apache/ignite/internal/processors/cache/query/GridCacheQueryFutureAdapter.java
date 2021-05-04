@@ -146,9 +146,30 @@ public abstract class GridCacheQueryFutureAdapter<K, V, R> extends GridFutureAda
 
     /** {@inheritDoc} */
     @Override public boolean onDone(Collection<R> res, Throwable err) {
+        if (!super.onDone(res, err))
+            return false;
+
         cctx.time().removeTimeoutObject(this);
 
-        return super.onDone(res, err);
+        synchronized (this) {
+            notifyAll();
+        }
+
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean onCancelled() {
+        if (!super.onCancelled())
+            return false;
+
+        cctx.time().removeTimeoutObject(this);
+
+        synchronized (this) {
+            notifyAll();
+        }
+
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -216,20 +237,10 @@ public abstract class GridCacheQueryFutureAdapter<K, V, R> extends GridFutureAda
             if (c == null && !isDone()) {
                 loadPage();
 
-                long timeout = qry.query().timeout();
-
-                long waitTime = timeout == 0 ? Long.MAX_VALUE : timeout - (U.currentTimeMillis() - startTime);
-
-                if (waitTime <= 0) {
-                    it = Collections.<R>emptyList().iterator();
-
-                    break;
-                }
-
                 synchronized (this) {
                     try {
                         if (queue.isEmpty() && !isDone())
-                            wait(waitTime);
+                            wait();
                     }
                     catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -480,12 +491,11 @@ public abstract class GridCacheQueryFutureAdapter<K, V, R> extends GridFutureAda
     /** {@inheritDoc} */
     @Override public void onTimeout() {
         try {
-            cancelQuery();
-
-            onDone(new IgniteFutureTimeoutCheckedException("Query timed out."));
+            if (onDone(new IgniteFutureTimeoutCheckedException("Query timed out.")))
+                cancelQuery();
         }
         catch (IgniteCheckedException e) {
-            onDone(e);
+            log.warning("Exception while canceling query: " + toString(), e);
         }
     }
 

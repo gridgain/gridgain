@@ -266,15 +266,18 @@ public class IgniteStatisticsConfigurationManager {
                 configs = getAllConfig();
         }
         catch (IgniteCheckedException e) {
-            // TODO: log
+            log.warning("Error while getting statistics configuration: " + e.getMessage(), e);
+
             configs = Collections.emptyList();
         }
 
         List<StatisticsColumnConfigurationView> res = new ArrayList<>();
 
         for (StatisticsObjectConfiguration cfg : configs) {
-            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values())
-                res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
+                if (!colCfg.tombstone())
+                    res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+            }
         }
 
         return res;

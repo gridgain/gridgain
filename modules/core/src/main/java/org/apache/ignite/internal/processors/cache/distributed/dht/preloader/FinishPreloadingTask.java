@@ -23,22 +23,22 @@ import org.apache.ignite.internal.processors.cache.CachePartitionExchangeWorkerT
  * A task for finishing preloading future in exchange worker thread.
  */
 public class FinishPreloadingTask implements CachePartitionExchangeWorkerTask {
-    /**
-     * Topology version.
-     */
+    /** Topology version. */
     private final AffinityTopologyVersion topVer;
 
-    /**
-     * Group id.
-     */
+    /** Group id. */
     private final int grpId;
+
+    /** Rebalance id. */
+    private final long rebalanceId;
 
     /**
      * @param topVer Topology version.
      */
-    public FinishPreloadingTask(AffinityTopologyVersion topVer, int grpId) {
+    public FinishPreloadingTask(AffinityTopologyVersion topVer, int grpId, long rebalanceId) {
         this.grpId = grpId;
         this.topVer = topVer;
+        this.rebalanceId = rebalanceId;
     }
 
     /**
@@ -60,5 +60,12 @@ public class FinishPreloadingTask implements CachePartitionExchangeWorkerTask {
      */
     public int groupId() {
         return grpId;
+    }
+
+    /**
+     * @return Rebalance id.
+     */
+    public long rebalanceId() {
+        return rebalanceId;
     }
 }

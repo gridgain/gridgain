@@ -260,22 +260,25 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * Create SQL table with the given index.
      *
      * @param suffix Table idx, if {@code null} - name "SMALL" without index will be used.
+     * @return Table name.
      */
-    protected void createSmallTable(String suffix) {
-        suffix = suffix != null ? suffix : "";
+    protected String createSmallTable(String suffix) {
+        String tblName = "small" + ((suffix != null) ? suffix : "");
 
-        sql("DROP TABLE IF EXISTS small" + suffix);
+        sql("DROP TABLE IF EXISTS " + tblName);
 
-        sql(String.format("CREATE TABLE small%s (a INT PRIMARY KEY, b INT, c INT)" +
+        sql(String.format("CREATE TABLE %s (a INT PRIMARY KEY, b INT, c INT)" +
                 " with \"BACKUPS=1,CACHE_NAME=SMALL%s\"",
-            suffix, suffix));
+            tblName, suffix));
 
-        sql(String.format("CREATE INDEX small%s_b ON small%s(b)", suffix, suffix));
+        sql(String.format("CREATE INDEX %s_b ON %s(b)", tblName, tblName));
 
-        sql(String.format("CREATE INDEX small%s_c ON small%s(c)", suffix, suffix));
+        sql(String.format("CREATE INDEX %s_c ON %s(c)", tblName, tblName));
 
         for (int i = 0; i < SMALL_SIZE; i++)
-            sql(String.format("INSERT INTO small%s(a, b, c) VALUES(%d, %d, %d)", suffix, i, i, i % 10));
+            sql(String.format("INSERT INTO %s(a, b, c) VALUES(%d, %d, %d)", tblName, i, i, i % 10));
+
+        return tblName;
     }
 
     /**

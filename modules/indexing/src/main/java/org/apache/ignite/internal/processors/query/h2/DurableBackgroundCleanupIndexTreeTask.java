@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -34,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTaskResult;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -41,11 +44,16 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.thread.IgniteThread;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.singleton;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 
 /**
@@ -59,10 +67,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     private List<Long> rootPages;
 
     /** */
-    private transient List<H2Tree> trees;
-
-    /** */
-    private transient volatile boolean completed;
+    private transient volatile List<H2Tree> trees;
 
     /** */
     private String cacheGrpName;
@@ -82,6 +87,12 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     /** */
     private String id;
 
+    /** Logger. */
+    @Nullable private transient volatile IgniteLogger log;
+
+    /** Worker tasks. */
+    @Nullable private transient volatile GridWorker worker;
+
     /** */
     public DurableBackgroundCleanupIndexTreeTask(
         List<Long> rootPages,
@@ -94,7 +105,6 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     ) {
         this.rootPages = rootPages;
         this.trees = trees;
-        this.completed = false;
         this.cacheGrpName = cacheGrpName;
         this.cacheName = cacheName;
         this.schemaName = schemaName;
@@ -104,12 +114,51 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     }
 
     /** {@inheritDoc} */
-    @Override public String shortName() {
+    @Override public String name() {
         return "DROP_SQL_INDEX-" + schemaName + "." + idxName + "-" + id;
     }
 
     /** {@inheritDoc} */
-    @Override public void execute(GridKernalContext ctx) {
+    @Override public IgniteInternalFuture<DurableBackgroundTaskResult> executeAsync(GridKernalContext ctx) {
+        log = ctx.log(this.getClass());
+
+        assert worker == null;
+
+        GridFutureAdapter<DurableBackgroundTaskResult> fut = new GridFutureAdapter<>();
+
+        worker = new GridWorker(
+            ctx.igniteInstanceName(),
+            "async-durable-background-task-executor-" + name(),
+            log
+        ) {
+            /** {@inheritDoc} */
+            @Override protected void body() {
+                try {
+                    execute(ctx);
+
+                    worker = null;
+
+                    fut.onDone(DurableBackgroundTaskResult.complete(null));
+                }
+                catch (Throwable t) {
+                    worker = null;
+
+                    fut.onDone(DurableBackgroundTaskResult.restart(t));
+                }
+            }
+        };
+
+        new IgniteThread(worker).start();
+
+        return fut;
+    }
+
+    /**
+     * Task execution.
+     *
+     * @param ctx Kernal context.
+     */
+    private void execute(GridKernalContext ctx) {
         List<H2Tree> trees0 = trees;
 
         if (trees0 == null) {
@@ -178,7 +227,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 // Below we create a fake index tree using it's root page, stubbing some parameters,
                 // because we just going to free memory pages that are occupied by tree structure.
                 try {
-                    String treeName = "deletedTree_" + i + "_" + shortName();
+                    String treeName = "deletedTree_" + i + "_" + name();
 
                     H2TreeToDestroy tree = new H2TreeToDestroy(
                         grpCtx,
@@ -255,7 +304,8 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                     return pageAddr == 0;
                 }
                 finally {
-                    pageMem.readUnlock(grpId, rootPageId, page);
+                    if (pageAddr != 0)
+                        pageMem.readUnlock(grpId, rootPageId, page);
                 }
             }
             finally {
@@ -268,18 +318,16 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     }
 
     /** {@inheritDoc} */
-    @Override public void complete() {
-        completed = true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean isCompleted() {
-        return completed;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onCancel() {
+    @Override public void cancel() {
         trees = null;
+
+        GridWorker w = worker;
+
+        if (w != null) {
+            worker = null;
+
+            U.awaitForWorkersStop(singleton(w), true, log);
+        }
     }
 
     /** {@inheritDoc} */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.DataStorageMetrics;
@@ -165,8 +166,10 @@ import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Objects.isNull;
+import static java.util.Collections.emptyList;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
@@ -1401,46 +1404,83 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (defrgMgr != null)
             return;
 
-        rebuildIndexes(cctx.cacheContexts(), (cacheCtx) -> cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()));
+        Collection<GridCacheContext> rejected = rebuildIndexes(
+            cctx.cacheContexts(),
+            (cacheCtx) -> cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()) &&
+                cctx.kernalContext().query().rebuildIndexOnExchange(cacheCtx.cacheId(), exchangeFut),
+            false
+        );
+
+        if (!rejected.isEmpty()) {
+            cctx.kernalContext().query().removeIndexRebuildFuturesOnExchange(
+                exchangeFut,
+                rejected.stream().map(GridCacheContext::cacheId).collect(toSet())
+            );
+        }
     }
 
     /** {@inheritDoc} */
-    @Override public void forceRebuildIndexes(Collection<GridCacheContext> contexts) {
-        contexts.forEach(ctx -> cctx.kernalContext().query().prepareIndexRebuildFuture(ctx.cacheId()));
+    @Override public Collection<GridCacheContext> forceRebuildIndexes(Collection<GridCacheContext> contexts) {
+        Set<Integer> cacheIds = contexts.stream().map(GridCacheContext::cacheId).collect(toSet());
 
-        rebuildIndexes(contexts, (cacheCtx) -> true);
+        Set<Integer> rejected = cctx.kernalContext().query().prepareRebuildIndexes(cacheIds);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Preparing features of rebuilding indexes for caches on force rebuild [requested=" + cacheIds +
+                ", rejected=" + rejected + ']');
+        }
+
+        rebuildIndexes(contexts, (cacheCtx) -> !rejected.contains(cacheCtx.cacheId()), true);
+
+        return rejected.isEmpty() ? emptyList() :
+            contexts.stream().filter(ctx -> rejected.contains(ctx.cacheId())).collect(toList());
     }
 
     /**
+     * Rebuilding indexes for caches.
+     *
      * @param contexts Collection of cache contexts for which indexes should be rebuilt.
      * @param rebuildCond Condition that should be met for indexes to be rebuilt for specific cache.
+     * @param force Force rebuild indexes.
+     * @return Cache contexts that did not pass by {@code rebuildCond}.
      */
-    private void rebuildIndexes(Collection<GridCacheContext> contexts, Predicate<GridCacheContext> rebuildCond) {
+    private Collection<GridCacheContext> rebuildIndexes(
+        Collection<GridCacheContext> contexts,
+        Predicate<GridCacheContext> rebuildCond,
+        boolean force
+    ) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (!qryProc.moduleEnabled())
-            return;
+            return emptyList();
 
         GridCompoundFuture allCacheIdxsCompoundFut = null;
 
+        Collection<GridCacheContext> rejected = null;
+
         for (GridCacheContext cacheCtx : contexts) {
-            if (!rebuildCond.test(cacheCtx))
-                continue;
+            if (rebuildCond.test(cacheCtx)) {
+                IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx, force);
 
-            IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx);
+                if (rebuildFut != null) {
+                    if (log.isInfoEnabled())
+                        log.info("Started indexes rebuilding for cache [" + cacheInfo(cacheCtx) + ']');
 
-            if (nonNull(rebuildFut)) {
-                if (log.isInfoEnabled())
-                    log.info("Started indexes rebuilding for cache [" + cacheInfo(cacheCtx) + ']');
+                    if (allCacheIdxsCompoundFut == null)
+                        allCacheIdxsCompoundFut = new GridCompoundFuture<>();
 
-                if (isNull(allCacheIdxsCompoundFut))
-                    allCacheIdxsCompoundFut = new GridCompoundFuture<>();
+                    allCacheIdxsCompoundFut.add(rebuildFut);
+                }
+            }
+            else {
+                if (rejected == null)
+                    rejected = new ArrayList<>();
 
-                allCacheIdxsCompoundFut.add(rebuildFut);
+                rejected.add(cacheCtx);
             }
         }
 
-        if (nonNull(allCacheIdxsCompoundFut)) {
+        if (allCacheIdxsCompoundFut != null) {
             allCacheIdxsCompoundFut.listen(fut -> {
                 if (log.isInfoEnabled())
                     log.info("Indexes rebuilding completed for all caches.");
@@ -1448,6 +1488,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             allCacheIdxsCompoundFut.markInitialized();
         }
+
+        return rejected == null ? emptyList() : rejected;
     }
 
     /**
@@ -1467,6 +1509,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         Collection<IgniteBiTuple<CacheGroupContext, Boolean>> stoppedGrps
     ) {
         Map<PageMemoryEx, Collection<Integer>> destroyed = new HashMap<>();
+
+        List<Integer> stoppedGrpIds = stoppedGrps.stream()
+            .filter(IgniteBiTuple::get2)
+            .map(t -> t.get1().groupId())
+            .collect(Collectors.toList());
+
+        initiallyLocWalDisabledGrps.removeAll(stoppedGrpIds);
+        initiallyGlobalWalDisabledGrps.removeAll(stoppedGrpIds);
 
         for (IgniteBiTuple<CacheGroupContext, Boolean> tup : stoppedGrps) {
             CacheGroupContext gctx = tup.get1();
@@ -1841,7 +1891,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             mntcRegistry.registerWorkflowCallback(CORRUPTED_DATA_FILES_MNTC_TASK_NAME,
                 new CorruptedPdsMaintenanceCallback(workDir,
-                    Arrays.asList(mntcTask.parameters().split(File.separator)))
+                    Arrays.asList(mntcTask.parameters().split(Pattern.quote(File.separator))))
             );
 
             return;
@@ -3598,7 +3648,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                     return cctx.cacheContext(cacheId) != null && cacheGroupPredicate.apply(cctx.cacheContext(cacheId).groupId());
                 })
-                .collect(Collectors.toList());
+                .collect(toList());
 
             return record.setWriteEntries(filteredEntries);
         }

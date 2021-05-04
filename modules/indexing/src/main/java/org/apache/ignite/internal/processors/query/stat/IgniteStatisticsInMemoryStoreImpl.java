@@ -64,8 +64,12 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     ) {
         Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>(partsStats.size());
 
-        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsImpl>> keyStat : partsStats.entrySet())
-            res.put(keyStat.getKey(), Arrays.asList(keyStat.getValue().values()));
+        for (StatisticsKey key : partsStats.keySet()) {
+            partsStats.computeIfPresent(key, (k, v) -> {
+                res.put(k, Arrays.asList(v.values()));
+                return v;
+            });
+        }
 
         return res;
     }

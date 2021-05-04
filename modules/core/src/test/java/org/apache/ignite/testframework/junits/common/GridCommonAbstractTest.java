@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -85,9 +86,12 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
+import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -97,7 +101,9 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.WalStateManager.WALDisableContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
@@ -111,6 +117,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
@@ -146,6 +153,7 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
@@ -155,6 +163,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -2838,5 +2847,82 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         for (GridDhtLocalPartition locPart : locParts)
             locPart.clearTombstonesAsync().get();
+    }
+
+     /**
+      * Getting WAL manager.
+      *
+      * @param n Node.
+      * @return WAL manger.
+     */
+     protected static FileWriteAheadLogManager walMgr(IgniteEx n) {
+         return (FileWriteAheadLogManager)n.context().cache().context().wal();
+     }
+
+    /**
+     * Disable/enable VAL.
+     *
+     * @param n Node.
+     * @param disable Disable flag.
+     * @throws Exception If failed.
+     */
+    protected static void disableWal(IgniteEx n, boolean disable) throws Exception {
+        WALDisableContext walDisableCtx = n.context().cache().context().walState().walDisableContext();
+
+        setFieldValue(walDisableCtx, "disableWal", disable);
+
+        assertEquals(disable, walDisableCtx.check());
+
+        WALPointer logPtr = walMgr(n).log(new DataRecord(emptyList()));
+
+        if (disable)
+            assertNull(logPtr);
+        else
+            assertNotNull(logPtr);
+    }
+
+    /**
+     * Initiate an asynchronous forced index rebuild for caches.
+     *
+     * @param n Node.
+     * @param cacheCtxs Cache contexts.
+     * @return Cache contexts for which index rebuilding is not initiated by
+     *      this call because they are already in the process of rebuilding.
+     */
+    protected Collection<GridCacheContext> forceRebuildIndexes(IgniteEx n, GridCacheContext... cacheCtxs) {
+        return n.context().cache().context().database().forceRebuildIndexes(F.asList(cacheCtxs));
+    }
+
+    /**
+     * Getting rebuild index future for the cache.
+     *
+     * @param n Node.
+     * @param cacheId Cache id.
+     * @return Rebuild index future.
+     */
+    @Nullable protected IgniteInternalFuture<?> indexRebuildFuture(IgniteEx n, int cacheId) {
+        return n.context().query().indexRebuildFuture(cacheId);
+    }
+
+    /**
+     * Getting cache metrics.
+     *
+     * @param n Node.
+     * @param cacheName Cache name.
+     * @return Cache metrics.
+     */
+    @Nullable protected CacheMetricsImpl cacheMetrics0(IgniteEx n, String cacheName) {
+        return Optional.ofNullable(n.cachex(cacheName)).map(IgniteInternalCache::context)
+            .map(GridCacheContext::cache).map(GridCacheAdapter::metrics0).orElse(null);
+    }
+
+    /**
+     * Getting database manager.
+     *
+     * @param n Node.
+     * @return Database manager.
+     */
+    protected GridCacheDatabaseSharedManager dbMgr(IgniteEx n) {
+        return (GridCacheDatabaseSharedManager)n.context().cache().context().database();
     }
 }
