@@ -205,6 +205,12 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testEnforceStatisticValues() throws Exception {
         long size = SMALL_SIZE;
+
+        sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
+        sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+
+        U.sleep(5000);
+
         ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         assertNotNull(smallStat);
@@ -214,15 +220,12 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
 
         List<List<Object>> localData = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 7, size, 0, size, 4, 1L, tsA.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", 8, size, 0, size, 4, 1L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, 5L, 6, 7L, 8, 1L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, 6L, 7, 8L, 4, 1L, tsB.toString()),
             Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
         );
 
-        sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
-        sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
 
-        U.sleep(10000);
         System.out.println("+++ " + sql("select * from SYS.STATISTICS_LOCAL_DATA"));
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);

@@ -483,7 +483,6 @@ public class IgniteStatisticsRepository {
         );
 
         for (StatisticsColumnConfiguration col : cfg.columns().values()) {
-
             locStat.columnsStatistics().put(
                 col.name(), StatisticsUtils.override(locStat.columnStatistics(col.name()), col.overrides())
             );
