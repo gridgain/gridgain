@@ -2,10 +2,14 @@ package org.apache.ignite.internal.processors.query.stat.config;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /** */
-public class StatisticsColumnOverrides {
+public class StatisticsColumnOverrides implements Serializable  {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Percent of null values in column. If {@code null} - use calculated value. */
     private final Long nulls;
 

@@ -120,6 +120,15 @@ public class StatisticsColumnConfiguration implements Serializable {
     }
 
     /**
+     * Get statistics overrides.
+     *
+     * @return Statistics overrides.
+     */
+    public StatisticsColumnOverrides overrides() {
+        return overrides;
+    }
+
+    /**
      * Merge configuration changes with existing configuration.
      *
      * @param oldCfg Previous configuration. May be {@code null} when new configuration is created.

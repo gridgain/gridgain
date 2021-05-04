@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnOverrides;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
@@ -169,5 +170,24 @@ public class StatisticsUtils {
     public static StatisticsTarget statisticsTarget(StatisticsKeyMessage msg) {
         String[] cols = (msg.colNames() == null) ? null : msg.colNames().toArray(new String[0]);
         return new StatisticsTarget(msg.schema(), msg.obj(), cols);
+    }
+
+    /** */
+    public static ColumnStatistics override(ColumnStatistics colStat, StatisticsColumnOverrides overrides) {
+        if (overrides == null)
+            return colStat;
+
+        return new ColumnStatistics(
+            colStat.min(),
+            colStat.max(),
+            colStat.nulls(),
+            colStat.distinct(),
+            colStat.total(),
+            colStat.size(),
+            colStat.raw(),
+            colStat.version(),
+            colStat.createdAt()
+        );
+
     }
 }

@@ -33,6 +33,8 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnLocalDataViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnPartitionDataViewWalker;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnOverrides;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
@@ -479,6 +481,14 @@ public class IgniteStatisticsRepository {
             keyMsg,
             statsToAgg
         );
+
+        for (StatisticsColumnConfiguration col : cfg.columns().values()) {
+            StatisticsColumnOverrides overrides = col.overrides();
+            if (overrides != null) {
+                locStat.columnStatistics(col.name()).
+            }
+
+        }
 
         if (locStat != null)
             saveLocalStatistics(cfg.key(), locStat);
