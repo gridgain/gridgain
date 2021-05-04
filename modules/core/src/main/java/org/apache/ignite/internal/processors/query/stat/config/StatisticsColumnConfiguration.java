@@ -36,6 +36,7 @@ public class StatisticsColumnConfiguration implements Serializable {
     /** Tombstone flag: {@code true} statistic for this column is dropped, otherwise {@code false}. */
     private final boolean tombstone;
 
+    /** Override statistics for column. */
     private final StatisticsColumnOverrides overrides;
 
     /**
@@ -45,6 +46,15 @@ public class StatisticsColumnConfiguration implements Serializable {
      */
     public StatisticsColumnConfiguration(String name) {
         this(name, 1, false, null);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param name Column name.
+     */
+    public StatisticsColumnConfiguration(String name, StatisticsColumnOverrides overrides) {
+        this(name, 1, false, overrides);
     }
 
     /**
@@ -70,18 +80,16 @@ public class StatisticsColumnConfiguration implements Serializable {
      * @param ver New collection version.
      * @param tombstone if {@code true} - object represents a tombstone of configuration,
      *                  if {@code false} - live configuration.
-     * @param overrides If set - contains statistics overrides for local statistics.
      */
     private StatisticsColumnConfiguration(
         StatisticsColumnConfiguration cfg,
         long ver,
-        boolean tombstone,
-        StatisticsColumnOverrides overrides
+        boolean tombstone
     ) {
         this.name = cfg.name;
         this.ver = ver;
         this.tombstone = tombstone;
-        this.overrides = overrides;
+        this.overrides = cfg.overrides;
     }
 
     /**
@@ -126,9 +134,9 @@ public class StatisticsColumnConfiguration implements Serializable {
             return newCfg;
 
         if (oldCfg.collectionAwareEqual(newCfg))
-            return new StatisticsColumnConfiguration(newCfg, oldCfg.ver, oldCfg.tombstone, oldCfg.overrides);
+            return new StatisticsColumnConfiguration(newCfg, oldCfg.ver, oldCfg.tombstone);
 
-        return new StatisticsColumnConfiguration(newCfg, oldCfg.ver + 1, false, newCfg.overrides);
+        return new StatisticsColumnConfiguration(newCfg, oldCfg.ver + 1, false);
     }
 
     /**
@@ -157,7 +165,7 @@ public class StatisticsColumnConfiguration implements Serializable {
      */
     public StatisticsColumnConfiguration createTombstone()
     {
-        return new StatisticsColumnConfiguration(this, ver + 1, true, overrides);
+        return new StatisticsColumnConfiguration(this, ver + 1, true);
     }
 
     /**
@@ -167,7 +175,7 @@ public class StatisticsColumnConfiguration implements Serializable {
      */
     public StatisticsColumnConfiguration refresh()
     {
-        return new StatisticsColumnConfiguration(this, tombstone ? ver : ver + 1, tombstone, overrides);
+        return new StatisticsColumnConfiguration(this, tombstone ? ver : ver + 1, tombstone);
     }
 
     /** {@inheritDoc} */
@@ -181,7 +189,8 @@ public class StatisticsColumnConfiguration implements Serializable {
         StatisticsColumnConfiguration that = (StatisticsColumnConfiguration)o;
 
         return ver == that.ver && tombstone == that.tombstone
-            && Objects.equals(name, that.name) && Objects.equals(overrides, that.overrides);
+            && Objects.equals(name, that.name)
+            && Objects.equals(overrides, that.overrides);
     }
 
     /** {@inheritDoc} */

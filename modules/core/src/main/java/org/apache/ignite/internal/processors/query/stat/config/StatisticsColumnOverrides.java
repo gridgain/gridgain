@@ -4,6 +4,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.Objects;
 
+/** */
 public class StatisticsColumnOverrides {
     /** Percent of null values in column. If {@code null} - use calculated value. */
     private final Long nulls;

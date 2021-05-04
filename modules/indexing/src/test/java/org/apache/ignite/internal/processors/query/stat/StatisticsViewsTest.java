@@ -218,8 +218,8 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
             Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
         );
 
-        sql("ANALYZE SMALL(A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7\"");
-        sql("ANALYZE SMALL(B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+        sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
+        sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
     }
