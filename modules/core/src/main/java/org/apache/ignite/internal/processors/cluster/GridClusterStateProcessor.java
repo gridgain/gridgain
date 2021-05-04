@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -784,7 +784,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 nodeIds
             );
 
-            ctx.durableBackgroundTasksProcessor().onStateChange(msg);
+            ctx.durableBackgroundTasksProcessor().onStateChangeStarted(msg);
 
             if (msg.forceChangeBaselineTopology())
                 globalState.setTransitionResult(msg.requestId(), msg.state());

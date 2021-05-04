@@ -15,10 +15,12 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.junit.Test;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -55,6 +57,50 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     }
 
     /**
+     * Check that no deleted configuration available throw view:
+     * 1) Create table,
+     * 2) Create statistics for new table.
+     * 3) Check statistics configuration presence.
+     * 4) Drop statistics for some column of new table.
+     * 5) Check statistics configuration without dropped column.
+     * 6) Drop statistics for new table.
+     * 7) Check statistics configuration without it.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testConfigurationViewDeletion() throws Exception {
+        // 1) Create table,
+        String name = createSmallTable("DELETE");
+        name = name.toUpperCase();
+
+        // 2) Create statistics for new table.
+        grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("ANALYZE " + name)).getAll();
+
+        // 3) Check statistics configuration presence.
+        List<List<Object>> config = new ArrayList<>();
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "A", (byte)15, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "B", (byte)15, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "C", (byte)15, 1L));
+
+        checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION where NAME = '" + name + "'", null, config::equals);
+
+        // 4) Drop statistics for some column of new table.
+        grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("DROP STATISTICS " + name + "(A);")).getAll();
+
+        // 5) Check statistics configuration without dropped column.
+        List<Object> removed = config.remove(0);
+        checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION where NAME = '" + name + "'", null,
+            act -> testContains(config, act) == null && testContains(Arrays.asList(removed), act) != null);
+
+        // 6) Drop statistics for new table.
+        grid(0).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery("DROP STATISTICS " + name)).getAll();
+
+        // 7) Check statistics configuration without it.
+        checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION where NAME = '" + name + "'", null, List::isEmpty);
+    }
+
+    /**
      * Check partition from small table in statistics partition data view.
      */
     @Test
@@ -70,12 +116,25 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     }
 
     /**
-     * Check that all expected line exists in actual.
+     * Check that all expected lines exist in actual. If not - fail.
      *
      * @param expected Expected lines, nulls mean any value.
      * @param actual Actual lines.
      */
     private void checkContains(List<List<Object>> expected, List<List<?>> actual) {
+        List<Object> notExisting = testContains(expected, actual);
+        if (notExisting != null)
+            fail("Unable to found " + notExisting + " in specified dataset");
+    }
+
+    /**
+     * Test that all expected lines exist in actual.
+     *
+     * @param expected Expected lines, nulls mean any value.
+     * @param actual Actual lines.
+     * @return First not existing line or {@code null} if all lines presented.
+     */
+    private List<Object> testContains(List<List<Object>> expected, List<List<?>> actual) {
         assertTrue(expected.size() <= actual.size());
 
         assertTrue("Test may take too long with such datasets of actual = " + actual.size(), actual.size() <= 1024);
@@ -91,8 +150,10 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
             }
 
             if (!found)
-                fail("Unable to found " + exp + " in specified dataset");
+                return exp;
         }
+
+        return null;
     }
 
     /**
