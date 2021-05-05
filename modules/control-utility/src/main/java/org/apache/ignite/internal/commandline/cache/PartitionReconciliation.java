@@ -387,7 +387,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg)
-            .a("], recheck-delay=[" + args.recheckDelay + "]")
+            .a("], recheck-delay=[" + args.recheckDelay + ']')
             .a(System.lineSeparator());
 
         if (args.includeSensitive) {

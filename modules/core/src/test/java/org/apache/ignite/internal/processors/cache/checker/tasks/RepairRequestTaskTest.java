@@ -312,9 +312,7 @@ public class RepairRequestTaskTest {
                 ? CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.SUCCESS)
                 : CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.FAIL));
         }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
+        catch (IgniteCheckedException ignored) { }
 
         return igniteMock;
     }

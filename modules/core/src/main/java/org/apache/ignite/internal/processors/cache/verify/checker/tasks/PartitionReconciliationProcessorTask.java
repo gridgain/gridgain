@@ -215,10 +215,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** {@inheritDoc} */
         @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
-
-            Collection<String> cacheNames = F.viewReadOnly(ignite.context().cache().cacheDescriptors().values(),
-                (IgniteClosure<DynamicCacheDescriptor, String>)desc -> desc.cacheConfiguration().getName()
-            );
+            Collection<String> cacheNames = ignite.context().cache().cacheNames();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
                 caches.addAll(cacheNames);

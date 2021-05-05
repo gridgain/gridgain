@@ -74,6 +74,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         return cfg;
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
