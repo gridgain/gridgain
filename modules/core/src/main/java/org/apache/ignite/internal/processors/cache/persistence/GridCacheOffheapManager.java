@@ -2594,8 +2594,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @param partId Partition id.
          */
         private void checkGapsLinkAndPartMetaStorage(PagePartitionMetaIOV3 io, long pageId, long pageAddr, int grpId, int partId) {
-            if ((io.getPartitionMetaStoreReuseListRoot(pageAddr) == 0 && io.getGapsLink(pageAddr) != 0) ||
-                (io.getPartitionMetaStoreReuseListRoot(pageAddr) != 0 && io.getGapsLink(pageAddr) == 0)) {
+            if (io.getPartitionMetaStoreReuseListRoot(pageAddr) == 0 && io.getGapsLink(pageAddr) != 0) {
                 String msg = "Partition meta page corruption: links to counter data page and partition " +
                     "meta store must both be present, or both be absent in partition [" +
                     "grpId=" + grpId +
