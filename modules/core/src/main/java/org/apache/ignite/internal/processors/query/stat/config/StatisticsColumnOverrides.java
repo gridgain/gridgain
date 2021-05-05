@@ -24,6 +24,9 @@ import java.util.Objects;
  * Configuration overrides.
  */
 public class StatisticsColumnOverrides implements Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** Percent of null values in column. If {@code null} - use calculated value. */
     private final Long nulls;
 
