@@ -2610,6 +2610,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 return null;
         }
 
+        @Override public void removeReconciliationCtx() throws IgniteCheckedException {
+            CacheDataStore delegate = init0(false);
+
+            if (delegate != null)
+                delegate.removeReconciliationCtx();
+        }
+
         @Override public CacheDataTree tree() {
             return dataTree;
         }

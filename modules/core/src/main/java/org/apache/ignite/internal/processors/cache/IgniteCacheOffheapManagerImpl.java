@@ -1663,8 +1663,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccUpdateTxStateHint = new MvccUpdateTxStateHintHandler(grp);
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
 
-            reconciliationCtx = new ReconciliationContext();
-
             this.dataTree.reconciliationCtx = reconciliationCtx;
         }
 
@@ -1715,9 +1713,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public ReconciliationContext reconciliationCtx() {
-            assert reconciliationCtx != null;
+            if (reconciliationCtx == null) {
+                reconciliationCtx = new ReconciliationContext();
+
+                tree().reconciliationCtx = reconciliationCtx;
+            }
 
             return reconciliationCtx;
+
+        }
+
+        /** {@inheritDoc} */
+        @Override public void removeReconciliationCtx() {
+            assert reconciliationCtx != null;
+
+            reconciliationCtx = null;
 
         }
 
@@ -1842,7 +1852,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
             }
             else
-                storageSize.set(reconciliationCtx().sizes.get(CU.UNDEFINED_CACHE_ID).get());
+                storageSize.set(reconciliationCtx().sizes.remove(CU.UNDEFINED_CACHE_ID).get());
 
             if (reconciliationCtx().sizes.isEmpty()) {
                 reconciliationCtx = null;

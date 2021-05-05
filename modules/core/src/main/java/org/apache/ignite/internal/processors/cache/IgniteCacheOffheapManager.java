@@ -669,6 +669,9 @@ public interface IgniteCacheOffheapManager {
         /** */
         public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
 
+        /** */
+        public void removeReconciliationCtx() throws IgniteCheckedException;
+
         /**
          * @return Cache data tree object.
          */

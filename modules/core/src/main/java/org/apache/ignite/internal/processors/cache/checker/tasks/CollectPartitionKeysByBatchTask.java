@@ -236,7 +236,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
             boolean reconSize = partBatch.reconSize &&
                 (nodePartitionSize == null ||
-                    nodePartitionSize.inProgress);
+                    (nodePartitionSize.inProgress && !nodePartitionSize.isFinished));
 
 //            if (reconConsist || reconSize)
 //            System.out.println("qdsvdsdfd start recon");
@@ -430,9 +430,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             nodeSize.lastKey = null;
 
                             nodeSize.inProgress = false;
+                            nodeSize.isFinished = true;
 
 //                        partEntryHashRecords.clear();
                             partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);
+
+//                            cacheDataStore.removeReconciliationCtx();
                         }
                         finally {
 //                            System.out.println("qdsaftpg end second busy lock");
