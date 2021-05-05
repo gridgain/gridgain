@@ -379,12 +379,12 @@ public class ClusterMetricsImpl implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public float getBusyTimePercentage() {
-        return 1 - getIdleTimePercentage();
+        return Math.max(100 - getIdleTimePercentage(), 0);
     }
 
     /** {@inheritDoc} */
     @Override public float getIdleTimePercentage() {
-        return getTotalIdleTime() / (float)getUpTime();
+        return Math.min((float)100 * getTotalIdleTime() / getUpTime(), (float)100.);
     }
 
     /** {@inheritDoc} */
