@@ -271,7 +271,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
 
-        for (int i = 1; i <= 3; i++){
+        for (int i = 1; i <= 3; i++) {
             ignite.atomicLong(DEFAULT_CACHE_NAME + i, 0, true);
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
         }
