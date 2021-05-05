@@ -147,13 +147,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
         params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
-        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
         params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
 
         params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
-        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 10, null,              10,  3,  8, false});
-        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, "testCacheGroup1", 10,  3,  8, false});
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
 
         params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
         params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
@@ -164,6 +164,339 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
         params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
         params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
+        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+
+        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+
+        //****************************************************************
+
 //
 //        params.add(new Object[] {2, 0, 100, ATOMIC,        REPLICATED,  0, 1, null, 1,   1, 1, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
 //        params.add(new Object[] {1, 0, 1000, ATOMIC,        PARTITIONED,  0, 1, null, 1,   1, 8, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
