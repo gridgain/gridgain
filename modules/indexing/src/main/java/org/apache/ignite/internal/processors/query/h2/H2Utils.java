@@ -112,8 +112,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.sql.ResultSetMetaData.columnNullableUnknown;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_HASH_JOIN;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_HASH_JOIN_MAX_TABLE_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.*;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_COL;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
@@ -1071,6 +1070,8 @@ public class H2Utils {
             }
         }
     }
+    
+    private static final boolean IGNITE_DONT_UNWRAP_PK = getBoolean("IGNITE_DONT_UNWRAP_PK", false);
 
     /**
      * Create list of index columns. Where possible _KEY columns will be unwrapped.
@@ -1086,6 +1087,9 @@ public class H2Utils {
         boolean isSql = tbl.rowDescriptor().tableDescriptor().sql();
 
         if (!isSql)
+            return idxCols;
+        
+        if (IGNITE_DONT_UNWRAP_PK)
             return idxCols;
 
         GridQueryTypeDescriptor type = tbl.rowDescriptor().type();

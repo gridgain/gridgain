@@ -5,12 +5,7 @@
  */
 package org.gridgain.internal.h2.table;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
@@ -727,6 +722,23 @@ public abstract class Table extends SchemaObjectBase {
         return columnMap.containsKey(columnName);
     }
 
+    private static final boolean IGNITE_SORT_INDEXES = getBoolean("IGNITE_SORT_INDEXES", false);
+
+    private static final boolean IGNITE_SHOW_ORDER_OF_INDEXES = getBoolean("IGNITE_SHOW_ORDER_OF_INDEXES", false);
+    
+    public static boolean getBoolean(String name, boolean dflt) {
+        assert name != null;
+
+        String v = System.getProperty(name);
+
+        if (v == null)
+            v = System.getenv(name);
+
+        String val = v;
+
+        return val == null ? dflt : Boolean.parseBoolean(val);
+    }
+    
     /**
      * Get the best plan for the given search mask.
      *
@@ -771,6 +783,20 @@ public abstract class Table extends SchemaObjectBase {
         }
 
         if (indexes != null && masks != null) {
+            // sort all but the 0'th index
+            if (IGNITE_SORT_INDEXES) {
+                indexes = new ArrayList<>(indexes);
+                Index zeroth = indexes.remove(0);
+                Comparator<Index> comparator = new Comparator<Index>() {
+                    @Override
+                    public int compare(Index o1, Index o2) {
+                        return o1.getName().compareTo(o2.getName());
+                    }
+                };
+                Collections.sort(indexes, comparator);
+                indexes.add(0, zeroth);
+            }
+            
             for (int i = 1, size = indexes.size(); i < size; i++) {
                 Index index = indexes.get(i);
 
@@ -780,9 +806,10 @@ public abstract class Table extends SchemaObjectBase {
                 double cost = index.getCost(session, masks, filters, filter,
                         sortOrder, allColumnsSet);
 
-                if (t.isDebugEnabled()) {
-                    t.debug("Table      :     potential plan item cost {0} index {1}",
-                            cost, index.getPlanSQL());
+                if (IGNITE_SHOW_ORDER_OF_INDEXES) {
+                    System.out.println("Index[" + i + "]: potential plan item cost {" + cost +
+                            "} index {" + index.getPlanSQL() + "} planned cost to be used {" + item.cost + "}" +
+                            " planned index to be used {" + item.getIndex().getPlanSQL() + "}");
                 }
 
                 if (cost < item.cost) {
