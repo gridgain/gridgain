@@ -93,18 +93,18 @@ public class StatisticsColumnLocalDataView {
     }
 
     /**
-     * @return Percent of unique not null values.
+     * @return Number of distinct values in column.
      */
     @Order(5)
-    public long cardinality() {
-        return statistics.columnStatistics(column).cardinality();
+    public long distinct() {
+        return statistics.columnStatistics(column).distinct();
     }
 
     /**
      * @return Percent of nulls values.
      */
     @Order(6)
-    public int nulls() {
+    public long nulls() {
         return statistics.columnStatistics(column).nulls();
     }
 

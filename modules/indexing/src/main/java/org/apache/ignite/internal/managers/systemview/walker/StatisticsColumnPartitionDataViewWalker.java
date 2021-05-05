@@ -79,8 +79,8 @@ public class StatisticsColumnPartitionDataViewWalker implements SystemViewRowAtt
         v.acceptInt(4, "partition", row.partition());
         v.acceptLong(5, "rowsCount", row.rowsCount());
         v.acceptLong(6, "updateCounter", row.updateCounter());
-        v.acceptLong(7, "cardinality", row.cardinality());
-        v.acceptInt(8, "nulls", row.nulls());
+        v.acceptLong(7, "distinct", row.distinct());
+        v.acceptLong(8, "nulls", row.nulls());
         v.acceptLong(9, "total", row.total());
         v.acceptInt(10, "size", row.size());
         v.acceptLong(11, "version", row.version());
