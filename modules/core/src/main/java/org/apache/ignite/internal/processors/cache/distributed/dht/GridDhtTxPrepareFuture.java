@@ -1526,6 +1526,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             assert req.transactionNodes() != null;
 
+            if(req.toString().contains("dCacheVersion [topVer=0, order=0"))
+            {
+                System.out.println("lol");
+            }
+
             try {
                 cctx.io().send(n, req, tx.ioPolicy());
 
@@ -1606,6 +1611,11 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
                 }
 
                 assert req.transactionNodes() != null;
+
+                if(req.toString().contains("dCacheVersion [topVer=0, order=0"))
+                {
+                    System.out.println("lol");
+                }
 
                 try {
                     cctx.io().send(nearMapping.primary(), req, tx.ioPolicy());

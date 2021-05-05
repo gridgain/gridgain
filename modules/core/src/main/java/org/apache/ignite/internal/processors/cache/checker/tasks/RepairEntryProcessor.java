@@ -166,6 +166,7 @@ public class RepairEntryProcessor implements EntryProcessor {
      * @return Current {@link GridCacheVersion}
      */
     protected GridCacheVersion keyVersion(MutableEntry entry) {
+        int i = entry.hashCode();
         CacheEntry verEntry = (CacheEntry)entry.unwrap(CacheEntry.class);
 
         return (GridCacheVersion)verEntry.version();

@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -60,6 +61,7 @@ public class TestStorageUtils {
 
             Object valToPut = e.getValue();
 
+
             KeyCacheObject keyCacheObj = e.getKey() instanceof BinaryObject ?
                 (KeyCacheObject)e.getKey() :
                 new KeyCacheObjectImpl(e.getKey(), null, partId);
@@ -71,7 +73,6 @@ public class TestStorageUtils {
                 valToPut = e.getValue().toString() + brokenValPostfix;
 
             // Create data entry
-
             DataEntry dataEntry = new DataEntry(
                 ctx.cacheId(),
                 keyCacheObj,

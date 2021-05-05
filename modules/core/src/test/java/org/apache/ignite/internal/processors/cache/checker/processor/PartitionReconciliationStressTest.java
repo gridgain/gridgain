@@ -46,13 +46,13 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class PartitionReconciliationStressTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 4;
+    protected static final int NODES_CNT = 2;
 
     /** Keys count. */
-    protected static final int KEYS_CNT = 2000;
+    protected static final int KEYS_CNT = 1;
 
     /** Corrupted keys count. */
-    protected static final int BROKEN_KEYS_CNT = 500;
+    protected static final int BROKEN_KEYS_CNT = 1;
 
     /** Cache atomicity mode. */
     @Parameterized.Parameter(0)
@@ -184,9 +184,6 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
             correctKeys.remove(i);
 
-            if (i % 3 == 0)
-                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], i);
-            else
                 simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], i);
         }
 

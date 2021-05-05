@@ -1807,6 +1807,7 @@ public class IgniteTxHandler {
                             }
 
                             if (reserved) {
+                                //HEREare
                                 tx.addWrite(entry, ctx.deploy().globalLoader());
 
                                 if (txCounters != null) {

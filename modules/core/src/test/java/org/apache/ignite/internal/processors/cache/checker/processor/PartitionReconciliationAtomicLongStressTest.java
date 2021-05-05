@@ -46,13 +46,13 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class PartitionReconciliationAtomicLongStressTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    protected static final int NODES_CNT = 4;
+    protected static final int NODES_CNT = 2;
 
     /** Keys count. */
-    protected static final int KEYS_CNT = 2000;
+    protected static final int KEYS_CNT = 1;
 
     /** Corrupted keys count. */
-    protected static final int BROKEN_KEYS_CNT = 500;
+    protected static final int BROKEN_KEYS_CNT = 1;
 
     /** Internal data structure cache name. */
     protected static final String INTERNAL_CACHE_NAME = "ignite-sys-atomic-cache@default-ds-group";

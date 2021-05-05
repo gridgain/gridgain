@@ -87,9 +87,9 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
             corruptedKeys.add(i);
             GridCacheInternalKeyImpl key = new GridCacheInternalKeyImpl(Integer.toString(i), "default-ds-group");
 
-            if (i % 3 == 0)
-                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], key);
-            else
+//            if (i % 3 == 0)
+//                simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], key);
+//            else
                 simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], key);
         }
 
@@ -99,20 +99,7 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
 
         AtomicInteger threadCntr = new AtomicInteger(0);
 
-        IgniteInternalFuture<Long> randLoadFut = GridTestUtils.runMultiThreadedAsync(() -> {
-            int threadId = threadCntr.incrementAndGet() - 1;
-            reloadedKeys[threadId] = new HashSet<>();
 
-            while (!stopRandomLoad.get()) {
-                int i = ThreadLocalRandom.current().nextInt(KEYS_CNT);
-                // The following statement won't work: atomicLong.incrementAndGet().
-                // This happens because of internal null value verification that fails
-                // if simulateMissingEntryCorruption have been invoked.
-                // Therefore let's simulate new key creation.
-                client.atomicLong(Integer.toString(i), cfg, i * 2, true);
-                reloadedKeys[threadId].add(i);
-            }
-        }, 6, "rand-loader");
 
         ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, INTERNAL_CACHE_NAME);
 
@@ -120,12 +107,12 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
 
         stopRandomLoad.set(true);
 
-        randLoadFut.get();
 
-        for (Set<Integer> reloadedKey : reloadedKeys)
-            corruptedKeys.removeAll(reloadedKey);
+
 
         assertResultContainsConflictKeys(res, INTERNAL_CACHE_NAME, this::keyMap, corruptedKeys);
+
+        ReconciliationResult result = partitionReconciliation(ig, false, repairAlgorithm, parallelism, INTERNAL_CACHE_NAME);
 
         assertFalse(idleVerify(ig, INTERNAL_CACHE_NAME).hasConflicts());
     }
