@@ -107,7 +107,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testPartitionDataView() throws Exception {
         List<List<Object>> partLines = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0, null, null, 1L, null)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0, null, null, null, null)
         );
 
         checkSqlResult("select * from SYS.STATISTICS_PARTITION_DATA where PARTITION < 10", null, act -> {
@@ -205,11 +205,14 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testEnforceStatisticValues() throws Exception {
         long size = SMALL_SIZE;
+        sql("DROP STATISTICS SMALL");
 
         sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
         sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+        sql("ANALYZE SMALL (C)");
 
-        U.sleep(5000);
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            list -> !list.isEmpty());
 
         ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
@@ -220,14 +223,12 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
 
         List<List<Object>> localData = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, 5L, 6, 7L, 8, 1L, tsA.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, 6L, 7, 8L, 4, 1L, tsB.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, 5L, 6, 7L, 8, 3L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, 6L, 7, 8L, 4, 3L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 3L, tsC.toString())
         );
 
-
-        System.out.println("+++ " + sql("select * from SYS.STATISTICS_LOCAL_DATA"));
-
-        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            localData::equals);
     }
 }

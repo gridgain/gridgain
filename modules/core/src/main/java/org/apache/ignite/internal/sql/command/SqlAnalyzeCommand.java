@@ -100,8 +100,17 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
         return new StatisticsObjectConfiguration(target.key(), colCfgs, maxChangedRows);
     }
 
-    /** */
+    /**
+     * Try to cut overrides parameters from ANALYZE command params and return StatisticsColumnOverrides if at least one
+     * overriding parameter found.
+     *
+     * @param params ANALYZE params to cut overrides from.
+     * @return StatisticsColumnOverrides or {@code null} if there is no overriding parameters.
+     */
     private static StatisticsColumnOverrides overrides(Map<String, String> params) {
+        if (params == null)
+            return null;
+
         Long total = null;
         Long nulls = null;
         Long distinct = null;
@@ -127,7 +136,6 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
             return null;
         else
             return new StatisticsColumnOverrides(nulls, distinct, total, size);
-
     }
 
     /**

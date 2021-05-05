@@ -252,8 +252,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @param sql Statement to execute.
      */
-    protected void sql(String sql) {
-        grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
+    protected List<List<?>> sql(String sql) {
+        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 
     /**
