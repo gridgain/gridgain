@@ -87,20 +87,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cleanPersistenceDir();
     }
 
-    private CacheConfiguration getCacheConfig(String name, CacheAtomicityMode cacheAtomicityMode, CacheMode cacheMode, int backupCount, int partCount, String cacheGroup) {
-        CacheConfiguration ccfg = new CacheConfiguration();
-        ccfg.setName(name);
-        if (cacheGroup != null)
-            ccfg.setGroupName(cacheGroup);
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, partCount));
-        ccfg.setBackups(backupCount);
-        ccfg.setAtomicityMode(cacheAtomicityMode);
-        ccfg.setCacheMode(cacheMode);
-
-        return ccfg;
-    }
-
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTwoReconciliationInRow() throws Exception {

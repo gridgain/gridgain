@@ -440,8 +440,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 p.oldRow = p.needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
 
                 if (reconciliationCtx != null) {
-                    oldRow = getRow(io, pageAddr, idx);
-
+                    if (p.needOld)
+                        oldRow = p.oldRow;
+                    else
+                        oldRow = getRow(io, pageAddr, idx);
                     oldRowReaded = true;
                 }
 

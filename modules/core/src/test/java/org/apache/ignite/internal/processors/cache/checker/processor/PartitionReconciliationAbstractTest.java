@@ -330,9 +330,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
                             break;
                     }
-
-
-
                 }
 
                 System.out.println("dfjklkvfod last op: " + op + ", n: "  + n + ", thread: " + Thread.currentThread().getName());

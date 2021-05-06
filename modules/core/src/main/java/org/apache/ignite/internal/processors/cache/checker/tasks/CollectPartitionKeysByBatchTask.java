@@ -236,18 +236,12 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
             boolean reconSize = partBatch.reconSize &&
-                (nodePartitionSize == null ||
-                    (nodePartitionSize.inProgress && !nodePartitionSize.isFinished));
-
-//            if (reconConsist || reconSize)
-//            System.out.println("qdsvdsdfd start recon");
-            IgniteCache<Object, Object> cache = ignite.cache(partBatch.cacheName());
+                (nodePartitionSize == null || nodePartitionSize.inProgress);
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
 
-//            int cacheId = cctx.cacheId();
             int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             final int batchSize = partBatch.batchSize();
@@ -433,7 +427,6 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             nodeSize.lastKey = null;
 
                             nodeSize.inProgress = false;
-                            nodeSize.isFinished = true;
 
 //                        partEntryHashRecords.clear();
                             partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);

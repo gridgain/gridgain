@@ -14,8 +14,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
 
     public boolean inProgress;
 
-    public boolean isFinished;
-
     public KeyCacheObject lastKey;
 
     public long oldSize;
@@ -25,7 +23,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeBoolean(inProgress);
-        out.writeBoolean(isFinished);
         out.writeObject(lastKey);
         out.writeLong(oldSize);
         out.writeLong(newSize);
@@ -35,7 +32,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
         inProgress = in.readBoolean();
-        isFinished = in.readBoolean();
         lastKey = (KeyCacheObject)in.readObject();
         oldSize = in.readLong();
         newSize = in.readLong();
@@ -44,7 +40,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     @Override public String toString() {
         return "NodePartitionSize{" +
             "inProgress=" + inProgress +
-            "isFinished=" + isFinished +
             ", lastKey=" + lastKey +
             ", oldSize=" + oldSize +
             ", newSize=" + newSize +
