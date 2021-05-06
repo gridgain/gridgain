@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -424,7 +425,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                            System.out.println("qpooikjgns partSize ************************* " + partSize);
 
                             nodeSize.oldSize = partSize.get();
-                            cacheDataStore.flushReconciliationResult(cacheId);
+
+                            if (partBatch.repairAlg != RepairAlgorithm.PRINT_ONLY)
+                                cacheDataStore.flushReconciliationResult(cacheId);
                             nodeSize.newSize = partSize.get();
 
                             nodeSize.lastKey = null;

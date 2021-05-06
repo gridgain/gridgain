@@ -34,6 +34,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -150,6 +151,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         reconResult = new AtomicReference<>();
 
@@ -280,7 +282,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testRepairPartOfCachesReconciliationInRow() throws Exception {
+    public void testRepairPartOfCachesReconciliation() throws Exception {
         CacheConfiguration ccfg0 = new CacheConfiguration("cache0");
         CacheConfiguration ccfg1 = new CacheConfiguration("cache1");
         CacheConfiguration ccfg2 = new CacheConfiguration("cache2_group0").setGroupName("group0");
@@ -357,6 +359,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         partitionReconciliation(client, builder);
 
@@ -418,6 +421,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         partitionReconciliation(client, builder);
 
@@ -450,6 +454,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         partitionReconciliation(client, builder);
 
@@ -491,6 +496,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         partitionReconciliation(client, builder);
 

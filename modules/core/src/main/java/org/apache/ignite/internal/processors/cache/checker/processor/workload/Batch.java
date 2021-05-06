@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 
 /**
  * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
@@ -30,6 +31,8 @@ public class Batch extends PipelineWorkload {
     public boolean reconConsist;
 
     public boolean reconSize;
+
+    public RepairAlgorithm repairAlg;
 
     /** Cache name. */
     private final String cacheName;
@@ -53,10 +56,11 @@ public class Batch extends PipelineWorkload {
      * @param partId Partition id.
      * @param lowerKey Lower key.
      */
-    public Batch(boolean reconConsist, boolean reconSize, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
+    public Batch(boolean reconConsist, boolean reconSize, RepairAlgorithm repairAlg, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
         super(sesId, workloadChainId);
         this.reconConsist = reconConsist;
         this.reconSize = reconSize;
+        this.repairAlg = repairAlg;
 
         this.cacheName = cacheName;
         this.partId = partId;

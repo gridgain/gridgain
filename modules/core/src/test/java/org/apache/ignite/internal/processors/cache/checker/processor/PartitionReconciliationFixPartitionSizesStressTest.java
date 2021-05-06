@@ -42,6 +42,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -241,6 +242,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         builder.caches(cacheNames);
         builder.batchSize(reconBatchSize);
         builder.reconTypes(new HashSet(reconTypes));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         reconResult = new AtomicReference<>();
 

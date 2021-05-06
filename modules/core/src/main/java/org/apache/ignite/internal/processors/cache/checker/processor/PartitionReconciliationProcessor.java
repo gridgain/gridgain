@@ -204,7 +204,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconTypes.contains(CONSISTENCY), reconTypes.contains(SIZES), sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconTypes.contains(CONSISTENCY), reconTypes.contains(SIZES), repairAlg, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -319,7 +319,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
@@ -331,7 +331,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress));
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
+                    schedule(new Batch(reconConsist, reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
                 if (nextBatchKey == null) {
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());

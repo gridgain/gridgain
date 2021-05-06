@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -29,6 +30,8 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     public boolean reconConsist;
 
     public boolean reconSize;
+
+    public RepairAlgorithm repairAlg;
 
     /**
      *
@@ -71,6 +74,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     public PartitionBatchRequest(
         boolean reconConsist,
         boolean reconSize,
+        RepairAlgorithm repairAlg,
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -83,6 +87,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         super(sesId, workloadChainId);
         this.reconConsist = reconConsist;
         this.reconSize = reconSize;
+        this.repairAlg = repairAlg;
         this.cacheName = cacheName;
         this.partId = partId;
         this.batchSize = batchSize;
