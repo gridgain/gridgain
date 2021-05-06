@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
@@ -133,7 +132,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         String cacheName,
         Set<Integer> keys
     ) {
-        Pattern p = Pattern.compile("name=(\\d+)");
         for (Integer key : keys)
             assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName).contains(key));
     }
@@ -155,7 +153,15 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
      *
      */
     public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key) {
-        corruptDataEntry(ctx, key, false, true, new GridCacheVersion(0, 0, 0L), "_broken");
+        simulateOutdatedVersionCorruption(ctx, key, false);
+    }
+
+    /**
+     *
+     */
+    public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key, boolean lockEntry) {
+        corruptDataEntry(ctx, key, false, true,
+            new GridCacheVersion(0, 0, 0L), "_broken", lockEntry);
     }
 
     /**

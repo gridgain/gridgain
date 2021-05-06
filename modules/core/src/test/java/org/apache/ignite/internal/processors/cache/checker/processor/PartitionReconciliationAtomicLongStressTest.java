@@ -178,7 +178,7 @@ public class PartitionReconciliationAtomicLongStressTest extends PartitionReconc
             if (i % 3 == 0)
                 simulateMissingEntryCorruption(nodeCacheCtxs[i % NODES_CNT], key);
             else
-                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], key);
+                simulateOutdatedVersionCorruption(nodeCacheCtxs[i % NODES_CNT], key, true);
         }
 
         log.info(">>>> Simulating data corruption finished");

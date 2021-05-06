@@ -47,41 +47,27 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOG
  */
 @RunWith(Parameterized.class)
 public class PartitionReconciliationSetDataStructureTest extends PartitionReconciliationAbstractTest {
-    /**
-     * Nodes.
-     */
+    /** Nodes. */
     protected static final int NODES_CNT = 4;
 
-    /**
-     * Keys count.
-     */
+    /** Keys count. */
     protected static final int KEYS_CNT = 100;
 
-    /**
-     * Corrupted keys count.
-     */
+    /** Corrupted keys count. */
     protected static final int BROKEN_KEYS_CNT = 10;
 
-    /**
-     * Data structure name.
-     */
+    /** Data structure name. */
     protected static final String DS_NAME = "DefaultDS";
 
-    /**
-     * Cache atomicity mode.
-     */
+    /** Cache atomicity mode. */
     @Parameterized.Parameter(0)
     public CacheAtomicityMode cacheAtomicityMode;
 
-    /**
-     * Fix mode.
-     */
+    /** Fix mode. */
     @Parameterized.Parameter(1)
     public boolean fixMode;
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
@@ -97,27 +83,21 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
         return cfg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
     }
 
-    /**
-     *
-     */
+    /**  */
     @Parameterized.Parameters(name = "atomicity = {0}, repair = {1}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
