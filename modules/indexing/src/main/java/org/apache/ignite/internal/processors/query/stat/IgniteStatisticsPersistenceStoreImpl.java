@@ -62,7 +62,7 @@ public class IgniteStatisticsPersistenceStoreImpl implements IgniteStatisticsSto
     private static final String META_VERSION_KEY = META_STAT_PREFIX + META_SEPARATOR + "version";
 
     /** Actual statistics version. */
-    private static final Integer VERSION = 2;
+    public static final Integer VERSION = 2;
 
     /** Logger. */
     private final IgniteLogger log;

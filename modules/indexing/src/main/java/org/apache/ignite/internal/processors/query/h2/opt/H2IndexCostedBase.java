@@ -713,6 +713,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      * Cost function implementation.
      */
     private final class CostFunctionLast implements CostFunction {
+        /** Null fraction by default. */
+        private final double NULL_FRACTION = 0.25;
         /**
          * Math context to use in estimations calculations.
          */
@@ -728,12 +730,21 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          */
         private final int RANGE_OPEN_SELECTIVITY = 33;
 
-        /** Nulls values fraction*/
+        /**
+         *  Nulls values fraction.
+         *
+         * @param colStat Column statistics or {@code null} if there is no statistics for column.
+         * @return Null fraction estimation (by default or by statistics.
+         */
         private double nulls(ColumnStatistics colStat) {
             if (colStat == null)
-                return 0.1;
-            else
-                return (double)colStat.nulls() / colStat.total();
+                return NULL_FRACTION;
+            else {
+                if (colStat.total() > 0)
+                    return (double)colStat.nulls() / colStat.total();
+                else
+                    return 0;
+            }
         }
 
         /**
@@ -784,25 +795,23 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             continue;
                         }
                         if (colStats != null && equalNull == Boolean.FALSE)
-                            rowsCost = rowsCost * (100 - colStats.nulls()) / 100;
+                            rowsCost = Math.max(Math.round(rowsCost * (1 - nulls(colStats))), 1);
 
                         long distinctRows;
                         if (colStats == null) {
                             double cardinality = (double)column.getSelectivity() / 100;
-                            totalCardinality = (1 - totalCardinality) * (1 - cardinality);
+                            totalCardinality = 1 - (1 - totalCardinality) * (1 - cardinality);
                             distinctRows = Math.round((double) rowCount * totalCardinality);
                         }
                         else {
-                            // TODO: here nulls is a number of null values, not a percent. But only here.
-                            double cardinality = colStats.distinct() / (colStats.total() - colStats.nulls());
-                            totalCardinality = (1 - totalCardinality) * (1 - cardinality);
-                            distinctRows = Math.round(colStats.distinct() * totalCardinality);
+                            double cardinality;
+                            if (colStats.total() - colStats.nulls() == 0)
+                                cardinality = 1;
+                            else
+                                cardinality = (double) colStats.distinct() / (colStats.total() - colStats.nulls());
+                            totalCardinality = 1 - (1 - totalCardinality) * (1 - cardinality);
+                            distinctRows = Math.round(rowCount * totalCardinality);
                         }
-                        //double cardinality = getColumnCardinality(colStats, column);
-
-                        //totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
-
-                        //long distinctRows = Math.round((double) rowCount * totalCardinality / 100);
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
@@ -822,14 +831,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
                     else if (isNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
-                                    (i > 0 ? 1 : 0));
+                            rowsCost = Math.min(5 + colStats.nulls(), rowsCost - (i > 0 ? 1 : 0));
                         break;
                     }
                     else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost -
-                                    (i > 0 ? 1 : 0));
+                            rowsCost = Math.min(5 + colStats.total() - colStats.nulls(), rowsCost - (i > 0 ? 1 : 0));
                         break;
                     }
                     else
