@@ -38,13 +38,17 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
@@ -63,6 +67,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         boolean repair,
         @Nullable RepairAlgorithm repairAlgorithm,
         int parallelism,
+        Set<ReconType> reconTypes,
         String... caches
     ) {
         return partitionReconciliation(
@@ -73,6 +78,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                 .parallelism(parallelism)
                 .repair(repair)
                 .repairAlg(repairAlgorithm)
+                .reconTypes(reconTypes)
         );
     }
 
@@ -161,7 +167,11 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
     protected void updatePartitionsSize(IgniteEx grid, String cacheName) {
 
-        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+        GridCacheContext<Object, Object> cctx = grid
+            .context()
+            .cache()
+            .cache(cacheName)
+            .context();
 
         int cacheId = cctx.cacheId();
 

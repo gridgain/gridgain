@@ -20,6 +20,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -33,6 +34,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
@@ -40,6 +42,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * Tests that reconciliation works with binary objects that are absent in the nodes classpath.
@@ -60,6 +64,8 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
 
     /** Custom value class. */
     private static final String CUSTOM_VAL_CLS = "org.apache.ignite.tests.p2p.ReconciliationCustomValue";
+
+    private static Random rnd = new Random();
 
     /** Cache atomicity mode. */
     @Parameterized.Parameter(0)
@@ -197,7 +203,16 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
 
         ig.cluster().active(true);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, DEFAULT_CACHE_NAME);
+        Set<ReconType> reconTypes = new HashSet<>();
+
+        reconTypes.add(CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconTypes.add(SIZES);
+
+        log.info(">>> Reconciliation types: " + reconTypes);
+
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, reconTypes, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

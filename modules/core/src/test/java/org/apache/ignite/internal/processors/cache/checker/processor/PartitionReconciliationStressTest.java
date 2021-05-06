@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -34,11 +35,15 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * Tests the utility under loading.
@@ -79,6 +84,8 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
     /** Client. */
     protected IgniteEx client;
+
+    protected static Random rnd = new Random();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
@@ -203,7 +210,16 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
             }
         }, 4, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, DEFAULT_CACHE_NAME);
+        Set<ReconType> reconTypes = new HashSet<>();
+
+        reconTypes.add(CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconTypes.add(SIZES);
+
+        log.info(">>> Reconciliation types: " + reconTypes);
+
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, reconTypes, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 
