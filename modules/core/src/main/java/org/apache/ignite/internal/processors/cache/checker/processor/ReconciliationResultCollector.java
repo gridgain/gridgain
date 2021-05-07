@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
@@ -339,15 +340,24 @@ public interface ReconciliationResultCollector {
         /** {@inheritDoc} */
         @Override public File flushResultsToFile(LocalDateTime startTime) {
             ReconciliationAffectedEntries res = result();
-
-            if (res != null && !res.isEmpty()) {
                 try {
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
 
                     try (PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(file)))) {
-                        res.print(pw::write, includeSensitive);
 
-                        pw.flush();
+                        if (res != null && !res.isEmpty()) {
+                            res.print(pw::write, includeSensitive);
+
+                            pw.flush();
+                        }
+
+                        String brokenSizes = generateSizeResult();
+
+                        if (!brokenSizes.isEmpty()) {
+                            pw.write(brokenSizes);
+
+                            pw.flush();
+                        }
 
                         return file;
                     }
@@ -358,9 +368,68 @@ public interface ReconciliationResultCollector {
                 catch (IgniteCheckedException | IOException e) {
                     log.error("Unable to create file " + e.getMessage());
                 }
-            }
 
             return null;
+        }
+
+        public String generateSizeResult() {
+            Map<String, Map<String, Map<String, String>>> strBrokenSizes = new HashMap<>();
+
+            partSizesMap().entrySet().forEach(cacheSizes -> {
+                Integer cacheId = cacheSizes.getKey();
+                Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
+
+                partsSizes.entrySet().forEach(partSizes -> {
+                    Integer partId = partSizes.getKey();
+                    Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
+
+                    StringBuilder brokenSizes = new StringBuilder();//"Node UUID: "
+
+                    nodesSizes.entrySet().stream()
+                        .filter(entry -> entry.getValue().oldCacheSize != entry.getValue().newCacheSize)
+                        .forEach(entry -> {
+                            System.out.println("dsfhlsfd");
+                            strBrokenSizes.putIfAbsent(entry.getValue().cacheName, new HashMap<>());
+
+                            strBrokenSizes.get(entry.getValue().cacheName)
+                                .putIfAbsent(Integer.toString(partId), new HashMap<>());
+
+                            strBrokenSizes.get(entry.getValue().cacheName)
+                                .get(Integer.toString(partId))
+                                .put(entry.getKey().toString(),
+                                    "cache size from partition meta " +entry.getValue().oldCacheSize +
+                                        ", real cache size " + entry.getValue().newCacheSize);
+                        });
+                });
+
+            });
+
+            StringBuilder result = new StringBuilder();
+
+            strBrokenSizes.entrySet().forEach(cacheSizes -> {
+                String cacheName = cacheSizes.getKey();
+                Map<String, Map<String, String>> partsSizes = cacheSizes.getValue();
+
+                result.append("Cache: " + cacheName + "\n");
+
+                partsSizes.entrySet().forEach(partSizes -> {
+                    String partId = partSizes.getKey();
+                    Map<String, String> nodesSizes = partSizes.getValue();
+
+                    result.append("\tpartition: " + partId + "\n");
+
+                    StringBuilder brokenSizes = new StringBuilder();//"Node UUID: "
+
+                    nodesSizes.entrySet().stream()
+                        .forEach(entry -> {
+                            result.append("\t\tnode: " + entry.getKey() + "\n");
+                            result.append("\t\t\t" + entry.getValue() + "\n");
+                        });
+                });
+
+            });
+
+            return result.toString();
         }
     }
 

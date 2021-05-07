@@ -107,7 +107,7 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
                 }
             }
 
-            NodePartitionSize nodeSize = new NodePartitionSize();
+            NodePartitionSize nodeSize = new NodePartitionSize(ctxo.cacheName());
 
             res.add(new ComputeJobResultStub<>(new T2(partKeyVer, nodeSize)));
         }

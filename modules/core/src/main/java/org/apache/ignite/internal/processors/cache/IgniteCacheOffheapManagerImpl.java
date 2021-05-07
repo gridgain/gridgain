@@ -51,6 +51,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccMarkUpdat
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateNewTxStateHintRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateTxStateHintRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
@@ -121,6 +122,7 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -1725,9 +1727,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void removeReconciliationCtx() {
-            assert reconciliationCtx != null;
-
-            reconciliationCtx = null;
+            if (reconciliationCtx().sizes.isEmpty()) {
+                reconciliationCtx = null;
+                tree().reconciliationCtx = null;
+            }
 
         }
 
@@ -1832,7 +1835,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public void flushReconciliationResult(int cacheId) {
+        @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
 //                    System.out.println("qefsrvfdbs");
 //                    if (grp.sharedGroup()) {
 //                        cacheSizes.get(cacheId).set(
@@ -1843,22 +1846,33 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 //                    }
 
             if (grp.sharedGroup()) {
-                cacheSizes.get(cacheId).set(reconciliationCtx().sizes.remove(cacheId).get());
+                nodePartitionSize.oldCacheSize = cacheSizes.get(cacheId).get();
 
-//                reconciliationCtx().sizes.forEach((cacheId0, size) -> {
-//                    cacheSizes.get(cacheId0).set(size.get());
-//                });
+                long newSize = reconciliationCtx().sizes.remove(cacheId).get();
 
-                storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                nodePartitionSize.newCacheSize = newSize;
+
+                if (repair) {
+                    cacheSizes.get(cacheId).set(newSize);
+
+                    storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                }
             }
-            else
-                storageSize.set(reconciliationCtx().sizes.remove(CU.UNDEFINED_CACHE_ID).get());
+            else {
+                nodePartitionSize.oldCacheSize = storageSize.get();
+
+                long newSize = reconciliationCtx().sizes.remove(CU.UNDEFINED_CACHE_ID).get();
+
+                nodePartitionSize.newCacheSize = newSize;
+
+                storageSize.set(newSize);
+            }
 
             if (reconciliationCtx().sizes.isEmpty()) {
                 reconciliationCtx = null;
+
                 tree().reconciliationCtx = null;
             }
-
 //                    CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
 //                    CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
 

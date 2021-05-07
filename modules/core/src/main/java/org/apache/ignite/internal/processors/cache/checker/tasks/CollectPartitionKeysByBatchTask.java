@@ -269,7 +269,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = null;
 
-            NodePartitionSize nodeSize = nodePartitionSize == null ? new NodePartitionSize() : nodePartitionSize;
+            NodePartitionSize nodeSize = nodePartitionSize == null ? new NodePartitionSize(partBatch.cacheName()) : nodePartitionSize;
 
             KeyCacheObject lastKeyForSizes = null;
 
@@ -418,11 +418,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 //                            System.out.println("qpijkhdikg old size ************************* " + cacheDataStore.storageSize.get());
 //                            System.out.println("qpooikjgns partSize ************************* " + partSize);
 
-                            nodeSize.oldSize = partSize.get();
+//                            nodeSize.oldStorageSize = partSize.get();
 
                             if (partBatch.repairAlg != RepairAlgorithm.PRINT_ONLY)
-                                cacheDataStore.flushReconciliationResult(cacheId);
-                            nodeSize.newSize = partSize.get();
+                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
+                            else
+                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
+
+//                            nodeSize.newStorageSize = partSize.get();
 
                             nodeSize.lastKey = null;
 
