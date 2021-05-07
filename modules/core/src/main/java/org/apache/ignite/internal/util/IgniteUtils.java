@@ -2226,6 +2226,9 @@ public abstract class IgniteUtils {
                     }
                 }
 
+                /* On z/OS NetworkInterface will expose IPv6 ::1 and IPv4 external address, but not 127.0.0.1
+                    "localhost" resolves to 127.0.0.1 so we need to add it to binding addresses list so
+                    that discovery and clients can connect to "localhost" ports. */
                 try {
                     InetAddress localHost = InetAddress.getByName(LOCALHOST);
 
