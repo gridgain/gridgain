@@ -715,6 +715,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     private final class CostFunctionLast implements CostFunction {
         /** Null fraction by default. */
         private final double NULL_FRACTION = 0.25;
+
         /**
          * Math context to use in estimations calculations.
          */
@@ -863,7 +864,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             else if (nulls == null)
                 return colStats.total();
             else if (nulls)
-                return colStats.nulls() ;
+                return colStats.nulls();
             else
                 return colStats.total() - colStats.nulls();
         }

@@ -45,7 +45,6 @@ public class StatisticsObsolescenceTest extends StatisticsAbstractTest {
     public void testObsolescence() throws Exception {
         startGridsMultiThreaded(1);
 
-
         createSmallTable(null);
 
         statisticsMgr(0).collectStatistics(buildDefaultConfigurations(SMALL_TARGET));

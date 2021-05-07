@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 import java.sql.Timestamp;
