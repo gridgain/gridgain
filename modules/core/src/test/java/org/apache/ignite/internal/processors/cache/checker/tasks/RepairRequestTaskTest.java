@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.cache.processor.EntryProcessor;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvokeResult;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -34,8 +34,8 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
@@ -113,7 +113,7 @@ public class RepairRequestTaskTest {
      * Test can't resolve conflict and should use user algorithm.
      */
     @Test
-    public void testNotFullSetOfOldKeysUsesUserRepairAlg() throws IllegalAccessException {
+    public void testNotFullSetOfOldKeysUsesUserRepairAlg() throws IllegalAccessException, IgniteCheckedException {
         Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
         VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
@@ -158,7 +158,7 @@ public class RepairRequestTaskTest {
      * This reparation works with GRID_MAX_VERSION and ignores th user algorithm.
      */
     @Test
-    public void testFullOwnerSetNotMaxAttempt() throws IllegalAccessException {
+    public void testFullOwnerSetNotMaxAttempt() throws IllegalAccessException, IgniteCheckedException {
         Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
         VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
@@ -197,7 +197,7 @@ public class RepairRequestTaskTest {
      * Repair reached max attempts, it should use user algorithm.
      */
     @Test
-    public void testFullOwnerSetMaxAttempt() throws IllegalAccessException {
+    public void testFullOwnerSetMaxAttempt() throws IllegalAccessException, IgniteCheckedException {
         Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
         VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
@@ -299,21 +299,17 @@ public class RepairRequestTaskTest {
     /**
      *
      */
-    private IgniteEx igniteMock(boolean invokeReturnFixed) {
+    private IgniteEx igniteMock(boolean invokeReturnFixed) throws IgniteCheckedException {
         IgniteEx igniteMock = mock(IgniteEx.class);
-
-        IgniteCache cacheMock = mock(IgniteCache.class);
-        when(igniteMock.cache(DEFAULT_CACHE_NAME)).thenReturn(cacheMock);
-
         GridCacheContext ccMock = mock(GridCacheContext.class);
         IgniteInternalCache internalCacheMock = mock(IgniteInternalCache.class);
         when(igniteMock.cachex(DEFAULT_CACHE_NAME)).thenReturn(internalCacheMock);
         when(internalCacheMock.context()).thenReturn(ccMock);
 
-        when(cacheMock.withKeepBinary()).thenReturn(cacheMock);
-        when(cacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed ?
-            RepairEntryProcessor.RepairStatus.SUCCESS : RepairEntryProcessor.RepairStatus.FAIL);
-
+        when(internalCacheMock.keepBinary()).thenReturn(internalCacheMock);
+        when(internalCacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed
+            ? CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.SUCCESS)
+            : CacheInvokeResult.fromResult(RepairEntryProcessor.RepairStatus.FAIL));
         return igniteMock;
     }
 
