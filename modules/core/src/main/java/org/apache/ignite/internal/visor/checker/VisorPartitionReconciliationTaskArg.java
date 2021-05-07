@@ -373,7 +373,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param caches New caches.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder caches(Set<String> caches) {
             this.caches = caches;
@@ -383,7 +383,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repair New if  - Partition Reconciliation&Fix: update from Primary partition.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder repair(boolean repair) {
             this.repair = repair;
@@ -394,7 +394,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /**
          * @param fastCheck Flag indicates that only partitions that did not pass validation
          *                  during the last partition map exchange will be checked and repaired.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder fastCheck(boolean fastCheck) {
             this.fastCheck = fastCheck;
@@ -404,7 +404,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param partsToRepair  Collection of partitions that should be checked and repaired.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder partitionsToRepair(Map<Integer, Set<Integer>> partsToRepair) {
             this.partsToRepair = partsToRepair;
@@ -414,7 +414,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param locOutput The result will be primted to output if {@code locOutput} equals to {@code true}.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder locOutput(boolean locOutput) {
             this.locOutput = locOutput;
@@ -424,7 +424,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param includeSensitive If {@code true} then sensitive information is included into result.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder includeSensitive(boolean includeSensitive) {
             this.includeSensitive = includeSensitive;
@@ -434,7 +434,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder parallelism(int parallelism) {
             this.parallelism = parallelism;
@@ -444,7 +444,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param batchSize New amount of keys to retrieve within one job.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder batchSize(int batchSize) {
             this.batchSize = batchSize;
@@ -454,7 +454,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckAttempts New amount of potentially inconsistent keys recheck attempts.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder recheckAttempts(int recheckAttempts) {
             this.recheckAttempts = recheckAttempts;
@@ -464,7 +464,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repairAlg New specifies which fix algorithm to use: options  while repairing doubtful keys.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder repairAlg(RepairAlgorithm repairAlg) {
             this.repairAlg = repairAlg;
@@ -474,7 +474,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckDelay Recheck delay seconds.
-         * @return Builder for chaning.
+         * @return Builder for chaining.
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
