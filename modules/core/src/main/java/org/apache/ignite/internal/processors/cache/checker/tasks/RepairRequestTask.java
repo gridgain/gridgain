@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.cache.processor.EntryProcessorResult;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -38,9 +39,9 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
@@ -288,14 +289,19 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<RepairEntryProcessor.RepairStatus>invoke(
-                                key,
-                                new RepairEntryProcessor(
-                                    valToFixWith,
-                                    nodeToVersionedValues,
-                                    rmvQueueMaxSize,
-                                    false,
-                                    startTopVer));
+                            EntryProcessorResult<RepairEntryProcessor.RepairStatus> res = ignite.cachex(cacheName)
+                                .keepBinary().invoke(
+                                    key,
+                                    new RepairEntryProcessor(
+                                        valToFixWith,
+                                        nodeToVersionedValues,
+                                        rmvQueueMaxSize,
+                                        false,
+                                        startTopVer));
+
+                            assert res != null;
+
+                            keyWasSuccessfullyFixed = res.get();
                         }
                     }
                     else {
@@ -308,14 +314,19 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
-                                key,
-                                new RepairEntryProcessor(
-                                    valToFixWith,
-                                    nodeToVersionedValues,
-                                    rmvQueueMaxSize,
-                                    true,
-                                    startTopVer));
+                            EntryProcessorResult<RepairEntryProcessor.RepairStatus> res = ignite.cachex(cacheName)
+                                .keepBinary().invoke(
+                                    key,
+                                    new RepairEntryProcessor(
+                                        valToFixWith,
+                                        nodeToVersionedValues,
+                                        rmvQueueMaxSize,
+                                        true,
+                                        startTopVer));
+
+                            assert res != null;
+
+                            keyWasSuccessfullyFixed = res.get();
                         }
                         else {
                             usedRepairAlg = RepairAlgorithm.LATEST;
@@ -327,14 +338,19 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
-                                key,
-                                new RepairEntryProcessor(
-                                    valToFixWith,
-                                    nodeToVersionedValues,
-                                    rmvQueueMaxSize,
-                                    false,
-                                    startTopVer));
+                            EntryProcessorResult<RepairEntryProcessor.RepairStatus> res = ignite.cachex(cacheName)
+                                .keepBinary().invoke(
+                                    key,
+                                    new RepairEntryProcessor(
+                                        valToFixWith,
+                                        nodeToVersionedValues,
+                                        rmvQueueMaxSize,
+                                        false,
+                                        startTopVer));
+
+                            assert res != null;
+
+                            keyWasSuccessfullyFixed = res.get();
                         }
                     }
 
