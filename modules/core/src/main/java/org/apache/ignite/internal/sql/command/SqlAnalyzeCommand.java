@@ -53,7 +53,7 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     /** SIZE parameter name*/
     public static final String SIZE = "SIZE";
 
-    /** NULLS parameter name*/
+    /** NULLS parameter name. */
     public static final String NULLS = "NULLS";
 
     /** Targets to analyze. */
