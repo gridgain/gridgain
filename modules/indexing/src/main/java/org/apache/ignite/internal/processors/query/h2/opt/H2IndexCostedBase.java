@@ -805,10 +805,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         }
                         else {
                             double cardinality;
-                            if (colStats.total() - colStats.nulls() == 0)
+                            long nonNulls = colStats.total() - colStats.nulls();
+                            if (nonNulls == 0)
                                 cardinality = 1;
                             else
-                                cardinality = (double) colStats.distinct() / (colStats.total() - colStats.nulls());
+                                cardinality = (double) colStats.distinct() / nonNulls;
                             totalCardinality = 1 - (1 - totalCardinality) * (1 - cardinality);
                             distinctRows = Math.round(rowCount * totalCardinality);
                         }
