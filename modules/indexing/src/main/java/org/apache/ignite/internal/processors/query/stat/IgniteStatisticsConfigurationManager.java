@@ -365,7 +365,6 @@ public class IgniteStatisticsConfigurationManager {
             log.debug("Update statistics [targets=" + targets + ']');
 
         for (StatisticsObjectConfiguration target : targets) {
-
             GridH2Table tbl = schemaMgr.dataTable(target.key().schema(), target.key().obj());
 
             validate(target, tbl);

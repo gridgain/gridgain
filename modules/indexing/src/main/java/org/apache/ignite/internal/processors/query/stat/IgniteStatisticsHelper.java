@@ -68,14 +68,20 @@ public class IgniteStatisticsHelper {
     /**
      * Aggregate specified partition level statistics to local level statistics.
      *
-     * @param keyMsg Aggregation key.
+     * @param cfg Statistics object configuration.
      * @param stats Collection of all local partition level or local level statistics by specified key to aggregate.
      * @return Local level aggregated statistics.
      */
     public ObjectStatisticsImpl aggregateLocalStatistics(
-        StatisticsKeyMessage keyMsg,
+        StatisticsObjectConfiguration cfg,
         Collection<? extends ObjectStatisticsImpl> stats
     ) {
+        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(
+            cfg.key().schema(),
+            cfg.key().obj(),
+            new ArrayList<>(cfg.columns().keySet())
+        );
+
         // For now there can be only tables
         GridH2Table tbl = schemaMgr.dataTable(keyMsg.schema(), keyMsg.obj());
 
@@ -88,25 +94,26 @@ public class IgniteStatisticsHelper {
             return null;
         }
 
-        return aggregateLocalStatistics(tbl, filterColumns(tbl.getColumns(), keyMsg.colNames()), stats, log);
+        return aggregateLocalStatistics(tbl, cfg, stats, log);
     }
 
     /**
      * Aggregate partition level statistics to local level one or local statistics to global one.
      *
      * @param tbl Table to aggregate statistics by.
-     * @param selectedCols Columns to aggregate statistics by.
+     * @param cfg Statistics object configuration.
      * @param stats Collection of partition level or local level statistics to aggregate.
      * @param log Logger.
      * @return Local level statistics.
      */
     public static ObjectStatisticsImpl aggregateLocalStatistics(
         GridH2Table tbl,
-        Column[] selectedCols,
+        StatisticsObjectConfiguration cfg,
         Collection<? extends ObjectStatisticsImpl> stats,
         IgniteLogger log
     ) {
         assert !stats.isEmpty();
+        Column[] selectedCols = filterColumns(tbl.getColumns(), cfg.columns().keySet());
 
         Map<Column, List<ColumnStatistics>> colPartStats = new HashMap<>(selectedCols.length);
         long rowCnt = 0;
@@ -133,7 +140,8 @@ public class IgniteStatisticsHelper {
         Map<String, ColumnStatistics> colStats = new HashMap<>(selectedCols.length);
 
         for (Column col : selectedCols) {
-            ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col));
+            StatisticsColumnConfiguration colCfg = cfg.columns().get(col.getName());
+            ColumnStatistics stat = ColumnStatisticsCollector.aggregate(tbl::compareValues, colPartStats.get(col), colCfg.overrides());
 
             if (log.isDebugEnabled())
                 log.debug("Aggregate column statistic done [col=" + col.getName() + ", stat=" + stat + ']');
