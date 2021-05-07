@@ -41,7 +41,7 @@ public class StatisticsColumnData implements Message {
     /** Number of null values in column. */
     private long nulls;
 
-    /** Percent of distinct values in column (except nulls). */
+    /** Number of distinct values in column (except nulls). */
     private long distinct;
 
     /** Total vals in column. */
@@ -115,7 +115,7 @@ public class StatisticsColumnData implements Message {
     }
 
     /**
-     * @return Percent of null values in column.
+     * @return Number of null values in column.
      */
     public long nulls() {
         return nulls;

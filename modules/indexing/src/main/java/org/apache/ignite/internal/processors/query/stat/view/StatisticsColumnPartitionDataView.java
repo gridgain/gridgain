@@ -116,7 +116,7 @@ public class StatisticsColumnPartitionDataView {
     }
 
     /**
-     * @return Percent of nulls values.
+     * @return Number of nulls values.
      */
     @Order(8)
     public long nulls() {
