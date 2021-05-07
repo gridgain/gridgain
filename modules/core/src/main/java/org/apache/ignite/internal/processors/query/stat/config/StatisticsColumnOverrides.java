@@ -72,7 +72,7 @@ public class StatisticsColumnOverrides implements Serializable {
     /**
      * Get total number of values in column.
      *
-     * @return Total number of values in column (including {@code null}'s)
+     * @return Total number of values in column (including {@code null}'s).
      */
     public Long total() {
         return total;
