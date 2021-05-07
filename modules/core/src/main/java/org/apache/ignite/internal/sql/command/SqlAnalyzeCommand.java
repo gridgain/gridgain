@@ -47,7 +47,7 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     /** DISTINCT parameter name*/
     public static final String DISTINCT = "DISTINCT";
 
-    /** TOTAL parameter name*/
+    /** TOTAL parameter name. */
     public static final String TOTAL = "TOTAL";
 
     /** SIZE parameter name*/
