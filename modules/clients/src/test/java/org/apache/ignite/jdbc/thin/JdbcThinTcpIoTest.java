@@ -29,7 +29,6 @@ import org.junit.Test;
  * Tests for JdbcThinTcpIo.
  */
 public class JdbcThinTcpIoTest extends GridCommonAbstractTest {
-
     /**
      * Test connection to host with accessible address.
      *

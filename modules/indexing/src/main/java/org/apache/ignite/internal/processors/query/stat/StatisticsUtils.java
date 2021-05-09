@@ -43,7 +43,7 @@ public class StatisticsUtils {
         GridH2ValueMessage msgMin = stat.min() == null ? null : GridH2ValueMessageFactory.toMessage(stat.min());
         GridH2ValueMessage msgMax = stat.max() == null ? null : GridH2ValueMessageFactory.toMessage(stat.max());
 
-        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.cardinality(),
+        return new StatisticsColumnData(msgMin, msgMax, stat.nulls(), stat.distinct(),
             stat.total(), stat.size(), stat.raw(), stat.version(), stat.createdAt());
     }
 
@@ -62,7 +62,7 @@ public class StatisticsUtils {
         Value min = (data.min() == null) ? null : data.min().value(ctx);
         Value max = (data.max() == null) ? null : data.max().value(ctx);
 
-        return new ColumnStatistics(min, max, data.nulls(), data.cardinality(),
+        return new ColumnStatistics(min, max, data.nulls(), data.distinct(),
             data.total(), data.size(), data.rawData(), data.version(), data.createdAt());
     }
 

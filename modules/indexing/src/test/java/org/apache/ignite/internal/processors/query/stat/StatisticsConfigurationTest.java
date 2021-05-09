@@ -93,7 +93,7 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
                 ColumnStatistics colStat = stat.columnStatistics(col);
                 assertNotNull("Column: " + col, colStat);
 
-                assertTrue("Column: " + col, colStat.cardinality() > 0);
+                assertTrue("Column: " + col, colStat.distinct() > 0);
                 assertTrue("Column: " + col, colStat.max().getInt() > 0);
                 assertTrue("Column: " + col, colStat.total() == stat.rowCount());
             }

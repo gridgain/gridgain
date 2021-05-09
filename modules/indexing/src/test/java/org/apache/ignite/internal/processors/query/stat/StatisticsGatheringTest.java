@@ -83,7 +83,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
      */
     private boolean checkStat(ObjectStatisticsImpl stat) {
         assertTrue(stat.columnStatistics("A").total() > 0);
-        assertTrue(stat.columnStatistics("B").cardinality() > 0);
+        assertTrue(stat.columnStatistics("B").distinct() > 0);
         ColumnStatistics statC = stat.columnStatistics("C");
         assertTrue(statC.min() != null);
         assertTrue(statC.max() != null);

@@ -371,7 +371,7 @@ public class IgniteStatisticsConfigurationManager {
             if (F.isEmpty(target.columns()))
                 colCfgs = Arrays.stream(tbl.getColumns())
                     .filter(c -> c.getColumnId() >= QueryUtils.DEFAULT_COLUMNS_COUNT)
-                    .map(c -> new StatisticsColumnConfiguration(c.getName()))
+                    .map(c -> new StatisticsColumnConfiguration(c.getName(), null))
                     .collect(Collectors.toList());
             else
                 colCfgs = new ArrayList<>(target.columns().values());

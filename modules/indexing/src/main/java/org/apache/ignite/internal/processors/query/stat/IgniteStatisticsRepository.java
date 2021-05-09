@@ -34,7 +34,6 @@ import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnLocalDataViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnPartitionDataViewWalker;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnLocalDataView;
 import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnPartitionDataView;
@@ -469,14 +468,8 @@ public class IgniteStatisticsRepository {
 
         assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
 
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(
-            cfg.key().schema(),
-            cfg.key().obj(),
-            new ArrayList<>(cfg.columns().keySet())
-        );
-
         ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-            keyMsg,
+            cfg,
             statsToAgg
         );
 

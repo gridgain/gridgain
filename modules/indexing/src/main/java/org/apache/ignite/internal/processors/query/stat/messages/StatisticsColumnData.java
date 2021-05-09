@@ -38,11 +38,11 @@ public class StatisticsColumnData implements Message {
     /** Max value in column. */
     private GridH2ValueMessage max;
 
-    /** Percent of null values in column. */
-    private int nulls;
+    /** Number of null values in column. */
+    private long nulls;
 
-    /** Percent of distinct values in column (except nulls). */
-    private int cardinality;
+    /** Number of distinct values in column (except nulls). */
+    private long distinct;
 
     /** Total vals in column. */
     private long total;
@@ -70,8 +70,8 @@ public class StatisticsColumnData implements Message {
      *
      * @param min Min value in column.
      * @param max Max value in column.
-     * @param nulls Percent of null values in column.
-     * @param cardinality Percent of distinct values in column.
+     * @param nulls Number of null values in column.
+     * @param distinct Total distinct values in column.
      * @param total Total values in column.
      * @param size Average size, for variable size types (in bytes).
      * @param rawData Raw data to make statistics aggregate.
@@ -81,8 +81,8 @@ public class StatisticsColumnData implements Message {
     public StatisticsColumnData(
         GridH2ValueMessage min,
         GridH2ValueMessage max,
-        int nulls,
-        int cardinality,
+        long nulls,
+        long distinct,
         long total,
         int size,
         byte[] rawData,
@@ -92,7 +92,7 @@ public class StatisticsColumnData implements Message {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
-        this.cardinality = cardinality;
+        this.distinct = distinct;
         this.total = total;
         this.size = size;
         this.rawData = rawData;
@@ -115,17 +115,17 @@ public class StatisticsColumnData implements Message {
     }
 
     /**
-     * @return Percent of null values in column.
+     * @return Number of null values in column.
      */
-    public int nulls() {
+    public long nulls() {
         return nulls;
     }
 
     /**
-     * @return Percent of distinct values in column.
+     * @return Total distinct values in column.
      */
-    public int cardinality() {
-        return cardinality;
+    public long distinct() {
+        return distinct;
     }
 
     /**
@@ -176,13 +176,13 @@ public class StatisticsColumnData implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeInt("cardinality", cardinality))
+                if (!writer.writeLong("createdAt", createdAt))
                     return false;
 
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeLong("createdAt", createdAt))
+                if (!writer.writeLong("distinct", distinct))
                     return false;
 
                 writer.incrementState();
@@ -200,7 +200,7 @@ public class StatisticsColumnData implements Message {
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeInt("nulls", nulls))
+                if (!writer.writeLong("nulls", nulls))
                     return false;
 
                 writer.incrementState();
@@ -243,7 +243,7 @@ public class StatisticsColumnData implements Message {
 
         switch (reader.state()) {
             case 0:
-                cardinality = reader.readInt("cardinality");
+                createdAt = reader.readLong("createdAt");
 
                 if (!reader.isLastRead())
                     return false;
@@ -251,7 +251,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 1:
-                createdAt = reader.readLong("createdAt");
+                distinct = reader.readLong("distinct");
 
                 if (!reader.isLastRead())
                     return false;
@@ -275,7 +275,7 @@ public class StatisticsColumnData implements Message {
                 reader.incrementState();
 
             case 4:
-                nulls = reader.readInt("nulls");
+                nulls = reader.readLong("nulls");
 
                 if (!reader.isLastRead())
                     return false;

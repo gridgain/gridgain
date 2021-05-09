@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.managers.systemview.walker;
 
 import java.sql.Timestamp;
@@ -58,8 +59,8 @@ public class StatisticsColumnLocalDataViewWalker implements SystemViewRowAttribu
         v.accept(2, "name", String.class);
         v.accept(3, "column", String.class);
         v.accept(4, "rowsCount", long.class);
-        v.accept(5, "cardinality", long.class);
-        v.accept(6, "nulls", int.class);
+        v.accept(5, "distinct", long.class);
+        v.accept(6, "nulls", long.class);
         v.accept(7, "total", long.class);
         v.accept(8, "size", int.class);
         v.accept(9, "version", long.class);
@@ -73,8 +74,8 @@ public class StatisticsColumnLocalDataViewWalker implements SystemViewRowAttribu
         v.accept(2, "name", String.class, row.name());
         v.accept(3, "column", String.class, row.column());
         v.acceptLong(4, "rowsCount", row.rowsCount());
-        v.acceptLong(5, "cardinality", row.cardinality());
-        v.acceptInt(6, "nulls", row.nulls());
+        v.acceptLong(5, "distinct", row.distinct());
+        v.acceptLong(6, "nulls", row.nulls());
         v.acceptLong(7, "total", row.total());
         v.acceptInt(8, "size", row.size());
         v.acceptLong(9, "version", row.version());
