@@ -44,13 +44,13 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     /** OBSOLESCENCE_MAP_PERCENT parameter name. */
     public static final String MAX_CHANGED_PARTITION_ROWS_PERCENT = "MAX_CHANGED_PARTITION_ROWS_PERCENT";
 
-    /** DISTINCT parameter name*/
+    /** DISTINCT parameter name. */
     public static final String DISTINCT = "DISTINCT";
 
     /** TOTAL parameter name. */
     public static final String TOTAL = "TOTAL";
 
-    /** SIZE parameter name*/
+    /** SIZE parameter name. */
     public static final String SIZE = "SIZE";
 
     /** NULLS parameter name. */
