@@ -162,7 +162,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         db.checkpointReadLock();
 
         try {
-            assertEquals(1, db.metaStorage().read("stats.version"));
+            assertEquals(IgniteStatisticsPersistenceStoreImpl.VERSION, db.metaStorage().read("stats.version"));
         }
         finally {
             db.checkpointReadUnlock();

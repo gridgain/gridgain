@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.managers.systemview.walker;
 
 import java.util.Collections;
@@ -57,7 +58,11 @@ public class StatisticsColumnConfigurationViewWalker implements SystemViewRowAtt
         v.accept(2, "name", String.class);
         v.accept(3, "column", String.class);
         v.accept(4, "maxPartitionObsolescencePercent", byte.class);
-        v.accept(5, "version", long.class);
+        v.accept(5, "manualNulls", Long.class);
+        v.accept(6, "manualDistinct", Long.class);
+        v.accept(7, "manualTotal", Long.class);
+        v.accept(8, "manualSize", Integer.class);
+        v.accept(9, "version", long.class);
     }
 
     /** {@inheritDoc} */
@@ -67,11 +72,15 @@ public class StatisticsColumnConfigurationViewWalker implements SystemViewRowAtt
         v.accept(2, "name", String.class, row.name());
         v.accept(3, "column", String.class, row.column());
         v.acceptByte(4, "maxPartitionObsolescencePercent", row.maxPartitionObsolescencePercent());
-        v.acceptLong(5, "version", row.version());
+        v.accept(5, "manualNulls", Long.class, row.manualNulls());
+        v.accept(6, "manualDistinct", Long.class, row.manualDistinct());
+        v.accept(7, "manualTotal", Long.class, row.manualTotal());
+        v.accept(8, "manualSize", Integer.class, row.manualSize());
+        v.acceptLong(9, "version", row.version());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 6;
+        return 10;
     }
 }
