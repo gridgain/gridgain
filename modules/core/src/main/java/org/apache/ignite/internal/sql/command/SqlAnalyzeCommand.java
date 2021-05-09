@@ -18,6 +18,7 @@ package org.apache.ignite.internal.sql.command;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnOverrides;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.SqlKeyword;
 import org.apache.ignite.internal.sql.SqlLexer;
@@ -42,6 +43,18 @@ import static org.apache.ignite.internal.sql.SqlParserUtils.skipIfMatchesKeyword
 public class SqlAnalyzeCommand extends SqlStatisticsCommands {
     /** OBSOLESCENCE_MAP_PERCENT parameter name. */
     public static final String MAX_CHANGED_PARTITION_ROWS_PERCENT = "MAX_CHANGED_PARTITION_ROWS_PERCENT";
+
+    /** DISTINCT parameter name. */
+    public static final String DISTINCT = "DISTINCT";
+
+    /** TOTAL parameter name. */
+    public static final String TOTAL = "TOTAL";
+
+    /** SIZE parameter name. */
+    public static final String SIZE = "SIZE";
+
+    /** NULLS parameter name. */
+    public static final String NULLS = "NULLS";
 
     /** Targets to analyze. */
     protected List<StatisticsObjectConfiguration> configs = new ArrayList<>();
@@ -75,13 +88,54 @@ public class SqlAnalyzeCommand extends SqlStatisticsCommands {
         byte maxChangedRows = getByteOrDefault(params, MAX_CHANGED_PARTITION_ROWS_PERCENT,
             StatisticsObjectConfiguration.DEFAULT_OBSOLESCENCE_MAX_PERCENT);
 
+        StatisticsColumnOverrides overrides = overrides(params);
+
         if (!F.isEmpty(params))
             throw new IgniteSQLException("");
 
         List<StatisticsColumnConfiguration> colCfgs = (target.columns() == null) ? null :
-            Arrays.stream(target.columns()).map(StatisticsColumnConfiguration::new).collect(Collectors.toList());
+            Arrays.stream(target.columns()).map(col -> new StatisticsColumnConfiguration(col, overrides))
+                .collect(Collectors.toList());
 
         return new StatisticsObjectConfiguration(target.key(), colCfgs, maxChangedRows);
+    }
+
+    /**
+     * Try to cut overrides parameters from ANALYZE command params and return StatisticsColumnOverrides if at least one
+     * overriding parameter found.
+     *
+     * @param params ANALYZE params to cut overrides from.
+     * @return StatisticsColumnOverrides or {@code null} if there is no overriding parameters.
+     */
+    private static StatisticsColumnOverrides overrides(Map<String, String> params) {
+        if (params == null)
+            return null;
+
+        Long total = null;
+        Long nulls = null;
+        Long distinct = null;
+        Integer size = null;
+
+        String val = params.remove(TOTAL);
+        if (val != null)
+            total = Long.parseLong(val);
+
+        val = params.remove(DISTINCT);
+        if (val != null)
+            distinct = Long.parseLong(val);
+
+        val = params.remove(NULLS);
+        if (val != null)
+            nulls = Long.parseLong(val);
+
+        val = params.remove(SIZE);
+        if (val != null)
+            size = Integer.parseInt(val);
+
+        if (size == null && nulls == null && total == null && distinct == null)
+            return null;
+        else
+            return new StatisticsColumnOverrides(nulls, distinct, total, size);
     }
 
     /**
