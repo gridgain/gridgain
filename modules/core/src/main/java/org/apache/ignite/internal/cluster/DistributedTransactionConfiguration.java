@@ -23,6 +23,7 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
+import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
@@ -35,8 +36,6 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
-import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
 import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
@@ -144,7 +143,7 @@ public class DistributedTransactionConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    if (allNodesSupport(ctx, DISTRIBUTED_METASTORAGE)) {
+                    if (ReadableDistributedMetaStorage.isSupported(ctx)) {
                         setDefaultValue(longOperationsDumpTimeout, dfltLongOpsDumpTimeout, log);
                         setDefaultValue(longTransactionTimeDumpThreshold, dfltLongTransactionTimeDumpThreshold, log);
                         setDefaultValue(transactionTimeDumpSamplesCoefficient, dfltTransactionTimeDumpSamplesCoefficient, log);
