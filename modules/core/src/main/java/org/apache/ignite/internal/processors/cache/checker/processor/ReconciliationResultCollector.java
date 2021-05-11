@@ -397,7 +397,7 @@ public interface ReconciliationResultCollector {
                             strBrokenSizes.get(entry.getValue().cacheName)
                                 .get(Integer.toString(partId))
                                 .put(entry.getKey().toString(),
-                                    "cache size from partition meta " +entry.getValue().oldCacheSize +
+                                    "cache size from partition meta " + entry.getValue().oldCacheSize +
                                         ", real cache size " + entry.getValue().newCacheSize);
                         });
                 });
