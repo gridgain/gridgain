@@ -19,7 +19,9 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import org.apache.ignite.IgniteSet;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -32,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.datastructures.GridCacheSetItemKey;
 import org.apache.ignite.lang.IgniteUuid;
@@ -41,6 +44,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * Tests that reconciliation works with data collections.
@@ -66,6 +71,8 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
     /** Fix mode. */
     @Parameterized.Parameter(1)
     public boolean fixMode;
+
+    static Random rnd = new Random();
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
@@ -190,7 +197,15 @@ public class PartitionReconciliationSetDataStructureTest extends PartitionReconc
         ig.cluster().active(true);
 
         String[] cacheNameToRepair = useCacheName ? new String[]{cacheName} : new String[0];
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, cacheNameToRepair);
+
+        Set<ReconType> reconTypes = new HashSet<>();
+
+        reconTypes.add(CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconTypes.add(SIZES);
+
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, reconTypes, cacheNameToRepair);
 
         log.info(">>>> Partition reconciliation finished");
 

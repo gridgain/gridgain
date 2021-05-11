@@ -27,12 +27,15 @@ import org.apache.ignite.configuration.AtomicConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
@@ -114,7 +117,14 @@ public class PartitionReconciliationAtomicLongFixStressTest extends PartitionRec
             }
         }, 6, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, INTERNAL_CACHE_NAME);
+        Set<ReconType> reconTypes = new HashSet<>();
+
+        reconTypes.add(CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconTypes.add(SIZES);
+
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, reconTypes, INTERNAL_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 
