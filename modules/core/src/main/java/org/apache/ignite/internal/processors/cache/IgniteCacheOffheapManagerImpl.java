@@ -124,7 +124,6 @@ import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -3489,15 +3488,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null) {
-                    assert tombstoneRow.version().updateCounter() != 0;
-
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
-                }
 
-                if (oldRow != null) {
-                    assert oldRow.version().updateCounter() != 0;
-
+                if (oldRow != null && oldRow.version().updateCounter() != 0) {
                     if (oldTombstone && tombstoneRow == null)
                         cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
@@ -3917,6 +3911,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @throws IgniteCheckedException If failed.
          */
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
+            assert row.updateCounter() > 0;
+
             UpdateLogRow old = logTree.remove(row);
 
             assert old == null || old.link() == row.link();
@@ -3929,7 +3925,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @throws IgniteCheckedException If failed.
          */
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
-            A.ensure(row.updateCounter() > 0, "Row update counter was not set");
+            assert row.updateCounter() > 0;
 
             boolean res = logTree.putx(row);
 

@@ -108,18 +108,18 @@ public class StatisticsColumnPartitionDataView {
     }
 
     /**
-     * @return Percent of unique not null values.
+     * @return Number of distinct values in column.
      */
     @Order(7)
-    public long cardinality() {
-        return statistics.columnStatistics(column).cardinality();
+    public long distinct() {
+        return statistics.columnStatistics(column).distinct();
     }
 
     /**
-     * @return Percent of nulls values.
+     * @return Number of nulls values.
      */
     @Order(8)
-    public int nulls() {
+    public long nulls() {
         return statistics.columnStatistics(column).nulls();
     }
 

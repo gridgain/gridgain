@@ -48,9 +48,9 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testConfigurationView() throws Exception {
         List<List<Object>> config = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", (byte)15, 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", (byte)15, 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", (byte)15, 1L)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", (byte)15, null, null, null, null, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", (byte)15, null, null, null, null, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", (byte)15, null, null, null, null, 1L)
         );
 
         checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION", null, config::equals);
@@ -79,9 +79,9 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
 
         // 3) Check statistics configuration presence.
         List<List<Object>> config = new ArrayList<>();
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "A", (byte)15, 1L));
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "B", (byte)15, 1L));
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "C", (byte)15, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "A", (byte)15, null, null, null, null, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "B", (byte)15, null, null, null, null, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "C", (byte)15, null, null, null, null, 1L));
 
         checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION where NAME = '" + name + "'", null, config::equals);
 
@@ -106,7 +106,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testPartitionDataView() throws Exception {
         List<List<Object>> partLines = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0, null, null, 1L, null)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0L, null, null, null, null)
         );
 
         checkSqlResult("select * from SYS.STATISTICS_PARTITION_DATA where PARTITION < 10", null, act -> {
@@ -191,11 +191,43 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
 
         List<List<Object>> localData = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0, size, 4, 1L, tsA.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0, size, 4, 1L, tsB.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0L, size, 4, 1L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0L, size, 4, 1L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0L, size, 4, 1L, tsC.toString())
         );
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
+    }
+
+    /**
+     */
+    @Test
+    public void testEnforceStatisticValues() throws Exception {
+        long size = SMALL_SIZE;
+        sql("DROP STATISTICS SMALL");
+
+        sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
+        sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+        sql("ANALYZE SMALL (C)");
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            list -> !list.isEmpty());
+
+        ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+
+        assertNotNull(smallStat);
+
+        Timestamp tsA = new Timestamp(smallStat.columnStatistics("A").createdAt());
+        Timestamp tsB = new Timestamp(smallStat.columnStatistics("B").createdAt());
+        Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
+
+        List<List<Object>> localData = Arrays.asList(
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, 5L, 6L, 7L, 8, 3L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, 6L, 7L, 8L, 4, 3L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0L, size, 4, 3L, tsC.toString())
+        );
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            localData::equals);
     }
 }

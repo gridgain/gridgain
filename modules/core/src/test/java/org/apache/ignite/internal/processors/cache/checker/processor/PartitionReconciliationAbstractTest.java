@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
@@ -59,9 +60,7 @@ import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
     static final long BROKEN_PART_SIZE = 10;
 
-    /**
-     *
-     */
+    /** */
     public static ReconciliationResult partitionReconciliation(
         Ignite ig,
         boolean repair,
@@ -119,6 +118,20 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     /**
      *
      */
+    public static <T> Set<T> conflictKeys(ReconciliationResult res, String cacheName, Function<String, T> map) {
+        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .map(k -> (String)U.field(k, "strView"))
+            .map(map)
+            .collect(Collectors.toSet());
+    }
+
+    /**
+     *
+     */
     public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
             .values()
@@ -143,8 +156,29 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     /**
      *
      */
+    public static <T> void assertResultContainsConflictKeys(
+        ReconciliationResult res,
+        String cacheName,
+        Function<String, T> map,
+        Set<T> keys
+    ) {
+        for (T key : keys)
+            assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName, map).contains(key));
+    }
+
+    /**
+     *
+     */
     public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key) {
-        corruptDataEntry(ctx, key, false, true, new GridCacheVersion(0, 0, 0L), "_broken");
+        simulateOutdatedVersionCorruption(ctx, key, false);
+    }
+
+    /**
+     *
+     */
+    public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key, boolean lockEntry) {
+        corruptDataEntry(ctx, key, false, true,
+            new GridCacheVersion(0, 0, 0L), "_broken", lockEntry);
     }
 
     /**
