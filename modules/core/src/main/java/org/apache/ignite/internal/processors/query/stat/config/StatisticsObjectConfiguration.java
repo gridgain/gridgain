@@ -163,7 +163,8 @@ public class StatisticsObjectConfiguration implements Serializable {
         for (StatisticsColumnConfiguration colNew : newCfg.cols.values()) {
             StatisticsColumnConfiguration colOld = oldCfg.cols.get(colNew.name());
 
-            if (colOld == null || (colNew.version() > colOld.version() && !colNew.tombstone()))
+            if (colOld == null || (colNew.version() > colOld.version() && !colNew.tombstone()) ||
+                !Objects.equals(colOld.overrides(), colNew.overrides()))
                 updateCols.put(colNew.name(), colNew);
             else if (colNew.tombstone() && !colOld.tombstone())
                 dropCols.add(colNew.name());
