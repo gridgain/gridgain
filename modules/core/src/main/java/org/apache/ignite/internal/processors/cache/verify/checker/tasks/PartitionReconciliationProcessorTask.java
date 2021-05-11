@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -211,14 +212,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** {@inheritDoc} */
         @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
+            Collection<String> cacheNames = ignite.context().cache().cacheNames();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
-                caches.addAll(ignite.context().cache().publicCacheNames());
+                caches.addAll(cacheNames);
             else {
                 for (String cacheRegexp : reconciliationTaskArg.caches()) {
                     List<String> acceptedCaches = new ArrayList<>();
 
-                    for (String cacheName : ignite.context().cache().publicCacheNames()) {
+                    for (String cacheName : cacheNames) {
                         if (cacheName.matches(cacheRegexp))
                             acceptedCaches.add(cacheName);
                     }
@@ -281,7 +283,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /**
          * Creates a new instance.
          *
-         * @param sesId Partition reconsiliation session identifier.
+         * @param sesId Partition reconciliation session identifier.
          */
         public ReconciliationSessionId(long sesId, int parallelism) {
             this.sesId = sesId;

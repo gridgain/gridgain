@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -331,6 +331,9 @@ public abstract class IgniteUtils {
 
     /** Default minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MAX_CHECKPOINTING_PAGE_BUFFER_SIZE = 2 * GB;
+
+    /** Fallback local address. */
+    public static final String LOCALHOST = "localhost";
 
     /** {@code True} if {@code unsafe} should be used for array copy. */
     private static final boolean UNSAFE_BYTE_ARR_CP = unsafeByteArrayCopyAvailable();
@@ -2201,6 +2204,19 @@ public abstract class IgniteUtils {
                         if (!addr.isLinkLocalAddress())
                             locAddrs.add(addr);
                     }
+                }
+
+                /* On z/OS NetworkInterface::getNetworkInterfaces returns external interfaces
+                    and IPv6 loopback but not IPv4 loopback.
+                    Trying to additionally resolve "localhost" to find the IPv4 loopback address. */
+                try {
+                    InetAddress localHost = InetAddress.getByName(LOCALHOST);
+
+                    if (!locAddrs.contains(localHost))
+                        locAddrs.add(localHost);
+                }
+                catch (Exception ex) {
+                    // Ignore.
                 }
 
                 locAddrs = filterReachable(locAddrs);
@@ -12020,7 +12036,11 @@ public abstract class IgniteUtils {
      * @param cancel Wheter should cancel workers.
      * @param log Logger.
      */
-    public static void awaitForWorkersStop(Collection<GridWorker> workers, boolean cancel, IgniteLogger log) {
+    public static void awaitForWorkersStop(
+        Collection<GridWorker> workers,
+        boolean cancel,
+        @Nullable IgniteLogger log
+    ) {
         for (GridWorker worker : workers) {
             try {
                 if (cancel)
@@ -12029,7 +12049,8 @@ public abstract class IgniteUtils {
                 worker.join();
             }
             catch (Exception e) {
-                log.warning(String.format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
+                if (log != null)
+                    log.warning("Failed to cancel grid runnable [" + worker.toString() + "]: " + e.getMessage());
             }
         }
     }
@@ -12361,7 +12382,7 @@ public abstract class IgniteUtils {
         /** Return collection of local network interfaces. */
         Enumeration<NetworkInterface> getInterfaces() throws SocketException;
     }
-    
+
     /**
      * @param ctx Kernel context.
      * @param depInfo Deployment info.

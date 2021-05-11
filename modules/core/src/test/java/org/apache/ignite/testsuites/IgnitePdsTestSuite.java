@@ -69,6 +69,7 @@ import org.apache.ignite.internal.processors.database.IgniteDbPutGetWithCacheSto
 import org.apache.ignite.internal.processors.database.IgniteDbSingleNodePutGetTest;
 import org.apache.ignite.internal.processors.database.IgniteDbSingleNodeTinyPutGetTest;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessorTest;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessorSelfTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStoragePersistentTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
@@ -210,5 +211,7 @@ public class IgnitePdsTestSuite {
         GridTestUtils.addTestIfNeeded(suite, ActiveOnStartPropertyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AutoActivationPropertyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterStateOnStartPropertyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, DurableBackgroundTasksProcessorSelfTest.class, ignoredTests);
     }
 }
