@@ -324,9 +324,7 @@ public class CheckpointManager {
         checkpointMarkersStorage.cleanupCheckpointDirectory();
     }
 
-    /**
-     *
-     */
+    /** Current checkpointer implementation. */
     public Checkpointer getCheckpointer() {
         return checkpointer;
     }
