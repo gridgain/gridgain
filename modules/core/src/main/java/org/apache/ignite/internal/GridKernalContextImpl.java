@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1324,7 +1324,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTask() {
         return durableBackgroundTasksProcessor;
     }
 
