@@ -612,7 +612,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     idxName
                 );
 
-                cctx.kernalContext().durableBackgroundTasksProcessor().executeAsync(task, cctx.config());
+                cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
             }
         }
         catch (IgniteCheckedException e) {
