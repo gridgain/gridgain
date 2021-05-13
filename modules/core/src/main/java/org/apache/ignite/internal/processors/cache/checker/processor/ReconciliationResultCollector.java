@@ -383,12 +383,9 @@ public interface ReconciliationResultCollector {
                     Integer partId = partSizes.getKey();
                     Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
 
-                    StringBuilder brokenSizes = new StringBuilder();//"Node UUID: "
-
                     nodesSizes.entrySet().stream()
                         .filter(entry -> entry.getValue().oldCacheSize != entry.getValue().newCacheSize)
                         .forEach(entry -> {
-                            System.out.println("dsfhlsfd");
                             strBrokenSizes.putIfAbsent(entry.getValue().cacheName, new HashMap<>());
 
                             strBrokenSizes.get(entry.getValue().cacheName)

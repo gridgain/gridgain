@@ -76,9 +76,6 @@ public class AbstractPipelineProcessor {
     /** Event listener that allows to track the execution of workload. */
     protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerProvider.defaultListenerInstance();
 
-    /** Tracks workload chains based on its lifecycle. */
-    protected final WorkloadsInProgressTracker workloadsInProgressTracker = new WorkloadsInProgressTracker();
-
     /** Error. */
     protected final AtomicReference<String> error = new AtomicReference<>();
 
@@ -111,8 +108,6 @@ public class AbstractPipelineProcessor {
         this.liveListeners = new Semaphore(parallelismLevel);
         this.ignite = ignite;
         this.log = ignite.log().getLogger(getClass());
-
-        evtLsnr.andThen(workloadsInProgressTracker);
     }
 
     /**

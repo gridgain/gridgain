@@ -220,10 +220,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
 
-        return cctx.group().topology().localPartitions().stream().mapToLong(part -> {
-            System.out.println("qedsffd localPartition " + grid.name() + " " + cacheName + " " + part.dataStore().fullSize());
-            return part.dataStore().fullSize();
-        }).sum();
+        return cctx.group().topology().localPartitions().stream().mapToLong(part -> part.dataStore().fullSize()).sum();
     }
 
     protected long getPartitionsSizeForCache(IgniteEx grid, String cacheName) {
@@ -232,14 +229,9 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
         int cacheId = cctx.cacheId();
 
-        System.out.println("qqqqqqqqqqqq");
-
         return cctx.group().topology().localPartitions()
             .stream()
             .mapToLong(part -> {
-                    System.out.println("zdfdf " + part);
-                    System.out.println("dfvfd " + part.dataStore());
-                    System.out.println("xfgnf " + part.dataStore().cacheSizes());
                     if (cctx.group().sharedGroup())
                         return part
                             .dataStore()
@@ -365,8 +357,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                             break;
                     }
                 }
-
-                System.out.println("dfjklkvfod last op: " + op + ", n: "  + n + ", thread: " + Thread.currentThread().getName());
             },
             "LoadThread");
     }
