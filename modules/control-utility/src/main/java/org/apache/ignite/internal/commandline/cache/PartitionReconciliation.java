@@ -506,6 +506,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         /** Recheck delay in seconds. */
         private int recheckDelay;
 
+        /** Types of reconciliation. */
         private Set<ReconType> reconTypes;
 
         /**

@@ -23,7 +23,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * Tests count of calls the recheck process with different inputs.
+ * Tests partition reconciliation of sizes with persistence caches.
  */
 @RunWith(Parameterized.class)
 public class PartitionReconciliationFixPartitionSizesPersistenceStressTest extends PartitionReconciliationFixPartitionSizesStressTest {

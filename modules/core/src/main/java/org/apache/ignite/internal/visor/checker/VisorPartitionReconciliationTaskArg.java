@@ -19,11 +19,8 @@ package org.apache.ignite.internal.visor.checker;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -82,6 +79,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** Recheck delay seconds. */
     private int recheckDelay;
 
+    /** Types of reconciliation. */
     private Set<ReconType> reconTypes;
 
     /**
@@ -106,6 +104,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
+     * @param reconTypes Types of reconciliation.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -301,6 +300,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         return recheckDelay;
     }
 
+    /** @return Types of reconciliation. */
     public Set<ReconType> reconTypes() {
         return reconTypes;
     }
@@ -314,8 +314,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
         private boolean repair;
-
-        private boolean repairSizes;
 
         /** Print result to locOutput. */
         private boolean locOutput;
@@ -351,7 +349,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Recheck delay seconds. */
         private int recheckDelay;
 
-        Set<ReconType> reconTypes;
+        /** Types of reconciliation. */
+        private Set<ReconType> reconTypes;
 
         /**
          * Default constructor.
@@ -509,6 +508,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             return this;
         }
 
+        /**
+         * @param reconTypes Types of reconciliation.
+         * @return Builder for chaining.
+         */
         public Builder reconTypes(Set<ReconType> reconTypes) {
             this.reconTypes = reconTypes;
 

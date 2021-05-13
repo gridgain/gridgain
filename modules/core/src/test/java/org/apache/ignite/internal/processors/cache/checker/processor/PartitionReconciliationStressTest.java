@@ -85,6 +85,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     /** Client. */
     protected IgniteEx client;
 
+    /** */
     protected static Random rnd = new Random();
 
     /** {@inheritDoc} */

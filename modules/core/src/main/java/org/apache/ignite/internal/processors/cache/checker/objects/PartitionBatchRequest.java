@@ -27,10 +27,13 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Pageable partition batch request.
  */
 public class PartitionBatchRequest extends CachePartitionRequest {
+    /** If reconciliation of consistency is needed. */
     public boolean reconConsist;
 
+    /** If reconciliation of cache sizes is needed. */
     public boolean reconSize;
 
+    /** */
     public RepairAlgorithm repairAlg;
 
     /**
@@ -63,12 +66,16 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     private final AffinityTopologyVersion startTopVer;
 
     /**
+     * @param reconConsist Is reconciliation of consistency needed.
+     * @param reconSize Is reconciliation of cache sizes is needed.
+     * @param repairAlg Repair algorithm.
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
+     * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
      * @param startTopVer Start topology version.
      */
     public PartitionBatchRequest(
@@ -121,7 +128,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     }
 
     /**
-     *
+     * @return Map of partition sizes for reconciliation of cache sizes.
      */
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;

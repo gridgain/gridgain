@@ -52,7 +52,6 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -659,20 +658,20 @@ public interface IgniteCacheOffheapManager {
      *
      */
     interface CacheDataStore {
-        /** */
-        public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes);
-
-        /** */
+        /**
+         * Preparing for start a reconciliation of cache sizes.
+         *
+         * @return Cache data tree object.
+         */
         public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext startReconciliation(int cacheId);
 
-        /** */
-        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair);
+        /** Appling a reconciliation of cache sizes result */
+        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
 
-        /** */
+        /**
+         * @return Cache sizes reconciliation context.
+         */
         public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
-
-        /** */
-        public void removeReconciliationCtx() throws IgniteCheckedException;
 
         /**
          * @return Cache data tree object.
@@ -1134,6 +1133,16 @@ public interface IgniteCacheOffheapManager {
             MvccSnapshot snapshot,
             int flags) throws IgniteCheckedException;
 
+        /**
+         * @param cacheId Cache ID.
+         * @param lower Lower bound.
+         * @param upper Upper bound.
+         * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+         * @param snapshot Mvcc snapshot.
+         * @param flags Scan flags.
+         * @return Data cursor for reconciliation of cache sizes.
+         * @throws IgniteCheckedException If failed.
+         */
         public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
             KeyCacheObject lower,
             KeyCacheObject upper,
@@ -1237,8 +1246,15 @@ public interface IgniteCacheOffheapManager {
          */
         public void tombstoneCreated();
 
+        /**
+         * Blocks current thread till all operations end
+         * and prevents them to invoke new operations.
+         */
         public void block();
 
+        /**
+         * Makes possible for activities entering busy state again.
+         */
         public void unblock();
     }
 }

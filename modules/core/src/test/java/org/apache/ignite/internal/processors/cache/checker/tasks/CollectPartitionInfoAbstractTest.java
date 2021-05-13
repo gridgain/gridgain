@@ -214,7 +214,6 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
                     return false;
                 }
             };
-//            throw new IllegalStateException("Unsupported!");
         }
 
         /** {@inheritDoc} */

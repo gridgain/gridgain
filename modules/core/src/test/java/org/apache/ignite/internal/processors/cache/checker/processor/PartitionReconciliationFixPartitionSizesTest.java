@@ -23,11 +23,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -39,16 +34,13 @@ import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
- * Tests count of calls the recheck process with different inputs.
+ * Tests partition reconciliation of sizes.
  */
 public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
@@ -119,11 +111,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         List<IgniteEx> grids = new ArrayList<>();
 
-        for (int i = 0; i < nodesCnt; i++) {
+        for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
-        }
 
-        breakCacheSizes(grids, Arrays.asList(DEFAULT_CACHE_NAME));
+        breakCacheSizes(grids, new HashSet<String>(){{add(DEFAULT_CACHE_NAME);}});
 
         assertFalse(cache0.size() == startSize0);
 
@@ -208,11 +199,10 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         grids = new ArrayList<>();
 
-        for (int i = 0; i < nodesCnt; i++) {
+        for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
-        }
 
-        breakCacheSizes(grids, Arrays.asList(DEFAULT_CACHE_NAME));
+        breakCacheSizes(grids, new HashSet<String>(){{add(DEFAULT_CACHE_NAME);}});
 
         assertFalse(cache0.size() == startSize0);
 
@@ -315,13 +305,14 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, Arrays.asList(
-            cache0.getName(),
-            cache1.getName(),
-            cache2_group0.getName(),
-            cache3_group0.getName(),
-            cache4_group1.getName(),
-            cache5_group1.getName())
+        breakCacheSizes(grids, new HashSet<String>(){{
+                add(cache0.getName());
+                add(cache1.getName());
+                add(cache2_group0.getName());
+                add(cache3_group0.getName());
+                add(cache4_group1.getName());
+                add(cache5_group1.getName());
+            }}
         );
 
         assertFalse(cache1.size() == 100);
@@ -392,7 +383,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, Arrays.asList(cache.getName()));
+        breakCacheSizes(grids, new HashSet<String>(){{add(cache.getName());}});
 
         assertFalse(cache.size() == entryCount);
 
@@ -465,7 +456,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, Arrays.asList(cache.getName()));
+        breakCacheSizes(grids, new HashSet<String>(){{add(cache.getName());}});
 
         long brokenCacheSize = cache.size();
 

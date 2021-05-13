@@ -22,8 +22,10 @@ import org.jetbrains.annotations.Nullable;
  *
  */
 public enum ReconType {
+    /** */
     CONSISTENCY,
 
+    /** */
     SIZES;
 
     /** Enumerated values. */

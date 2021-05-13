@@ -28,16 +28,19 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
  * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
  */
 public class Batch extends PipelineWorkload {
+    /** If reconciliation of consistency is needed. */
     public boolean reconConsist;
 
+    /** If reconciliation of cache sizes is needed. */
     public boolean reconSize;
 
+    /** */
     public RepairAlgorithm repairAlg;
 
     /** Cache name. */
     private final String cacheName;
 
-    /** Cache name. */
+    /** Cache id. */
     private final int cacheId;
 
     /** Partition id. */
@@ -67,8 +70,6 @@ public class Batch extends PipelineWorkload {
         this.cacheId = cacheId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
-
-//        System.out.println("ijsdfidf new Batch: " + this);
     }
 
     /**
@@ -78,7 +79,9 @@ public class Batch extends PipelineWorkload {
         return cacheName;
     }
 
-    /** */
+    /**
+     * @return Cache ID.
+     */
     public int cacheId() {
         return cacheId;
     }
@@ -98,21 +101,9 @@ public class Batch extends PipelineWorkload {
     }
 
     /**
-     *
+     * @return Map of partition sizes for reconciliation of cache sizes.
      */
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
-    }
-
-    @Override public String toString() {
-        return "Batch{" +
-            "reconConsist=" + reconConsist +
-            ", reconSize=" + reconSize +
-            ", cacheName='" + cacheName + '\'' +
-            ", cacheId=" + cacheId +
-            ", partId=" + partId +
-            ", lowerKey=" + lowerKey +
-            ", partSizesMap=" + partSizesMap +
-            '}';
     }
 }

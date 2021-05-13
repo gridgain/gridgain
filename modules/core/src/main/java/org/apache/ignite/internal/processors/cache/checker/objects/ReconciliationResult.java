@@ -36,8 +36,8 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /** Result. */
     private ReconciliationAffectedEntries res;
 
-    /** */
-    private Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
+    /** Map of partition sizes for reconciliation of cache sizes. */
+    private Map<Integer/*cache id*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
 
     /** Folders with local results. */
     private Map<UUID, String> nodeIdToFolder;
@@ -58,7 +58,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      */
     public ReconciliationResult(
         ReconciliationAffectedEntries partReconciliationRes,
-        Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap,
+        Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap,
         Map<UUID, String> nodeIdToFolder,
         List<String> errors
     ) {
@@ -92,7 +92,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public Map<Integer, Map<Integer, Map<UUID, Long>>>  partSizesMap() {
+    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>  partSizesMap() {
         return partSizesMap;
     }
 

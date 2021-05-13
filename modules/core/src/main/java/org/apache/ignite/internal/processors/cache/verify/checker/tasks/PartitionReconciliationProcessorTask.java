@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -37,7 +36,6 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
@@ -53,7 +51,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 
 /**
@@ -138,7 +135,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         List<String> errors = new ArrayList<>();
 
-        Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap<>();
+        Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap<>();
 
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
@@ -150,7 +147,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, Long>>>>>> data = result.getData();
+            T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
             res.merge(data.get2().result().get1());
@@ -160,7 +157,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
             data.get2().result().get2().entrySet().forEach(e -> {
                 partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
-//                partSizesMap.putIfAbsent(e.getKey(), e.getValue());
                 e.getValue().entrySet().forEach(e0 -> {
                     partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue());
                 });

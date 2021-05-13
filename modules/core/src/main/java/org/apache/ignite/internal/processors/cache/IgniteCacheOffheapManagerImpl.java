@@ -52,7 +52,6 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateNew
 import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageMvccUpdateTxStateHintRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtDetachedCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
@@ -122,7 +121,6 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -187,6 +185,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** */
     protected final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
+    /** */
     protected final AtomicBoolean nodeIsStopping = new AtomicBoolean();
 
     /** */
@@ -1594,7 +1593,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         protected final PartitionUpdateCounter pCntr;
 
         /** Partition size. */
-        public final AtomicLong storageSize = new AtomicLong();
+        private final AtomicLong storageSize = new AtomicLong();
 
         /** */
         private final IntMap<AtomicLong> cacheSizes = new IntRWHashMap();
@@ -1622,6 +1621,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** Tombstones counter. */
         private final AtomicLong tombstonesCnt = new AtomicLong();
 
+        /** Context for a cache size reconciliation. */
         private volatile ReconciliationContext reconciliationCtx;
 
         /**
@@ -1667,39 +1667,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.dataTree.reconciliationCtx = reconciliationCtx;
         }
 
-//        /** {@inheritDoc} */
-//        @Override public void startReconciliation() {
-//            reconciliationCtx = new ReconciliationContext();
-//
-//        }
-
         /** {@inheritDoc} */
-        @Override public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes) {
-//            synchronized (reconciliationCtx.reconciliationMux()) {
-//                if (reconciliationCacheSizes != null) {
-//                    if (grp.sharedGroup()) {
-//                        for (Map.Entry<Integer, Long> reconciliationCacheSize : reconciliationCacheSizes.entrySet()) {
-//                            cacheSizes.get(reconciliationCacheSize.getKey()).set(
-//                                reconciliationCacheSize.getValue() +
-//                                    reconciliationCtx.storageSizeDeltas().get(reconciliationCacheSize.getKey()).get());
-//                        }
-//
-//                        storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
-//                    }
-//                    else {
-//                        Map.Entry<Integer, Long> cacheSizeEntry = reconciliationCacheSizes.entrySet().iterator().next();
-//
-//                        storageSize.set(cacheSizeEntry.getValue() + reconciliationCtx.storageSizeDeltas().get(cacheSizeEntry.getKey()).get());
-//                    }
-//                }
-//
-//                reconciliationCtx.storageSizeDeltas().clear();
-//
-//                reconciliationCtx.isReconciliationInProgress(false);
-//            }
-//
-        }
-
         @Override public ReconciliationContext startReconciliation(int cacheId) {
             if (reconciliationCtx == null) {
                 reconciliationCtx = new ReconciliationContext();
@@ -1721,15 +1689,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             return reconciliationCtx;
-
-        }
-
-        /** {@inheritDoc} */
-        @Override public void removeReconciliationCtx() {
-            if (reconciliationCtx().sizes.isEmpty()) {
-                reconciliationCtx = null;
-                tree().reconciliationCtx = null;
-            }
 
         }
 
@@ -1807,11 +1766,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
         }
 
-//        /** */
-//        public void processReconcilation(int cacheId, long delta, KeyCacheObject key) {
-//
-//        }
-
         /** {@inheritDoc} */
         @Override public void updateSize(int cacheId, long delta) {
             storageSize.addAndGet(delta);
@@ -1828,28 +1782,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 size.addAndGet(delta);
             }
-
-//            throw new RuntimeException("qwer");
-//            System.out.println("qfdgtservs updateSize");
         }
 
         /** {@inheritDoc} */
         @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
-//                    System.out.println("qefsrvfdbs");
-//                    if (grp.sharedGroup()) {
-//                        cacheSizes.get(cacheId).set(
-//                            reconciliationCacheSize/* +
-//                                reconciliationCtx.storageSizeDeltas().get(cacheId).get()*/);
-//
-//                        storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
-//                    }
-
             if (grp.sharedGroup()) {
-                nodePartitionSize.oldCacheSize = cacheSizes.get(cacheId).get();
+                nodePartitionSize.oldCacheSize(cacheSizes.get(cacheId).get());
 
                 long newSize = reconciliationCtx().sizes.remove(cacheId).get();
 
-                nodePartitionSize.newCacheSize = newSize;
+                nodePartitionSize.newCacheSize(newSize);
 
                 if (repair) {
                     cacheSizes.get(cacheId).set(newSize);
@@ -1858,11 +1800,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
             }
             else {
-                nodePartitionSize.oldCacheSize = storageSize.get();
+                nodePartitionSize.oldCacheSize(storageSize.get());
 
                 long newSize = reconciliationCtx().sizes.remove(CU.UNDEFINED_CACHE_ID).get();
 
-                nodePartitionSize.newCacheSize = newSize;
+                nodePartitionSize.newCacheSize(newSize);
 
                 storageSize.set(newSize);
             }
@@ -1872,10 +1814,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 tree().reconciliationCtx = null;
             }
-//                    CollectPartitionKeysByBatchTask.msg.put(System.identityHashCode(this), "xxxxx reconciliationCacheSize: " + reconciliationCacheSize + ", reconciliationCtx.storageSizeDelta(cacheId): " + reconciliationCtx.storageSizeDelta(cacheId) + ", reconciliationCtx.keysAfterCounter: " + reconciliationCtx.keysAfterCounters.get(cacheId).get());
-//                    CollectPartitionKeysByBatchTask.msg1.put(System.identityHashCode(this), "zzzzz reconciliationCtx.keysAfter: " + reconciliationCtx.keysAfter);
-
-//                System.out.println(CollectPartitionKeysByBatchTask.msg);
         }
 
         /** {@inheritDoc} */
@@ -1988,10 +1926,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
 
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2000,11 +1936,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     e.printStackTrace();
                 }
             }
-
-//            if (!busyLock.enterBusy()) {
-//                System.out.println("qkoplkdhtde");
-//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-//            }
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2025,13 +1956,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void invoke0(GridCacheContext cctx, CacheSearchRow row, OffheapInvokeClosure c)
             throws IgniteCheckedException {
             assert cctx.shared().database().checkpointLockIsHeldByThread();
-
-//            System.out.println("qdtdsldop");
-//            reconciliationCtx.lockPutRemove.readLock().lock();
-
-//            try {
-//                if (reconciliationCtx.isReconciliationInProgress())
-//                    reconciliationCtx.putRemoveInProgress.incrementAndGet();
 
             dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
 
@@ -2097,10 +2021,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 default:
                     assert false : c.operationType();
             }
-//            }
-//            finally {
-//                reconciliationCtx.lockPutRemove.readLock().unlock();
-//            }
         }
 
         /**
@@ -2185,10 +2105,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert mvccVer != null || newMvccVer == null : newMvccVer;
 
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2261,10 +2179,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert !F.isEmpty(hist);
 
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2349,10 +2265,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             byte mvccTxState,
             byte newMvccTxState) throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2415,10 +2329,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert primary || !needHistory;
 
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2635,10 +2547,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert primary || !needHistory;
 
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2712,10 +2622,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert mvccSnapshot != null;
 
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2772,10 +2680,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void mvccRemoveAll(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2843,13 +2749,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (F.isEmpty(cleanupRows))
                 return 0;
 
-//            CollectPartitionKeysByBatchTask.iCleanup++;
-
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -2931,13 +2833,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             assert oldRow == null || oldRow.link() != 0L : oldRow;
 
-//            CollectPartitionKeysByBatchTask.iUpdate++;
-
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -3003,10 +2901,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             MvccVersion mvccVer
         ) throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -3101,31 +2997,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
-            if (!hasOldVal) {
+            if (!hasOldVal)
                 incrementSize(cctx.cacheId());
-//
-//                if (reconciliationCtx().isReconciliationInProgress()) {
-//                    if (reconciliationCtx().lastKey(cctx.cacheId()) != null && reconciliationCtx().KEY_COMPARATOR.compare(newRow.key(), reconciliationCtx().lastKey(cctx.cacheId())) <= 0) {
-//                        reconciliationCtx().sizes.get(cctx.cacheId()).incrementAndGet();
-//                    }
-//                    else {
-//                        if (reconciliationCtx().cursorIteration) {
-//                            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
-//
-//                            if (!tempMap.containsKey(newRow.key())) {
-//                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), 1);
-//
-//                                tempMap.put(newRow.key(), borderKeyTuple);
-//                            }
-//                            else if (tempMap.get(newRow.key()).get2() == -1) {
-//                                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), 1);
-//
-//                                tempMap.put(newRow.key(), borderKeyTuple);
-//                            }
-//                        }
-//                    }
-//                }
-            }
 
             GridCacheQueryManager qryMgr = cctx.queries();
 
@@ -3187,24 +3060,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException {
-//            if (reconciliationCtx().isReconciliationInProgress()) {
                 while (!busyLock.enterBusy()) {
-                    if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                    if (nodeIsStopping.get())
                         throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                    }
 
                     try {
-                        sleep(2);
+                        sleep(5);
                     }
                     catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-//            }
-
-//            if (!busyLock.enterBusy())
-//                throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3221,16 +3087,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
         }
 
+        /** Context for a cache size reconciliation. */
         public static class ReconciliationContext {
-            public volatile Map<Integer, AtomicLong> keysAfterCounters = new ConcurrentHashMap<>();
-
-//            public int cacheId;
+            /** */
+            private final Map<Integer, Boolean> isReconciliationInProgress = new ConcurrentHashMap<>();
 
             /** */
-//            private volatile boolean isReconciliationInProgress;
-            private final Map<Integer, Boolean> isReconciliationInProgress = new ConcurrentHashMap<>();
             public final Map<Integer, Boolean> isReconciliationIsFinished = new ConcurrentHashMap<>();
-            public final Map<Integer, Boolean> endOfPart = new ConcurrentHashMap<>();
 
             /** */
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
@@ -3238,22 +3101,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             /** */
             public final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
 
+            /** */
             public final Map<Integer, AtomicLong> sizes = new ConcurrentHashMap<>();
 
+            /** */
             public final Map<Integer, Map<KeyCacheObject, Boolean>> tempMap = new ConcurrentHashMap<>();
 
             /** */
             public static final KeyComparator KEY_COMPARATOR = new KeyComparator();
-
-//            /** */
-//            public boolean isReconciliationInProgress() {
-//                return isReconciliationInProgress;
-//            }
-//
-//            /** */
-//            public void isReconciliationInProgress(boolean b) {
-//                this.isReconciliationInProgress = b;
-//            }
 
             /** */
             public Boolean isReconciliationInProgress(int cacheId) {
@@ -3369,10 +3224,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridDhtLocalPartition part
         ) throws IgniteCheckedException {
             while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get()) {
-//                    System.out.println("qkoplkdhtde");
+                if (nodeIsStopping.get())
                     throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-                }
 
                 try {
                     sleep(5);
@@ -3393,16 +3246,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
-                if (c.operationType() != NOOP) {
-//                    reconciliationCtx.lockPutRemove.readLock().lock();
-
-//                    try {
+                if (c.operationType() != NOOP)
                         finishRemove(cctx, key, c.oldRow, c.newRow);
-//                    }
-//                    finally {
-//                        reconciliationCtx.lockPutRemove.readLock().unlock();
-//                    }
-                }
             }
             finally {
                 busyLock.leaveBusy();
@@ -3422,38 +3267,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             @Nullable CacheDataRow oldRow,
             @Nullable CacheDataRow tombstoneRow
         ) throws IgniteCheckedException {
-//            Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
-//
-//            if (!tempMap.containsKey(key)) {
-//                T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), -1);
-//
-//                tempMap.put(key, borderKeyTuple);
-//            }
-//            else if (tempMap.get(key).get2() == 1)
-//                tempMap.remove(key);
-
-//            if (reconciliationCtx().isReconciliationInProgress()) {
-//                if (reconciliationCtx().lastKey(cctx.cacheId()) != null && reconciliationCtx().KEY_COMPARATOR.compare(key, reconciliationCtx().lastKey(cctx.cacheId())) <= 0) {
-//                    reconciliationCtx().sizes.get(cctx.cacheId()).decrementAndGet();
-//                }
-//                else {
-//                    if (reconciliationCtx().cursorIteration) {
-//                        reconciliationCtx().tempMap.putIfAbsent(cctx.cacheId(), new ConcurrentHashMap<>());
-//
-//                        Map<KeyCacheObject, T2<KeyCacheObject, Integer>> tempMap = reconciliationCtx().tempMap.get(cctx.cacheId());
-//
-//                        if (!tempMap.containsKey(key)) {
-//                            T2<KeyCacheObject, Integer> borderKeyTuple = new T2<>(reconciliationCtx().lastKeys.get(cctx.cacheId()), -1);
-//
-//                            tempMap.put(key, borderKeyTuple);
-//                        }
-//                        else if (tempMap.get(key).get2() == 1) {
-//                            tempMap.remove(key);
-//                        }
-//                    }
-//                }
-//            }
-
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
 
@@ -3760,15 +3573,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 cursor = dataTree.findRecon(cacheId, lowerRow, upperRow, x);
 
-//                dataTree.reconCursor(cursor);
-
                 if (flags == DATA)
                     cursor = cursorSkipTombstone(cursor);
                 else if (flags == TOMBSTONES)
                     cursor = cursorSkipData(cursor);
             }
-
-//            cursor.rec
 
             return cursor;
         }
@@ -3976,10 +3785,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             tombstonesCnt.incrementAndGet();
         }
 
+        /** {@inheritDoc} */
         @Override public void block() {
             busyLock.block();
         }
 
+        /** {@inheritDoc} */
         @Override public void unblock() {
             busyLock.unblock();
         }
@@ -4035,8 +3846,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return new GridCursor<CacheDataRow>() {
                 /** */
                 CacheDataRow next;
-
-//                boolean reconCursor;
 
                 /** {@inheritDoc} */
                 @Override public boolean next() throws IgniteCheckedException {

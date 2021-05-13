@@ -17,19 +17,12 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -45,8 +38,6 @@ import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,38 +52,62 @@ import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSI
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
- * Tests count of calls the recheck process with different inputs.
+ * Tests partition reconciliation of sizes with in-memory caches.
  */
 @RunWith(Parameterized.class)
 public class PartitionReconciliationFixPartitionSizesStressTest extends PartitionReconciliationAbstractTest {
-    /** Nodes. */
+    /** */
     @Parameterized.Parameter(0)
     public static int nodesCnt;
+
+    /** */
     @Parameterized.Parameter(1)
     public static int startKey;
+
+    /** */
     @Parameterized.Parameter(2)
     public static int endKey;
+
+    /** */
     @Parameterized.Parameter(3)
     public static CacheAtomicityMode cacheAtomicityMode;
+
+    /** */
     @Parameterized.Parameter(4)
     public static CacheMode cacheMode;
+
+    /** */
     @Parameterized.Parameter(5)
-    public static int backupCount;
+    public static int backupCnt;
+
+    /** */
     @Parameterized.Parameter(6)
-    public static int partCount;
+    public static int partCnt;
+
+    /** */
     @Parameterized.Parameter(7)
-    public static String cacheGroup;
+    public static String cacheGrp;
+
+    /** */
     @Parameterized.Parameter(8)
     public static int reconBatchSize;
+
+    /** */
     @Parameterized.Parameter(9)
     public static int reconParallelism;
-    @Parameterized.Parameter(10)
-    public static int loadThreads;
-    @Parameterized.Parameter(11)
-    public static boolean cacheClear;
 
+    /** */
+    @Parameterized.Parameter(10)
+    public static int loadThreadsCnt;
+
+    /** */
+    @Parameterized.Parameter(11)
+    public static boolean cacheClearOp;
+
+    /** */
     static Random rnd = new Random();
 
+    /** */
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
     /** Crd server node. */
@@ -129,6 +144,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         cleanPersistenceDir();
     }
 
+    /** */
     private CacheConfiguration getCacheConfig(String name, CacheAtomicityMode cacheAtomicityMode, CacheMode cacheMode, int backupCount, int partCount, String cacheGroup) {
         CacheConfiguration ccfg = new CacheConfiguration();
         ccfg.setName(name);
@@ -171,16 +187,10 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
         params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
 
-        //****************************************************************
-
-//
-//        params.add(new Object[] {2, 0, 100, ATOMIC,        REPLICATED,  0, 1, null, 1,   1, 1, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
-//        params.add(new Object[] {1, 0, 1000, ATOMIC,        PARTITIONED,  0, 1, null, 1,   1, 8, true});//падал на assertEquals(endKey, grid(0).cache(DEFAULT_CACHE_NAME).size()); Важно наличие бекап копий
-//        params.add(new Object[] {2, 0, 100, ATOMIC,        PARTITIONED,  1, 1, null, 1,   1, 1, false});//зависает в org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.execute Важно наличие бекап копий
-
         return params;
     }
 
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void test() throws Exception {
@@ -199,46 +209,49 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         ig.cluster().active(true);
 
-        IgniteCache<Object, Object> cache0 = client.createCache(
-            getCacheConfig(DEFAULT_CACHE_NAME + 0, cacheAtomicityMode, cacheMode, backupCount, partCount, cacheGroup)
-        );
-        IgniteCache<Object, Object> cache1 = client.createCache(
-            getCacheConfig(DEFAULT_CACHE_NAME + 1, cacheAtomicityMode, cacheMode, backupCount, partCount, cacheGroup)
-        );
+        List<IgniteCache<Object, Object>> caches = new ArrayList<>();
+
+        caches.add(client.createCache(
+            getCacheConfig(DEFAULT_CACHE_NAME + 0, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
+        ));
+
+        if (rnd.nextBoolean()) {
+            caches.add(client.createCache(
+                getCacheConfig(DEFAULT_CACHE_NAME + 1, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
+            ));
+        }
+
+        Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
             if (i < endKey) {
-                cache0.put(i, i);
-                cache1.put(i, i);
+                for (IgniteCache<Object, Object> cache : caches)
+                    cache.put(i, i);
+
                 System.out.print(i + " ");
             }
         }
 
-//        System.out.println();
+        List<Integer> startSizes = new ArrayList<>();
 
-        int startSize0 = cache0.size();
-        int startSize1 = cache1.size();
+        for (IgniteCache<Object, Object> cache : caches) {
+            startSizes.add(cache.size());
+        }
 
         List<IgniteEx> grids = new ArrayList<>();
 
-        for (int i = 0; i < nodesCnt; i++) {
+        for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
-        }
 
-        breakCacheSizes(grids, Arrays.asList(DEFAULT_CACHE_NAME + 0, DEFAULT_CACHE_NAME + 1));
+        breakCacheSizes(grids, cacheNames);
 
-        assertFalse(cache0.size() == startSize0);
-        assertFalse(cache1.size() == startSize1);
+        for (int i = 0; i < caches.size(); i++)
+            assertFalse(caches.get(i).size() == startSizes.get(i));
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(reconParallelism);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
-        Set<String> cacheNames = new HashSet<>();
-        cacheNames.add(DEFAULT_CACHE_NAME + 0);
-        cacheNames.add(DEFAULT_CACHE_NAME + 1);
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(reconBatchSize);
         builder.reconTypes(new HashSet(reconTypes));
@@ -248,10 +261,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
-        for (int i = 0; i < loadThreads; i++) {
-            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, cacheClear));
-            loadFuts.add(startAsyncLoad0(reconResult, cache1, startKey, endKey, cacheClear));
-        }
+        for (int i = 0; i < loadThreadsCnt; i++)
+            caches.forEach(cache -> startAsyncLoad0(reconResult, cache, startKey, endKey, cacheClearOp));
 
         GridTestUtils.runMultiThreadedAsync(() -> {
             reconResult.set(partitionReconciliation(client, builder));
@@ -259,18 +270,12 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
-//        System.out.println("qvsdhntsd partitionReconciliation stop");
-
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
-//        for (long i = startKey; i < endKey; i++)
-//            if (grid(0).cache(DEFAULT_CACHE_NAME).containsKey(i))
-//                System.out.println("cache contains key: " + i);
-
         for (long i = startKey; i < endKey; i++) {
-            cache0.put(i, i);
-            cache1.put(i, i);
+            for (IgniteCache<Object, Object> cache : caches)
+                cache.put(i, i);
         }
 
         long allKeysCountForCacheGroup;
@@ -281,29 +286,23 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             allKeysCountForCache = 0;
 
             for (int i = 0; i < nodesCnt; i++) {
-//            System.out.println("jhsdaidfgh " + i);
-
                 long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-//            System.out.println("asdhubd " + i0);
                 allKeysCountForCacheGroup += i0;
 
                 long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-//            System.out.println("kjkhdfdf " + i1);
                 allKeysCountForCache += i1;
             }
 
             assertEquals(endKey, client.cache(cacheName).size());
 
             if (cacheMode == REPLICATED) {
-                assertEquals((long)endKey * nodesCnt * (cacheGroup == null ? 1 : cacheNames.size()), allKeysCountForCacheGroup);
+                assertEquals((long)endKey * nodesCnt * (cacheGrp == null ? 1 : caches.size()), allKeysCountForCacheGroup);
                 assertEquals((long)endKey * nodesCnt, allKeysCountForCache);
             }
             else {
-                assertEquals((long)endKey * (1 + backupCount) * (cacheGroup == null ? 1 : cacheNames.size()), allKeysCountForCacheGroup);
-                assertEquals((long)endKey * (1 + backupCount), allKeysCountForCache);
+                assertEquals((long)endKey * (1 + backupCnt) * (cacheGrp == null ? 1 : caches.size()), allKeysCountForCacheGroup);
+                assertEquals((long)endKey * (1 + backupCnt), allKeysCountForCache);
             }
-
         }
     }
-
 }

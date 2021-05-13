@@ -30,9 +30,8 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -64,11 +63,11 @@ public class PartitionReconciliationCompactCollectorTest extends PartitionReconc
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                .setPersistenceEnabled(true)
-                .setMaxSize(300L * 1024 * 1024))
-        );
+//        cfg.setDataStorageConfiguration(new DataStorageConfiguration()
+//            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+//                .setPersistenceEnabled(true)
+//                .setMaxSize(300L * 1024 * 1024))
+//        );
 
         CacheConfiguration<Integer, Integer>[] ccfgs = new CacheConfiguration[CACHES_CNT];
         for (int i = 0; i < ccfgs.length; ++i) {
@@ -107,6 +106,25 @@ public class PartitionReconciliationCompactCollectorTest extends PartitionReconc
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), RECONCILIATION_DIR, false));
 
         cleanPersistenceDir();
+    }
+
+    @Test
+    public void test1() throws Exception {
+        IgniteEx grid = startGrid();
+
+        IgniteCache<Object, Object> cache = grid.createCache(new CacheConfiguration<>("cache0")
+            .setGroupName("group0")
+            .setAffinity(new RendezvousAffinityFunction(false, 10))
+        );
+
+        for (int i = -100; i <= 100/*Integer.MAX_VALUE*/; i++) {
+            if (i % 10_000 == 0)
+                System.out.println(i);
+
+            cache.put(i, true);
+        }
+
+        System.out.println("cache.size(): " + cache.size());
     }
 
     /**

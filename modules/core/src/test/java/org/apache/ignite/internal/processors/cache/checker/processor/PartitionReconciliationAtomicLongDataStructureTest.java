@@ -63,6 +63,7 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
     @Parameterized.Parameter(0)
     public boolean fixMode;
 
+    /** */
     static Random rnd = new Random();
 
     /** {@inheritDoc} */

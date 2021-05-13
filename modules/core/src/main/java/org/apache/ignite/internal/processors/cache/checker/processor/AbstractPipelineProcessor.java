@@ -17,16 +17,11 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -226,8 +221,6 @@ public class AbstractPipelineProcessor {
                 lsnr.apply(res.result());
 
                 evtLsnr.onEvent(FINISHED, workload);
-
-//                evtLsnr.isWorkloadInProgress(workload.workloadChainId());
             }
             finally {
                 liveListeners.release();
@@ -275,61 +268,5 @@ public class AbstractPipelineProcessor {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
         return ignite.cluster().forNodes(nodes);
-    }
-
-    /**
-     * This class allows tracking workload chains based on its lifecycle.
-     */
-    protected static class WorkloadsInProgressTracker implements ReconciliationEventListener {
-        /** */
-        final Map<UUID, AtomicInteger> workloadChainIdsInProgress = new HashMap();
-
-        /** {@inheritDoc} */
-        @Override public void onEvent(WorkLoadStage stage, PipelineWorkload workload) {
-            switch (stage) {
-                case SCHEDULED:
-                    attachWorkload(workload.workloadChainId());
-
-                    break;
-
-                case FINISHED:
-                    detachWorkload(workload.workloadChainId());
-
-                    break;
-                default:
-                    // There is no need to process other stages.
-            }
-        }
-
-        /** */
-        protected void addTrackingChain(UUID workloadId) {
-            workloadChainIdsInProgress.putIfAbsent(
-                workloadId,
-                new AtomicInteger());
-        }
-
-        /** */
-        protected void attachWorkload(UUID workloadId) {
-            // It should be guaranteed that the workload can be scheduled
-            // strictly before its parent workload is finished.
-            workloadChainIdsInProgress.get(workloadId).incrementAndGet();
-        }
-
-        /** */
-        protected boolean detachWorkload(UUID workloadId) {
-            // It should be guaranteed that the workload can be finished
-            // strictly after all subsequent workloads are scheduled.
-            AtomicInteger workloadCntr = workloadChainIdsInProgress.get(workloadId);
-
-            workloadCntr.decrementAndGet();
-
-            if (workloadCntr.get() == 0) {
-                workloadChainIdsInProgress.remove(workloadId);
-
-                return true;
-            }
-            else
-                return false;
-        }
     }
 }

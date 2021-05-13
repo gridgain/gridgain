@@ -26,12 +26,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -59,7 +57,6 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -84,14 +81,12 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridTreePrinter;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.FALSE;
@@ -110,6 +105,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  */
 @SuppressWarnings({"ConstantValueVariableUse"})
 public abstract class BPlusTree<L, T extends L> extends DataStructure implements IgniteTree<L, T> {
+    /**
+     * @return Cache sizes reconciliation context.
+     */
     public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx;
     /** */
     private static final Object[] EMPTY = {};
@@ -386,8 +384,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /** */
     private final PageHandler<Put, Result> replace;
 
-    public static int i0;
-
     /**
      *
      */
@@ -395,8 +391,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override public Result run0(long pageId, long page, long pageAddr, BPlusIO<L> io, Put p, int lvl)
             throws IgniteCheckedException {
-
-//            iReplace++;
 
             // Check the triangle invariant.
             if (io.getForward(pageAddr) != p.fwdId)
@@ -1128,6 +1122,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return cursor;
     }
 
+    /**
+     * @param cacheId Cache id.
+     * @param upper Upper bound.
+     * @param c Filter closure.
+     * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+     * @return Cursor.
+     * @throws IgniteCheckedException If failed.
+     */
     private GridCursor<T> findLowerUnboundedRecon(int cacheId, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
         ForwardCursor cursor = new ForwardCursor(null, upper, c, x);
 
@@ -1186,11 +1188,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return find(lower, upper, null, x);
     }
 
-    /** {@inheritDoc} */
+    /** */
     public final GridCursor<T> findRecon(int cacheId, L lower, L upper, Object x) throws IgniteCheckedException {
         return findRecon(cacheId, lower, upper, null, x);
     }
 
+    /** */
     public void reconCursor(GridCursor cursor) {
         ((ForwardCursor) cursor).reconCursor = true;
     }
@@ -1238,6 +1241,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
     }
 
+    /** */
     public GridCursor<T> findRecon(int cacheId, L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
         checkDestroyed();
 
@@ -3259,6 +3263,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return row;
         }
 
+        /** */
         public void reconInsert(L newRow) {
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
@@ -3277,16 +3282,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         }
 
+        /** */
         public void reconRemove(int cacheId, KeyCacheObject key) {
             if ((reconciliationCtx.lastKey(cacheId) != null &&
                 reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
                 reconciliationCtx.size(cacheId).decrementAndGet();
             else {
                 reconciliationCtx.tempMap.get(cacheId).compute(key, (k, v) -> {
-                    if (k != null && v != null) {
-
+                    if (k != null && v != null)
                         return null;
-                    }
                     else if (v == null && reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0) {
 
                         reconciliationCtx.size(cacheId).decrementAndGet();
@@ -3300,6 +3304,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
         }
 
+        /** */
         public void reconRemoveFromLeaf(L row) {
             if (row instanceof SearchRow) {
                 SearchRow row0 = (SearchRow)row;
@@ -3312,6 +3317,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
         }
 
+        /** */
         public void reconReplace(L oldRow, L newRow) {
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
@@ -4422,7 +4428,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * Remove operation.
      */
-    public final class Remove extends Get implements ReuseBag {
+    private final class Remove extends Get implements ReuseBag {
         /** We may need to lock part of the tree branch from the bottom to up for multiple levels. */
         Tail<L> tail;
 
@@ -5997,8 +6003,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * Forward cursor.
      */
     private final class ForwardCursor extends AbstractForwardCursor implements GridCursor<T> {
+        /** Is it partition reconciliation cursor. */
         public volatile boolean reconCursor;
 
+        /** Cache id. */
         public int cacheId;
 
         /** */
@@ -6006,7 +6014,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         /** */
         private T[] rows = (T[])EMPTY;
-        private T[] lastRows = null;
 
         /** */
         private int row = -1;

@@ -121,7 +121,6 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -2086,6 +2085,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** */
         private final GridSpinBusyLock busyLock;
 
+        /** */
         private final AtomicBoolean nodeIsStopping;
 
         /** */
@@ -2586,11 +2586,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        @Override public void finishReconciliation(Map<Integer, Long> reconciliationCacheSizes) {
-            if (delegate != null)
-                delegate.finishReconciliation(reconciliationCacheSizes);
-        }
-
+        /** {@inheritDoc} */
         @Override public CacheDataStoreImpl.ReconciliationContext startReconciliation(int cacheId) {
             if (delegate != null)
                 return delegate.startReconciliation(cacheId);
@@ -2598,11 +2594,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 return null;
         }
 
+        /** {@inheritDoc} */
         @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
             if (delegate != null)
                 delegate.flushReconciliationResult(cacheId, nodePartitionSize, repair);
         }
 
+        /** {@inheritDoc} */
         @Override public CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException {
             CacheDataStore delegate = init0(false);
 
@@ -2612,13 +2610,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 return null;
         }
 
-        @Override public void removeReconciliationCtx() throws IgniteCheckedException {
-            CacheDataStore delegate = init0(false);
-
-            if (delegate != null)
-                delegate.removeReconciliationCtx();
-        }
-
+        /** {@inheritDoc} */
         @Override public CacheDataTree tree() {
             return dataTree;
         }
@@ -3378,6 +3370,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
+        /** {@inheritDoc} */
         @Override public void block() {
             try {
                 CacheDataStore delegate0 = init0(true);
@@ -3392,6 +3385,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
+        /** {@inheritDoc} */
         @Override public void unblock() {
             try {
                 CacheDataStore delegate0 = init0(true);

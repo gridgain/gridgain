@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -40,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
@@ -61,7 +59,6 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**
@@ -219,7 +216,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
             boolean reconSize = partBatch.reconSize &&
-                (nodePartitionSize == null || nodePartitionSize.inProgress);
+                (nodePartitionSize == null || nodePartitionSize.inProgress());
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
@@ -278,7 +275,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                     cacheDataStore.block();
 
                     try {
-                        nodeSize.inProgress = true;
+                        nodeSize.inProgress(true);
                         partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
                     }
                     finally {
@@ -348,7 +345,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             (lowerKey == null || lowerKey.equals(newLowerKey))) &&
                         partReconciliationCtx.isReconciliationInProgress(cacheId)) {
 
-                        nodeSize.lastKey = (partReconciliationCtx.lastKey(cacheId));
+                        nodeSize.lastKey((partReconciliationCtx.lastKey(cacheId)));
 
                         cacheDataStore.block();
 
@@ -372,9 +369,9 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                             else
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
 
-                            nodeSize.lastKey = null;
+                            nodeSize.lastKey(null);
 
-                            nodeSize.inProgress = false;
+                            nodeSize.inProgress(false);
 
                             partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);
                         }

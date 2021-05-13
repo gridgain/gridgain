@@ -87,6 +87,7 @@ public class PartitionReconciliationAtomicLongStressTest extends PartitionReconc
     /** Client. */
     protected IgniteEx client;
 
+    /** */
     static Random rnd = new Random();
 
     /** {@inheritDoc} */

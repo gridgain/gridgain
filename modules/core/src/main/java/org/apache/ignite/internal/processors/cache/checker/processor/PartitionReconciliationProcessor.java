@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -113,6 +112,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private final RepairAlgorithm repairAlg;
 
+    /** Types of reconciliation. */
     private final Set<ReconType> reconTypes;
 
     /** Tracks workload chains based on its lifecycle. */
@@ -135,6 +135,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Repair algorithm to be used to fix inconsistency.
      * @param recheckDelay Specifies the time interval between two consequent attempts to check keys.
+     * @param reconTypes Types of reconciliation.
      * @param compact {@code true} if the result should be returned in compact form.
      * @param includeSensitive {@code true} if sensitive information should be included in the result.
      */
@@ -227,7 +228,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (isEmpty() && live) {
                     U.sleep(100);
-//                    System.out.println("HELP!!!!!!!!!!!!");
                     continue;
                 }
 
@@ -261,11 +261,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     throw new IgniteException(err);
                 }
             }
-
-//            collector()
-
-//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
-//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size() + " ||| " + collector.partSizesMap() + " ||| " + Thread.currentThread().getName());
 
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
@@ -328,7 +323,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress));
+                boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
 
                 if (reconConsist || reconSize)
                     schedule(new Batch(reconConsist, reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
@@ -468,11 +463,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
         return new Repair(sesId, workloadChainId, cacheName, partId, res, repairAttempts);
     }
-
-//    private Repair repairSizes(String cacheName, int partId) {
-//        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
-//
-//    }
 
     /**
      * This class allows tracking workload chains based on its lifecycle.

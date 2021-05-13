@@ -65,6 +65,7 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
     /** Custom value class. */
     private static final String CUSTOM_VAL_CLS = "org.apache.ignite.tests.p2p.ReconciliationCustomValue";
 
+    /** */
     private static Random rnd = new Random();
 
     /** Cache atomicity mode. */

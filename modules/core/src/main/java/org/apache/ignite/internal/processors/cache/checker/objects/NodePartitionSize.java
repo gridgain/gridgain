@@ -3,47 +3,99 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.collection.IntMap;
-import org.apache.ignite.internal.util.collection.IntRWHashMap;
 
+/** */
 public class NodePartitionSize extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    public String cacheName;
-
-    public boolean inProgress;
-
-    public boolean isFinished;
-
-    public KeyCacheObject lastKey;
-
-//    /** Partition size. */
-//    public long oldStorageSize;
+    /** */
+    private String cacheName;
 
     /** */
-    public long oldCacheSize;
-//    public IntMap<AtomicLong> oldCacheSizes = new IntRWHashMap();
-
-//    /** Partition size. */
-//    public long newStorageSize;
+    private boolean inProgress;
 
     /** */
-    public long newCacheSize;
-//    public IntMap<AtomicLong> newCacheSizes = new IntRWHashMap();
+    private boolean isFinished;
 
+    /** */
+    private KeyCacheObject lastKey;
+
+    /** Brocken cache size from partition meta. */
+    private long oldCacheSize;
+
+    /** Real cache size. */
+    private long newCacheSize;
+
+    /** */
     public NodePartitionSize() {
     }
 
+    /** */
     public NodePartitionSize(String cacheName) {
         this.cacheName = cacheName;
+    }
+
+    /** */
+    public String cacheName() {
+        return cacheName;
+    }
+
+    /** */
+    public void cacheName(String cacheName) {
+        this.cacheName = cacheName;
+    }
+
+    /** */
+    public boolean inProgress() {
+        return inProgress;
+    }
+
+    /** */
+    public void inProgress(boolean inProgress) {
+        this.inProgress = inProgress;
+    }
+
+    /** */
+    public boolean finished() {
+        return isFinished;
+    }
+
+    /** */
+    public void finished(boolean finished) {
+        isFinished = finished;
+    }
+
+    /** */
+    public KeyCacheObject lastKey() {
+        return lastKey;
+    }
+
+    /** */
+    public void lastKey(KeyCacheObject lastKey) {
+        this.lastKey = lastKey;
+    }
+
+    /** */
+    public long oldCacheSize() {
+        return oldCacheSize;
+    }
+
+    /** */
+    public void oldCacheSize(long oldCacheSize) {
+        this.oldCacheSize = oldCacheSize;
+    }
+
+    /** */
+    public long newCacheSize() {
+        return newCacheSize;
+    }
+
+    /** */
+    public void newCacheSize(long newCacheSize) {
+        this.newCacheSize = newCacheSize;
     }
 
     /** {@inheritDoc} */
@@ -52,9 +104,7 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         out.writeBoolean(inProgress);
         out.writeBoolean(isFinished);
         out.writeObject(lastKey);
-//        out.writeObject(oldStorageSize);
         out.writeLong(oldCacheSize);
-//        out.writeObject(newStorageSize);
         out.writeLong(newCacheSize);
     }
 
@@ -65,10 +115,7 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         inProgress = in.readBoolean();
         isFinished = in.readBoolean();
         lastKey = (KeyCacheObject)in.readObject();
-
         oldCacheSize = in.readLong();
-//        oldCacheSizes = (IntMap<AtomicLong>)in.readObject();
         newCacheSize = in.readLong();
-//        newCacheSizes = (IntMap<AtomicLong>)in.readObject();
     }
 }

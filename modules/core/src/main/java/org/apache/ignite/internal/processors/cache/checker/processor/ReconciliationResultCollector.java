@@ -57,8 +57,6 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
@@ -128,8 +126,8 @@ public interface ReconciliationResultCollector {
      */
     File flushResultsToFile(LocalDateTime startTime);
 
-    /** */
-    Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap();
+    /** @return Result of partition reconciliation of sizes. */
+    Map<Integer/*cache id*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap();
 
     /**
      * Represents a collector of inconsistent and repaired entries.
@@ -153,7 +151,7 @@ public interface ReconciliationResultCollector {
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
-        /** */
+        /** Result of partition reconciliation of sizes. */
         public final Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
 
         /**
@@ -181,19 +179,10 @@ public interface ReconciliationResultCollector {
             }
         }
 
-        /**
-         *
-         */
+        /** {@inheritDoc} */
         @Override public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
             return partSizesMap;
         }
-
-//        /**
-//         *
-//         */
-//        public void partSizesMap(Map<Integer, Map<UUID, Long>> partSizesMap) {
-//            this.partSizesMap.putAll(partSizesMap);
-//        }
 
         /** {@inheritDoc} */
         @Override public void appendSkippedEntries(
@@ -384,18 +373,18 @@ public interface ReconciliationResultCollector {
                     Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
 
                     nodesSizes.entrySet().stream()
-                        .filter(entry -> entry.getValue().oldCacheSize != entry.getValue().newCacheSize)
+                        .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
                         .forEach(entry -> {
-                            strBrokenSizes.putIfAbsent(entry.getValue().cacheName, new HashMap<>());
+                            strBrokenSizes.putIfAbsent(entry.getValue().cacheName(), new HashMap<>());
 
-                            strBrokenSizes.get(entry.getValue().cacheName)
+                            strBrokenSizes.get(entry.getValue().cacheName())
                                 .putIfAbsent(Integer.toString(partId), new HashMap<>());
 
-                            strBrokenSizes.get(entry.getValue().cacheName)
+                            strBrokenSizes.get(entry.getValue().cacheName())
                                 .get(Integer.toString(partId))
                                 .put(entry.getKey().toString(),
-                                    "cache size from partition meta " + entry.getValue().oldCacheSize +
-                                        ", real cache size " + entry.getValue().newCacheSize);
+                                    "cache size from partition meta " + entry.getValue().oldCacheSize() +
+                                        ", real cache size " + entry.getValue().newCacheSize());
                         });
                 });
 

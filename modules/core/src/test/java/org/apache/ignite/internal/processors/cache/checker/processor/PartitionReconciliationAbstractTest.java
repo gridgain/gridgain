@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -46,10 +46,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
@@ -58,6 +55,7 @@ import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
  * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
+    /** */
     static final long BROKEN_PART_SIZE = 10;
 
     /** */
@@ -190,6 +188,9 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         cache.clearLocally(key);
     }
 
+    /**
+     *
+     */
     protected void setPartitionSize(IgniteEx grid, String cacheName, int partId, int delta) {
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
@@ -199,6 +200,9 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         cctx.group().topology().localPartition(partId).dataStore().updateSize(cacheId, delta);
     }
 
+    /**
+     *
+     */
     protected void updatePartitionsSize(IgniteEx grid, String cacheName) {
 
         GridCacheContext<Object, Object> cctx = grid
@@ -209,13 +213,19 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
         int cacheId = cctx.cacheId();
 
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE/*Math.abs(rnd.nextInt())*/));
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE));
     }
 
+    /**
+     *
+     */
     protected long getFullPartitionsSizeForCacheGroup(List<IgniteEx> nodes, String cacheName) {
         return nodes.stream().mapToLong(node -> getFullPartitionsSizeForCacheGroup(node, cacheName)).sum();
     }
 
+    /**
+     *
+     */
     protected long getFullPartitionsSizeForCacheGroup(IgniteEx grid, String cacheName) {
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
@@ -223,6 +233,9 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         return cctx.group().topology().localPartitions().stream().mapToLong(part -> part.dataStore().fullSize()).sum();
     }
 
+    /**
+     *
+     */
     protected long getPartitionsSizeForCache(IgniteEx grid, String cacheName) {
 
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
@@ -241,11 +254,13 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                         return part.dataStore().fullSize();
                 }
             )
-//            .mapToLong(part -> Optional.of(part.dataStore().cacheSizes().get(cacheId)).orElseGet(() -> 0L))
             .sum();
     }
 
-    protected void breakCacheSizes(List<IgniteEx> nodes, List<String> cacheNames) {
+    /**
+     *
+     */
+    protected void breakCacheSizes(List<IgniteEx> nodes, Set<String> cacheNames) {
         nodes.forEach(node -> {
             cacheNames.forEach(cacheName -> {
                 updatePartitionsSize(node, cacheName);
@@ -253,6 +268,9 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         });
     }
 
+    /**
+     *
+     */
     protected IgniteInternalFuture startAsyncLoad0(AtomicReference<ReconciliationResult> reconResult, IgniteCache cache,
         int startKey, int endKey, boolean clear) {
         Random rnd = new Random();
