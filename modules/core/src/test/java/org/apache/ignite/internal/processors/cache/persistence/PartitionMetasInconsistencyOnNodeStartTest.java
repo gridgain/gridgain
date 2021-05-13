@@ -20,7 +20,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
@@ -37,22 +36,17 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_SKIP_CRC;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.T_PART_META;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2.PART_META_REUSE_LIST_ROOT_OFF;
-import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
-import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
-import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
+import static org.apache.ignite.testframework.GridTestUtils.findMetaPage;
 
 /**
  * Tests that grid with corrupted partitions, where meta page is corrupted, fails on start with correct error.
@@ -85,9 +79,9 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             )
-            .setFailureHandler(new FailureHandlerWithCallback(failureCtx -> {
-                correctFailure = failureCtx.error() instanceof CorruptedPartitionMetaPageException;
-            }));
+            .setFailureHandler(new FailureHandlerWithCallback(failureCtx ->
+                correctFailure = failureCtx.error() instanceof CorruptedPartitionMetaPageException
+            ));
     }
 
     /** {@inheritDoc} */
@@ -97,6 +91,15 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** Tests that node with corrupted partition fails on start. */
@@ -134,7 +137,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
         store.ensure();
 
-        long metaPageId = findMetaPage(0, FLAG_DATA, store);
+        long metaPageId = findMetaPage(0, FLAG_DATA, store, PAGE_SIZE);
 
         if (metaPageId < 0)
             fail("Could not find meta page.");
@@ -175,43 +178,5 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
             c.write(buf);
         }
-    }
-
-    /**
-     * Finds meta page in file page store
-     *
-     * @param partId Partition id.
-     * @param flag Page store flag.
-     * @param store File page store.
-     * @return Page id.
-     * @throws IgniteCheckedException If failed.
-     */
-    protected long findMetaPage(int partId, byte flag, FilePageStore store)
-        throws IgniteCheckedException {
-        ByteBuffer buf = allocateBuffer(PAGE_SIZE);
-
-        try {
-            long addr = bufferAddress(buf);
-
-            long pagesNum = isNull(store) ? 0 : (store.size() - store.headerSize()) / PAGE_SIZE;
-
-            for (int i = 0; i < pagesNum; i++) {
-                buf.rewind();
-
-                long pageId = PageIdUtils.pageId(partId, flag, i);
-
-                store.read(pageId, buf, false);
-
-                PageIO io = PageIO.getPageIO(addr);
-
-                if (io.getType() == T_PART_META)
-                    return pageId;
-            }
-        }
-        finally {
-            freeBuffer(buf);
-        }
-
-        return -1;
     }
 }

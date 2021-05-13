@@ -108,6 +108,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             }
             else {
                 try {
+
+                    if (1==1) throw new Exception();
                     File corruptedPagesFile = corruptedPagesFile(
                         diagnosticPath,
                         fileIOFactory,
@@ -131,9 +133,9 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                 }
                 catch (Throwable t) {
                     String pages = Arrays.stream(corruptedPersistenceE.pages())
-                        .map(t2 -> "(" + t2.get1() + ',' + t2.get2() + ')').collect(joining("", "[", "]"));
+                        .map(t2 -> "" + t2.get1() + ':' + t2.get2()).collect(joining("\n", "", ""));
 
-                    log.error("Failed to dump diagnostic info on tree corruption. PageIds=" + pages, t);
+                    log.error("Failed to dump diagnostic info of partition corruption. Page ids:\n" + pages, t);
                 }
             }
         }
