@@ -98,7 +98,7 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
          *
          * @param cacheNames Set of cache names.
          * @param rebuildIdxCaches Set of infos about cached which have indexes being rebuilt at the moment.
-         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.         *
+         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.
          * @return {@code IndexForceRebuildTaskRes} object.
          */
         @NotNull private IndexForceRebuildTaskRes rebuildByCacheNames(
@@ -136,7 +136,7 @@ public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTas
          *
          * @param grpNames Set of cache groups names.
          * @param rebuildIdxCaches Set of infos about cached which have indexes being rebuilt at the moment.
-         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.         *
+         * @param rebuildIdxCachesNames Set of names of cached which have indexes being rebuilt at the moment.
          * @return {@code IndexForceRebuildTaskRes} object.
          */
         @NotNull private IndexForceRebuildTaskRes rebuildByGroupNames(
