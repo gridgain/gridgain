@@ -108,8 +108,6 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
             }
             else {
                 try {
-
-                    if (1==1) throw new Exception();
                     File corruptedPagesFile = corruptedPagesFile(
                         diagnosticPath,
                         fileIOFactory,
