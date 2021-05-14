@@ -754,6 +754,12 @@ public class CommandHandlerParsingTest {
      *      if unsupported value is used - IllegalArgumentException (Invalid recheck attempts:
      *      <invalid-recheck-attempts>. Int value between 1 and 5 should be used.) is expected.
      *
+     * --consistency-reconciliation
+     *      if value is missing - IllegalArgumentException (The consistency reconciliation should be specified.) is expected.
+     *
+     * --cache-size-reconciliation
+     *      if value is missing - IllegalArgumentException (The cache size reconciliation should be specified.) is expected.
+     *
      * As invalid values use values that produce NumberFormatException and out-of-range values.
      * Also ensure that in case of appropriate parameters parseArgs() doesn't throw any exceptions.
      */
@@ -826,6 +832,18 @@ public class CommandHandlerParsingTest {
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "0"));
 
         parseArgs(asList("--cache", "partition_reconciliation", "--recheck-delay", "50"));
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--consistency-reconciliation", "true"));
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--consistency-reconciliation", "false"));
+
+        assertParseArgsThrows("The consistency reconciliation should be specified.", "--cache", "partition_reconciliation", "--consistency-reconciliation");
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--cache-size-reconciliation", "true"));
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--cache-size-reconciliation", "false"));
+
+        assertParseArgsThrows("The cache size reconciliation should be specified.", "--cache", "partition_reconciliation", "--cache-size-reconciliation");
     }
 
     /**
