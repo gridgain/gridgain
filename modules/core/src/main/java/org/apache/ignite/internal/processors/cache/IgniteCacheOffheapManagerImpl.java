@@ -1725,7 +1725,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (grp.sharedGroup()) {
                 AtomicLong size = cacheSizes.get(cacheId);
 
-                return size != null ? (int)size.get() : 0;
+                return size != null ? size.get() : 0;
             }
 
             return storageSize.get();
@@ -1787,14 +1787,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
             if (grp.sharedGroup()) {
-                nodePartitionSize.oldCacheSize(cacheSizes.get(cacheId).get());
+                AtomicLong cacheSize = cacheSizes.get(cacheId);
+
+                nodePartitionSize.oldCacheSize(cacheSize != null ? cacheSize.get() : 0);
 
                 long newSize = reconciliationCtx().sizes.remove(cacheId).get();
 
                 nodePartitionSize.newCacheSize(newSize);
 
                 if (repair) {
-                    cacheSizes.get(cacheId).set(newSize);
+                    if (cacheSize != null)
+                        cacheSize.set(newSize);
+                    else if (newSize != 0)
+                        cacheSizes.put(cacheId, new AtomicLong(newSize));
 
                     storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
                 }
