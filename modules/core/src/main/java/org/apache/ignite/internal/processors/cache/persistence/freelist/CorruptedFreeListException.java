@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -27,11 +28,19 @@ public class CorruptedFreeListException extends IgniteCheckedException implement
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** */
+    private final T2<Integer, Long>[] pages = null;
+
     /**
      * @param msg Message.
      * @param cause Cause.
      */
     public CorruptedFreeListException(String msg, @Nullable Throwable cause) {
         super(msg, cause);
+    }
+
+    /** {@inheritDoc} */
+    @Override public T2<Integer, Long>[] pages() {
+        return pages;
     }
 }

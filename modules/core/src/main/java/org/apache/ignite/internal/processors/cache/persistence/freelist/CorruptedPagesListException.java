@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
-package org.apache.ignite.internal.processors.cache.persistence;
-
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
 import org.apache.ignite.internal.util.typedef.T2;
 
-/**
- * Marker interface to distinguish exceptions that were caused by broken persistence datastructures invariants.
- */
-public interface CorruptedPersistenceException {
-    /**
-     * @return (groupId, pageId) pairs for pages that might be corrupted.
-     */
-    public T2<Integer, Long>[] pages();
+/** */
+public class CorruptedPagesListException extends IgniteCheckedException implements CorruptedPersistenceException {
+    /** */
+    private final T2<Integer, Long>[] pages = null;
+
+    /** {@inheritDoc} */
+    @Override public T2<Integer, Long>[] pages() {
+        return pages;
+    }
 }
