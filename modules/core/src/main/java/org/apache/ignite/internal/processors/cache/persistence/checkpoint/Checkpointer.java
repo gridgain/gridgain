@@ -119,7 +119,7 @@ public class Checkpointer extends GridWorker {
     private final boolean skipSync = getBoolean(IGNITE_PDS_CHECKPOINT_TEST_SKIP_SYNC);
 
     /** Avoid the start checkpoint if checkpointer was canceled. */
-    private final boolean skipCheckpointOnNodeStop = getBoolean(IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, false);
+    private volatile boolean skipCheckpointOnNodeStop = getBoolean(IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, false);
 
     /** Long JVM pause threshold. */
     private final int longJvmPauseThreshold =
@@ -239,7 +239,7 @@ public class Checkpointer extends GridWorker {
                 checkpointWritePageThreads,
                 checkpointWritePageThreads,
                 30_000,
-                new LinkedBlockingQueue<Runnable>()
+                new LinkedBlockingQueue<>()
             );
 
         return null;
@@ -1049,5 +1049,14 @@ public class Checkpointer extends GridWorker {
      */
     private boolean isShutdownNow() {
         return shutdownNow;
+    }
+
+    /**
+     * Skip checkpoint on node stop.
+     *
+     * @param skip If {@code true} skips checkpoint on node stop.
+     */
+    public void skipCheckpointOnNodeStop(boolean skip) {
+        skipCheckpointOnNodeStop = skip;
     }
 }

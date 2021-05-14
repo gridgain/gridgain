@@ -92,6 +92,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WalRecordCacheGroupAware;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
@@ -137,6 +138,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
+import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.port.GridPortProcessor;
@@ -182,6 +184,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.METASTORE_DATA_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.TX_RECORD;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.fromOrdinal;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
@@ -800,7 +803,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 metaStorage = createMetastorage(true);
 
-                applyLogicalUpdates(status, onlyMetastorageGroup(), onlyMetastorageAndEncryptionRecords(), false);
+                applyLogicalUpdates(status, onlyMetastorageGroup(), onlyMetastorageAndEncryptionRecords(), true);
 
                 fillWalDisabledGroups();
 
@@ -1927,8 +1930,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 status,
                 groupsWithEnabledWal(),
                 logicalRecords(),
-                true
+                false
             );
+
+            cctx.tm().clearUncommitedStates();
 
             if (recoveryVerboseLogging && log.isInfoEnabled()) {
                 log.info("Partition states information after LOGICAL RECOVERY phase:");
@@ -2726,6 +2731,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /**
      * @param status Last registered checkpoint status.
+     * @param restoreMeta Metastore restore phase if {@code true}.
      * @throws IgniteCheckedException If failed to apply updates.
      * @throws StorageException If IO exception occurred while reading write-ahead log.
      */
@@ -2733,13 +2739,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         CheckpointStatus status,
         IgnitePredicate<Integer> cacheGroupsPredicate,
         IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordTypePredicate,
-        boolean skipFieldLookup
+        boolean restoreMeta
     ) throws IgniteCheckedException {
         if (log.isInfoEnabled())
-            log.info("Applying lost cache updates since last checkpoint record [lastMarked="
+            log.info("Applying lost " + (restoreMeta ? "metastore" : "cache") + " updates since last checkpoint record [lastMarked="
                 + status.startPtr + ", lastCheckpointId=" + status.cpStartId + ']');
 
-        if (skipFieldLookup)
+        if (!restoreMeta)
             cctx.kernalContext().query().skipFieldLookup(true);
 
         long start = U.currentTimeMillis();
@@ -2761,6 +2767,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         RestoreLogicalState restoreLogicalState =
             new RestoreLogicalState(status, it, lastArchivedSegment, cacheGroupsPredicate, partitionRecoveryStates);
 
+        final IgniteTxManager txManager = cctx.tm();
+
         try {
             while (it.hasNextX()) {
                 WALRecord rec = restoreLogicalState.next();
@@ -2769,6 +2777,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     break;
 
                 switch (rec.type()) {
+                    case TX_RECORD:
+                        if (restoreMeta) { // Also restore tx states.
+                            TxRecord txRec = (TxRecord)rec;
+
+                            txManager.collectTxStates(txRec);
+                        }
+
+                        break;
                     case CHECKPOINT_RECORD: // Calculate initial partition states
                         CheckpointRecord cpRec = (CheckpointRecord)rec;
 
@@ -2810,6 +2826,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         DataRecord dataRec = (DataRecord)rec;
 
                         for (DataEntry dataEntry : dataRec.writeEntries()) {
+                            if (!restoreMeta && txManager.uncommitedTx(dataEntry))
+                                continue;
+
                             int cacheId = dataEntry.cacheId();
 
                             DynamicCacheDescriptor cacheDesc = cctx.cache().cacheDescriptor(cacheId);
@@ -2905,7 +2924,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         finally {
             it.close();
 
-            if (skipFieldLookup)
+            if (!restoreMeta)
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
 
@@ -3526,7 +3545,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * @return WAL records predicate that passes only Metastorage and encryption data records.
      */
     private IgniteBiPredicate<WALRecord.RecordType, WALPointer> onlyMetastorageAndEncryptionRecords() {
-        return (type, ptr) -> type == METASTORE_DATA_RECORD ||
+        return (type, ptr) -> type == METASTORE_DATA_RECORD || type == TX_RECORD ||
             type == MASTER_KEY_CHANGE_RECORD || type == MASTER_KEY_CHANGE_RECORD_V2;
     }
 
