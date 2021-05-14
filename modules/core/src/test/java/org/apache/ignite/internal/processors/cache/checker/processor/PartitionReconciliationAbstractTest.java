@@ -228,7 +228,11 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
      */
     protected long getFullPartitionsSizeForCacheGroup(IgniteEx grid, String cacheName) {
 
-        GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
+        GridCacheContext<Object, Object> cctx = grid
+            .context()
+            .cache()
+            .cache(cacheName)
+            .context();
 
         return cctx.group().topology().localPartitions().stream().mapToLong(part -> part.dataStore().fullSize()).sum();
     }

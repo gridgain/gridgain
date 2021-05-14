@@ -20,15 +20,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -51,6 +55,11 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     /** Client. */
     protected IgniteEx client;
 
+    /** */
+    protected boolean persistence;
+
+    private Random rnd = new Random();
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
@@ -59,6 +68,14 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         storageConfiguration.setPageSize(1024);
 
         cfg.setDataStorageConfiguration(storageConfiguration);
+
+        if (persistence) {
+            DataStorageConfiguration memCfg = new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration().setMaxSize(200 * 1024 * 1024).setPersistenceEnabled(true));
+
+            cfg.setDataStorageConfiguration(memCfg);
+        }
 
         cfg.setConsistentId(name);
 
@@ -79,6 +96,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cleanPersistenceDir();
     }
 
+    /** Tests that two size reconciliationы in a row work sucessfully. */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTwoReconciliationInRow() throws Exception {
@@ -95,7 +113,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         IgniteCache<Object, Object> cache0 = client.createCache(DEFAULT_CACHE_NAME);
 
-        //first
+        //first reconciliation
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
@@ -105,8 +123,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             }
         }
 
-//        System.out.println();
-
         int startSize0 = cache0.size();
 
         List<IgniteEx> grids = new ArrayList<>();
@@ -114,17 +130,15 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<String>(){{add(DEFAULT_CACHE_NAME);}});
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
 
         assertFalse(cache0.size() == startSize0);
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(DEFAULT_CACHE_NAME);
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
@@ -143,14 +157,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
-//        System.out.println("qvsdhntsd partitionReconciliation stop");
-
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
-
-//        for (long i = startKey; i < endKey; i++)
-//            if (grid(0).cache(DEFAULT_CACHE_NAME).containsKey(i))
-//                System.out.println("cache contains key: " + i);
 
         for (long i = startKey; i < endKey; i++)
             cache0.put(i, i);
@@ -163,27 +171,23 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             allKeysCountForCache = 0;
 
             for (int i = 0; i < nodesCnt; i++) {
-//            System.out.println("jhsdaidfgh " + i);
-
                 long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-//            System.out.println("asdhubd " + i0);
                 allKeysCountForCacheGroup += i0;
 
                 long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-//            System.out.println("kjkhdfdf " + i1);
                 allKeysCountForCache += i1;
             }
 
             assertEquals(endKey, client.cache(cacheName).size());
 
-            assertEquals((long)endKey, allKeysCountForCacheGroup);
-            assertEquals((long)endKey, allKeysCountForCache);
+            assertEquals(endKey, allKeysCountForCacheGroup);
+            assertEquals(endKey, allKeysCountForCache);
 
         }
 
         cache0.clear();
 
-        //second
+        //second reconciliation
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
@@ -193,8 +197,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             }
         }
 
-//        System.out.println();
-
         startSize0 = cache0.size();
 
         grids = new ArrayList<>();
@@ -202,7 +204,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<String>(){{add(DEFAULT_CACHE_NAME);}});
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
 
         assertFalse(cache0.size() == startSize0);
 
@@ -219,14 +221,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
-//        System.out.println("qvsdhntsd partitionReconciliation stop");
-
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
-
-//        for (long i = startKey; i < endKey; i++)
-//            if (grid(0).cache(DEFAULT_CACHE_NAME).containsKey(i))
-//                System.out.println("cache contains key: " + i);
 
         for (long i = startKey; i < endKey; i++)
             cache0.put(i, i);
@@ -236,26 +232,23 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             allKeysCountForCache = 0;
 
             for (int i = 0; i < nodesCnt; i++) {
-//            System.out.println("jhsdaidfgh " + i);
-
                 long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-//            System.out.println("asdhubd " + i0);
                 allKeysCountForCacheGroup += i0;
 
                 long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-//            System.out.println("kjkhdfdf " + i1);
                 allKeysCountForCache += i1;
             }
 
             assertEquals(endKey, client.cache(cacheName).size());
 
-            assertEquals((long)endKey, allKeysCountForCacheGroup);
-            assertEquals((long)endKey, allKeysCountForCache);
+            assertEquals(endKey, allKeysCountForCacheGroup);
+            assertEquals(endKey, allKeysCountForCache);
 
         }
 
     }
 
+    /** Tests that only sizes of repaired caches fixed. */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testRepairPartOfCachesReconciliation() throws Exception {
@@ -305,14 +298,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<String>(){{
-                add(cache0.getName());
-                add(cache1.getName());
-                add(cache2_group0.getName());
-                add(cache3_group0.getName());
-                add(cache4_group1.getName());
-                add(cache5_group1.getName());
-            }}
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(
+                cache0.getName(),
+                cache1.getName(),
+                cache2_group0.getName(),
+                cache3_group0.getName(),
+                cache4_group1.getName(),
+                cache5_group1.getName()))
         );
 
         assertFalse(cache1.size() == 100);
@@ -326,19 +318,19 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(cache0.getName());
         cacheNames.add(cache2_group0.getName());
         cacheNames.add(cache4_group1.getName());
         cacheNames.add(cache5_group1.getName());
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
-        partitionReconciliation(client, builder);
+        List<String> errors = partitionReconciliation(client, builder).errors();
+
+        assertTrue(errors.isEmpty());
 
         assertFalse(cache1.size() == 100);
         assertFalse(cache3_group0.size() == 100);
@@ -349,18 +341,21 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     }
 
+    /** Test size reconciliation for empty cache. */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testRepairEmptyCacheSize() throws Exception {
         testRepairCacheSize(0);
     }
 
+    /** Test size reconciliation for cache with one entry. */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testRepairCacheSizeWithOneEntry() throws Exception {
         testRepairCacheSize(1);
     }
 
+    /** */
     private void testRepairCacheSize(int entryCount) throws Exception {
         int nodesCnt = 3;
 
@@ -383,7 +378,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<String>(){{add(cache.getName());}});
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(cache.getName())));
 
         assertFalse(cache.size() == entryCount);
 
@@ -391,29 +386,49 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(cache.getName());
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
-        partitionReconciliation(client, builder);
+        List<String> errors = partitionReconciliation(client, builder).errors();
+
+        assertTrue(errors.isEmpty());
 
         assertEquals(entryCount, cache.size());
     }
 
+    /** */
     @Test
-    public void testRepairEmptyCacheSizeWithoutPreloading() throws Exception {
+    public void testRepairSizeOfEmptyCacheWithoutPreloading() throws Exception {
+        testRepairSizeOfEmptyCacheWithoutPreloading(false);
+    }
+
+    /** */
+    @Test
+    public void testRepairSizeOfEmptyCacheWithoutPreloadingWithCacheGroup() throws Exception {
+        testRepairSizeOfEmptyCacheWithoutPreloading(true);
+    }
+
+    /** */
+    public void testRepairSizeOfEmptyCacheWithoutPreloading(boolean cacheGrp) throws Exception {
         int nodesCnt = 4;
 
         ig = startGrids(nodesCnt);
 
         client = startClientGrid(nodesCnt);
 
-        IgniteCache cache = client.createCache("cache0");
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("cache0");
+
+        if (cacheGrp) {
+            ccfg.setGroupName("group0");
+
+            log().info(">>> Cache in cache group");
+        }
+
+        IgniteCache<Object, Object> cache = client.createCache(ccfg);
 
         List<IgniteEx> grids = new ArrayList<>();
 
@@ -424,22 +439,23 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(cache.getName());
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
-        partitionReconciliation(client, builder);
+        List<String> errors = partitionReconciliation(client, builder).errors();
+
+        assertTrue(errors.isEmpty());
 
         assertEquals(0, cache.size());
     }
 
+    /** Test that size not repaired if reconciliation was started without {@link ReconType#SIZES} */
     @Test
-    public void testCacheSizeNotRepaired() throws Exception {//щее не сделан
+    public void testCacheSizeNotRepaired() throws Exception {
         int nodesCnt = 3;
 
         ig = startGrids(nodesCnt);
@@ -456,28 +472,106 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<String>(){{add(cache.getName());}});
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(cache.getName())));
 
         long brokenCacheSize = cache.size();
 
         assertFalse(cache.size() == 1000);
 
-
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-//        builder.caches(Collections.singleton(DEFAULT_CACHE_NAME, "qqq"));
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(cache.getName());
-//        objects.add("qqq");
         builder.caches(cacheNames);
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
-        partitionReconciliation(client, builder);
+        List<String> errors = partitionReconciliation(client, builder).errors();
+
+        assertTrue(errors.isEmpty());
 
         assertEquals(brokenCacheSize, cache.size());
+    }
+
+    /** */
+    @Test
+    public void testRestartPersistenceCluaterAfterSizeReconciliation() throws Exception {
+        int nodesCnt = 2;
+
+        persistence = true;
+
+        ig = startGrids(nodesCnt);
+
+        ig.cluster().state(ClusterState.ACTIVE);
+
+        client = startClientGrid(nodesCnt);
+
+        int backupCnt = 1;
+
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("cache0")
+            .setBackups(backupCnt);
+
+        if (rnd.nextBoolean()) {
+            ccfg.setGroupName("group0");
+
+            log().info(">>> Cache in cache group");
+        }
+
+        int entryCount = 2000;
+
+        IgniteCache cache = client.createCache(ccfg);
+
+        for (int i = 0; i < entryCount; i++)
+            cache.put(i, i);
+
+        List<IgniteEx> grids = new ArrayList<>();
+
+        for (int i = 0; i < nodesCnt; i++)
+            grids.add(grid(i));
+
+        breakCacheSizes(grids, new HashSet<>(Arrays.asList(cache.getName())));
+
+        assertFalse(cache.size() == entryCount);
+
+        VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
+        builder.repair(true);
+        builder.parallelism(10);
+        Set<String> cacheNames = new HashSet<>();
+        cacheNames.add(cache.getName());
+        builder.caches(cacheNames);
+        builder.batchSize(10);
+        builder.reconTypes(new HashSet(Arrays.asList(SIZES)));
+        builder.repairAlg(RepairAlgorithm.PRIMARY);
+
+        List<String> errors = partitionReconciliation(client, builder).errors();
+
+        assertTrue(errors.isEmpty());
+
+        assertEquals(entryCount, cache.size());
+
+        stopAllGrids();
+
+        ig = startGrids(nodesCnt);
+
+        ig.cluster().state(ClusterState.ACTIVE);
+
+        cache = grid(1).cache("cache0");
+
+        long allKeysCountForCacheGroup = 0;
+        long allKeysCountForCache = 0;
+
+        for (int i = 0; i < nodesCnt; i++) {
+            long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cache.getName());
+            allKeysCountForCacheGroup += i0;
+
+            long i1 = getPartitionsSizeForCache(grid(i), cache.getName());
+            allKeysCountForCache += i1;
+        }
+
+        assertEquals(entryCount * (1 + backupCnt), allKeysCountForCacheGroup);
+        assertEquals(entryCount * (1 + backupCnt), allKeysCountForCache);
     }
 
 }

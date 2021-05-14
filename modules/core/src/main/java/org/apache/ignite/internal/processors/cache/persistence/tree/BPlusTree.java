@@ -3263,12 +3263,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return row;
         }
 
-        /** */
+        /** Size reconciliation logic for insert new entry to the cache. */
         public void reconInsert(L newRow) {
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
-
-                reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
 
                 AtomicLong reconSize = reconciliationCtx.sizes.get(row0.cacheId());
 
@@ -3282,7 +3280,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         }
 
-        /** */
+        /** Size reconciliation logic for remove entry from the cache. */
         public void reconRemove(int cacheId, KeyCacheObject key) {
             if ((reconciliationCtx.lastKey(cacheId) != null &&
                 reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
@@ -3304,14 +3302,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
         }
 
-        /** */
+        /** Size reconciliation logic for remove entry from the cache. */
         public void reconRemoveFromLeaf(L row) {
             if (row instanceof SearchRow) {
                 SearchRow row0 = (SearchRow)row;
-
-                reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
-
-                reconciliationCtx.sizes.putIfAbsent(row0.cacheId(), new AtomicLong());
 
                 reconRemove(row0.cacheId(), row0.key());
             }
@@ -3332,10 +3326,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     if (oldRow0.tombstone())
                         oldIsTombstone = true;
                 }
-
-                reconciliationCtx.tempMap.putIfAbsent(row0.cacheId(), new ConcurrentHashMap<>());
-
-                reconciliationCtx.sizes.putIfAbsent(row0.cacheId(), new AtomicLong());
 
                 if (row0.isReady() && ((row0.tombstone() && !oldIsTombstone && oldRow != null)))
                     reconRemove(row0.cacheId(), row0.key());
@@ -6061,15 +6051,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
             }
 
-            KeyCacheObject lastKey = null;
-            KeyCacheObject firstKey = null;
-
-            Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
-
             if (reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
-                reconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
+                KeyCacheObject lastKey = null;
+                KeyCacheObject firstKey = null;
 
-                reconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
+                Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
 
                 for (T row : rows) {
                     CacheDataRowAdapter row0 = (CacheDataRowAdapter) row;
@@ -6081,7 +6067,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         if (row0.tombstone())
                             continue;
 
-                            newTempMap.put(row0.key(), true);
+                        newTempMap.put(row0.key(), true);
 
                         if (firstKey == null)
                             firstKey = row0.key();
@@ -6100,8 +6086,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(cacheId);
 
                     AtomicLong partSize = reconciliationCtx.sizes.get(cacheId);
-
-                    reconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
 
                     Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 

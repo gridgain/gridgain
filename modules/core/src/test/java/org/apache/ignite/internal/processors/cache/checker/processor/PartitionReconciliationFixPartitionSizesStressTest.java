@@ -190,7 +190,18 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         return params;
     }
 
-    /** */
+    /**
+     * <ul>
+     * <li>Start nodes.</li>
+     * <li>Start one or two caches.</li>
+     * <li>Load some data.</li>
+     * <li>Break cache sizes.</li>
+     * <li>Start load threads.</li>
+     * <li>Do size reconciliation.</li>
+     * <li>Stop load threads.</li>
+     * <li>Check size of primary/backup partitions in cluster.</li>
+     * </ul>
+     */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void test() throws Exception {
@@ -220,6 +231,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
                 getCacheConfig(DEFAULT_CACHE_NAME + 1, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
             ));
         }
+
+        log.info(">>> Cache count: " + caches.size());
 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
 
@@ -269,6 +282,10 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         }, 1, "reconciliation");
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
+
+        List<String> errors = reconResult.get().errors();
+
+        assertTrue(errors.isEmpty());
 
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();

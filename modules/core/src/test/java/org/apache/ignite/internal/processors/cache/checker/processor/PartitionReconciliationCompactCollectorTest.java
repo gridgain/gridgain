@@ -108,25 +108,6 @@ public class PartitionReconciliationCompactCollectorTest extends PartitionReconc
         cleanPersistenceDir();
     }
 
-    @Test
-    public void test1() throws Exception {
-        IgniteEx grid = startGrid();
-
-        IgniteCache<Object, Object> cache = grid.createCache(new CacheConfiguration<>("cache0")
-            .setGroupName("group0")
-            .setAffinity(new RendezvousAffinityFunction(false, 10))
-        );
-
-        for (int i = -100; i <= 100/*Integer.MAX_VALUE*/; i++) {
-            if (i % 10_000 == 0)
-                System.out.println(i);
-
-            cache.put(i, true);
-        }
-
-        System.out.println("cache.size(): " + cache.size());
-    }
-
     /**
      * Tests that both modes (locOutput and compact) of execution of partition reconciliation utility provide the same result.
      *
