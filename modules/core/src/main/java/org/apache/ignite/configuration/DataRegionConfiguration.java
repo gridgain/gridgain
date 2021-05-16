@@ -73,6 +73,9 @@ public final class DataRegionConfiguration implements Serializable {
     /** Default metrics enabled flag. */
     public static final boolean DFLT_METRICS_ENABLED = false;
 
+    /** Default empty pages pool size. */
+    public static final int DFLT_EMPTY_PAGES_POOL_SIZE = 100;
+
     /** Default amount of sub intervals to calculate {@link DataRegionMetrics#getAllocationRate()} metric. */
     public static final int DFLT_SUB_INTERVALS = 5;
 
@@ -102,7 +105,7 @@ public final class DataRegionConfiguration implements Serializable {
     private double evictionThreshold = 0.9;
 
     /** Minimum number of empty pages in reuse lists. */
-    private int emptyPagesPoolSize = 100;
+    private int emptyPagesPoolSize = DFLT_EMPTY_PAGES_POOL_SIZE;
 
     /**
      * Flag to enable the memory metrics collection for this data region.

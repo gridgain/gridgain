@@ -213,6 +213,7 @@ import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
 import org.apache.ignite.internal.processors.cache.CacheClassLoaderMarker;
 import org.apache.ignite.internal.processors.cache.GridCacheAttributes;
@@ -12510,5 +12511,45 @@ public abstract class IgniteUtils {
      */
     public static String enabledString(boolean enabled) {
         return enabled ? "enabled" : "disabled";
+    }
+
+    /**
+     * Tries to increase pool of empty pages in data region, if it is too small to process large entries.
+     *
+     * @param ctx Cache context.
+     * @param e Exception caused by {@link IgniteOutOfMemoryException}.
+     * @return Exception if the increasing of the pool has failed, {@code null} otherwise.
+     */
+    @Nullable public static IgniteCheckedException preventOutOfMemoryOperationFailure(GridCacheContext ctx, Exception e) {
+        if (!ctx.dataRegion().increaseEmptyPagesPool()) {
+            return new IgniteCheckedException("Failed to increase empty pages pool size [" +
+                "currentSize=" + ctx.dataRegion().emptyPagesPoolSize() +
+                ", dataRegion=" + ctx.dataRegion().config().getName() +
+                ", emptyPoolSize=" + ctx.dataRegion().config().getEmptyPagesPoolSize() +
+                ", memoryMaxSize=" + ctx.dataRegion().config().getMaxSize() +
+                ", pageSize=" + ctx.dataRegion().pageMemory().systemPageSize() +
+                ", evictionThreshold=" + ctx.dataRegion().config().getEvictionThreshold() +
+                "]", e
+            );
+        }
+
+        try {
+            if (!ctx.shared().database().ensureFreeSpace(ctx.dataRegion())) {
+                return new IgniteCheckedException("Failed to evict any pages [" +
+                    "pageEvictionMode=" + ctx.dataRegion().config().getPageEvictionMode() +
+                    ", dataRegion=" + ctx.dataRegion().config().getName() +
+                    ", emptyPoolSize=" + ctx.dataRegion().emptyPagesPoolSize() +
+                    ", memoryMaxSize=" + ctx.dataRegion().config().getMaxSize() +
+                    ", pageSize=" + ctx.dataRegion().pageMemory().systemPageSize() +
+                    ", evictionThreshold=" + ctx.dataRegion().config().getEvictionThreshold() + "]",
+                    e
+                );
+            }
+        }
+        catch (IgniteCheckedException ex) {
+            return ex;
+        }
+
+        return null;
     }
 }
