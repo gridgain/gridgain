@@ -161,7 +161,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */
@@ -219,7 +219,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             partsToRepair = U.readIntKeyMap(in);
         }
 
-        reconTypes = U.readSet(in);
+        if (protoVer >= V3)
+            reconTypes = U.readSet(in);
     }
 
     /**

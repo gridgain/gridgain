@@ -65,7 +65,7 @@ import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES
 /**
  * The base point of partition reconciliation processing.
  */
-public class PartitionReconciliationProcessor extends AbstractPipelineProcessor {
+public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcessor {
     /** Session change message. */
     public static final String SESSION_CHANGE_MSG = "Reconciliation session has changed.";
 
@@ -112,6 +112,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private final RepairAlgorithm repairAlg;
 
+    private final Set<ReconType> reconTypes;
+
     /** Tracks workload chains based on its lifecycle. */
     private final WorkloadTracker workloadTracker = new WorkloadTracker();
 
@@ -136,7 +138,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @param includeSensitive {@code true} if sensitive information should be included in the result.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public PartitionReconciliationProcessor(
+    public PartitionReconciliationProcessorV2(
         long sesId,
         IgniteEx ignite,
         Collection<String> caches,
@@ -147,6 +149,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int batchSize,
         int recheckAttempts,
         int recheckDelay,
+        Set<ReconType> reconTypes,
         boolean compact,
         boolean includeSensitive
     ) throws IgniteCheckedException {
@@ -159,6 +162,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
+        this.reconTypes = reconTypes;
 
         registerListener(workloadTracker.andThen(evtLsnr));
 
@@ -170,7 +174,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<ReconciliationAffectedEntries> execute() {
+    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> execute() {
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
@@ -196,8 +200,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 int[] partitions = partitions(cache);
 
+                int cacheId = cachex.context().cacheId();
+
                 for (int partId : partitions) {
-                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, partId, null);
+                    Batch workload = new Batch(reconTypes.contains(CONSISTENCY), reconTypes.contains(SIZES), repairAlg, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -220,7 +226,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 if (isEmpty() && live) {
                     U.sleep(100);
-
+//                    System.out.println("HELP!!!!!!!!!!!!");
                     continue;
                 }
 
@@ -255,7 +261,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
             }
 
-            return new ExecutionResult<>(collector.result());
+//            collector()
+
+//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
+//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size() + " ||| " + collector.partSizesMap() + " ||| " + Thread.currentThread().getName());
+
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
         catch (InterruptedException | IgniteException e) {
             String errMsg = "Partition reconciliation was interrupted.";
@@ -264,14 +275,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             log.warning(errMsg, e);
 
-            return new ExecutionResult<>(collector.result(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
         catch (Exception e) {
             String errMsg = "Unexpected error.";
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(collector.result(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
     }
 
@@ -307,7 +318,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
+            new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
@@ -315,8 +326,17 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
-                if (nextBatchKey != null)
-                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
+                boolean reconConsist = nextBatchKey != null;
+                boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
+
+                if (reconConsist || reconSize)
+                    schedule(new Batch(reconConsist, reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
+
+                if (nextBatchKey == null) {
+                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
+
+                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
+                }
 
                 if (!recheckKeys.isEmpty()) {
                     schedule(
@@ -447,6 +467,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
         return new Repair(sesId, workloadChainId, cacheName, partId, res, repairAttempts);
     }
+
+//    private Repair repairSizes(String cacheName, int partId) {
+//        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
+//
+//    }
 
     /**
      * This class allows tracking workload chains based on its lifecycle.

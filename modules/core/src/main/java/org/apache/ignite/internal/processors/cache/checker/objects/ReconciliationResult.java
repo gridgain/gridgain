@@ -58,6 +58,21 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      */
     public ReconciliationResult(
         ReconciliationAffectedEntries partReconciliationRes,
+        Map<UUID, String> nodeIdToFolder,
+        List<String> errors
+    ) {
+        this.res = partReconciliationRes;
+        this.nodeIdToFolder = nodeIdToFolder;
+        this.errors = errors;
+    }
+
+    /**
+     * @param partReconciliationRes Partition reconciliation response.
+     * @param nodeIdToFolder Node id to folder.
+     * @param errors Errors.
+     */
+    public ReconciliationResult(
+        ReconciliationAffectedEntries partReconciliationRes,
         Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap,
         Map<UUID, String> nodeIdToFolder,
         List<String> errors

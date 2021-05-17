@@ -411,7 +411,7 @@ public class PartitionReconciliationProcessorTest {
             when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
 
             return new MockedProcessor(igniteMock, Collections.emptyList(), fixMode, parallelismLevel,
-                10, MAX_RECHECK_ATTEMPTS, 10, new HashSet<>(Arrays.asList(CONSISTENCY)));
+                10, MAX_RECHECK_ATTEMPTS, 10);
         }
 
         /**
@@ -424,8 +424,7 @@ public class PartitionReconciliationProcessorTest {
             int parallelismLevel,
             int batchSize,
             int recheckAttempts,
-            int recheckDelay,
-            Set<ReconType> reconTypes
+            int recheckDelay
         ) throws IgniteCheckedException {
             super(SESSION_ID,
                 ignite,
@@ -437,7 +436,6 @@ public class PartitionReconciliationProcessorTest {
                 batchSize,
                 recheckAttempts,
                 recheckDelay,
-                reconTypes,
                 false,
                 true);
         }

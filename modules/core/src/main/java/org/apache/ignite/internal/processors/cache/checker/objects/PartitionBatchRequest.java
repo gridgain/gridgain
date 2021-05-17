@@ -58,7 +58,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     /**
      *
      */
-    private final Map<UUID, NodePartitionSize> partSizesMap;
+    private Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * Reconciliation start topology version.
@@ -76,6 +76,32 @@ public class PartitionBatchRequest extends CachePartitionRequest {
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
      * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
+     * @param startTopVer Start topology version.
+     */
+    public PartitionBatchRequest(
+        long sesId,
+        UUID workloadChainId,
+        String cacheName,
+        int partId,
+        int batchSize,
+        KeyCacheObject lowerKey,
+        AffinityTopologyVersion startTopVer
+    ) {
+        super(sesId, workloadChainId);
+        this.cacheName = cacheName;
+        this.partId = partId;
+        this.batchSize = batchSize;
+        this.lowerKey = lowerKey;
+        this.startTopVer = startTopVer;
+    }
+
+    /**
+     * @param sesId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param batchSize Batch size.
+     * @param lowerKey Lower key.
      * @param startTopVer Start topology version.
      */
     public PartitionBatchRequest(

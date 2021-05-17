@@ -41,7 +41,7 @@ public class Batch extends PipelineWorkload {
     private final String cacheName;
 
     /** Cache id. */
-    private final int cacheId;
+    private int cacheId;
 
     /** Partition id. */
     private final int partId;
@@ -50,7 +50,22 @@ public class Batch extends PipelineWorkload {
     private final KeyCacheObject lowerKey;
 
     /** */
-    private final Map<UUID, NodePartitionSize> partSizesMap;
+    private Map<UUID, NodePartitionSize> partSizesMap;
+
+    /**
+     * @param sesId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param lowerKey Lower key.
+     */
+    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
+        super(sesId, workloadChainId);
+
+        this.cacheName = cacheName;
+        this.partId = partId;
+        this.lowerKey = lowerKey;
+    }
 
     /**
      * @param sesId Session id.
