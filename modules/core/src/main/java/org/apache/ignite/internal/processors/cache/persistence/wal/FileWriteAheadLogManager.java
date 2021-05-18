@@ -3370,7 +3370,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 for (int i = 0, j = 0; i < toFormat.size(); i++) {
                     File segFile = toFormat.get(i).file();
 
-                    File tmpDst = segFile.toPath().getParent().resolve(segFile.getName() + TMP_SUFFIX).toFile();
+                    File tmpDst = segFile.getAbsoluteFile()
+                            .toPath().getParent().resolve(segFile.getName() + TMP_SUFFIX).toFile();
 
                     try {
                         Files.copy(segFile.toPath(), tmpDst.toPath());
