@@ -31,10 +31,11 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -235,7 +236,7 @@ public class PageMemoryNoLoadSelfTest extends GridCommonAbstractTest {
                     assertNotNull(pageAddr);
 
                     try {
-                        PAGE_IO.initNewPage(pageAddr, id.pageId(), mem.realPageSize(id.groupId()));
+                        PAGE_IO.initNewPage(pageAddr, id.pageId(), mem.realPageSize(id.groupId()), null);
 
                         long updId = PageIdUtils.rotatePageId(id.pageId());
 
@@ -328,11 +329,11 @@ public class PageMemoryNoLoadSelfTest extends GridCommonAbstractTest {
         return new PageMemoryNoStoreImpl(
             log(),
             provider,
-            null,
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            true);
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
+            true
+        );
     }
 
     /**
@@ -345,7 +346,7 @@ public class PageMemoryNoLoadSelfTest extends GridCommonAbstractTest {
         long pageAddr = mem.writeLock(-1, fullId.pageId(), page);
 
         try {
-            PAGE_IO.initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()));
+            PAGE_IO.initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()), null);
 
             for (int i = PageIO.COMMON_HEADER_END; i < PAGE_SIZE; i++)
                 PageUtils.putByte(pageAddr, i, (byte)val);

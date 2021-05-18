@@ -113,7 +113,7 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
 
         DataRegion dataRegion = getDefaultDataRegion(ignite);
 
-        DataRegionMetricsImpl memMetrics = dataRegion.memoryMetrics();
+        DataRegionMetricsImpl memMetrics = dataRegion.metrics();
 
         memMetrics.enableMetrics();
 

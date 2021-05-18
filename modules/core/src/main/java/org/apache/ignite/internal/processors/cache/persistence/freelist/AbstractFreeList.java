@@ -337,10 +337,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
     }
 
     /**
-     * @param cacheId Cache ID.
+     * @param cacheGrpId Cache group ID.
      * @param name Name (for debug purpose).
-     * @param memMetrics Memory metrics.
-     * @param memPlc Data region.
+     * @param dataRegion Data region.
      * @param reuseList Reuse list or {@code null} if this free list will be a reuse list for itself.
      * @param wal Write ahead log manager.
      * @param metaPageId Metadata page ID.
@@ -349,10 +348,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
      * @throws IgniteCheckedException If failed.
      */
     public AbstractFreeList(
-        int cacheId,
+        int cacheGrpId,
         String name,
-        DataRegionMetricsImpl memMetrics,
-        DataRegion memPlc,
+        DataRegion dataRegion,
         ReuseList reuseList,
         IgniteWriteAheadLogManager wal,
         long metaPageId,
@@ -362,11 +360,11 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         AtomicLong pageListCacheLimit,
         byte pageFlag
     ) throws IgniteCheckedException {
-        super(cacheId, name, memPlc.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
+        super(cacheGrpId, name, dataRegion.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
 
-        rmvRow = new RemoveRowHandler(cacheId == 0);
+        rmvRow = new RemoveRowHandler(cacheGrpId == 0);
 
-        this.evictionTracker = memPlc.evictionTracker();
+        this.evictionTracker = dataRegion.evictionTracker();
         this.reuseList = reuseList == null ? this : reuseList;
         int pageSize = pageMem.pageSize();
 
@@ -387,7 +385,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
         this.shift = shift;
 
-        this.memMetrics = memMetrics;
+        this.memMetrics = dataRegion.metrics();
 
         this.pageListCacheLimit = pageListCacheLimit;
 
