@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
@@ -87,6 +88,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     /** Partition batch. */
     private volatile PartitionBatchRequest partBatch;
 
+    private boolean sizeReconciliationSupport;
+
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         PartitionBatchRequest partBatch) throws IgniteException {
@@ -94,8 +97,19 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         this.partBatch = partBatch;
 
-        for (ClusterNode node : subgrid)
-            jobs.put(new CollectPartitionKeysByBatchJob(partBatch), node);
+        sizeReconciliationSupport = IgniteFeatures.allNodesSupports(
+            ignite.context(),
+            ignite.context().discovery().allNodes(),
+            IgniteFeatures.PARTITION_RECONCILIATION_V2);
+
+        if (sizeReconciliationSupport) {
+            for (ClusterNode node : subgrid)
+                jobs.put(new CollectPartitionKeysByBatchJobV2(partBatch), node);
+        }
+        else {
+            for (ClusterNode node : subgrid)
+                jobs.put(new CollectPartitionKeysByBatchJob(partBatch), node);
+        }
 
         return jobs;
     }
@@ -126,45 +140,83 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         KeyCacheObject lastKey = null;
 
-        Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
+        if (sizeReconciliationSupport) {
 
-        for (int i = 0; i < results.size(); i++) {
-            UUID nodeId = results.get(i).getNode().id();
+            Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
 
-            IgniteException exc = results.get(i).getException();
+            for (int i = 0; i < results.size(); i++) {
+                UUID nodeId = results.get(i).getNode().id();
 
-            if (exc != null)
-                return new ExecutionResult<>(exc.getMessage());
+                IgniteException exc = results.get(i).getException();
 
-            ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> nodeRes = results.get(i).getData();
+                if (exc != null)
+                    return new ExecutionResult<>(exc.getMessage());
 
-            if (nodeRes.errorMessage() != null)
-                return new ExecutionResult<>(nodeRes.errorMessage());
+                ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> nodeRes = results.get(i).getData();
 
-            for (VersionedKey partKeyVer : nodeRes.result().get1()) {
-                try {
-                    KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
+                if (nodeRes.errorMessage() != null)
+                    return new ExecutionResult<>(nodeRes.errorMessage());
 
-                    if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
-                        lastKey = key;
+                for (VersionedKey partKeyVer : nodeRes.result().get1()) {
+                    try {
+                        KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 
-                    Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
-                    map.put(partKeyVer.nodeId(), partKeyVer.ver());
+                        if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
+                            lastKey = key;
 
-                    if (i == (results.size() - 1) && map.size() == results.size() && !hasConflict(map.values()))
-                        totalRes.remove(key);
+                        Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
+                        map.put(partKeyVer.nodeId(), partKeyVer.ver());
+
+                        if (i == (results.size() - 1) && map.size() == results.size() && !hasConflict(map.values()))
+                            totalRes.remove(key);
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, e.getMessage(), e);
+
+                        return new ExecutionResult<>(e.getMessage());
+                    }
                 }
-                catch (IgniteCheckedException e) {
-                    U.error(log, e.getMessage(), e);
 
-                    return new ExecutionResult<>(e.getMessage());
+                partSizesMap.put(nodeId, nodeRes.result().get2());
+            }
+
+            return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
+        }
+        else {
+            for (int i = 0; i < results.size(); i++) {
+                IgniteException exc = results.get(i).getException();
+
+                if (exc != null)
+                    return new ExecutionResult<>(exc.getMessage());
+
+                ExecutionResult<List<VersionedKey>> nodeRes = results.get(i).getData();
+
+                if (nodeRes.errorMessage() != null)
+                    return new ExecutionResult<>(nodeRes.errorMessage());
+
+                for (VersionedKey partKeyVer : nodeRes.result()) {
+                    try {
+                        KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
+
+                        if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
+                            lastKey = key;
+
+                        Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
+                        map.put(partKeyVer.nodeId(), partKeyVer.ver());
+
+                        if (i == (results.size() - 1) && map.size() == results.size() && !hasConflict(map.values()))
+                            totalRes.remove(key);
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, e.getMessage(), e);
+
+                        return new ExecutionResult<>(e.getMessage());
+                    }
                 }
             }
 
-            partSizesMap.put(nodeId, nodeRes.result().get2());
+            return new ExecutionResult<>(new T3<>(lastKey, totalRes, null));
         }
-
-        return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
     }
 
     /**
@@ -202,6 +254,91 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
          * @param partBatch Partition key.
          */
         private CollectPartitionKeysByBatchJob(PartitionBatchRequest partBatch) {
+            this.partBatch = partBatch;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected long sessionId() {
+            return partBatch.sessionId();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected ExecutionResult<List<VersionedKey>> execute0() {
+            GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
+
+            CacheGroupContext grpCtx = cctx.group();
+
+            final int batchSize = partBatch.batchSize();
+            final KeyCacheObject lowerKey;
+
+            try {
+                lowerKey = unmarshalKey(partBatch.lowerKey(), cctx);
+            }
+            catch (IgniteCheckedException e) {
+                String errMsg = "Batch [" + partBatch + "] can't processed. Broken key.";
+
+                log.error(errMsg, e);
+
+                return new ExecutionResult<>(errMsg + " " + e.getMessage());
+            }
+
+            GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
+
+            assert part != null;
+
+            part.reserve();
+
+            try (GridCursor<? extends CacheDataRow> cursor = lowerKey == null ?
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId()) :
+                grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), lowerKey, null)) {
+
+                List<VersionedKey> partEntryHashRecords = new ArrayList<>();
+
+                for (int i = 0; i < batchSize && cursor.next(); i++) {
+                    CacheDataRow row = cursor.get();
+
+                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0) {
+                        partEntryHashRecords.add(new VersionedKey(
+                            ignite.localNode().id(),
+                            row.key(),
+                            row.version()
+                        ));
+                    }
+                    else
+                        i--;
+                }
+
+                return new ExecutionResult<>(partEntryHashRecords);
+            }
+            catch (Exception e) {
+                String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
+
+                log.error(errMsg, e);
+
+                return new ExecutionResult<>(errMsg + " " + e.getMessage());
+            }
+            finally {
+                part.release();
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    public static class CollectPartitionKeysByBatchJobV2 extends ReconciliationResourceLimitedJob {
+        /**
+         *
+         */
+        private static final long serialVersionUID = 0L;
+
+        /** Partition key. */
+        private PartitionBatchRequest partBatch;
+
+        /**
+         * @param partBatch Partition key.
+         */
+        private CollectPartitionKeysByBatchJobV2(PartitionBatchRequest partBatch) {
             this.partBatch = partBatch;
         }
 

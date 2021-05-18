@@ -37,7 +37,6 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
@@ -54,7 +53,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 
 /**
@@ -76,7 +74,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** Flag indicates that the result of the utility should be logged to the console. */
     private boolean localOutoutMode;
 
-    boolean reconciliationWithSizes;
+    private boolean sizeReconciliationSupport;
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(
@@ -125,12 +123,13 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 .build();
         }
 
-        reconciliationWithSizes = IgniteFeatures.allNodesSupports(
+        sizeReconciliationSupport = IgniteFeatures.allNodesSupports(
             ignite.context(),
             ignite.context().discovery().allNodes(),
             IgniteFeatures.PARTITION_RECONCILIATION_V2);
 
-        if (reconciliationWithSizes) {
+
+        if (sizeReconciliationSupport) {
             for (ClusterNode node : subgrid)
                 jobs.put(new PartitionReconciliationJobV2(arg, startTime, sesId), node);
         }
@@ -164,17 +163,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            if (result instanceof PartitionReconciliationJob) {
-                T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
-
-                res.merge(data.get2().result());
-
-                if (data.get2().errorMessage() != null)
-                    errors.add(nodeId + " - " + data.get2().errorMessage());
-
-                nodeIdToFolder.put(nodeId, data.get1());
-            }
-            else if (result instanceof PartitionReconciliationJobV2) {
+            if (sizeReconciliationSupport) {
                 T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> data = result.getData();
 
                 res.merge(data.get2().result().get1());
@@ -191,11 +180,20 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     errors.add(nodeId + " - " + data.get2().errorMessage());
 
                 nodeIdToFolder.put(nodeId, data.get1());
+            }
+            else {
+                T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
 
+                res.merge(data.get2().result());
+
+                if (data.get2().errorMessage() != null)
+                    errors.add(nodeId + " - " + data.get2().errorMessage());
+
+                nodeIdToFolder.put(nodeId, data.get1());
             }
         }
 
-        if (reconciliationWithSizes)
+        if (sizeReconciliationSupport)
             return new ReconciliationResult(res, partSizesMap, nodeIdToFolder, errors);
         else
             return new ReconciliationResult(res, nodeIdToFolder, errors);

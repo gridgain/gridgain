@@ -93,6 +93,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         this.batchSize = batchSize;
         this.lowerKey = lowerKey;
         this.startTopVer = startTopVer;
+        this.reconConsist = true;
     }
 
     /**
