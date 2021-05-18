@@ -228,19 +228,19 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
                 DataStorageConfiguration dsCfg0 = cfg.getDataStorageConfiguration();
 
                 dsCfg0.setWalSegments(segments)
-                        .setFileIOFactory(new LocationTrackingFileIOFactory(dsCfg0.getFileIOFactory(),
-                                dsCfg0.getWalArchivePath(),
-                                workSegmentLocation,
-                                tmpSegmentLocation));
+                    .setFileIOFactory(new LocationTrackingFileIOFactory(dsCfg0.getFileIOFactory(),
+                        dsCfg0.getWalArchivePath(),
+                        workSegmentLocation,
+                        tmpSegmentLocation));
             });
 
             assertNotNull(workSegmentLocation.get());
             assertNotNull(tmpSegmentLocation.get());
 
             assertEquals("Tmp segment is placed in a different directory than a corresponding WAL segment: [tmp="
-                            + tmpSegmentLocation.get() + ", work=" + workSegmentLocation.get() + ']',
-                    workSegmentLocation.get(),
-                    tmpSegmentLocation.get());
+                    + tmpSegmentLocation.get() + ", work=" + workSegmentLocation.get() + ']',
+                workSegmentLocation.get(),
+                tmpSegmentLocation.get());
         }
         else {
             n0 = startGrid(0, cfg -> {
