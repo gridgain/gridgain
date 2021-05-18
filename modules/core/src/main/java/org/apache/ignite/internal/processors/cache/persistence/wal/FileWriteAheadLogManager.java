@@ -3368,12 +3368,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 }
 
                 for (int i = 0, j = 0; i < toFormat.size(); i++) {
-                    FileDescriptor fd = toFormat.get(i);
+                    File segFile = toFormat.get(i).file();
 
-                    File tmpDst = new File(fd.file().getName() + TMP_SUFFIX);
+                    File tmpDst = segFile.toPath().getParent().resolve(segFile.getName() + TMP_SUFFIX).toFile();
 
                     try {
-                        Files.copy(fd.file().toPath(), tmpDst.toPath());
+                        Files.copy(segFile.toPath(), tmpDst.toPath());
 
                         if (log.isDebugEnabled()) {
                             log.debug("Start formatting WAL segment [filePath=" + tmpDst.getAbsolutePath() +
@@ -3392,10 +3392,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                             fileIO.force();
                         }
 
-                        Files.move(tmpDst.toPath(), fd.file().toPath(), REPLACE_EXISTING, ATOMIC_MOVE);
+                        Files.move(tmpDst.toPath(), segFile.toPath(), REPLACE_EXISTING, ATOMIC_MOVE);
 
                         if (log.isDebugEnabled())
-                            log.debug("WAL segment formatted: " + fd.file().getAbsolutePath());
+                            log.debug("WAL segment formatted: " + segFile.getAbsolutePath());
 
                         // Batch output.
                         if (log.isInfoEnabled() && (i == toFormat.size() - 1 || (i != 0 && i % 9 == 0))) {
@@ -3406,7 +3406,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         }
                     }
                     catch (IOException e) {
-                        throw new StorageException("Failed to format WAL segment: " + fd.file().getAbsolutePath(), e);
+                        throw new StorageException("Failed to format WAL segment: " + segFile.getAbsolutePath(), e);
                     }
                 }
             }
