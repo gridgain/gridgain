@@ -43,14 +43,11 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
     /** */
     @Test
     public void removeBackShift() {
-        HashMap<Integer, Integer> bijection = new HashMap<>();
-        bijection.put(1, 14);
-        bijection.put(2, 14);
-        bijection.put(3, 14);
-        bijection.put(4, 14);
-        bijection.put(5, 14);
-
-        IntMap<String> directPositionMap = bijectionHashFunctionMap(bijection);
+        IntHashMap<String> directPositionMap = new IntHashMap<String>() {
+            @Override protected int index(int key) {
+                return 14;
+            }
+        };
 
         directPositionMap.put(1, value(1));
         directPositionMap.put(2, value(2));
@@ -66,18 +63,11 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
     /** */
     @Test
     public void distance() {
-        HashMap<Integer, Integer> bijection = new HashMap<>();
-        bijection.put(1, 14);
-        bijection.put(2, 14);
-        bijection.put(3, 14);
-        bijection.put(4, 14);
-        bijection.put(5, 14);
-        bijection.put(6, 14);
-        bijection.put(7, 14);
-        bijection.put(8, 14);
-        bijection.put(9, 14);
-
-        IntHashMap<String> directPositionMap = (IntHashMap<String>)bijectionHashFunctionMap(bijection);
+        IntHashMap<String> directPositionMap = new IntHashMap<String>() {
+            @Override protected int index(int key) {
+                return 14;
+            }
+        };
 
         directPositionMap.put(1, value(1));
         directPositionMap.put(2, value(2));
@@ -168,16 +158,5 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
      */
     private static int realCapacityForInitialSize(int initSize) {
         return ((Object[]) U.field(new IntHashMap<String>(initSize), "entries")).length;
-    }
-
-    /**
-     * @param bijection Bijection.
-     */
-    private static IntMap<String> bijectionHashFunctionMap(Map<Integer, Integer> bijection) {
-        return new IntHashMap<String>() {
-            @Override protected int index(int key) {
-                return bijection.get(key);
-            }
-        };
     }
 }

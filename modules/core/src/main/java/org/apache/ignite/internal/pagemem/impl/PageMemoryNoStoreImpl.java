@@ -310,7 +310,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
             Segment seg = segment(pageIdx);
 
             absPtr = seg.absolute(pageIdx);
-        } else {
+        }
+        else {
             // No segments contained a free page.
             Segment[] seg0 = segments;
             Segment allocSeg = seg0[seg0.length - 1];
