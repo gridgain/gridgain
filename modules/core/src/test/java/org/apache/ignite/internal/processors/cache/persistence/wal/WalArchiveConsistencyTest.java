@@ -336,6 +336,9 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
         }
     }
 
+    /**
+     * FileIO factory that enables to track where WAL segments and tmp segments are created.
+     */
     private static final class LocationTrackingFileIOFactory implements FileIOFactory {
         /** */
         private final FileIOFactory delegate;
@@ -349,6 +352,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
         /** */
         private final AtomicReference<String> tmpWalSegmentLocation;
 
+        /** */
         private LocationTrackingFileIOFactory(FileIOFactory delegate,
                                               String archivePath,
                                               AtomicReference<String> workDirWalSegmentLocation,
@@ -359,10 +363,11 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
             this.tmpWalSegmentLocation = tmpWalSegmentLocation;
         }
 
+        /** {@inheritDoc} */
         @Override public FileIO create(File file, OpenOption... modes) throws IOException {
             if (workDirWalSegmentLocation.get() == null
-                    && WAL_NAME_PATTERN.matcher(file.getName()).matches()
-                    && !file.getAbsolutePath().contains(archivePath)
+                && WAL_NAME_PATTERN.matcher(file.getName()).matches()
+                && !file.getAbsolutePath().contains(archivePath)
             ) {
                 workDirWalSegmentLocation.set(file.getParentFile().getAbsolutePath());
             }
