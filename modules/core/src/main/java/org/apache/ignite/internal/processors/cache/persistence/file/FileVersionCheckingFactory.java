@@ -49,6 +49,9 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
     /** Memory configuration. */
     private final DataStorageConfiguration memCfg;
 
+    /** Latest version. */
+    private final int latestVer;
+
     /**
      * @param fileIOFactory File IO factory.
      * @param fileIOFactoryStoreV1 File IO factory for V1 page store and for version checking.
@@ -62,6 +65,17 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
         this.fileIOFactory = fileIOFactory;
         this.fileIOFactoryStoreV1 = fileIOFactoryStoreV1;
         this.memCfg = memCfg;
+
+        int latestVer0 = LATEST_VERSION;
+
+        try {
+            latestVer0 = Integer.parseInt(System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY));
+        }
+        catch (NumberFormatException ignore) {
+            // No override.
+        }
+
+        latestVer = latestVer0;
     }
 
     /** {@inheritDoc} */
@@ -101,14 +115,6 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
      * Resolves latest page store version.
      */
     public int latestVersion() {
-        int latestVer = LATEST_VERSION;
-
-        try {
-            latestVer = Integer.parseInt(System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY));
-        } catch (NumberFormatException e) {
-            // No override.
-        }
-
         return latestVer;
     }
 
