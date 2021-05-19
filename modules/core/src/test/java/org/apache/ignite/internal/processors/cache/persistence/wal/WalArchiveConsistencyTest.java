@@ -16,9 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -27,6 +32,9 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -36,6 +44,8 @@ import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_NAME_PATTERN;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_TEMP_NAME_PATTERN;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -191,6 +201,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
         }
 
         forceCheckpoint();
+
         assertTrue(waitForCondition(() -> walMgr(n).lastTruncatedSegment() == 3, getTestTimeout()));
 
         // Guaranteed recovery from WAL segments.
@@ -198,13 +209,68 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
 
         fill(n, 2, key);
 
+        DataStorageConfiguration dsCfg = n.configuration().getDataStorageConfiguration();
+
+        int walSegments = dsCfg.getWalSegments();
+        File walDir = walMgr(n).getSegmentRouter().getWalWorkDir();
+
         stopAllGrids();
 
-        IgniteEx n0 = startGrid(0, cfg -> {
-            cfg.getDataStorageConfiguration().setWalSegments(segments);
-        });
+        contaminateWalWorkDirWithTmpFiles(walDir, walSegments);
+
+        IgniteEx n0;
+
+        if (walMode == WALMode.FSYNC) {
+            AtomicReference<String> tmpSegmentLocation = new AtomicReference<>(null);
+            AtomicReference<String> workSegmentLocation = new AtomicReference<>(null);
+
+            n0 = startGrid(0, cfg -> {
+                DataStorageConfiguration dsCfg0 = cfg.getDataStorageConfiguration();
+
+                dsCfg0.setWalSegments(segments)
+                    .setFileIOFactory(new LocationTrackingFileIOFactory(dsCfg0.getFileIOFactory(),
+                        dsCfg0.getWalArchivePath(),
+                        workSegmentLocation,
+                        tmpSegmentLocation));
+            });
+
+            assertNotNull(workSegmentLocation.get());
+            assertNotNull(tmpSegmentLocation.get());
+
+            assertEquals("Tmp segment is placed in a different directory than a corresponding WAL segment: [tmp="
+                    + tmpSegmentLocation.get() + ", work=" + workSegmentLocation.get() + ']',
+                workSegmentLocation.get(),
+                tmpSegmentLocation.get());
+        }
+        else {
+            n0 = startGrid(0, cfg -> {
+                cfg.getDataStorageConfiguration().setWalSegments(segments);
+            });
+        }
+
+        checkNoTmpFilesAfterRestart(walDir, walSegments);
 
         assertEquals(key.get(), n0.cache(DEFAULT_CACHE_NAME).size());
+    }
+
+    /**
+     * Create a tmp file in wal work directory to check that they are automatically removed on node startup.
+     */
+    private void contaminateWalWorkDirWithTmpFiles(File walDir, int walSegments) throws IOException {
+        for (int i = 0; i < walSegments; i++) {
+            String tmpSegName = FileDescriptor.fileName(i) + FilePageStoreManager.TMP_SUFFIX;
+
+            Files.createFile(walDir.toPath().resolve(tmpSegName));
+        }
+    }
+
+    /** */
+    private void checkNoTmpFilesAfterRestart(File walDir, int walSegments) {
+        for (int i = 0; i < walSegments; i++) {
+            String tmpSegName = FileDescriptor.fileName(i) + FilePageStoreManager.TMP_SUFFIX;
+
+            assertFalse(Files.exists(walDir.toPath().resolve(tmpSegName)));
+        }
     }
 
     /**
@@ -267,6 +333,49 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
         if (log.isInfoEnabled()) {
             log.info("Fill [keys=" + i + ", totalKeys=" + key.get() +
                 ", segNum=" + segments + ", currSeg=" + walMgr(n).currentSegment() + ']');
+        }
+    }
+
+    /**
+     * FileIO factory that enables to track where WAL segments and tmp segments are created.
+     */
+    private static final class LocationTrackingFileIOFactory implements FileIOFactory {
+        /** */
+        private final FileIOFactory delegate;
+
+        /** */
+        private final String archivePath;
+
+        /** */
+        private final AtomicReference<String> workDirWalSegmentLocation;
+
+        /** */
+        private final AtomicReference<String> tmpWalSegmentLocation;
+
+        /** */
+        private LocationTrackingFileIOFactory(FileIOFactory delegate,
+                                              String archivePath,
+                                              AtomicReference<String> workDirWalSegmentLocation,
+                                              AtomicReference<String> tmpWalSegmentLocation) {
+            this.delegate = delegate;
+            this.archivePath = archivePath;
+            this.workDirWalSegmentLocation = workDirWalSegmentLocation;
+            this.tmpWalSegmentLocation = tmpWalSegmentLocation;
+        }
+
+        /** {@inheritDoc} */
+        @Override public FileIO create(File file, OpenOption... modes) throws IOException {
+            if (workDirWalSegmentLocation.get() == null
+                && WAL_NAME_PATTERN.matcher(file.getName()).matches()
+                && !file.getAbsolutePath().contains(archivePath)
+            ) {
+                workDirWalSegmentLocation.set(file.getParentFile().getAbsolutePath());
+            }
+
+            if (tmpWalSegmentLocation.get() == null && WAL_TEMP_NAME_PATTERN.matcher(file.getName()).matches())
+                tmpWalSegmentLocation.set(file.toPath().toAbsolutePath().getParent().toAbsolutePath().toString());
+
+            return delegate.create(file, modes);
         }
     }
 }
