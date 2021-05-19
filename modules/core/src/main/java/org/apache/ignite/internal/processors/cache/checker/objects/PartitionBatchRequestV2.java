@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,26 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
+import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Pageable partition batch request.
  */
-public class PartitionBatchRequest extends CachePartitionRequest {
+public class PartitionBatchRequestV2 extends CachePartitionRequest {
+    /** If reconciliation of consistency is needed. */
+    public boolean reconConsist;
+
+    /** If reconciliation of cache sizes is needed. */
+    public boolean reconSize;
+
+    /** */
+    public RepairAlgorithm repairAlg;
+
     /**
      *
      */
@@ -45,20 +56,29 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     private final KeyCacheObject lowerKey;
 
     /**
+     *
+     */
+    private Map<UUID, NodePartitionSize> partSizesMap;
+
+    /**
      * Reconciliation start topology version.
      */
     private final AffinityTopologyVersion startTopVer;
 
     /**
+     * @param reconConsist Is reconciliation of consistency needed.
+     * @param reconSize Is reconciliation of cache sizes is needed.
+     * @param repairAlg Repair algorithm.
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
+     * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
      * @param startTopVer Start topology version.
      */
-    public PartitionBatchRequest(
+    public PartitionBatchRequestV2(
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -72,6 +92,41 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         this.partId = partId;
         this.batchSize = batchSize;
         this.lowerKey = lowerKey;
+        this.startTopVer = startTopVer;
+        this.reconConsist = true;
+    }
+
+    /**
+     * @param sesId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param batchSize Batch size.
+     * @param lowerKey Lower key.
+     * @param startTopVer Start topology version.
+     */
+    public PartitionBatchRequestV2(
+        boolean reconConsist,
+        boolean reconSize,
+        RepairAlgorithm repairAlg,
+        long sesId,
+        UUID workloadChainId,
+        String cacheName,
+        int partId,
+        int batchSize,
+        KeyCacheObject lowerKey,
+        Map<UUID, NodePartitionSize> partSizesMap,
+        AffinityTopologyVersion startTopVer
+    ) {
+        super(sesId, workloadChainId);
+        this.reconConsist = reconConsist;
+        this.reconSize = reconSize;
+        this.repairAlg = repairAlg;
+        this.cacheName = cacheName;
+        this.partId = partId;
+        this.batchSize = batchSize;
+        this.lowerKey = lowerKey;
+        this.partSizesMap = partSizesMap;
         this.startTopVer = startTopVer;
     }
 
@@ -100,6 +155,13 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     }
 
     /**
+     * @return Map of partition sizes for reconciliation of cache sizes.
+     */
+    public Map<UUID, NodePartitionSize> partSizesMap() {
+        return partSizesMap;
+    }
+
+    /**
      * @return Reconciliation start topology version.
      */
     public AffinityTopologyVersion startTopVer() {
@@ -108,6 +170,6 @@ public class PartitionBatchRequest extends CachePartitionRequest {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PartitionBatchRequest.class, this);
+        return S.toString(PartitionBatchRequestV2.class, this);
     }
 }

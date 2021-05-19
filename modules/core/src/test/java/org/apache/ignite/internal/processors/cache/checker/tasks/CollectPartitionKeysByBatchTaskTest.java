@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
@@ -91,8 +92,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         CacheObjectContext ctxo = node.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheObjectContext();
 
-        CollectPartitionKeysByBatchTask task = new CollectPartitionKeysByBatchTask();
-        task.map(Collections.EMPTY_LIST, new PartitionBatchRequest(
+        CollectPartitionKeysByBatchTaskV2 task = new CollectPartitionKeysByBatchTaskV2();
+        task.map(Collections.EMPTY_LIST, new PartitionBatchRequestV2(
             true, true, RepairAlgorithm.PRINT_ONLY,
             ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), ver));
@@ -244,8 +245,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         Set<KeyCacheObject> fetched = new HashSet<>();
 
         T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>> firstBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            CollectPartitionKeysByBatchTaskV2.class,
+            new PartitionBatchRequestV2(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), ver)
         ).result();
 
@@ -254,8 +255,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         KeyCacheObject firstMaxKey = firstBatch.get1();
 
         T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>> secondBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            CollectPartitionKeysByBatchTaskV2.class,
+            new PartitionBatchRequestV2(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), ver)
         ).result();
 
@@ -264,8 +265,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         fetched.addAll(secondBatch.get2().keySet());
 
         T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>> thirdBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            CollectPartitionKeysByBatchTaskV2.class,
+            new PartitionBatchRequestV2(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), ver)
         ).result();
 

@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
@@ -47,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Ba
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.verify.ReconType;
@@ -317,8 +319,8 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
      */
     private void handle(Batch workload) throws InterruptedException {
         compute(
-            CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.reconConsist, workload.reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            CollectPartitionKeysByBatchTaskV2.class,
+            new PartitionBatchRequestV2(workload.reconConsist, workload.reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 

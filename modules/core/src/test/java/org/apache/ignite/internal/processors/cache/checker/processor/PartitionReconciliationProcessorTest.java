@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Ba
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -117,7 +118,7 @@ public class PartitionReconciliationProcessorTest {
 
         processor.addTask(new Batch(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
-            .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
+            .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
             .execute();
 
         processor.verify(never()).schedule(any());
@@ -140,7 +141,7 @@ public class PartitionReconciliationProcessorTest {
 
         processor.addTask(new Batch(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
-            .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
+            .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
             .execute();
 
         processor.verify(times(1)).schedule(any(Batch.class));
