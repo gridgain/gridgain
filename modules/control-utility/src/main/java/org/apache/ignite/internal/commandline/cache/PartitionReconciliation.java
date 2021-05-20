@@ -19,6 +19,7 @@ package org.apache.ignite.internal.commandline.cache;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,7 +103,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             "processed by " + PARTITION_RECONCILIATION + " command. If cache names are specified, in form of regular " +
             "expressions, only matching caches will be verified.";
 
-        Map<String, String> paramsDesc = new HashMap<>();
+        Map<String, String> paramsDesc = new LinkedHashMap<>();
 
         paramsDesc.put(FAST_CHECK.toString(),
             "This option allows checking and repairing only partitions that did not pass validation" +
@@ -123,6 +124,12 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             "Amount of potentially inconsistent keys recheck attempts. Value between 1 (inclusive) and 5 (exclusive) should be used." +
                 " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
 
+        paramsDesc.put(CONSISTENCY_RECONCILIATION.toString(),
+            "This option allows checking consistency of partitions. Default value is true.");
+
+        paramsDesc.put(CACHE_SIZE_RECONCILIATION.toString(),
+            "This option allows checking sizes of partitions. Default value is true.");
+
         paramsDesc.put(INCLUDE_SENSITIVE.toString(),
             "Print data to result with sensitive information: keys and values." +
                 " Default value is " + INCLUDE_SENSITIVE.defaultValue() + '.');
@@ -139,6 +146,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             optional(PARALLELISM),
             optional(BATCH_SIZE),
             optional(RECHECK_ATTEMPTS),
+            optional(CONSISTENCY_RECONCILIATION),
+            optional(CACHE_SIZE_RECONCILIATION),
             optional(INCLUDE_SENSITIVE),
             optional(caches));
     }
