@@ -27,16 +27,11 @@
 
 using ignite::odbc::config::Configuration;
 
-/**
- * Display configuration window for user to configure DSN.
- *
- * @param hwndParent Parent window handle.
- * @param config Output configuration.
- * @return True on success and false on fail.
- */
-bool DisplayConnectionWindow(HWND hwndParent, Configuration& config)
+bool DisplayConnectionWindow(void* windowParent, Configuration& config)
 {
     using namespace ignite::odbc::system::ui;
+
+    HWND hwndParent = (HWND) windowParent;
 
     if (!hwndParent)
         return true;

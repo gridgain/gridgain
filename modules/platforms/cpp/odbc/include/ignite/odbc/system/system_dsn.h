@@ -33,10 +33,10 @@ namespace ignite
 /**
  * Display connection window for user to configure connection parameters.
  *
- * @param hwndParent Parent window handle.
+ * @param windowParent Parent window handle.
  * @param config Output configuration.
  * @return True on success and false on fail.
  */
-bool DisplayConnectionWindow(HWND hwndParent, ignite::odbc::config::Configuration& config);
+bool DisplayConnectionWindow(void* windowParent, ignite::odbc::config::Configuration& config);
 
 #endif //_IGNITE_ODBC_SYSTEM_SYSTEM_DSN

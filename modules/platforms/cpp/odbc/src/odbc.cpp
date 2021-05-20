@@ -291,25 +291,10 @@ namespace ignite
         if (!connection)
             return SQL_INVALID_HANDLE;
 
-        DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
-
         std::string connectStr = SqlStringToString(inConnectionString, inConnectionStringLen);
+        connection->Establish(connectStr, windowHandle);
 
-        odbc::config::Configuration config;
-        odbc::config::ConnectionStringParser parser(config);
-        parser.ParseConnectionString(connectStr, &diag);
-
-        if (!HandleParentWindow(windowHandle, config))
-        {
-            diag.Reset();
-            diag.SetHeaderRecord(odbc::SqlResult::AI_ERROR);
-            diag.AddStatusRecord(odbc::SqlState::SHY008_OPERATION_CANCELED, "Connection canceled by user");
-
-            return diag.GetReturnCode();
-        }
-
-        connection->Establish(config);
-
+        DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
         if (!diag.IsSuccessful())
             return diag.GetReturnCode();
 
