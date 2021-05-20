@@ -47,6 +47,9 @@ bool HandleParentWindow(SQLHWND windowHandle, ignite::odbc::config::Configuratio
         LOG_MSG("Parent window is passed. Creating configuration window.");
         return DisplayConnectionWindow(windowHandle, config);
     }
+#else
+    IGNITE_UNUSED(windowHandle);
+    IGNITE_UNUSED(config);
 #endif
     return true;
 }
