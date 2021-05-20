@@ -97,6 +97,8 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
         this.partBatch = partBatch;
 
+        System.out.println("sdjhnehf ignite " + ignite);
+
         sizeReconciliationSupport = IgniteFeatures.allNodesSupports(
             ignite.context(),
             ignite.context().discovery().allNodes(),
@@ -398,11 +400,8 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
                             Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
-                            while (tempMapIter.hasNext()) {
-                                Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
-
+                            while (tempMapIter.hasNext())
                                 partSize.incrementAndGet();
-                            }
 
                             partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 

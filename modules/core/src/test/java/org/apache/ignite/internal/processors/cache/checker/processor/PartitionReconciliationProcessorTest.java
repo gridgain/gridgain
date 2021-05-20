@@ -56,18 +56,15 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.ConsoleTestLogger;
@@ -79,6 +76,7 @@ import org.mockito.verification.VerificationMode;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -321,7 +319,7 @@ public class PartitionReconciliationProcessorTest {
     /**
      * Mocked partition reconciliation processor for testing purposes.
      */
-    private static class MockedProcessor extends PartitionReconciliationProcessor {
+    private static class MockedProcessor extends PartitionReconciliationProcessorV2 {
         /** */
         private final AbstractPipelineProcessor mock = mock(AbstractPipelineProcessor.class);
 
@@ -437,6 +435,7 @@ public class PartitionReconciliationProcessorTest {
                 batchSize,
                 recheckAttempts,
                 recheckDelay,
+                new HashSet<>(Arrays.asList(CONSISTENCY, SIZES)),
                 false,
                 true);
         }

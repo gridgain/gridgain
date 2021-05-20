@@ -93,12 +93,12 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         CacheObjectContext ctxo = node.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheObjectContext();
 
         CollectPartitionKeysByBatchTaskV2 task = new CollectPartitionKeysByBatchTaskV2();
+        Field igniteField = U.findField(task.getClass(), "ignite");
+        igniteField.set(task, node);
         task.map(Collections.EMPTY_LIST, new PartitionBatchRequestV2(
             true, true, RepairAlgorithm.PRINT_ONLY,
             ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), ver));
-        Field igniteField = U.findField(task.getClass(), "ignite");
-        igniteField.set(task, node);
 
         {
             T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>> reduce = task
