@@ -22,6 +22,7 @@
 #include "ignite/odbc/log.h"
 #include "ignite/odbc/utility.h"
 #include "ignite/odbc/system/odbc_constants.h"
+#include "ignite/odbc/system/system_dsn.h"
 
 #include "ignite/odbc/config/connection_string_parser.h"
 #include "ignite/odbc/config/configuration.h"
@@ -32,6 +33,23 @@
 #include "ignite/odbc/dsn_config.h"
 #include "ignite/odbc.h"
 
+/**
+ * Handle window handle.
+ * @param windowHandle Window handle.
+ * @param config Configuration.
+ * @return @c true on success and @c false otherwise.
+ */
+bool HandleParentWindow(SQLHWND windowHandle, ignite::odbc::config::Configuration &config)
+{
+#ifdef _WIN32
+    if (windowHandle)
+    {
+        LOG_MSG("Parent window is passed. Creating configuration window.");
+        return DisplayConnectionWindow(windowHandle, config);
+    }
+#endif
+    return true;
+}
 
 namespace ignite
 {
@@ -261,8 +279,6 @@ namespace ignite
         using utility::SqlStringToString;
         using utility::CopyStringToBuffer;
 
-        UNREFERENCED_PARAMETER(windowHandle);
-
         LOG_MSG("SQLDriverConnect called");
         if (inConnectionString)
             LOG_MSG("Connection String: [" << inConnectionString << "]");
@@ -272,11 +288,24 @@ namespace ignite
         if (!connection)
             return SQL_INVALID_HANDLE;
 
+        DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
+
         std::string connectStr = SqlStringToString(inConnectionString, inConnectionStringLen);
 
-        connection->Establish(connectStr);
+        odbc::config::Configuration config;
+        odbc::config::ConnectionStringParser parser(config);
+        parser.ParseConnectionString(connectStr, &diag);
 
-        const DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
+        if (!HandleParentWindow(windowHandle, config))
+        {
+            diag.Reset();
+            diag.SetHeaderRecord(odbc::SqlResult::AI_ERROR);
+            diag.AddStatusRecord(odbc::SqlState::SHY008_OPERATION_CANCELED, "Connection canceled by user");
+
+            return diag.GetReturnCode();
+        }
+
+        connection->Establish(config);
 
         if (!diag.IsSuccessful())
             return diag.GetReturnCode();
