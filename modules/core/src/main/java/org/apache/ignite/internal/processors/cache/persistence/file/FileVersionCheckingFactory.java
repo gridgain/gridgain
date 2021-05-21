@@ -68,11 +68,15 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
 
         int latestVer0 = LATEST_VERSION;
 
-        try {
-            latestVer0 = Integer.parseInt(System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY));
-        }
-        catch (NumberFormatException ignore) {
-            // No override.
+        String latestVerProp = System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY);
+
+        if (latestVerProp != null) {
+            try {
+                latestVer0 = Integer.parseInt(latestVerProp);
+            }
+            catch (NumberFormatException ignore) {
+                // No override.
+            }
         }
 
         latestVer = latestVer0;
