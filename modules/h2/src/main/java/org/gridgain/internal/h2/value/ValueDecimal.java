@@ -178,7 +178,7 @@ public class ValueDecimal extends Value {
 
     @Override
     public int hashCode() {
-        return value.hashCode();
+        return Float.hashCode(getFloatValue());
     }
 
     @Override
@@ -240,8 +240,7 @@ public class ValueDecimal extends Value {
         // value and scale (thus 2.0 is not equal to 2.00 when using equals;
         // however -0.0 and 0.0 are). Can not use compareTo because 2.0 and 2.00
         // have different hash codes
-        return other instanceof ValueDecimal &&
-                value.equals(((ValueDecimal) other).value);
+        return other instanceof Value && compareTo((Value)other, null, null) == 0;
     }
 
     @Override
