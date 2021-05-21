@@ -3271,8 +3271,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 AtomicLong reconSize = reconciliationCtx.sizes.get(row0.cacheId());
 
                 if (row0.isReady() && !row0.tombstone()) {
+                    //need to increment the real size if the reconciliation cursor has moved beyond this key and does not see the key
                     if (reconciliationCtx.lastKey(row0.cacheId()) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(row0.cacheId())) <= 0)
                         reconSize.incrementAndGet();
+                    //put key in temp collection if reconciliation cursor didn't see the key and can see it further
                     else
                         reconciliationCtx.tempMap.get(row0.cacheId()).put(row0.key(), true);
                 }
@@ -3282,19 +3284,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         /** Size reconciliation logic for remove entry from the cache. */
         public void reconRemove(int cacheId, KeyCacheObject key) {
+            //Need to decrement real size if reconciliation cursor has moved beyond this key and will can not see the key
             if ((reconciliationCtx.lastKey(cacheId) != null &&
                 reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
                 reconciliationCtx.size(cacheId).decrementAndGet();
             else {
                 reconciliationCtx.tempMap.get(cacheId).compute(key, (k, v) -> {
+                    //Reconciliation cursor didn't see the key and cannot see it further. Just remove key from temp collection.
                     if (k != null && v != null)
                         return null;
+                    //Need to decrement real size if reconciliation cursor has moved beyond this key and cursor saw the key
                     else if (v == null && reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0) {
-
                         reconciliationCtx.size(cacheId).decrementAndGet();
 
                         return null;
                     }
+                    //Temp collection not contains the key. Do nothing.
                     else
                         return v;
                 });
@@ -6095,11 +6100,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         KeyCacheObject finalFirstKey = firstKey;
 
                         tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
+                            //Key from previous page. Need to increment real size
                             if (k != null && v != null && reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
                                 partSize.incrementAndGet();
 
                                 return null;
                             }
+                            //Key from next pages. Just remove the key now.
                             else
                                 return null;
 
@@ -6107,7 +6114,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     }
 
                     tempMap.putAll(newTempMap);
-
                 }
             }
 

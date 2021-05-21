@@ -400,8 +400,11 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
                             Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
-                            while (tempMapIter.hasNext())
+                            while (tempMapIter.hasNext()) {
+                                tempMapIter.next();
+
                                 partSize.incrementAndGet();
+                            }
 
                             partReconciliationCtx.isReconciliationInProgress(cacheId, false);
 
