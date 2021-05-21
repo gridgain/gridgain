@@ -33,7 +33,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -281,11 +280,11 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         Random rnd = new Random();
 
         return GridTestUtils.runAsync(() -> {
-                int op = -1;
+                int op;
 
-                long n = -1;
+                long n;
 
-                while(reconResult.get() == null) {
+                while (reconResult.get() == null) {
 
                     if (clear)
                         op = rnd.nextInt(8);
@@ -346,7 +345,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                         case 4:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            cache.getAndPut(n, n+1);
+                            cache.getAndPut(n, n + 1);
 
                             break;
 

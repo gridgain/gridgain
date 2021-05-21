@@ -89,7 +89,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -1768,8 +1767,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         if ((exchangeId().discoveryEvent() instanceof DiscoveryCustomEvent &&
                 (((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage()) instanceof FinalizeCountersDiscoveryMessage)) {
             FinalizeCountersDiscoveryMessage msg = (FinalizeCountersDiscoveryMessage)(((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage());
-
-
 
 //            IgniteCache<Object, Object> cache = cctx.cache(partBatch.cacheName());
 //sharedContext().cacheContext(1).offheap()

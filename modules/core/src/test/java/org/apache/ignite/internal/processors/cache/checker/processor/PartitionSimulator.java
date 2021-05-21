@@ -801,6 +801,7 @@ public class PartitionSimulator extends GridCommonAbstractTest {
         assertTrue(part.size.get() == part.realSize());
 
     }
+
     static void doRecon(Part part) {
 //        IgniteInternalFuture loadFut = GridTestUtils.runAsync(() -> {
             part.partLock.writeLock().lock();
@@ -851,7 +852,7 @@ public class PartitionSimulator extends GridCommonAbstractTest {
                         int sleep0 = (Integer)params.get("sleepInReconCompute");
 
                         part.tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
-                            if (k != null && v!= null && entry.getKey() < firstKey.get()) {
+                            if (k != null && v != null && entry.getKey() < firstKey.get()) {
 //                                if (!part.removesInProgress.contains(entry.getKey()))
                                 if (sleep0 > 0)
                                     doSleep(sleep0);
@@ -968,6 +969,7 @@ public class PartitionSimulator extends GridCommonAbstractTest {
         volatile Integer borderKey;
 
         volatile Map<Integer, Integer> tempMap = new ConcurrentHashMap<>()/*ConcurrentSkipListMap<>()*/;
+
         volatile Set<Integer> removesInProgress = new ConcurrentSkipListSet<>();
 
 
@@ -1141,8 +1143,6 @@ public class PartitionSimulator extends GridCommonAbstractTest {
 //
 //                                    return null;
 //                                });
-
-
 
 //                                tempMap.compute(key, (k, v) -> {
 //                                    System.out.println("in REMOVE start compute " + strThread);

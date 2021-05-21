@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
@@ -47,7 +46,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;

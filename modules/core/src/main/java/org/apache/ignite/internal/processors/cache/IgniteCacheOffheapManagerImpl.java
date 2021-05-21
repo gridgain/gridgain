@@ -1801,7 +1801,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     else if (newSize != 0)
                         cacheSizes.put(cacheId, new AtomicLong(newSize));
 
-                    storageSize.set(Arrays.stream(cacheSizes.values()).map(AtomicLong::get).reduce(0L, Long::sum));
+                    storageSize.set(cacheSizes.values().stream().map(AtomicLong::get).reduce(0L, Long::sum));
                 }
             }
             else {

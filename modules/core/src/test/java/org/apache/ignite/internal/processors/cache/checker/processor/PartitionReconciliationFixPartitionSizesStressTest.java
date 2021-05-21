@@ -17,18 +17,10 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
@@ -46,8 +38,6 @@ import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -177,37 +167,37 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        params.add(new Object[] {1, 0, 1000,  ATOMIC,        PARTITIONED, 0, 1,  null,              100, 1,  8, false});
+        params.add(new Object[] {1, 0, 1000, ATOMIC, PARTITIONED, 0, 1, null, 100, 1, 8, false});
 
-        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, "testCacheGroup1", 100, 1,  8, false});
+        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, "testCacheGroup1", 100, 1, 8, false});
 
-        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 32, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 32, null, 100, 1, 8, false});
 
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, null,              100, 1,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 100, 1, 8, false});
 
-        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              10,  3,  8, false});
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 10, 3, 8, false});
 
-        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 1, 12, null,              10,  3,  8, false});
+        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 1, 12, null, 10, 3, 8, false});
 
-        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10,  3,  8, false});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 3, 8, false});
 
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 17, null,              10,  3,  8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 17, null, 10, 3, 8, false});
 
-        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, false});
+        params.add(new Object[] {1, 0, 3000, ATOMIC,PARTITIONED, 0, 1, null, 1, 10, 8, false});
 
-        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, false});
+        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, false});
 
-        params.add(new Object[] {4, 0, 3000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, false});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, false});
 
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, false});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});
 
-        params.add(new Object[] {1, 0, 3000,  ATOMIC,        PARTITIONED, 0, 1,  null,              1,   10, 8, true});
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, true});
 
-        params.add(new Object[] {3, 0, 3000,  ATOMIC,        PARTITIONED, 0, 10, null,              1,   10, 8, true});
+        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, true});
 
-        params.add(new Object[] {4, 0, 1000,  TRANSACTIONAL, PARTITIONED, 2, 12, null,              1,   10, 8, true});
+        params.add(new Object[] {4, 0, 1000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, true});
 
-        params.add(new Object[] {4, 0, 10000, ATOMIC,        REPLICATED,  0, 12, "testCacheGroup1", 1,   10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, true});
 
         return params;
     }

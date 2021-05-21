@@ -128,7 +128,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             ignite.context().discovery().allNodes(),
             IgniteFeatures.PARTITION_RECONCILIATION_V2);
 
-
         if (sizeReconciliationSupport) {
             for (ClusterNode node : subgrid)
                 jobs.put(new PartitionReconciliationJobV2(arg, startTime, sesId), node);

@@ -107,7 +107,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>  partSizesMap() {
+    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;
     }
 

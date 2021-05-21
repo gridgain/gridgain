@@ -42,7 +42,6 @@ public class PartitionReconciliationFixPartitionSizesPersistenceStressTest exten
 
         cfg.setDataStorageConfiguration(memCfg);
 
-
         cfg.setConsistentId(name);
 
         return cfg;

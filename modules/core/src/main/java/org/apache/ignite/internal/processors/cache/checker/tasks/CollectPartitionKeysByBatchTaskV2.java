@@ -357,14 +357,12 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                    cacheDataStore.reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA)  :
+                    cacheDataStore.reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
                     cacheDataStore.reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
 
                     List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-                    boolean hasNext = true;
-
-                    hasNext = cursor.next();
+                    boolean hasNext = cursor.next();
 
                     for (int i = 0; (i < batchSize && hasNext); i++) {
 

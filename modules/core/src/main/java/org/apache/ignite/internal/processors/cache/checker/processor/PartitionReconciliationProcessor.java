@@ -36,7 +36,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
@@ -49,18 +48,14 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.Collections.EMPTY_SET;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
 
 /**
  * The base point of partition reconciliation processing.

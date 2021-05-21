@@ -166,7 +166,7 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
         if (rnd.nextBoolean())
             reconTypes.add(SIZES);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4,reconTypes,  cacheName);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4,reconTypes, cacheName);
 
         log.info(">>>> Partition reconciliation finished");
 
