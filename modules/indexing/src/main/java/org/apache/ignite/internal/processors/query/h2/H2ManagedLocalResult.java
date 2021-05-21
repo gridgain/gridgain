@@ -695,6 +695,19 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** */
     private Map<Value, Value[]> createDistinctMap() {
-        return USE_TREEMAP ? new TreeMap<>(session.getDatabase().getCompareMode()) : new HashMap<>();
+        boolean useTreeMap = USE_TREEMAP;
+
+        if (!useTreeMap) {
+            if (distinctIndexes != null) {
+                for (int i : distinctIndexes) {
+                    if (expressions[i].getType().getValueType() == Value.DECIMAL)
+                        useTreeMap = true;
+                }
+            }
+            else
+                useTreeMap = Arrays.stream(expressions).anyMatch(e -> e.getType().getValueType() == Value.DECIMAL);
+        }
+
+        return useTreeMap ? new TreeMap<>(session.getDatabase().getCompareMode()) : new HashMap<>();
     }
 }
