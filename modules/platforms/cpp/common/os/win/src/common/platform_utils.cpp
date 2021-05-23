@@ -21,6 +21,18 @@
 
 #include <ignite/common/platform_utils.h>
 
+// Original code is suggested by MSDN at
+// https://docs.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time
+// Modified to fit larger time values
+void TimetToFileTime(time_t tt, LPFILETIME pft)
+{
+    ULARGE_INTEGER uli;
+    uli.QuadPart = tt * 10000000 + 116444736000000000LL;
+
+    pft->dwLowDateTime = uli.LowPart;
+    pft->dwHighDateTime = uli.HighPart;
+}
+
 namespace ignite
 {
     namespace common
@@ -41,12 +53,43 @@ namespace ignite
 
         bool IgniteGmTime(time_t in, tm& out)
         {
-            return gmtime_s(&out, &in) == 0;
+            FILETIME fileTime;
+            TimetToFileTime(in, &fileTime);
+
+            SYSTEMTIME localTime;
+            if (!FileTimeToSystemTime(&fileTime, &localTime))
+                return false;
+
+            SYSTEMTIME systemTime;
+            if (!SystemTimeToTzSpecificLocalTime(NULL, &localTime, &systemTime))
+                return false;
+
+            out.tm_year = systemTime.wYear - 1900;
+            out.tm_mon = systemTime.wMonth - 1;
+            out.tm_mday = systemTime.wDay;
+            out.tm_hour = systemTime.wHour;
+            out.tm_min = systemTime.wMinute;
+            out.tm_sec = systemTime.wSecond;
+
+            return true;
         }
 
         bool IgniteLocalTime(time_t in, tm& out)
-        {
-            return localtime_s(&out, &in) == 0;
+        {            FILETIME fileTime;
+            TimetToFileTime(in, &fileTime);
+
+            SYSTEMTIME localTime;
+            if (!FileTimeToSystemTime(&fileTime, &localTime))
+                return false;
+
+            out.tm_year = localTime.wYear - 1900;
+            out.tm_mon = localTime.wMonth - 1;
+            out.tm_mday = localTime.wDay;
+            out.tm_hour = localTime.wHour;
+            out.tm_min = localTime.wMinute;
+            out.tm_sec = localTime.wSecond;
+
+            return true;
         }
 
         std::string GetEnv(const std::string& name)
