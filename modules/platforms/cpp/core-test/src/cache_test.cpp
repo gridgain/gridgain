@@ -171,6 +171,32 @@ struct CacheNativePersistenceTestSuiteFixture
 
         ignite_test::ClearLfs();
     }
+
+    /**
+     * Check whether WAL is in required state.
+     * @param enabled Whether WAL should be enabled or not.
+     * @param cache Cache name.
+     * @return true if complete.
+     */
+    bool IsWalInState(bool enabled, std::string& cache)
+    {
+        return grid0.GetCluster().IsWalEnabled(cache) == enabled;
+    }
+
+    /**
+     * Wait for WAL state.
+     * @param enabled Whether WAL should be enabled or not.
+     * @param cache Cache name.
+     * @param timeout Timeout to wait.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    bool WaitForWalState(bool enabled, std::string& cache, int32_t timeout = 5000)
+    {
+        return ignite_test::WaitForCondition(
+            boost::bind(&CacheNativePersistenceTestSuiteFixture::IsWalInState, this, enabled, cache),
+            timeout
+        );
+    }
 };
 
 BOOST_FIXTURE_TEST_SUITE(CacheTestSuite, CacheTestSuiteFixture)
@@ -780,12 +806,13 @@ BOOST_AUTO_TEST_CASE(TestWal)
     cluster.SetActive(true);
 
     cache::Cache<int, int> cache = Cache();
+    std::string cacheName = cache.GetName();
 
-    BOOST_REQUIRE(cluster.IsWalEnabled(cache.GetName()));
-    cluster.DisableWal(cache.GetName());
-    BOOST_REQUIRE(!cluster.IsWalEnabled(cache.GetName()));
-    cluster.EnableWal(cache.GetName());
-    BOOST_REQUIRE(cluster.IsWalEnabled(cache.GetName()));
+    BOOST_REQUIRE(cluster.IsWalEnabled(cacheName));
+    cluster.DisableWal(cacheName);
+    BOOST_REQUIRE(WaitForWalState(false, cacheName));
+    cluster.EnableWal(cacheName);
+    BOOST_REQUIRE(WaitForWalState(true, cacheName));
 
     BOOST_CHECK_THROW(cluster.IsWalEnabled("foo"), IgniteError);
     BOOST_CHECK_THROW(cluster.DisableWal("foo"), IgniteError);
