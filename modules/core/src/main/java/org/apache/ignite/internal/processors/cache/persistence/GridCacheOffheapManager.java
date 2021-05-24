@@ -2176,11 +2176,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             AtomicLong pageListCacheLimit = ((GridCacheDatabaseSharedManager) ctx.database()).pageListCacheLimitHolder(grp.dataRegion());
 
+            IgniteCacheDatabaseSharedManager dbMgr = ctx.database();
+
+            dbMgr.checkpointReadLock();
+
             if (init.compareAndSet(false, true)) {
-                IgniteCacheDatabaseSharedManager dbMgr = ctx.database();
-
-                dbMgr.checkpointReadLock();
-
                 try {
                     Metas metas = getOrAllocatePartitionMetas();
 
@@ -2422,6 +2422,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
             }
             else {
+                dbMgr.checkpointReadUnlock();
+
                 U.await(latch);
 
                 delegate0 = delegate;
