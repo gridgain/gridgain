@@ -110,7 +110,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSslSelfTest extends GridTcp
     }
 
     @Test
-    public void sentTestMessageOneToAnotherWithHandshake() throws Exception {
+    @Override public void sentTestMessageOneToAnotherWithHandshake() throws Exception {
         super.sentTestMessageOneToAnotherWithHandshake();
     }
 }

@@ -29,6 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * Job cancellation request.
  */
 public class GridJobCancelRequest implements Message {
+
+    private static final long MAGIC_NUMBER = 38474979L;
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,6 +42,8 @@ public class GridJobCancelRequest implements Message {
 
     /** */
     private boolean sys;
+
+    private long magicNumber;
 
     /**
      * No-op constructor to support {@link Externalizable} interface.
@@ -63,10 +67,7 @@ public class GridJobCancelRequest implements Message {
      * @param jobId Job ID.
      */
     public GridJobCancelRequest(@Nullable IgniteUuid sesId, @Nullable IgniteUuid jobId) {
-        assert sesId != null || jobId != null;
-
-        this.sesId = sesId;
-        this.jobId = jobId;
+        this(sesId, jobId, false);
     }
 
     /**
@@ -80,6 +81,8 @@ public class GridJobCancelRequest implements Message {
         this.sesId = sesId;
         this.jobId = jobId;
         this.sys = sys;
+
+        this.magicNumber = MAGIC_NUMBER;
     }
 
     /**
@@ -133,12 +136,18 @@ public class GridJobCancelRequest implements Message {
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeIgniteUuid("sesId", sesId))
+                if (!writer.writeLong("magicNumber", magicNumber))
                     return false;
 
                 writer.incrementState();
 
             case 2:
+                if (!writer.writeIgniteUuid("sesId", sesId))
+                    return false;
+
+                writer.incrementState();
+
+            case 3:
                 if (!writer.writeBoolean("sys", sys))
                     return false;
 
@@ -166,6 +175,16 @@ public class GridJobCancelRequest implements Message {
                 reader.incrementState();
 
             case 1:
+                magicNumber = reader.readLong("magicNumber");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+                assert magicNumber == MAGIC_NUMBER : "magicNumber=" + magicNumber;
+
+            case 2:
                 sesId = reader.readIgniteUuid("sesId");
 
                 if (!reader.isLastRead())
@@ -173,7 +192,7 @@ public class GridJobCancelRequest implements Message {
 
                 reader.incrementState();
 
-            case 2:
+            case 3:
                 sys = reader.readBoolean("sys");
 
                 if (!reader.isLastRead())
@@ -193,7 +212,7 @@ public class GridJobCancelRequest implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 3;
+        return 4;
     }
 
     /** {@inheritDoc} */
