@@ -25,7 +25,9 @@ import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
@@ -84,7 +86,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
 
 
     @Test
-    public void dbg() {
+    public void dbg() throws IgniteInterruptedCheckedException {
         msql(grid(0),
 
             "CREATE TABLE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (\n" +
@@ -130,6 +132,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
             " ANALYZE PIM_ATG_PART_AND_ASSET (TYPE) WITH \"DISTINCT=4,NULLS=0,TOTAL=538925,SIZE=22\"\n" +
             " ANALYZE PIM_ATG_PART_AND_ASSET (MODIFY_TIME) WITH \"DISTINCT=422992,NULLS=0,TOTAL=538925,SIZE=6\"\n" +
             " ANALYZE PIM_ATG_PART_AND_ASSET (PART_ID) WITH \"DISTINCT=16426,NULLS=0,TOTAL=538925,SIZE=8\"\n" +
+
             " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (LANGUAGE) WITH \"DISTINCT=9,NULLS=0,TOTAL=878553,SIZE=2\"\n" +
             " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (STATUS) WITH \"DISTINCT=1,NULLS=0,TOTAL=878553,SIZE=1\"\n" +
             " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ATTRIBUTE_ID) WITH \"DISTINCT=10,NULLS=0,TOTAL=878553,SIZE=12\"\n" +
@@ -140,6 +143,8 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
             " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (MODIFY_TIME) WITH \"DISTINCT=529649,NULLS=0,TOTAL=878553,SIZE=6\"\n" +
             " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (IS_MULTIPLE_VALUE) WITH \"DISTINCT=1,NULLS=0,TOTAL=878553,SIZE=1\"\n");
 
+        U.sleep(3000);
+
         sql(
             "select t1.PART_ID, t2.ATTRIBUTE_VALUE from PIM_ATG_PART_AND_ASSET t1, PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES t2 where \n" +
                 "t1.PART_ID IN ('121-1012', '121-1012E')\n" +
@@ -149,7 +154,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
             "explain select t1.PART_ID, t2.ATTRIBUTE_VALUE from PIM_ATG_PART_AND_ASSET t1, " +
                 "PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES t2  " +
                 "where \n" +
-                "t1.PART_ID IN ('121-1012', '121-1012E')\n" +
+                "t1.PART_ID IN ('121-1012', '121-1012E', '121-1012LTM', '121-1013', '121-1013LTM', '121-101A', '121-101ALTM', '121-1022', '121-1022E', '121-1023', '121-1023LTM', '121-1043', '121-1043E', '122-1011', '122-1012', '122-1012E', '122-1012LTM', '122-1013', '122-1013E', '122-1022', '122-1022E', '122-1031', '122-1031E', '122-1032', '122-1032-KEY', '122-1032E', '122-1032LTM', '122-1033', '122-1033E', '122-1033LTM', '122-103E', '122-1052', '122-1061', '122-1062', '122-1062E', '122-1063', '122-1063E', '122-106E', '122-10AE', '122-10G3', '123-100A-INT', '123-100ALTM', '123-1011', '123-1012', '123-1012LTM', '123-1013', '123-1014', '123-1015', '123-1015E', '123-1015LTM', '123-1022', '123-1026', '123-1027', '123-102F', '123-1031', '123-1032', '123-1032E', '123-1032LTM', '123-1033', '123-1033-INT', '123-1033E', '123-1033LTM', '123-1034', '123-1034E', '123-1035', '123-1035E', '123-1035LTM', '123-103B', '123-103BLTM', '123-103E', '123-103ELTM', '123-1052', '123-1055', '123-1056', '123-105C', '123-105F', '123-1061', '123-1062', '123-1062E', '123-1063', '123-1063E', '123-1064', '123-1065', '123-1065E', '123-106B', '123-106BE', '123-106E', '123-106G', '124-1032', '124-1034', '125-1002', '125-1002E', '125-1005', '125-1005LTM', '125-100B', '125-1011', '125-1011E', '125-1012', '125-1012E', '125-1012LTM', '125-1014', '125-1015', '125-1015E', '125-1017', '125-101J', '125-101K', '125-1025', '125-102J', '125-1032', '125-1032E', '125-1032LTM', '125-1034', '125-1034E', '125-1034LTM', '125-1035', '125-1035E', '125-1035LTM', '125-1037', '125-1039', '125-103B', '125-103J', '125-103JE', '125-103JLTM', '125-103K', '125-103KE', '125-1055', '125-1055E', '125-1062', '125-1062E', '125-1064', '125-1065', '125-1065E', '125-106J', '125-106JE', '125-10B5', '125-10H5', '125-10HB', '125-10HBE', '126-1012', '126-1013', '127-100A', '127-100ALTM', '127-1012', '127-1012E', '127-1013', '127-1013E', '127-1013LTM', '127-1022', '127-1022E', '127-1023', '127-1023E', '127-1043', '127-1046', '127-1046E', '128-1012', '128-1022', '128-1034', '128-1052', '12A-1015', '222-1032LTM', 'G3838AA', 'G3900-63002', 'G3903-61004')\n" +
                 "and t1.ASSET_ID=t2.ASSET_ID and t1.LANGUAGE='en' and t2.ATTRIBUTE_ID='ExternalAssetURL' and t2.LANGUAGE='en' and t1.type='PartNumberImage'").getAll();
 
         System.out.println("+++ " + res);
