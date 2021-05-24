@@ -82,6 +82,79 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
         assertEquals("Invalid results:\n" + res, KEY_CNT, res.size());
     }
 
+
+    @Test
+    public void dbg() {
+        msql(grid(0),
+
+            "CREATE TABLE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (\n" +
+            "\tASSET_ID VARCHAR,\n" +
+            "\tATTRIBUTE_ID VARCHAR,\n" +
+            "\tLANGUAGE VARCHAR,\n" +
+            "\tATTRIBUTE_VALUE VARCHAR,\n" +
+            "\tATTRIBUTES_STRING VARCHAR,\n" +
+            "\tIS_MULTIPLE_VALUE VARCHAR,\n" +
+            "\tCREATE_TIME TIMESTAMP,\n" +
+            "\tMODIFY_TIME TIMESTAMP,\n" +
+            "\tSTATUS VARCHAR,\n" +
+            "\tCONSTRAINT PK_PUBLIC_PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES PRIMARY KEY (ASSET_ID,ATTRIBUTE_ID,LANGUAGE,ATTRIBUTE_VALUE)\n" +
+            ") WITH \"template=replicated, CACHE_NAME=ATGC16\";\n" +
+
+            "CREATE TABLE PIM_ATG_PART_AND_ASSET (\n" +
+            "\tPART_ID VARCHAR,\n" +
+            "\tASSET_ID VARCHAR,\n" +
+            "\tTYPE VARCHAR,\n" +
+            "\tLANGUAGE VARCHAR,\n" +
+            "\tMETA_VALUES VARCHAR,\n" +
+            "\tCREATE_TIME TIMESTAMP,\n" +
+            "\tMODIFY_TIME TIMESTAMP,\n" +
+            "\tSTATUS VARCHAR,\n" +
+            "\tCONSTRAINT PK_PUBLIC_PIM_ATG_PART_AND_ASSET PRIMARY KEY (PART_ID,ASSET_ID,TYPE,LANGUAGE)\n" +
+            ") WITH \"template=partitioned,CACHE_NAME=ATGC12,AFFINITY_KEY=PART_ID\";\n" +
+
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES_IDX_ASSET_ID ON PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ASSET_ID);\n" +
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES_IDX_LANGUAGE ON PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (LANGUAGE);\n" +
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES_IDX_ASSET_ID_LANGUAGE ON PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ASSET_ID, LANGUAGE);\n" +
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES_IDX_LANGUAGE_ATTRIBUTE_ID ON PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (LANGUAGE, ATTRIBUTE_ID);\n" +
+
+
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_PART_AND_ASSET_IDX_PART_ID ON PIM_ATG_PART_AND_ASSET (PART_ID);\n" +
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_PART_AND_ASSET_IDX_LANGUAGE ON PIM_ATG_PART_AND_ASSET (LANGUAGE);\n" +
+            "CREATE INDEX IF NOT EXISTS PIM_ATG_PART_AND_ASSET_IDX_LANGUAGE_PART_ID ON PIM_ATG_PART_AND_ASSET (LANGUAGE, PART_ID);");
+
+        msql(grid(0), " ANALYZE PIM_ATG_PART_AND_ASSET (LANGUAGE) WITH \"DISTINCT=9,NULLS=0,TOTAL=538925,SIZE=2\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (META_VALUES) WITH \"DISTINCT=30,NULLS=519586,TOTAL=538925,SIZE=7\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (STATUS) WITH \"DISTINCT=1,NULLS=0,TOTAL=538925,SIZE=1\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (CREATE_TIME) WITH \"DISTINCT=422992,NULLS=0,TOTAL=538925,SIZE=6\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (ASSET_ID) WITH \"DISTINCT=44824,NULLS=0,TOTAL=538925,SIZE=10\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (TYPE) WITH \"DISTINCT=4,NULLS=0,TOTAL=538925,SIZE=22\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (MODIFY_TIME) WITH \"DISTINCT=422992,NULLS=0,TOTAL=538925,SIZE=6\"\n" +
+            " ANALYZE PIM_ATG_PART_AND_ASSET (PART_ID) WITH \"DISTINCT=16426,NULLS=0,TOTAL=538925,SIZE=8\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (LANGUAGE) WITH \"DISTINCT=9,NULLS=0,TOTAL=878553,SIZE=2\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (STATUS) WITH \"DISTINCT=1,NULLS=0,TOTAL=878553,SIZE=1\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ATTRIBUTE_ID) WITH \"DISTINCT=10,NULLS=0,TOTAL=878553,SIZE=12\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ATTRIBUTE_VALUE) WITH \"DISTINCT=128355,NULLS=0,TOTAL=878553,SIZE=29\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (CREATE_TIME) WITH \"DISTINCT=529615,NULLS=0,TOTAL=878553,SIZE=6\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ATTRIBUTES_STRING) WITH \"DISTINCT=1,NULLS=0,TOTAL=878553,SIZE=0\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (ASSET_ID) WITH \"DISTINCT=45835,NULLS=0,TOTAL=878553,SIZE=10\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (MODIFY_TIME) WITH \"DISTINCT=529649,NULLS=0,TOTAL=878553,SIZE=6\"\n" +
+            " ANALYZE PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES (IS_MULTIPLE_VALUE) WITH \"DISTINCT=1,NULLS=0,TOTAL=878553,SIZE=1\"\n");
+
+        sql(
+            "select t1.PART_ID, t2.ATTRIBUTE_VALUE from PIM_ATG_PART_AND_ASSET t1, PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES t2 where \n" +
+                "t1.PART_ID IN ('121-1012', '121-1012E')\n" +
+                "and t1.ASSET_ID=t2.ASSET_ID and t1.LANGUAGE='en' and t2.ATTRIBUTE_ID='ExternalAssetURL' and t2.LANGUAGE='en' and t1.type='PartNumberImage'").getAll();
+
+        List<List<?>> res = sql(
+            "explain select t1.PART_ID, t2.ATTRIBUTE_VALUE from PIM_ATG_PART_AND_ASSET t1, " +
+                "PIM_ATG_ASSET_DYNAMIC_ATTRIBUTES t2  " +
+                "where \n" +
+                "t1.PART_ID IN ('121-1012', '121-1012E')\n" +
+                "and t1.ASSET_ID=t2.ASSET_ID and t1.LANGUAGE='en' and t2.ATTRIBUTE_ID='ExternalAssetURL' and t2.LANGUAGE='en' and t1.type='PartNumberImage'").getAll();
+
+        System.out.println("+++ " + res);
+    }
+
     /**
      */
     @Test
@@ -146,6 +219,19 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
     private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
+            .setLocal(true)
             .setArgs(args), false);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private List<FieldsQueryCursor<List<?>>> msql(IgniteEx ign, String sql, Object... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
+            .setLazy(true)
+            .setArgs(args), false, false);
     }
 }

@@ -474,6 +474,8 @@ public class H2Utils {
         assert oldCtx == null || oldCtx == qctx || s.memoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
+
+        s.getTrace().setLevel(9);
     }
 
     /**

@@ -47,6 +47,10 @@ public class ObjectStatisticsImpl implements Cloneable, ObjectStatistics {
 
         assert colNameToStat != null : "colNameToStat != null";
 
+        long fff = colNameToStat.values().stream().map(ColumnStatistics::total).max(Long::compareTo).orElse(0L);
+        if (fff > rowsCnt)
+            rowsCnt = fff;
+
         this.rowsCnt = rowsCnt;
         this.colNameToStat = colNameToStat;
     }
