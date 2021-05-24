@@ -314,7 +314,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         assertFalse(cache4_group1.size() == 100);
         assertFalse(cache5_group1.size() == 100);
 
-
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
@@ -382,7 +381,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         assertFalse(cache.size() == entryCount);
 
-
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
@@ -434,7 +432,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
-
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);

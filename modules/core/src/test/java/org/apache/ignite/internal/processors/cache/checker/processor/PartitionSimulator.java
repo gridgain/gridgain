@@ -972,7 +972,6 @@ public class PartitionSimulator extends GridCommonAbstractTest {
 
         volatile Set<Integer> removesInProgress = new ConcurrentSkipListSet<>();
 
-
         Part(int count, int keysPerPage) {
             this.pagesCount = count;
             this.keysPerPage = keysPerPage;
