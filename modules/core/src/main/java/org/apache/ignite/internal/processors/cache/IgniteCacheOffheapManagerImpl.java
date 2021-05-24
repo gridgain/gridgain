@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1675,7 +1674,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 tree().reconciliationCtx = reconciliationCtx;
             }
 
-            reconciliationCtx.isReconciliationInProgress(cacheId, true);
+            reconciliationCtx.sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
             return reconciliationCtx;
         }
@@ -3065,17 +3064,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException {
-                while (!busyLock.enterBusy()) {
-                    if (nodeIsStopping.get())
-                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            while (!busyLock.enterBusy()) {
+                if (nodeIsStopping.get())
+                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                    try {
-                        sleep(5);
-                    }
-                    catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                try {
+                    sleep(5);
                 }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
 
             try {
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -3094,11 +3093,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** Context for a cache size reconciliation. */
         public static class ReconciliationContext {
-            /** */
-            private final Map<Integer, Boolean> isReconciliationInProgress = new ConcurrentHashMap<>();
+            public enum SizeReconciliationState {
+                NOT_STARTED,
+                IN_PROGRESS,
+                FINISHED
+            }
 
             /** */
-            public final Map<Integer, Boolean> isReconciliationIsFinished = new ConcurrentHashMap<>();
+            private final Map<Integer, SizeReconciliationState> sizeReconciliationState = new ConcurrentHashMap<>();
 
             /** */
             private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
@@ -3116,14 +3118,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             public static final KeyComparator KEY_COMPARATOR = new KeyComparator();
 
             /** */
-            public Boolean isReconciliationInProgress(int cacheId) {
-                isReconciliationInProgress.putIfAbsent(cacheId, false);
-                return isReconciliationInProgress.get(cacheId);
+            public SizeReconciliationState sizeReconciliationState(int cacheId) {
+                return sizeReconciliationState.get(cacheId);
             }
 
             /** */
-            public void isReconciliationInProgress(int cacheId, boolean flag) {
-                isReconciliationInProgress.put(cacheId, flag);
+            public void sizeReconciliationState(int cacheId, SizeReconciliationState sizeReconciliationState) {
+                this.sizeReconciliationState.put(cacheId, sizeReconciliationState);
             }
 
             /** */

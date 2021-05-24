@@ -133,6 +133,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 jobs.put(new PartitionReconciliationJobV2(arg, startTime, sesId), node);
         }
         else {
+            log.warning("Partition size reconciliation is not supported by all nodes");
+
             for (ClusterNode node : subgrid)
                 jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
         }

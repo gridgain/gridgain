@@ -972,7 +972,6 @@ public class PartitionSimulator extends GridCommonAbstractTest {
 
         volatile Set<Integer> removesInProgress = new ConcurrentSkipListSet<>();
 
-
         Part(int count, int keysPerPage) {
             this.pagesCount = count;
             this.keysPerPage = keysPerPage;
@@ -1193,7 +1192,5 @@ public class PartitionSimulator extends GridCommonAbstractTest {
 
         volatile ConcurrentSkipListSet<Integer> keys = new ConcurrentSkipListSet<>();
     }
-
-//    В тикете было описано как по логам определять наличие расхождения LWM и HWM. Если до того как стрельнет "AssertionError: LWM after HWM" пройдет мало времени, то вероятно мы не успеем в полуручном режиме починить LWM и HWM. Возможно мы могли бы вместо того чтобы сразу ассертить попробовать автоматически починить эту проблему.
 
 }

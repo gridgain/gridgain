@@ -60,6 +60,8 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**
@@ -96,8 +98,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         this.partBatch = partBatch;
-
-        System.out.println("sdjhnehf ignite " + ignite);
 
         sizeReconciliationSupport = IgniteFeatures.allNodesSupports(
             ignite.context(),
@@ -314,9 +314,8 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                 }
 
                 if (partReconciliationCtx != null &&
-                    !partReconciliationCtx.isReconciliationInProgress(cacheId) &&
-                    partReconciliationCtx.lastKey(cacheId) == null &&
-                    partReconciliationCtx.isReconciliationIsFinished.get(cacheId) == null) {
+                    partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
+                    partReconciliationCtx.lastKey(cacheId) == null) {
 
                     cacheDataStore.block();
 
@@ -365,13 +364,11 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     boolean hasNext = cursor.next();
 
                     for (int i = 0; (i < batchSize && hasNext); i++) {
-
                         CacheDataRow row = cursor.get();
 
                         if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
                             i--;
                         else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
-
                             newLowerKey = row.key();
 
                             partEntryHashRecords.add(new VersionedKey(
@@ -387,14 +384,14 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     if (reconSize && !hasNext &&
                         ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                             (lowerKey == null || lowerKey.equals(newLowerKey))) &&
-                        partReconciliationCtx.isReconciliationInProgress(cacheId)) {
+                        partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
 
                         nodeSize.lastKey((partReconciliationCtx.lastKey(cacheId)));
 
                         cacheDataStore.block();
 
                         try {
-                            partReconciliationCtx.isReconciliationInProgress(cacheId, false);
+                            partReconciliationCtx.sizeReconciliationState(cacheId, FINISHED);
 
                             Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
 
@@ -404,8 +401,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                                 partSize.incrementAndGet();
                             }
 
-                            partReconciliationCtx.isReconciliationInProgress(cacheId, false);
-
                             if (partBatch.repairAlg != RepairAlgorithm.PRINT_ONLY)
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
                             else
@@ -414,8 +409,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                             nodeSize.lastKey(null);
 
                             nodeSize.inProgress(false);
-
-                            partReconciliationCtx.isReconciliationIsFinished.put(cacheId, true);
                         }
                         finally {
                             cacheDataStore.unblock();
@@ -432,7 +425,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     return new ExecutionResult<>(errMsg + " " + e.getMessage());
                 }
                 finally {
-
                     part.release();
                 }
             }

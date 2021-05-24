@@ -88,6 +88,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.FALSE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.READY;
@@ -457,7 +458,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.isReconciliationInProgress(newRow0.cacheId()))
+            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS)
                 p.reconReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
@@ -496,7 +497,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (p.row instanceof CacheDataRowAdapter)
                 row0 = (CacheDataRowAdapter) p.row;
 
-            if (reconciliationCtx != null && row0 != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()))
+            if (reconciliationCtx != null && row0 != null && reconciliationCtx.sizeReconciliationState(row0.cacheId()) == IN_PROGRESS)
                 p.reconInsert(p.row);
 
             // Check if split happened.
@@ -4900,12 +4901,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 CacheDataRowAdapter oldRow0;
 
                 boolean oldIsTombstone = false;
-                    oldRow0 = (CacheDataRowAdapter)rmvd;
+                oldRow0 = (CacheDataRowAdapter)rmvd;
 
-                    if (oldRow0.tombstone())
-                        oldIsTombstone = true;
+                if (oldRow0.tombstone())
+                    oldIsTombstone = true;
 
-                if (reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(row0.cacheId()) && rmvd != null && !oldIsTombstone)
+                if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(row0.cacheId()) == IN_PROGRESS && rmvd != null && !oldIsTombstone)
                     reconRemoveFromLeaf(row);
             }
 
@@ -6057,7 +6058,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
             }
 
-            if (reconCursor && reconciliationCtx != null && reconciliationCtx.isReconciliationInProgress(cacheId)) {
+            if (reconCursor && reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
                 KeyCacheObject lastKey = null;
                 KeyCacheObject firstKey = null;
 
