@@ -4259,7 +4259,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param <V> type of values.
      * @return Cache instance for given name.
      */
-    public <K, V> IgniteInternalCache<K, V> cache(String name) {
+    public <K, V> @Nullable IgniteInternalCache<K, V> cache(String name) {
         assert name != null;
 
         if (log.isDebugEnabled())
@@ -4414,6 +4414,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param <K> type of keys.
      * @param <V> type of values.
      * @return Cache instance for given name.
+     * @throws IllegalArgumentException If cache not exists.
      */
     public <K, V> IgniteInternalCache<K, V> publicCache(String name) {
         assert name != null;

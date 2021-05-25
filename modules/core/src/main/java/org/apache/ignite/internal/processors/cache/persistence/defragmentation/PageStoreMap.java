@@ -102,6 +102,6 @@ class PageStoreMap implements PageStoreCollection {
             ));
         }
 
-        return Arrays.asList(partPageStoresMap.values());
+        return partPageStoresMap.values();
     }
 }

@@ -22,7 +22,8 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -69,10 +70,9 @@ public class LinkMapTest extends GridCommonAbstractTest {
 
         PageMemory pageMem = new PageMemoryNoStoreImpl(log,
                 new UnsafeMemoryProvider(log),
-                null,
                 PAGE_SIZE,
                 plcCfg,
-                new LongAdderMetric("NO_OP", null),
+                new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
                 true);
 
         pageMem.start();

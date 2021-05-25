@@ -120,7 +120,7 @@ public class Loader implements IgniteClosure<Integer, Integer> {
 
         try {
             final DataRegionMetricsImpl impl = igniteEx.context().cache().context().database().dataRegion(dataRegName)
-                .memoryMetrics();
+                .metrics();
 
             impl.enableMetrics();
 
