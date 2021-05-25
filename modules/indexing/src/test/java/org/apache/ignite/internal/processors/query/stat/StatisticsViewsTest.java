@@ -240,6 +240,4 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
             localData::equals);
     }
-
-
 }
