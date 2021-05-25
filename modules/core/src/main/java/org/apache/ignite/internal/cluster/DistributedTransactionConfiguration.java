@@ -151,6 +151,10 @@ public class DistributedTransactionConfiguration {
                         setDefaultValue(collisionsDumpInterval, dfltCollisionsDumpInterval, log);
                         setDefaultValue(txOwnerDumpRequestsAllowed, dfltTxOwnerDumpRequestsAllowed, log);
                     } else {
+                        log.warning("Distributed metastorage is not supported. " +
+                            "All distributed transaction configuration parameters are unavailable. " +
+                            "Default values will be set.");
+
                         longOperationsDumpTimeout.localUpdate(dfltLongOpsDumpTimeout);
                         longTransactionTimeDumpThreshold.localUpdate(dfltLongTransactionTimeDumpThreshold);
                         transactionTimeDumpSamplesCoefficient.localUpdate(dfltTransactionTimeDumpSamplesCoefficient);

@@ -3114,12 +3114,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      * Distribute property via cluster in compatibility mode.
      *
      * @param feature Property feature.
-     * @param closure Old way setting.
+     * @param clos Old way setting.
      * @param supplier Distributed property update.
      */
     private void distributePropertyCompatibility(
             IgniteFeatures feature,
-            IgniteRunnable closure,
+            IgniteRunnable clos,
             Supplier<GridFutureAdapter<?>> supplier
     ) {
         try {
@@ -3137,7 +3137,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             IgniteFuture<Void> computeFut = broadcastToNodesWithFilterAsync(
                     cctx.kernalContext(),
-                    closure,
+                    clos,
                     true,
                     nodeFilter
             );
