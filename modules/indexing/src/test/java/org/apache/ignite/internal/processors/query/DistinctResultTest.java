@@ -57,8 +57,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
         super.afterTest();
     }
 
-    /**
-     */
+    /** */
     @Test
     public void distinctDifferentNumericTypes() {
         sql("CREATE TABLE table1 (id INT PRIMARY KEY, vint INT, vstr VARCHAR)");
@@ -82,8 +81,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
         assertEquals("Invalid results:\n" + res, KEY_CNT, res.size());
     }
 
-    /**
-     */
+    /** */
     @Test
     public void distinctDifferentDateTimeTypes() {
         sql("CREATE TABLE table1 (id INT PRIMARY KEY, vdate DATE, vstr VARCHAR)");
@@ -107,8 +105,7 @@ public class DistinctResultTest extends AbstractIndexingCommonTest {
         assertEquals("Invalid results:\n" + res, 1, res.size());
     }
 
-    /**
-     */
+    /** */
     @Test
     public void distinctDateVarchar() {
         sql("CREATE TABLE table1 (id INT PRIMARY KEY, vdate DATE)");

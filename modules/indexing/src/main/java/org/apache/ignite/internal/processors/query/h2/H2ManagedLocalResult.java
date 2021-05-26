@@ -700,8 +700,11 @@ public class H2ManagedLocalResult implements LocalResult {
         if (!useTreeMap) {
             if (distinctIndexes != null) {
                 for (int i : distinctIndexes) {
-                    if (expressions[i].getType().getValueType() == Value.DECIMAL)
+                    if (expressions[i].getType().getValueType() == Value.DECIMAL) {
                         useTreeMap = true;
+
+                        break;
+                    }
                 }
             }
             else

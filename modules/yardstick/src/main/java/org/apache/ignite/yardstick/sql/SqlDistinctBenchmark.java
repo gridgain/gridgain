@@ -93,9 +93,7 @@ public class SqlDistinctBenchmark extends IgniteAbstractBenchmark {
         printPlan();
     }
 
-    /**
-     *
-     */
+    /** */
     private void init() {
         sql("CREATE TABLE TBL(" +
             "ID LONG PRIMARY KEY, " +
@@ -186,9 +184,7 @@ public class SqlDistinctBenchmark extends IgniteAbstractBenchmark {
             .setArgs(args), false);
     }
 
-    /**
-     *
-     */
+    /** */
     private void printParameters() {
         println("Benchmark parameter:");
         println("    SQL: " + sql);
@@ -196,9 +192,7 @@ public class SqlDistinctBenchmark extends IgniteAbstractBenchmark {
         println("    param range: " + range);
     }
 
-    /**
-     *
-     */
+    /** */
     private void printPlan() {
         FieldsQueryCursor<List<?>> planCur;
 
