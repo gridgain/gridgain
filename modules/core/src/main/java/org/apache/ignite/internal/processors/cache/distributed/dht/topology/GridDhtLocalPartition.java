@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
@@ -84,6 +85,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
  * Key partition.
@@ -94,6 +96,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** Maximum size for delete queue. */
     public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 200_000);
+
+    /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
+    private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
+
+    /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
+    static volatile Integer partWhereTestCheckpointEnforced;
 
     /** Static logger to avoid re-creation. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
@@ -960,6 +968,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 finally {
                     ctx.database().checkpointReadUnlock();
                 }
+            }
+
+            if (forceTestCheckpointOnEviction && partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
+                ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
+
+                log.warning("Forced checkpoint by test reasons for partition: " + this);
+
+                partWhereTestCheckpointEnforced = id;
             }
         }
         catch (NodeStoppingException e) {
