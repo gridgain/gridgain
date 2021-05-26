@@ -1764,14 +1764,14 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             // First, need to acquire locks on cache entries, then check filter.
             List<GridDhtCacheEntry> locked = lockEntries(req, req.topologyVersion());;
 
-            Collection<IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion>> deleted = null;
-
             DhtAtomicUpdateResult updDhtRes = new DhtAtomicUpdateResult();
 
             try {
                 while (true) {
                     try {
                         GridDhtPartitionTopology top = topology();
+
+                        AffinityTopologyVersion remapVer = null;
 
                         top.readLock();
 
@@ -1787,8 +1787,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                 return;
                             }
 
-                            boolean remap = false;
-
                             // Do not check topology version if topology was locked on near node by
                             // external transaction or explicit lock.
                             if (!req.topologyLocked()) {
@@ -1800,37 +1798,37 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                 // Can not wait for topology future since it will break
                                 // GridNearAtomicCheckUpdateRequest processing.
-                                remap = !compatible && !top.topologyVersionFuture().isDone() ||
-                                    needRemap(req.topologyVersion(), top.readyTopologyVersion());
+                                if (!compatible && !top.topologyVersionFuture().isDone() ||
+                                    needRemap(req.topologyVersion(), top.readyTopologyVersion()))
+                                    remapVer = top.lastTopologyChangeVersion();
                             }
-
-                            if (!remap) {
-                                // TXDR requirement, check TxDrBasicScenariosTest.testScenario3_1
-                                if (ctx.shared().readOnlyMode() && !CU.isUtilityCache(ctx.name())) {
-                                    CacheInvalidStateException err = new CacheInvalidStateException(
-                                        new IgniteClusterReadOnlyException(format(CLUSTER_READ_ONLY_ERROR_MSG,
-                                            ctx.group().name(), ctx.name())));
-
-                                    res.error(err);
-
-                                    completionCb.apply(req, res);
-
-                                    return;
-                                }
-
-                                update(node, locked, req, res, updDhtRes, taskName);
-
-                                dhtFut = updDhtRes.dhtFuture();
-                                deleted = updDhtRes.deleted();
-                                expiry = updDhtRes.expiryPolicy();
-                            }
-                            else
-                                // Should remap all keys.
-                                res.remapTopologyVersion(top.lastTopologyChangeVersion());
                         }
                         finally {
                             top.readUnlock();
                         }
+
+                        if (remapVer == null) {
+                            // TXDR requirement, check TxDrBasicScenariosTest.testScenario3_1
+                            if (ctx.shared().readOnlyMode() && !CU.isUtilityCache(ctx.name())) {
+                                CacheInvalidStateException err = new CacheInvalidStateException(
+                                    new IgniteClusterReadOnlyException(format(CLUSTER_READ_ONLY_ERROR_MSG,
+                                        ctx.group().name(), ctx.name())));
+
+                                res.error(err);
+
+                                completionCb.apply(req, res);
+
+                                return;
+                            }
+
+                            update(node, locked, req, res, updDhtRes, taskName);
+
+                            dhtFut = updDhtRes.dhtFuture();
+                            expiry = updDhtRes.expiryPolicy();
+                        }
+                        else
+                            // Should remap all keys.
+                            res.remapTopologyVersion(remapVer);
 
                         // This call will convert entry processor invocation results to cache object instances.
                         // Must be done outside topology read lock to avoid deadlocks.
@@ -1876,15 +1874,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             finally {
                 if (locked != null)
                     unlockEntries(locked, req.topologyVersion());
-
-                // Enqueue if necessary after locks release.
-                if (deleted != null) {
-                    assert !deleted.isEmpty();
-                    assert ctx.deferredDelete() : this;
-
-                    for (IgniteBiTuple<GridDhtCacheEntry, GridCacheVersion> e : deleted)
-                        ctx.onDeferredDelete(e.get1(), e.get2());
-                }
 
                 // TODO handle failure: probably drop the node from topology
                 // TODO fire events only after successful fsync
@@ -3008,53 +2997,20 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     private void unlockEntries(List<GridDhtCacheEntry> locked, AffinityTopologyVersion topVer) {
         MTC.span().addLog(() -> "unlock.entries");
 
-        // Process deleted entries before locks release.
-        assert ctx.deferredDelete() : this;
-
-        // Entries to skip eviction manager notification for.
-        // Enqueue entries while holding locks.
-        Collection<KeyCacheObject> skip = null;
-
         int size = locked.size();
 
-        try {
-            for (int i = 0; i < size; i++) {
-                GridCacheMapEntry entry = locked.get(i);
-                if (entry != null && entry.deleted()) {
-                    if (skip == null)
-                        skip = U.newHashSet(locked.size());
-
-                    skip.add(entry.key());
-                }
-            }
-        }
-        finally {
-            // At least RuntimeException can be thrown by the code above when GridCacheContext is cleaned and there is
-            // an attempt to use cleaned resources.
-            // That's why releasing locks in the finally block..
-            for (int i = 0; i < size; i++) {
-                GridCacheMapEntry entry = locked.get(i);
-                if (entry != null)
-                    entry.unlockEntry();
-            }
-        }
-
-        // Try evict partitions.
+        // It's important to unlock in separate loop, otherwise eviction policy can try to evict locked entry.
         for (int i = 0; i < size; i++) {
-            GridDhtCacheEntry entry = locked.get(i);
+            GridCacheMapEntry entry = locked.get(i);
             if (entry != null)
-                entry.onUnlock();
+                entry.unlockEntry();
         }
-
-        if (skip != null && skip.size() == size)
-            // Optimization.
-            return;
 
         // Must touch all entries since update may have deleted entries.
         // Eviction manager will remove empty entries.
         for (int i = 0; i < size; i++) {
             GridCacheMapEntry entry = locked.get(i);
-            if (entry != null && (skip == null || !skip.contains(entry.key())))
+            if (entry != null)
                 entry.touch();
         }
     }
@@ -3340,11 +3296,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     updateIdx,
                                     null,
                                     req.transformOperation());
-
-                                if (updRes.removeVersion() != null)
-                                    ctx.onDeferredDelete(entry, updRes.removeVersion());
-
-                                entry.onUnlock();
 
                                 break; // While.
                             }

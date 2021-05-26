@@ -17,9 +17,10 @@
 #ifndef _IGNITE_IMPL_THIN_TRANSACTIONS_IMPL
 #define _IGNITE_IMPL_THIN_TRANSACTIONS_IMPL
 
-#include "impl/data_router.h"
 #include <ignite/common/fixed_size_array.h>
-#include "ignite/thin/transactions/transaction_consts.h"
+#include <ignite/thin/transactions/transaction_consts.h>
+
+#include "impl/data_router.h"
 #include "impl/transactions/transaction_impl.h"
 
 namespace ignite
@@ -30,11 +31,6 @@ namespace ignite
         {
             namespace transactions
             {
-                class TransactionsImpl;
-
-                typedef ignite::common::concurrent::SharedPointer<TransactionImpl> SP_TransactionImpl;
-                typedef ignite::common::concurrent::SharedPointer<TransactionsImpl> SP_TransactionsImpl;
-
                 /**
                  * Thin client transaction.
                  */
@@ -71,32 +67,6 @@ namespace ignite
                             ignite::common::concurrent::SharedPointer<common::FixedSizeArray<char> > label);
 
                     /**
-                     * Commit Transaction.
-                     *
-                     * @param id Transaction ID.
-                     * @return Resulting state.
-                     */
-                    int32_t TxCommit(int32_t id);
-
-                    /**
-                     * Rollback Transaction.
-                     *
-                     * @param id Transaction ID.
-                     * @return Resulting state.
-                     */
-                    int32_t TxRollback(int32_t id);
-
-
-                    /**
-                     * Close the transaction.
-                     *
-                     * This method should only be used on the valid instance.
-                     *
-                     * @param id Transaction ID.
-                     */
-                    int32_t TxClose(int32_t id);
-
-                    /**
                      * Get active transaction for the current thread.
                      *
                      * @return Active transaction implementation for current thread
@@ -117,16 +87,6 @@ namespace ignite
                      */
                     void ResetCurrent();
 
-                    /**
-                     * Synchronously send message and receive response.
-                     *
-                     * @param req Request message.
-                     * @param rsp Response message.
-                     * @throw IgniteError on error.
-                     */
-                    template<typename ReqT, typename RspT>
-                    void SendTxMessage(const ReqT& req, RspT& rsp);
-
                 private:
                     /** Data router. */
                     SP_DataRouter router;
@@ -136,6 +96,8 @@ namespace ignite
 
                     IGNITE_NO_COPY_ASSIGNMENT(TransactionsImpl);
                 };
+
+                typedef ignite::common::concurrent::SharedPointer<TransactionsImpl> SP_TransactionsImpl;
             }
         }
     }

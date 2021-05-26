@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.query.stat;
 
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueDecimal;
@@ -32,7 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * Test different scenarious with column statistics aggregation.
  */
 public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstractTest {
-    /** Deciman comparator. */
+    /** Decimal comparator. */
     private static final Comparator<Value> DECIMAL_VALUE_COMPARATOR = (v1, v2) ->
             v1.getBigDecimal().compareTo(v2.getBigDecimal());
 
@@ -44,10 +45,10 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateSingleTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
         statistics.add(stat1);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertEquals(stat1, res);
     }
@@ -60,19 +61,19 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateNullTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(null, null, 100, 0, 100, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
         ColumnStatistics stat2 = new ColumnStatistics(null, null, 100, 0, 10, 0,
-                getHLL(-1).toBytes());
+            getHLL(-1).toBytes(), 0, U.currentTimeMillis());
 
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertNull(res.min());
         assertNull(res.max());
-        assertEquals(100, res.nulls());
-        assertEquals(0, res.cardinality());
+        assertEquals(200, res.nulls());
+        assertEquals(0, res.distinct());
         assertEquals(110, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
@@ -86,19 +87,19 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     public void aggregateTest() {
         List<ColumnStatistics> statistics = new ArrayList<>();
         ColumnStatistics stat1 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ONE), ValueDecimal.get(BigDecimal.TEN),
-                50, 10, 1000, 0, getHLL(50).toBytes());
+            50, 10, 1000, 0, getHLL(50).toBytes(), 0, U.currentTimeMillis());
         ColumnStatistics stat2 = new ColumnStatistics(ValueDecimal.get(BigDecimal.ZERO), ValueDecimal.get(BigDecimal.ONE),
-                10, 100, 10, 0, getHLL(9).toBytes());
+            10, 100, 10, 0, getHLL(9).toBytes(), 0, U.currentTimeMillis());
 
         statistics.add(stat1);
         statistics.add(stat2);
 
-        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics);
+        ColumnStatistics res = ColumnStatisticsCollector.aggregate(DECIMAL_VALUE_COMPARATOR, statistics, null);
 
         assertEquals(ValueDecimal.get(BigDecimal.ZERO), res.min());
         assertEquals(ValueDecimal.get(BigDecimal.TEN), res.max());
-        assertEquals(49, res.nulls());
-        assertEquals(11, res.cardinality());
+        assertEquals(60, res.nulls());
+        assertEquals(59, res.distinct());
         assertEquals(1010, res.total());
         assertEquals(0, res.size());
         assertNotNull(res.raw());
@@ -107,7 +108,7 @@ public class ColumnStatisticsCollectorAggregationTest extends GridCommonAbstract
     /**
      * Generate HLL with specified number of unique values.
      *
-     * @param uniq Desired uniq value count.
+     * @param uniq Desired unique value count.
      * @return HLL with specified (or near) cardinality.
      */
     private HLL getHLL(int uniq) {

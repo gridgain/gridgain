@@ -75,7 +75,7 @@ public class SqlMemoryStatisticsHolder {
         quotasMetrics.register("freeMem",
             new LongSupplier() {
                 @Override public long getAsLong() {
-                    return memMgr.memoryLimit() - memMgr.reserved();
+                    return memMgr.freeMemory();
                 }
             },
             "How much memory in bytes currently left available for the queries on this node. " +

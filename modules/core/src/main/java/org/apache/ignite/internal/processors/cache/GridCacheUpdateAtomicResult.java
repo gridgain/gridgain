@@ -45,7 +45,7 @@ public class GridCacheUpdateAtomicResult {
     /** Explicit DR expire time (if any). */
     private final long conflictExpireTime;
 
-    /** Version for deferred delete. */
+    /** Version for deferred delete. TODO remove */
     @GridToStringInclude
     private final GridCacheVersion rmvVer;
 

@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.gridgain.internal.h2.value.Value;
 
 import java.util.Arrays;
@@ -30,14 +31,11 @@ public class ColumnStatistics {
     /** Maximum value in column or {@code null} if there are no non null values in the column. */
     private final Value max;
 
-    /** Percent of null values in column. */
-    private final int nulls;
+    /** Number of null values in column. */
+    private final long nulls;
 
-    /**
-     * Percent of different values in column, i.e. 100 means that all values are unique, 0% means that all values
-     * are the same.
-     */
-    private final int cardinality;
+    /** Number of distinct values in column. */
+    private final long distinct;
 
     /** Total number of values in column. */
     private final long total;
@@ -48,25 +46,45 @@ public class ColumnStatistics {
     /** Raw data. */
     private final byte[] raw;
 
+    /** Version. */
+    private final long ver;
+
+    /** Created at time, milliseconds. */
+    private final long createdAt;
+
     /**
      * Constructor.
      *
      * @param min Min value in column or {@code null}.
      * @param max Max value in column or {@code null}.
-     * @param nulls Percent of null values in column.
-     * @param cardinality Percent of unique value in column.
+     * @param nulls Number of null values in column.
+     * @param distinct Number of distinct values in column.
      * @param total Total number of values in column.
      * @param size Average size in bytes, for variable size only.
      * @param raw Raw data to aggregate statistics.
+     * @param ver Statistics version.
+     * @param createdAt Created at time, milliseconds.
      */
-    public ColumnStatistics(Value min, Value max, int nulls, int cardinality, long total, int size, byte[] raw) {
+    public ColumnStatistics(
+        Value min,
+        Value max,
+        long nulls,
+        long distinct,
+        long total,
+        int size,
+        byte[] raw,
+        long ver,
+        long createdAt
+    ) {
         this.min = min;
         this.max = max;
         this.nulls = nulls;
-        this.cardinality = cardinality;
+        this.distinct = distinct;
         this.total = total;
         this.size = size;
         this.raw = raw;
+        this.ver = ver;
+        this.createdAt = createdAt;
     }
 
     /**
@@ -84,17 +102,17 @@ public class ColumnStatistics {
     }
 
     /**
-     * @return Percent of null values.
+     * @return Number of null values in column.
      */
-    public int nulls() {
+    public long nulls() {
         return nulls;
     }
 
     /**
-     * @return Percent of unique not null values.
+     * @return Number of null values in column.
      */
-    public int cardinality() {
-        return cardinality;
+    public long distinct() {
+        return distinct;
     }
 
     /**
@@ -118,15 +136,31 @@ public class ColumnStatistics {
         return raw;
     }
 
+    /**
+     * @return Statistic's version.
+     */
+    public long version() {
+        return ver;
+    }
+
+    /**
+     * @return Created at time, milliseconds
+     */
+    public long createdAt() {
+        return createdAt;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ColumnStatistics that = (ColumnStatistics) o;
         return nulls == that.nulls &&
-                cardinality == that.cardinality &&
+                distinct == that.distinct &&
                 total == that.total &&
                 size == that.size &&
+                ver == that.ver &&
+                createdAt == that.createdAt &&
                 Objects.equals(min, that.min) &&
                 Objects.equals(max, that.max) &&
                 Arrays.equals(raw, that.raw);
@@ -134,8 +168,13 @@ public class ColumnStatistics {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = Objects.hash(min, max, nulls, cardinality, total, size);
+        int result = Objects.hash(min, max, nulls, distinct, total, size, ver, createdAt);
         result = 31 * result + Arrays.hashCode(raw);
         return result;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(ColumnStatistics.class, this);
     }
 }

@@ -55,6 +55,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
+import org.apache.ignite.internal.binary.BinaryClassDescriptor;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
@@ -83,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArrayImpl;
@@ -1222,6 +1224,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             case CacheObject.TYPE_REGULAR:
                 return new CacheObjectImpl(null, bytes);
 
+            case CacheObject.TOMBSTONE:
+                return TombstoneCacheObject.INSTANCE;
+
             case CacheObject.TYPE_BINARY_COMPRESSED:
                 return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);
         }
@@ -1546,6 +1551,13 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             throw new BinaryObjectException("Failed to remove metadata for type: " + typeId, ex);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryType registerClass(Class<?> cls) throws BinaryObjectException {
+        BinaryClassDescriptor clsDesc = binaryCtx.registerClass(cls, true, false);
+
+        return metadata(clsDesc.typeId());
     }
 
     /** */

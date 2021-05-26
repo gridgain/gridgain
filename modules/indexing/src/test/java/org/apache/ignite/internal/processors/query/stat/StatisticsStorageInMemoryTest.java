@@ -30,7 +30,7 @@ public class StatisticsStorageInMemoryTest extends StatisticsStorageTest {
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(false));
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(false));
 
         cfg.setDataStorageConfiguration(memCfg);
 

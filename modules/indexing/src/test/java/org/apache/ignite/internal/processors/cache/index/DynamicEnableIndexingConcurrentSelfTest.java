@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -626,10 +626,10 @@ public class DynamicEnableIndexingConcurrentSelfTest extends DynamicEnableIndexi
      */
     private static class BlockingIndexing extends IgniteH2Indexing {
         /** {@inheritDoc} */
-        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
+        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {
             awaitIndexing(ctx.localNodeId());
 
-            return super.rebuildIndexesFromHash(cctx);
+            return super.rebuildIndexesFromHash(cctx, force);
         }
     }
 }

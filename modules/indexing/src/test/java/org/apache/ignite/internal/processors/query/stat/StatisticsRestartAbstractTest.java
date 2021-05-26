@@ -15,15 +15,20 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Test about statistics reload after restart.
  */
 public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
+    /** Target for test table SMALL. */
+    protected StatisticsTarget SMALL_TARGET = new StatisticsTarget(SCHEMA, "SMALL");
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -31,10 +36,7 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
         cfg.setConsistentId(igniteInstanceName);
 
         DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                                .setPersistenceEnabled(true)
-                );
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true));
 
         cfg.setDataStorageConfiguration(memCfg);
 
@@ -42,26 +44,47 @@ public class StatisticsRestartAbstractTest extends StatisticsAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
+        stopAllGrids();
+
         cleanPersistenceDir();
 
-        startGridsMultiThreaded(1);
+        startGrids(nodes());
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        U.sleep(100);
 
         grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        runSql("DROP TABLE IF EXISTS small");
+        createStatisticTarget(null);
 
-        runSql("CREATE TABLE small (a INT PRIMARY KEY, b INT, c INT)");
+        collectStatistics(SMALL_TARGET);
+    }
 
-        runSql("CREATE INDEX small_b ON small(b)");
+    /**
+     * Create SQL table with the given index.
+     *
+     * @param idx Table idx, if {@code null} - name "SMALL" without index will be used.
+     * @return Target to created table.
+     */
+    protected StatisticsTarget createStatisticTarget(Integer idx) {
+        String strIdx = (idx == null) ? "" : String.valueOf(idx);
 
-        runSql("CREATE INDEX small_c ON small(c)");
+        createSmallTable(strIdx);
 
-        IgniteCache<Integer, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        return new StatisticsTarget(SCHEMA, "SMALL" + strIdx);
+    }
 
-        for (int i = 0; i < SMALL_SIZE; i++)
-            runSql("INSERT INTO small(a, b, c) VALUES(" + i + "," + i + "," + i % 10 + ")");
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws IgniteCheckedException {
+        updateStatistics(SMALL_TARGET);
+    }
 
-        grid(0).context().query().getIndexing().statsManager().collectObjectStatistics("PUBLIC", "SMALL");
+    /**
+     * @return Number of nodes to start.
+     */
+    public int nodes() {
+        return 1;
     }
 }

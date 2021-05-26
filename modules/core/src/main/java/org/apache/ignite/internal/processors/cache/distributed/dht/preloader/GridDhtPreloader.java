@@ -49,6 +49,7 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,9 +68,15 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
+    /** */
+    public static final String PRELOADER_FORCE_CLEAR = "PRELOADER_FORCE_CLEAR";
+
     /** Disable rebalancing cancellation optimization. */
     private final boolean disableRebalancingCancellationOptimization =
         IgniteSystemProperties.getBoolean(IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION);
+
+    /** */
+    private final boolean forceClear = IgniteSystemProperties.getBoolean(PRELOADER_FORCE_CLEAR);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -195,7 +202,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         GridDhtPartitionTopology top = grp.topology();
 
         if (!grp.rebalanceEnabled())
-            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(), false);
+            return new GridDhtPreloaderAssignments(exchId, top.readyTopologyVersion(), false, false);
 
         int partitions = grp.affinity().partitions();
 
@@ -209,7 +216,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             ", topVer=" + top.readyTopologyVersion() + ']';
 
         GridDhtPreloaderAssignments assignments = new GridDhtPreloaderAssignments(exchId, topVer,
-            exchFut != null && exchFut.affinityReassign());
+            exchFut != null && exchFut.affinityReassign(), forceClear);
 
         AffinityAssignment aff = grp.affinity().cachedAffinity(topVer);
 
@@ -274,11 +281,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 }
                 else {
                     int partId = p;
-                    List<ClusterNode> picked = remoteOwners(p, topVer, node -> {
-                        if (exchFut != null && !exchFut.isNodeApplicableForFullRebalance(node.id(), grp.groupId(), partId))
-                            return false;
+                    List<ClusterNode> picked = remoteOwners(p, topVer, (node, owners) -> {
+                        if (owners.size() == 1)
+                            return true;
 
-                        return true;
+                        return exchFut == null || exchFut.isNodeApplicableForFullRebalance(node.id(), grp.groupId(), partId);
                     });
 
                     if (!picked.isEmpty()) {
@@ -338,7 +345,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
      * @return Nodes owning this partition.
      */
     private List<ClusterNode> remoteOwners(int p, AffinityTopologyVersion topVer) {
-        return remoteOwners(p, topVer, node -> true);
+        return remoteOwners(p, topVer, (node, ownres) -> true);
     }
 
     /**
@@ -349,13 +356,13 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
      * @param topVer Topology version.
      * @return Nodes owning this partition.
      */
-    private List<ClusterNode> remoteOwners(int p, AffinityTopologyVersion topVer, IgnitePredicate<ClusterNode> pred) {
+    private List<ClusterNode> remoteOwners(int p, AffinityTopologyVersion topVer, IgniteBiPredicate<ClusterNode, List<ClusterNode>> pred) {
         List<ClusterNode> owners = grp.topology().owners(p, topVer);
 
         List<ClusterNode> res = new ArrayList<>(owners.size());
 
         for (ClusterNode owner : owners) {
-            if (!owner.id().equals(ctx.localNodeId()) && pred.apply(owner))
+            if (!owner.id().equals(ctx.localNodeId()) && pred.apply(owner, owners))
                 res.add(owner);
         }
 
@@ -585,12 +592,12 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void finishPreloading(AffinityTopologyVersion topVer) {
+    @Override public void finishPreloading(AffinityTopologyVersion topVer, long rebalanceId) {
         if (!enterBusy())
             return;
 
         try {
-            demander.finishPreloading(topVer);
+            demander.finishPreloading(topVer, rebalanceId);
         }
         finally {
             leaveBusy();

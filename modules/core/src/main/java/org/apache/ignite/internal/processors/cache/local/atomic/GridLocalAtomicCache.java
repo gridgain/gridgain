@@ -1584,9 +1584,4 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         return f;
     }
-
-    /** {@inheritDoc} */
-    @Override public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
-        assert false : "Should not be called";
-    }
 }

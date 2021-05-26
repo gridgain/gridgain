@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -25,9 +26,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Extends a DHT partition adding a support for blocking capabilities on clearing.
@@ -53,7 +51,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
      * @param grp Group.
      * @param id Id.
      * @param recovery Recovery.
-     * @param mode Delay mode: 0 - delay before rent, 1 - delay in the middle of clearing, 2 - delay after tryFinishEviction
+     * @param mode Delay mode: 0 - delay before rent, 1 - delay in the middle of clearing, 2 - delay after clearing
      *             3 - delay before clearing.
      * @param lock Clearing lock latch.
      * @param unlock Clearing unlock latch.
@@ -82,27 +80,23 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** {@inheritDoc} */
-    @Override protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        EvictionContext spied = mode == 1 ? Mockito.spy(evictionCtx) : evictionCtx;
+    @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
+        BooleanSupplier realClo = mode == 1 ? new BooleanSupplier() {
+            @Override public boolean getAsBoolean() {
+                if (!delayed) {
+                    sync();
+
+                    delayed = true;
+                }
+
+                return stopClo.getAsBoolean();
+            }
+        } : stopClo;
 
         if (mode == 3)
             sync();
 
-        if (mode == 1) {
-            Mockito.doAnswer(new Answer() {
-                @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                    if (!delayed) {
-                        sync();
-
-                        delayed = true;
-                    }
-
-                    return invocation.callRealMethod();
-                }
-            }).when(spied).shouldStop();
-        }
-
-        long cnt = super.clearAll(spied);
+        long cnt = super.clearAll(realClo, task);
 
         if (mode == 2)
             sync();

@@ -220,6 +220,9 @@ namespace Apache.Ignite.Core
         /** */
         private bool? _clientMode;
 
+        /** */
+        private AsyncContinuationExecutor? _asyncContinuationExecutor;
+
         /// <summary>
         /// Default network retry count.
         /// </summary>
@@ -341,6 +344,7 @@ namespace Apache.Ignite.Core
             writer.WriteTimeSpanAsLongNullable(_sysWorkerBlockedTimeout);
             writer.WriteIntNullable(_sqlQueryHistorySize);
             writer.WriteBooleanNullable(_javaPeerClassLoadingEnabled);
+            writer.WriteIntNullable((int?) _asyncContinuationExecutor);
 
             if (SqlSchemas == null)
                 writer.WriteInt(0);
@@ -746,6 +750,7 @@ namespace Apache.Ignite.Core
             _sysWorkerBlockedTimeout = r.ReadTimeSpanNullable();
             _sqlQueryHistorySize = r.ReadIntNullable();
             _javaPeerClassLoadingEnabled = r.ReadBooleanNullable();
+            _asyncContinuationExecutor = (AsyncContinuationExecutor?) r.ReadIntNullable();
 
             int sqlSchemasCnt = r.ReadInt();
 
@@ -1078,7 +1083,7 @@ namespace Apache.Ignite.Core
         public ICollection<string> JvmOptions { get; set; }
 
         /// <summary>
-        /// List of additional .Net assemblies to load on Ignite start. Each item can be either
+        /// List of additional .NET assemblies to load on Ignite start. Each item can be either
         /// fully qualified assembly name, path to assembly to DLL or path to a directory when
         /// assemblies reside.
         /// </summary>
@@ -1728,10 +1733,20 @@ namespace Apache.Ignite.Core
         /// and peer class loading in Java are two distinct and independent features.
         /// <para />
         /// </summary>
-        public bool JavaPeerClassLoadingEnabled 
+        public bool JavaPeerClassLoadingEnabled
         {
             get { return _javaPeerClassLoadingEnabled ?? default(bool); }
             set { _javaPeerClassLoadingEnabled = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the async continuation behavior.
+        /// See <see cref="Apache.Ignite.Core.Configuration.AsyncContinuationExecutor"/> members for more details.
+        /// </summary>
+        public AsyncContinuationExecutor AsyncContinuationExecutor
+        {
+            get { return _asyncContinuationExecutor ?? default(AsyncContinuationExecutor); }
+            set { _asyncContinuationExecutor = value; }
         }
     }
 }

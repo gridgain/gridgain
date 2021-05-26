@@ -16,9 +16,13 @@
 
 namespace Apache.Ignite.Core.Tests.Services
 {
+    using NUnit.Framework;
+
     /// <summary>
     /// Services test with compact footers disabled.
     /// </summary>
+    [TestFixture]
+    [Category(TestUtils.CategoryIntensive)]
     public class ServicesTestFullFooter : ServicesTest
     {
         /// <summary>

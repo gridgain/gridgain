@@ -20,7 +20,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnOverrides;
 import org.apache.ignite.internal.processors.query.stat.hll.HLL;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.TypeInfo;
@@ -62,6 +64,9 @@ public class ColumnStatisticsCollector {
     /** Hasher. */
     private final Hasher hash = new Hasher();
 
+    /** Version. */
+    private final long ver;
+
     /**
      * Constructor.
      *
@@ -69,42 +74,53 @@ public class ColumnStatisticsCollector {
      * @param comp Column values comparator.
      */
     public ColumnStatisticsCollector(Column col, Comparator<Value> comp) {
+        this(col, comp, 0);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param col Column to collect statistics by.
+     * @param comp Column values comparator.
+     * @param ver Target statistic version.
+     */
+    public ColumnStatisticsCollector(Column col, Comparator<Value> comp, long ver) {
         this.col = col;
         this.comp = comp;
+        this.ver = ver;
 
         TypeInfo colTypeInfo = col.getType();
         complexType = colTypeInfo == TypeInfo.TYPE_ARRAY || colTypeInfo == TypeInfo.TYPE_ENUM_UNDEFINED
                 || colTypeInfo == TypeInfo.TYPE_JAVA_OBJECT || colTypeInfo == TypeInfo.TYPE_RESULT_SET
                 || colTypeInfo == TypeInfo.TYPE_UNKNOWN;
-
     }
 
     /**
      * Try to fix unexpected behaviour of base Value class.
      *
-     * @param value Value to convert.
+     * @param val Value to convert.
      * @return Byte array.
      */
-    private byte[] getBytes(Value value) {
-        switch (value.getValueType()) {
+    private byte[] getBytes(Value val) {
+        switch (val.getValueType()) {
             case Value.STRING:
-                String strValue = value.getString();
-                return strValue.getBytes(StandardCharsets.UTF_8);
+                String strVal = val.getString();
+                return strVal.getBytes(StandardCharsets.UTF_8);
             case Value.BOOLEAN:
-                return value.getBoolean() ? new byte[]{1} : new byte[]{0};
+                return val.getBoolean() ? new byte[]{1} : new byte[]{0};
             case Value.DECIMAL:
             case Value.DOUBLE:
             case Value.FLOAT:
-                return U.join(value.getBigDecimal().unscaledValue().toByteArray(),
-                        BigInteger.valueOf(value.getBigDecimal().scale()).toByteArray());
+                return U.join(val.getBigDecimal().unscaledValue().toByteArray(),
+                        BigInteger.valueOf(val.getBigDecimal().scale()).toByteArray());
             case Value.TIME:
-                return BigInteger.valueOf(value.getTime().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTime().getTime()).toByteArray();
             case Value.DATE:
-                return BigInteger.valueOf(value.getDate().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getDate().getTime()).toByteArray();
             case Value.TIMESTAMP:
-                return BigInteger.valueOf(value.getTimestamp().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTimestamp().getTime()).toByteArray();
             default:
-                return value.getBytes();
+                return val.getBytes();
         }
     }
 
@@ -122,7 +138,7 @@ public class ColumnStatisticsCollector {
             return;
         }
 
-        byte bytes[] = getBytes(val);
+        byte[] bytes = getBytes(val);
         size += bytes.length;
 
         hll.addRaw(hash.fastHash(bytes));
@@ -142,40 +158,11 @@ public class ColumnStatisticsCollector {
      * @return Aggregated column statistics.
      */
     public ColumnStatistics finish() {
-        int nulls = nullsPercent(nullsCnt, total);
-
-        int cardinality = cardinalityPercent(nullsCnt, total, hll.cardinality());
 
         int averageSize = averageSize(size, total, nullsCnt);
 
-        return new ColumnStatistics(min, max, nulls, cardinality, total, averageSize, hll.toBytes());
-    }
-
-    /**
-     * Count percent of null values.
-     *
-     * @param nullsCnt Total number of nulls.
-     * @param totalRows Total number of rows.
-     * @return Percent of null values.
-     */
-    private static int nullsPercent(long nullsCnt, long totalRows) {
-        if (totalRows > 0)
-            return (int)(100 * nullsCnt / totalRows);
-        return 0;
-    }
-
-    /**
-     * Count cardinality percent.
-     *
-     * @param nullsCnt Total number of nulls.
-     * @param totalRows Total number of rows.
-     * @param cardinality Total cardinality (number of different values).
-     * @return Percent of different non null values.
-     */
-    private static int cardinalityPercent(long nullsCnt, long totalRows, long cardinality) {
-        if (totalRows - nullsCnt > 0)
-            return (int)(100 * cardinality / (totalRows - nullsCnt));
-        return 0;
+        return new ColumnStatistics(min, max, nullsCnt, hll.cardinality(), total, averageSize, hll.toBytes(), ver,
+            U.currentTimeMillis());
     }
 
     /**
@@ -203,9 +190,17 @@ public class ColumnStatisticsCollector {
      *
      * @param comp Value comparator.
      * @param partStats Column statistics by partitions.
+     * @param overrides Overrides or {@code null} to keep calculated values.
      * @return Column statistics for all partitions.
      */
-    public static ColumnStatistics aggregate(Comparator<Value> comp, List<ColumnStatistics> partStats) {
+    public static ColumnStatistics aggregate(
+        Comparator<Value> comp,
+        List<ColumnStatistics> partStats,
+        StatisticsColumnOverrides overrides
+    ) {
+        assert !F.isEmpty(partStats);
+
+        Long overrideDistinct = (overrides == null) ? null : overrides.distinct();
         HLL hll = buildHll();
 
         Value min = null;
@@ -220,25 +215,44 @@ public class ColumnStatisticsCollector {
         // Total size in bytes
         long totalSize = 0;
 
+        ColumnStatistics firstStat = F.first(partStats);
+        long ver = firstStat.version();
+        long createdAt = firstStat.createdAt();
+
         for (ColumnStatistics partStat : partStats) {
-            HLL partHll = HLL.fromBytes(partStat.raw());
-            hll.union(partHll);
+            assert ver == partStat.version() : "Aggregate statistics with different version [stats=" + partStats + ']';
+
+            if (overrideDistinct == null) {
+                HLL partHll = HLL.fromBytes(partStat.raw());
+                hll.union(partHll);
+            }
 
             total += partStat.total();
-            nullsCnt += (partStat.total() * partStat.nulls()) / 100;
-            totalSize += (long)partStat.size() * (partStat.total() * (double)(100 - partStat.nulls()) / 100);
+            nullsCnt += partStat.nulls();
+            totalSize += (long)partStat.size() * (partStat.total() - partStat.nulls());
 
             if (min == null || (partStat.min() != null && comp.compare(partStat.min(), min) < 0))
                 min = partStat.min();
 
             if (max == null || (partStat.max() != null && comp.compare(partStat.max(), max) > 0))
                 max = partStat.max();
+
+            if (createdAt < partStat.createdAt())
+                createdAt = partStat.createdAt();
         }
 
-        int averageSize = averageSize(totalSize, total, nullsCnt);
+        Integer overrideSize = (overrides == null) ? null : overrides.size();
+        int averageSize = (overrideSize == null) ? averageSize(totalSize, total, nullsCnt) : overrideSize;
 
-        return new ColumnStatistics(min, max, nullsPercent(nullsCnt, total),
-                cardinalityPercent(nullsCnt, total, hll.cardinality()), total, averageSize, hll.toBytes());
+        long distinct = (overrideDistinct == null) ? hll.cardinality() : overrideDistinct;
+
+        Long overrideNulls = (overrides == null) ? null : overrides.nulls();
+        long nulls = (overrideNulls == null) ? nullsCnt : overrideNulls;
+
+        Long overrideTotal = (overrides == null) ? null : overrides.total();
+        total = (overrideTotal == null) ? total : overrideTotal;
+
+        return new ColumnStatistics(min, max, nulls, distinct, total, averageSize, hll.toBytes(), ver, createdAt);
     }
 
     /**

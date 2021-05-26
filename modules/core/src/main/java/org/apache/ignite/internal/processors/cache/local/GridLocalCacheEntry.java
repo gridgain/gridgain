@@ -324,8 +324,6 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
 
         GridCacheMvccCandidate doomed;
 
-        GridCacheVersion deferredDelVer;
-
         lockEntry();
 
         try {
@@ -350,20 +348,9 @@ public class GridLocalCacheEntry extends GridCacheMapEntry {
             }
 
             val = this.val;
-
-            deferredDelVer = this.ver;
         }
         finally {
             unlockEntry();
-        }
-
-        if (val == null) {
-            boolean deferred = cctx.deferredDelete() && !detached() && !isInternal();
-
-            if (deferred) {
-                if (deferredDelVer != null)
-                    cctx.onDeferredDelete(this, deferredDelVer);
-            }
         }
 
         if (doomed != null)

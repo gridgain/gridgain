@@ -217,6 +217,11 @@ public class FillFactorMetricTest extends GridCommonAbstractTest {
             // Wait for cache to be cleared
             clearFut.get();
 
+            clearTombstones(grid(0).cache(MY_CACHE));
+            clearTombstones(grid(1).cache(MY_CACHE));
+
+            doSleep(1100);
+
             // Since refactoring of AbstractFreeList with recycling empty data pages,
             // fill factor after cache cleaning will about 0.99, no more obsolete typically value 0.8
             for (float fillFactor : curFillFactor)

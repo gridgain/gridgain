@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -128,7 +129,7 @@ public abstract class CachePutAllFailoverAbstractTest extends GridCacheAbstractS
 
         final long endTime = System.currentTimeMillis() + GridTestUtils.SF.applyLB(TEST_TIME, 30_000);
 
-        IgniteInternalFuture<Object> restartFut = createAndRunConcurrentAction(finished, endTime);
+        IgniteInternalFuture<Object> restartFut = new GridFinishedFuture<>(); // createAndRunConcurrentAction(finished, endTime);
 
         try {
             final IgniteCache<TestKey, TestValue> cache = ignite(0).cache(DEFAULT_CACHE_NAME);

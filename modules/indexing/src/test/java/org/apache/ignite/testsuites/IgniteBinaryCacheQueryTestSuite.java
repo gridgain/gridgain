@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.metric.SystemViewSelfTest;
@@ -124,6 +123,7 @@ import org.apache.ignite.internal.processors.cache.distributed.replicated.Ignite
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheReplicatedQueryP2PDisabledSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheReplicatedQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.encryption.EncryptedSqlTableTest;
+import org.apache.ignite.internal.processors.cache.encryption.EncryptedSqlTemplateTableTest;
 import org.apache.ignite.internal.processors.cache.index.ArrayIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicIndexMultinodeTest;
 import org.apache.ignite.internal.processors.cache.index.BasicIndexTest;
@@ -250,8 +250,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryMinMaxTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryStartFinishListenerTest;
 import org.apache.ignite.internal.processors.query.h2.QueryDataPageScanTest;
 import org.apache.ignite.internal.processors.query.h2.QueryParserMetricsHolderSelfTest;
-import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsSurvivesNodeRestartTest;
-import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsageTest;
 import org.apache.ignite.internal.processors.query.h2.sql.BaseH2CompareQueryTest;
 import org.apache.ignite.internal.processors.query.h2.sql.ExplainSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.GridQueryParsingTest;
@@ -266,22 +264,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.InOperationExtract
 import org.apache.ignite.internal.processors.query.h2.twostep.JoinPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.MvccDmlPartitionPruningSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.SqlDataTypeConversionTest;
-import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorAggregationTest;
-import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorTest;
-import org.apache.ignite.internal.processors.query.stat.HasherSelfTest;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsRepositoryTest;
-import org.apache.ignite.internal.processors.query.stat.ManagerStatisticsTypesTest;
-import org.apache.ignite.internal.processors.query.stat.PSUBasicValueDistributionTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.stat.PSUCompositeIndexTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatistcsRestartTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticsStorageTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticsTypesTest;
-import org.apache.ignite.internal.processors.query.stat.PSUStatisticPartialCollectionTest;
-import org.apache.ignite.internal.processors.query.stat.PSUValueDistributionTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
-import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
-import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
-import org.apache.ignite.internal.processors.query.stat.StatisticsStorageUnitTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedAtomicColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalColumnConstraintsTest;
 import org.apache.ignite.internal.processors.sql.IgniteCachePartitionedTransactionalSnapshotColumnConstraintTest;
@@ -616,6 +598,7 @@ import org.junit.runners.Suite;
     SqlParserUserSelfTest.class,
     SqlUserCommandSelfTest.class,
     EncryptedSqlTableTest.class,
+    EncryptedSqlTemplateTableTest.class,
 
     // Partition loss.
     IndexingCachePartitionLossPolicySelfTest.class,
@@ -668,32 +651,10 @@ import org.junit.runners.Suite;
     KillQueryOnClientDisconnectTest.class,
     KillQueryErrorOnCancelTest.class,
 
-    // Table statistics collection.
-    HasherSelfTest.class,
-    ColumnStatisticsCollectorAggregationTest.class,
-    ColumnStatisticsCollectorTest.class,
-    ManagerStatisticsTypesTest.class,
-    IgniteStatisticsRepositoryTest.class,
-    StatisticsStorageRestartTest.class,
-
-    // Table statistics usage.
-    RowCountTableStatisticsUsageTest.class,
-    RowCountTableStatisticsSurvivesNodeRestartTest.class,
-    PSUStatisticsTypesTest.class,
-    PSUStatisticPartialCollectionTest.class,
-    PSUBasicValueDistributionTableStatisticsUsageTest.class,
-    PSUValueDistributionTableStatisticsUsageTest.class,
-    PSUCompositeIndexTableStatisticsUsageTest.class,
-    PSUStatisticsStorageTest.class,
-    PSUStatistcsRestartTest.class,
-
-    // Statistics collection components tests
-    StatisticsStorageInMemoryTest.class,
-    StatisticsStoragePersistenceTest.class,
-    StatisticsStorageUnitTest.class,
+    IgniteStatisticsTestSuite.class,
 
     SqlViewExporterSpiTest.class,
-    SystemViewSelfTest.class
+    SystemViewSelfTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite {
 }

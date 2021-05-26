@@ -112,7 +112,7 @@ public class IgniteCacheClientNearCacheExpiryTest extends IgniteCacheAbstractTes
 
         assertEquals(KEYS_COUNT * 2, map.publicSize(internalCache.context().cacheId()));
 
-        U.sleep(1000);
+        U.sleep(1500);
 
         assertEquals(KEYS_COUNT, map.publicSize(internalCache.context().cacheId()));
 

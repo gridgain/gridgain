@@ -69,7 +69,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
-import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheLazyPlainVersionedEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -1242,7 +1241,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                     seal();
 
                 if (state == PREPARED || state == COMMITTED || state == ROLLED_BACK) {
-                    cctx.tm().setMvccState(this, toMvccState(state));
+                    cctx.tm().setMvccState(this, state);
 
                     ptr = cctx.tm().logTxRecord(this);
 
@@ -1273,20 +1272,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
 
         return valid;
-    }
-
-    /** */
-    private byte toMvccState(TransactionState state) {
-        switch (state) {
-            case PREPARED:
-                return TxState.PREPARED;
-            case COMMITTED:
-                return TxState.COMMITTED;
-            case ROLLED_BACK:
-                return TxState.ABORTED;
-            default:
-                throw new IllegalStateException("Unexpected state: " + state);
-        }
     }
 
     /** */
@@ -1843,7 +1828,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 newTtl = CU.TTL_ETERNAL;
             else {
                 newTtl = old.rawTtl();
-                newExpireTime = old.rawExpireTime();
+                newExpireTime = old.deleted() ? CU.EXPIRE_TIME_ETERNAL : old.rawExpireTime();
             }
         }
 

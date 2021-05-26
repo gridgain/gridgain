@@ -314,6 +314,7 @@ namespace Apache.Ignite.Core.Tests
                 CheckDefaultProperties(resCfg.ClientConnectorConfiguration);
 
                 Assert.AreEqual(false, resCfg.JavaPeerClassLoadingEnabled);
+                Assert.AreEqual(AsyncContinuationExecutor.Custom, resCfg.AsyncContinuationExecutor);
             }
         }
 
@@ -371,6 +372,7 @@ namespace Apache.Ignite.Core.Tests
         /// Tests the default spi.
         /// </summary>
         [Test]
+        [NUnit.Framework.Category(TestUtils.CategoryIntensive)]
         public void TestDefaultSpi()
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
@@ -420,6 +422,7 @@ namespace Apache.Ignite.Core.Tests
         /// Tests the static ip finder.
         /// </summary>
         [Test]
+        [NUnit.Framework.Category(TestUtils.CategoryIntensive)]
         public void TestStaticIpFinder()
         {
             TestIpFinders(new TcpDiscoveryStaticIpFinder
@@ -435,6 +438,7 @@ namespace Apache.Ignite.Core.Tests
         /// Tests the multicast ip finder.
         /// </summary>
         [Test]
+        [NUnit.Framework.Category(TestUtils.CategoryIntensive)]
         public void TestMulticastIpFinder()
         {
             TestIpFinders(
@@ -551,6 +555,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(IgniteConfiguration.DefaultAuthenticationEnabled, cfg.AuthenticationEnabled);
             Assert.AreEqual(IgniteConfiguration.DefaultMvccVacuumFrequency, cfg.MvccVacuumFrequency);
             Assert.AreEqual(IgniteConfiguration.DefaultMvccVacuumThreadCount, cfg.MvccVacuumThreadCount);
+            Assert.AreEqual(AsyncContinuationExecutor.ThreadPool, cfg.AsyncContinuationExecutor);
 
             // Thread pools.
             Assert.AreEqual(IgniteConfiguration.DefaultManagementThreadPoolSize, cfg.ManagementThreadPoolSize);

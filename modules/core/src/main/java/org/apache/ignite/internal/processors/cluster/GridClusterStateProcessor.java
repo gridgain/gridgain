@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -632,7 +632,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
+            ctx.durableBackgroundTask().onStateChangeFinish(msg);
 
             if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state()))
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
@@ -784,7 +784,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 nodeIds
             );
 
-            ctx.durableBackgroundTasksProcessor().onStateChange(msg);
+            ctx.durableBackgroundTask().onStateChangeStarted(msg);
 
             if (msg.forceChangeBaselineTopology())
                 globalState.setTransitionResult(msg.requestId(), msg.state());

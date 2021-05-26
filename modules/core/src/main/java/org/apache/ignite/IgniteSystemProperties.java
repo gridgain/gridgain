@@ -390,10 +390,20 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_OFFHEAP_SAFE_RELEASE = "IGNITE_OFFHEAP_SAFE_RELEASE";
 
-    /** Maximum size for atomic cache queue delete history (default is 200 000 entries per partition). */
+    /**
+     * Maximum size for atomic cache queue delete history (default is 200 000 entries per partition).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE = "IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE";
 
-    /** Ttl of removed cache entries (ms). */
+    /**
+     * Ttl of removed cache entries (ms).
+     *
+     * @deprecated No longer used.
+     */
+    @Deprecated
     public static final String IGNITE_CACHE_REMOVED_ENTRIES_TTL = "IGNITE_CACHE_REMOVED_ENTRIES_TTL";
 
     /**
@@ -732,9 +742,8 @@ public final class IgniteSystemProperties {
      * When set to {@code true} fields are written by BinaryMarshaller in sorted order. Otherwise
      * the natural order is used.
      * <p>
-     * @deprecated Should be removed in Apache Ignite 2.0.
+     * NOTICE: Should be the default in Apache Ignite 3.0
      */
-    @Deprecated
     public static final String IGNITE_BINARY_SORT_OBJECT_FIELDS = "IGNITE_BINARY_SORT_OBJECT_FIELDS";
 
     /**
@@ -775,8 +784,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL = "IGNITE_REBALANCE_STATISTICS_TIME_INTERVAL";
 
     /**
-     * When cache has entries with expired TTL, each user operation will also remove this amount of expired entries.
-     * Defaults to {@code 5}.
+     * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
+     * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
@@ -811,7 +820,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
-     * Prefer historical rebalance if there's enough history regardless off all heuristics.
+     * Prefer historical rebalance if there's enough history regardless of all heuristics.
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */
@@ -1090,7 +1099,10 @@ public final class IgniteSystemProperties {
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind if there is nothing to clean yet.
      *
      * Default is 500 ms.
+     *
+     * @deprecated No longer used.
      */
+    @Deprecated
     public static final String IGNITE_UNWIND_THROTTLING_TIMEOUT = "IGNITE_UNWIND_THROTTLING_TIMEOUT";
 
     /**
@@ -1474,9 +1486,6 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
 
-    /** Preserve local store classLoaders. */
-    public static final String IGNITE_DEPLOYMENT_PRESERVE_LOCAL = "IGNITE_DEPLOYMENT_PRESERVE_LOCAL";
-
     /**
      * Defragmentation region size percentage of configured region size.
      * This percentage will be calculated from largest configured region size and then proportionally subtracted
@@ -1501,6 +1510,12 @@ public final class IgniteSystemProperties {
      * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
      */
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
+
+    /**
+     * Use TreeMap instead of HashMap to hold distinct values.
+     * Default value is {@code false}. HashMap is used by default.
+     */
+    public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
      * Enforces singleton.

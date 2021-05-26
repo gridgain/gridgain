@@ -18,10 +18,14 @@ package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
 import java.util.Collection;
 import java.util.Iterator;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsColumnData;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.messages.StatisticsObjectData;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
@@ -63,6 +67,11 @@ public class GridH2ValueMessageFactory implements MessageFactoryProvider {
         factory.register((short)-55, GridH2DmlRequest::new);
         factory.register((short)-56, GridH2DmlResponse::new);
         factory.register((short)-57, GridH2SelectForUpdateTxDetails::new);
+
+        // Statistics related messages.
+        factory.register(StatisticsKeyMessage.TYPE_CODE, StatisticsKeyMessage::new);
+        factory.register(StatisticsObjectData.TYPE_CODE, StatisticsObjectData::new);
+        factory.register(StatisticsColumnData.TYPE_CODE, StatisticsColumnData::new);
     }
 
     /** {@inheritDoc} */

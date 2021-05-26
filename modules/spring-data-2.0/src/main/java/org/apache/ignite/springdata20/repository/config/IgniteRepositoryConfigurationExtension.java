@@ -43,6 +43,6 @@ public class IgniteRepositoryConfigurationExtension extends RepositoryConfigurat
 
     /** {@inheritDoc} */
     @Override protected Collection<Class<?>> getIdentifyingTypes() {
-        return Collections.<Class<?>>singleton(IgniteRepository.class);
+        return Collections.singleton(IgniteRepository.class);
     }
 }

@@ -89,7 +89,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
             costFuncType = CostFunctionType.LAST;
         }
-        
+
         switch (costFuncType) {
             case COMPATIBLE_8_7_12:
                 constFunc = this::getCostRangeIndex_8_7_12;
@@ -713,6 +713,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
      * Cost function implementation.
      */
     private final class CostFunctionLast implements CostFunction {
+        /** Null fraction by default. */
+        private final double NULL_FRACTION = 0.25;
+
         /**
          * Math context to use in estimations calculations.
          */
@@ -727,6 +730,23 @@ public abstract class H2IndexCostedBase extends BaseIndex {
          * Selectivity for open range queries, in percent.
          */
         private final int RANGE_OPEN_SELECTIVITY = 33;
+
+        /**
+         *  Nulls values fraction.
+         *
+         * @param colStat Column statistics or {@code null} if there is no statistics for column.
+         * @return Null fraction estimation (by default or by statistics.
+         */
+        private double nulls(ColumnStatistics colStat) {
+            if (colStat == null)
+                return NULL_FRACTION;
+            else {
+                if (colStat.total() > 0)
+                    return (double)colStat.nulls() / colStat.total();
+                else
+                    return 0;
+            }
+        }
 
         /**
          * Row cost calculation.
@@ -745,7 +765,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 long rowCount,
                 ObjectStatisticsImpl locTblStats
         ) {
-            int totalCardinality = 0;
+            double totalCardinality = 0;
 
             long rowsCost = rowCount;
 
@@ -771,18 +791,29 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         rowCount = getColumnSize(colStats, rowCount, equalNull);
 
                         if (colStats != null && equalNull == Boolean.TRUE) {
-                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
+                            rowsCost = Math.min(5 + Math.max(Math.round(rowsCost * nulls(colStats)), 1), rowsCost -
                                     (i > 0 ? 1 : 0));
                             continue;
                         }
                         if (colStats != null && equalNull == Boolean.FALSE)
-                            rowsCost = rowsCost * (100 - colStats.nulls()) / 100;
+                            rowsCost = Math.max(Math.round(rowsCost * (1 - nulls(colStats))), 1);
 
-                        int cardinality = getColumnCardinality(colStats, column);
-
-                        totalCardinality = 100 - ((100 - totalCardinality) * (100 - cardinality) / 100);
-
-                        long distinctRows = rowCount * totalCardinality / 100;
+                        long distinctRows;
+                        if (colStats == null) {
+                            double cardinality = (double)column.getSelectivity() / 100;
+                            totalCardinality = 1 - (1 - totalCardinality) * (1 - cardinality);
+                            distinctRows = Math.round((double) rowCount * totalCardinality);
+                        }
+                        else {
+                            double cardinality;
+                            long nonNulls = colStats.total() - colStats.nulls();
+                            if (nonNulls == 0)
+                                cardinality = 1;
+                            else
+                                cardinality = (double) colStats.distinct() / nonNulls;
+                            totalCardinality = 1 - (1 - totalCardinality) * (1 - cardinality);
+                            distinctRows = Math.round(rowCount * totalCardinality);
+                        }
 
                         if (distinctRows <= 0)
                             distinctRows = 1;
@@ -802,14 +833,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
                     else if (isNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * colStats.nulls() / 100, 1), rowsCost -
-                                    (i > 0 ? 1 : 0));
+                            rowsCost = Math.min(5 + colStats.nulls(), rowsCost - (i > 0 ? 1 : 0));
                         break;
                     }
                     else if (isNotNullFilter(ses, column, filter)) {
                         if (colStats != null)
-                            rowsCost = Math.min(5 + Math.max(rowsCost * (100 - colStats.nulls()) / 100, 1), rowsCost -
-                                    (i > 0 ? 1 : 0));
+                            rowsCost = Math.min(5 + colStats.total() - colStats.nulls(), rowsCost - (i > 0 ? 1 : 0));
                         break;
                     }
                     else
@@ -817,17 +846,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 }
             }
             return rowsCost;
-        }
-
-        /**
-         * Try to get column cardinality from statistics, if there is no such - fall back to H2 column selectivity.
-         *
-         * @param colStats Column statistics.
-         * @param column Column.
-         * @return Column cardinality in percents.
-         */
-        private int getColumnCardinality(@Nullable ColumnStatistics colStats, Column column) {
-            return (colStats == null) ? column.getSelectivity() : colStats.cardinality();
         }
 
         /**
@@ -846,9 +864,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             else if (nulls == null)
                 return colStats.total();
             else if (nulls)
-                return colStats.total() * colStats.nulls() / 100;
+                return colStats.nulls();
             else
-                return colStats.total() * (100 - colStats.nulls()) / 100;
+                return colStats.total() - colStats.nulls();
         }
 
         /**
@@ -1033,7 +1051,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             // If one select from column with exactly one (same for all rows) value - all rows will be selected if
             // the border is equal to that single value
             if (total.signum() == 0)
-                return (minStat.equals(start)) ? 100 - colStat.nulls() : 0;
+                return (minStat.equals(start)) ? 100 - (int)Math.round(nulls(colStat) * 100) : 0;
 
             // 1) actual range divided by total range to get simple piece of table (selecting values part, 0-1)
             // 2) taking into account nulls by multiplying by percent of non null values: (100 - null)/100

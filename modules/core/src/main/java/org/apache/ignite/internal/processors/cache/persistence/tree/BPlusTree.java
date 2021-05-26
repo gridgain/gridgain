@@ -2410,7 +2410,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      * @return {@code True} if replaced existing row.
      */
-    public boolean putx(T row) throws IgniteCheckedException {
+    public final boolean putx(T row) throws IgniteCheckedException {
         Boolean res = (Boolean)doPut(row, false);
 
         return res != null ? res : false;
@@ -2737,7 +2737,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         // Update forward page.
-        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageSize());
+        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageSize(), metrics);
 
         // Update existing page.
         io.splitExistingPage(pageAddr, mid, fwdId);
@@ -3799,7 +3799,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     null,
                                     fwdId,
                                     pageSize(),
-                                    needWal);
+                                    needWal,
+                                    metrics);
 
                                 if (needWal)
                                     wal.log(new NewRootInitRecord<>(grpId, newRootId, newRootId,

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.cache.store.cassandra.persistence;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -26,7 +27,7 @@ import org.w3c.dom.NodeList;
 /**
  * Stores persistence settings for Ignite cache key
  */
-public class KeyPersistenceSettings extends PersistenceSettings {
+public class KeyPersistenceSettings extends PersistenceSettings<PojoKeyField> {
     /** Partition key XML tag. */
     private static final String PARTITION_KEY_ELEMENT = "partitionKey";
 
@@ -37,13 +38,13 @@ public class KeyPersistenceSettings extends PersistenceSettings {
     private static final String FIELD_ELEMENT = "field";
 
     /** POJO fields. */
-    private List<PojoField> fields = new LinkedList<>();
+    private List<PojoKeyField> fields = new LinkedList<>();
 
     /** Partition key fields. */
-    private List<PojoField> partKeyFields = new LinkedList<>();
+    private List<PojoKeyField> partKeyFields = new LinkedList<>();
 
     /** Cluster key fields. */
-    private List<PojoField> clusterKeyFields = new LinkedList<>();
+    private List<PojoKeyField> clusterKeyFields = new LinkedList<>();
 
     /**
      * Creates key persistence settings object based on it's XML configuration.
@@ -83,10 +84,10 @@ public class KeyPersistenceSettings extends PersistenceSettings {
                     getJavaClass().getName() + "'");
         }
 
-        List<PojoField> filteredFields = new LinkedList<>();
+        List<PojoKeyField> filteredFields = new LinkedList<>();
 
         // Find all fields annotated by @AffinityKeyMapped
-        for (PojoField field : partKeyFields) {
+        for (PojoKeyField field : partKeyFields) {
             if (field.getAnnotation(AffinityKeyMapped.class) != null)
                 filteredFields.add(field);
         }
@@ -100,7 +101,7 @@ public class KeyPersistenceSettings extends PersistenceSettings {
         filteredFields = new LinkedList<>();
 
         // Removing out all fields which are already in partition key fields list
-        for (PojoField field : clusterKeyFields) {
+        for (PojoKeyField field : clusterKeyFields) {
             if (!PojoField.containsField(partKeyFields, field.getName()))
                 filteredFields.add(field);
         }
@@ -117,18 +118,23 @@ public class KeyPersistenceSettings extends PersistenceSettings {
     }
 
     /** {@inheritDoc} */
-    @Override public List<PojoField> getFields() {
+    @Override public List<PojoKeyField> getFields() {
         return fields;
     }
 
     /** {@inheritDoc} */
-    @Override protected PojoField createPojoField(Element el, Class clazz) {
+    @Override protected PojoKeyField createPojoField(Element el, Class clazz) {
         return new PojoKeyField(el, clazz);
     }
 
     /** {@inheritDoc} */
-    @Override protected PojoField createPojoField(PojoFieldAccessor accessor) {
+    @Override protected PojoKeyField createPojoField(PojoFieldAccessor accessor) {
         return new PojoKeyField(accessor);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected PojoKeyField createPojoField(PojoKeyField field, Class clazz) {
+        return new PojoKeyField(field, clazz);
     }
 
     /**
@@ -229,5 +235,14 @@ public class KeyPersistenceSettings extends PersistenceSettings {
         }
 
         return cols;
+    }
+
+    /**
+     * @see java.io.Serializable
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+
+        fields = enrichFields(fields);
     }
 }

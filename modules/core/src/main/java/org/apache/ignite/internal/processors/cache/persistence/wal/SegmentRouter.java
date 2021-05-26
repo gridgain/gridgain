@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,16 +31,16 @@ public class SegmentRouter {
     public static final String ZIP_SUFFIX = ".zip";
 
     /** */
-    private File walWorkDir;
+    private final File walWorkDir;
 
     /** WAL archive directory (including consistent ID as subfolder) */
-    private File walArchiveDir;
+    private final File walArchiveDir;
 
     /** Holder of actual information of latest manipulation on WAL segments. */
-    private SegmentAware segmentAware;
+    private final SegmentAware segmentAware;
 
     /** */
-    private DataStorageConfiguration dsCfg;
+    private final DataStorageConfiguration dsCfg;
 
     /**
      * @param walWorkDir WAL work directory.

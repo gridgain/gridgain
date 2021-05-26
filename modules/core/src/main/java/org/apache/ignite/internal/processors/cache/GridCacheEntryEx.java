@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxLocalAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
@@ -91,10 +90,7 @@ public interface GridCacheEntryEx {
     public boolean detached();
 
     /**
-     * Note: this method works only for cache configured in ATOMIC mode or for cache that is
-     * data center replication target.
-     *
-     * @return {@code True} if entry has been already deleted.
+     * @return {@code True} if entry is a tombstone.
      */
     public boolean deleted();
 
@@ -1029,11 +1025,11 @@ public interface GridCacheEntryEx {
     /**
      * Callback from ttl processor to cache entry indicating that entry is expired.
      *
-     * @param obsoleteVer Version to set obsolete if entry is expired.
+     * @param expireTime Expire time.
      * @throws GridCacheEntryRemovedException If entry was removed.
      * @return {@code True} if this entry was expired as a result of this call.
      */
-    public boolean onTtlExpired(GridCacheVersion obsoleteVer) throws GridCacheEntryRemovedException;
+    public boolean onTtlExpired(long expireTime) throws GridCacheEntryRemovedException;
 
     /**
      * @return Time to live, without accounting for transactions or removals.
@@ -1147,11 +1143,6 @@ public interface GridCacheEntryEx {
      * @return {@code True} if value was removed, {@code false} otherwise.
      */
     public <V> boolean removeMeta(int key, V val);
-
-    /**
-     * Calls {@link GridDhtLocalPartition#onUnlock()} for this entry's partition.
-     */
-    public void onUnlock();
 
     /**
      * Locks entry to protect from concurrent access.

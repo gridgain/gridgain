@@ -368,7 +368,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         fut = new DataStreamerFuture(this);
 
-        publicFut = new IgniteCacheFutureImpl<>(fut);
+        publicFut = new IgniteCacheFutureImpl<>(fut, ctx.getAsyncContinuationExecutor());
 
         GridCacheAdapter cache = ctx.cache().internalCache(cacheName);
 
@@ -702,7 +702,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
     @NotNull protected IgniteCacheFutureImpl createDataLoadFuture() {
         GridFutureAdapter internalFut0 = new GridFutureAdapter();
 
-        IgniteCacheFutureImpl fut = new IgniteCacheFutureImpl(internalFut0);
+        IgniteCacheFutureImpl fut = new IgniteCacheFutureImpl(internalFut0, ctx.getAsyncContinuationExecutor());
 
         internalFut0.listen(rmvActiveFut);
 
@@ -1509,7 +1509,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         /** Node. */
         private final ClusterNode node;
 
-        /** Active futures. */
+        /** Active futures for a local updates. */
         private final Collection<IgniteInternalFuture<Object>> locFuts;
 
         /** Buffered entries. */
@@ -1521,7 +1521,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         /** ID generator. */
         private final AtomicLong idGen = new AtomicLong();
 
-        /** Active futures. */
+        /** Active futures related to the remote node. */
         private final ConcurrentMap<Long, GridFutureAdapter<Object>> reqs;
 
         /** */
@@ -1969,26 +1969,29 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                     if (log.isDebugEnabled())
                         log.debug("Sent request to node [nodeId=" + node.id() + ", req=" + req + ']');
                 }
-                catch (ClusterTopologyCheckedException e) {
-                    GridFutureAdapter<Object> fut0 = ((GridFutureAdapter<Object>)fut);
-
-                    fut0.onDone(e);
-                }
                 catch (IgniteCheckedException e) {
+                    // This request was not sent probably.
+                    // Anyway it does not make sense to track it.
+                    reqs.remove(reqId);
+
                     GridFutureAdapter<Object> fut0 = ((GridFutureAdapter<Object>)fut);
 
-                    if (X.hasCause(e, IgniteClientDisconnectedCheckedException.class, IgniteClientDisconnectedException.class))
+                    if (e instanceof ClusterTopologyCheckedException)
                         fut0.onDone(e);
                     else {
-                        try {
-                            if (ctx.discovery().alive(node) && ctx.discovery().pingNode(node.id()))
-                                fut0.onDone(e);
-                            else
-                                fut0.onDone(new ClusterTopologyCheckedException("Failed to send request (node has left): "
-                                    + node.id()));
-                        }
-                        catch (IgniteClientDisconnectedCheckedException e0) {
-                            fut0.onDone(e0);
+                        if (X.hasCause(e, IgniteClientDisconnectedCheckedException.class, IgniteClientDisconnectedException.class))
+                            fut0.onDone(e);
+                        else {
+                            try {
+                                if (ctx.discovery().alive(node) && ctx.discovery().pingNode(node.id()))
+                                    fut0.onDone(e);
+                                else
+                                    fut0.onDone(new ClusterTopologyCheckedException("Failed to send request (node has left): "
+                                        + node.id()));
+                            }
+                            catch (IgniteClientDisconnectedCheckedException e0) {
+                                fut0.onDone(e0);
+                            }
                         }
                     }
                 }
@@ -2287,8 +2290,6 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                         entry.touch();
 
                         CU.unwindEvicts(cctx);
-
-                        entry.onUnlock();
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         ignoredParts.add(cctx.affinity().partition(e.getKey()));

@@ -15,18 +15,20 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
-
-import java.util.Arrays;
-import java.util.Collection;
 
 /**
  * Unit tests for statistics store.
@@ -34,13 +36,17 @@ import java.util.Collection;
 @RunWith(Parameterized.class)
 public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
     /** Test statistics key1. */
-    private static final StatsKey KEY1 = new StatsKey("schema", "obj");
+    private static final StatisticsKey KEY1 = new StatisticsKey("schema", "obj");
 
     /** Test statistics key2. */
-    private static final StatsKey KEY2 = new StatsKey("schema", "obj2");
+    private static final StatisticsKey KEY2 = new StatisticsKey("schema", "obj2");
+
+    /** Test against storage of such type. */
+    @Parameterized.Parameter(0)
+    public String testLb;
 
     /** Test store. */
-    @Parameterized.Parameter(0)
+    @Parameterized.Parameter(1)
     public IgniteStatisticsStore store;
 
     /**
@@ -51,21 +57,27 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
 
+        IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
+
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
         Mockito.doAnswer(invocation -> lsnr[0] = invocation.getArgument(0))
-                .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
+            .when(subscriptionProcessor).registerMetastorageListener(Mockito.any(MetastorageLifecycleListener.class));
 
-        IgniteStatisticsRepositoryImpl statsRepos = new IgniteStatisticsRepositoryImpl(true,
-                new IgniteCacheDatabaseSharedManager(), subscriptionProcessor, null, cls -> log);
+        IgniteStatisticsStore inMemoryStore = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
+        GridSystemViewManager sysViewMgr = Mockito.mock(GridSystemViewManager.class);
+
+        IgniteStatisticsRepository statsRepos = new IgniteStatisticsRepository(inMemoryStore, sysViewMgr, helper, cls -> log);
+
+        IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
+        IgniteStatisticsPersistenceStoreImpl persStore = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor,
+            dbMgr, cls -> new GridTestLog4jLogger());
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
 
-        IgniteCacheDatabaseSharedManager dbMgr = new IgniteCacheDatabaseSharedManager();
-
         return Arrays.asList(new Object[][] {
-                { new IgniteStatisticsInMemoryStoreImpl(cls -> log) },
-                { new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, dbMgr, statsRepos, cls -> log) },
+            { "IgniteStatisticsInMemoryStoreImpl", inMemoryStore },
+            { "IgniteStatisticsPersistenceStoreImpl", persStore},
         });
     }
 
@@ -75,7 +87,6 @@ public class StatisticsStorageUnitTest extends StatisticsAbstractTest {
 
         store = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
     }
-
 
     /**
      * Test clear all method:

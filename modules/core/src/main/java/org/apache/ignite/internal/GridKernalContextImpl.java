@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -1322,7 +1324,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTask() {
         return durableBackgroundTasksProcessor;
     }
 
@@ -1334,5 +1336,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridKernalContextImpl.class, this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Executor getAsyncContinuationExecutor() {
+        return config().getAsyncContinuationExecutor() == null
+                ? ForkJoinPool.commonPool()
+                : config().getAsyncContinuationExecutor();
     }
 }

@@ -90,6 +90,23 @@ public class CheckpointReadWriteLock {
     }
 
     /**
+     * Try to get a checkpoint read lock.
+     *
+     * @return {@code True} if the checkpoint read lock is acquired.
+     */
+    public boolean tryReadLock() {
+        if (checkpointLock.writeLock().isHeldByCurrentThread())
+            return true;
+
+        boolean res = checkpointLock.readLock().tryLock();
+
+        if (ASSERTION_ENABLED)
+            CHECKPOINT_LOCK_HOLD_COUNT.set(CHECKPOINT_LOCK_HOLD_COUNT.get() + 1);
+
+        return res;
+    }
+
+    /**
      * This method works only if the assertion is enabled or it always returns true otherwise.
      *
      * @return {@code true} if checkpoint lock is held by current thread.

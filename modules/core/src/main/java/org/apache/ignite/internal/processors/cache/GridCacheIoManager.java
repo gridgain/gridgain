@@ -929,12 +929,20 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                     req.classError(),
                     cctx.deploymentEnabled());
 
-                cctx.io().sendOrderedMessage(
-                    cctx.node(nodeId),
-                    TOPIC_CACHE.topic(QUERY_TOPIC_PREFIX, nodeId, req.id()),
-                    res,
-                    plc,
-                    Long.MAX_VALUE);
+                ClusterNode node = cctx.node(nodeId);
+
+                if (node == null) {
+                    U.error(log, "Failed to send message because node left grid [nodeId=" + nodeId +
+                        ", msg=" + msg + ']');
+                }
+                else {
+                    cctx.io().sendOrderedMessage(
+                        node,
+                        TOPIC_CACHE.topic(QUERY_TOPIC_PREFIX, nodeId, req.id()),
+                        res,
+                        plc,
+                        Long.MAX_VALUE);
+                }
             }
 
             break;
@@ -1185,7 +1193,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         else if (msg instanceof GridCacheIdMessage) {
             GridCacheContext ctx = cctx.cacheContext(((GridCacheIdMessage)msg).cacheId());
 
-            if (ctx != null)
+            if (ctx != null && !(msg instanceof GridCacheQueryRequest))
                 CU.unwindEvicts(ctx);
         }
     }

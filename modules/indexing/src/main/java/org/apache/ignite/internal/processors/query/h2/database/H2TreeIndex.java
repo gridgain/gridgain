@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -616,10 +616,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
                         cctx.cache().name(),
                         table.getSchema().getName(),
+                        treeName,
                         idxName
                 );
 
-                cctx.kernalContext().durableBackgroundTasksProcessor().startDurableBackgroundTask(task, cctx.config());
+                cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
             }
         }
         catch (IgniteCheckedException e) {
