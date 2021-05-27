@@ -81,7 +81,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         strLog.reset();
 
-        strLog.logLength(300_000);
+        strLog.logLength(1_000_000);
 
         startGrids(2);
     }
