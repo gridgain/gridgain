@@ -82,7 +82,6 @@ import org.apache.ignite.internal.processors.cache.DynamicCacheChangeRequest;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
@@ -150,7 +149,6 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.active;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_FAILURE_DETECTION_TIMEOUT;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_DISCONNECTED;
 import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -621,19 +619,15 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
-                        ChangeGlobalStateMessage stateChangeMsg = (ChangeGlobalStateMessage)customMsg;
-
-                        ctx.state().onStateMessage(stateChangeMsg);
+                        ctx.state().onStateMessage();
 
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
-                            stateChangeMsg,
+                            (ChangeGlobalStateMessage)customMsg,
                             discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
-                        ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
-
-                        ctx.state().onStateFinishMessage(finishStateChangeMsg);
+                        ctx.state().onStateFinishMessage((ChangeGlobalStateFinishMessage)customMsg);
 
                         Snapshot snapshot = topSnap.get();
 

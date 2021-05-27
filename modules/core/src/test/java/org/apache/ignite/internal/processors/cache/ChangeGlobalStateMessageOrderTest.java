@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.discovery;
+package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +36,7 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
 
 /**
  * Test check that disco-event-worker processed ChangeGlobalStateMessage before
- * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage
+ * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage.
  */
 public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     /** */
@@ -58,10 +58,18 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         assertTrue(client.cluster().state() == ClusterState.ACTIVE);
 
-        doSleep(2000);
-
         //check that cluster state changing works
-        client.cluster().state(ClusterState.INACTIVE);
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                client.cluster().state(ClusterState.INACTIVE);
+            }
+            catch (Exception e) {
+                return false;
+            }
+
+            return true;
+        },
+                5000);
 
         assertTrue(client.cluster().state() == ClusterState.INACTIVE);
 
@@ -86,7 +94,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /** */
+    /** This listener slow down processing of ChangeGlobalStateMessage in disco-event-worker thread. */
     private static class TestEventListener implements HighPriorityListener, DiscoveryEventListener {
         /** */
         IgniteEx client;
