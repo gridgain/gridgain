@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -2918,6 +2919,46 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         );
 
         return new CacheGroupNoAffOrFilteredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
+    }
+
+    /**
+     * Prints {@code waitInfo} to provided {@code log}.
+     *
+     * @param log Logger to print to.
+     */
+    public void printWaitInfo(IgniteLogger log) {
+        if (waitInfo == null || waitInfo.empty())
+            return;
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Current affinity assignment is not ideal, it is waiting for cache: [");
+
+        waitInfo.assignments.forEach((grpId, partsMap) -> {
+            sb.append("grp=[grpId=").append(grpId).append(",nodes=[");
+
+            Map<UUID/* ClusterNode id */, Integer/* Number of partitions for this UUID */> nodeMap = new HashMap<>();
+
+            partsMap.forEach((partId, nodes) -> {
+                nodes.forEach((node -> {
+                    if (nodeMap.containsKey(node.id()))
+                        nodeMap.compute(node.id(), (k, v) -> v + 1);
+                    else
+                        nodeMap.put(node.id(), 1);
+                }));
+            });
+
+            nodeMap.forEach((nodeId, partsNum) -> {
+                sb.append("node=[id=").append(nodeId).append(",partsNum=").append(partsNum).append("],");
+            });
+
+            // Remove extra comma
+            sb.deleteCharAt(sb.length() - 1);
+
+            sb.append("]]");
+        });
+
+        log.info(sb.toString());
     }
 
     /**

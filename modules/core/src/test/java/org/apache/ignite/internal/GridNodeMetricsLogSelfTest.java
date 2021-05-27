@@ -25,11 +25,16 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessageV2;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi;
 import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
+
+import static org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi.commSpi;
 
 /**
  * Check logging local node metrics
@@ -59,6 +64,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
             new ExecutorConfiguration(CUSTOM_EXECUTOR_1));
 
         cfg.setGridLogger(strLog);
+
+        BlockTcpCommunicationSpi commSpi = new BlockTcpCommunicationSpi();
+
+        cfg.setCommunicationSpi(commSpi);
 
         return cfg;
     }
@@ -103,6 +112,41 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         checkOffHeapMetrics(logOutput);
 
         checkDataRegionsMetrics(logOutput);
+
+        commSpi(grid(0)).blockMessage(GridDhtPartitionSupplyMessageV2.class);
+        commSpi(grid(0)).blockMessage(GridDhtPartitionSupplyMessage.class);
+        commSpi(grid(1)).blockMessage(GridDhtPartitionSupplyMessageV2.class);
+        commSpi(grid(1)).blockMessage(GridDhtPartitionSupplyMessage.class);
+
+        new Thread(() -> {
+            try {
+                startGrid(2);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        doSleep(5_000);
+
+        logOutput = strLog.toString();
+
+        checkRebalanceInfo(logOutput);
+
+        commSpi(grid(0)).unblockAllMessages();
+        commSpi(grid(1)).unblockAllMessages();
+    }
+
+    /**
+     * Checks rebalance info.
+     *
+     * @param output Node log.
+     */
+    private void checkRebalanceInfo(String output) {
+        String msg = "Expected rebalance info not found";
+
+        assertTrue(msg, output.contains("Current affinity assignment is not ideal, it is waiting for cache:"));
+        assertTrue(msg, output.matches("(?s).*grp=\\[grpId=.*,nodes=\\[node=\\[id=.*,partsNum=.*].*"));
     }
 
     /**
