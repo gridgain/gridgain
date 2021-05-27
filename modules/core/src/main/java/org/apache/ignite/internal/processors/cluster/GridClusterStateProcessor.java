@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
@@ -106,10 +107,12 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_FAILURE_DETECTION_TIMEOUT;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
@@ -175,6 +178,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** */
     private final ConcurrentMap<UUID, GridFutureAdapter<Void>> transitionFuts = new ConcurrentHashMap<>();
+
+    /**
+     * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
+     * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
+     * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
+     */
+    private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
     /** Future initialized if node joins when cluster state change is in progress. */
     private TransitionOnJoinWaitFuture joinFut;
@@ -622,6 +632,29 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
         DiscoveryDataClusterState discoClusterState = globalState;
 
+        if (ctx.clientNode()) {
+            UUID reqId = msg.requestId();
+
+            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
+
+            if (changeStateLatch != null) {
+                boolean awaited = true;
+
+                try {
+                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+
+                if (!awaited)
+                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                            "before ChangeGlobalStateMessage was processed.");
+
+                changeStatesInProgress.remove(reqId);
+            }
+        }
+
         if (msg.requestId().equals(discoClusterState.transitionRequestId())) {
             if (log.isInfoEnabled())
                 log.info("Received state change finish message: " + msg.state());
@@ -660,6 +693,20 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
         else
             U.warn(log, "Received state finish message with unexpected ID: " + msg);
+    }
+
+    /** */
+    public void onStateMessage(ChangeGlobalStateMessage msg) {
+        if (ctx.clientNode())
+            changeStatesInProgress.put(msg.requestId(), new CountDownLatch(1));
+    }
+
+    /** */
+    public void setChangeStateMessageWasProcessed(ChangeGlobalStateMessage msg) {
+        CountDownLatch changeStateLatch = changeStatesInProgress.get(msg.requestId());
+
+        if (changeStateLatch != null)
+            changeStateLatch.countDown();
     }
 
     /** */
