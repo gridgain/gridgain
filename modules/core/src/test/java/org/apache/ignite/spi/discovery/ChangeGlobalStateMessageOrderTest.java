@@ -36,7 +36,7 @@ import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVE
 
 /**
  * Test check that disco-event-worker processed ChangeGlobalStateMessage before
- * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage
+ * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage.
  */
 public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     /** */
@@ -58,6 +58,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         assertTrue(client.cluster().state() == ClusterState.ACTIVE);
 
+        //waiting until ChangeGlobalStateFinishMessage will be processed
         doSleep(2000);
 
         //check that cluster state changing works
@@ -86,7 +87,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /** */
+    /** This listener slow down processing of ChangeGlobalStateMessage in disco-event-worker thread. */
     private static class TestEventListener implements HighPriorityListener, DiscoveryEventListener {
         /** */
         IgniteEx client;
