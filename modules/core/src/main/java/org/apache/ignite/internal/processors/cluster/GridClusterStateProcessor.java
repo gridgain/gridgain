@@ -648,8 +648,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 }
 
                 if (!awaited)
-                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                            "before ChangeGlobalStateMessage was processed.");
+                    throw new RuntimeException("qwer12345 hdmyudfshg onStateFinishMessage");
+//                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+//                            "before ChangeGlobalStateMessage was processed.");
 
                 changeStatesInProgress.remove(reqId);
             }
@@ -707,6 +708,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (changeStateLatch != null)
             changeStateLatch.countDown();
+        else
+            throw new RuntimeException("qwer12345 dtyhukiulea setChangeStateMessageWasProcessed");
     }
 
     /** */
