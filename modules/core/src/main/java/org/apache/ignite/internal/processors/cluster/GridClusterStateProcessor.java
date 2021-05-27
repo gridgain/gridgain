@@ -648,8 +648,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 }
 
                 if (!awaited)
-                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                            "before ChangeGlobalStateMessage was processed.");
+                    throw new RuntimeException("qwer12345");
+//                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+//                            "before ChangeGlobalStateMessage was processed.");
             }
         }
 
