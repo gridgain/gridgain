@@ -155,7 +155,7 @@ public class IgniteStatisticsHelper {
             if (ccfg.overrides() != null && ccfg.overrides().total() != null) {
                 Long colRowCnt = ccfg.overrides().total();
 
-                overridedRowCnt = (overridedRowCnt > colRowCnt) ? overridedRowCnt : colRowCnt;
+                overridedRowCnt = Math.max(overridedRowCnt, colRowCnt);
             }
         }
 
