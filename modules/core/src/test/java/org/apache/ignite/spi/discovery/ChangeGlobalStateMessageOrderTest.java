@@ -27,7 +27,6 @@ import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
-import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -36,7 +35,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 
 /**
- * Test check that disco-event-worker proccessed ChangeGlobalStateMessage before
+ * Test check that disco-event-worker processed ChangeGlobalStateMessage before
  * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage
  */
 public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {

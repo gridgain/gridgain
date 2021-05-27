@@ -632,7 +632,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
         DiscoveryDataClusterState discoClusterState = globalState;
 
-        if (ctx.clientNode()) {
+        if (ctx.clientNode() && !ctx.isDaemon()) {
             UUID reqId = msg.requestId();
 
             CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
@@ -648,9 +648,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 }
 
                 if (!awaited)
-                    throw new RuntimeException("qwer12345 hdmyudfshg onStateFinishMessage");
-//                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-//                            "before ChangeGlobalStateMessage was processed.");
+                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                            "before ChangeGlobalStateMessage was processed.");
 
                 changeStatesInProgress.remove(reqId);
             }
@@ -698,18 +697,23 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** */
     public void onStateMessage(ChangeGlobalStateMessage msg) {
-        if (ctx.clientNode())
+        if (ctx.clientNode() && !ctx.isDaemon())
             changeStatesInProgress.put(msg.requestId(), new CountDownLatch(1));
     }
 
     /** */
-    public void setChangeStateMessageWasProcessed(ChangeGlobalStateMessage msg) {
-        CountDownLatch changeStateLatch = changeStatesInProgress.get(msg.requestId());
+    public void onChangeStateMessageWasProcessed(ChangeGlobalStateMessage msg) {
+        if (ctx.clientNode() && !ctx.isDaemon()) {
+            CountDownLatch changeStateLatch = changeStatesInProgress.get(msg.requestId());
 
-        if (changeStateLatch != null)
-            changeStateLatch.countDown();
-        else
-            throw new RuntimeException("qwer12345 dtyhukiulea setChangeStateMessageWasProcessed");
+            if (changeStateLatch != null)
+                changeStateLatch.countDown();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
+        changeStatesInProgress.clear();
     }
 
     /** */
