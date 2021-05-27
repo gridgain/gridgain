@@ -635,7 +635,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (ctx.clientNode()) {
             UUID reqId = msg.requestId();
 
-            CountDownLatch changeStateLatch = changeStatesInProgress.remove(reqId);
+            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
 
             if (changeStateLatch != null) {
                 boolean awaited = true;
@@ -648,9 +648,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 }
 
                 if (!awaited)
-                    throw new RuntimeException("qwer12345");
-//                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-//                            "before ChangeGlobalStateMessage was processed.");
+                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                            "before ChangeGlobalStateMessage was processed.");
+
+                changeStatesInProgress.remove(reqId);
             }
         }
 

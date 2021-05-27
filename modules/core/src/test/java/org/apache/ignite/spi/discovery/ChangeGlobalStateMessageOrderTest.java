@@ -27,6 +27,7 @@ import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -42,7 +43,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testChangeGlobalStateMessageOrder() throws Exception {
-        startGrid(0);
+        IgniteEx grid = startGrid(0);
 
         IgniteEx client = startClientGrid(1);
 
@@ -57,6 +58,8 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         latch.await(10, TimeUnit.SECONDS);
 
         assertTrue(client.cluster().state() == ClusterState.ACTIVE);
+
+        doSleep(2000);
 
         //check that cluster state changing works
         client.cluster().state(ClusterState.INACTIVE);
@@ -102,13 +105,10 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         @Override public void onEvent(DiscoveryEvent evt, DiscoCache cache) {
             if (latch.getCount() > 0 && ((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage) {
                 try {
-                    assert GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 5000)
-                        : "Cluster state change is not in progress";
+                    assertTrue("Cluster state change is not in progress",
+                            GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 5000));
 
-                    doSleep(3000);
-
-                    assert GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 5000)
-                            : "Cluster state change is not in progress";
+                    doSleep(2000);
                 }
                 catch (IgniteInterruptedCheckedException e) {
                     throw new RuntimeException(e);
