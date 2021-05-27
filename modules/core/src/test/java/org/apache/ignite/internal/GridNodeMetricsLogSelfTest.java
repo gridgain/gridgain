@@ -30,6 +30,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi;
 import org.apache.ignite.testframework.GridStringLogger;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
@@ -54,6 +56,9 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     /** */
     private GridStringLogger strLog = new GridStringLogger(false, this.log);
 
+    /** Coordinator test logger */
+    private ListeningTestLogger crdLog;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -63,11 +68,14 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         cfg.setExecutorConfiguration(new ExecutorConfiguration(CUSTOM_EXECUTOR_0),
             new ExecutorConfiguration(CUSTOM_EXECUTOR_1));
 
-        cfg.setGridLogger(strLog);
-
         BlockTcpCommunicationSpi commSpi = new BlockTcpCommunicationSpi();
 
         cfg.setCommunicationSpi(commSpi);
+
+        if (igniteInstanceName.endsWith("0") && crdLog != null)
+            cfg.setGridLogger(crdLog);
+        else
+            cfg.setGridLogger(strLog);
 
         return cfg;
     }
@@ -81,9 +89,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         strLog.reset();
 
-        strLog.logLength(1_000_000);
-
-        startGrids(2);
+        strLog.logLength(300_000);
     }
 
     /**
@@ -91,6 +97,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNodeMetricsLog() throws Exception {
+        LogListener rebalanceInfoLsnr = prepareRebalanceInfoLogListener();
+
+        startGrids(2);
+
         IgniteCache<Integer, String> cache1 = grid(0).createCache("TestCache1");
         IgniteCache<Integer, String> cache2 = grid(1).createCache(
             new CacheConfiguration<Integer, String>("TestCache2")
@@ -129,24 +139,28 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         doSleep(5_000);
 
-        logOutput = strLog.toString();
-
-        checkRebalanceInfo(logOutput);
+        assertTrue("Expected rebalance info not found", rebalanceInfoLsnr.check());
 
         commSpi(grid(0)).unblockAllMessages();
         commSpi(grid(1)).unblockAllMessages();
     }
 
     /**
-     * Checks rebalance info.
+     * Prepares rebalance info log listener.
      *
-     * @param output Node log.
+     * @return Prepared log listener
      */
-    private void checkRebalanceInfo(String output) {
-        String msg = "Expected rebalance info not found";
+    private LogListener prepareRebalanceInfoLogListener() {
+        crdLog = new ListeningTestLogger(log);
 
-        assertTrue(msg, output.contains("Current affinity assignment is not ideal, it is waiting for cache:"));
-        assertTrue(msg, output.matches("(?s).*grp=\\[grpId=.*,nodes=\\[node=\\[id=.*,partsNum=.*].*"));
+        LogListener rebalanceInfoLsnr =
+            LogListener.matches("Current affinity assignment is not ideal, it is waiting for cache:")
+                .andMatches(Pattern.compile("(?s).*grp=\\[grpId=.*,nodes=\\[node=\\[id=.*,partsNum=.*].*"))
+                .build();
+
+        crdLog.registerListener(rebalanceInfoLsnr);
+
+        return rebalanceInfoLsnr;
     }
 
     /**
