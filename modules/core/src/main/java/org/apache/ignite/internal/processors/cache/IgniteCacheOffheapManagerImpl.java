@@ -3430,9 +3430,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            boolean res = logTree.putx(row);
-
-            assert !res;
+            logTree.putx(row);
         }
 
         /** {@inheritDoc} */
