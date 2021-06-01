@@ -89,8 +89,9 @@ namespace ignite
              * Establish connection to ODBC server.
              *
              * @param connectStr Connection string.
+             * @param parentWindow Parent window pointer.
              */
-            void Establish(const std::string& connectStr);
+            void Establish(const std::string& connectStr, void* parentWindow);
 
             /**
              * Establish connection to ODBC server.
@@ -359,9 +360,10 @@ namespace ignite
              * Internal call.
              *
              * @param connectStr Connection string.
+             * @param parentWindow Parent window.
              * @return Operation result.
              */
-            SqlResult::Type InternalEstablish(const std::string& connectStr);
+            SqlResult::Type InternalEstablish(const std::string& connectStr, void* parentWindow);
 
             /**
              * Establish connection to ODBC server.

@@ -48,6 +48,14 @@ public interface EntryCompressionStrategy extends AutoCloseable {
     boolean compressKeys();
 
     /**
+     * Gets flag indicating whether this strategy is stateless. Only stateless strategies may be used with snapshots.
+     * Strategies which require storing local dictionaries are not stateless.
+     *
+     * @return {@code True} if strategy is stateless.
+     */
+    boolean stateless();
+
+    /**
      * Initializes entry compression strategy.
      *
      * @param ctx Kernal context.

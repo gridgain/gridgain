@@ -20,7 +20,6 @@ import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsAtomicCa
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinaryMetadataAsyncWritingTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinaryMetadataOnClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinarySortObjectFieldsTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCorruptedIndexTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsMarshallerMappingRestoreOnNodeStartTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTxCacheRebalancingTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTxHistoricalRebalancingTest;
@@ -87,8 +86,6 @@ import org.junit.runners.Suite;
     IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
     IgnitePdsThreadInterruptionTest.class,
     IgnitePdsBinarySortObjectFieldsTest.class,
-
-    IgnitePdsCorruptedIndexTest.class,
 
     IgniteLogicalRecoveryTest.class,
     IgniteLogicalRecoveryWithParamsTest.class,

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -26,7 +27,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.commons.io.Charsets;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
@@ -34,9 +34,10 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
 import org.apache.ignite.testframework.junits.GridTestBinaryMarshaller;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.util.DateTimeUtils;
@@ -100,13 +101,13 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     @Test
     public void testConvert() {
         // 8 bytes total: 1b, 1b, 3b, 3b.
-        byte[] bytes = StringInlineIndexColumn.trimUTF8("00\u20ac\u20ac".getBytes(Charsets.UTF_8), 7);
+        byte[] bytes = StringInlineIndexColumn.trimUTF8("00\u20ac\u20ac".getBytes(StandardCharsets.UTF_8), 7);
         assertEquals(5, bytes.length);
 
         String s = new String(bytes);
         assertEquals(3, s.length());
 
-        bytes = StringInlineIndexColumn.trimUTF8("aaaaaa".getBytes(Charsets.UTF_8), 4);
+        bytes = StringInlineIndexColumn.trimUTF8("aaaaaa".getBytes(StandardCharsets.UTF_8), 4);
         assertEquals(4, bytes.length);
     }
 
@@ -217,16 +218,20 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
      * @throws Exception If failed.
      */
     private <T> int putAndCompare(T v1, T v2, Class<T> cls, int maxSize) throws Exception {
-        DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
+        DataRegionConfiguration plcCfg = new DataRegionConfiguration()
+            .setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log,
+        DataRegionMetricsImpl dataRegionMetrics = new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log()));
+
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
             new UnsafeMemoryProvider(log),
-            null,
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            dataRegionMetrics,
+            false
+        );
 
         pageMem.start();
 
@@ -260,7 +265,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     @Test
     public void testStringCut() {
         // 6 bytes total: 3b, 3b.
-        byte[] bytes = StringInlineIndexColumn.trimUTF8("\u20ac\u20ac".getBytes(Charsets.UTF_8), 2);
+        byte[] bytes = StringInlineIndexColumn.trimUTF8("\u20ac\u20ac".getBytes(StandardCharsets.UTF_8), 2);
 
         assertNull(bytes);
     }
@@ -272,13 +277,14 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
-            new UnsafeMemoryProvider(log()),
-            null,
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
+            new UnsafeMemoryProvider(log),
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
+            false
+        );
 
         pageMem.start();
 
@@ -321,13 +327,14 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
-            new UnsafeMemoryProvider(log()),
-            null,
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
+            new UnsafeMemoryProvider(log),
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
+            false
+        );
 
         pageMem.start();
 
@@ -377,13 +384,16 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
-            new UnsafeMemoryProvider(log()),
-            null,
+        DataRegionMetricsImpl dataRegionMetrics = new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log()));
+
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
+            new UnsafeMemoryProvider(log),
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            dataRegionMetrics,
+            false
+        );
 
         pageMem.start();
 
@@ -435,13 +445,14 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
-            new UnsafeMemoryProvider(log()),
-            null,
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
+            new UnsafeMemoryProvider(log),
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
+            false
+        );
 
         pageMem.start();
 
@@ -763,13 +774,14 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
 
-        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
-            new UnsafeMemoryProvider(log()),
-            null,
+        PageMemory pageMem = new PageMemoryNoStoreImpl(
+            log,
+            new UnsafeMemoryProvider(log),
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
-            false);
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
+            false
+        );
 
         pageMem.start();
 
