@@ -46,7 +46,6 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOV2.PART_META_REUSE_LIST_ROOT_OFF;
-import static org.apache.ignite.testframework.GridTestUtils.findMetaPage;
 
 /**
  * Tests that grid with corrupted partitions, where meta page is corrupted, fails on start with correct error.
@@ -137,14 +136,10 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
 
         store.ensure();
 
-        long metaPageId = findMetaPage(0, FLAG_DATA, store, PAGE_SIZE);
+        // Index of meta page is always 0.
+        int metaPageIdx = 0;
 
-        if (metaPageId < 0)
-            fail("Could not find meta page.");
-
-        int pageIdx = PageIdUtils.pageIndex(metaPageId);
-
-        long offset = store.headerSize() + pageIdx * PAGE_SIZE + PART_META_REUSE_LIST_ROOT_OFF;
+        long offset = store.headerSize() + metaPageIdx * PAGE_SIZE + PART_META_REUSE_LIST_ROOT_OFF;
 
         writeLongToFileByOffset(store.getFileAbsolutePath(), offset, 0L);
 

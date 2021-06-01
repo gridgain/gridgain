@@ -2606,43 +2606,4 @@ public final class GridTestUtils {
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
     }
-
-
-    /**
-     * Finds meta page in file page store
-     *
-     * @param partId Partition id.
-     * @param flag Page store flag.
-     * @param store File page store.
-     * @return Page id.
-     * @throws IgniteCheckedException If failed.
-     */
-    public static long findMetaPage(int partId, byte flag, FilePageStore store, int pageSize)
-        throws IgniteCheckedException {
-        ByteBuffer buf = allocateBuffer(pageSize);
-
-        try {
-            long addr = bufferAddress(buf);
-
-            long pagesNum = isNull(store) ? 0 : (store.size() - store.headerSize()) / pageSize;
-
-            for (int i = 0; i < pagesNum; i++) {
-                buf.rewind();
-
-                long pageId = PageIdUtils.pageId(partId, flag, i);
-
-                store.read(pageId, buf, false);
-
-                PageIO io = PageIO.getPageIO(addr);
-
-                if (io.getType() == T_PART_META)
-                    return pageId;
-            }
-        }
-        finally {
-            freeBuffer(buf);
-        }
-
-        return -1;
-    }
 }
