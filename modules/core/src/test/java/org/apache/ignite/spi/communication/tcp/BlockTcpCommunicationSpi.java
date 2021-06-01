@@ -51,8 +51,10 @@ public class BlockTcpCommunicationSpi extends TcpCommunicationSpi {
     @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC)
         throws IgniteSpiException {
 
-        if (msg instanceof GridIoMessage && msgClasses.contains(((GridIoMessage)msg).message().getClass())) {
-            log.info("Block message: " + msg);
+        final Message iomsg = ((GridIoMessage)msg).message();
+
+        if (msg instanceof GridIoMessage && msgClasses.contains(iomsg.getClass())) {
+            log.info("Block message: " + iomsg);
 
             queue.add(new T3<>(node, msg, ackC));
 
@@ -60,6 +62,21 @@ public class BlockTcpCommunicationSpi extends TcpCommunicationSpi {
         }
 
         super.sendMessage(node, msg, ackC);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void sendMessage(ClusterNode node, Message msg) throws IgniteSpiException {
+        final Message iomsg = ((GridIoMessage)msg).message();
+
+        if (msg instanceof GridIoMessage && msgClasses.contains(iomsg.getClass())) {
+            log.info("Block message: " + iomsg);
+
+            queue.add(new T3<>(node, msg, null));
+
+            return;
+        }
+
+        super.sendMessage(node, msg);
     }
 
     /**
@@ -83,7 +100,10 @@ public class BlockTcpCommunicationSpi extends TcpCommunicationSpi {
         msgClasses.clear();
 
         for (T3<ClusterNode, Message, IgniteInClosure> msg : queue)
-            super.sendMessage(msg.get1(), msg.get2(), msg.get3());
+            if (msg.get3() != null)
+                super.sendMessage(msg.get1(), msg.get2(), msg.get3());
+            else
+                super.sendMessage(msg.get1(), msg.get2());
 
         queue.clear();
     }

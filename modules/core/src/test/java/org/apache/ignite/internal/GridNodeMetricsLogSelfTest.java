@@ -25,8 +25,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessageV2;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi;
 import org.apache.ignite.testframework.GridStringLogger;
@@ -59,6 +58,9 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     /** Coordinator test logger */
     private ListeningTestLogger crdLog;
 
+    /** Coordinator log listener */
+    LogListener rebalanceInfoLsnr;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -90,6 +92,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         strLog.reset();
 
         strLog.logLength(300_000);
+
+        rebalanceInfoLsnr = prepareRebalanceInfoLogListener();
+
+        startGrids(2);
     }
 
     /**
@@ -97,19 +103,15 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNodeMetricsLog() throws Exception {
-        LogListener rebalanceInfoLsnr = prepareRebalanceInfoLogListener();
-
-        startGrids(2);
-
         IgniteCache<Integer, String> cache1 = grid(0).createCache("TestCache1");
         IgniteCache<Integer, String> cache2 = grid(1).createCache(
             new CacheConfiguration<Integer, String>("TestCache2")
-            .setDataRegionName(persistenceEnabled() ? IN_MEMORY_REGION : "default"));
+                .setDataRegionName(persistenceEnabled() ? IN_MEMORY_REGION : "default"));
 
         cache1.put(1, "one");
         cache2.put(2, "two");
 
-        Thread.sleep(10_000);
+        Thread.sleep(5_000);
 
         // Check that nodes are alive.
         assertEquals("one", cache1.get(1));
@@ -123,14 +125,21 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         checkDataRegionsMetrics(logOutput);
 
-        commSpi(grid(0)).blockMessage(GridDhtPartitionSupplyMessageV2.class);
-        commSpi(grid(0)).blockMessage(GridDhtPartitionSupplyMessage.class);
-        commSpi(grid(1)).blockMessage(GridDhtPartitionSupplyMessageV2.class);
-        commSpi(grid(1)).blockMessage(GridDhtPartitionSupplyMessage.class);
+        if (!persistenceEnabled()) {
+            commSpi(grid(0)).blockMessage(GridDhtPartitionsFullMessage.class);
+            commSpi(grid(1)).blockMessage(GridDhtPartitionsFullMessage.class);
+        }
 
         new Thread(() -> {
             try {
                 startGrid(2);
+
+                if (persistenceEnabled()) {
+                    commSpi(grid(0)).blockMessage(GridDhtPartitionsFullMessage.class);
+                    commSpi(grid(1)).blockMessage(GridDhtPartitionsFullMessage.class);
+
+                    grid(0).cluster().setBaselineTopology(grid(0).cluster().nodes());
+                }
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -139,10 +148,10 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         doSleep(5_000);
 
-        assertTrue("Expected rebalance info not found", rebalanceInfoLsnr.check());
-
         commSpi(grid(0)).unblockAllMessages();
         commSpi(grid(1)).unblockAllMessages();
+
+        assertTrue("Expected rebalance info not found", rebalanceInfoLsnr.check());
     }
 
     /**
