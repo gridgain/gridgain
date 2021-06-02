@@ -1529,16 +1529,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (F.isEmpty(entries))
             return false;
 
-        WALPointer oldestWALPointerToReserve = null;
+        FileWALPointer oldestWALPointerToReserve = null;
 
         for (GroupPartitionId key : entries.keySet()) {
-            WALPointer ptr = entries.get(key).checkpointMark();
+            FileWALPointer ptr = (FileWALPointer)entries.get(key).checkpointMark();
 
             if (ptr == null)
                 return false;
 
-            if (oldestWALPointerToReserve == null ||
-                ((FileWALPointer)ptr).index() < ((FileWALPointer)oldestWALPointerToReserve).index())
+            if (oldestWALPointerToReserve == null || ptr.compareTo(oldestWALPointerToReserve) < 0)
                 oldestWALPointerToReserve = ptr;
         }
 
@@ -1766,7 +1765,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
         // can't write header without that condition.
-        WALPointer lastReadPtr = logicalState.lastReadRecordPointer();
+        FileWALPointer lastReadPtr = logicalState.lastReadRecordPointer();
 
         if (lastFlushPtr != null && lastReadPtr == null)
             return lastFlushPtr;
@@ -1776,7 +1775,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         if (lastFlushPtr != null && lastReadPtr != null) {
             FileWALPointer lastFlushPtr0 = (FileWALPointer)lastFlushPtr;
-            FileWALPointer lastReadPtr0 = (FileWALPointer)lastReadPtr;
+            FileWALPointer lastReadPtr0 = lastReadPtr;
 
             return lastReadPtr0.compareTo(lastFlushPtr0) >= 0 ? lastReadPtr : lastFlushPtr0;
         }
