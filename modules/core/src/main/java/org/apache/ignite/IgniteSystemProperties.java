@@ -1512,6 +1512,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
+     * Use TreeMap instead of HashMap to hold distinct values.
+     * Default value is {@code false}. HashMap is used by default.
+     */
+    public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

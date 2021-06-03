@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.IgniteInternalFuture;
+package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.UUID;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 
 /**
- * Future to track statistics gathering task. Allows to get collection id and targets immediately.
+ * Container for different memory page-related metrics.
  */
-public interface StatisticsGatheringFuture<T> extends IgniteInternalFuture<T> {
+public interface PageMetrics {
     /**
-     * @return Statistics gathering id.
+     * Total number of allocated pages.
      */
-    public UUID gatId();
+    public LongAdderMetric totalPages();
 
     /**
-     * @return Targets, which covered by the future.
+     * Number of index pages loaded into memory.
      */
-    public StatisticsTarget[] targets();
+    public LongAdderMetric indexPages();
+
+    /**
+     * Resets all metric counters.
+     */
+    public void reset();
 }
-

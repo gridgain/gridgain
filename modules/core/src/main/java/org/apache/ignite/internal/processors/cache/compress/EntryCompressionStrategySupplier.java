@@ -26,11 +26,11 @@ import org.apache.ignite.plugin.Extension;
  * Interface for getting cache entry compression from plugins.
  */
 @IgniteExperimental
-public interface EntryCompressionStrategySupplier<C extends EntryCompressionConfiguration> extends Extension {
+public interface EntryCompressionStrategySupplier extends Extension {
     /**
      * Getting cache entry compression strategies.
      *
      * @return Cache entry compression strategies.
      */
-    Map<Class<C>, IgniteClosure<C, EntryCompressionStrategy>> strategies();
+    <C extends EntryCompressionConfiguration> Map<Class<C>, IgniteClosure<C, EntryCompressionStrategy>> strategies();
 }

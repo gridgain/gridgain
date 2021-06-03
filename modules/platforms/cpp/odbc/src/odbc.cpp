@@ -22,6 +22,7 @@
 #include "ignite/odbc/log.h"
 #include "ignite/odbc/utility.h"
 #include "ignite/odbc/system/odbc_constants.h"
+#include "ignite/odbc/system/system_dsn.h"
 
 #include "ignite/odbc/config/connection_string_parser.h"
 #include "ignite/odbc/config/configuration.h"
@@ -32,6 +33,26 @@
 #include "ignite/odbc/dsn_config.h"
 #include "ignite/odbc.h"
 
+/**
+ * Handle window handle.
+ * @param windowHandle Window handle.
+ * @param config Configuration.
+ * @return @c true on success and @c false otherwise.
+ */
+bool HandleParentWindow(SQLHWND windowHandle, ignite::odbc::config::Configuration &config)
+{
+#ifdef _WIN32
+    if (windowHandle)
+    {
+        LOG_MSG("Parent window is passed. Creating configuration window.");
+        return DisplayConnectionWindow(windowHandle, config);
+    }
+#else
+    IGNITE_UNUSED(windowHandle);
+    IGNITE_UNUSED(config);
+#endif
+    return true;
+}
 
 namespace ignite
 {
@@ -261,8 +282,6 @@ namespace ignite
         using utility::SqlStringToString;
         using utility::CopyStringToBuffer;
 
-        UNREFERENCED_PARAMETER(windowHandle);
-
         LOG_MSG("SQLDriverConnect called");
         if (inConnectionString)
             LOG_MSG("Connection String: [" << inConnectionString << "]");
@@ -273,11 +292,9 @@ namespace ignite
             return SQL_INVALID_HANDLE;
 
         std::string connectStr = SqlStringToString(inConnectionString, inConnectionStringLen);
+        connection->Establish(connectStr, windowHandle);
 
-        connection->Establish(connectStr);
-
-        const DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
-
+        DiagnosticRecordStorage& diag = connection->GetDiagnosticRecords();
         if (!diag.IsSuccessful())
             return diag.GetReturnCode();
 

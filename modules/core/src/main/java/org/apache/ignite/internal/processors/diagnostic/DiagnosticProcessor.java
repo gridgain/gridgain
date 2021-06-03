@@ -28,10 +28,10 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
 import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -96,7 +96,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         if (IGNITE_DUMP_PAGE_LOCK_ON_FAILURE)
             ctx.cache().context().diagnostic().pageLockTracker().dumpLocksToLog();
 
-        CorruptedPersistenceException corruptedPersistenceE = X.cause(failureCtx.error(), CorruptedPersistenceException.class);
+        CorruptedPersistenceException corruptedPersistenceE =
+            X.cause(failureCtx.error(), AbstractCorruptedPersistenceException.class);
 
         if (corruptedPersistenceE != null && !F.isEmpty(corruptedPersistenceE.pages()) && fileIOFactory != null) {
             File[] walDirs = walDirs(ctx);
@@ -130,9 +131,9 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                 }
                 catch (Throwable t) {
                     String pages = Arrays.stream(corruptedPersistenceE.pages())
-                        .map(t2 -> "(" + t2.get1() + ',' + t2.get2() + ')').collect(joining("", "[", "]"));
+                        .map(t2 -> "" + t2.get1() + ':' + t2.get2()).collect(joining("\n", "", ""));
 
-                    log.error("Failed to dump diagnostic info on tree corruption. PageIds=" + pages, t);
+                    log.error("Failed to dump diagnostic info of partition corruption. Page ids:\n" + pages, t);
                 }
             }
         }

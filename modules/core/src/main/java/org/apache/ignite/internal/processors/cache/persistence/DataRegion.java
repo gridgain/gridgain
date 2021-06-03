@@ -27,7 +27,7 @@ public class DataRegion {
     private final PageMemory pageMem;
 
     /** */
-    private final DataRegionMetricsImpl memMetrics;
+    private final DataRegionMetricsImpl metrics;
 
     /** */
     private final DataRegionConfiguration cfg;
@@ -37,18 +37,18 @@ public class DataRegion {
 
     /**
      * @param pageMem PageMemory instance.
-     * @param memMetrics DataRegionMetrics instance.
+     * @param metrics DataRegionMetrics instance.
      * @param cfg Configuration of given DataRegion.
      * @param evictionTracker Eviction tracker.
      */
     public DataRegion(
         PageMemory pageMem,
         DataRegionConfiguration cfg,
-        DataRegionMetricsImpl memMetrics,
+        DataRegionMetricsImpl metrics,
         PageEvictionTracker evictionTracker
     ) {
         this.pageMem = pageMem;
-        this.memMetrics = memMetrics;
+        this.metrics = metrics;
         this.cfg = cfg;
         this.evictionTracker = evictionTracker;
     }
@@ -70,8 +70,8 @@ public class DataRegion {
     /**
      * @return Memory Metrics.
      */
-    public DataRegionMetricsImpl memoryMetrics() {
-        return memMetrics;
+    public DataRegionMetricsImpl metrics() {
+        return metrics;
     }
 
     /**
