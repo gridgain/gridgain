@@ -15,17 +15,22 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.jetbrains.annotations.Nullable;
 
 /** */
-public class CorruptedPagesListException extends IgniteCheckedException implements CorruptedPersistenceException {
-    /** */
-    private final T2<Integer, Long>[] pages = null;
-
-    /** {@inheritDoc} */
-    @Override public T2<Integer, Long>[] pages() {
-        return pages;
+public class CorruptedPagesListException extends AbstractCorruptedPersistenceException {
+    /**
+     * @param msg   Message.
+     * @param cause Cause.
+     * @param pages (groupId, pageId) pairs for pages that might be corrupted.
+     */
+    protected CorruptedPagesListException(
+        String msg,
+        @Nullable Throwable cause,
+        T2<Integer, Long>[] pages
+    ) {
+        super(msg, cause, pages);
     }
 }

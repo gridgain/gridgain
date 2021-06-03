@@ -27,9 +27,6 @@ public class CorruptedFreeListException extends AbstractCorruptedPersistenceExce
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
-    private final T2<Integer, Long>[] pages = null;
-
     /**
      * @param msg Message.
      * @param cause Cause.
@@ -50,10 +47,5 @@ public class CorruptedFreeListException extends AbstractCorruptedPersistenceExce
         T2<Integer, Long>[] pages
     ) {
         super(msg, cause, pages);
-    }
-
-    /** {@inheritDoc} */
-    @Override public T2<Integer, Long>[] pages() {
-        return pages;
     }
 }
