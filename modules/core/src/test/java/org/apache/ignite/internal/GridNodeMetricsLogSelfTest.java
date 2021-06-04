@@ -27,15 +27,16 @@ import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi;
 import org.apache.ignite.testframework.GridStringLogger;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 
-import static org.apache.ignite.spi.communication.tcp.BlockTcpCommunicationSpi.commSpi;
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Check logging local node metrics
@@ -70,9 +71,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         cfg.setExecutorConfiguration(new ExecutorConfiguration(CUSTOM_EXECUTOR_0),
             new ExecutorConfiguration(CUSTOM_EXECUTOR_1));
 
-        BlockTcpCommunicationSpi commSpi = new BlockTcpCommunicationSpi();
-
-        cfg.setCommunicationSpi(commSpi);
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         if (igniteInstanceName.endsWith("0") && crdLog != null)
             cfg.setGridLogger(crdLog);
@@ -126,32 +125,32 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         checkDataRegionsMetrics(logOutput);
 
         if (!persistenceEnabled()) {
-            commSpi(grid(0)).blockMessage(GridDhtPartitionsFullMessage.class);
-            commSpi(grid(1)).blockMessage(GridDhtPartitionsFullMessage.class);
+            spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+            spi(grid(1)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
         }
 
-        new Thread(() -> {
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
                 startGrid(2);
-
-                if (persistenceEnabled()) {
-                    commSpi(grid(0)).blockMessage(GridDhtPartitionsFullMessage.class);
-                    commSpi(grid(1)).blockMessage(GridDhtPartitionsFullMessage.class);
-
-                    grid(0).cluster().setBaselineTopology(grid(0).cluster().nodes());
-                }
             }
             catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
 
-        doSleep(5_000);
+            if (persistenceEnabled()) {
+                spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+                spi(grid(1)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
 
-        commSpi(grid(0)).unblockAllMessages();
-        commSpi(grid(1)).unblockAllMessages();
+                grid(0).cluster().setBaselineTopology(grid(0).cluster().nodes());
+            }
+        });
 
-        assertTrue("Expected rebalance info not found", rebalanceInfoLsnr.check());
+        assertTrue("Expected rebalance info not found", waitForCondition(() -> rebalanceInfoLsnr.check(), 5_000));
+
+        spi(grid(0)).stopBlock();
+        spi(grid(1)).stopBlock();
+
+        fut.get();
     }
 
     /**
@@ -164,7 +163,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         LogListener rebalanceInfoLsnr =
             LogListener.matches("Current affinity assignment is not ideal, it is waiting for cache:")
-                .andMatches(Pattern.compile("(?s).*grp=\\[grpId=.*,nodes=\\[node=\\[id=.*,partsNum=.*].*"))
+                .andMatches(Pattern.compile("(?s).*grp=\\[grpId=.*, nodes=\\[node=\\[id=.*, partsNum=.*].*"))
                 .build();
 
         crdLog.registerListener(rebalanceInfoLsnr);

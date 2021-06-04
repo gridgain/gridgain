@@ -2930,35 +2930,45 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         if (waitInfo == null || waitInfo.empty())
             return;
 
-        StringBuilder sb = new StringBuilder();
+        try {
+            final String header = "Current affinity assignment is not ideal, it is waiting for cache: ";
 
-        sb.append("Current affinity assignment is not ideal, it is waiting for cache: [");
+            List<String> grpList = new ArrayList<>();
 
-        waitInfo.assignments.forEach((grpId, partsMap) -> {
-            sb.append("grp=[grpId=").append(grpId).append(",nodes=[");
+            waitInfo.assignments.forEach((grpId, partsMap) -> {
+                StringBuilder sb = new StringBuilder();
 
-            Map<UUID/* ClusterNode id */, Integer/* Number of partitions for this UUID */> nodeMap = new HashMap<>();
+                sb.append("grp=[grpId=").append(grpId).append(", nodes=[");
 
-            partsMap.forEach((partId, nodes) -> {
-                nodes.forEach((node -> {
-                    if (nodeMap.containsKey(node.id()))
-                        nodeMap.compute(node.id(), (k, v) -> v + 1);
-                    else
-                        nodeMap.put(node.id(), 1);
-                }));
+                Map<UUID/* ClusterNode id */, Integer/* Number of partitions for this UUID */> nodeMap = new HashMap<>();
+
+                // Avoiding CME
+                Map<Integer /** Partition id. */, List<ClusterNode>> partsMap0 = new HashMap<>(partsMap);
+
+                partsMap0.forEach((partId, nodes) -> {
+                    nodes.forEach((node -> {
+                        if (nodeMap.containsKey(node.id()))
+                            nodeMap.compute(node.id(), (k, v) -> v + 1);
+                        else
+                            nodeMap.put(node.id(), 1);
+                    }));
+                });
+
+                String nodesStr = nodeMap.entrySet()
+                    .stream()
+                    .map(entry -> "node=[id=" + entry.getKey() + ", partsNum=" + entry.getValue() + "]")
+                    .collect(Collectors.joining(", "));
+
+                sb.append(nodesStr).append("]]");
+
+                grpList.add(sb.toString());
             });
 
-            nodeMap.forEach((nodeId, partsNum) -> {
-                sb.append("node=[id=").append(nodeId).append(",partsNum=").append(partsNum).append("],");
-            });
-
-            // Remove extra comma
-            sb.deleteCharAt(sb.length() - 1);
-
-            sb.append("]]");
-        });
-
-        log.info(sb.toString());
+            log.info(header + String.join(", ", grpList));
+        }
+        catch (Exception e) {
+            log.error("Failed to print waiting partitions info", e);
+        }
     }
 
     /**
