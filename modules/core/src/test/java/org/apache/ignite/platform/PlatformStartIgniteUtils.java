@@ -52,7 +52,7 @@ public class PlatformStartIgniteUtils {
                         SecurityPermissionSetBuilder.create().defaultAllowAll(false)
                                 .appendCachePermissions("DEFAULT_CACHE", CACHE_READ, CACHE_PUT, CACHE_REMOVE)
                                 .appendCachePermissions("FORBIDDEN_CACHE")
-                                .build(), new Permissions())
+                                .build())
         );
 
         IgniteConfiguration cfg = new IgniteConfiguration()
