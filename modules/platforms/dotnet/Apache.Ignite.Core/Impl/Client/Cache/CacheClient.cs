@@ -80,12 +80,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             WithExpiryPolicy = 1 << 2
         }
 
-        /** Query filter platform code: Java filter. */
-        private const byte FilterPlatformJava = 1;
-
-        /** Query filter platform code: .NET filter. */
-        private const byte FilterPlatformDotnet = 2;
-
         /** Cache name. */
         private readonly string _name;
 
@@ -892,7 +886,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
                 writer.WriteObject(holder);
 
-                writer.WriteByte(FilterPlatformDotnet);
+                writer.WriteByte(ClientPlatformId.Dotnet);
             }
 
             writer.WriteInt(qry.PageSize);
@@ -1113,14 +1107,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 if (javaFilter != null)
                 {
                     w.WriteObject(javaFilter.GetRawProxy());
-                    w.WriteByte(FilterPlatformJava);
+                    w.WriteByte(ClientPlatformId.Java);
                 }
                 else
                 {
                     var filterHolder = new ContinuousQueryFilterHolder(continuousQuery.Filter, _keepBinary);
 
                     w.WriteObject(filterHolder);
-                    w.WriteByte(FilterPlatformDotnet);
+                    w.WriteByte(ClientPlatformId.Dotnet);
                 }
             }
 
