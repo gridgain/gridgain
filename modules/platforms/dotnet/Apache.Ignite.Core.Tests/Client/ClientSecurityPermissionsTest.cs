@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Datastream;
     using NUnit.Framework;
@@ -85,7 +86,14 @@ namespace Apache.Ignite.Core.Tests.Client
                 var clientEx = (IgniteClientException)ex.GetBaseException();
 
                 Assert.AreEqual(ClientStatusCode.SecurityViolation, clientEx.StatusCode);
-                Assert.AreEqual("Client is not authorized to perform this operation", clientEx.Message);
+
+                var perm = add ? "CACHE_PUT" : "CACHE_REMOVE";
+                var message = Regex.Replace(clientEx.Message, "id=.*?, ", string.Empty);
+
+                Assert.AreEqual(
+                    "Authorization failed [perm=" + perm +
+                    ", name=FORBIDDEN_CACHE, subject=TestSecuritySubject{type=REMOTE_CLIENT, login=CLIENT}]",
+                    message);
             }
         }
 
