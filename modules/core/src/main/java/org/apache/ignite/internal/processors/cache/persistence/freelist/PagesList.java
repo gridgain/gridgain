@@ -17,9 +17,12 @@
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -543,6 +546,11 @@ public abstract class PagesList extends DataStructure {
             }
         }
     }
+
+    /**
+     * @return Total buckets count.
+     */
+    protected abstract int bucketsCnt();
 
     /**
      * Gets bucket index by page freespace.
@@ -1387,9 +1395,8 @@ public abstract class PagesList extends DataStructure {
 
                         dirty = true;
 
-                        assert !isReuseBucket(bucket) ||
-                            PageIdUtils.itemId(pageId) > 0 && PageIdUtils.itemId(pageId) <= MAX_ITEMID_NUM
-                            : "Incorrectly recycled pageId in reuse bucket: " + U.hexLong(pageId);
+                        if (isReuseBucket(bucket) && !(PageIdUtils.itemId(pageId) > 0 && PageIdUtils.itemId(pageId) <= MAX_ITEMID_NUM))
+                            throw corruptedFreeListException("Incorrectly recycled pageId in reuse bucket: " + U.hexLong(pageId), pageId);
 
                         if (isReuseBucket(bucket)) {
                             byte flag = getFlag(initIoVers);
@@ -1993,6 +2000,132 @@ public abstract class PagesList extends DataStructure {
      */
     public long metaPageId() {
         return metaPageId;
+    }
+
+    /**
+     * Collects the pages that list consists of.
+     *
+     * @param pageIds Initial list of pages ids, that will be added to result collection.
+     * @return Collection of pages that list consists of.
+     */
+    protected Collection<Long> pageIds(long... pageIds) {
+        Set<Long> res = new HashSet<>();
+
+        final int maxPages = 1000;
+
+        res.add(metaPageId);
+
+        // Iterate over buckets.
+        for (int i = 0; i < bucketsCnt(); i++) {
+            Stripe[] stripes = getBucket(i);
+
+            // Iterate over stripes in bucket. It is safe because array of stripes is changed via CAS.
+            for (int j = 0; j < stripes.length; j++) {
+                Stripe stripe = stripes[j];
+
+                // Doing several lock attempts for stripe.
+                for (int lockAttempt = 0; lockAttempt < TRY_LOCK_ATTEMPTS; lockAttempt++) {
+                    long tailId = stripe.tailId;
+
+                    res.add(tailId);
+
+                    if (res.size() == maxPages)
+                        return res;
+
+                    try {
+                        final long tailAddr = pageMem.acquirePage(grpId, tailId, IoStatisticsHolderNoOp.INSTANCE);
+
+                        try {
+                            pageMem.readLock(grpId, tailId, tailAddr);
+
+                            try {
+                                // Check that tail id wasn't changed concurrently.
+                                if (stripe.tailId != tailId)
+                                    continue;
+
+                                long pageId = tailId;
+                                long pageAddr = tailAddr;
+                                long nextId;
+
+                                // Iterate over page list nodes in stripe.
+                                while (true) {
+                                    if (pageId != tailId) {
+                                        res.add(pageId);
+
+                                        if (res.size() == maxPages)
+                                            return res;
+
+                                        try {
+                                            pageAddr = pageMem.acquirePage(grpId, pageId, IoStatisticsHolderNoOp.INSTANCE);
+                                        }
+                                        catch (IgniteCheckedException e) {
+                                            break;
+                                        }
+                                    }
+
+                                    try {
+                                        PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(pageAddr);
+
+                                        nextId = io.getNextId(pageAddr);
+
+                                        if (nextId == 0 || nextId == pageId)
+                                            break;
+                                    }
+                                    finally {
+                                        if (pageId != tailId)
+                                            pageMem.releasePage(grpId, pageId, pageAddr);
+                                    }
+
+                                    pageId = nextId;
+                                }
+                            }
+                            finally {
+                                pageMem.readUnlock(grpId, tailId, tailAddr);
+                            }
+                        }
+                        finally {
+                            pageMem.releasePage(grpId, tailId, tailAddr);
+                        }
+                    }
+                    catch (IgniteCheckedException ignore) {
+                        // No op - just retry.
+                    }
+                }
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * @param err Error that caused this exception.
+     * @param pageIds Ids of possibly corrupted pages.
+     * @return Exception of type {@link CorruptedFreeListException} that wraps original error and ids of
+     *  possibly corrupted pages.
+     */
+    protected CorruptedFreeListException corruptedFreeListException(Throwable err, long... pageIds) {
+        return corruptedFreeListException(err.getMessage(), err, pageIds);
+    }
+
+    /**
+     * @param msg Exception message.
+     * @param pageIds Ids of possibly corrupted pages.
+     * @return Exception of type {@link CorruptedFreeListException} that wraps original error and ids of
+     *  possibly corrupted pages.
+     */
+    protected CorruptedFreeListException corruptedFreeListException(String msg, long... pageIds) {
+        return corruptedFreeListException(msg, null, pageIds);
+    }
+
+    /**
+     * @param msg Exception message.
+     * @param err Error that caused this exception.
+     * @param pageIds Ids of possibly corrupted pages.
+     * @return Exception of type {@link CorruptedFreeListException} that wraps original error and ids of
+     *  possibly corrupted pages.
+     */
+    protected CorruptedFreeListException corruptedFreeListException(String msg, @Nullable Throwable err, long... pageIds) {
+        return new CorruptedFreeListException(msg, err, grpId, pageIds(pageIds));
     }
 
     /**
