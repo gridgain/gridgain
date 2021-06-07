@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * Base class for data transfer objects.
  */
 public abstract class IgniteDataTransferObject implements Externalizable {
-    /** */
+    /** Serial version UUID. */
     private static final long serialVersionUID = 0L;
 
     /** Magic number to detect correct transfer objects. */
