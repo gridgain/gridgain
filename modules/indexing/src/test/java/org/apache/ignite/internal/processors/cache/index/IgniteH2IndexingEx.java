@@ -25,10 +25,12 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -95,6 +97,13 @@ class IgniteH2IndexingEx extends IgniteH2Indexing {
             cacheRowConsumer.entrySet().removeIf(e -> e.getKey().startsWith(nodeNamePrefix));
             cacheRebuildRunner.entrySet().removeIf(e -> e.getKey().startsWith(nodeNamePrefix));
         }
+    }
+
+    /**
+     * Set {@link IgniteH2IndexingEx} to {@link GridQueryProcessor#idxCls} before starting the node.
+     */
+    static void prepareBeforeNodeStart() {
+        GridQueryProcessor.idxCls = IgniteH2IndexingEx.class;
     }
 
     /**
@@ -201,6 +210,41 @@ class IgniteH2IndexingEx extends IgniteH2Indexing {
         void resetFutures() {
             startRebuildIdxFut.reset();
             finishRebuildIdxFut.reset();
+        }
+    }
+
+    /**
+     * Consumer breaking index rebuild for the cache.
+     */
+    static class BreakRebuildIndexConsumer extends StopRebuildIndexConsumer {
+        /** Predicate for throwing an {@link IgniteCheckedException}. */
+        final IgniteThrowableBiPredicate<BreakRebuildIndexConsumer, CacheDataRow> brakePred;
+
+        /**
+         * Constructor.
+         *
+         * @param timeout The maximum time to wait finish future in milliseconds.
+         * @param brakePred Predicate for throwing an {@link IgniteCheckedException}.
+         */
+        BreakRebuildIndexConsumer(
+            long timeout,
+            IgniteThrowableBiPredicate<BreakRebuildIndexConsumer, CacheDataRow> brakePred
+        ) {
+            super(timeout);
+
+            this.brakePred = brakePred;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void accept(CacheDataRow row) throws IgniteCheckedException {
+            startRebuildIdxFut.onDone();
+
+            finishRebuildIdxFut.get(timeout);
+
+            visitCnt.incrementAndGet();
+
+            if (brakePred.test(this, row))
+                throw new IgniteCheckedException("From test.");
         }
     }
 }
