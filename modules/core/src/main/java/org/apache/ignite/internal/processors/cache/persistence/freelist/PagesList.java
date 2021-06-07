@@ -651,7 +651,7 @@ public abstract class PagesList extends DataStructure {
 
                 // Tail must exist to be updated.
                 assert !F.isEmpty(tails) : "Missing tails [bucket=" + bucket + ", tails=" + Arrays.toString(tails) +
-                    ", metaPage=" + U.hexLong(metaPageId) + ']';
+                    ", metaPage=" + U.hexLong(metaPageId) + ", grpId=" + grpId + ']';
 
                 idx = findTailIndex(tails, oldTailId, idx);
 
@@ -1941,6 +1941,13 @@ public abstract class PagesList extends DataStructure {
         // Ok to have a race here, see the field javadoc.
         if (!pageCacheChanged)
             pageCacheChanged = true;
+    }
+
+    /**
+     * @return Meta page id.
+     */
+    public long metaPageId() {
+        return metaPageId;
     }
 
     /**
