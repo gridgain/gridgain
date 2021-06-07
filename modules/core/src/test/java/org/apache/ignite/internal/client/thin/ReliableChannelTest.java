@@ -174,7 +174,7 @@ public class ReliableChannelTest {
     public void testNodeChannelsAreNotCleaned() {
         ClientConfiguration ccfg = new ClientConfiguration()
                 .setAddresses(dfltAddrs)
-                .setPartitionAwarenessEnabled(false);
+                .setAffinityAwarenessEnabled(false);
 
         ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
 
@@ -239,7 +239,7 @@ public class ReliableChannelTest {
 
         ClientConfiguration ccfg = new ClientConfiguration()
                 .setAddressesFinder(finder)
-                .setPartitionAwarenessEnabled(false);
+                .setAffinityAwarenessEnabled(false);
 
         ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
 

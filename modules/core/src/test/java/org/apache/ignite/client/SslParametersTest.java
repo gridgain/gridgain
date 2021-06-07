@@ -67,7 +67,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
                 .setAddresses("127.0.0.1:10800")
                 .setSslMode(SslMode.REQUIRED)
                 .setSslContextFactory(createSslFactory())
-                .setPartitionAwarenessEnabled(false);
+                .setAffinityAwarenessEnabled(false);
     }
 
     /**
