@@ -17,19 +17,12 @@
 package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Map;
-import org.apache.ignite.client.Person;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.StopRebuildIndexConsumer;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheCompoundFuture;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFuture;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
@@ -38,15 +31,14 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addCacheRebuildRunner;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addCacheRowConsumer;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.nodeName;
+import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.prepareBeforeNodeStart;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -54,40 +46,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 /**
  * Class for checking the correct completion/stop of index rebuilding.
  */
-public class StopRebuildIndexTest extends GridCommonAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        IgniteH2IndexingEx.clean(getTestIgniteInstanceName());
-
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        IgniteH2IndexingEx.clean(getTestIgniteInstanceName());
-
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setConsistentId(igniteInstanceName)
-            .setFailureHandler(new StopNodeFailureHandler())
-            .setDataStorageConfiguration(
-                new DataStorageConfiguration()
-                    .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
-            ).setCacheConfiguration(
-                new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, Person.class)
-            );
-    }
-
+public class StopRebuildIndexTest extends AbstractRebuildIndexTest {
     /**
      * Checks the correctness {@link SchemaIndexCacheCompoundFuture}.
      */
@@ -175,9 +134,11 @@ public class StopRebuildIndexTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInternalIndexingRebuildFuture() throws Exception {
-        GridQueryProcessor.idxCls = IgniteH2IndexingEx.class;
+        prepareBeforeNodeStart();
 
-        IgniteEx n = prepareCluster(10);
+        IgniteEx n = startGrid(0);
+
+        populate(n.cache(DEFAULT_CACHE_NAME), 10);
 
         GridCacheContext<?, ?> cacheCtx = n.cachex(DEFAULT_CACHE_NAME).context();
 
@@ -187,8 +148,7 @@ public class StopRebuildIndexTest extends GridCommonAbstractTest {
             () -> assertNull(internalIndexRebuildFuture(n, cacheCtx.cacheId()))
         );
 
-        StopRebuildIndexConsumer stopRebuildIdxConsumer = new StopRebuildIndexConsumer(getTestTimeout());
-        addCacheRowConsumer(nodeName(n), cacheCtx.name(), stopRebuildIdxConsumer);
+        StopRebuildIndexConsumer stopRebuildIdxConsumer = addStopRebuildIndexConsumer(n, cacheCtx.name());
 
         forceRebuildIndexes(n, cacheCtx);
 
@@ -226,10 +186,13 @@ public class StopRebuildIndexTest extends GridCommonAbstractTest {
         IgniteThrowableConsumer<IgniteEx> stopRebuildIndexes,
         boolean expThrowEx
     ) throws Exception {
-        GridQueryProcessor.idxCls = IgniteH2IndexingEx.class;
+        prepareBeforeNodeStart();
 
         int keys = 100_000;
-        IgniteEx n = prepareCluster(keys);
+
+        IgniteEx n = startGrid(0);
+
+        populate(n.cache(DEFAULT_CACHE_NAME), keys);
 
         GridCacheContext<?, ?> cacheCtx = n.cachex(DEFAULT_CACHE_NAME).context();
 
@@ -276,23 +239,6 @@ public class StopRebuildIndexTest extends GridCommonAbstractTest {
         }
 
         assertNull(internalIndexRebuildFuture(n, cacheCtx.cacheId()));
-    }
-
-    /**
-     * Prepare cluster for test.
-     *
-     * @param keys Key count.
-     * @throws Exception If failed.
-     */
-    private IgniteEx prepareCluster(int keys) throws Exception {
-        IgniteEx n = startGrid(0);
-
-        n.cluster().state(ACTIVE);
-
-        for (int i = 0; i < keys; i++)
-            n.cache(DEFAULT_CACHE_NAME).put(i, new Person(i, "p_" + i));
-
-        return n;
     }
 
     /**
