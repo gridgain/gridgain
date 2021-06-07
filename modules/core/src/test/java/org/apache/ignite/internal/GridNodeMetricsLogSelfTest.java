@@ -60,7 +60,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     private ListeningTestLogger crdLog;
 
     /** Coordinator log listener */
-    LogListener rebalanceInfoLsnr;
+    private LogListener rebalanceInfoLsnr;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -73,8 +73,11 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
-        if (igniteInstanceName.endsWith("0") && crdLog != null)
+        if (igniteInstanceName.equals(getTestIgniteInstanceName(0))) {
+            assertNotNull("Coordinator logger is null", crdLog);
+
             cfg.setGridLogger(crdLog);
+        }
         else
             cfg.setGridLogger(strLog);
 
@@ -134,14 +137,14 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
                 startGrid(2);
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Failed to start third node", e);
             }
 
             if (persistenceEnabled()) {
                 spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
                 spi(grid(1)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
 
-                grid(0).cluster().setBaselineTopology(grid(0).cluster().nodes());
+                resetBaselineTopology();
             }
         });
 
