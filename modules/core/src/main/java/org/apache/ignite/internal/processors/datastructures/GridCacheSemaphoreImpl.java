@@ -971,6 +971,6 @@ public final class GridCacheSemaphoreImpl extends AtomicDataStructureProxy<GridC
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheSemaphoreImpl.class, this);
+        return S.toString(GridCacheSemaphoreImpl.class, this, super.toString());
     }
 }
