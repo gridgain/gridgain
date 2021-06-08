@@ -32,6 +32,8 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.WAL_REBALANCE_THRESHOLD_DMS_KEY;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -216,6 +218,48 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
                 ((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing())
                     .distributedConfiguration().timeZone()
             );
+        }
+    }
+
+    /**
+     * Check the set command for property 'wal.rebalance.threshold'.
+     */
+    @Test
+    public void testPropertyWalRebalanceThreshold() {
+        assertDistributedPropertyEquals(WAL_REBALANCE_THRESHOLD_DMS_KEY, DFLT_PDS_WAL_REBALANCE_THRESHOLD, true);
+
+        int newVal = 1000;
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", "wal.rebalance.threshold",
+                "--val", Integer.toString(newVal)
+            )
+        );
+
+        assertDistributedPropertyEquals(WAL_REBALANCE_THRESHOLD_DMS_KEY, newVal, true);
+    }
+
+    /**
+     * Validates that distributed property has specified value across all nodes.
+     * @param propName Distributed property name.
+     * @param expected Expected property value.
+     * @param onlyServerMode Ignore client nodes.
+     * @param <T> Property type.
+     */
+    private <T extends Serializable> void assertDistributedPropertyEquals(String propName, T expected, boolean onlyServerMode) {
+        for (Ignite ign : G.allGrids()) {
+            IgniteEx ignEx = (IgniteEx) ign;
+
+            if (onlyServerMode && ign.configuration().isClientMode())
+                continue;
+
+            DistributedChangeableProperty<Serializable> prop =
+                ignEx.context().distributedConfiguration().property(propName);
+
+            assertEquals(prop.get(), expected);
         }
     }
 }
