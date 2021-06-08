@@ -147,6 +147,7 @@ public abstract class IgniteClientDataStructuresAbstractTest extends GridCommonA
         Ignite srvNode = serverNode();
 
         testAtomicLong(clientNode, srvNode);
+        testAtomicLong(srvNode, clientNode);
     }
 
     /**
