@@ -285,7 +285,7 @@ public final class GridCacheAtomicLongImpl extends AtomicDataStructureProxy<Grid
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheAtomicLongImpl.class, this);
+        return S.toString(GridCacheAtomicLongImpl.class, this, super.toString());
     }
 
     /**

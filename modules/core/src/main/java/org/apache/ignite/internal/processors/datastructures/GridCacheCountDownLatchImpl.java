@@ -324,7 +324,7 @@ public final class GridCacheCountDownLatchImpl extends AtomicDataStructureProxy<
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheCountDownLatchImpl.class, this);
+        return S.toString(GridCacheCountDownLatchImpl.class, this, super.toString());
     }
 
     /**
