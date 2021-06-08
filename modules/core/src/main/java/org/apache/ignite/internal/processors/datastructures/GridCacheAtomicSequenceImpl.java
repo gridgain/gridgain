@@ -408,6 +408,6 @@ public final class GridCacheAtomicSequenceImpl extends AtomicDataStructureProxy<
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheAtomicSequenceImpl.class, this);
+        return S.toString(GridCacheAtomicSequenceImpl.class, this, super.toString());
     }
 }
