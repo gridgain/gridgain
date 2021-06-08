@@ -2169,6 +2169,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Check that the previous rebuild is completed.
         assert prevIntRebFut == null;
 
+        cctx.kernalContext().query().onStartRebuildIndexes(cctx);
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2183,6 +2185,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (err != null)
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+            else
+                cctx.kernalContext().query().onFinishRebuildIndexes(cctx);
 
             idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
             intRebFut.onDone(err);

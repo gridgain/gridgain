@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2248,6 +2248,23 @@ public final class GridTestUtils {
         for (File grp : new File(workDir, U.maskForFileName(igniteInstanceName)).listFiles()) {
             new File(grp, "index.bin").delete();
         }
+    }
+
+    /**
+     * Removing the directory cache groups.
+     * Deletes all directory satisfy the {@code cacheGrpFilter}.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param cacheGrpFilter Filter cache groups.
+     * @throws Exception If failed.
+     */
+    public static void deleteCacheGrpDir(String igniteInstanceName, FilenameFilter cacheGrpFilter) throws Exception {
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+        String nodeDirName = U.maskForFileName(igniteInstanceName);
+
+        for (File cacheGrpDir : new File(workDir, nodeDirName).listFiles(cacheGrpFilter))
+            U.delete(cacheGrpDir);
     }
 
     /**
