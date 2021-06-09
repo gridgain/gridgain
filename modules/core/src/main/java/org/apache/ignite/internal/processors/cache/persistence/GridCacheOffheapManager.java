@@ -134,6 +134,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.fromOrdinal;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler.isWalDeltaRecordNeeded;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
@@ -744,6 +745,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 int stateId = io.getPartitionState(pageAddr);
 
                                 updateState(part, stateId);
+
+                                if (stateId != OWNING.ordinal()) {
+                                    log.warning("DBG: Partition was restored (from disk) in not OWNING state [state=" + fromOrdinal(stateId) +
+                                        ", ordinal=" + stateId + ']');
+                                }
 
                                 if (log.isDebugEnabled()) {
                                     log.debug("Restored partition state (from page memory) " +

@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
+import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -149,6 +150,16 @@ public class PagePartitionMetaIO extends PageMetaIO {
      */
     public byte getPartitionState(long pageAddr) {
         return PageUtils.getByte(pageAddr, PARTITION_STATE_OFF);
+    }
+
+    /**
+     * Gets a state from byffer.
+     *
+     * @param buf Buffer.
+     * @return Partition state.
+     */
+    public byte getPartitionState(ByteBuffer buf) {
+        return buf.get(PARTITION_STATE_OFF);
     }
 
     /**
