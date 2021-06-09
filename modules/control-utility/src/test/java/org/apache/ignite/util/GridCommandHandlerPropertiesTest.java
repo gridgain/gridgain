@@ -33,7 +33,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
-import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.WAL_REBALANCE_THRESHOLD_DMS_KEY;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -226,7 +226,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
      */
     @Test
     public void testPropertyWalRebalanceThreshold() {
-        assertDistributedPropertyEquals(WAL_REBALANCE_THRESHOLD_DMS_KEY, DFLT_PDS_WAL_REBALANCE_THRESHOLD, true);
+        assertDistributedPropertyEquals(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, DFLT_PDS_WAL_REBALANCE_THRESHOLD, true);
 
         int newVal = 1000;
 
@@ -239,7 +239,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
             )
         );
 
-        assertDistributedPropertyEquals(WAL_REBALANCE_THRESHOLD_DMS_KEY, newVal, true);
+        assertDistributedPropertyEquals(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, newVal, true);
     }
 
     /**

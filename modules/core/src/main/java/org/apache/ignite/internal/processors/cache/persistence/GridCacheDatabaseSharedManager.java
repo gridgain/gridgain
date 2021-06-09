@@ -239,7 +239,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /**
      * @see IgniteSystemProperties#IGNITE_PDS_WAL_REBALANCE_THRESHOLD
-     * @see #WAL_REBALANCE_THRESHOLD_DMS_KEY
+     * @see #HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY
      */
     public static final int DFLT_PDS_WAL_REBALANCE_THRESHOLD = 500;
 
@@ -251,7 +251,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, DFLT_PDS_WAL_REBALANCE_THRESHOLD);
 
     /** WAL rebalance threshold distributed configuration key */
-    public static final String WAL_REBALANCE_THRESHOLD_DMS_KEY = "wal.rebalance.threshold";
+    public static final String HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY = "historical.rebalance.threshold";
 
     /** Prefer historical rebalance flag. */
     private final boolean preferWalRebalance = getBoolean(IGNITE_PREFER_WAL_REBALANCE);
@@ -364,8 +364,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private SimpleDistributedProperty<Integer> cpFreqDeviation;
 
     /** WAL rebalance threshold. */
-    private final SimpleDistributedProperty<Integer> walRebalanceThreshold =
-        new SimpleDistributedProperty<>(WAL_REBALANCE_THRESHOLD_DMS_KEY, Integer::parseInt);
+    private final SimpleDistributedProperty<Integer> historicalRebalanceThreshold =
+        new SimpleDistributedProperty<>(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, Integer::parseInt);
 
     /**
      * @param ctx Kernal context.
@@ -1742,7 +1742,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
                 if (locPart.state() == OWNING && (preferWalRebalance() ||
-                    locPart.fullSize() > walRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy)))
+                    locPart.fullSize() > historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy)))
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
         }
@@ -3815,20 +3815,20 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
     }
 
-    /** Registers {@link #walRebalanceThreshold} property in distributed metastore. */
+    /** Registers {@link #historicalRebalanceThreshold} property in distributed metastore. */
     private void initWalRebalanceThreshold() {
         cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     String logMsgFmt = "Historical rebalance WAL threshold changed [property=%s, oldVal=%s, newVal=%s]";
 
-                    walRebalanceThreshold.addListener(makeUpdateListener(logMsgFmt, log));
+                    historicalRebalanceThreshold.addListener(makeUpdateListener(logMsgFmt, log));
 
-                    dispatcher.registerProperties(walRebalanceThreshold);
+                    dispatcher.registerProperties(historicalRebalanceThreshold);
                 }
 
                 @Override public void onReadyToWrite() {
-                    setDefaultValue(walRebalanceThreshold, walRebalanceThresholdLegacy, log);
+                    setDefaultValue(historicalRebalanceThreshold, walRebalanceThresholdLegacy, log);
                 }
             }
         );
