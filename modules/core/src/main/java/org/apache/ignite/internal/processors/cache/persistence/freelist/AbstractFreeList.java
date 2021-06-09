@@ -774,7 +774,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
     /** {@inheritDoc} */
     @Override protected int bucketsCnt() {
-        return 1;
+        return BUCKETS;
     }
 
     /** {@inheritDoc} */

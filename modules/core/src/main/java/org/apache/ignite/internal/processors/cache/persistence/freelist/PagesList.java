@@ -2015,80 +2015,86 @@ public abstract class PagesList extends DataStructure {
 
         res.add(metaPageId);
 
+        for (long pageId : pageIds)
+            res.add(pageId);
+
         // Iterate over buckets.
         for (int i = 0; i < bucketsCnt(); i++) {
             Stripe[] stripes = getBucket(i);
 
-            // Iterate over stripes in bucket. It is safe because array of stripes is changed via CAS.
-            for (int j = 0; j < stripes.length; j++) {
-                Stripe stripe = stripes[j];
+            if (stripes != null) {
+                // Iterate over stripes in the bucket. It is safe because array of stripes is changed via CAS.
+                for (int j = 0; j < stripes.length; j++) {
+                    Stripe stripe = stripes[j];
 
-                // Doing several lock attempts for stripe.
-                for (int lockAttempt = 0; lockAttempt < TRY_LOCK_ATTEMPTS; lockAttempt++) {
-                    long tailId = stripe.tailId;
+                    // Doing several lock attempts for stripe.
+                    for (int lockAttempt = 0; lockAttempt < TRY_LOCK_ATTEMPTS; lockAttempt++) {
+                        long tailId = stripe.tailId;
 
-                    res.add(tailId);
+                        res.add(tailId);
 
-                    if (res.size() == maxPages)
-                        return res;
-
-                    try {
-                        final long tailAddr = pageMem.acquirePage(grpId, tailId, IoStatisticsHolderNoOp.INSTANCE);
+                        if (res.size() == maxPages)
+                            return res;
 
                         try {
-                            pageMem.readLock(grpId, tailId, tailAddr);
+                            final long tailPage = pageMem.acquirePage(grpId, tailId, IoStatisticsHolderNoOp.INSTANCE);
 
                             try {
-                                // Check that tail id wasn't changed concurrently.
-                                if (stripe.tailId != tailId)
-                                    continue;
+                                long tailAddr = pageMem.readLock(grpId, tailId, tailPage);
 
-                                long pageId = tailId;
-                                long pageAddr = tailAddr;
-                                long nextId;
+                                try {
+                                    // Check that tail id wasn't changed concurrently.
+                                    if (stripe.tailId != tailId)
+                                        continue;
 
-                                // Iterate over page list nodes in stripe.
-                                while (true) {
-                                    if (pageId != tailId) {
-                                        res.add(pageId);
+                                    PagesListNodeIO io = PageIO.getPageIO(tailAddr);
+
+                                    long pageAddr = tailAddr;
+
+                                    // Iterate over page list nodes in stripe.
+                                    while (true) {
+                                        long nextId = io.getNextId(pageAddr);
+
+                                        if (nextId == 0 || nextId == tailId)
+                                            break;
+
+                                        res.add(nextId);
 
                                         if (res.size() == maxPages)
                                             return res;
 
+                                        long nextPage = pageMem.acquirePage(grpId, nextId, IoStatisticsHolderNoOp.INSTANCE);
+
                                         try {
-                                            pageAddr = pageMem.acquirePage(grpId, pageId, IoStatisticsHolderNoOp.INSTANCE);
+                                            long nextAddr = pageMem.readLock(grpId, nextId, nextPage);
+
+                                            try {
+                                                io = PageIO.getPageIO(nextAddr);
+
+                                                pageAddr = nextAddr;
+                                            }
+                                            finally {
+                                                pageMem.readUnlock(grpId, nextId, nextPage);
+                                            }
                                         }
-                                        catch (IgniteCheckedException e) {
-                                            break;
+                                        finally {
+                                            pageMem.releasePage(grpId, nextId, nextPage);
                                         }
                                     }
-
-                                    try {
-                                        PagesListNodeIO io = PagesListNodeIO.VERSIONS.forPage(pageAddr);
-
-                                        nextId = io.getNextId(pageAddr);
-
-                                        if (nextId == 0 || nextId == pageId)
-                                            break;
-                                    }
-                                    finally {
-                                        if (pageId != tailId)
-                                            pageMem.releasePage(grpId, pageId, pageAddr);
-                                    }
-
-                                    pageId = nextId;
+                                }
+                                finally {
+                                    pageMem.readLock(grpId, tailId, tailPage);
                                 }
                             }
                             finally {
-                                pageMem.readUnlock(grpId, tailId, tailAddr);
+                                pageMem.releasePage(grpId, tailId, tailPage);
                             }
                         }
-                        finally {
-                            pageMem.releasePage(grpId, tailId, tailAddr);
+                        catch (IgniteCheckedException ignore) {
+                            // No op - just retry.
                         }
-                    }
-                    catch (IgniteCheckedException ignore) {
-                        // No op - just retry.
+
+                        break;
                     }
                 }
             }
