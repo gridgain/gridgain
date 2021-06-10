@@ -166,7 +166,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
         assertTrue(correctFailure);
     }
 
-    /** Tests that node with corrupted partition fails on start. */
+    /** Tests page list pages are collected in {@link CorruptedFreeListException}. */
     @Test
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING, value = "true")
     public void testDiagnosticCollectedOnCorruptedPageList() throws Exception {
