@@ -234,7 +234,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
             EXIT_CODE_OK,
             execute(
                 "--property", "set",
-                "--name", "wal.rebalance.threshold",
+                "--name", HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY,
                 "--val", Integer.toString(newVal)
             )
         );
