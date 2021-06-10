@@ -60,7 +60,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  * Tests that grid with corrupted partitions, where meta page is corrupted, fails on start with correct error.
  */
 @WithSystemProperty(key = IGNITE_PDS_SKIP_CRC, value = "true")
-public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstractTest {
+public class PagesPossibleCorruptionDiagnosticTest extends GridCommonAbstractTest {
     /** */
     private static final int PAGE_SIZE = 4096;
 
@@ -90,6 +90,7 @@ public class PartitionMetasInconsistencyOnNodeStartTest extends GridCommonAbstra
             )
             .setFailureHandler(new FailureHandlerWithCallback(failureCtx ->
                 correctFailure = failureCtx.error() instanceof CorruptedPartitionMetaPageException
+                     && ((AbstractCorruptedPersistenceException)failureCtx.error()).pages().length > 0
             ));
     }
 

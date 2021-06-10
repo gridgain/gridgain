@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// Initializes a new instance of the <see cref="PartitionAwarenessTest"/> class.
         /// </summary>
         public PartitionAwarenessTest()
-            : base(ServerCount)
+            : base(ServerCount, enableServerListLogging: true)
         {
             // No-op.
         }
@@ -290,7 +290,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 .Where(r => r.Requests.Length > 0)
                 .ToArray();
 
-            // All requests should go to a single (default) node, because affinity awareness is not applicable.
+            // All requests should go to a single (default) node, because partition awareness is not applicable.
             Assert.AreEqual(1, reqs.Length);
 
             // There should be only one partitions request.
@@ -464,6 +464,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.AreEqual(gridIdx, GetPrimaryNodeIdx(key));
         }
 
+        [Test]
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        [TestCase(3, 0)]
+        [TestCase(4, 1)]
+        [TestCase(5, 1)]
+        [TestCase(6, 2)]
+        public void DataStreamer_PrimitiveKeyType_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
+        {
+            using (var streamer = Client.GetDataStreamer<int, int>(_cache.Name))
+            {
+                streamer.Add(key, key);
+            }
+
+            Assert.AreEqual(gridIdx, GetClientRequestGridIndex("Start", RequestNamePrefixStreamer));
+        }
+
         protected override IgniteClientConfiguration GetClientConfiguration()
         {
             var cfg = base.GetClientConfiguration();
@@ -475,7 +492,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             return cfg;
         }
 
-        private int GetClientRequestGridIndex(string message = null)
+        private int GetClientRequestGridIndex(string message = null, string prefix = null)
         {
             message = message ?? "Get";
 
@@ -483,7 +500,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 for (var i = 0; i < ServerCount; i++)
                 {
-                    var requests = GetServerRequestNames(i, RequestNamePrefixCache);
+                    var requests = GetServerRequestNames(i, prefix ?? RequestNamePrefixCache);
 
                     if (requests.Contains(message))
                     {
