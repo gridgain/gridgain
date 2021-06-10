@@ -22,11 +22,13 @@ import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 public class WalFinder1 {
     public static JdkMarshaller marshaller = new JdkMarshaller();
 
-    public static final String walDir1 = "/home/sutsel/work/tickets/GG-25687/test4/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
-    public static final String walDir2 = "/home/sutsel/work/tickets/GG-25687/test4/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
+//    public static final String walDir1 = "/home/sutsel/work/tickets/GG-25687/test7/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
+//    public static final String walDir2 = "/home/sutsel/work/tickets/GG-25687/test7/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
+    public static final String walDir1 = "/home/sutsel/work/gitrepo/gridgain/gridgain/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
+    public static final String walDir2 = "/home/sutsel/work/gitrepo/gridgain/gridgain/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
 
     public static final int grpId = CU.cacheId("CACHEGROUP_DICTIONARY");
-    public static final int partId = 463;
+    public static final int partId = 1;
 //    public static final long keyId= 60;
 
     // [topVer=151936057, order=1540460670614, nodeOrder=5]
@@ -145,8 +147,8 @@ public class WalFinder1 {
 
     public static class WalRecordFilter implements IgniteBiPredicate<WALRecord.RecordType, WALPointer> {
         @Override public boolean apply(WALRecord.RecordType type, WALPointer pointer) {
-            return type == WALRecord.RecordType.DATA_RECORD ||
-                type == WALRecord.RecordType.METASTORE_DATA_RECORD;
+            return type == WALRecord.RecordType.DATA_RECORD /*||
+                type == WALRecord.RecordType.METASTORE_DATA_RECORD*/;
         }
     }
 

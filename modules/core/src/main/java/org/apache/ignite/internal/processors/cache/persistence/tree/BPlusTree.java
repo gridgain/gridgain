@@ -52,6 +52,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -67,6 +68,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.InsertL
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.internal.processors.cache.tree.SearchRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
@@ -420,6 +422,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             boolean needWal = needWalDeltaRecord(pageId, page, null);
 
+            if (newRow instanceof CacheDataRowAdapter ||
+                newRow instanceof SearchRow)
+                    System.out.println(Thread.currentThread().getName() + " Replace " + newRow);
+
             byte[] newRowBytes = io.store(pageAddr, idx, newRow, null, needWal);
 
             if (needWal)
@@ -454,6 +460,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             idx = fix(idx);
 
             // Do insert.
+            if (p.row instanceof CacheDataRowAdapter ||
+                p.row instanceof SearchRow)
+                    System.out.println(Thread.currentThread().getName() + " Insert " + p.row);
+
             L moveUpRow = p.insert(pageId, page, pageAddr, io, idx, lvl);
 
             // Check if split happened.
@@ -546,6 +556,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 // we've locked the whole needed branch correctly.
                 return FOUND;
             }
+
+            if (r.row instanceof CacheDataRowAdapter ||
+                r.row instanceof SearchRow)
+                System.out.println(Thread.currentThread().getName() + " RemoveFromLeaf " + r.row);
 
             r.removeDataRowFromLeaf(leafId, leafPage, leafAddr, null, io, cnt, idx);
 

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -65,6 +66,7 @@ import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedHashMap;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JVM_PAUSE_DETECTOR_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
@@ -373,6 +375,8 @@ public class Checkpointer extends GridWorker {
         return ret;
     }
 
+//    public static CountDownLatch latch = new CountDownLatch(2);
+
     /**
      *
      */
@@ -380,6 +384,18 @@ public class Checkpointer extends GridWorker {
         Checkpoint chp = null;
 
         try {
+
+//            if (Thread.currentThread().getName().contains("TxPartitionCounterStateConsistencyTest0")) {
+//                latch.countDown();
+//                try {
+//                    sleep(150);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//                log.warning("latch.countDown()");
+//            }
+
             CheckpointMetricsTracker tracker = new CheckpointMetricsTracker();
 
             startCheckpointProgress();

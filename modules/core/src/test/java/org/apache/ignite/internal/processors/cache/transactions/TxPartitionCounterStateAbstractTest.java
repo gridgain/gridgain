@@ -108,7 +108,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     private AtomicReference<Throwable> testFailed = new AtomicReference<>();
 
     /** Number of keys to preload before txs to enable historical rebalance. */
-    protected static final int PRELOAD_KEYS_CNT = 1;
+    protected static final int PRELOAD_KEYS_CNT = 2;
 
     /** */
     protected static final String CLIENT_GRID_NAME = "client";

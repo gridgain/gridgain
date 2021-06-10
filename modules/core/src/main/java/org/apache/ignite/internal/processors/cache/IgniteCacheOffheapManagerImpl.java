@@ -1586,11 +1586,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public long nextUpdateCounter() {
-            return pCntr.next();
+            long next = pCntr.next();
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: adhrfouiera " + next);
+            return next;
         }
 
         /** {@inheritDoc} */
         @Override public long initialUpdateCounter() {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: tujsrhtrsazb " + pCntr.initial());
             return pCntr.initial();
         }
 
@@ -1600,11 +1605,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         @Override public void updateInitialCounter(long start, long delta) {
             pCntr.updateInitial(start, delta);
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: hwundsuiejsg " + pCntr.get() + " " + start + " " + delta);
         }
 
         /** {@inheritDoc} */
         @Override public long getAndIncrementUpdateCounter(long delta) {
-            return pCntr.reserve(delta);
+            long reserve = pCntr.reserve(delta);
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: ojiuneaorpi " + reserve);
+            return reserve;
         }
 
         /** {@inheritDoc} */
@@ -1614,7 +1624,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public long reservedCounter() {
-            return pCntr.reserved();
+            long reserve = pCntr.reserved();
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: oarhoti " + reserve);
+            return reserve;
         }
 
         /** {@inheritDoc} */
@@ -1624,12 +1637,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public long reserve(long delta) {
-            return pCntr.reserve(delta);
+            long reserve = pCntr.reserve(delta);
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: oidebfuiiue " + reserve);
+            return reserve;
         }
 
         /** {@inheritDoc} */
         @Override public void updateCounter(long val) {
             try {
+                if (partId == 1)
+                    log.warning("rkjgnreai touch part counter: uhybeaur " + val + " " + pCntr.getClass());
                 pCntr.update(val);
             }
             catch (IgniteCheckedException e) {
@@ -1645,11 +1663,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public boolean updateCounter(long start, long delta) {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: " + start + " fgdiuhwrtpio " + delta);
             return pCntr.update(start, delta);
         }
 
         /** {@inheritDoc} */
         @Override public GridLongList finalizeUpdateCounters() {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: ijuoruingte finalizeUpdateCounters()");
             return pCntr.finalizeUpdateCounters();
         }
 
@@ -3027,6 +3049,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param cntrUpdData Counter updates.
          */
         public void restoreState(long size, long updCntr, @Nullable Map<Integer, Long> cacheSizes, byte[] cntrUpdData) {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: hgvwrwe " + updCntr);
             pCntr.init(updCntr, cntrUpdData);
 
             storageSize.set(size);
@@ -3049,11 +3073,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void resetUpdateCounter() {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: dfijubetthyn");
             pCntr.reset();
         }
 
         /** {@inheritDoc} */
         @Override public void resetInitialUpdateCounter() {
+            if (partId == 1)
+                log.warning("rkjgnreai touch part counter: aeribuibrt " + 0);
             pCntr.resetInitialCounter();
         }
 

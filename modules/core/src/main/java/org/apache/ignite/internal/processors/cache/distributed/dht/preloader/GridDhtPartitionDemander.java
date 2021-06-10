@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -277,8 +278,8 @@ public class GridDhtPartitionDemander {
         final GridDhtPartitionsExchangeFuture exchFut = lastExchangeFut;
 
         if (exchFut != null) {
-            if (log.isDebugEnabled())
-                log.debug("Forcing rebalance event for future: " + exchFut);
+            if (log.isInfoEnabled())
+                log.info("Forcing rebalance event for future: " + exchFut);
 
             final GridFutureAdapter<Boolean> fut = new GridFutureAdapter<>();
 
@@ -304,8 +305,8 @@ public class GridDhtPartitionDemander {
 
             return fut;
         }
-        else if (log.isDebugEnabled())
-            log.debug("Ignoring force rebalance request (no topology event happened yet).");
+        else if (log.isInfoEnabled())
+            log.info("Ignoring force rebalance request (no topology event happened yet).");
 
         return new GridFinishedFuture<>(true);
     }
@@ -348,8 +349,8 @@ public class GridDhtPartitionDemander {
         @Nullable final GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
-        if (log.isDebugEnabled())
-            log.debug("Adding partition assignments: " + assignments);
+        if (log.isInfoEnabled())
+            log.info("Adding partition assignments: " + assignments);
 
         assert force == (forcedRebFut != null);
 
@@ -359,15 +360,15 @@ public class GridDhtPartitionDemander {
             final RebalanceFuture oldFut = rebalanceFut;
 
             if (assignments.cancelled()) { // Pending exchange.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to cancelled assignments.");
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing skipped due to cancelled assignments.");
 
                 return null;
             }
 
             if (assignments.isEmpty()) { // Nothing to rebalance.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to empty assignments.");
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing skipped due to empty assignments.");
 
                 if (oldFut.isInitial())
                     oldFut.onDone(true);
@@ -526,16 +527,16 @@ public class GridDhtPartitionDemander {
                 errMsg = "topology changed";
 
             if (errMsg != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Supply message has been ignored (" + errMsg + ") [" +
+                if (log.isInfoEnabled()) {
+                    log.info("Supply message has been ignored (" + errMsg + ") [" +
                         demandRoutineInfo(nodeId, supplyMsg) + ']');
                 }
 
                 return;
             }
 
-            if (log.isDebugEnabled())
-                log.debug("Received supply message [" + demandRoutineInfo(nodeId, supplyMsg) + ']');
+            if (log.isInfoEnabled())
+                log.info("Received supply message [" + demandRoutineInfo(nodeId, supplyMsg) + ']');
 
             // Check whether there were error during supplying process.
             if (supplyMsg.classError() != null)
@@ -596,8 +597,8 @@ public class GridDhtPartitionDemander {
                         catch (GridDhtInvalidPartitionException err) {
                             assert !topVer.equals(top.lastTopologyChangeVersion());
 
-                            if (log.isDebugEnabled()) {
-                                log.debug("Failed to get partition for rebalancing [" +
+                            if (log.isInfoEnabled()) {
+                                log.info("Failed to get partition for rebalancing [" +
                                     "grp=" + grp.cacheOrGroupName() +
                                     ", err=" + err +
                                     ", p=" + p +
@@ -660,16 +661,16 @@ public class GridDhtPartitionDemander {
                             if (last)
                                 fut.partitionDone(nodeId, p, false);
 
-                            if (log.isDebugEnabled())
-                                log.debug("Skipping rebalancing partition (state is not MOVING): " +
+                            if (log.isInfoEnabled())
+                                log.info("Skipping rebalancing partition (state is not MOVING): " +
                                     '[' + demandRoutineInfo(nodeId, supplyMsg) + ", p=" + p + ']');
                         }
                     }
                     else {
                         fut.partitionDone(nodeId, p, false);
 
-                        if (log.isDebugEnabled())
-                            log.debug("Skipping rebalancing partition (affinity changed): " +
+                        if (log.isInfoEnabled())
+                            log.info("Skipping rebalancing partition (affinity changed): " +
                                 '[' + demandRoutineInfo(nodeId, supplyMsg) + ", p=" + p + ']');
                     }
                 }
@@ -696,18 +697,18 @@ public class GridDhtPartitionDemander {
                         ctx.io().sendOrderedMessage(node, d.topic(),
                             d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
 
-                        if (log.isDebugEnabled())
-                            log.debug("Send next demand message [" + demandRoutineInfo(nodeId, supplyMsg) + "]");
+                        if (log.isInfoEnabled())
+                            log.info("Send next demand message [" + demandRoutineInfo(nodeId, supplyMsg) + "]");
                     }
                     catch (ClusterTopologyCheckedException e) {
-                        if (log.isDebugEnabled())
-                            log.debug("Supplier has left [" + demandRoutineInfo(nodeId, supplyMsg) +
+                        if (log.isInfoEnabled())
+                            log.info("Supplier has left [" + demandRoutineInfo(nodeId, supplyMsg) +
                                 ", errMsg=" + e.getMessage() + ']');
                     }
                 }
                 else {
-                    if (log.isDebugEnabled())
-                        log.debug("Will not request next demand message [" + demandRoutineInfo(nodeId, supplyMsg) +
+                    if (log.isInfoEnabled())
+                        log.info("Will not request next demand message [" + demandRoutineInfo(nodeId, supplyMsg) +
                             ", rebalanceFuture=" + fut + ']');
                 }
             }
@@ -754,13 +755,13 @@ public class GridDhtPartitionDemander {
 
                 fut.partitionDone(nodeId, id, true);
 
-                if (log.isDebugEnabled())
-                    log.debug("Finished rebalancing partition: " +
+                if (log.isInfoEnabled())
+                    log.info("Finished rebalancing partition: " +
                         "[" + demandRoutineInfo(nodeId, supplyMsg) + ", id=" + id + "]");
             }
             else {
-                if (log.isDebugEnabled())
-                    log.debug("Retrying partition owning: " +
+                if (log.isInfoEnabled())
+                    log.info("Retrying partition owning: " +
                         "[" + demandRoutineInfo(nodeId, supplyMsg) + ", id=" + id +
                         ", processed=" + processed + ", queued=" + queued + "]");
 
@@ -1000,8 +1001,8 @@ public class GridDhtPartitionDemander {
                             cached.key() + ", part=" + p + ']');
                 }
                 catch (GridDhtInvalidPartitionException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+                    if (log.isInfoEnabled())
+                        log.info("Partition became invalid during rebalancing (will ignore): " + p);
 
                     return false;
                 }
@@ -1077,8 +1078,8 @@ public class GridDhtPartitionDemander {
                             cached.key() + ", part=" + p + ']');
                 }
                 catch (GridDhtInvalidPartitionException ignored) {
-                    if (log.isDebugEnabled())
-                        log.debug("Partition became invalid during rebalancing (will ignore): " + p);
+                    if (log.isInfoEnabled())
+                        log.info("Partition became invalid during rebalancing (will ignore): " + p);
 
                     return false;
                 }
@@ -1461,6 +1462,8 @@ public class GridDhtPartitionDemander {
                         ", fullPartitions=" + S.compact(parts.fullSet()) +
                         ", histPartitions=" + S.compact(parts.historicalSet()) + ']');
 
+                System.out.println("tjuydsutyba Demander requestPartitions0 " + new TreeSet(parts.fullSet()));
+
                 ctx.io().sendOrderedMessage(supplierNode, msg.topic(),
                     msg.convertIfNeeded(supplierNode.version()), grp.ioPolicy(), msg.timeout());
 
@@ -1524,8 +1527,8 @@ public class GridDhtPartitionDemander {
             AffinityTopologyVersion curRebTopVer = ctx.exchange().lastAffinityChangedTopologyVersion(topologyVersion());
 
             if (!rebTopVer.equals(curRebTopVer)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Do not own partitions because the topology is outdated [grp=" +
+                if (log.isInfoEnabled()) {
+                    log.info("Do not own partitions because the topology is outdated [grp=" +
                         grp.cacheOrGroupName() + ", topVer=" + topVer + ", curTopVer=" + topologyVersion()
                         + ", rebTopVer=" + rebTopVer + ", curRebTopVer=" + curRebTopVer + ']');
                 }
@@ -1542,15 +1545,15 @@ public class GridDhtPartitionDemander {
                 // cannot appear.
                 grp.topology().ownMoving();
 
-                if (log.isDebugEnabled())
-                    log.debug("Partitions have been scheduled to resend [reason=" +
+                if (log.isInfoEnabled())
+                    log.info("Partitions have been scheduled to resend [reason=" +
                         "Group durability restored, name=" + grp.cacheOrGroupName() + "]");
 
                 ctx.exchange().refreshPartitions(Collections.singleton(grp));
             }
             else {
-                if (log.isDebugEnabled())
-                    log.debug("Do not own partitions because the future has been finished [grp=" +
+                if (log.isInfoEnabled())
+                    log.info("Do not own partitions because the future has been finished [grp=" +
                         grp.cacheOrGroupName() + ", ver=" + this.topVer + ", result=" + result() + ']');
             }
         }
@@ -1702,8 +1705,8 @@ public class GridDhtPartitionDemander {
                     d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
             }
             catch (IgniteCheckedException ignored) {
-                if (log.isDebugEnabled())
-                    log.debug("Failed to send failover context cleanup request to node " + nodeId);
+                if (log.isInfoEnabled())
+                    log.info("Failed to send failover context cleanup request to node " + nodeId);
             }
         }
 
@@ -1713,8 +1716,8 @@ public class GridDhtPartitionDemander {
          * @param own {@code True} to own partition if possible.
          */
         private synchronized void partitionDone(UUID nodeId, int p, boolean own) {
-            if (own && grp.localWalEnabled())
-                grp.topology().own(grp.topology().localPartition(p));
+//            if (own && grp.localWalEnabled())
+//                grp.topology().own(grp.topology().localPartition(p));
 
             if (isDone())
                 return;
@@ -1790,9 +1793,9 @@ public class GridDhtPartitionDemander {
                 }
 
                 // Delay owning until checkpoint is finished.
-                if (grp.persistenceEnabled() && !grp.localWalEnabled() && !cancelled) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Delaying partition owning for a group [name=" +
+                if (grp.persistenceEnabled()/* && !grp.localWalEnabled()*/ && !cancelled) {
+                    if (log.isInfoEnabled()) {
+                        log.info("Delaying partition owning for a group [name=" +
                             grp.cacheOrGroupName() + ", ver=" + topVer + ']');
                     }
 
@@ -1808,8 +1811,8 @@ public class GridDhtPartitionDemander {
                 else {
                     onDone(!cancelled);
 
-                    if (log.isDebugEnabled())
-                        log.debug("Partitions have been scheduled to resend [reason=" +
+                    if (log.isInfoEnabled())
+                        log.info("Partitions have been scheduled to resend [reason=" +
                             "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
 
                     // A group can be partially rebalanced even if rebalancing was cancelled.
@@ -1853,16 +1856,16 @@ public class GridDhtPartitionDemander {
 
             if (ctx.exchange().lastAffinityChangedTopologyVersion(topVer).equals(
                 ctx.exchange().lastAffinityChangedTopologyVersion(newAssignments.topologyVersion()))) {
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing is forced on the same topology [grp="
+                if (log.isInfoEnabled())
+                    log.info("Rebalancing is forced on the same topology [grp="
                         + grp.cacheOrGroupName() + ", " + "top=" + topVer + ']');
 
                 return false;
             }
 
             if (newAssignments.affinityReassign()) {
-                if (log.isDebugEnabled())
-                    log.debug("Some of owned partitions were reassigned by coordinator [grp="
+                if (log.isInfoEnabled())
+                    log.info("Some of owned partitions were reassigned by coordinator [grp="
                         + grp.cacheOrGroupName() + ", " + ", init=" + topVer +
                         ", other=" + newAssignments.topologyVersion() + ']');
 

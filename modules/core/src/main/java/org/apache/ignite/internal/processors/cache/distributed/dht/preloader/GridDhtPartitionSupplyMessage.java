@@ -238,6 +238,8 @@ public class GridDhtPartitionSupplyMessage extends GridCacheGroupIdMessage imple
             infoCol.init();
         }
 
+//        System.out.println("dsfkjgheui info GridDhtPartitionSupplyMessage.addEntry0 " + info);
+
         infoCol.add(info);
     }
 
