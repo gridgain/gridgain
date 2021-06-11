@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -136,6 +137,8 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.fromOrdinal;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler.isWalDeltaRecordNeeded;
+import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
@@ -748,7 +751,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                 if (stateId != OWNING.ordinal()) {
                                     log.warning("DBG: Partition was restored (from disk) in not OWNING state [state=" + fromOrdinal(stateId) +
-                                        ", ordinal=" + stateId + ']');
+                                        ", ordinal=" + stateId + ", page=" + io.printPage(pageAddr, pageMem.pageSize()) + ']');
+
+                                    ByteBuffer buf = allocateBuffer(pageMem.pageSize());
+
+                                    getStoreMgr(ctx).read(grp.groupId(), partMetaId, buf, true);
+
+                                    log.warning("DBG: Raw page from disk: " + io.printPage(bufferAddress(buf), pageMem.pageSize()));
                                 }
 
                                 if (log.isDebugEnabled()) {
@@ -804,6 +813,20 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         partitionStatesRestored = true;
 
         return processed;
+    }
+
+    /**
+     * @param cctx Shared context.
+     */
+    protected static FilePageStoreManager getStoreMgr(GridCacheSharedContext cctx) {
+        if (cctx.localNode().isClient() || cctx.localNode().isDaemon())
+            return null;
+
+        IgnitePageStoreManager store = cctx.pageStore();
+
+        assert store instanceof FilePageStoreManager : "Invalid page store manager was created: " + store;
+
+        return (FilePageStoreManager)store;
     }
 
     /**
