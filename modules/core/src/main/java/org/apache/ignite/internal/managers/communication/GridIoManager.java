@@ -867,12 +867,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                         assert false : "Unexpected event: " + evt;
                 }
 
-                if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2))
-                    secProcSupported = IGNITE_SECURITY_PROCESSOR_V2;
-                else if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR))
-                    secProcSupported = IGNITE_SECURITY_PROCESSOR;
-                else
-                    secProcSupported = null;
+                secProcSupported = currentSecurityProcSupport();
             }
         };
 
@@ -951,6 +946,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 closedTopics.add(e.getKey());
             }
         }
+
+        secProcSupported = currentSecurityProcSupport();
     }
 
     /**
@@ -1884,6 +1881,18 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         return new GridIoMessage(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout);
+    }
+
+    /**
+     * @return Version of security processor feature supported by cluster.
+     */
+    private IgniteFeatures currentSecurityProcSupport() {
+        if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2))
+            return IGNITE_SECURITY_PROCESSOR_V2;
+        else if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR))
+            return IGNITE_SECURITY_PROCESSOR;
+        else
+            return null;
     }
 
     /**
