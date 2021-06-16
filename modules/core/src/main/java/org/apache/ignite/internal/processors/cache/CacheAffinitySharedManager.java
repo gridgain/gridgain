@@ -2927,11 +2927,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param log Logger to print to.
      */
     public void printWaitInfo(IgniteLogger log) {
-        if (waitInfo == null || waitInfo.empty())
+        if (waitInfo == null || waitInfo.empty() || !log.isInfoEnabled())
             return;
 
         try {
-            final String header = "Current affinity assignment is not ideal, it is waiting for cache: ";
+            final String hdr = "Current affinity assignment is not ideal, it is waiting for cache: ";
 
             List<String> grpList = new ArrayList<>();
 
@@ -2956,7 +2956,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 String nodesStr = nodeMap.entrySet()
                     .stream()
-                    .map(entry -> "node=[id=" + entry.getKey() + ", partsNum=" + entry.getValue() + "]")
+                    .map(entry -> "node=[id=" + entry.getKey() + ", partsNum=" + entry.getValue() + ']')
                     .collect(Collectors.joining(", "));
 
                 sb.append(nodesStr).append("]]");
@@ -2964,7 +2964,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 grpList.add(sb.toString());
             });
 
-            log.info(header + String.join(", ", grpList));
+            log.info(hdr + String.join(", ", grpList));
         }
         catch (Exception e) {
             log.error("Failed to print waiting partitions info", e);

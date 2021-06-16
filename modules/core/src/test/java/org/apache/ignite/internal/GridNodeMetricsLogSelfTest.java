@@ -113,7 +113,9 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         cache1.put(1, "one");
         cache2.put(2, "two");
 
-        Thread.sleep(5_000);
+        final String metricsHdr = "Metrics for local node (to disable set 'metricsLogFrequency' to 0)";
+
+        assertTrue("Metrics weren't printed.", waitForCondition(() -> strLog.toString().contains(metricsHdr), 5000));
 
         // Check that nodes are alive.
         assertEquals("one", cache1.get(1));
