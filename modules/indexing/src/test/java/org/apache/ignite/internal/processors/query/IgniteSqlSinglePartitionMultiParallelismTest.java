@@ -85,7 +85,6 @@ public class IgniteSqlSinglePartitionMultiParallelismTest extends AbstractIndexi
         assertEquals(Long.valueOf(KEY_CNT), res);
     }
 
-
     /**
      * Check case with every single partition. Partition segment must be calculated correctly.
      */
@@ -119,7 +118,6 @@ public class IgniteSqlSinglePartitionMultiParallelismTest extends AbstractIndexi
         assertEquals(1, results.size());
         assertEquals(Long.valueOf(2), res);
     }
-
 
     /**
      * @param segment Target index segment.
