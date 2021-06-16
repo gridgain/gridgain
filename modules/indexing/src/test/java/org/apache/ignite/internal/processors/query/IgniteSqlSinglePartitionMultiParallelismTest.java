@@ -32,7 +32,6 @@ import static org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase
 
 /**
  * Test for correct results in case of query with single partition and cache with parallelism > 1.
- * The test is fix  for issue 'IGNITE-14120'.
  */
 public class IgniteSqlSinglePartitionMultiParallelismTest extends AbstractIndexingCommonTest {
     /** */
