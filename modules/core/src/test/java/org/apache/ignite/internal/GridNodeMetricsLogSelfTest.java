@@ -150,7 +150,7 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
             }
         });
 
-        assertTrue("Expected rebalance info not found", waitForCondition(() -> rebalanceInfoLsnr.check(), 5_000));
+        assertTrue("Expected rebalance info not found", waitForCondition(() -> rebalanceInfoLsnr.check(), 60_000));
 
         spi(grid(0)).stopBlock();
         spi(grid(1)).stopBlock();
