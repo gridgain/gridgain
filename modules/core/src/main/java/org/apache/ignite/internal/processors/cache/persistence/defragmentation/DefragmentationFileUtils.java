@@ -28,7 +28,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.FILE_SUFFIX;
@@ -218,7 +217,8 @@ public class DefragmentationFileUtils {
 
                 File oldPartFile = new File(workDir, String.format(PART_FILE_TEMPLATE, partId));
 
-                Files.move(partFile.toPath(), oldPartFile.toPath(), ATOMIC_MOVE, REPLACE_EXISTING);
+                Files.delete(oldPartFile.toPath());
+                Files.move(partFile.toPath(), oldPartFile.toPath(), ATOMIC_MOVE);
             }
 
             File idxFile = new File(workDir, DFRG_INDEX_FILE_NAME);
@@ -226,7 +226,8 @@ public class DefragmentationFileUtils {
             if (idxFile.exists()) {
                 File oldIdxFile = new File(workDir, INDEX_FILE_NAME);
 
-                Files.move(idxFile.toPath(), oldIdxFile.toPath(), ATOMIC_MOVE, REPLACE_EXISTING);
+                Files.delete(oldIdxFile.toPath());
+                Files.move(idxFile.toPath(), oldIdxFile.toPath(), ATOMIC_MOVE);
             }
         }
         catch (IOException e) {
