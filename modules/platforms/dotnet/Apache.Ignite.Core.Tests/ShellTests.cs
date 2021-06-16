@@ -17,7 +17,6 @@
 
 namespace Apache.Ignite.Core.Tests
 {
-    using System;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using NUnit.Framework;
@@ -37,13 +36,13 @@ namespace Apache.Ignite.Core.Tests
             {
                 return;
             }
-            
+
             var uname = Shell.ExecuteSafe("uname", string.Empty);
             Assert.IsNotEmpty(uname, uname);
 
             var readlink = Shell.ExecuteSafe("readlink", "-f /usr/bin/java");
             Assert.IsNotEmpty(readlink, readlink);
-            
+
             if (Os.IsLinux)
             {
                 Assert.AreEqual("Linux", uname.Trim());
