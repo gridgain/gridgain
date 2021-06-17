@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -31,6 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -402,9 +404,9 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
 
         int entryCnt = 10_000;
 
-        IgniteEx ig0 = (IgniteEx)startGrids(2);
+        IgniteEx ig0 = startGrids(2);
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<Integer, Integer> cache = ig0.cache("cache1");
 
@@ -417,7 +419,7 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        });
+        }).get();
 
         String nodeId0 = U.maskForFileName(ig0.localNode().consistentId().toString());
 
@@ -432,7 +434,7 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
 
         Ignite ig1 = startGrid(1);
 
-        ig1.cluster().active(true);
+        ig1.cluster().state(ClusterState.ACTIVE);
     }
 
     /**
