@@ -221,6 +221,8 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     public final GridCompoundFuture<T, R> add(IgniteInternalFuture<T> fut) {
         assert fut != null;
 
+        assert !initialized() : "Future already initialized and cannot apply any compounds.";
+
         synchronized (this) {
             if (futs == null)
                 futs = fut;
@@ -354,8 +356,18 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     /**
      * @return Futures size.
      */
-    private synchronized int futuresCount() {
-        return futuresCountNoLock();
+    private int futuresCount() {
+        assert initialized() : "Cannot get count of compounds before initialized.";
+
+        Object futs0 = futs;
+
+        if (futs0 == null)
+            return 0;
+
+        if (futs0 instanceof IgniteInternalFuture)
+            return 1;
+
+        return ((Collection<IgniteInternalFuture>)futs0).size();
     }
 
     /**
