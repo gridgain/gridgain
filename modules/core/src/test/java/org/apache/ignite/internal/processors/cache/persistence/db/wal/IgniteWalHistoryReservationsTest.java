@@ -32,7 +32,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -413,19 +412,11 @@ public class IgniteWalHistoryReservationsTest extends GridCommonAbstractTest {
         for (int k = 0; k < entryCnt; k++)
             cache.put(k, k);
 
-        GridTestUtils.runAsync(new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                forceCheckpoint();
-
-                return null;
-            }
-        }).get();
-
         String nodeId0 = U.maskForFileName(ig0.localNode().consistentId().toString());
 
         String walArchPath = ig0.configuration().getDataStorageConfiguration().getWalArchivePath();
 
-        stopAllGrids();
+        stopAllGrids(false);
 
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), walArchPath + "/" +
             nodeId0, false));
