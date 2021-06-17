@@ -579,7 +579,9 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
      */
     private MiniFuture miniFuture(IgniteUuid miniId) {
         // We iterate directly over the futs collection here to avoid copy.
-        synchronized (this) {
+        compoundsReadLock();
+
+        try {
             int size = futuresCountNoLock();
 
             // Avoid iterator creation.
@@ -593,6 +595,9 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
                         return null;
                 }
             }
+        }
+        finally {
+            compoundsReadUnlock();
         }
 
         return null;
