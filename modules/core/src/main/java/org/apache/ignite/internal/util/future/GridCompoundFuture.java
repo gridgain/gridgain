@@ -254,8 +254,6 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     public final GridCompoundFuture<T, R> add(IgniteInternalFuture<T> fut) {
         assert fut != null;
 
-        assert !isDone() : "Compound future is already done.";
-
         compoundsLock.writeLock().lock();
 
         try {
