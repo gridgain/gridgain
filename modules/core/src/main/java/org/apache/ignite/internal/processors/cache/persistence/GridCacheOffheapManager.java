@@ -139,6 +139,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler.isWalDeltaRecordNeeded;
 import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
 import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
+import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
 import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
@@ -450,6 +451,28 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         changed |= saveCacheSizes(store, io, partMetaPageAddr);
                         changed |= saveEncryptionState(store, encMgr, io, partMetaPageAddr);
 
+                        if (io.getPartitionState(partMetaPageAddr) != OWNING.ordinal()) {
+                            byte stateId = io.getPartitionState(partMetaPageAddr);
+
+                            log.warning("DBG: Sving partition metadata in not OWNING state [state=" + fromOrdinal(stateId) +
+                                ", ordinal=" + stateId + ", part=" + part
+                                + ", page=" + io.printPage(partMetaPageAddr, pageMem.pageSize()) + ']');
+
+                            ByteBuffer buf = allocateBuffer(pageMem.pageSize());
+
+                            try {
+                                getStoreMgr(grp.shared()).read(grp.groupId(), partMetaId, buf, true);
+
+                                log.warning("DBG: Raw page from disk: " + io.printPage(bufferAddress(buf), pageMem.pageSize()));
+                            }
+                            catch (Throwable th) {
+                                log.warning("DBG: Failed to read page from disk [msg=" + th.getMessage() + ']', th);
+                            }
+                            finally {
+                                freeBuffer(buf);
+                            }
+                        }
+
                         if (needSnapshot)
                             changed |= savePagesCount(ctx, part, store, io, partMetaPageAddr);
 
@@ -755,9 +778,17 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                     ByteBuffer buf = allocateBuffer(pageMem.pageSize());
 
-                                    getStoreMgr(ctx).read(grp.groupId(), partMetaId, buf, true);
+                                    try {
+                                        getStoreMgr(ctx).read(grp.groupId(), partMetaId, buf, true);
 
-                                    log.warning("DBG: Raw page from disk: " + io.printPage(bufferAddress(buf), pageMem.pageSize()));
+                                        log.warning("DBG: Raw page from disk: " + io.printPage(bufferAddress(buf), pageMem.pageSize()));
+                                    }
+                                    catch (Throwable th) {
+                                        log.warning("DBG: Failed to read page from disk [msg=" + th.getMessage() + ']', th);
+                                    }
+                                    finally {
+                                        freeBuffer(buf);
+                                    }
                                 }
 
                                 if (log.isDebugEnabled()) {
@@ -819,9 +850,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      * @param cctx Shared context.
      */
     protected static FilePageStoreManager getStoreMgr(GridCacheSharedContext cctx) {
-        if (cctx.localNode().isClient() || cctx.localNode().isDaemon())
-            return null;
-
         IgnitePageStoreManager store = cctx.pageStore();
 
         assert store instanceof FilePageStoreManager : "Invalid page store manager was created: " + store;
@@ -2596,6 +2624,27 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             && PageIdUtils.flag(updateLogTreeRoot) != PageMemory.FLAG_DATA)
                             throw new StorageException("Wrong partition update log root page id flag: updateLogTreeRoot="
                                 + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
+                    }
+
+                    if (io.getPartitionState(pageAddr) != OWNING.ordinal()) {
+                        byte stateId = io.getPartitionState(pageAddr);
+
+                        U.dumpStack(log, "DBG: Partition was allocated in not OWNING state [state=" + fromOrdinal(stateId) +
+                            ", ordinal=" + stateId + ", page=" + io.printPage(pageAddr, pageMem.pageSize()) + ']');
+
+                        ByteBuffer buf = allocateBuffer(pageMem.pageSize());
+
+                        try {
+                            getStoreMgr(grp.shared()).read(grp.groupId(), partMetaId, buf, true);
+
+                            log.warning("DBG: Raw page from disk: " + io.printPage(bufferAddress(buf), pageMem.pageSize()));
+                        }
+                        catch (Throwable th) {
+                            log.warning("DBG: Failed to read page from disk [msg=" + th.getMessage() + ']', th);
+                        }
+                        finally {
+                            freeBuffer(buf);
+                        }
                     }
 
                     if ((allocated || pageUpgraded || pendingTreeAllocated || partMetastoreReuseListAllocated || updateLogTreeRootAllocated) &&
