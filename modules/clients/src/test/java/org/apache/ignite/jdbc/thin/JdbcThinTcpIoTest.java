@@ -62,11 +62,12 @@ public class JdbcThinTcpIoTest extends GridCommonAbstractTest {
             @SuppressWarnings("ResultOfObjectAllocationIgnored")
             @Override public Object call() throws Exception {
                 new JdbcThinTcpIo(new ConnectionPropertiesImpl(),
-                    new InetSocketAddress("123.45.67.89", 10800), null, 500);
+                    //TODO GG-32283 Presumably replacing the hostname should help with test failures due to network problems. If the test continues to fail, another solution must be found.
+                    new InetSocketAddress("10.0.0.0", 10800), null, 500);
 
                 return null;
             }
-        }, SQLException.class, "Failed to connect to server [host=123.45.67.89, port=10800]");
+        }, SQLException.class, "Failed to connect to server [host=10.0.0.0, port=10800]");
 
         assertEquals(java.net.SocketTimeoutException.class, throwable.getCause().getClass());
 
