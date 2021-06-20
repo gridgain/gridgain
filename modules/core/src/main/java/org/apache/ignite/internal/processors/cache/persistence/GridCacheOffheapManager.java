@@ -2626,7 +2626,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 + U.hexLong(updateLogTreeRoot) + ", part=" + partId + ", grpId=" + grpId);
                     }
 
-                    if (io.getPartitionState(pageAddr) != OWNING.ordinal()) {
+                    if (io.getPartitionState(pageAddr) == MOVING.ordinal()) {
                         byte stateId = io.getPartitionState(pageAddr);
 
                         U.dumpStack(log, "DBG: Partition was allocated in not OWNING state [state=" + fromOrdinal(stateId) +
