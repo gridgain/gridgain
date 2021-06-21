@@ -21,7 +21,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.StopRebuildIndexConsumer;
+import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.StopBuildIndexConsumer;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheCompoundFuture;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFuture;
@@ -37,8 +37,8 @@ import org.junit.Test;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addCacheRebuildRunner;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addCacheRowConsumer;
-import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.nodeName;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.prepareBeforeNodeStart;
+import static org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.nodeName;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -148,7 +148,7 @@ public class StopRebuildIndexTest extends AbstractRebuildIndexTest {
             () -> assertNull(internalIndexRebuildFuture(n, cacheCtx.cacheId()))
         );
 
-        StopRebuildIndexConsumer stopRebuildIdxConsumer = addStopRebuildIndexConsumer(n, cacheCtx.name());
+        StopBuildIndexConsumer stopRebuildIdxConsumer = addStopRebuildIndexConsumer(n, cacheCtx.name());
 
         forceRebuildIndexes(n, cacheCtx);
 
@@ -158,13 +158,13 @@ public class StopRebuildIndexTest extends AbstractRebuildIndexTest {
         SchemaIndexCacheFuture rebFut1 = internalIndexRebuildFuture(n, cacheCtx.cacheId());
         assertNotNull(rebFut1);
 
-        stopRebuildIdxConsumer.startRebuildIdxFut.get(getTestTimeout());
+        stopRebuildIdxConsumer.startBuildIdxFut.get(getTestTimeout());
         assertFalse(rebFut0.isDone());
 
         assertFalse(rebFut1.isDone());
         assertFalse(rebFut1.cancelToken().isCancelled());
 
-        stopRebuildIdxConsumer.finishRebuildIdxFut.onDone();
+        stopRebuildIdxConsumer.finishBuildIdxFut.onDone();
 
         rebFut0.get(getTestTimeout());
         rebFut1.get(getTestTimeout());

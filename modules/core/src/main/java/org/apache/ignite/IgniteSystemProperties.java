@@ -1512,6 +1512,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
+     * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
+     * The default value is 1000.
+     */
+    public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
