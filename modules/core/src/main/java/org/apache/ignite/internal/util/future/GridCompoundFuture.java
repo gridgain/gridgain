@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
@@ -173,6 +174,22 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      */
     protected void compoundsReadUnlock() {
         compoundsLock.readLock().unlock();
+    }
+
+    /**
+     * Locks compounds list and executes code in {@code supplier}, when the lock holds.
+     *
+     * @param supplier Closure to execute some code when the compounds are locked exclusively.
+     * @return A result of the {@code supplier}.
+     */
+    protected Object compoundsLockedExclusively(Supplier<Object> supplier) {
+        compoundsLock.writeLock().lock();
+        try {
+            return supplier.get();
+        }
+        finally {
+            compoundsLock.writeLock().unlock();
+        }
     }
 
     /**
