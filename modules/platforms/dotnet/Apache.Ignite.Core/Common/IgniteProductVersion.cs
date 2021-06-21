@@ -197,5 +197,11 @@ namespace Apache.Ignite.Core.Common
 
             return ReleaseDate.CompareTo(other.ReleaseDate);
         }
+
+        /** <inheritDoc /> */
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as IgniteProductVersion);
+        }
     }
 }
