@@ -402,7 +402,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
 
             try {
-                long clearedEntities = part.clearAll(grpEvictionCtx);
+                long clearedEntities = part.clearAll(grpEvictionCtx, reason);
 
                 if (log.isInfoEnabled()) {
                     log.info("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
@@ -441,7 +441,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Reason for eviction of partition.
      */
-    private enum EvictReason {
+    public enum EvictReason {
         /**
          * Partition evicted after changing to
          * {@link GridDhtPartitionState#RENTING RENTING} state.

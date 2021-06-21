@@ -90,6 +90,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WalRecordCacheGroupAware;
@@ -2506,6 +2507,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         RestoreLogicalState restoreLogicalState =
             new RestoreLogicalState(status, it, lastArchivedSegment, cacheGroupsPredicate, partitionRecoveryStates);
 
+        List<GroupPartitionId> needToRebalance = new ArrayList<>();
+
         try {
             while (it.hasNextX()) {
                 WALRecord rec = restoreLogicalState.next();
@@ -2631,6 +2634,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         break;
 
+                    case PARTITION_CLEARING_STARTED:
+                        PartitionClearingStarted rec0 = (PartitionClearingStarted) rec;
+
+                        GroupPartitionId grpPartpId = new GroupPartitionId(rec0.grpId(), rec0.partId());
+
+                        needToRebalance.add(grpPartpId);
+
+                        break;
+
                     default:
                         // Skip other records.
                 }
@@ -2642,6 +2654,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             if (skipFieldLookup)
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
+
+        needToRebalance.forEach(groupPartitionId -> {
+            log.warning("aiefgiurt " + cctx.kernalContext().localNodeId() + " groupPartitionId: " + groupPartitionId);
+            restoreLogicalState.partitionRecoveryStates.put(groupPartitionId, 0);
+        });
 
         awaitApplyComplete(exec, applyError);
 

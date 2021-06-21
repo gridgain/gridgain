@@ -49,6 +49,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -182,6 +183,175 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             checkWAL((IgniteEx)ignite, new LinkedList<>(ops), 6);
         }
+    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void test1() throws Exception {
+        backups = 1;
+
+        Ignite prim = startGridsMultiThreaded(SERVER_NODES);
+
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10000);
+
+//        System.out.println("aijnfdgok primaryKeys " + primaryKeys);
+//        System.out.println("aijnfdgok primaryPartKeys " + primaryPartKeys);
+
+        for (int i = 0; i < 200; i++) {
+            cache.put(primaryKeys.get(i), i);
+        }
+
+        stopGrid(prim.name());
+
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < 200; i++)
+            cache.remove(primaryKeys.get(i));
+
+//                clearTombstones(grid(1).cache(DEFAULT_CACHE_NAME));
+
+
+        startGrid(prim.name());
+
+//        awaitPartitionMapExchange(true, true, null);
+
+        for (int i = 201; i < 401; i++) {
+            doSleep(10);
+            cache.put(primaryKeys.get(i), i);
+            System.out.println("put_after_restart");
+        }
+
+        awaitPartitionMapExchange(true, true, null);
+
+        System.out.println("final_cache_size " + cache.size());
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testPartitionConsistencyNotRebalancedRemoveOpWithPrimaryRestart() throws Exception {
+        backups = 1;
+
+        Ignite prim = startGridsMultiThreaded(2);
+
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), partitions() * 2);
+
+        List<Integer> primaryPartKeys = new ArrayList<>();
+
+        int partId = -1;
+
+        for (Integer key : primaryKeys) {
+            if (partId == -1 || prim.affinity(DEFAULT_CACHE_NAME).partition(key) == partId) {
+                if (partId == -1)
+                    partId = prim.affinity(DEFAULT_CACHE_NAME).partition(key);
+
+                primaryPartKeys.add(key);
+
+                if (primaryPartKeys.size() == 2)
+                    break;
+            }
+        }
+
+        System.out.println("aijnfdgok partId " + partId);
+        System.out.println("aijnfdgok primaryKeys " + primaryKeys);
+        System.out.println("aijnfdgok primaryPartKeys " + primaryPartKeys);
+
+        for (int i = 0; i < 2; i++) {
+            if (i == 0)
+                cache.put(primaryPartKeys.get(0), 1234567);
+
+            stopGrid(true, prim.name());
+
+            awaitPartitionMapExchange();
+            if (i == 0) {
+                cache.remove(primaryPartKeys.get(0));
+
+//                clearTombstones(grid(1).cache(DEFAULT_CACHE_NAME));
+            }
+
+            startGrid(prim.name());
+
+            awaitPartitionMapExchange(true, true, null);
+
+            if (i == 0)
+                cache.put(primaryPartKeys.get(1), 7654321);
+        }
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
+    public void testPartitionConsistencyNotRebalancedRemoveOpWithBackupRestart() throws Exception {
+        backups = 1;
+
+        Ignite prim = startGridsMultiThreaded(2);
+
+        Ignite backup = grid(1);
+
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> backupKeys = backupKeys(backup.cache(DEFAULT_CACHE_NAME), partitions() * 2, 0);
+
+        List<Integer> backupPartKeys = new ArrayList<>();
+
+        int partId = -1;
+
+        for (Integer key : backupKeys) {
+            if (partId == -1 || backup.affinity(DEFAULT_CACHE_NAME).partition(key) == partId) {
+                if (partId == -1)
+                    partId = backup.affinity(DEFAULT_CACHE_NAME).partition(key);
+
+                backupPartKeys.add(key);
+
+                if (backupPartKeys.size() == 2)
+                    break;
+            }
+        }
+
+        for (int i = 0; i < 2; i++) {
+            if (i == 0)
+                cache.put(backupPartKeys.get(0), 1234567);
+
+            stopGrid(true, backup.name());
+
+            awaitPartitionMapExchange();
+
+            if (i == 0) {
+                cache.remove(backupPartKeys.get(0));
+
+//                clearTombstones(prim.cache(DEFAULT_CACHE_NAME));
+            }
+
+            startGrid(backup.name());
+
+            awaitPartitionMapExchange(true, true, null);
+
+            if (i == 0)
+                cache.put(backupPartKeys.get(1), 7654321);
+        }
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
     }
 
     /**

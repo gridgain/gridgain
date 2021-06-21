@@ -230,7 +230,10 @@ public abstract class WALRecord {
         TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
 
         /** Atomic out-of-order update. */
-        OUT_OF_ORDER_UPDATE(62, LOGICAL);
+        OUT_OF_ORDER_UPDATE(62, LOGICAL),
+
+        PARTITION_CLEARING_STARTED(63, LOGICAL);
+
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

@@ -1716,8 +1716,8 @@ public class GridDhtPartitionDemander {
          * @param own {@code True} to own partition if possible.
          */
         private synchronized void partitionDone(UUID nodeId, int p, boolean own) {
-//            if (own && grp.localWalEnabled())
-//                grp.topology().own(grp.topology().localPartition(p));
+            if (own && grp.localWalEnabled())
+                grp.topology().own(grp.topology().localPartition(p));
 
             if (isDone())
                 return;
@@ -1793,7 +1793,7 @@ public class GridDhtPartitionDemander {
                 }
 
                 // Delay owning until checkpoint is finished.
-                if (grp.persistenceEnabled()/* && !grp.localWalEnabled()*/ && !cancelled) {
+                if (grp.persistenceEnabled() && !grp.localWalEnabled() && !cancelled) {
                     if (log.isInfoEnabled()) {
                         log.info("Delaying partition owning for a group [name=" +
                             grp.cacheOrGroupName() + ", ver=" + topVer + ']');

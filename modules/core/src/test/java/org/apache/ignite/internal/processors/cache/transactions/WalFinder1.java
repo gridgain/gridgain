@@ -24,8 +24,8 @@ public class WalFinder1 {
 
 //    public static final String walDir1 = "/home/sutsel/work/tickets/GG-25687/test7/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
 //    public static final String walDir2 = "/home/sutsel/work/tickets/GG-25687/test7/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
-    public static final String walDir1 = "/home/sutsel/work/gitrepo/gridgain/gridgain/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
-    public static final String walDir2 = "/home/sutsel/work/gitrepo/gridgain/gridgain/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
+    public static final String walDir1 = "/home/sutsel/work/gitrepo/gridgain/gridgain1/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest0";
+    public static final String walDir2 = "/home/sutsel/work/gitrepo/gridgain/gridgain1/incubator-ignite/work/db/wal/nodetransactions_TxPartitionCounterStateConsistencyTest1";
 
     public static final int grpId = CU.cacheId("CACHEGROUP_DICTIONARY");
     public static final int partId = 1;

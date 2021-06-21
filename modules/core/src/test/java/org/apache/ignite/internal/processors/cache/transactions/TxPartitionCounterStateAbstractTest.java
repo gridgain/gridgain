@@ -114,7 +114,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     protected static final String CLIENT_GRID_NAME = "client";
 
     /** */
-    protected static final int PARTS_CNT = 1000;
+    protected static final int PARTS_CNT = 2;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
