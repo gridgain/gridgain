@@ -25,7 +25,7 @@ package org.apache.ignite.client;
  * it, lazy and eager, depending on whether the partition awareness feature is enabled. If the feature is enabled then
  * Ignite calls the method for every topology change. Otherwise Ignite uses previous addresses until a first failure.
  *
- * {@link org.apache.ignite.configuration.ClientConfiguration#setPartitionAwarenessEnabled(boolean)}
+ * {@link org.apache.ignite.configuration.ClientConfiguration#setAffinityAwarenessEnabled(boolean)}
  * {@link org.apache.ignite.configuration.ClientConfiguration#setAddressesFinder(ClientAddressFinder)}
  */
 public interface ClientAddressFinder {

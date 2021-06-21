@@ -322,13 +322,13 @@ public class GridDhtPartitionSupplier {
                         initUpdateCntrs.put(part, loc.updateCounter());
                 }
 
-                iter = grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
-
                 for (int i = 0; i < histMap.size(); i++) {
                     int p = histMap.partitionAt(i);
 
                     remainingParts.add(p);
                 }
+
+                iter = grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
 
                 for (Integer part : demandMsg.partitions().fullSet()) {
                     if (iter.isPartitionMissing(part))

@@ -70,6 +70,7 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryTypeNamePut = 3001,
         BinaryTypeGet = 3002,
         BinaryTypePut = 3003,
+        BinaryConfigurationGet = 3004,
 
         // Transactions
         TxStart = 4000,
@@ -89,6 +90,10 @@ namespace Apache.Ignite.Core.Impl.Client
         ComputeTaskFinished = 6001,
 
         // Services.
-        ServiceInvoke = 7000
+        ServiceInvoke = 7000,
+
+        // Data Streamer.
+        DataStreamerStart = 8000,
+        DataStreamerAddData = 8001
     }
 }

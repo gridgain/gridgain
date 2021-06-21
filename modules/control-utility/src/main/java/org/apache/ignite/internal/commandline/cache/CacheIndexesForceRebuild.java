@@ -85,10 +85,14 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         final UUID nodeId = args.nodeId;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
-                taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
-                    nodeId, clientCfg);
-            }
+            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+                taskRes = TaskExecutor.executeTaskByNameOnNode(
+                    client,
+                    IndexForceRebuildTask.class.getName(),
+                    taskArg,
+                    nodeId,
+                    clientCfg
+                );
             else {
                 logger.info("Indexes force rebuild is not supported by node " + nodeId);
 
@@ -215,7 +219,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
             IndexForceRebuildCommandArg arg = CommandArgUtils.of(nextArg, IndexForceRebuildCommandArg.class);
 
             if (arg == null)
-                throw new IllegalArgumentException("Unknown argument: " + arg.argName());
+                throw new IllegalArgumentException("Unknown argument: " + nextArg);
 
             switch (arg) {
                 case NODE_ID:

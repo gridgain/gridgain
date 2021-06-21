@@ -54,7 +54,10 @@ public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView
            newColumn("DISK_ALLOCATION_MIN", Value.LONG),
            newColumn("DISK_ALLOCATION_MAX", Value.LONG),
            newColumn("DISK_ALLOCATION_TOTAL_MIN", Value.LONG),
-           newColumn("DISK_ALLOCATION_TOTAL_MAX", Value.LONG)
+           newColumn("DISK_ALLOCATION_TOTAL_MAX", Value.LONG),
+           newColumn("ENFORCE_JOIN_ORDER", Value.BOOLEAN),
+           newColumn("DISTRIBUTED_JOINS", Value.BOOLEAN),
+           newColumn("LAZY", Value.BOOLEAN)
        );
 
    }
@@ -83,7 +86,10 @@ public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView
                 m.minBytesAllocatedOnDisk(),
                 m.maxBytesAllocatedOnDisk(),
                 m.minTotalBytesWrittenOnDisk(),
-                m.maxTotalBytesWrittenOnDisk()
+                m.maxTotalBytesWrittenOnDisk(),
+                m.enforceJoinOrder(),
+                m.distributedJoins(),
+                m.lazy()
             };
 
             rows.add(createRow(ses, data));

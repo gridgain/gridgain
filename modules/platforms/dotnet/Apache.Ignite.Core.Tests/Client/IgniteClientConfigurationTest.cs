@@ -49,6 +49,7 @@ namespace Apache.Ignite.Core.Tests.Client
             Assert.AreEqual(IgniteClientConfiguration.DefaultSocketBufferSize, cfg.SocketSendBufferSize);
             Assert.AreEqual(IgniteClientConfiguration.DefaultTcpNoDelay, cfg.TcpNoDelay);
             Assert.AreEqual(IgniteClientConfiguration.DefaultSocketTimeout, cfg.SocketTimeout);
+            Assert.AreEqual(IgniteClientConfiguration.DefaultEnablePartitionAwareness, cfg.EnablePartitionAwareness);
         }
 
         /// <summary>
@@ -325,7 +326,7 @@ namespace Apache.Ignite.Core.Tests.Client
 #endif
 
         /// <summary>
-        /// Tests <see cref="TransactionClientConfiguration"/> copy ctor. 
+        /// Tests <see cref="TransactionClientConfiguration"/> copy ctor.
         /// </summary>
         [Test]
         public void TestTransactionConfigurationCopyCtor()
@@ -336,9 +337,9 @@ namespace Apache.Ignite.Core.Tests.Client
                 DefaultTransactionConcurrency = TransactionConcurrency.Pessimistic,
                 DefaultTransactionIsolation = TransactionIsolation.Serializable
             };
-            
+
             var resultCfg = new TransactionClientConfiguration(sourceCfg);
-            
+
             Assert.AreEqual(sourceCfg.DefaultTimeout, resultCfg.DefaultTimeout);
             Assert.AreEqual(sourceCfg.DefaultTransactionConcurrency, resultCfg.DefaultTransactionConcurrency);
             Assert.AreEqual(sourceCfg.DefaultTransactionIsolation, resultCfg.DefaultTransactionIsolation);

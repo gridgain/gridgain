@@ -104,8 +104,9 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
             long resSetSize = rowSize * SMALL_TABLE_SIZE;
 
             // adjust to the size of the reservation block
+            // (multiply by 2 because we track splitter buffer size at memory tracker)
             if (resSetSize % RESERVATION_BLOCK_SIZE != 0)
-                resSetSize = (resSetSize / RESERVATION_BLOCK_SIZE + 1) * RESERVATION_BLOCK_SIZE;
+                resSetSize = (resSetSize / RESERVATION_BLOCK_SIZE + 1) * RESERVATION_BLOCK_SIZE * 2;
 
             int expCursorCnt = (int)(globalQuotaSize() / resSetSize);
 
@@ -165,6 +166,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionLargeDataSets() {
+        maxMem = 2L * MB;
+
         // None of sub-selects fits to memory.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 4 " +
             "UNION " +
@@ -250,9 +253,8 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithGroupByPrimaryKey() throws Exception {
-        //TODO: GG-19071: make next test pass without hint.
         // OOM on reducer.
-        checkQueryExpectOOM("select K.indexed, sum(K.id) from K USE INDEX (K_IDX) GROUP BY K.indexed", true);
+        checkQueryExpectOOM("select K.indexed, sum(K.id) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());

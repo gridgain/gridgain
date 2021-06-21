@@ -315,7 +315,7 @@ public final class GridCacheAtomicReferenceImpl<T> extends AtomicDataStructurePr
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(ReferenceSetEntryProcessor.class, this);
+            return S.toString(ReferenceSetEntryProcessor.class, this, super.toString());
         }
     }
 

@@ -16,6 +16,9 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
+    using NUnit.Framework;
+
+    [Category(TestUtils.CategoryIntensive)]
     public class CacheLocalAtomicTest : CacheAbstractTest
     {
         protected override int CachePartitions()

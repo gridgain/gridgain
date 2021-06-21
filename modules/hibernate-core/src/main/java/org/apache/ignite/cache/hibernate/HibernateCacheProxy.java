@@ -706,10 +706,19 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
 
     /** {@inheritDoc} */
     @Override public Iterator<Cache.Entry<Object,Object>> scanIterator(
+            boolean keepBinary,
+            @Nullable IgniteBiPredicate p,
+            long timeout
+    ) throws IgniteCheckedException {
+        return delegate.get().scanIterator(keepBinary, p, timeout);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Iterator<Cache.Entry<Object,Object>> scanIterator(
         boolean keepBinary,
         @Nullable IgniteBiPredicate p
     ) throws IgniteCheckedException {
-        return delegate.get().scanIterator(keepBinary, p);
+        return scanIterator(keepBinary, p, 0);
     }
 
     /** {@inheritDoc} */

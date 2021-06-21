@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -750,7 +751,7 @@ public interface GridKernalContext extends Iterable<GridComponent> {
     /**
      * @return Local continuous tasks processor.
      */
-    public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor();
+    public DurableBackgroundTasksProcessor durableBackgroundTask();
 
     /**
      * Return Thread pool for create/rebuild indexes.
@@ -758,4 +759,11 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Thread pool for create/rebuild indexes.
      */
     public ExecutorService buildIndexExecutorService();
+
+    /**
+     * Executor that is in charge of processing user async continuations.
+     *
+     * @return Executor that is in charge of processing user async continuations.
+     */
+    public Executor getAsyncContinuationExecutor();
 }

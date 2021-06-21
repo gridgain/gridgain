@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 
@@ -59,7 +58,7 @@ public class VisorQueryNextPageTask extends VisorOneNodeTask<VisorQueryNextPageT
 
         /** {@inheritDoc} */
         @Override protected VisorQueryResult run(VisorQueryNextPageTaskArg arg) {
-            long start = U.currentTimeMillis();
+            long start = System.currentTimeMillis();
 
             String qryId = arg.getQueryId();
 
@@ -79,7 +78,7 @@ public class VisorQueryNextPageTask extends VisorOneNodeTask<VisorQueryNextPageT
                 removeQueryHolder(ignite, qryId);
 
             return new VisorQueryResult(ignite.localNode().id(), qryId, null, nextRows, hasMore,
-                U.currentTimeMillis() - start);
+                System.currentTimeMillis() - start);
         }
 
         /** {@inheritDoc} */

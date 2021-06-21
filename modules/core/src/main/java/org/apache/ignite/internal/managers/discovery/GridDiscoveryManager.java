@@ -42,6 +42,7 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.BaselineNode;
@@ -68,7 +69,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.cluster.NodeOrderComparator;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
@@ -1572,7 +1572,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             for (ClusterNode clusterNode : discoCache.allNodes())
                 if (discoCache.alive(clusterNode.id()))
-                    summary.a(clusterNode.toString()).a(", ");
+                    summary.a(nodeDescription(clusterNode)).a(", ");
 
             summary.setLength(summary.length() - 2);
 
@@ -1583,10 +1583,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         clo.apply(summary.toString());
 
-        ClusterNode currCrd = discoCache.coordinator();
+        ClusterNode currCrd = discoCache.oldestAliveServerNode();
 
         if ((evtType == EventType.EVT_NODE_FAILED || evtType == EventType.EVT_NODE_LEFT) &&
-                !evtNode.isClient() && currCrd != null && currCrd.order() > evtNode.order())
+                currCrd != null && currCrd.order() > evtNode.order() && !evtNode.isClient() && !evtNode.isDaemon())
             clo.apply("Coordinator changed [prev=" + evtNode + ", cur=" + currCrd + "]");
 
         BaselineTopology blt = state.baselineTopology();
@@ -1623,6 +1623,20 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     clo.apply("  ^-- " + bltOffline + " nodes left for auto-activation" + offlineConsistentIds);
             }
         }
+    }
+
+    /**
+     * Provides text descrition of a cluster node.
+     *
+     * @param node Node.
+     */
+    private static String nodeDescription(ClusterNode node) {
+        return new SB(node.getClass().getSimpleName())
+            .a(" [id=").a(node.id())
+            .a(", consistentId=").a(node.consistentId())
+            .a(", isClient=").a(node.isClient())
+            .a(", ver=").a(node.version()).a("]")
+            .toString();
     }
 
     /** {@inheritDoc} */

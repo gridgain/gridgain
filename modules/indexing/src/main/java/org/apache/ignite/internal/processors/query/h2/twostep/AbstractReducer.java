@@ -26,10 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageResponse;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
@@ -97,6 +99,9 @@ public abstract class AbstractReducer implements Reducer {
 
     /** */
     private Row lastEvictedRow;
+
+    /** */
+    protected H2MemoryTracker memTracker;
 
     /**
      * Constructor.
@@ -196,6 +201,11 @@ public abstract class AbstractReducer implements Reducer {
      */
     protected void onBlockEvict(@NotNull List<Row> evictedBlock) {
         assert evictedBlock.size() == prefetchSize;
+
+        if (memTracker != null) {
+            for (Row r : evictedBlock)
+                memTracker.release(r.getMemory());
+        }
 
         // Remember the last row (it will be max row) from the evicted block.
         lastEvictedRow = requireNonNull(last(evictedBlock));
@@ -310,6 +320,16 @@ public abstract class AbstractReducer implements Reducer {
         assert !lastPage.isDummyLast(); // It must be a real last page.
 
         return new ReduceResultPage(ctx, lastPage.source(), null).setLast(true);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void memoryTracker(H2MemoryTracker memTracker) {
+        this.memTracker = memTracker;
+    }
+
+    /** {@inheritDoc} */
+    @Override public H2MemoryTracker memoryTracker() {
+        return memTracker;
     }
 
     /**

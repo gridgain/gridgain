@@ -44,7 +44,7 @@ class ClientCacheSqlFieldsQueryResponse extends ClientResponse {
      * @param includeFieldNames Whether to include field names.
      */
     ClientCacheSqlFieldsQueryResponse(long requestId, ClientCacheQueryCursor cursor,
-                                      FieldsQueryCursor<List> fieldsCursor, boolean includeFieldNames) {
+        FieldsQueryCursor<List> fieldsCursor, boolean includeFieldNames) {
         super(requestId);
 
         assert cursor != null;

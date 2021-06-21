@@ -19,6 +19,9 @@
 
 #include <ignite/common/concurrent.h>
 
+#include <ignite/thin/cache/query/query_fields_cursor.h>
+#include <ignite/thin/cache/query/query_sql_fields.h>
+
 namespace ignite
 {
     namespace impl
@@ -283,6 +286,15 @@ namespace ignite
                      *     was no previous value).
                      */
                     void GetAndPutIfAbsent(const WritableKey& key, const Writable& valIn, Readable& valOut);
+
+                    /**
+                     * Perform SQL fields query.
+                     *
+                     * @param qry Query.
+                     * @return Query cursor.
+                     */
+                    ignite::thin::cache::query::QueryFieldsCursor Query(
+                            const ignite::thin::cache::query::SqlFieldsQuery& qry);
 
                     /**
                      * Get from CacheClient.
