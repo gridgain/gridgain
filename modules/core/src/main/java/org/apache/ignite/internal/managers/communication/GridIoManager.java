@@ -1887,9 +1887,11 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @return Version of security processor feature supported by cluster.
      */
     private IgniteFeatures currentSecurityProcSupport() {
-        if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2))
+        Collection<ClusterNode> allNodes = ctx.discovery().allNodes();
+
+        if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR_V2))
             return IGNITE_SECURITY_PROCESSOR_V2;
-        else if (allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR))
+        else if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR))
             return IGNITE_SECURITY_PROCESSOR;
         else
             return null;
