@@ -220,10 +220,7 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATIONS_CHAINING(59),
 
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
-    SNAPSHOT_SFTP_UPLOAD_V2(60),
-
-    /** Historical rebalance threshold heuristics managed by distributed metastorage property instead of system property. */
-    HISTORICAL_REBALANCE_THRESHOLD_DISTRIBUTED_PROPERTY(61);
+    SNAPSHOT_SFTP_UPLOAD_V2(60);
 
     /**
      * Unique feature identifier.
