@@ -336,9 +336,6 @@ public class IgniteWalIteratorFactory {
 
         String fileName = file.getName();
 
-//        if (fileName.endsWith("wal"))
-//            System.out.println("asdf1 " + fileName);
-
         if (!WAL_NAME_PATTERN.matcher(fileName).matches() &&
             !WAL_SEGMENT_FILE_COMPACTED_PATTERN.matcher(fileName).matches())
             return null;  // Filter out this because it is not segment file.

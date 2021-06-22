@@ -70,26 +70,24 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
         LongAdder puts = new LongAdder();
         LongAdder removes = new LongAdder();
 
-        final int max = 1;
+        final int max = 100;
 
         return multithreadedAsync(() -> {
             while (!stopClo.getAsBoolean()) {
                 int rangeStart = r.nextInt(primaryKeys.size() - max);
-//                int range = 1;
+                int range = 5 + r.nextInt(max - 5);
 
-                List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + 2);
+                List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + range);
 
-                final boolean batch = false;//r.nextBoolean();
+                final boolean batch = r.nextBoolean();
 
                 try {
                     List<Integer> insertedKeys = new ArrayList<>();
                     List<Integer> rmvKeys = new ArrayList<>();
 
                     for (Integer key : keys) {
-                        System.out.println("async load: before put " + key);
                         if (!batch)
                             cache.put(key, key);
-                        System.out.println("async load: after put " + key);
 
                         insertedKeys.add(key);
 
@@ -99,12 +97,10 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
                         if (rmv) {
                             key = insertedKeys.get(r.nextInt(insertedKeys.size()));
 
-                            System.out.println("async load: before remove " + key);
                             if (!batch)
                                 cache.remove(key);
                             else
                                 rmvKeys.add(key);
-                            System.out.println("async load: after remove " + key);
 
                             removes.increment();
                         }
@@ -117,8 +113,6 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
 
                         cache.removeAll(new LinkedHashSet<>(rmvKeys));
                     }
-
-                    doSleep(50);
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||

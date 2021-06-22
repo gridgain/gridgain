@@ -232,6 +232,7 @@ public abstract class WALRecord {
         /** Atomic out-of-order update. */
         OUT_OF_ORDER_UPDATE(62, LOGICAL),
 
+        /** Partition clearing start. */
         PARTITION_CLEARING_STARTED(63, LOGICAL);
 
 

@@ -24,7 +24,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -204,8 +203,6 @@ public class GridDhtPartitionSupplier {
         assert demandMsg != null;
         assert nodeId != null;
 
-        System.out.println("dfljjnsfdgoaer demandMsg.partitions(): " + new TreeSet<>(demandMsg.partitions().fullSet()));
-
         T3<UUID, Integer, AffinityTopologyVersion> ctxId = new T3<>(nodeId, topicId, demandMsg.topologyVersion());
 
         if (demandMsg.rebalanceId() < 0) { // Demand node requested context cleanup.
@@ -367,8 +364,6 @@ public class GridDhtPartitionSupplier {
 
             while (iter.hasNext()) {
                 CacheDataRow row = iter.peek();
-
-                log.info("asdhferuionb " + row);
 
                 // Prevent mvcc entry history splitting into separate batches.
                 boolean canFlushHistory = !grp.mvccEnabled() ||

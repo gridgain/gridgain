@@ -2453,8 +2453,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         // Filter out partitions having WAL history.
                         rebalancedParts.removeAll(historical);
 
-                        log.warning("aruiviue ownersByUpdCounters.get(1) " + ownersByUpdCounters.get(1));
-
                         U.warn(log, "Partitions have been scheduled for rebalancing due to outdated update counter "
                             + "[grp=" + grp.cacheOrGroupName()
                             + ", readyTopVer=" + readyTopVer

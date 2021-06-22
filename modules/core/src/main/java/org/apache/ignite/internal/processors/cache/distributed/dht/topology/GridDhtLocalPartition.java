@@ -76,7 +76,6 @@ import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
@@ -976,9 +975,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
         try {
-            if (grp.walEnabled() && reason == PartitionsEvictManager.EvictReason.CLEARING) {
+            if (grp.walEnabled() && reason == PartitionsEvictManager.EvictReason.CLEARING)
                 ctx.wal().log(new PartitionClearingStarted(id, grp.groupId()));
-            }
 
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
 

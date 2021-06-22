@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,22 +20,28 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 /** */
 public class PartitionClearingStarted extends WALRecord {
+    /** */
     private int partId;
 
+    /** */
     private int grpId;
 
+    /** */
     public int partId() {
         return partId;
     }
 
+    /** */
     public void partId(int partId) {
         this.partId = partId;
     }
 
+    /** */
     public int grpId() {
         return grpId;
     }
 
+    /** */
     public void grpId(int grpId) {
         this.grpId = grpId;
     }
@@ -45,13 +51,7 @@ public class PartitionClearingStarted extends WALRecord {
         return RecordType.PARTITION_CLEARING_STARTED;
     }
 
-    /**
-     *
-     */
-    private PartitionClearingStarted() {
-        // No-op, used from builder methods.
-    }
-
+    /** */
     public PartitionClearingStarted(int partId, int grpId) {
         this.partId = partId;
         this.grpId = grpId;
@@ -59,6 +59,6 @@ public class PartitionClearingStarted extends WALRecord {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PartitionClearingStarted.class, this, "super", super.toString()) + "qwerty";
+        return S.toString(PartitionClearingStarted.class, this, "super", super.toString());
     }
 }

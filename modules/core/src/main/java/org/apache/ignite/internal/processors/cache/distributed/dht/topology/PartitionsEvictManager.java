@@ -139,8 +139,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             EvictReason reason = part.state() == RENTING ? EvictReason.EVICTION : EvictReason.CLEARING;
 
-            if (log.isInfoEnabled())
-                log.info("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
+            if (log.isDebugEnabled())
+                log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
                     + ", topVer=" + grp.topology().readyTopologyVersion()
                     + ", id=" + part.id() + ", state=" + part.state()
                     + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
@@ -404,8 +404,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             try {
                 long clearedEntities = part.clearAll(grpEvictionCtx, reason);
 
-                if (log.isInfoEnabled()) {
-                    log.info("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
+                if (log.isDebugEnabled()) {
+                    log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
                         ", topVer=" + part.group().topology().readyTopologyVersion() +
                         ", id=" + part.id() + ", state=" + part.state() + ", cleared=" + clearedEntities +
                         ", fullSize=" + part.fullSize() + ']');

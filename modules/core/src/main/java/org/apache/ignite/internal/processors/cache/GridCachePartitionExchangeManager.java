@@ -31,7 +31,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -489,7 +488,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             if (grp != null) {
                                 if (m instanceof GridDhtPartitionSupplyMessage) {
-                                    System.out.println("ijsoipernae GridDhtPartitionSupplyMessage on demander" + m);
                                     grp.preloader().handleSupplyMessage(id, (GridDhtPartitionSupplyMessage)m);
 
                                     return;
@@ -3559,10 +3557,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
 
                                 GridDhtPreloaderAssignments assigns = assignsMap.get(grpId);
-
-                                assigns.forEach((k, v) -> {
-                                    System.out.println("dfrgjopawrenob grpId: " + grpId + ", k.consistentId(): " + k.consistentId() + ", assigns: " + new TreeSet<>(v.partitions().fullSet()));
-                                });
 
                                 RebalanceFuture cur = grp.preloader().addAssignments(assigns,
                                     forcePreload,

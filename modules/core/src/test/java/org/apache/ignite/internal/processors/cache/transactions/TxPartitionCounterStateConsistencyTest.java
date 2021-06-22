@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,12 +27,10 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -49,8 +42,6 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -67,18 +58,13 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
-import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
-import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
-import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -90,23 +76,15 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import static java.util.Arrays.fill;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
-import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
-import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MVCC_DATA_RECORD;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
-import static org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor.genNewStyleSubfolderName;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
@@ -189,57 +167,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void test1() throws Exception {
-        backups = 1;
-
-        Ignite prim = startGridsMultiThreaded(SERVER_NODES);
-
-        IgniteEx client = startGrid("client");
-
-        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10000);
-
-//        System.out.println("aijnfdgok primaryKeys " + primaryKeys);
-//        System.out.println("aijnfdgok primaryPartKeys " + primaryPartKeys);
-
-        for (int i = 0; i < 200; i++) {
-            cache.put(primaryKeys.get(i), i);
-        }
-
-        stopGrid(prim.name());
-
-        awaitPartitionMapExchange();
-
-        for (int i = 0; i < 200; i++)
-            cache.remove(primaryKeys.get(i));
-
-//                clearTombstones(grid(1).cache(DEFAULT_CACHE_NAME));
-
-
-        startGrid(prim.name());
-
-//        awaitPartitionMapExchange(true, true, null);
-
-        for (int i = 201; i < 401; i++) {
-            doSleep(10);
-            cache.put(primaryKeys.get(i), i);
-            System.out.println("put_after_restart");
-        }
-
-        awaitPartitionMapExchange(true, true, null);
-
-        System.out.println("final_cache_size " + cache.size());
-
-        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
-    }
-
-    /**
-     *
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testPartitionConsistencyNotRebalancedRemoveOpWithPrimaryRestart() throws Exception {
         backups = 1;
 
@@ -267,10 +194,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         }
 
-        System.out.println("aijnfdgok partId " + partId);
-        System.out.println("aijnfdgok primaryKeys " + primaryKeys);
-        System.out.println("aijnfdgok primaryPartKeys " + primaryPartKeys);
-
         for (int i = 0; i < 2; i++) {
             if (i == 0)
                 cache.put(primaryPartKeys.get(0), 1234567);
@@ -278,11 +201,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             stopGrid(true, prim.name());
 
             awaitPartitionMapExchange();
-            if (i == 0) {
+            if (i == 0)
                 cache.remove(primaryPartKeys.get(0));
-
-//                clearTombstones(grid(1).cache(DEFAULT_CACHE_NAME));
-            }
 
             startGrid(prim.name());
 
@@ -299,7 +219,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      *
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testPartitionConsistencyNotRebalancedRemoveOpWithBackupRestart() throws Exception {
         backups = 1;
 
@@ -337,11 +256,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             awaitPartitionMapExchange();
 
-            if (i == 0) {
+            if (i == 0)
                 cache.remove(backupPartKeys.get(0));
-
-//                clearTombstones(prim.cache(DEFAULT_CACHE_NAME));
-            }
 
             startGrid(backup.name());
 
@@ -358,65 +274,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * Test primary-backup partitions consistency while restarting primary node under load.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    public void testPartitionConsistencyWithPrimaryRestartOriginal() throws Exception {
-        backups = 1;
-
-        Ignite prim = startGridsMultiThreaded(SERVER_NODES);
-
-        IgniteEx client = startGrid("client");
-
-        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
-
-        long stop = U.currentTimeMillis() + 30_000;//GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
-
-        Random r = new Random();
-
-        AtomicBoolean flag = new AtomicBoolean(false);
-
-        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
-//            while (U.currentTimeMillis() < stop) {
-//                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
-            for (int i = 0; i < 2; i++) {
-//                doSleep(100);
-                System.out.println("before stop node " + prim.name() + ", iter " + i);
-                stopGrid(true, prim.name());
-                System.out.println("after stop " + prim.name() + ", iter " + i);
-
-                try {
-                    awaitPartitionMapExchange();
-                    System.out.println("before start node " + prim.name() + ", iter " + i);
-                    startGrid(prim.name());
-                    System.out.println("after start node " + prim.name() + ", iter " + i);
-                    awaitPartitionMapExchange();
-
-//                    doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
-//                    doSleep(100);
-                }
-                catch (Exception e) {
-                    fail(X.getFullStackTrace(e));
-                }
-                finally {
-                    flag.set(true);
-                }
-            }
-        }, 1, "node-restarter");
-
-        doRandomUpdates(r, client, primaryKeys, cache, () -> flag.get()).get();
-        fut.get();
-
-        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
-    }
-
-    /**
-     * Test primary-backup partitions consistency while restarting primary node under load.
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
-        backups = 1;
+        backups = 2;
 
         Ignite prim = startGridsMultiThreaded(SERVER_NODES);
 
@@ -425,90 +284,33 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
-        int primaryPartId = prim.affinity(DEFAULT_CACHE_NAME).partition(primaryKeys.get(0));
-        int anotherPartId = (primaryPartId + 1) % 1000;
-        AtomicInteger anotherKey = new AtomicInteger();
-        for (int i = 0; i < 1000; i++) {
-            if (prim.affinity(DEFAULT_CACHE_NAME).partition(i) != primaryPartId) {
-                anotherKey.set(i);
-//                log.warning(">>>>> primaryPartId=" + primaryPartId + ", key=" + i);
-                break;
-            }
-        }
-        AtomicInteger keyK = new AtomicInteger();
-        for (int i = 12; i < 10000; i++) {
-            if ((prim.affinity(DEFAULT_CACHE_NAME).partition(i) == primaryPartId) && (primaryKeys.get(0) != i)) {
-                log.warning(">>>>> prim.affinity(DEFAULT_CACHE_NAME).partition(i) " + prim.affinity(DEFAULT_CACHE_NAME).partition(i));
-                keyK.set(i);
-                break;
-            }
-        }
 
-        log.warning(
-            ">>>>> primaryPartId=" + primaryPartId +
-                ", key=" + primaryKeys.get(0) +
-                ", keyK=" + keyK.get());
-
-        long stop = U.currentTimeMillis() + 30_000;//GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
 
         Random r = new Random();
 
-        AtomicBoolean flag = new AtomicBoolean(false);
-
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
-//            while (U.currentTimeMillis() < stop) {
-//                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
-            for (int i = 1; i <= 2; i++) {
-//                doSleep(100);
-                if (i == 1) {
-                    cache.put(primaryKeys.get(0), 201);
-                }
-                System.out.println("before stop " + prim.name() + ", iter " + i);
+            while (U.currentTimeMillis() < stop) {
+                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
+
                 stopGrid(true, prim.name());
-                System.out.println("after stop " + prim.name() + ", iter " + i);
 
                 try {
                     awaitPartitionMapExchange();
-                    if (i == 1)
-                        cache.remove(primaryKeys.get(0));
-//                    if (i == 1)
-//                        cache.put(2001, 203);
-//                    if (i == 1)
-//                        cache.put(3001, 204);
-//                    if (i == 1)
-//                        cache.put(keyK.get(), 202);
 
-//                    if (i == 1) {
-//                        for (int j = 0; j < 10_000; j++) {
-//                            cache.put(anotherKey.get(), j);
-//                        }
-//                    }
-                    System.out.println("before start " + prim.name() + ", iter " + i);
                     startGrid(prim.name());
-                    System.out.println("after start " + prim.name() + ", iter " + i);
-                    awaitPartitionMapExchange(true, true, null);
-                    if (i == 1)
-                        cache.put(keyK.get(), 202);
 
-//                    doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
-//                    doSleep(100);
+                    awaitPartitionMapExchange();
+
+                    doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
                 }
                 catch (Exception e) {
                     fail(X.getFullStackTrace(e));
                 }
-                finally {
-                    flag.set(true);
-                }
             }
         }, 1, "node-restarter");
 
-//        Checkpointer.latch.await();
-//
-//        log.warning("sdlifrw after latch.await(), before put");
-//        cache.put(keyK.get(), 202);
-//        log.warning("sdlifrw after latch.await(), after put");
-
-//        doRandomUpdates(r, client, primaryKeys, cache, () -> flag.get()).get();
+        doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
 
         assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
