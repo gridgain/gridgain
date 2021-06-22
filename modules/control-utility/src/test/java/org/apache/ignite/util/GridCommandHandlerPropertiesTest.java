@@ -228,7 +228,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     public void testPropertyWalRebalanceThreshold() {
         assertDistributedPropertyEquals(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, DFLT_PDS_WAL_REBALANCE_THRESHOLD, true);
 
-        int newVal = 1000;
+        int newVal = DFLT_PDS_WAL_REBALANCE_THRESHOLD * 2;
 
         assertEquals(
             EXIT_CODE_OK,
@@ -244,6 +244,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
 
     /**
      * Validates that distributed property has specified value across all nodes.
+     *
      * @param propName Distributed property name.
      * @param expected Expected property value.
      * @param onlyServerMode Ignore client nodes.

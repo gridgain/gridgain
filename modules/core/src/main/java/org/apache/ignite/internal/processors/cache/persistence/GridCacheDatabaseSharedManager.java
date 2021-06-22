@@ -246,7 +246,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
     public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
-    /** */
+    /**
+     * Threshold value to use history or full rebalance for local partition.
+     * Master value contained in {@link #historicalRebalanceThreshold}.
+     */
     private final int walRebalanceThresholdLegacy =
             getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, DFLT_PDS_WAL_REBALANCE_THRESHOLD);
 
@@ -3815,10 +3818,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
     }
 
-    /** Registers {@link #historicalRebalanceThreshold} property in distributed metastore. */
+    /**
+     * Registers {@link #historicalRebalanceThreshold} property in distributed metastore.
+     */
     private void initWalRebalanceThreshold() {
         cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
+                /** {@inheritDoc} */
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     String logMsgFmt = "Historical rebalance WAL threshold changed [property=%s, oldVal=%s, newVal=%s]";
 
@@ -3827,6 +3833,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     dispatcher.registerProperties(historicalRebalanceThreshold);
                 }
 
+                /** {@inheritDoc} */
                 @Override public void onReadyToWrite() {
                     setDefaultValue(historicalRebalanceThreshold, walRebalanceThresholdLegacy, log);
                 }
