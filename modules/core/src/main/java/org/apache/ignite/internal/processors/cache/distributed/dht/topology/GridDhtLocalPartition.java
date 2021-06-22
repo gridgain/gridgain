@@ -976,7 +976,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
         try {
-            if (reason == PartitionsEvictManager.EvictReason.CLEARING) {
+            if (grp.walEnabled() && reason == PartitionsEvictManager.EvictReason.CLEARING) {
                 ctx.wal().log(new PartitionClearingStarted(id, grp.groupId()));
             }
 

@@ -117,7 +117,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     public static final int PARTITION_ID = 0;
 
     /** */
-    public static final int SERVER_NODES = 2;
+    public static final int SERVER_NODES = 3;
 
     /** */
     protected TcpDiscoverySpi customDiscoSpi;

@@ -208,7 +208,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
 
         stopAllGrids();
 
-//        cleanPersistenceDir();
+        cleanPersistenceDir();
     }
 
     /**
