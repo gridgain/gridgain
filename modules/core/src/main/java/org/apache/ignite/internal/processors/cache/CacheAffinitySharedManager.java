@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -2918,6 +2919,56 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         );
 
         return new CacheGroupNoAffOrFilteredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
+    }
+
+    /**
+     * Prints {@code waitInfo} to provided {@code log}.
+     *
+     * @param log Logger to print to.
+     */
+    public void printWaitInfo(IgniteLogger log) {
+        if (waitInfo == null || waitInfo.empty() || !log.isInfoEnabled())
+            return;
+
+        try {
+            final String hdr = "Current affinity assignment is not ideal, it is waiting for cache: ";
+
+            List<String> grpList = new ArrayList<>();
+
+            waitInfo.assignments.forEach((grpId, partsMap) -> {
+                StringBuilder sb = new StringBuilder();
+
+                sb.append("grp=[grpId=").append(grpId).append(", nodes=[");
+
+                Map<UUID/* ClusterNode id */, Integer/* Number of partitions for this UUID */> nodeMap = new HashMap<>();
+
+                // Avoiding CME
+                Map<Integer /** Partition id. */, List<ClusterNode>> partsMap0 = new HashMap<>(partsMap);
+
+                partsMap0.forEach((partId, nodes) -> {
+                    nodes.forEach((node -> {
+                        if (nodeMap.containsKey(node.id()))
+                            nodeMap.compute(node.id(), (k, v) -> v + 1);
+                        else
+                            nodeMap.put(node.id(), 1);
+                    }));
+                });
+
+                String nodesStr = nodeMap.entrySet()
+                    .stream()
+                    .map(entry -> "node=[id=" + entry.getKey() + ", partsNum=" + entry.getValue() + ']')
+                    .collect(Collectors.joining(", "));
+
+                sb.append(nodesStr).append("]]");
+
+                grpList.add(sb.toString());
+            });
+
+            log.info(hdr + String.join(", ", grpList));
+        }
+        catch (Exception e) {
+            log.error("Failed to print waiting partitions info", e);
+        }
     }
 
     /**
