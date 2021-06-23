@@ -25,11 +25,18 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ExecutorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridStringLogger;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Check logging local node metrics
@@ -49,6 +56,12 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
     /** */
     private GridStringLogger strLog = new GridStringLogger(false, this.log);
 
+    /** Coordinator test logger */
+    private ListeningTestLogger crdLog;
+
+    /** Coordinator log listener */
+    private LogListener rebalanceInfoLsnr;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -58,7 +71,15 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         cfg.setExecutorConfiguration(new ExecutorConfiguration(CUSTOM_EXECUTOR_0),
             new ExecutorConfiguration(CUSTOM_EXECUTOR_1));
 
-        cfg.setGridLogger(strLog);
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        if (igniteInstanceName.equals(getTestIgniteInstanceName(0))) {
+            assertNotNull("Coordinator logger is null", crdLog);
+
+            cfg.setGridLogger(crdLog);
+        }
+        else
+            cfg.setGridLogger(strLog);
 
         return cfg;
     }
@@ -74,6 +95,8 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
 
         strLog.logLength(300_000);
 
+        rebalanceInfoLsnr = prepareRebalanceInfoLogListener();
+
         startGrids(2);
     }
 
@@ -85,12 +108,14 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         IgniteCache<Integer, String> cache1 = grid(0).createCache("TestCache1");
         IgniteCache<Integer, String> cache2 = grid(1).createCache(
             new CacheConfiguration<Integer, String>("TestCache2")
-            .setDataRegionName(persistenceEnabled() ? IN_MEMORY_REGION : "default"));
+                .setDataRegionName(persistenceEnabled() ? IN_MEMORY_REGION : "default"));
 
         cache1.put(1, "one");
         cache2.put(2, "two");
 
-        Thread.sleep(10_000);
+        final String metricsHdr = "Metrics for local node (to disable set 'metricsLogFrequency' to 0)";
+
+        assertTrue("Metrics weren't printed.", waitForCondition(() -> strLog.toString().contains(metricsHdr), 5000));
 
         // Check that nodes are alive.
         assertEquals("one", cache1.get(1));
@@ -103,6 +128,52 @@ public class GridNodeMetricsLogSelfTest extends GridCommonAbstractTest {
         checkOffHeapMetrics(logOutput);
 
         checkDataRegionsMetrics(logOutput);
+
+        if (!persistenceEnabled()) {
+            spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+            spi(grid(1)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+        }
+
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+            try {
+                startGrid(2);
+            }
+            catch (Exception e) {
+                log.error("Failed to start third node", e);
+            }
+
+            if (persistenceEnabled()) {
+                spi(grid(0)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+                spi(grid(1)).blockMessages(GridDhtPartitionsFullMessage.class, getTestIgniteInstanceName(2));
+
+                resetBaselineTopology();
+            }
+        });
+
+        assertTrue("Expected rebalance info not found", waitForCondition(() -> rebalanceInfoLsnr.check(), 60_000));
+
+        spi(grid(0)).stopBlock();
+        spi(grid(1)).stopBlock();
+
+        fut.get();
+    }
+
+    /**
+     * Prepares rebalance info log listener.
+     *
+     * @return Prepared log listener
+     */
+    private LogListener prepareRebalanceInfoLogListener() {
+        crdLog = new ListeningTestLogger(log);
+
+        LogListener rebalanceInfoLsnr =
+            LogListener.matches("Current affinity assignment is not ideal, it is waiting for cache:")
+                .andMatches(Pattern.compile("(?s).*grp=\\[grpId=.*, nodes=\\[node=\\[id=.*, partsNum=.*].*"))
+                .build();
+
+        crdLog.registerListener(rebalanceInfoLsnr);
+
+        return rebalanceInfoLsnr;
     }
 
     /**
