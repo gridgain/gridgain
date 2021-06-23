@@ -62,7 +62,6 @@ public class JdbcThinTcpIoTest extends GridCommonAbstractTest {
             @SuppressWarnings("ResultOfObjectAllocationIgnored")
             @Override public Object call() throws Exception {
                 new JdbcThinTcpIo(new ConnectionPropertiesImpl(),
-                    //TODO GG-32283 Presumably replacing the hostname should help with test failures due to network problems. If the test continues to fail, another solution must be found.
                     new InetSocketAddress("10.0.0.0", 10800), null, 500);
 
                 return null;
