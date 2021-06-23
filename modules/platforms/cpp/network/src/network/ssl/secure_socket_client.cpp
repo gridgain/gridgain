@@ -170,14 +170,23 @@ namespace ignite
                         return res;
                 }
 
-                res = sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
+                do {
+                    res = sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
 
-                if (res <= 0)
-                {
-                    int err = sslGateway.SSL_get_error_(ssl0, res);
-                    std::cout << __FUNCTION__ << ": " << "SSL Error on read: " << err << std::endl;
-                    return -err;
-                }
+                    if (res <= 0)
+                    {
+                        int err = sslGateway.SSL_get_error_(ssl0, res);
+                        if (IsActualError(err))
+                            return -err;
+
+                        int want = sslGateway.SSL_want_(ssl0);
+
+                        int waitRes = WaitOnSocket(ssl, timeout, want == SSL_READING);
+
+                        if (waitRes < 0 || waitRes == WaitResult::TIMEOUT)
+                            return waitRes;
+                    }
+                } while (res <= 0);
 
                 return res;
             }
