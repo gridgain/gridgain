@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(TestConnectionSslReject)
     BOOST_REQUIRE_EQUAL(ret, SQL_ERROR);
 
     // Checking that error is the connection error.
-    BOOST_CHECK_EQUAL(std::string("08001"), GetOdbcErrorState(SQL_HANDLE_DBC, dbc));
+    BOOST_CHECK_EQUAL(std::string("08S01"), GetOdbcErrorState(SQL_HANDLE_DBC, dbc));
 }
 
 BOOST_AUTO_TEST_CASE(TestLoginTimeout)
