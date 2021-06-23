@@ -379,9 +379,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         boolean beforeDestroy,
         boolean needSnapshot
     ) throws IgniteCheckedException {
-        RowStore rowStore0 = store.rowStore();
+        if (partitionStatesRestored) {
+            RowStore rowStore0 = store.rowStore();
 
-        if (rowStore0 != null && partitionStatesRestored) {
             ((CacheFreeList)rowStore0.freeList()).saveMetadata(grp.statisticsHolderData());
 
             long updCntr = store.updateCounter();
