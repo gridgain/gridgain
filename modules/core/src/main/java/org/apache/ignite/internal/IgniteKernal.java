@@ -294,6 +294,7 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -2244,6 +2245,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             log.info(msg.toString());
 
             ctx.cache().context().database().dumpStatistics(log);
+
+            if (isLocalNodeCoordinator(ctx.discovery()))
+                ctx.cache().context().affinity().printWaitInfo(log);
         }
         catch (IgniteClientDisconnectedException ignore) {
             // No-op.
