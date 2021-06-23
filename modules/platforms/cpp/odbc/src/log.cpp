@@ -15,6 +15,7 @@
  */
 
 #include <cstdlib>
+#include <iostream>
 
 #include "ignite/odbc/log.h"
 
@@ -64,11 +65,11 @@ namespace ignite
 
         void Logger::WriteMessage(std::string const& message)
         {
-            if (IsEnabled())
-            {
+//            if (IsEnabled())
+//            {
                 ignite::common::concurrent::CsLockGuard guard(mutex);
-                stream << message << std::endl;
-            }
+                std::cerr << message << std::endl;
+//            }
         }
 
         Logger* Logger::Get()
