@@ -170,7 +170,16 @@ namespace ignite
                         return res;
                 }
 
-                return sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
+                res = sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
+
+                if (res <= 0)
+                {
+                    int err = sslGateway.SSL_get_error_(ssl0, res);
+                    std::cout << __FUNCTION__ << ": " << "SSL Error on read: " << err << std::endl;
+                    return -err;
+                }
+
+                return res;
             }
 
             bool SecureSocketClient::IsBlocking() const
