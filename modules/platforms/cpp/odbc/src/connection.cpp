@@ -189,6 +189,8 @@ namespace ignite
                 return SqlResult::AI_ERROR;
             }
 
+            Sleep(5000);
+
             bool connected = TryRestoreConnection();
 
             if (!connected)

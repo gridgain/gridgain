@@ -21,6 +21,8 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 #include <boost/test/unit_test.hpp>
 
 #include "ignite/ignition.h"
@@ -89,6 +91,7 @@ namespace ignite
             SQLCHAR outstr[ODBC_BUFFER_SIZE];
             SQLSMALLINT outstrlen;
 
+            boost::this_thread::sleep_for(boost::chrono::seconds(5));
             // Connecting to ODBC server.
             SQLRETURN ret = SQLDriverConnect(dbc, NULL, &connectStr0[0], static_cast<SQLSMALLINT>(connectStr0.size()),
                 outstr, sizeof(outstr), &outstrlen, SQL_DRIVER_COMPLETE);
