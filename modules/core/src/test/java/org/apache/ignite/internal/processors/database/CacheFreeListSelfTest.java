@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.evict.NoOpPageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
@@ -56,6 +57,10 @@ import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  *
@@ -345,7 +350,7 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
      * @return Free list.
      * @throws Exception If failed.
      */
-    protected FreeList createFreeList(int pageSize) throws Exception {
+    private FreeList<?> createFreeList(int pageSize) throws Exception {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration()
             .setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
@@ -360,6 +365,10 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
 
         DataRegion dataRegion = new DataRegion(pageMem, plcCfg, regionMetrics, new NoOpPageEvictionTracker());
 
+        PageLockTrackerManager pageLockTrackerManager = mock(PageLockTrackerManager.class);
+
+        when(pageLockTrackerManager.createPageLockTracker(anyString())).thenReturn(PageLockTrackerManager.NOOP_LSNR);
+
         return new CacheFreeList(
             1,
             "freelist",
@@ -367,7 +376,7 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             null,
             metaPageId,
             true,
-            null,
+            pageLockTrackerManager,
             new GridTestKernalContext(log),
             null,
             PageIdAllocator.FLAG_IDX

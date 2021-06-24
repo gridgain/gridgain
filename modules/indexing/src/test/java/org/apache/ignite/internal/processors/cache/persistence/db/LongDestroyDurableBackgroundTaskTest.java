@@ -50,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
@@ -757,12 +758,13 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
          * @param mvccEnabled Mvcc flag.
          * @param rowCache Row cache.
          * @param failureProcessor if the tree is corrupted.
+         * @param pageLockTrackerManager Page lock tracker manager.
          * @param log Logger.
          * @param stats Statistics holder.
          * @throws IgniteCheckedException If failed.
          */
         public H2TreeTest(
-            GridCacheContext cctx,
+            GridCacheContext<?, ?> cctx,
             GridH2Table table,
             String name,
             String idxName,
@@ -784,6 +786,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
             boolean mvccEnabled,
             @Nullable H2RowCache rowCache,
             @Nullable FailureProcessor failureProcessor,
+            PageLockTrackerManager pageLockTrackerManager,
             IgniteLogger log,
             IoStatisticsHolder stats,
             InlineIndexColumnFactory factory,
@@ -813,6 +816,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                 mvccEnabled,
                 rowCache,
                 failureProcessor,
+                pageLockTrackerManager,
                 log,
                 stats,
                 factory,

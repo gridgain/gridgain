@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
  * Helper for creating string from {@link PageLockDump}.
  */
 public class ToStringDumpHelper {
-
     /** Date format. */
     public static final SimpleDateFormat DATE_FMT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
@@ -49,7 +48,7 @@ public class ToStringDumpHelper {
     public static String toStringDump(SharedPageLockTrackerDump pageLockDump) {
         StringBuilder sb = new StringBuilder();
 
-        ToStringDumpProcessor proc = new ToStringDumpProcessor(sb, pageLockDump.structureIdToStrcutureName::get);
+        ToStringDumpProcessor proc = new ToStringDumpProcessor(sb, pageLockDump.structureIdToStructureName::get);
 
         proc.processDump(pageLockDump);
 
