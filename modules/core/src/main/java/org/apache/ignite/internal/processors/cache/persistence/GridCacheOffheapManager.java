@@ -381,7 +381,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     ) throws IgniteCheckedException {
         RowStore rowStore0 = store.rowStore();
 
-        if (rowStore0 != null && partitionStatesRestored) {
+        if (rowStore0 != null && (partitionStatesRestored || grp.isLocal())) {
             ((CacheFreeList)rowStore0.freeList()).saveMetadata(grp.statisticsHolderData());
 
             long updCntr = store.updateCounter();
