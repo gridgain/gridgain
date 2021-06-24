@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -119,6 +120,7 @@ import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Assert;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
@@ -362,16 +364,6 @@ public final class GridTestUtils {
         }
     }
 
-//    static {
-//        new Thread(new Runnable() {
-//            @Override public void run() {
-//                JOptionPane.showMessageDialog(null, "Close this to dump messages.");
-//
-//                dumpMessages();
-//            }
-//        }).start();
-//    }
-
     /**
      * Checks that string {@param str} matches given regular expression {@param regexp}. Logs both strings
      * and throws {@link java.lang.AssertionError}, if not.
@@ -389,6 +381,50 @@ public final class GridTestUtils {
             U.warn(log, str);
 
             throw e;
+        }
+    }
+
+    /**
+     * Checks that file contains line {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param filePath Absolute path to file.
+     * @param charset File charset.
+     * @param regexp Regular expression pattern.
+     */
+    public static void assertMatchesLine(@Nullable IgniteLogger log, String filePath, String charset, String regexp) throws IOException {
+        assertMatchesLine(log, filePath, charset, Pattern.compile(regexp));
+    }
+
+    /**
+     * Checks that file contains line {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param filePath Absolute path to file.
+     * @param charset File charset.
+     * @param regexp Regular expression pattern.
+     */
+    public static void assertMatchesLine(@Nullable IgniteLogger log, String filePath, String charset, Pattern regexp) throws IOException {
+        try (Scanner input = new Scanner(new FileInputStream(filePath), charset)) {
+            input.useDelimiter("[\\s]*\\n[\\s]*");
+
+            boolean found = false;
+
+            while (input.hasNext()) {
+                if (found = input.hasNext(regexp))
+                    break;
+                else
+                    input.nextLine();
+            }
+
+            if (!found) {
+                U.warn(log, String.format("File doesn't does not contain line matches regexp: '%s'", regexp));
+                U.warn(log, String.format("File name: '%s'", filePath));
+
+                Assert.fail("File doesn't does not contain line matches regexp");
+            }
         }
     }
 
