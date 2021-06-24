@@ -68,20 +68,20 @@ namespace Apache.Ignite
                         return;
                     }
 
-                    if (Svc.Equals(first))
+                    if (Svc.Equals(first, StringComparison.Ordinal))
                     {
                         args = RemoveFirstArg(args);
 
                         svc = true;
                     }
 
-                    else if (SvcInstall.Equals(first))
+                    else if (SvcInstall.Equals(first, StringComparison.Ordinal))
                     {
                         args = RemoveFirstArg(args);
 
                         install = true;
                     }
-                    else if (SvcUninstall.Equals(first))
+                    else if (SvcUninstall.Equals(first, StringComparison.Ordinal))
                     {
                         IgniteService.Uninstall();
 
