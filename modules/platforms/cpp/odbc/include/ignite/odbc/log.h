@@ -20,19 +20,17 @@
 #include <string>
 #include <sstream>
 #include <fstream>
-#include <iostream>
 
 #include "ignite/common/common.h"
 #include "ignite/common/concurrent.h"
 
-#   define LOG_MSG(param) \
-    std::cout << __FUNCTION__ << ": " << param << std::endl;
+#   define LOG_MSG(param)                                      \
+    if (ignite::odbc::Logger* p = ignite::odbc::Logger::Get()) \
+    {                                                          \
+        ignite::odbc::LogStream lstream(p);                    \
+        lstream << __FUNCTION__ << ": " << param;              \
+    }
 
-//if (ignite::odbc::Logger* p = ignite::odbc::Logger::Get()) \
-//    {                                                          \
-//        ignite::odbc::LogStream lstream(p);                    \
-//        lstream << __FUNCTION__ << ": " << param;              \
-//    }
 namespace ignite
 {
     namespace odbc

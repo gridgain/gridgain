@@ -20,10 +20,8 @@
 #include <string>
 #include <sstream>
 
-#include <boost/thread.hpp>
 #include <boost/regex.hpp>
 #include <boost/test/unit_test.hpp>
-#include <boost/chrono/duration.hpp>
 
 #include "ignite/ignite.h"
 #include "ignite/ignition.h"
@@ -181,8 +179,6 @@ BOOST_AUTO_TEST_CASE(TestConnectionTimeoutBatch)
 
 BOOST_AUTO_TEST_CASE(TestConnectionTimeoutBoth)
 {
-    boost::this_thread::sleep_for(boost::chrono::seconds(5));
-
     Connect(MakeDefaultConnectionString());
 
     SQLRETURN ret = SQLSetConnectAttr(dbc, SQL_ATTR_CONNECTION_TIMEOUT, reinterpret_cast<SQLPOINTER>(5), 0);
