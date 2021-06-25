@@ -3687,6 +3687,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * indexes is completed and the entry will be deleted from the MetaStorage
      * at the end of the checkpoint. Otherwise, delete the index rebuild entry.
      *
+     *
      * @param cacheName Cache name.
      */
     public void completeRebuildIndexes(String cacheName) {
