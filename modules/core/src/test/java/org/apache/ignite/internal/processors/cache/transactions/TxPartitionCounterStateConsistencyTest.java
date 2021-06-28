@@ -164,10 +164,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * There is a key that was removed while grid(0) was stopped.
-     * After start grid(0) (a primary node) there is a full rebalance with clearing.
-     * So that remove operation was not writen to WAL. Also the partition was not chekpointed.
-     * After restart grid(0) (a primary node) need to rebalance the partition to clear the key.
+     * There is a key that was removed while a primary node was stopped.
+     * After start a primary node there is a full rebalance with clearing.
+     * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
+     * After restart a primary node need to rebalance the partition to clear the key.
      */
     @Test
     public void testPartitionConsistencyNotRebalancedRemoveOpWithPrimaryRestart() throws Exception {
@@ -219,10 +219,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
-     * There is a key that was removed while grid(0) was stopped.
-     * After start grid(0) (a backup node) there is a full rebalance with clearing.
-     * So that remove operation was not writen to WAL. Also the partition was not chekpointed.
-     * After restart grid(0) (a backup node) need to rebalance the partition to clear the key.
+     * There is a key that was removed while a backup node was stopped.
+     * After start a backup node there is a full rebalance with clearing.
+     * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
+     * After restart a backup node need to rebalance the partition to clear the key.
      */
     @Test
     public void testPartitionConsistencyNotRebalancedRemoveOpWithBackupRestart() throws Exception {

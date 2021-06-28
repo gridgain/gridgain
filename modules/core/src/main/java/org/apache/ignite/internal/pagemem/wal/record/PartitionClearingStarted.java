@@ -18,7 +18,9 @@ package org.apache.ignite.internal.pagemem.wal.record;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-/** */
+/**
+ * Partition clearing started record.
+ */
 public class PartitionClearingStarted extends WALRecord {
     /** */
     private int partId;
@@ -26,22 +28,30 @@ public class PartitionClearingStarted extends WALRecord {
     /** */
     private int grpId;
 
-    /** */
+    /**
+     * @return Partition ID.
+     */
     public int partId() {
         return partId;
     }
 
-    /** */
+    /**
+     * @param partId Partition ID.
+     */
     public void partId(int partId) {
         this.partId = partId;
     }
 
-    /** */
+    /**
+     * @return Cache group ID.
+     */
     public int grpId() {
         return grpId;
     }
 
-    /** */
+    /**
+     * @param grpId Cache group ID.
+     */
     public void grpId(int grpId) {
         this.grpId = grpId;
     }

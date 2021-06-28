@@ -2522,7 +2522,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
-        List<GroupPartitionId> partsToRebalance = new ArrayList<>();
+        List<GroupPartitionId> partsNeedToRebalance = new ArrayList<>();
 
         try {
             while (it.hasNextX()) {
@@ -2665,7 +2665,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         GroupPartitionId grpPartpId = new GroupPartitionId(rec0.grpId(), rec0.partId());
 
-                        partsToRebalance.add(grpPartpId);
+                        partsNeedToRebalance.add(grpPartpId);
 
                         break;
 
@@ -2681,7 +2681,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
 
-        partsToRebalance.forEach(groupPartitionId -> {
+        partsNeedToRebalance.forEach(groupPartitionId -> {
             restoreLogicalState.partitionRecoveryStates.put(groupPartitionId, 0);
         });
 

@@ -640,13 +640,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             assert partState == OWNING || partState == RENTING :
                 "Only partitions in state OWNING or RENTING can be moved to MOVING state " + partState + " " + id;
 
-            if (casState(state, MOVING)) {
-                // The state is switched under global topology lock, safe to record version here.
-                clearVer = ctx.versions().localOrder();
-
+            if (casState(state, MOVING))
                 return true;
-            }
         }
+    }
+
+    /** */
+    public void updateClearVer() {
+        clearVer = ctx.versions().localOrder();
     }
 
     /**
