@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import java.util.Map;
-import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
