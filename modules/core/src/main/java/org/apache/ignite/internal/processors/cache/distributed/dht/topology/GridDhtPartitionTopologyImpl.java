@@ -2518,15 +2518,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
         }
 
-        if (part.state() != MOVING)
-            part.moving();
+        part.moving();
 
-        if (clear) {
-            // The state is switched under global topology lock, safe to record version here.
-            part.updateClearVer();
-
+        if (clear)
             exchFut.addClearingPartition(grp, part.id());
-        }
 
         assert part.state() == MOVING : part;
 
