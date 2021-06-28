@@ -637,17 +637,23 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (partState == EVICTED)
                 return false;
 
+            if (partState == MOVING) {
+                // The state is switched under global topology lock, safe to record version here.
+                clearVer = ctx.versions().localOrder();
+
+                return false;
+            }
+
             assert partState == OWNING || partState == RENTING :
                 "Only partitions in state OWNING or RENTING can be moved to MOVING state " + partState + " " + id;
 
-            if (casState(state, MOVING))
-                return true;
-        }
-    }
+            if (casState(state, MOVING)) {
+                // The state is switched under global topology lock, safe to record version here.
+                clearVer = ctx.versions().localOrder();
 
-    /** */
-    public void updateClearVer() {
-        clearVer = ctx.versions().localOrder();
+                return true;
+            }
+        }
     }
 
     /**
