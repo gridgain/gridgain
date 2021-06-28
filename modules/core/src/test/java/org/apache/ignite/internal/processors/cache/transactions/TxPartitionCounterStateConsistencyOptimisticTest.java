@@ -31,13 +31,13 @@ public class TxPartitionCounterStateConsistencyOptimisticTest extends TxPartitio
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
         // No-op.
     }
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
+    public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
         // No-op.
     }
 }

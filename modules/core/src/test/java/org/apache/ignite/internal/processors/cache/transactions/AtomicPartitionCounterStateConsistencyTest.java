@@ -24,15 +24,23 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
+import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
@@ -40,28 +48,74 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 /**
  * Test partitions consistency for atomic caches trying to reuse tx scenarios as much as possible.
  */
+@RunWith(Parameterized.class)
 public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCounterStateConsistencyTest {
+    /** */
+    @Parameterized.Parameter(0)
+    public int x;
+
+    /** */
+    @Parameterized.Parameters(
+        name = "x = {0}")
+    public static List<Integer> parameters() {
+        ArrayList<Integer> params = new ArrayList<>();
+
+        for (int i = 0; i < 50; i++) {
+            params.add(i);
+        }
+
+        return params;
+    }
+
     /** {@inheritDoc} */
     @Override protected CacheConfiguration<Object, Object> cacheConfiguration(String name) {
         return super.cacheConfiguration(name).setAtomicityMode(ATOMIC);
     }
 
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_SameAffinityPME() throws Exception {
-        // No-op.
-    }
+    /**
+     * Test primary-backup partitions consistency while restarting primary node under load.
+     */
+    @Test
+    public void testPartitionConsistencyWithPrimaryRestart() throws Exception {
+        backups = 2;
 
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
-        // No-op.
-    }
+        Ignite prim = startGridsMultiThreaded(SERVER_NODES);
 
-    /** {@inheritDoc} */
-    @Ignore
-    @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_LateAffinitySwitch() throws Exception {
-        // No-op.
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), 10_000);
+
+        long stop = U.currentTimeMillis() + GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+
+        Random r = new Random();
+
+        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
+            while (U.currentTimeMillis() < stop) {
+                doSleep(GridTestUtils.SF.applyLB(30_000, 15_000));
+
+                stopGrid(true, prim.name());
+
+                try {
+                    awaitPartitionMapExchange();
+
+                    startGrid(prim.name());
+
+                    awaitPartitionMapExchange();
+
+                    doSleep(GridTestUtils.SF.applyLB(5_000, 2_000));
+                }
+                catch (Exception e) {
+                    fail(X.getFullStackTrace(e));
+                }
+            }
+        }, 1, "node-restarter");
+
+        doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
+        fut.get();
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
     }
 
     /** {@inheritDoc} */
