@@ -129,10 +129,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
         log = ctx.log(QueryMemoryManager.class);
 
+        offloadingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
+
         setGlobalQuota(ctx.config().getSqlConfiguration().getSqlGlobalMemoryQuota());
         setQueryQuota(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota());
 
-        offloadingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
         metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
         blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);

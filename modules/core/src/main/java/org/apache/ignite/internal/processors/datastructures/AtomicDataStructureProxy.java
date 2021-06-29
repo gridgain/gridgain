@@ -28,6 +28,9 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -39,24 +42,30 @@ public abstract class AtomicDataStructureProxy<V extends AtomicDataStructureValu
     protected IgniteLogger log;
 
     /** Removed flag. */
+    @GridToStringInclude
     protected volatile boolean rmvd;
 
+    @GridToStringExclude
     /** Suspended future. */
     private volatile GridFutureAdapter<Void> suspendFut;
 
+    @GridToStringExclude
     /** Check removed flag. */
     private volatile boolean rmvCheck;
 
     /** Structure name. */
+    @GridToStringInclude
     protected String name;
 
     /** Structure key. */
+    @GridToStringInclude
     protected GridCacheInternalKey key;
 
     /** Structure projection. */
     protected IgniteInternalCache<GridCacheInternalKey, V> cacheView;
 
     /** Cache context. */
+    @GridToStringInclude
     protected volatile GridCacheContext<GridCacheInternalKey, V> ctx;
 
     /**
@@ -186,7 +195,12 @@ public abstract class AtomicDataStructureProxy<V extends AtomicDataStructureValu
 
     /** {@inheritDoc} */
     @Override public boolean onRemoved() {
-        return rmvd = true;
+        rmvd = true;
+
+        if (log.isDebugEnabled())
+            log.debug("DataStructure has been removed [" + this + "].");
+
+        return rmvd;
     }
 
     /** {@inheritDoc} */
@@ -225,6 +239,11 @@ public abstract class AtomicDataStructureProxy<V extends AtomicDataStructureValu
      */
     protected void invalidateLocalState() {
         // No-op
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(AtomicDataStructureProxy.class, this);
     }
 
 }

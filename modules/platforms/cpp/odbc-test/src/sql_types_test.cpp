@@ -404,7 +404,7 @@ BOOST_AUTO_TEST_CASE(TestFetchLiteralTime)
 
 BOOST_AUTO_TEST_CASE(TestFetchLiteralTimeLegacy)
 {
-    FetchAndCheckTime(stmt, "select TIME '12:42:13'", SQL_C_TYPE_TIME);
+    FetchAndCheckTime(stmt, "select TIME '12:42:13'", SQL_C_TIME);
 }
 
 BOOST_AUTO_TEST_CASE(TestFetchFieldTimeAsIs)
@@ -425,6 +425,66 @@ BOOST_AUTO_TEST_CASE(TestFetchFieldTimeAsIsLegacy)
     testCache.Put(1, val1);
 
     FetchAndCheckTime(stmt, "select timeField from TestType", SQL_C_TIME);
+}
+
+void FetchAndCheckTimestamp(SQLHSTMT stmt, int year, int mon, int day, int hour, int mmin, int sec)
+{
+    std::stringstream reqStream;
+
+    reqStream << "select TIMESTAMP '"
+        << year << "-"
+        << mon << "-"
+        << day << " "
+        << hour << ":"
+        << mmin << ":"
+        << sec << "'";
+
+    std::string req = reqStream.str();
+
+    std::vector<SQLCHAR> req0(req.begin(), req.end());
+    req0.push_back(0);
+
+    SQLExecDirect(stmt, &req0[0], SQL_NTS);
+
+    SQL_TIMESTAMP_STRUCT res;
+
+    memset(&res, 0, sizeof(res));
+
+    SQLLEN resLen = 0;
+    SQLRETURN ret = SQLBindCol(stmt, 1, SQL_C_TYPE_TIMESTAMP, &res, 0, &resLen);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLFetch(stmt);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(res.year,   year);
+    BOOST_CHECK_EQUAL(res.month,  mon);
+    BOOST_CHECK_EQUAL(res.day,    day);
+    BOOST_CHECK_EQUAL(res.hour,   hour);
+    BOOST_CHECK_EQUAL(res.minute, mmin);
+    BOOST_CHECK_EQUAL(res.second, sec);
+
+    SQLCloseCursor(stmt);
+}
+
+BOOST_AUTO_TEST_CASE(TestFetchLiteralTimestamp)
+{
+    FetchAndCheckTimestamp(stmt, 1850, 3, 20, 18, 43, 19);
+    FetchAndCheckTimestamp(stmt, 1900, 1, 1, 0, 0, 0);
+    FetchAndCheckTimestamp(stmt, 1969, 12, 31, 23, 59, 59);
+    FetchAndCheckTimestamp(stmt, 1970, 1, 1, 0, 0, 0);
+    FetchAndCheckTimestamp(stmt, 1970, 3, 20, 18, 43, 19);
+    FetchAndCheckTimestamp(stmt, 2000, 12, 31, 23, 59, 59);
+    FetchAndCheckTimestamp(stmt, 2001, 9, 9, 1, 46, 39);
+    FetchAndCheckTimestamp(stmt, 2017, 3, 20, 18, 43, 19);
+    FetchAndCheckTimestamp(stmt, 2007, 12, 31, 19, 24, 44);
+    FetchAndCheckTimestamp(stmt, 2001, 6, 21, 13, 53, 2);
+    FetchAndCheckTimestamp(stmt, 2521, 1, 1, 0, 0, 0);
+    FetchAndCheckTimestamp(stmt, 2521, 3, 20, 18, 43, 19);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

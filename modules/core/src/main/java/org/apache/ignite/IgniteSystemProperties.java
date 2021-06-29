@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1000,12 +1000,6 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
-     * Property for setup percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
-     * Default value is 0.5
-     */
-    public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
-
-    /**
      * Threshold time (in millis) to print warning to log if waiting for next wal segment took longer than the threshold.
      *
      * Default value is 1000 ms.
@@ -1510,6 +1504,18 @@ public final class IgniteSystemProperties {
      * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
      */
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
+
+    /**
+     * Use TreeMap instead of HashMap to hold distinct values.
+     * Default value is {@code false}. HashMap is used by default.
+     */
+    public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
+
+    /**
+     * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
+     * The default value is 1000.
+     */
+    public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
 
     /**
      * Enforces singleton.

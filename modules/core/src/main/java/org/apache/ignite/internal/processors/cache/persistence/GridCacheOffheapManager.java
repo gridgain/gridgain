@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,7 +39,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
@@ -130,6 +130,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Boolean.TRUE;
+import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -536,8 +537,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        if (changed)
+        if (changed) {
             partStore.saveMetadata(grp.statisticsHolderData());
+
+            io.setPartitionMetaStoreReuseListRoot(partMetaPageAddr, partStore.metaPageId());
+        }
 
         return changed;
     }
@@ -2183,11 +2187,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             AtomicLong pageListCacheLimit = ((GridCacheDatabaseSharedManager) ctx.database()).pageListCacheLimitHolder(grp.dataRegion());
 
+            IgniteCacheDatabaseSharedManager dbMgr = ctx.database();
+
+            dbMgr.checkpointReadLock();
+
             if (init.compareAndSet(false, true)) {
-                IgniteCacheDatabaseSharedManager dbMgr = ctx.database();
-
-                dbMgr.checkpointReadLock();
-
                 try {
                     Metas metas = getOrAllocatePartitionMetas();
 
@@ -2419,7 +2423,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     U.error(log, "Unhandled exception during page store initialization. All further operations will " +
                         "be failed and local node will be stopped.", ex);
 
-                    ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, ex));
+                    ctx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, ex));
 
                     throw ex;
                 }
@@ -2430,6 +2434,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
             }
             else {
+                dbMgr.checkpointReadUnlock();
+
                 U.await(latch);
 
                 delegate0 = delegate;
@@ -2446,6 +2452,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          */
         private Metas getOrAllocatePartitionMetas() throws IgniteCheckedException {
             PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+
             IgniteWriteAheadLogManager wal = grp.shared().wal();
 
             int grpId = grp.groupId();
@@ -2525,6 +2532,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             pendingTreeAllocated = true;
                         }
+
+                        checkGapsLinkAndPartMetaStorage(io, partMetaId, pageAddr, grpId, partId);
 
                         if ((partMetaStoreReuseListRoot = io.getPartitionMetaStoreReuseListRoot(pageAddr)) == 0) {
                             partMetaStoreReuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
@@ -2613,6 +2622,41 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 return delegate.reconciliationCtx();
             else
                 return null;
+        }
+
+        /**
+         * Checks that links to counter data page and partition meta store are both present or both absent in partition.
+         *
+         * @param io Meta page io.
+         * @param pageAddr Meta page address.
+         * @param grpId Group id.
+         * @param partId Partition id.
+         */
+        private void checkGapsLinkAndPartMetaStorage(PagePartitionMetaIOV3 io, long pageId, long pageAddr, int grpId, int partId) {
+            if (io.getPartitionMetaStoreReuseListRoot(pageAddr) == 0 && io.getGapsLink(pageAddr) != 0) {
+                String msg = "Partition meta page corruption: links to counter data page and partition " +
+                    "meta store must both be present, or both be absent in partition [" +
+                    "grpId=" + grpId +
+                    ", partId=" + partId +
+                    ", cntrUpdDataPageId=" + io.getGapsLink(pageAddr) +
+                    ", partitionMetaStoreReuseListRoot=" + io.getPartitionMetaStoreReuseListRoot(pageAddr) +
+                    ']';
+
+                List<Long> pages = new ArrayList<>();
+
+                pages.add(pageId);
+
+                if (io.getPartitionMetaStoreReuseListRoot(pageAddr) != 0)
+                    pages.add(io.getPartitionMetaStoreReuseListRoot(pageAddr));
+
+                if (io.getGapsLink(pageAddr) != 0)
+                    pages.add(io.getGapsLink(pageAddr));
+
+                CorruptedPartitionMetaPageException e =
+                    new CorruptedPartitionMetaPageException(msg, null, grpId, pages.stream().mapToLong(l -> l).toArray());
+
+                grp.shared().kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, e));
+            }
         }
 
         /** {@inheritDoc} */

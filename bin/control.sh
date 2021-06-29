@@ -176,6 +176,12 @@ case $osname in
          -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
          -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} $@
     ;;
+    OS/390*)
+        "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
+         -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \
+         -Dcom.ibm.jsse2.overrideDefaultTLS=true -Dssl.KeyManagerFactory.algorithm=IbmX509 \
+         -DIGNITE_PROG_NAME="$0" ${JVM_XOPTS:-} -cp "${CP}" ${MAIN_CLASS} $@
+    ;;
     *)
         "$JAVA" ${CONTROL_JVM_OPTS} ${QUIET:-} \
          -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="${IGNITE_HOME}" \

@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 {
     using System.IO;
     using System.Linq;
+    using System.Reflection;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
@@ -57,6 +58,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
                 {
                     SpringConfigUrl = springConfig,
                     IgniteInstanceName = i.ToString(),
+                    WorkDirectory = Path.Combine(
+                        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), 
+                        "ignite_work_" + GetType().Name + "_" + i),
 
                     // Cache configs will be merged with Spring cache configs.
                     CacheConfiguration = new[]

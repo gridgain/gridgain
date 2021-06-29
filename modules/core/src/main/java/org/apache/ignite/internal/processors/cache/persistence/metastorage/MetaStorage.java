@@ -72,6 +72,7 @@ import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.NotNull;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_AUX;
+import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.OLD_METASTORE_PARTITION;
 
 /**
@@ -468,14 +469,12 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
     }
 
     /** */
-    private void checkRootsPageIdFlag(long treeRoot, long reuseListRoot) throws StorageException {
-        if (PageIdUtils.flag(treeRoot) != FLAG_AUX
-            && PageIdUtils.flag(treeRoot) != PageMemory.FLAG_DATA)
+    private static void checkRootsPageIdFlag(long treeRoot, long reuseListRoot) throws StorageException {
+        if (PageIdUtils.flag(treeRoot) != FLAG_AUX && PageIdUtils.flag(treeRoot) != FLAG_DATA)
             throw new StorageException("Wrong tree root page id flag: treeRoot="
                 + U.hexLong(treeRoot) + ", METASTORAGE_CACHE_ID=" + METASTORAGE_CACHE_ID);
 
-        if (PageIdUtils.flag(reuseListRoot) != FLAG_AUX
-            && PageIdUtils.flag(treeRoot) != PageMemory.FLAG_DATA)
+        if (PageIdUtils.flag(reuseListRoot) != FLAG_AUX && PageIdUtils.flag(reuseListRoot) != FLAG_DATA)
             throw new StorageException("Wrong reuse list root page id flag: reuseListRoot="
                 + U.hexLong(reuseListRoot) + ", METASTORAGE_CACHE_ID=" + METASTORAGE_CACHE_ID);
     }

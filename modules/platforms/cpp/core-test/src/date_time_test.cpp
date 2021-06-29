@@ -261,22 +261,35 @@ BOOST_AUTO_TEST_CASE(CastTimeToTm)
 
 BOOST_AUTO_TEST_CASE(CastDateToTm)
 {
+    CheckDate(1850, 3, 20);
+    CheckDate(1900, 1, 1);
+    CheckDate(1969, 12, 31);
+    CheckDate(1970, 1, 1);
+    CheckDate(1970, 3, 20);
     CheckDate(2024, 8, 5);
     CheckDate(1987, 1, 1);
     CheckDate(1999, 2, 18);
     CheckDate(1997, 12, 9);
     CheckDate(2007, 12, 31);
     CheckDate(2001, 6, 21);
+    CheckDate(2521, 1, 1);
+    CheckDate(2521, 3, 20);
 }
 
 BOOST_AUTO_TEST_CASE(CastTimestampToTm)
 {
+    CheckTimestamp(1850, 3, 20, 18, 43, 19, 170038645);
+    CheckTimestamp(1900, 1, 1, 0, 0, 0, 0);
+    CheckTimestamp(1969, 12, 31, 23, 59, 59, 999999999);
     CheckTimestamp(1970, 1, 1, 0, 0, 0, 0);
+    CheckTimestamp(1970, 3, 20, 18, 43, 19, 170038645);
     CheckTimestamp(2000, 12, 31, 23, 59, 59, 999999999);
     CheckTimestamp(2001, 9, 9, 1, 46, 39, 999999999);
     CheckTimestamp(2017, 3, 20, 18, 43, 19, 170038645);
     CheckTimestamp(2007, 12, 31, 19, 24, 44, 894375963);
     CheckTimestamp(2001, 6, 21, 13, 53, 2, 25346547);
+    CheckTimestamp(2521, 1, 1, 0, 0, 0, 0);
+    CheckTimestamp(2521, 3, 20, 18, 43, 19, 170038645);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

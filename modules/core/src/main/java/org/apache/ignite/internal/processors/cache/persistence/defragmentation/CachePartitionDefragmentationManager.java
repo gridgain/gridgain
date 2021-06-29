@@ -803,6 +803,9 @@ public class CachePartitionDefragmentationManager {
                         long rmvId = oldPartMetaIo.getGlobalRemoveId(oldPartMetaPageAddr);
                         newPartMetaIo.setGlobalRemoveId(newPartMetaPageAddr, rmvId);
 
+                        long reuseListRoot = oldPartMetaIo.getPartitionMetaStoreReuseListRoot(oldPartMetaPageAddr);
+                        newPartMetaIo.setPartitionMetaStoreReuseListRoot(newPartMetaPageAddr,reuseListRoot);
+
                         // Copy cache sizes for shared cache group.
                         long oldCountersPageId = oldPartMetaIo.getCacheSizesPageId(oldPartMetaPageAddr);
                         if (oldCountersPageId != 0L) {
@@ -833,6 +836,10 @@ public class CachePartitionDefragmentationManager {
                             partCtx.newCacheDataStore.partStorage().insertDataRow(gapsDataRow, IoStatisticsHolderNoOp.INSTANCE);
 
                             newPartMetaIo.setGapsLink(newPartMetaPageAddr, gapsDataRow.link());
+
+                            newPartMetaIo.setPartitionMetaStoreReuseListRoot(newPartMetaPageAddr,
+                                oldPartMetaIo.getPartitionMetaStoreReuseListRoot(oldPartMetaPageAddr)
+                            );
                         }
 
                         // Encryption stuff.
