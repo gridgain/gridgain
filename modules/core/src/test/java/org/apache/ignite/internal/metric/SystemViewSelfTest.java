@@ -57,6 +57,7 @@ import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.client.Config;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
@@ -73,6 +74,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.binary.mutabletest.GridBinaryTestClasses.TestObjectAllTypes;
 import org.apache.ignite.internal.binary.mutabletest.GridBinaryTestClasses.TestObjectEnum;
 import org.apache.ignite.internal.client.thin.ProtocolVersion;
+import org.apache.ignite.internal.managers.systemview.walker.BaselineNodeAttributeViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.CachePagesListViewWalker;
 import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionAttributeViewWalker;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -88,6 +90,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.services.ServiceConfiguration;
+import org.apache.ignite.spi.systemview.view.BaselineNodeAttributeView;
 import org.apache.ignite.spi.systemview.view.BinaryMetadataView;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
 import org.apache.ignite.spi.systemview.view.CachePagesListView;
@@ -133,6 +136,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId
 import static org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl.BINARY_METADATA_VIEW;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.DATA_REGION_PAGE_LIST_VIEW;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
+import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.BASELINE_NODE_ATTRIBUTES_SYS_VIEW;
 import static org.apache.ignite.internal.processors.continuous.GridContinuousProcessor.CQ_SYS_VIEW;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_DS_GROUP_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_VOLATILE_DS_GROUP_NAME;
@@ -1853,6 +1857,50 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                         assertTrue(meta.fields().contains(field.getName()));
                 }
             }
+        }
+    }
+
+    /** */
+    @Test
+    public void testBaselineNodeAttributes() throws Exception {
+        cleanPersistenceDir();
+
+        try (IgniteEx ignite = startGrid(getConfiguration()
+                .setDataStorageConfiguration(
+                        new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                                new DataRegionConfiguration().setName("pds").setPersistenceEnabled(true)
+                        ))
+                .setUserAttributes(F.asMap("name", "val"))
+                .setConsistentId("consId"))
+        ) {
+            ignite.cluster().state(ClusterState.ACTIVE);
+
+            SystemView<BaselineNodeAttributeView> view = ignite.context().systemView()
+                    .view(BASELINE_NODE_ATTRIBUTES_SYS_VIEW);
+
+            assertEquals(ignite.cluster().localNode().attributes().size(), view.size());
+
+            assertEquals(1, F.size(view.iterator(), row -> "consId".equals(row.nodeConsistentId()) &&
+                    "name".equals(row.name()) && "val".equals(row.value())));
+
+            // Test filtering.
+            assertTrue(view instanceof FiltrableSystemView);
+
+            Iterator<BaselineNodeAttributeView> iter = ((FiltrableSystemView<BaselineNodeAttributeView>)view)
+                    .iterator(F.asMap(BaselineNodeAttributeViewWalker.NODE_CONSISTENT_ID_FILTER, "consId",
+                            BaselineNodeAttributeViewWalker.NAME_FILTER, "name"));
+
+            assertEquals(1, F.size(iter));
+
+            iter = ((FiltrableSystemView<BaselineNodeAttributeView>)view).iterator(
+                    F.asMap(BaselineNodeAttributeViewWalker.NODE_CONSISTENT_ID_FILTER, "consId"));
+
+            assertEquals(1, F.size(iter, row -> "name".equals(row.name())));
+
+            iter = ((FiltrableSystemView<BaselineNodeAttributeView>)view).iterator(
+                    F.asMap(BaselineNodeAttributeViewWalker.NAME_FILTER, "name"));
+
+            assertEquals(1, F.size(iter));
         }
     }
 

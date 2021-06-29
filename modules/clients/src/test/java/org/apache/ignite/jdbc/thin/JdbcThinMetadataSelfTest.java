@@ -422,6 +422,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".SCHEMAS",
                 sysSchemaName() + ".NODE_METRICS",
                 sysSchemaName() + ".BASELINE_NODES",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES",
                 sysSchemaName() + ".INDEXES",
                 sysSchemaName() + ".LOCAL_CACHE_GROUPS_IO",
                 sysSchemaName() + ".SQL_QUERIES",
@@ -653,6 +654,9 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
             expectedCols = new HashSet<>(Arrays.asList(
                 sysSchemaName() + ".BASELINE_NODES.CONSISTENT_ID.null.2147483647",
                 sysSchemaName() + ".BASELINE_NODES.ONLINE.null.1",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.NODE_CONSISTENT_ID.null.2147483647",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.NAME.null.2147483647",
+                sysSchemaName() + ".BASELINE_NODE_ATTRIBUTES.VALUE.null.2147483647",
                 sysSchemaName() + ".CACHES.CACHE_GROUP_ID.null.10",
                 sysSchemaName() + ".CACHES.CACHE_GROUP_NAME.null.2147483647",
                 sysSchemaName() + ".CACHES.CACHE_ID.null.10",
