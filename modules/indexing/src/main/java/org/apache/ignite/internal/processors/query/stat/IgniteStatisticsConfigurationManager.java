@@ -24,10 +24,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterState;
@@ -327,6 +327,15 @@ public class IgniteStatisticsConfigurationManager {
 
         schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
         schemaMgr.unregisterDropTableListener(dropTblLsnr);
+
+        mgmtPool.shutdownNow();
+
+        try {
+            mgmtPool.awaitTermination(1, TimeUnit.MINUTES);
+        }
+        catch (InterruptedException e) {
+            log.error("Cannot shutdown statictics configuration manager thread pool.", e);
+        }
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager stopped.");
