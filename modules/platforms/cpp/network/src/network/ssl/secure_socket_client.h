@@ -125,7 +125,7 @@ namespace ignite
                  * @param timeout Timeout in seconds.
                  * @return
                  */
-                static int SecureSocketClient::WaitOnSocketIfNeeded(int res, void* ssl, int timeout);
+                static int WaitOnSocketIfNeeded(int res, void* ssl, int timeout);
 
                 /**
                  * Make new context instance.
