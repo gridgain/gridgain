@@ -601,6 +601,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
                             cache.put(key, ret.get2());
 
                         tx.commit();
+
+                        if (log.isDebugEnabled())
+                            log.debug("New DataStructure has been created [" + ret.get1() + ", val=" + ret.get2() + "].");
                     }
                     catch (Error | Exception e) {
                         dsMap.remove(key);

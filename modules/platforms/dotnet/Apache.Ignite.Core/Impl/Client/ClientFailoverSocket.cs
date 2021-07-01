@@ -257,7 +257,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Checks the disposed state.
         /// </summary>
-        private ClientSocket GetSocket()
+        internal ClientSocket GetSocket()
         {
             var tx = _transactions.Tx;
             if (tx != null)
@@ -278,7 +278,7 @@ namespace Apache.Ignite.Core.Impl.Client
             }
         }
 
-        private ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
+        internal ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
         {
             ThrowIfDisposed();
 
@@ -338,8 +338,9 @@ namespace Apache.Ignite.Core.Impl.Client
             Justification = "There is no finalizer.")]
         public void Dispose()
         {
-            lock (_socketLock)
+            // Lock order: same as in OnAffinityTopologyVersionChange. 
             lock (_topologyUpdateLock)
+            lock (_socketLock)
             {
                 _disposed = true;
 

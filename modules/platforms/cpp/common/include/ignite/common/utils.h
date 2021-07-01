@@ -383,22 +383,6 @@ namespace ignite
             int day = 1, int hour = 0, int min = 0, int sec = 0);
 
         /**
-         * Make Date in human understandable way.
-         *
-         * Created Date uses local timezone.
-         *
-         * @param year Year.
-         * @param month Month.
-         * @param day Day.
-         * @param hour Hour.
-         * @param min Min.
-         * @param sec Sec.
-         * @return Date.
-         */
-        IGNITE_FRIEND_EXPORT Date MakeDateLocal(int year = 1900, int month = 1,
-            int day = 1, int hour = 0, int min = 0, int sec = 0);
-
-        /**
          * Make Time in human understandable way.
          *
          * Created Time uses GMT timezone.
@@ -409,18 +393,6 @@ namespace ignite
          * @return Time.
          */
         IGNITE_FRIEND_EXPORT Time MakeTimeGmt(int hour = 0, int min = 0, int sec = 0);
-
-        /**
-         * Make Time in human understandable way.
-         *
-         * Created Time uses Local timezone.
-         *
-         * @param hour Hour.
-         * @param min Minute.
-         * @param sec Second.
-         * @return Time.
-         */
-        IGNITE_FRIEND_EXPORT Time MakeTimeLocal(int hour = 0, int min = 0, int sec = 0);
 
         /**
          * Make Timestamp in human understandable way.
@@ -437,23 +409,6 @@ namespace ignite
          * @return Timestamp.
          */
         IGNITE_FRIEND_EXPORT Timestamp MakeTimestampGmt(int year = 1900, int month = 1,
-            int day = 1, int hour = 0, int min = 0, int sec = 0, long ns = 0);
-
-        /**
-         * Make Date in human understandable way.
-         *
-         * Created Timestamp uses Local timezone.
-         *
-         * @param year Year.
-         * @param month Month.
-         * @param day Day.
-         * @param hour Hour.
-         * @param min Minute.
-         * @param sec Second.
-         * @param ns Nanosecond.
-         * @return Timestamp.
-         */
-        IGNITE_FRIEND_EXPORT Timestamp MakeTimestampLocal(int year = 1900, int month = 1,
             int day = 1, int hour = 0, int min = 0, int sec = 0, long ns = 0);
 
         /**

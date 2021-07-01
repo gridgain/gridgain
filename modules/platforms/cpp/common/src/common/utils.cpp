@@ -103,25 +103,6 @@ namespace ignite
             return CTmToDate(date);
         }
 
-        IGNITE_FRIEND_EXPORT Date MakeDateLocal(int year, int month, int day, int hour,
-            int min, int sec)
-        {
-            tm date;
-
-            std::memset(&date, 0, sizeof(date));
-
-            date.tm_year = year - 1900;
-            date.tm_mon = month - 1;
-            date.tm_mday = day;
-            date.tm_hour = hour;
-            date.tm_min = min;
-            date.tm_sec = sec;
-
-            time_t localTime = common::IgniteTimeLocal(date);
-
-            return CTimeToDate(localTime);
-        }
-
         IGNITE_FRIEND_EXPORT Time MakeTimeGmt(int hour, int min, int sec)
         {
             tm date;
@@ -136,24 +117,6 @@ namespace ignite
             date.tm_sec = sec;
 
             return CTmToTime(date);
-        }
-
-        IGNITE_FRIEND_EXPORT Time MakeTimeLocal(int hour, int min, int sec)
-        {
-            tm date;
-
-            std::memset(&date, 0, sizeof(date));
-
-            date.tm_year = 70;
-            date.tm_mon = 0;
-            date.tm_mday = 1;
-            date.tm_hour = hour;
-            date.tm_min = min;
-            date.tm_sec = sec;
-
-            time_t localTime = common::IgniteTimeLocal(date);
-
-            return CTimeToTime(localTime);
         }
 
         IGNITE_FRIEND_EXPORT Timestamp MakeTimestampGmt(int year, int month, int day,
@@ -171,25 +134,6 @@ namespace ignite
             date.tm_sec = sec;
 
             return CTmToTimestamp(date, ns);
-        }
-
-        IGNITE_FRIEND_EXPORT Timestamp MakeTimestampLocal(int year, int month, int day,
-            int hour, int min, int sec, long ns)
-        {
-            tm date;
-
-            std::memset(&date, 0, sizeof(date));
-
-            date.tm_year = year - 1900;
-            date.tm_mon = month - 1;
-            date.tm_mday = day;
-            date.tm_hour = hour;
-            date.tm_min = min;
-            date.tm_sec = sec;
-
-            time_t localTime = common::IgniteTimeLocal(date);
-
-            return CTimeToTimestamp(localTime, ns);
         }
 
         IGNITE_IMPORT_EXPORT std::string GetDynamicLibraryName(const char* name)

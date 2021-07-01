@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Tests.Client
         protected const string RequestNamePrefixCache = "cache.ClientCache";
 
         /** */
-        protected const string RequestNamePrefixBinary = "binary.ClientBinary";
+        protected const string RequestNamePrefixStreamer = "streamer.ClientDataStreamer";
 
         /** Grid count. */
         private readonly int _gridCount = 1;
@@ -54,6 +54,9 @@ namespace Apache.Ignite.Core.Tests.Client
 
         /** Partition Awareness */
         private readonly bool _enablePartitionAwareness;
+
+        /** Enable logging to a list logger for checks and assertions. */
+        private readonly bool _enableServerListLogging;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientTestBase"/> class.
@@ -67,13 +70,15 @@ namespace Apache.Ignite.Core.Tests.Client
         /// Initializes a new instance of the <see cref="ClientTestBase"/> class.
         /// </summary>
         public ClientTestBase(
-            int gridCount, 
-            bool enableSsl = false, 
-            bool enablePartitionAwareness = false)
+            int gridCount,
+            bool enableSsl = false,
+            bool enablePartitionAwareness = false,
+            bool enableServerListLogging = false)
         {
             _gridCount = gridCount;
             _enableSsl = enableSsl;
             _enablePartitionAwareness = enablePartitionAwareness;
+            _enableServerListLogging = enableServerListLogging;
         }
 
         /// <summary>
@@ -208,7 +213,9 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
-                Logger = new ListLogger(new TestUtils.TestContextLogger()),
+                Logger = _enableServerListLogging
+                    ? (ILogger) new ListLogger(new TestUtils.TestContextLogger())
+                    : new TestUtils.TestContextLogger(),
                 SpringConfigUrl = _enableSsl ? Path.Combine("Config", "Client", "server-with-ssl.xml") : null
             };
         }
@@ -312,7 +319,7 @@ namespace Apache.Ignite.Core.Tests.Client
             return Ignition.GetAll()
                 .OrderBy(i => i.Name)
                 .Select(i => i.Logger)
-                .Cast<ListLogger>();
+                .OfType<ListLogger>();
         }
 
         /// <summary>
