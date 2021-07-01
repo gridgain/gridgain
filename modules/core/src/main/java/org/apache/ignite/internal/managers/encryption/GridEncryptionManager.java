@@ -1112,7 +1112,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
     /** {@inheritDoc} */
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-        if (fut.activateCluster() || fut.localJoinExchange()) {
+        if (!fut.isFailed() && (fut.activateCluster() || fut.localJoinExchange())) {
             try {
                 startReencryption(reencryptGroups.keySet());
             }
