@@ -26,3 +26,4 @@ org.apache.ignite.spi.tracing.SpiSpecificSpan;
 org.apache.ignite.spi.tracing.TracingSpi;
 org.apache.ignite.spi.tracing.TracingSpiType;
 org.apache.ignite.IgniteSystemProperties#IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
+org.apache.ignite.IgniteSystemProperties#IGNITE_WAL_LOG_TX_RECORDS;
