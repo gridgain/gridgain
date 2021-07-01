@@ -266,6 +266,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /** */
     private final PageHandler<Get, Result> askNeighbor;
 
+    public enum CursorType {
+        RECONCILIATION;
+    }
+
     /**
      *
      */
@@ -1087,56 +1091,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Cursor.
      * @throws IgniteCheckedException If failed.
      */
-    private GridCursor<T> findLowerUnbounded(L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
-        ForwardCursor cursor = new ForwardCursor(null, upper, c, x);
+    private GridCursor<T> findLowerUnbounded(L upper, TreeRowClosure<L, T> c, Object x, CursorType cursorType, Integer cacheId) throws IgniteCheckedException {
+        ForwardCursor cursor;
 
-        long firstPageId;
-
-        long metaPage = acquirePage(metaPageId);
-        try {
-            firstPageId = getFirstPageId(metaPageId, metaPage, 0); // Level 0 is always at the bottom.
-        }
-        finally {
-            releasePage(metaPageId, metaPage);
-        }
-
-        try {
-            long firstPage = acquirePage(firstPageId);
-
-            try {
-                long pageAddr = readLock(firstPageId, firstPage); // We always merge pages backwards, the first page is never removed.
-
-                try {
-                    cursor.init(pageAddr, io(pageAddr), -1);
-                }
-                finally {
-                    readUnlock(firstPageId, firstPage, pageAddr);
-                }
-            }
-            finally {
-                releasePage(firstPageId, firstPage);
-            }
-        }
-        catch (RuntimeException | AssertionError e) {
-            throw new BPlusTreeRuntimeException(e, grpId, metaPageId, firstPageId);
-        }
-
-        return cursor;
-    }
-
-    /**
-     * @param cacheId Cache id.
-     * @param upper Upper bound.
-     * @param c Filter closure.
-     * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
-     * @return Cursor.
-     * @throws IgniteCheckedException If failed.
-     */
-    private GridCursor<T> findLowerUnboundedRecon(int cacheId, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
-        ForwardCursor cursor = new ForwardCursor(null, upper, c, x);
-
-        cursor.reconCursor = true;
-        cursor.cacheId = cacheId;
+        if (cursorType != CursorType.RECONCILIATION)
+            cursor = new ForwardCursor(null, upper, c, x);
+        else
+            cursor = new ReconciliationCursor(null, upper, c, x, cacheId);
 
         long firstPageId;
 
@@ -1187,17 +1148,16 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** {@inheritDoc} */
     @Override public final GridCursor<T> find(L lower, L upper, Object x) throws IgniteCheckedException {
-        return find(lower, upper, null, x);
+        return find(lower, upper, null, x, null, null);
     }
 
-    /** */
-    public final GridCursor<T> findRecon(int cacheId, L lower, L upper, Object x) throws IgniteCheckedException {
-        return findRecon(cacheId, lower, upper, null, x);
+    /** {@inheritDoc} */
+    @Override public final GridCursor<T> reconciliationFind(L lower, L upper, Object x, CursorType cursorType, int cacheId) throws IgniteCheckedException {
+        return find(lower, upper, null, x, CursorType.RECONCILIATION, cacheId);
     }
 
-    /** */
-    public void reconCursor(GridCursor cursor) {
-        ((ForwardCursor) cursor).reconCursor = true;
+    public GridCursor<T> find(L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
+        return find(lower, upper, c, x, null, null);
     }
 
     /**
@@ -1208,53 +1168,19 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Cursor.
      * @throws IgniteCheckedException If failed.
      */
-    public GridCursor<T> find(L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
+    public GridCursor<T> find(L lower, L upper, TreeRowClosure<L, T> c, Object x, CursorType cursorType, Integer cacheId) throws IgniteCheckedException {
         checkDestroyed();
 
-        ForwardCursor cursor = new ForwardCursor(lower, upper, c, x);
+        ForwardCursor cursor;
+
+        if (cursorType == CursorType.RECONCILIATION)
+            cursor = new ReconciliationCursor(lower, upper, c, x, cacheId);
+        else
+            cursor = new ForwardCursor(lower, upper, c, x);
 
         try {
             if (lower == null)
-                return findLowerUnbounded(upper, c, x);
-
-            cursor.find();
-
-            return cursor;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
-        }
-        catch (RuntimeException | AssertionError e) {
-            if (e.getCause() instanceof SQLException)
-                throw e;
-
-            long[] pageIds = pages(
-                lower == null || cursor == null || cursor.getCursor == null,
-                () -> new long[]{cursor.getCursor.pageId}
-            );
-
-            throw corruptedTreeException(
-                formatMsg("Runtime failure on bounds: [lower=%s, upper=%s]", lower, upper),
-                e, grpId, pageIds
-            );
-        }
-        finally {
-            checkDestroyed();
-        }
-    }
-
-    /** */
-    public GridCursor<T> findRecon(int cacheId, L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
-        checkDestroyed();
-
-        ForwardCursor cursor = new ForwardCursor(lower, upper, c, x);
-
-        cursor.reconCursor = true;
-        cursor.cacheId = cacheId;
-
-        try {
-            if (lower == null)
-                return findLowerUnboundedRecon(cacheId, upper, c, x);
+                return findLowerUnbounded(upper, c, x, cursorType, cacheId);
 
             cursor.find();
 
@@ -5999,24 +5925,18 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * Forward cursor.
      */
-    private final class ForwardCursor extends AbstractForwardCursor implements GridCursor<T> {
-        /** Is it partition reconciliation cursor. */
-        public volatile boolean reconCursor;
-
-        /** Cache id. */
-        public int cacheId;
-
+    private class ForwardCursor extends AbstractForwardCursor implements GridCursor<T> {
         /** */
         final Object x;
 
         /** */
-        private T[] rows = (T[])EMPTY;
+        protected T[] rows = (T[])EMPTY;
 
         /** */
         private int row = -1;
 
         /** */
-        private final TreeRowClosure<L, T> c;
+        protected final TreeRowClosure<L, T> c;
 
         /**
          * @param lowerBound Lower bound.
@@ -6058,66 +5978,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     rows = GridArrays.set(rows, resCnt++, getRow(io, pageAddr, idx, x));
             }
 
-            if (reconCursor && reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
-                KeyCacheObject lastKey = null;
-                KeyCacheObject firstKey = null;
-
-                Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
-
-                for (T row : rows) {
-                    CacheDataRowAdapter row0 = (CacheDataRowAdapter) row;
-
-                    if (row0 != null &&
-                        (reconciliationCtx.lastKey(cacheId) == null ||
-                            reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
-
-                        if (row0.tombstone())
-                            continue;
-
-                        newTempMap.put(row0.key(), true);
-
-                        if (firstKey == null)
-                            firstKey = row0.key();
-
-                        lastKey = row0.key();
-                    }
-                }
-
-                if (firstKey != null)
-                    reconciliationCtx.firstKey(cacheId, firstKey);
-
-                if (lastKey != null)
-                    reconciliationCtx.lastKey(cacheId, lastKey);
-
-                if (!newTempMap.isEmpty()) {
-                    Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(cacheId);
-
-                    AtomicLong partSize = reconciliationCtx.sizes.get(cacheId);
-
-                    Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
-
-                    while (tempMapIter.hasNext()) {
-                        Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
-
-                        KeyCacheObject finalFirstKey = firstKey;
-
-                        tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
-                            //Key from previous page. Need to increment real size
-                            if (k != null && v != null && reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
-                                partSize.incrementAndGet();
-
-                                return null;
-                            }
-                            //Key from next pages. Just remove the key now.
-                            else
-                                return null;
-
-                        });
-                    }
-
-                    tempMap.putAll(newTempMap);
-                }
-            }
+            handleRows();
 
             if (resCnt == 0) {
                 rows = (T[])EMPTY;
@@ -6128,6 +5989,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             GridArrays.clearTail(rows, resCnt);
 
             return true;
+        }
+
+        protected void handleRows() {
+            //no op
         }
 
         /** {@inheritDoc} */
@@ -6202,6 +6067,86 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override public void close() {
             rows = null;
+        }
+    }
+
+    private final class ReconciliationCursor extends ForwardCursor {
+        /** Cache id. */
+        public int cacheId;
+
+        /**
+         * @param lowerBound Lower bound.
+         * @param upperBound Upper bound.
+         * @param c Filter closure.
+         * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+         */
+        ReconciliationCursor(L lowerBound, L upperBound, TreeRowClosure<L, T> c, Object x, int cacheId) {
+            super(lowerBound, upperBound, c, x);
+
+            this.cacheId = cacheId;
+        }
+
+        protected void handleRows() {
+            if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+                KeyCacheObject lastKey = null;
+                KeyCacheObject firstKey = null;
+
+                Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
+
+                for (T row : rows) {
+                    CacheDataRowAdapter row0 = (CacheDataRowAdapter) row;
+
+                    if (row0 != null &&
+                            (reconciliationCtx.lastKey(cacheId) == null ||
+                                    reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
+
+                        if (row0.tombstone())
+                            continue;
+
+                        newTempMap.put(row0.key(), true);
+
+                        if (firstKey == null)
+                            firstKey = row0.key();
+
+                        lastKey = row0.key();
+                    }
+                }
+
+                if (firstKey != null)
+                    reconciliationCtx.firstKey(cacheId, firstKey);
+
+                if (lastKey != null)
+                    reconciliationCtx.lastKey(cacheId, lastKey);
+
+                if (!newTempMap.isEmpty()) {
+                    Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(cacheId);
+
+                    AtomicLong partSize = reconciliationCtx.sizes.get(cacheId);
+
+                    Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
+
+                    while (tempMapIter.hasNext()) {
+                        Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
+
+                        KeyCacheObject finalFirstKey = firstKey;
+
+                        tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
+                            //Key from previous page. Need to increment real size
+                            if (k != null && v != null && reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
+                                partSize.incrementAndGet();
+
+                                return null;
+                            }
+                            //Key from next pages. Just remove the key now.
+                            else
+                                return null;
+
+                        });
+                    }
+
+                    tempMap.putAll(newTempMap);
+                }
+            }
         }
     }
 

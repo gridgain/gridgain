@@ -3496,8 +3496,20 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
+            KeyCacheObject upper, int flags) throws IgniteCheckedException {
+            return cursor(cacheId, lower, upper, null, flags);
+        }
+
+        /** {@inheritDoc} */
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
             KeyCacheObject upper, CacheDataRowAdapter.RowData x) throws IgniteCheckedException {
             return cursor(cacheId, lower, upper, null, null, DATA);
+        }
+
+        /** {@inheritDoc} */
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
+            KeyCacheObject upper, CacheDataRowAdapter.RowData x, int flags) throws IgniteCheckedException {
+            return cursor(cacheId, lower, upper, null, null, flags);
         }
 
         /** {@inheritDoc} */
@@ -3532,54 +3544,18 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 cursor = dataTree.find(lowerRow, upperRow, new MvccFirstVisibleRowTreeClosure(cctx, snapshot), x);
             }
             else {
-                cursor = dataTree.find(lowerRow, upperRow, x);
+                if (flags != RECONCILIATION)
+                    cursor = dataTree.find(lowerRow, upperRow, x);
+                else {
+                    int cacheId0 = cacheId;
 
-                if (flags == DATA)
-                    cursor = cursorSkipTombstone(cursor);
-                else if (flags == TOMBSTONES)
-                    cursor = cursorSkipData(cursor);
-            }
+                    if (!grp.sharedGroup())
+                        cacheId0 = CU.UNDEFINED_CACHE_ID;
 
-            return cursor;
-        }
+                    cursor = dataTree.reconciliationFind(lowerRow, upperRow, x, BPlusTree.CursorType.RECONCILIATION, cacheId0);
+                }
 
-        /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
-            KeyCacheObject lower,
-            KeyCacheObject upper,
-            CacheDataRowAdapter.RowData x,
-            MvccSnapshot snapshot,
-            int flags
-        ) throws IgniteCheckedException {
-            SearchRow lowerRow;
-            SearchRow upperRow;
-
-            if (grp.sharedGroup()) {
-                assert cacheId != CU.UNDEFINED_CACHE_ID;
-
-                lowerRow = lower != null ? new SearchRow(cacheId, lower) : new SearchRow(cacheId);
-                upperRow = upper != null ? new SearchRow(cacheId, upper) : new SearchRow(cacheId);
-            }
-            else {
-                lowerRow = lower != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, lower) : null;
-                upperRow = upper != null ? new SearchRow(CU.UNDEFINED_CACHE_ID, upper) : null;
-
-                cacheId = CU.UNDEFINED_CACHE_ID;
-            }
-
-            GridCursor<? extends CacheDataRow> cursor;
-
-            if (snapshot != null) {
-                assert grp.mvccEnabled();
-
-                GridCacheContext cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
-
-                cursor = dataTree.find(lowerRow, upperRow, new MvccFirstVisibleRowTreeClosure(cctx, snapshot), x);
-            }
-            else {
-                cursor = dataTree.findRecon(cacheId, lowerRow, upperRow, x);
-
-                if (flags == DATA)
+                if (flags == DATA || flags == RECONCILIATION)
                     cursor = cursorSkipTombstone(cursor);
                 else if (flags == TOMBSTONES)
                     cursor = cursorSkipData(cursor);

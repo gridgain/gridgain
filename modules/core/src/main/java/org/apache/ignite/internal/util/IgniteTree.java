@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.util;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,6 +74,8 @@ public interface IgniteTree<L, T> {
      * @throws IgniteCheckedException If failed.
      */
     public GridCursor<T> find(L lower, L upper, Object x) throws IgniteCheckedException;
+
+    public GridCursor<T> reconciliationFind(L lower, L upper, Object x, BPlusTree.CursorType cursorType, int cacheId) throws IgniteCheckedException;
 
     /**
      * Returns a value mapped to the lowest key, or {@code null} if tree is empty

@@ -69,6 +69,8 @@ public interface IgniteCacheOffheapManager {
     /** Scan for both. */
     public static final int DATA_AND_TOMBSTONES = DATA | TOMBSTONES;
 
+    public static final int RECONCILIATION = 4;
+
     /**
      * @param ctx Context.
      * @param grp Cache group.
@@ -1109,12 +1111,33 @@ public interface IgniteCacheOffheapManager {
          * @param cacheId Cache ID.
          * @param lower Lower bound.
          * @param upper Upper bound.
+         * @return Data cursor.
+         * @throws IgniteCheckedException If failed.
+         */
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
+            KeyCacheObject upper, int flags) throws IgniteCheckedException;
+
+        /**
+         * @param cacheId Cache ID.
+         * @param lower Lower bound.
+         * @param upper Upper bound.
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
         public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
             KeyCacheObject upper, CacheDataRowAdapter.RowData x) throws IgniteCheckedException;
+
+        /**
+         * @param cacheId Cache ID.
+         * @param lower Lower bound.
+         * @param upper Upper bound.
+         * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+         * @return Data cursor.
+         * @throws IgniteCheckedException If failed.
+         */
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
+            KeyCacheObject upper, CacheDataRowAdapter.RowData x, int flags) throws IgniteCheckedException;
 
         /**
          * @param cacheId Cache ID.
@@ -1132,24 +1155,6 @@ public interface IgniteCacheOffheapManager {
             CacheDataRowAdapter.RowData x,
             MvccSnapshot snapshot,
             int flags) throws IgniteCheckedException;
-
-        /**
-         * @param cacheId Cache ID.
-         * @param lower Lower bound.
-         * @param upper Upper bound.
-         * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
-         * @param snapshot Mvcc snapshot.
-         * @param flags Scan flags.
-         * @return Data cursor for reconciliation of cache sizes.
-         * @throws IgniteCheckedException If failed.
-         */
-        public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
-            KeyCacheObject lower,
-            KeyCacheObject upper,
-            CacheDataRowAdapter.RowData x,
-            MvccSnapshot snapshot,
-            int flags
-        ) throws IgniteCheckedException;
 
         /**
          * Destroys the tree associated with the store.

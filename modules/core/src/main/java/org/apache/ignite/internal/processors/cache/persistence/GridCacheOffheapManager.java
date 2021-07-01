@@ -3199,6 +3199,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return EMPTY_CURSOR;
         }
 
+        @Override
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, int flags) throws IgniteCheckedException {
+            if (delegate != null)
+                return delegate.cursor(cacheId, lower, upper, flags);
+
+            return EMPTY_CURSOR;
+        }
+
         /** {@inheritDoc} */
         @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId,
             KeyCacheObject lower,
@@ -3209,6 +3217,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             if (delegate != null)
                 return delegate.cursor(cacheId, lower, upper, x);
+
+            return EMPTY_CURSOR;
+        }
+
+        @Override
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, CacheDataRowAdapter.RowData x, int flags) throws IgniteCheckedException {
+            if (delegate != null)
+                return delegate.cursor(cacheId, lower, upper, x, flags);
 
             return EMPTY_CURSOR;
         }
@@ -3226,22 +3242,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             if (delegate != null)
                 return delegate.cursor(cacheId, lower, upper, x, mvccSnapshot, flags);
-
-            return EMPTY_CURSOR;
-        }
-
-        /** {@inheritDoc} */
-        @Override public GridCursor<? extends CacheDataRow> reconCursor(int cacheId,
-            KeyCacheObject lower,
-            KeyCacheObject upper,
-            CacheDataRowAdapter.RowData x,
-            MvccSnapshot snapshot,
-            int flags
-        ) throws IgniteCheckedException {
-            CacheDataStore delegate = init0(true);
-
-            if (delegate != null)
-                return delegate.reconCursor(cacheId, lower, upper, x, snapshot, flags);
 
             return EMPTY_CURSOR;
         }

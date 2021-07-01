@@ -156,6 +156,19 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         Object x
     ) throws IgniteCheckedException {
         // If there is a group of caches, lower and upper bounds will not be null here.
+        return find(lower, upper, c, x, null, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridCursor<CacheDataRow> find(
+        CacheSearchRow lower,
+        CacheSearchRow upper,
+        TreeRowClosure<CacheSearchRow,CacheDataRow> c,
+        Object x,
+        CursorType cursorType,
+        Integer cacheId
+    ) throws IgniteCheckedException {
+        // If there is a group of caches, lower and upper bounds will not be null here.
         if (lower == null
                 && upper == null
                 && grp.persistenceEnabled()
@@ -164,7 +177,11 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             return scanDataPages(asRowData(x), (MvccDataPageClosure)c);
 
         lastFindWithDataPageScan = FALSE;
-        return super.find(lower, upper, c, x);
+
+        if (cursorType != CursorType.RECONCILIATION)
+            return super.find(lower, upper, c, x, null, null);
+        else
+            return super.find(lower, upper, c, x, CursorType.RECONCILIATION, cacheId);
     }
 
     /**

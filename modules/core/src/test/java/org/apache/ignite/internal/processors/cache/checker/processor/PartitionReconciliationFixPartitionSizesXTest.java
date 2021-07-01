@@ -16,14 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -39,6 +33,14 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
@@ -46,7 +48,7 @@ import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES
 /**
  * Tests partition reconciliation of sizes.
  */
-public class PartitionReconciliationFixPartitionSizesTest extends PartitionReconciliationAbstractTest {
+public class PartitionReconciliationFixPartitionSizesXTest extends PartitionReconciliationFixPartitionSizesTest {
     static AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
     /** Crd server node. */
@@ -54,9 +56,9 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     /** Client. */
     protected IgniteEx client;
-
-    /** */
-    protected boolean persistence;
+    protected IgniteEx client1;
+    protected IgniteEx client2;
+    protected IgniteEx client3;
 
     private Random rnd = new Random();
 
@@ -64,18 +66,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
-        DataStorageConfiguration storageConfiguration = new DataStorageConfiguration();
-        storageConfiguration.setPageSize(1024);
+        DataStorageConfiguration storageConfiguration = new DataStorageConfiguration()
+                .setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration().setMaxSize(1000 * 1024 * 1024));
+
+        storageConfiguration.setPageSize(/*16384*/1024);
 
         cfg.setDataStorageConfiguration(storageConfiguration);
-
-        if (persistence) {
-            DataStorageConfiguration memCfg = new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                    new DataRegionConfiguration().setMaxSize(200 * 1024 * 1024).setPersistenceEnabled(true));
-
-            cfg.setDataStorageConfiguration(memCfg);
-        }
 
         cfg.setConsistentId(name);
 
@@ -100,27 +97,29 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTwoReconciliationInRow() throws Exception {
-        int nodesCnt = 3;
+        int nodesCnt = 1;
 
         ig = startGrids(nodesCnt);
 
         client = startClientGrid(nodesCnt);
+        client1 = startClientGrid(nodesCnt + 1);
+        client2 = startClientGrid(nodesCnt + 2);
+        client3 = startClientGrid(nodesCnt + 3);
 
         ig.cluster().active(true);
 
         int startKey = 0;
-        int endKey = 2000;
+        int endKey = 4_000;
 
-        IgniteCache<Object, Object> cache0 = client.createCache(DEFAULT_CACHE_NAME);
+        IgniteCache<TestKey, Object> cache0 = client.createCache(new CacheConfiguration<TestKey, Object>(DEFAULT_CACHE_NAME).setAffinity(new RendezvousAffinityFunction(false, 1)));
+        IgniteCache<TestKey, Object> cache1 = client1.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<TestKey, Object> cache2 = client2.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<TestKey, Object> cache3 = client3.cache(DEFAULT_CACHE_NAME);
 
         //first reconciliation
 
         for (long i = startKey; i < endKey; i++) {
-            i += 1;
-            if (i < endKey) {
-                cache0.put(i, i);
-                System.out.print(i + " ");
-            }
+            cache0.put(new TestKey(i), i);
         }
 
         int startSize0 = cache0.size();
@@ -130,17 +129,17 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
+//        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
 
-        assertFalse(cache0.size() == startSize0);
+//        assertFalse(cache0.size() == startSize0);
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
-        builder.parallelism(10);
+        builder.parallelism(1);
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(DEFAULT_CACHE_NAME);
         builder.caches(cacheNames);
-        builder.batchSize(10);
+        builder.batchSize(10000);
         builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
@@ -148,8 +147,251 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
-        for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+//        for (int i = 0; i < 4; i++)
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 100_000_000;
+                        while (reconResult.get() == null) {
+                            cache0.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut0 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 200_000_000;
+                        while (reconResult.get() == null) {
+                            cache0.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut1 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 300_000_000;
+                        while (reconResult.get() == null) {
+                            cache0.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut2 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 400_000_000;
+                        while (reconResult.get() == null) {
+                            cache0.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut3 " + i);
+            }));
+
+
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 500_000_000;
+                        while (reconResult.get() == null) {
+                            cache1.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut4 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 600_000_000;
+                        while (reconResult.get() == null) {
+                            cache1.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut5 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 700_000_000;
+                        while (reconResult.get() == null) {
+                            cache1.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut6 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 800_000_000;
+                        while (reconResult.get() == null) {
+                            cache1.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut7 " + i);
+            }));
+
+
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 900_000_000;
+                        while (reconResult.get() == null) {
+                            cache2.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut8 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1000_000_000;
+                        while (reconResult.get() == null) {
+                            cache2.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut9 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1100_000_000;
+                        while (reconResult.get() == null) {
+                            cache2.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut10 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1200_000_000;
+                        while (reconResult.get() == null) {
+                            cache2.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut11 " + i);
+            }));
+
+
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1300_000_000;
+                        while (reconResult.get() == null) {
+                            cache3.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut12 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1400_000_000;
+                        while (reconResult.get() == null) {
+                            cache3.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut13 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1500_000_000;
+                        while (reconResult.get() == null) {
+                            cache3.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut14 " + i);
+            }));
+            loadFuts.add(GridTestUtils.runAsync(() -> {
+                int i = 1600_000_000;
+                        while (reconResult.get() == null) {
+                            cache3.put(new TestKey(++i), i);
+                        }
+                System.out.println("loadFut15 " + i);
+            }));
+
+            //----------------------
+
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 100_000_000;
+            while (reconResult.get() == null) {
+                cache0.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut0 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 200_000_000;
+            while (reconResult.get() == null) {
+                cache0.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut1 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 300_000_000;
+            while (reconResult.get() == null) {
+                cache0.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut2 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 400_000_000;
+            while (reconResult.get() == null) {
+                cache0.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut3 " + i);
+        }));
+
+
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 500_000_000;
+            while (reconResult.get() == null) {
+                cache1.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut4 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 600_000_000;
+            while (reconResult.get() == null) {
+                cache1.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut5 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 700_000_000;
+            while (reconResult.get() == null) {
+                cache1.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut6 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 800_000_000;
+            while (reconResult.get() == null) {
+                cache1.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut7 " + i);
+        }));
+
+
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 900_000_000;
+            while (reconResult.get() == null) {
+                cache2.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut8 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1000_000_000;
+            while (reconResult.get() == null) {
+                cache2.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut9 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1100_000_000;
+            while (reconResult.get() == null) {
+                cache2.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut10 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1200_000_000;
+            while (reconResult.get() == null) {
+                cache2.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut11 " + i);
+        }));
+
+
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1300_000_000;
+            while (reconResult.get() == null) {
+                cache3.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut12 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1400_000_000;
+            while (reconResult.get() == null) {
+                cache3.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut13 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1500_000_000;
+            while (reconResult.get() == null) {
+                cache3.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut14 " + i);
+        }));
+        loadFuts.add(GridTestUtils.runAsync(() -> {
+            int i = 1600_000_000;
+            while (reconResult.get() == null) {
+                cache3.put(new TestKey(i=i+2), i);
+            }
+            System.out.println("loadFut15 " + i);
+        }));
+
+//            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+//            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+//            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+//            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
 
         GridTestUtils.runMultiThreadedAsync(() -> {
             reconResult.set(partitionReconciliation(client, builder));
@@ -160,92 +402,58 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
-        for (long i = startKey; i < endKey; i++)
-            cache0.put(i, i);
+//        for (long i = startKey; i < endKey; i++)
+//            cache0.put(i, i);
+//
+//        long allKeysCountForCacheGroup;
+//        long allKeysCountForCache;
+//
+//        for (String cacheName : cacheNames) {
+//            allKeysCountForCacheGroup = 0;
+//            allKeysCountForCache = 0;
+//
+//            for (int i = 0; i < nodesCnt; i++) {
+//                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
+//                allKeysCountForCacheGroup += i0;
+//
+//                long i1 = getPartitionsSizeForCache(grid(i), cacheName);
+//                allKeysCountForCache += i1;
+//            }
+//
+//            assertEquals(endKey, client.cache(cacheName).size());
+//
+//            assertEquals(endKey, allKeysCountForCacheGroup);
+//            assertEquals(endKey, allKeysCountForCache);
+//
+//        }
 
-        long allKeysCountForCacheGroup;
-        long allKeysCountForCache;
+        System.out.println("cache.size() = " + cache0.size());
 
-        for (String cacheName : cacheNames) {
-            allKeysCountForCacheGroup = 0;
-            allKeysCountForCache = 0;
-
-            for (int i = 0; i < nodesCnt; i++) {
-                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-                allKeysCountForCacheGroup += i0;
-
-                long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-                allKeysCountForCache += i1;
-            }
-
-            assertEquals(endKey, client.cache(cacheName).size());
-
-            assertEquals(endKey, allKeysCountForCacheGroup);
-            assertEquals(endKey, allKeysCountForCache);
-
-        }
-
-        cache0.clear();
+//        cache0.clear();
 
         //second reconciliation
 
-        for (long i = startKey; i < endKey; i++) {
-            i += 1;
-            if (i < endKey) {
-                cache0.put(i, i);
-                System.out.print(i + " ");
-            }
+    }
+
+    static class TestKey {
+        long value;
+
+        private long[] array = new long[] {
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+                40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+                50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+                60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+                70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+                80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+                90, 91, 92, 93, 94, 95, 96, 97, 98, 99
+        };
+
+        TestKey(long value) {
+            this.value = value;
         }
-
-        startSize0 = cache0.size();
-
-        grids = new ArrayList<>();
-
-        for (int i = 0; i < nodesCnt; i++)
-            grids.add(grid(i));
-
-        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
-
-        assertFalse(cache0.size() == startSize0);
-
-        reconResult = new AtomicReference<>();
-
-        loadFuts = new ArrayList<>();
-
-        for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
-
-        GridTestUtils.runMultiThreadedAsync(() -> {
-            reconResult.set(partitionReconciliation(client, builder));
-        }, 1, "reconciliation");
-
-        GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
-
-        for (IgniteInternalFuture fut : loadFuts)
-            fut.get();
-
-        for (long i = startKey; i < endKey; i++)
-            cache0.put(i, i);
-
-        for (String cacheName : cacheNames) {
-            allKeysCountForCacheGroup = 0;
-            allKeysCountForCache = 0;
-
-            for (int i = 0; i < nodesCnt; i++) {
-                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-                allKeysCountForCacheGroup += i0;
-
-                long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-                allKeysCountForCache += i1;
-            }
-
-            assertEquals(endKey, client.cache(cacheName).size());
-
-            assertEquals(endKey, allKeysCountForCacheGroup);
-            assertEquals(endKey, allKeysCountForCache);
-
-        }
-
     }
 
     /** Tests that only sizes of repaired caches fixed. */
@@ -494,7 +702,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
     /** */
     @Test
-    public void testRestartPersistenceClusterAfterSizeReconciliation() throws Exception {
+    public void testRestartPersistenceCluaterAfterSizeReconciliation() throws Exception {
         int nodesCnt = 2;
 
         persistence = true;

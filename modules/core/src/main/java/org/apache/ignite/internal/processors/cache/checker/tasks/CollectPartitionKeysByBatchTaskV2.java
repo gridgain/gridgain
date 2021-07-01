@@ -60,6 +60,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.RECONCILIATION;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -356,8 +357,8 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             if (reconConsist || reconSize) {
                 try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
-                    cacheDataStore.reconCursor(cacheId, null, null, null, null, IgniteCacheOffheapManager.DATA) :
-                    cacheDataStore.reconCursor(cacheId, keyToStart, null, null, null, IgniteCacheOffheapManager.DATA)) {
+                        grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
+                        grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {
 
                     List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
