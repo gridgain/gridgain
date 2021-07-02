@@ -146,6 +146,14 @@ namespace ignite
                 if (X509_V_OK != res)
                     ThrowSecureError("Certificate chain verification failed: " + GetSslError(ssl0, res));
 
+                res = WaitOnSocket(ssl, timeout, false);
+
+                if (res == WaitResult::TIMEOUT)
+                    return false;
+
+                if (res != WaitResult::SUCCESS)
+                    ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
+
                 guard.Release();
 
                 return true;
@@ -313,7 +321,7 @@ namespace ignite
                     int res = sslGateway.SSL_connect_(ssl0);
 
                     if (res == OPERATION_SUCCESS)
-                        return true;
+                        break;
 
                     int sslError = sslGateway.SSL_get_error_(ssl0, res);
 
@@ -330,6 +338,19 @@ namespace ignite
                     if (res != WaitResult::SUCCESS)
                         ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
                 }
+
+                if (std::string("TLSv1.3") == sslGateway.SSL_get_version_(ssl0))
+                {
+                    // Workaround. Need to get SSL into read state to avoid deadlock.
+                    // See https://github.com/openssl/openssl/issues/7967 for details.
+                    sslGateway.SSL_read_(ssl0, 0, 0);
+                    int res = WaitOnSocket(ssl, timeout, true);
+
+                    if (res == WaitResult::TIMEOUT)
+                        return false;
+                }
+
+                return true;
             }
 
             std::string SecureSocketClient::GetSslError(void* ssl, int ret)

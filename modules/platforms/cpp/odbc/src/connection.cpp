@@ -745,7 +745,10 @@ namespace ignite
                     }
                     catch (const IgniteError& err)
                     {
-                        LOG_MSG("Error while trying connect to " << addr.host << ":" << addr.port <<", " << err.GetText());
+                        std::stringstream msgBuilder;
+                        msgBuilder << "Error while trying connect to "
+                            << addr.host << ":" << addr.port <<", " << err.GetText();
+                        AddStatusRecord(SqlState::S08001_CANNOT_CONNECT, msgBuilder.str());
                     }
 
                     if (connected)
