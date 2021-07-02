@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.PAX;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -387,6 +388,81 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         assertEquals(exp, dbMgr(n).persistentStoreMetrics().getWalWrittenBytes());
         assertEquals(exp, dsMetricsMXBean(n).getWalWrittenBytes());
         assertEquals(exp, ((LongAdderMetric)dsMetricRegistry(n).findMetric("WalWrittenBytes")).value());
+    }
+
+    /**
+     * Check whether Wal is reporting correct usage.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWalTotalSize() throws Exception {
+        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
+            cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
+
+        n.cluster().state(ACTIVE);
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < 10; i++)
+            n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        long exp = 10 * 2048 * 1024;
+
+        assertEquals(exp, dbMgr(n).persistentStoreMetrics().getWalTotalSize());
+        assertEquals(exp, dsMetricsMXBean(n).getWalTotalSize());
+        assertEquals(exp, ((LongGauge)dsMetricRegistry(n).findMetric("WalTotalSize")).value());
+    }
+
+    /**
+     * Check whether Wal is reporting correct usage when WAL Archive is turned off.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWalTotalSizeWithArchive() throws Exception {
+
+        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
+            cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
+
+        n.cluster().state(ACTIVE);
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < 10; i++)
+            n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        while (walMgr(n).lastArchivedSegment() < 3)
+            n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        long exp = 14 * 2048 * 1024;
+
+        //the wal archive segements are not exactly 2K bytes.
+        assertTrue(exp >= dbMgr(n).persistentStoreMetrics().getWalTotalSize());
+        assertTrue(exp >= dsMetricsMXBean(n).getWalTotalSize());
+        assertTrue(exp >= ((LongGauge)dsMetricRegistry(n).findMetric("WalTotalSize")).value());
+    }
+
+    /**
+     * Check whether Wal is reporting correct usage when WAL Archive is turned off.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWalTotalSizeWithArchiveTurnedOff() throws Exception {
+
+        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
+            cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath()).setWalSegmentSize((int)(2 * U.MB)));
+
+        n.cluster().state(ACTIVE);
+        awaitPartitionMapExchange();
+
+        for (int i = 0; i < 10; i++)
+            n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        long exp = 2048 * 1024;
+
+        assertEquals(exp, dbMgr(n).persistentStoreMetrics().getWalTotalSize());
+        assertEquals(exp, dsMetricsMXBean(n).getWalTotalSize());
+        assertEquals(exp, ((LongGauge)dsMetricRegistry(n).findMetric("WalTotalSize")).value());
     }
 
     /**
