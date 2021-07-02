@@ -26,12 +26,12 @@
 #include "network/ssl/secure_socket_client.h"
 #include "network/ssl/ssl_gateway.h"
 
+using namespace ignite::network::ssl;
+
 enum { OPERATION_SUCCESS = 1 };
 
 void FreeContext(SSL_CTX* ctx)
 {
-    using namespace ignite::network::ssl;
-
     SslGateway &sslGateway = SslGateway::GetInstance();
 
     assert(sslGateway.Loaded());
@@ -41,13 +41,34 @@ void FreeContext(SSL_CTX* ctx)
 
 void FreeBio(BIO* bio)
 {
-    using namespace ignite::network::ssl;
-
     SslGateway &sslGateway = SslGateway::GetInstance();
 
     assert(sslGateway.Loaded());
 
     sslGateway.BIO_free_all_(bio);
+}
+
+/**
+ * Check if a actual error occured.
+ *
+ * @param err SSL error code.
+ * @return @true if a actual error occured
+ */
+bool IsActualError(int err)
+{
+    switch (err)
+    {
+        case SSL_ERROR_NONE:
+        case SSL_ERROR_WANT_WRITE:
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_CONNECT:
+        case SSL_ERROR_WANT_ACCEPT:
+        case SSL_ERROR_WANT_X509_LOOKUP:
+            return false;
+
+        default:
+            return true;
+    }
 }
 
 namespace ignite
@@ -125,6 +146,14 @@ namespace ignite
                 if (X509_V_OK != res)
                     ThrowSecureError("Certificate chain verification failed: " + GetSslError(ssl0, res));
 
+                res = WaitOnSocket(ssl, timeout, false);
+
+                if (res == WaitResult::TIMEOUT)
+                    return false;
+
+                if (res != WaitResult::SUCCESS)
+                    ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
+
                 guard.Release();
 
                 return true;
@@ -135,7 +164,7 @@ namespace ignite
                 CloseInternal();
             }
 
-            int SecureSocketClient::Send(const int8_t* data, size_t size, int32_t)
+            int SecureSocketClient::Send(const int8_t* data, size_t size, int32_t timeout)
             {
                 SslGateway &sslGateway = SslGateway::GetInstance();
 
@@ -146,7 +175,20 @@ namespace ignite
 
                 SSL* ssl0 = reinterpret_cast<SSL*>(ssl);
 
-                return sslGateway.SSL_write_(ssl0, data, static_cast<int>(size));
+                int res = WaitOnSocket(ssl, timeout, false);
+
+                if (res == WaitResult::TIMEOUT)
+                    return res;
+
+                do {
+                    res = sslGateway.SSL_write_(ssl0, data, static_cast<int>(size));
+
+                    int waitRes = WaitOnSocketIfNeeded(res, ssl, timeout);
+                    if (waitRes <= 0)
+                        return waitRes;
+                } while (res <= 0);
+
+                return res;
             }
 
             int SecureSocketClient::Receive(int8_t* buffer, size_t size, int32_t timeout)
@@ -170,7 +212,15 @@ namespace ignite
                         return res;
                 }
 
-                return sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
+                do {
+                    res = sslGateway.SSL_read_(ssl0, buffer, static_cast<int>(size));
+
+                    int waitRes = WaitOnSocketIfNeeded(res, ssl, timeout);
+                    if (waitRes <= 0)
+                        return waitRes;
+                } while (res <= 0);
+
+                return res;
             }
 
             bool SecureSocketClient::IsBlocking() const
@@ -271,7 +321,7 @@ namespace ignite
                     int res = sslGateway.SSL_connect_(ssl0);
 
                     if (res == OPERATION_SUCCESS)
-                        return true;
+                        break;
 
                     int sslError = sslGateway.SSL_get_error_(ssl0, res);
 
@@ -288,6 +338,19 @@ namespace ignite
                     if (res != WaitResult::SUCCESS)
                         ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
                 }
+
+                if (std::string("TLSv1.3") == sslGateway.SSL_get_version_(ssl0))
+                {
+                    // Workaround. Need to get SSL into read state to avoid deadlock.
+                    // See https://github.com/openssl/openssl/issues/7967 for details.
+                    sslGateway.SSL_read_(ssl0, 0, 0);
+                    int res = WaitOnSocket(ssl, timeout, true);
+
+                    if (res == WaitResult::TIMEOUT)
+                        return false;
+                }
+
+                return true;
             }
 
             std::string SecureSocketClient::GetSslError(void* ssl, int ret)
@@ -324,23 +387,6 @@ namespace ignite
                 return std::string(errBuf);
             }
 
-            bool SecureSocketClient::IsActualError(int err)
-            {
-                switch (err)
-                {
-                    case SSL_ERROR_NONE:
-                    case SSL_ERROR_WANT_WRITE:
-                    case SSL_ERROR_WANT_READ:
-                    case SSL_ERROR_WANT_CONNECT:
-                    case SSL_ERROR_WANT_ACCEPT:
-                    case SSL_ERROR_WANT_X509_LOOKUP:
-                        return false;
-
-                    default:
-                        return true;
-                }
-            }
-
             void SecureSocketClient::CloseInternal()
             {
                 SslGateway &sslGateway = SslGateway::GetInstance();
@@ -363,7 +409,7 @@ namespace ignite
                 SslGateway &sslGateway = SslGateway::GetInstance();
 
                 assert(sslGateway.Loaded());
-                
+
                 SSL* ssl0 = reinterpret_cast<SSL*>(ssl);
                 int fd = sslGateway.SSL_get_fd_(ssl0);
 
@@ -377,6 +423,29 @@ namespace ignite
                 }
 
                 return sockets::WaitOnSocket(fd, timeout, rd);
+            }
+
+            int SecureSocketClient::WaitOnSocketIfNeeded(int res, void* ssl, int timeout)
+            {
+                SslGateway &sslGateway = SslGateway::GetInstance();
+
+                assert(sslGateway.Loaded());
+
+                SSL* ssl0 = reinterpret_cast<SSL*>(ssl);
+
+                if (res <= 0)
+                {
+                    int err = sslGateway.SSL_get_error_(ssl0, res);
+                    if (IsActualError(err))
+                        return res;
+
+                    int want = sslGateway.SSL_want_(ssl0);
+                    int waitRes = WaitOnSocket(ssl, timeout, want == SSL_READING);
+                    if (waitRes < 0 || waitRes == WaitResult::TIMEOUT)
+                        return waitRes;
+                }
+
+                return WaitResult::SUCCESS;
             }
         }
     }

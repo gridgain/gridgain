@@ -118,6 +118,16 @@ namespace ignite
                 static int WaitOnSocket(void* ssl, int32_t timeout, bool rd);
 
                 /**
+                 * Wait on the socket if it's required by SSL.
+                 *
+                 * @param res Operation result.
+                 * @param ssl SSl instance.
+                 * @param timeout Timeout in seconds.
+                 * @return
+                 */
+                static int WaitOnSocketIfNeeded(int res, void* ssl, int timeout);
+
+                /**
                  * Make new context instance.
                  *
                  * @param certPath Certificate file path.
@@ -156,14 +166,6 @@ namespace ignite
                  * @return Error string.
                  */
                 static std::string GetSslError(void* ssl, int ret);
-
-                /**
-                 * Check if a actual error occured.
-                 *
-                 * @param err SSL error code.
-                 * @return @true if a actual error occured
-                 */
-                static bool IsActualError(int err);
 
                 /** Certificate file path. */
                 std::string certPath;

@@ -59,6 +59,7 @@ namespace ignite
                 void *fpSSL_write;
                 void *fpSSL_read;
                 void *fpSSL_pending;
+                void *fpSSL_get_version;
                 void *fpSSL_get_fd;
                 void *fpSSL_free;
                 void *fpOPENSSL_config;
@@ -162,6 +163,8 @@ namespace ignite
                 int SSL_read_(SSL* s, void* buf, int num);
 
                 int SSL_pending_(const SSL* ssl);
+
+                const char* SSL_get_version_(const SSL* ssl);
 
                 int SSL_get_fd_(const SSL* ssl);
 
