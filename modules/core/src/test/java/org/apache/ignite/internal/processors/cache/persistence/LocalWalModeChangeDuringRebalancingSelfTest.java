@@ -170,8 +170,6 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
         System.setProperty(IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED,
             Boolean.toString(enablePendingTxTracker));
 
-        System.setProperty(IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS, Boolean.toString(enablePendingTxTracker));
-
         return cfg;
     }
 
