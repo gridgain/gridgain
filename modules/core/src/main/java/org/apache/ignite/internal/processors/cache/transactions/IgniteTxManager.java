@@ -129,7 +129,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_D
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
@@ -302,9 +301,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** TxDeadlock detection. */
     private TxDeadlockDetection txDeadlockDetection;
 
-    /** Flag indicates that {@link TxRecord} records will be logged to WAL. */
-    private volatile boolean logTxRecords;
-
     /** Pending transactions tracker. */
     private LocalPendingTransactionsTracker pendingTracker;
 
@@ -392,9 +388,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         cctx.gridIO().addMessageListener(TOPIC_TX, new DeadlockDetectionListener());
 
         this.pendingTracker = new LocalPendingTransactionsTracker(cctx);
-
-        // todo gg-13416 unhardcode
-        this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
 
         cctx.txMetrics().onTxManagerStarted();
 
@@ -2764,13 +2757,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @return True if {@link TxRecord} records should be logged to WAL.
-     */
-    public boolean logTxRecords() {
-        return logTxRecords;
-    }
-
-    /**
      * @return Tracker that is aware of pending transactions state.
      */
     public LocalPendingTransactionsTracker pendingTxsTracker() {
@@ -2779,16 +2765,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
     /**
      * Enables pending transactions tracker.
-     * Also enables transaction wal logging, if it was disabled.
      */
     public void trackPendingTxs(boolean logTxRecords) {
         pendingTracker.enable();
-
-        if (logTxRecords && !this.logTxRecords) {
-            this.logTxRecords = true;
-
-            U.warn(log, "Transaction wal logging is enabled, because pending transaction tracker is enabled.");
-        }
     }
 
     /**
@@ -2849,7 +2828,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
         // Log tx state change to WAL.
         if (cctx.wal() == null
-            || (!logTxRecords && !tx.txState().mvccEnabled())
             || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
             || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
             return null;
