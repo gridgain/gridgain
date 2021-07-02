@@ -78,6 +78,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -982,7 +983,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
         try {
-            if (grp.walEnabled() && reason == PartitionsEvictManager.EvictReason.CLEARING)
+            if (reason == PartitionsEvictManager.EvictReason.CLEARING &&
+                    grp.walEnabled() && grp.config().getAtomicityMode() == ATOMIC)
                 ctx.wal().log(new PartitionClearingStarted(id, grp.groupId()));
 
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
