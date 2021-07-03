@@ -176,6 +176,7 @@ namespace ignite
                 functions.fpSSL_write = LoadSslMethod("SSL_write");
                 functions.fpSSL_read = LoadSslMethod("SSL_read");
                 functions.fpSSL_pending = LoadSslMethod("SSL_pending");
+                functions.fpSSL_get_version = LoadSslMethod("SSL_get_version");
                 functions.fpSSL_get_fd = LoadSslMethod("SSL_get_fd");
                 functions.fpSSL_free = LoadSslMethod("SSL_free");
                 functions.fpBIO_new_ssl_connect = LoadSslMethod("BIO_new_ssl_connect");
@@ -545,6 +546,17 @@ namespace ignite
                 typedef int (FuncType)(const SSL*);
 
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_pending);
+
+                return fp(ssl);
+            }
+
+            const char* SslGateway::SSL_get_version_(const SSL* ssl)
+            {
+                assert(functions.fpSSL_get_version != 0);
+
+                typedef const char* (FuncType)(const SSL*);
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_get_version);
 
                 return fp(ssl);
             }
