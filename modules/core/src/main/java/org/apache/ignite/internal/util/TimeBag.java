@@ -50,7 +50,7 @@ public class TimeBag {
     private Map<String, List<Stage>> localStages;
 
     /** Last seen global stage by thread. */
-    private final ThreadLocal<CompositeStage> tlLastSeenStage = ThreadLocal.withInitial(() -> INITIAL_STAGE);
+    private static final ThreadLocal<CompositeStage> tlLastSeenStage = new ThreadLocal<>();
 
     /** Thread-local stopwatch. */
     private final ThreadLocal<IgniteStopwatch> tlStopwatch = ThreadLocal.withInitial(IgniteStopwatch::createUnstarted);
@@ -71,6 +71,8 @@ public class TimeBag {
         this.measurementUnit = measurementUnit;
 
         this.stages.add(INITIAL_STAGE);
+
+        tlLastSeenStage.set(INITIAL_STAGE);
     }
 
     /**
