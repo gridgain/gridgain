@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors;
 
-import java.util.Date;
+import java.time.Instant;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockDump;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTracker;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.SharedPageLockTrackerDump;
@@ -66,7 +66,7 @@ public class ToStringDumpHelperTest extends GridCommonAbstractTest {
             "Thread=[name=async-lock-unlock, id=" + threadIdInLog + "], state=TERMINATED" + U.nl() +
             "Locked pages = [32[0000000000000020](r=1|w=0)]" + U.nl() +
             "Locked pages log: name=async-lock-unlock time=(1596173397167, " +
-            ToStringDumpHelper.DATE_FMT.format(new Date(TIME)) + ")" + U.nl() +
+            ToStringDumpHelper.DATE_FMT.format(Instant.ofEpochMilli(TIME)) + ")" + U.nl() +
             "L=1 -> Read lock pageId=32, structureId=dummy [pageIdHex=0000000000000020, partId=0, pageIdx=32, flags=00000000]" +
             U.nl() +
             U.nl() +

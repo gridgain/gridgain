@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteInterruptedException;
@@ -69,7 +70,7 @@ public class SharedPageLockTracker {
     private Map<Long, PageLockThreadState> prevThreadsState = new HashMap<>();
 
     /** */
-    private int idGen;
+    private final AtomicInteger idGen = new AtomicInteger();
 
     /** */
     private final Consumer<Set<PageLockThreadState>> hangThreadsCallBack;
@@ -142,7 +143,7 @@ public class SharedPageLockTracker {
             // Size for the new (K,V) pair.
             memCalc.onHeapAllocated((name.getBytes().length + 16) + (8 + 16 + 4));
 
-            return ++idGen;
+            return idGen.incrementAndGet();
         });
 
         // Size for the PageLockListener object.

@@ -41,12 +41,12 @@ public class LinkMap {
     public static final int META_PAGE_IDX = 2;
 
     /** */
-    public static final IOVersions<LinkMappingLeafIO> LEAF_IO_VERSIONS = new IOVersions<>(
+    public static final IOVersions<? extends BPlusLeafIO<LinkMapping>> LEAF_IO_VERSIONS = new IOVersions<>(
         new LinkMappingLeafIO()
     );
 
     /** */
-    public static final IOVersions<LinkMappingInnerIO> INNER_IO_VERSIONS = new IOVersions<>(
+    public static final IOVersions<? extends BPlusInnerIO<LinkMapping>> INNER_IO_VERSIONS = new IOVersions<>(
         new LinkMappingInnerIO()
     );
 

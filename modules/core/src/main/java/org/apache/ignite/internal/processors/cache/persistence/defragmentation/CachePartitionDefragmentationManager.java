@@ -83,7 +83,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.jetbrains.annotations.Nullable;
 
 import static java.util.Comparator.comparing;
 import static java.util.stream.StreamSupport.stream;
@@ -161,8 +160,8 @@ public class CachePartitionDefragmentationManager {
     /** */
     private final GridFutureAdapter<?> completionFut = new GridFutureAdapter<>();
 
-    /** Checkpoint runner thread pool. If null tasks are to be run in single thread */
-    @Nullable private volatile IgniteThreadPoolExecutor defragmentationThreadPool;
+    /** Checkpoint runner thread pool. */
+    private final IgniteThreadPoolExecutor defragmentationThreadPool;
 
     /** Link map by partition ID. */
     private final IntMap<LinkMap> linkMapByPart = new IntRWHashMap<>();
@@ -207,8 +206,14 @@ public class CachePartitionDefragmentationManager {
             defragmentationThreadPoolSize,
             defragmentationThreadPoolSize,
             30_000,
-            new LinkedBlockingQueue<Runnable>()
+            new LinkedBlockingQueue<>()
         );
+
+        completionFut.listen(future -> {
+            linkMapByPart.values().forEach(LinkMap::close);
+
+            linkMapByPart.clear();
+        });
     }
 
     /** */
@@ -590,13 +595,7 @@ public class CachePartitionDefragmentationManager {
 
     /** */
     public IgniteInternalFuture<?> completionFuture() {
-        return completionFut.chain(future -> {
-            linkMapByPart.values().forEach(LinkMap::close);
-
-            linkMapByPart.clear();
-
-            return null;
-        });
+        return completionFut.chain(future -> null);
     }
 
     /** */
