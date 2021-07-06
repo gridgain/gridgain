@@ -49,8 +49,8 @@ public class TimeBag {
     /** List of current local stages separated by threads (guarded by {@code lock}). */
     private Map<String, List<Stage>> localStages;
 
-    /** Last seen global stage by thread. */
-    private static final ThreadLocal<CompositeStage> tlLastSeenStage = new ThreadLocal<>();
+    /** Flag that indicates if a thread has started to track local stages. */
+    private final ThreadLocal<Boolean> tlStartedTrackingLocalStages = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     /** Thread-local stopwatch. */
     private final ThreadLocal<IgniteStopwatch> tlStopwatch = ThreadLocal.withInitial(IgniteStopwatch::createUnstarted);
@@ -71,17 +71,6 @@ public class TimeBag {
         this.measurementUnit = measurementUnit;
 
         this.stages.add(INITIAL_STAGE);
-
-        tlLastSeenStage.set(INITIAL_STAGE);
-    }
-
-    /**
-     *
-     */
-    private CompositeStage lastCompletedGlobalStage() {
-        assert !stages.isEmpty() : "No stages :(";
-
-        return stages.get(stages.size() - 1);
     }
 
     /**
@@ -98,6 +87,8 @@ public class TimeBag {
             localStages = new ConcurrentHashMap<>();
 
             globalStopwatch.reset().start();
+
+            tlStartedTrackingLocalStages.set(Boolean.FALSE);
         }
         finally {
             lock.writeLock().unlock();
@@ -111,17 +102,17 @@ public class TimeBag {
         lock.readLock().lock();
 
         try {
-            CompositeStage lastSeen = tlLastSeenStage.get();
-            CompositeStage lastCompleted = lastCompletedGlobalStage();
+            Boolean started = tlStartedTrackingLocalStages.get();
             IgniteStopwatch localStopWatch = tlStopwatch.get();
 
             Stage stage;
 
-            // We see this stage first time, get elapsed time from last completed global stage and start tracking local.
-            if (lastSeen != lastCompleted) {
+            // This is the first local stage after the global one,
+            // get elapsed time from last completed global stage and start tracking local.
+            if (!started) {
                 stage = new Stage(description, globalStopwatch.elapsed(measurementUnit));
 
-                tlLastSeenStage.set(lastCompleted);
+                tlStartedTrackingLocalStages.set(Boolean.TRUE);
             }
             else
                 stage = new Stage(description, localStopWatch.elapsed(measurementUnit));
