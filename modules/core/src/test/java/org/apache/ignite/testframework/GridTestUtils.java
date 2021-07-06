@@ -393,19 +393,6 @@ public final class GridTestUtils {
      * @param charset File charset.
      * @param regexp Regular expression pattern.
      */
-    public static void assertMatchesLine(@Nullable IgniteLogger log, String filePath, String charset, String regexp) throws IOException {
-        assertMatchesLine(log, filePath, charset, Pattern.compile(regexp));
-    }
-
-    /**
-     * Checks that file contains line {@param str} matches given regular expression {@param regexp}. Logs both strings
-     * and throws {@link java.lang.AssertionError}, if not.
-     *
-     * @param log Logger (optional).
-     * @param filePath Absolute path to file.
-     * @param charset File charset.
-     * @param regexp Regular expression pattern.
-     */
     public static void assertMatchesLine(@Nullable IgniteLogger log, String filePath, String charset, Pattern regexp) throws IOException {
         try (Scanner input = new Scanner(new FileInputStream(filePath), charset)) {
             input.useDelimiter("[\\s]*\\n[\\s]*");
@@ -420,10 +407,10 @@ public final class GridTestUtils {
             }
 
             if (!found) {
-                U.warn(log, String.format("File doesn't does not contain line matches regexp: '%s'", regexp));
+                U.warn(log, String.format("File doesn't contain a line matching regexp: '%s'", regexp));
                 U.warn(log, String.format("File name: '%s'", filePath));
 
-                Assert.fail("File doesn't does not contain line matches regexp");
+                Assert.fail("File doesn't contain a line matching regexp");
             }
         }
     }
