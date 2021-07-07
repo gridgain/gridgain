@@ -46,6 +46,7 @@ public class TimeBag {
     /** List of current local stages separated by threads (guarded by {@code lock}). */
     private Map<String, List<Stage>> localStages;
 
+    /** Last seen global stage by thread. */
     private final ThreadLocal<CompositeStage> tlLastSeenStage = new ThreadLocal<>();
 
     /** Thread-local stopwatch. */
