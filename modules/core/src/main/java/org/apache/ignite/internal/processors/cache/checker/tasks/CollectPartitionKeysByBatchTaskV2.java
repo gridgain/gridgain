@@ -38,8 +38,8 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
@@ -61,8 +61,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.RECONCILIATION;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.FINISHED;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
+import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.FINISHED;
+import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**
@@ -294,7 +294,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             part.reserve();
 
-            IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext partReconciliationCtx = null;
+            ReconciliationContext partReconciliationCtx = null;
 
             NodePartitionSize nodeSize = nodePartitionSize == null ? new NodePartitionSize(partBatch.cacheName()) : nodePartitionSize;
 

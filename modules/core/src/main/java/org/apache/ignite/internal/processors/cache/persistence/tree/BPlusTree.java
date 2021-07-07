@@ -55,8 +55,8 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -88,7 +88,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
+import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.FALSE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.READY;
@@ -109,7 +109,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * @return Cache sizes reconciliation context.
      */
-    public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx;
+    public ReconciliationContext reconciliationCtx;
 
     /** */
     private static final Object[] EMPTY = {};

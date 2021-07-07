@@ -23,6 +23,7 @@ import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -665,7 +666,7 @@ public interface IgniteCacheOffheapManager {
          *
          * @return Cache data tree object.
          */
-        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext startReconciliation(int cacheId);
+        public ReconciliationContext startReconciliation(int cacheId);
 
         /** Appling a reconciliation of cache sizes result */
         public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
@@ -673,7 +674,7 @@ public interface IgniteCacheOffheapManager {
         /**
          * @return Cache sizes reconciliation context.
          */
-        public IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
+        public ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
 
         /**
          * @return Cache data tree object.

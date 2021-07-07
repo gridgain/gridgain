@@ -74,6 +74,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -2600,8 +2601,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
         }
 
-        /** {@inheritDoc} */
-        @Override public CacheDataStoreImpl.ReconciliationContext startReconciliation(int cacheId) {
+        /** {@inheritDoc}
+         * @return*/
+        @Override public ReconciliationContext startReconciliation(int cacheId) {
             if (delegate != null)
                 return delegate.startReconciliation(cacheId);
             else
@@ -2615,7 +2617,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public CacheDataStoreImpl.ReconciliationContext reconciliationCtx() throws IgniteCheckedException {
+        @Override public ReconciliationContext reconciliationCtx() throws IgniteCheckedException {
             CacheDataStore delegate = init0(false);
 
             if (delegate != null)
