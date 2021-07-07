@@ -51,8 +51,7 @@ public class FinalizeCountersDiscoveryMessage implements DiscoveryCustomMessage 
         return false;
     }
 
-    @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer,
-        DiscoCache discoCache) {
+    @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer, DiscoCache discoCache) {
         return discoCache.copy(topVer, null);
     }
 }

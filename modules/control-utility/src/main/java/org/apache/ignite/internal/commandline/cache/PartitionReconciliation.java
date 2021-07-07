@@ -57,8 +57,8 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PARTITION_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CACHE_SIZE_RECONCILIATION;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CONSISTENCY_RECONCILIATION;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CACHE_SIZE_CONSISTENCY_RECONCILIATION;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.DATA_CONSISTENCY_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FAST_CHECK;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
@@ -124,10 +124,10 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             "Amount of potentially inconsistent keys recheck attempts. Value between 1 (inclusive) and 5 (exclusive) should be used." +
                 " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
 
-        paramsDesc.put(CONSISTENCY_RECONCILIATION.toString(),
+        paramsDesc.put(DATA_CONSISTENCY_RECONCILIATION.toString(),
             "This option allows checking consistency of partitions. Default value is true.");
 
-        paramsDesc.put(CACHE_SIZE_RECONCILIATION.toString(),
+        paramsDesc.put(CACHE_SIZE_CONSISTENCY_RECONCILIATION.toString(),
             "This option allows checking sizes of partitions. Default value is true.");
 
         paramsDesc.put(INCLUDE_SENSITIVE.toString(),
@@ -146,8 +146,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             optional(PARALLELISM),
             optional(BATCH_SIZE),
             optional(RECHECK_ATTEMPTS),
-            optional(CONSISTENCY_RECONCILIATION),
-            optional(CACHE_SIZE_RECONCILIATION),
+            optional(DATA_CONSISTENCY_RECONCILIATION),
+            optional(CACHE_SIZE_CONSISTENCY_RECONCILIATION),
             optional(INCLUDE_SENSITIVE),
             optional(caches));
     }
@@ -240,8 +240,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         int recheckAttempts = (int)RECHECK_ATTEMPTS.defaultValue();
         RepairAlgorithm repairAlg = (RepairAlgorithm)REPAIR.defaultValue();
         int recheckDelay = (int)RECHECK_DELAY.defaultValue();
-        boolean consistencyReconciliation = (boolean)CONSISTENCY_RECONCILIATION.defaultValue();
-        boolean cacheSizeReconciliation = (boolean)CACHE_SIZE_RECONCILIATION.defaultValue();
+        boolean consistencyReconciliation = (boolean) DATA_CONSISTENCY_RECONCILIATION.defaultValue();
+        boolean cacheSizeReconciliation = (boolean) CACHE_SIZE_CONSISTENCY_RECONCILIATION.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -357,14 +357,14 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
                         break;
 
-                    case CONSISTENCY_RECONCILIATION:
+                    case DATA_CONSISTENCY_RECONCILIATION:
                         strVal = argIter.nextArg("The consistency reconciliation should be specified.");
 
                         consistencyReconciliation = Boolean.parseBoolean(strVal);
 
                         break;
 
-                    case CACHE_SIZE_RECONCILIATION:
+                    case CACHE_SIZE_CONSISTENCY_RECONCILIATION:
                         strVal = argIter.nextArg("The cache size reconciliation should be specified.");
 
                         cacheSizeReconciliation = Boolean.parseBoolean(strVal);

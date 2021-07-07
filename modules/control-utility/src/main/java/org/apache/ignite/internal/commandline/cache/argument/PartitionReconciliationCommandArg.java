@@ -61,10 +61,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     RECHECK_DELAY("--recheck-delay", 5),
 
     /** Consistency reconciliation. */
-    CONSISTENCY_RECONCILIATION("--consistency-reconciliation", Boolean.TRUE),
+    DATA_CONSISTENCY_RECONCILIATION("--data-consistency-reconciliation", Boolean.TRUE),
 
     /** Cache size reconciliation. */
-    CACHE_SIZE_RECONCILIATION("--cache-size-reconciliation", Boolean.TRUE);
+    CACHE_SIZE_CONSISTENCY_RECONCILIATION("--cache-size-consistency-reconciliation", Boolean.TRUE);
 
     /** Option name. */
     private final String name;

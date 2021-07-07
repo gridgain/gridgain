@@ -26,7 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  * Pageable partition batch request.
  */
-public class PartitionBatchRequestV2 extends CachePartitionRequest {
+public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** If reconciliation of consistency is needed. */
     public boolean reconConsist;
 
@@ -41,41 +41,18 @@ public class PartitionBatchRequestV2 extends CachePartitionRequest {
      */
     private static final long serialVersionUID = 0L;
 
-    /** Cache name. */
-    private final String cacheName;
-
-    /** Partition id. */
-    private final int partId;
-
-    /** Batch size. */
-    private final int batchSize;
-
-    /**
-     * Lower key, uses for pagination. The first request should set this value to null. This key excluding.
-     */
-    private final KeyCacheObject lowerKey;
-
     /**
      *
      */
     private Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
-     * Reconciliation start topology version.
-     */
-    private final AffinityTopologyVersion startTopVer;
-
-    /**
-     * @param reconConsist Is reconciliation of consistency needed.
-     * @param reconSize Is reconciliation of cache sizes is needed.
-     * @param repairAlg Repair algorithm.
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
-     * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
      * @param startTopVer Start topology version.
      */
     public PartitionBatchRequestV2(
@@ -87,12 +64,7 @@ public class PartitionBatchRequestV2 extends CachePartitionRequest {
         KeyCacheObject lowerKey,
         AffinityTopologyVersion startTopVer
     ) {
-        super(sesId, workloadChainId);
-        this.cacheName = cacheName;
-        this.partId = partId;
-        this.batchSize = batchSize;
-        this.lowerKey = lowerKey;
-        this.startTopVer = startTopVer;
+        super(sesId, workloadChainId, cacheName, partId, batchSize, lowerKey, startTopVer);
         this.reconConsist = true;
     }
 
@@ -118,40 +90,11 @@ public class PartitionBatchRequestV2 extends CachePartitionRequest {
         Map<UUID, NodePartitionSize> partSizesMap,
         AffinityTopologyVersion startTopVer
     ) {
-        super(sesId, workloadChainId);
+        super(sesId, workloadChainId, cacheName, partId, batchSize, lowerKey, startTopVer);
         this.reconConsist = reconConsist;
         this.reconSize = reconSize;
         this.repairAlg = repairAlg;
-        this.cacheName = cacheName;
-        this.partId = partId;
-        this.batchSize = batchSize;
-        this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
-        this.startTopVer = startTopVer;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int partitionId() {
-        return partId;
-    }
-
-    /** {@inheritDoc} */
-    @Override public String cacheName() {
-        return cacheName;
-    }
-
-    /**
-     * @return Batch size.
-     */
-    public int batchSize() {
-        return batchSize;
-    }
-
-    /**
-     * @return Lowest key of current batch.
-     */
-    public KeyCacheObject lowerKey() {
-        return lowerKey;
     }
 
     /**
@@ -159,13 +102,6 @@ public class PartitionBatchRequestV2 extends CachePartitionRequest {
      */
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
-    }
-
-    /**
-     * @return Reconciliation start topology version.
-     */
-    public AffinityTopologyVersion startTopVer() {
-        return startTopVer;
     }
 
     /** {@inheritDoc} */

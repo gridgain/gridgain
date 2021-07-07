@@ -222,7 +222,7 @@ public enum IgniteFeatures {
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
     SNAPSHOT_SFTP_UPLOAD_V2(60),
 
-    /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
+    /** Partition reconciliation utility version with cache size consistency. */
     PARTITION_RECONCILIATION_V2(61);
 
     /**

@@ -20,7 +20,7 @@ Arguments: --cache help --yes
     Parameters:
       --check-crc  - check the CRC-sum of pages stored on disk before verifying data consistency in partitions between primary and backup nodes.
 
-  --cache partition_reconciliation [--repair] [--fast-check] [--parallelism] [--batch-size] [--recheck-attempts] [--consistency-reconciliation] [--cache-size-reconciliation] [--include-sensitive] [cacheName1,...,cacheNameN]
+  --cache partition_reconciliation [--repair] [--fast-check] [--parallelism] [--batch-size] [--recheck-attempts] [--data-consistency-reconciliation] [--cache-size-consistency-reconciliation] [--include-sensitive] [cacheName1,...,cacheNameN]
     Verify whether there are inconsistent entries for the specified caches and print out the differences if any. Fix inconsistency if --repairargument is presented. When no parameters are specified, all user caches are verified. Cache filtering options configure the set of caches that will be processed by partition_reconciliation command. If cache names are specified, in form of regular expressions, only matching caches will be verified.
 
     Parameters:
@@ -29,8 +29,8 @@ Arguments: --cache help --yes
       --parallelism                 - Maximum number of threads that can be involved in partition reconciliation activities on one node. Default value equals number of cores.
       --batch-size                  - Amount of keys to retrieve within one job. Default value is 1000.
       --recheck-attempts            - Amount of potentially inconsistent keys recheck attempts. Value between 1 (inclusive) and 5 (exclusive) should be used. Default value is 2.
-      --consistency-reconciliation  - This option allows checking consistency of partitions. Default value is true.
-      --cache-size-reconciliation   - This option allows checking sizes of partitions. Default value is true.
+      --data-consistency-reconciliation  - This option allows checking consistency of partitions. Default value is true.
+      --cache-size-consistency-reconciliation   - This option allows checking sizes of partitions. Default value is true.
       --include-sensitive           - Print data to result with sensitive information: keys and values. Default value is false.
 
   --cache partition_reconciliation_cancel

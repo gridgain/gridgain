@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+/** Context for a cache size reconciliation. */
 public class ReconciliationContext {
     public enum SizeReconciliationState {
     NOT_STARTED,

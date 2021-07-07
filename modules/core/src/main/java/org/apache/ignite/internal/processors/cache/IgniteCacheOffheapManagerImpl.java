@@ -3185,7 +3185,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
                 if (c.operationType() != NOOP)
-                        finishRemove(cctx, key, c.oldRow, c.newRow);
+                    finishRemove(cctx, key, c.oldRow, c.newRow);
             }
             finally {
                 busyLock.leaveBusy();
