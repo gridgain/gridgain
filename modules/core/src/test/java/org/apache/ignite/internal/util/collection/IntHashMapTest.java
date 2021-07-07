@@ -18,6 +18,7 @@ package org.apache.ignite.internal.util.collection;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,7 +26,9 @@ import org.junit.Test;
 import static org.apache.ignite.internal.util.collection.IntHashMap.INITIAL_CAPACITY;
 import static org.apache.ignite.internal.util.collection.IntHashMap.MAXIMUM_CAPACITY;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 /**
  * Test for the specific implementation of IntMap.
@@ -138,6 +141,29 @@ public class IntHashMapTest extends AbstractBaseIntMapTest {
 
         assertEquals("0 0", map0.get(0));
         assertEquals("1 0", map0.get(1));
+    }
+
+    /**
+     * Tests the {@link IntHashMap#clear} method.
+     */
+    @Test
+    public void testClear() {
+        IntMap<String> map = new IntHashMap<>();
+
+        IntStream.range(0, 10).forEach(i -> map.put(i, String.valueOf(i)));
+
+        assertThat(map.size(), is(10));
+
+        map.clear();
+
+        assertThat(map.size(), is(0));
+
+        IntStream.range(0, 10).forEach(i -> assertThat(map.containsKey(i), is(false)));
+
+        // clear an empty map
+        map.clear();
+
+        assertThat(map.size(), is(0));
     }
 
     /**
