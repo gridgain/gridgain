@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -304,8 +303,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             KeyCacheObject oldBorderKey = null;
 
-            Map<KeyCacheObject, Boolean> tempMap = null;
-
             if (reconSize) {
                 try {
                     partReconciliationCtx = cacheDataStore.reconciliationCtx();
@@ -322,15 +319,16 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
                     try {
                         nodeSize.inProgress(true);
+
                         partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
+
+                        partReconciliationCtx.resetSize(cacheId);
+
+                        partReconciliationCtx.resetCacheKeysMap(cacheId);
                     }
                     finally {
                         cacheDataStore.unblock();
                     }
-
-                    partReconciliationCtx.sizes.putIfAbsent(cacheId, new AtomicLong());
-
-                    partReconciliationCtx.tempMap.putIfAbsent(cacheId, new ConcurrentHashMap<>());
                 }
                 else {
                     if (nodePartitionSize != null)
@@ -339,11 +337,9 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
                 lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
 
-                partSize = partReconciliationCtx.sizes.get(cacheId);
+                partSize = partReconciliationCtx.size(cacheId);
 
                 oldBorderKey = partReconciliationCtx.lastKey(cacheId);
-
-                tempMap = partReconciliationCtx.tempMap.get(cacheId);
             }
 
             KeyCacheObject keyToStart = null;
@@ -387,14 +383,12 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                             (lowerKey == null || lowerKey.equals(newLowerKey))) &&
                         partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
 
-                        nodeSize.lastKey((partReconciliationCtx.lastKey(cacheId)));
-
                         cacheDataStore.block();
 
                         try {
                             partReconciliationCtx.sizeReconciliationState(cacheId, FINISHED);
 
-                            Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
+                            Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = partReconciliationCtx.getCacheKeysIterator(cacheId);
 
                             while (tempMapIter.hasNext()) {
                                 tempMapIter.next();
@@ -406,8 +400,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
                             else
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
-
-                            nodeSize.lastKey(null);
 
                             nodeSize.inProgress(false);
                         }

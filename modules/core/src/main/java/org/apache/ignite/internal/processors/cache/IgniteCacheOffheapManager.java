@@ -668,7 +668,7 @@ public interface IgniteCacheOffheapManager {
          */
         public ReconciliationContext startReconciliation(int cacheId);
 
-        /** Applying a reconciliation of cache sizes result. */
+        /** Applying of a cache size consistency reconciliation result. */
         public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
 
         /**

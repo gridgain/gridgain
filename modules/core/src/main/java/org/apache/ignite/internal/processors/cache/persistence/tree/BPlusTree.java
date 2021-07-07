@@ -107,9 +107,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
 @SuppressWarnings({"ConstantValueVariableUse"})
 public abstract class BPlusTree<L, T extends L> extends DataStructure implements IgniteTree<L, T> {
     /**
-     * @return Cache sizes reconciliation context.
+     * Cache sizes reconciliation context.
      */
-    public ReconciliationContext reconciliationCtx;
+    private ReconciliationContext reconciliationCtx;
 
     /** */
     private static final Object[] EMPTY = {};
@@ -266,8 +266,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /** */
     private final PageHandler<Get, Result> askNeighbor;
 
+    /**
+    * Types for specific purpose cursors.
+    */
     public enum CursorType {
-        RECONCILIATION;
+        /** */
+        RECONCILIATION
     }
 
     /**
@@ -463,7 +467,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
             if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS)
-                p.reconReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
+                p.reconciliationForReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
         }
@@ -502,7 +506,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 row0 = (CacheDataRowAdapter) p.row;
 
             if (reconciliationCtx != null && row0 != null && reconciliationCtx.sizeReconciliationState(row0.cacheId()) == IN_PROGRESS)
-                p.reconInsert(p.row);
+                p.reconciliationForInsert(p.row);
 
             // Check if split happened.
             if (moveUpRow != null) {
@@ -895,6 +899,16 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         rmvFromLeaf = (PageHandler<Remove, Result>) wrap(this, new RemoveFromLeaf());
         insert = (PageHandler<Put, Result>) wrap(this, new Insert());
         replace = (PageHandler<Put, Result>) wrap(this, new Replace());
+    }
+
+    /** */
+    public ReconciliationContext reconciliationCtx() {
+        return reconciliationCtx;
+    }
+
+    /** */
+    public void reconciliationCtx(ReconciliationContext reconciliationCtx) {
+        this.reconciliationCtx = reconciliationCtx;
     }
 
     /**
@@ -3192,37 +3206,37 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         /** Size reconciliation logic for insert new entry to the cache. */
-        public void reconInsert(L newRow) {
+        public void reconciliationForInsert(L newRow) {
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
 
-                AtomicLong reconSize = reconciliationCtx.sizes.get(row0.cacheId());
+                AtomicLong reconSize = reconciliationCtx.size(row0.cacheId());
 
                 if (row0.isReady() && !row0.tombstone()) {
                     //need to increment the real size if the reconciliation cursor has moved beyond this key and does not see the key
-                    if (reconciliationCtx.lastKey(row0.cacheId()) != null && reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(row0.cacheId())) <= 0)
+                    if (reconciliationCtx.lastKey(row0.cacheId()) != null && ReconciliationContext.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(row0.cacheId())) <= 0)
                         reconSize.incrementAndGet();
                     //put key in temp collection if reconciliation cursor didn't see the key and can see it further
                     else
-                        reconciliationCtx.tempMap.get(row0.cacheId()).put(row0.key(), true);
+                        reconciliationCtx.putCacheKeyMap(row0.cacheId(), row0.key());
                 }
             }
 
         }
 
         /** Size reconciliation logic for remove entry from the cache. */
-        public void reconRemove(int cacheId, KeyCacheObject key) {
+        public void reconciliationForRemove(int cacheId, KeyCacheObject key) {
             //Need to decrement real size if reconciliation cursor has moved beyond this key and will can not see the key
             if ((reconciliationCtx.lastKey(cacheId) != null &&
-                reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
+                    ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
                 reconciliationCtx.size(cacheId).decrementAndGet();
             else {
-                reconciliationCtx.tempMap.get(cacheId).compute(key, (k, v) -> {
+                reconciliationCtx.computeCacheKeysMap(cacheId, key, (k, v) -> {
                     //Reconciliation cursor didn't see the key and cannot see it further. Just remove key from temp collection.
                     if (k != null && v != null)
                         return null;
                     //Need to decrement real size if reconciliation cursor has moved beyond this key and cursor saw the key
-                    else if (v == null && reconciliationCtx.lastKey(cacheId) != null && reconciliationCtx.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0) {
+                    else if (v == null && reconciliationCtx.lastKey(cacheId) != null && ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0) {
                         reconciliationCtx.size(cacheId).decrementAndGet();
 
                         return null;
@@ -3240,12 +3254,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (row instanceof SearchRow) {
                 SearchRow row0 = (SearchRow)row;
 
-                reconRemove(row0.cacheId(), row0.key());
+                reconciliationForRemove(row0.cacheId(), row0.key());
             }
         }
 
         /** */
-        public void reconReplace(L oldRow, L newRow) {
+        public void reconciliationForReplace(L oldRow, L newRow) {
             if (newRow instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
 
@@ -3260,12 +3274,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         oldIsTombstone = true;
                 }
 
-                if (row0.isReady() && ((row0.tombstone() && !oldIsTombstone && oldRow != null)))
-                    reconRemove(row0.cacheId(), row0.key());
-                else if (row0.isReady() && !row0.tombstone() && (/*oldRow == null || */oldIsTombstone))
-                    reconInsert(newRow);
+                if (row0.isReady() && row0.tombstone() && oldRow != null && !oldIsTombstone)
+                    reconciliationForRemove(row0.cacheId(), row0.key());
+                else if (row0.isReady() && !row0.tombstone() && oldIsTombstone)
+                    reconciliationForInsert(newRow);
             }
-
         }
     }
 
@@ -6070,9 +6083,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
     }
 
+    /**
+     * A cursor for cache consistency reconciliation
+     * which contains attitional logic for cache size consistency reconciliation.
+     */
     private final class ReconciliationCursor extends ForwardCursor {
-        /** Cache id. */
-        public int cacheId;
+        /** Cache ID. */
+        private int cacheId;
 
         /**
          * @param lowerBound Lower bound.
@@ -6086,7 +6103,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             this.cacheId = cacheId;
         }
 
-        protected void handleRows() {
+        /**
+         * Handler of a rows for cache size consistency reconciliation.
+         */
+        @Override protected void handleRows() {
             if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
                 KeyCacheObject lastKey = null;
                 KeyCacheObject firstKey = null;
@@ -6098,7 +6118,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     if (row0 != null &&
                             (reconciliationCtx.lastKey(cacheId) == null ||
-                                    reconciliationCtx.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
+                                ReconciliationContext.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
 
                         if (row0.tombstone())
                             continue;
@@ -6112,27 +6132,22 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     }
                 }
 
-                if (firstKey != null)
-                    reconciliationCtx.firstKey(cacheId, firstKey);
-
                 if (lastKey != null)
                     reconciliationCtx.lastKey(cacheId, lastKey);
 
                 if (!newTempMap.isEmpty()) {
-                    Map<KeyCacheObject, Boolean> tempMap = reconciliationCtx.tempMap.get(cacheId);
+                    AtomicLong partSize = reconciliationCtx.size(cacheId);
 
-                    AtomicLong partSize = reconciliationCtx.sizes.get(cacheId);
-
-                    Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = tempMap.entrySet().iterator();
+                    Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = reconciliationCtx.getCacheKeysIterator(cacheId);
 
                     while (tempMapIter.hasNext()) {
                         Map.Entry<KeyCacheObject, Boolean> entry = tempMapIter.next();
 
                         KeyCacheObject finalFirstKey = firstKey;
 
-                        tempMap.computeIfPresent(entry.getKey(), (k, v) -> {
+                        reconciliationCtx.computeIfPresentCacheKeysMap(cacheId, entry.getKey(), (k, v) -> {
                             //Key from previous page. Need to increment real size
-                            if (k != null && v != null && reconciliationCtx.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
+                            if (k != null && v != null && ReconciliationContext.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
                                 partSize.incrementAndGet();
 
                                 return null;
@@ -6144,7 +6159,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         });
                     }
 
-                    tempMap.putAll(newTempMap);
+                    reconciliationCtx.putAllCacheKeysMap(cacheId, newTempMap);
                 }
             }
         }

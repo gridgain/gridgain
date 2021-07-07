@@ -22,7 +22,7 @@ import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 
-/** */
+/** Container for cache size consistency reconsiliztion result */
 public class NodePartitionSize extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
@@ -32,12 +32,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
 
     /** */
     private boolean inProgress;
-
-    /** */
-    private boolean isFinished;
-
-    /** */
-    private KeyCacheObject lastKey;
 
     /** Brocken cache size from partition meta. */
     private long oldCacheSize;
@@ -75,26 +69,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     }
 
     /** */
-    public boolean finished() {
-        return isFinished;
-    }
-
-    /** */
-    public void finished(boolean finished) {
-        isFinished = finished;
-    }
-
-    /** */
-    public KeyCacheObject lastKey() {
-        return lastKey;
-    }
-
-    /** */
-    public void lastKey(KeyCacheObject lastKey) {
-        this.lastKey = lastKey;
-    }
-
-    /** */
     public long oldCacheSize() {
         return oldCacheSize;
     }
@@ -118,8 +92,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(cacheName);
         out.writeBoolean(inProgress);
-        out.writeBoolean(isFinished);
-        out.writeObject(lastKey);
         out.writeLong(oldCacheSize);
         out.writeLong(newCacheSize);
     }
@@ -129,8 +101,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         ObjectInput in) throws IOException, ClassNotFoundException {
         cacheName = (String)in.readObject();
         inProgress = in.readBoolean();
-        isFinished = in.readBoolean();
-        lastKey = (KeyCacheObject)in.readObject();
         oldCacheSize = in.readLong();
         newCacheSize = in.readLong();
     }

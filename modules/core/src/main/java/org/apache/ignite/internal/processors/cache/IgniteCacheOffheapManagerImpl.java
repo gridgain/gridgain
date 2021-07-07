@@ -1663,16 +1663,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccUpdateTxStateHint = new MvccUpdateTxStateHintHandler(grp);
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
 
-            this.dataTree.reconciliationCtx = reconciliationCtx;
+            this.dataTree.reconciliationCtx(reconciliationCtx);
         }
 
-        /** {@inheritDoc}
-         * @return*/
+        /** {@inheritDoc} */
         @Override public ReconciliationContext startReconciliation(int cacheId) {
             if (reconciliationCtx == null) {
                 reconciliationCtx = new ReconciliationContext();
 
-                tree().reconciliationCtx = reconciliationCtx;
+                tree().reconciliationCtx(reconciliationCtx);
             }
 
             reconciliationCtx.sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
@@ -1685,7 +1684,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (reconciliationCtx == null) {
                 reconciliationCtx = new ReconciliationContext();
 
-                tree().reconciliationCtx = reconciliationCtx;
+                tree().reconciliationCtx(reconciliationCtx);
             }
 
             return reconciliationCtx;
@@ -1791,7 +1790,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 nodePartitionSize.oldCacheSize(cacheSize != null ? cacheSize.get() : 0);
 
-                long newSize = reconciliationCtx().sizes.remove(cacheId).get();
+                long newSize = reconciliationCtx().finishSize(cacheId).get();
 
                 nodePartitionSize.newCacheSize(newSize);
 
@@ -1807,17 +1806,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 nodePartitionSize.oldCacheSize(storageSize.get());
 
-                long newSize = reconciliationCtx().sizes.remove(CU.UNDEFINED_CACHE_ID).get();
+                long newSize = reconciliationCtx().finishSize(CU.UNDEFINED_CACHE_ID).get();
 
                 nodePartitionSize.newCacheSize(newSize);
-
-                storageSize.set(newSize);
+                if (repair)
+                    storageSize.set(newSize);
             }
 
-            if (reconciliationCtx().sizes.isEmpty()) {
+            if (reconciliationCtx().partSizeIsFinished()) {
                 reconciliationCtx = null;
 
-                tree().reconciliationCtx = null;
+                tree().reconciliationCtx(null);
             }
         }
 
