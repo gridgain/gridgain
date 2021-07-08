@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * Partition reconciliation task arguments.
@@ -80,7 +80,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     private int recheckDelay;
 
     /** Types of reconciliation. */
-    private Set<ReconType> reconTypes;
+    private Set<ReconciliationType> reconciliationTypes;
 
     /**
      * Default constructor.
@@ -104,7 +104,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
      * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param recheckDelay Recheck delay in seconds.
-     * @param reconTypes Types of reconciliation.
+     * @param reconciliationTypes Types of reconciliation.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(
@@ -118,7 +118,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         int recheckAttempts,
         RepairAlgorithm repairAlg,
         int recheckDelay,
-        Set<ReconType> reconTypes
+        Set<ReconciliationType> reconciliationTypes
     ) {
         this.caches = caches;
         this.fastCheck = fastCheck;
@@ -130,7 +130,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
         this.recheckDelay = recheckDelay;
-        this.reconTypes = reconTypes;
+        this.reconciliationTypes = reconciliationTypes;
     }
 
     /**
@@ -149,7 +149,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.recheckAttempts,
              b.repairAlg,
              b.recheckDelay,
-             b.reconTypes);
+             b.reconciliationTypes);
 
         if (b.partsToRepair != null) {
             partsToRepair = b.partsToRepair
@@ -189,7 +189,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         U.writeIntKeyMap(out, partsToRepair);
 
-        U.writeCollection(out, reconTypes);
+        U.writeCollection(out, reconciliationTypes);
     }
 
     /** {@inheritDoc} */
@@ -220,7 +220,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         if (protoVer >= V3)
-            reconTypes = U.readSet(in);
+            reconciliationTypes = U.readSet(in);
     }
 
     /**
@@ -302,8 +302,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /** @return Types of reconciliation. */
-    public Set<ReconType> reconTypes() {
-        return reconTypes;
+    public Set<ReconciliationType> reconTypes() {
+        return reconciliationTypes;
     }
 
     /**
@@ -351,7 +351,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         private int recheckDelay;
 
         /** Types of reconciliation. */
-        private Set<ReconType> reconTypes;
+        private Set<ReconciliationType> reconciliationTypes;
 
         /**
          * Default constructor.
@@ -367,7 +367,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
-            reconTypes = new HashSet<>(Arrays.asList(CONSISTENCY, SIZES));
+            reconciliationTypes = new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY));
         }
 
         /**
@@ -388,7 +388,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = cpFrom.recheckAttempts;
             recheckDelay = cpFrom.recheckDelay;
             repairAlg = cpFrom.repairAlg;
-            reconTypes = cpFrom.reconTypes;
+            reconciliationTypes = cpFrom.reconciliationTypes;
         }
 
         /**
@@ -510,11 +510,11 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param reconTypes Types of reconciliation.
+         * @param reconciliationTypes Types of reconciliation.
          * @return Builder for chaining.
          */
-        public Builder reconTypes(Set<ReconType> reconTypes) {
-            this.reconTypes = reconTypes;
+        public Builder reconTypes(Set<ReconciliationType> reconciliationTypes) {
+            this.reconciliationTypes = reconciliationTypes;
 
             return this;
         }

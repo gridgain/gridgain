@@ -19,17 +19,17 @@ package org.apache.ignite.internal.processors.cache.verify;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *
+ * Reconciliation types
  */
-public enum ReconType {
-    /** */
-    CONSISTENCY,
+public enum ReconciliationType {
+    /** Data consistency reconciliation. */
+    DATA_CONSISTENCY,
 
-    /** */
-    SIZES;
+    /** Cache size reconciliation. */
+    CACHE_SIZE_CONSISTENCY;
 
     /** Enumerated values. */
-    private static final ReconType[] VALS = values();
+    private static final ReconciliationType[] VALS = values();
 
     /**
      * Efficiently gets enumerated value from its ordinal.
@@ -37,15 +37,7 @@ public enum ReconType {
      * @param ord Ordinal value.
      * @return Enumerated value or {@code null} if ordinal out of range.
      */
-    @Nullable public static ReconType fromOrdinal(int ord) {
+    @Nullable public static ReconciliationType fromOrdinal(int ord) {
         return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
     }
-
-    /**
-     * @return Default repair algorithm.
-     */
-    public static ReconType defaultValue() {
-        return CONSISTENCY;
-    }
-
 }

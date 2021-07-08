@@ -60,10 +60,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** Recheck delay seconds. */
     RECHECK_DELAY("--recheck-delay", 5),
 
-    /** Consistency reconciliation. */
+    /** Data consistency reconciliation. */
     DATA_CONSISTENCY_RECONCILIATION("--data-consistency-reconciliation", Boolean.TRUE),
 
-    /** Cache size reconciliation. */
+    /** Cache size consistency reconciliation. */
     CACHE_SIZE_CONSISTENCY_RECONCILIATION("--cache-size-consistency-reconciliation", Boolean.TRUE);
 
     /** Option name. */

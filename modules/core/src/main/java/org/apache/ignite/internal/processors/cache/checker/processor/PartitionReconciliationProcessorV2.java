@@ -49,7 +49,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -59,8 +59,8 @@ import static java.util.Collections.EMPTY_SET;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * The base point of partition reconciliation processing.
@@ -91,7 +91,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     /** Caches. */
     private final Collection<String> caches;
 
-    /** Indicates that inconsistent key values should be repaired in accordance with {@link #repairAlg}. */
+    /** Indicates that inconsistent key values and cache sizes should be repaired in accordance with {@link #repairAlg}. */
     private final boolean repair;
 
     /**
@@ -112,7 +112,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
      */
     private final RepairAlgorithm repairAlg;
 
-    private final Set<ReconType> reconTypes;
+    private final Set<ReconciliationType> reconciliationTypes;
 
     /** Tracks workload chains based on its lifecycle. */
     private final WorkloadTracker workloadTracker = new WorkloadTracker();
@@ -149,7 +149,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
         int batchSize,
         int recheckAttempts,
         int recheckDelay,
-        Set<ReconType> reconTypes,
+        Set<ReconciliationType> reconciliationTypes,
         boolean compact,
         boolean includeSensitive
     ) throws IgniteCheckedException {
@@ -162,7 +162,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
-        this.reconTypes = reconTypes;
+        this.reconciliationTypes = reconciliationTypes;
 
         registerListener(workloadTracker.andThen(evtLsnr));
 
@@ -203,7 +203,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconTypes.contains(CONSISTENCY), reconTypes.contains(SIZES), repairAlg, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), repair, repairAlg, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -317,7 +317,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTaskV2.class,
-            new PartitionBatchRequestV2(workload.reconConsist, workload.reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
@@ -329,7 +329,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.repairAlg, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
+                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
                 if (nextBatchKey == null) {
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());

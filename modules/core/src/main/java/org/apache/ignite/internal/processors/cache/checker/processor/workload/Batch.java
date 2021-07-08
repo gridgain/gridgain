@@ -29,13 +29,19 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
  */
 public class Batch extends PipelineWorkload {
     /** If reconciliation of consistency is needed. */
-    public boolean reconConsist;
+    private boolean dataReconciliation;
 
     /** If reconciliation of cache sizes is needed. */
-    public boolean reconSize;
+    private boolean cacheSizeReconciliation;
 
-    /** */
-    public RepairAlgorithm repairAlg;
+    /** If {@code true} - Partition Reconciliation&Fix. */
+    private boolean repair;
+
+    /**
+     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while
+     * repairing doubtful keys.
+     */
+    private RepairAlgorithm repairAlg;
 
     /** Cache name. */
     private final String cacheName;
@@ -70,14 +76,21 @@ public class Batch extends PipelineWorkload {
     /**
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
+     * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
+     * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
+     * @param repair Flag indicates that an inconsistency should be fixed in accordance with {@code repairAlg} parameter.
+     * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param cacheName Cache name.
      * @param partId Partition id.
+     * @param cacheId cache id.
      * @param lowerKey Lower key.
+     * @param partSizesMap Map of partition sizes.
      */
-    public Batch(boolean reconConsist, boolean reconSize, RepairAlgorithm repairAlg, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
+    public Batch(boolean dataReconciliation, boolean cacheSizeReconciliation, boolean repair, RepairAlgorithm repairAlg, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
         super(sesId, workloadChainId);
-        this.reconConsist = reconConsist;
-        this.reconSize = reconSize;
+        this.dataReconciliation = dataReconciliation;
+        this.cacheSizeReconciliation = cacheSizeReconciliation;
+        this.repair = repair;
         this.repairAlg = repairAlg;
 
         this.cacheName = cacheName;
@@ -85,6 +98,34 @@ public class Batch extends PipelineWorkload {
         this.cacheId = cacheId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
+    }
+
+    /**
+     * @return Data reconciliation.
+     */
+    public boolean dataReconciliation() {
+        return dataReconciliation;
+    }
+
+    /**
+     * @return Cache size reconciliation.
+     */
+    public boolean cacheSizeReconciliation() {
+        return cacheSizeReconciliation;
+    }
+
+    /**
+     * @return Repair.
+     */
+    public boolean repair() {
+        return repair;
+    }
+
+    /**
+     * @return Repair algorithm.
+     */
+    public RepairAlgorithm repairAlg() {
+        return repairAlg;
     }
 
     /**

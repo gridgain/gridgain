@@ -30,7 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.datastructures.GridCacheInternalKeyImpl;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -39,8 +39,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * Tests that reconciliation works with data structures.
@@ -159,14 +159,14 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
 
         ig.cluster().active(true);
 
-        Set<ReconType> reconTypes = new HashSet<>();
+        Set<ReconciliationType> reconciliationTypes = new HashSet<>();
 
-        reconTypes.add(CONSISTENCY);
+        reconciliationTypes.add(DATA_CONSISTENCY);
 
         if (rnd.nextBoolean())
-            reconTypes.add(SIZES);
+            reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4,reconTypes, cacheName);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, reconciliationTypes, cacheName);
 
         log.info(">>>> Partition reconciliation finished");
 

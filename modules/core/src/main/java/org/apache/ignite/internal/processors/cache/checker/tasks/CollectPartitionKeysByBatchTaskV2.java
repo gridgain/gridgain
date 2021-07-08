@@ -258,10 +258,10 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> execute0() {
-            boolean reconConsist = partBatch.reconConsist;
+            boolean reconConsist = partBatch.dataReconciliation();
 
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
-            boolean reconSize = partBatch.reconSize &&
+            boolean reconSize = partBatch.cacheSizeReconciliation() &&
                 (nodePartitionSize == null || nodePartitionSize.inProgress());
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
@@ -396,7 +396,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                                 partSize.incrementAndGet();
                             }
 
-                            if (partBatch.repairAlg != RepairAlgorithm.PRINT_ONLY)
+                            if (partBatch.repair())
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
                             else
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);

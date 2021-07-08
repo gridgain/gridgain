@@ -35,15 +35,15 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * Tests the utility under loading.
@@ -211,16 +211,16 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
             }
         }, 4, "rand-loader");
 
-        Set<ReconType> reconTypes = new HashSet<>();
+        Set<ReconciliationType> reconciliationTypes = new HashSet<>();
 
-        reconTypes.add(CONSISTENCY);
+        reconciliationTypes.add(DATA_CONSISTENCY);
 
         if (rnd.nextBoolean())
-            reconTypes.add(SIZES);
+            reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
-        log.info(">>> Reconciliation types: " + reconTypes);
+        log.info(">>> Reconciliation types: " + reconciliationTypes);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, reconTypes, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, reconciliationTypes, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

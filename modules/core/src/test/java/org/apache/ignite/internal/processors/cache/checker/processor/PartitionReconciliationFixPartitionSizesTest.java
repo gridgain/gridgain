@@ -32,7 +32,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -40,8 +40,8 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * Tests partition reconciliation of sizes.
@@ -141,7 +141,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cacheNames.add(DEFAULT_CACHE_NAME);
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.reconTypes(new HashSet(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         reconResult = new AtomicReference<>();
@@ -324,7 +324,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cacheNames.add(cache5_group1.getName());
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.reconTypes(new HashSet(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         List<String> errors = partitionReconciliation(client, builder).errors();
@@ -388,7 +388,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cacheNames.add(cache.getName());
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.reconTypes(new HashSet(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         List<String> errors = partitionReconciliation(client, builder).errors();
@@ -440,7 +440,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cacheNames.add(cache.getName());
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY, SIZES)));
+        builder.reconTypes(new HashSet(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         List<String> errors = partitionReconciliation(client, builder).errors();
@@ -450,16 +450,54 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         assertEquals(0, cache.size());
     }
 
-    /** Test that size not repaired if reconciliation was started without {@link ReconType#SIZES} */
+    /**
+     * Test that size not repaired if reconciliation was started without {@link ReconciliationType#CACHE_SIZE_CONSISTENCY}.
+     * Cache in cache group.
+     */
     @Test
-    public void testCacheSizeNotRepaired() throws Exception {
+    public void testCacheSizeNotRepaired1() throws Exception {
+        testCacheSizeNotRepaired(true, Arrays.asList(DATA_CONSISTENCY), true);
+    }
+
+    /**
+     * Test that size not repaired if reconciliation was started without repair enabled.
+     * Cache in cache group.
+     */
+    @Test
+    public void testCacheSizeNotRepaired2() throws Exception {
+        testCacheSizeNotRepaired(false, Arrays.asList(CACHE_SIZE_CONSISTENCY), true);
+    }
+
+    /**
+     * Test that size not repaired if reconciliation was started without {@link ReconciliationType#CACHE_SIZE_CONSISTENCY}.
+     */
+    @Test
+    public void testCacheSizeNotRepaired3() throws Exception {
+        testCacheSizeNotRepaired(true, Arrays.asList(DATA_CONSISTENCY), false);
+    }
+
+    /**
+     * Test that size not repaired if reconciliation was started without repair enabled.
+     */
+    @Test
+    public void testCacheSizeNotRepaired4() throws Exception {
+        testCacheSizeNotRepaired(false, Arrays.asList(CACHE_SIZE_CONSISTENCY), false);
+    }
+
+    /** */
+    private void testCacheSizeNotRepaired(boolean repair, List<ReconciliationType> reconciliationTypes, boolean cacheGroup) throws Exception {
         int nodesCnt = 3;
 
         ig = startGrids(nodesCnt);
 
         client = startClientGrid(nodesCnt);
 
-        IgniteCache cache = client.createCache("cache0");
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>("cache0");
+
+        if (cacheGroup)
+            ccfg.setGroupName("cacheGroup0");
+
+        IgniteCache cache = client.createCache(ccfg);
 
         for (int i = 0; i < 1000; i++)
             cache.put(i, i);
@@ -476,13 +514,13 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         assertFalse(cache.size() == 1000);
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
-        builder.repair(true);
+        builder.repair(repair);
         builder.parallelism(10);
         Set<String> cacheNames = new HashSet<>();
         cacheNames.add(cache.getName());
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(CONSISTENCY)));
+        builder.reconTypes(new HashSet<>(reconciliationTypes));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         List<String> errors = partitionReconciliation(client, builder).errors();
@@ -539,7 +577,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cacheNames.add(cache.getName());
         builder.caches(cacheNames);
         builder.batchSize(10);
-        builder.reconTypes(new HashSet(Arrays.asList(SIZES)));
+        builder.reconTypes(new HashSet(Arrays.asList(CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         List<String> errors = partitionReconciliation(client, builder).errors();

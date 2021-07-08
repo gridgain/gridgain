@@ -34,7 +34,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -48,8 +48,8 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
 /**
  * Tests partition reconciliation of sizes with in-memory caches.
@@ -217,14 +217,14 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void test() throws Exception {
-        Set<ReconType> reconTypes = new HashSet<>();
+        Set<ReconciliationType> reconciliationTypes = new HashSet<>();
 
-        reconTypes.add(SIZES);
+        reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
         if (rnd.nextBoolean())
-            reconTypes.add(CONSISTENCY);
+            reconciliationTypes.add(DATA_CONSISTENCY);
 
-        log.info(">>> Reconciliation types: " + reconTypes);
+        log.info(">>> Reconciliation types: " + reconciliationTypes);
 
         ig = startGrids(nodesCnt);
 
@@ -279,7 +279,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         builder.parallelism(reconParallelism);
         builder.caches(cacheNames);
         builder.batchSize(reconBatchSize);
-        builder.reconTypes(new HashSet(reconTypes));
+        builder.reconTypes(new HashSet(reconciliationTypes));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
         reconResult = new AtomicReference<>();

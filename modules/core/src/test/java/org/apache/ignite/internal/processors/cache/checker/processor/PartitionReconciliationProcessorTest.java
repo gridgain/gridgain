@@ -74,8 +74,8 @@ import org.mockito.verification.VerificationMode;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconType.SIZES;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -113,7 +113,7 @@ public class PartitionReconciliationProcessorTest {
 
         ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(null, new HashMap<>(), partSizesMap));
 
-        processor.addTask(new Batch(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+        processor.addTask(new Batch(true, true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
             .execute();
@@ -136,7 +136,7 @@ public class PartitionReconciliationProcessorTest {
         Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
         ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(nextKey, batchRes, partSizesMap));
 
-        processor.addTask(new Batch(true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+        processor.addTask(new Batch(true, true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
             .execute();
@@ -434,7 +434,7 @@ public class PartitionReconciliationProcessorTest {
                 batchSize,
                 recheckAttempts,
                 recheckDelay,
-                new HashSet<>(Arrays.asList(CONSISTENCY, SIZES)),
+                new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)),
                 false,
                 true);
         }

@@ -43,7 +43,7 @@ import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.verify.ReconType;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
@@ -374,13 +374,13 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             }
         }
 
-        HashSet<ReconType> reconTypes = new HashSet<>();
+        HashSet<ReconciliationType> reconciliationTypes = new HashSet<>();
 
         if (consistencyReconciliation)
-            reconTypes.add(ReconType.CONSISTENCY);
+            reconciliationTypes.add(ReconciliationType.DATA_CONSISTENCY);
 
         if (cacheSizeReconciliation)
-            reconTypes.add(ReconType.SIZES);
+            reconciliationTypes.add(ReconciliationType.CACHE_SIZE_CONSISTENCY);
 
         args = new Arguments(
             cacheNames,
@@ -393,7 +393,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             recheckAttempts,
             repairAlg,
             recheckDelay,
-            reconTypes);
+            reconciliationTypes);
     }
 
     /**
@@ -537,7 +537,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         private int recheckDelay;
 
         /** Types of reconciliation. */
-        private Set<ReconType> reconTypes;
+        private Set<ReconciliationType> reconciliationTypes;
 
         /**
          * Constructor.
@@ -566,7 +566,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             int recheckAttempts,
             RepairAlgorithm repairAlg,
             int recheckDelay,
-            Set<ReconType> reconTypes
+            Set<ReconciliationType> reconciliationTypes
         ) {
             this.caches = caches;
             this.repair = repair;
@@ -578,7 +578,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             this.recheckAttempts = recheckAttempts;
             this.repairAlg = repairAlg;
             this.recheckDelay = recheckDelay;
-            this.reconTypes = reconTypes;
+            this.reconciliationTypes = reconciliationTypes;
         }
 
         /**
@@ -655,8 +655,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         /**
          * @return Recheck delay.
          */
-        public Set<ReconType> reconTypes() {
-            return reconTypes;
+        public Set<ReconciliationType> reconTypes() {
+            return reconciliationTypes;
         }
     }
 }
