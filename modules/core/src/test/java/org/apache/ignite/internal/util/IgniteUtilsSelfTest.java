@@ -49,6 +49,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
@@ -89,6 +90,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static com.google.common.collect.Sets.newHashSet;
 import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -1515,6 +1517,170 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
         finally {
             assertTrue(U.delete(zipFile));
         }
+    }
+
+    /**
+     * Test to verify the {@link U#setIntersection(Set, Set)}.
+     */
+    @Test
+    public void testSetIntersection() {
+        assertEquals(
+                newHashSet("bar"),
+                U.setIntersection(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setIntersection(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setIntersection(newHashSet(), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setIntersection(null, newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setIntersection(newHashSet("foo", "bar", "qwe"), null)
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setIntersection(null, null)
+        );
+    }
+
+    /**
+     * Test to verify the {@link U#setIntersectionSize(Set, Set)}.
+     */
+    @Test
+    public void testSetIntersectionSize() {
+        assertEquals(
+                1,
+                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setIntersectionSize(newHashSet(), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setIntersectionSize(null, newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), null)
+        );
+
+        assertEquals(
+                0,
+                U.setIntersectionSize(null, null)
+        );
+    }
+
+    /**
+     * Test to verify the {@link U#setSubtraction(Set, Set)}.
+     */
+    @Test
+    public void testSetSubtraction() {
+        assertEquals(
+                newHashSet("foo", "qwe"),
+                U.setSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet("foo", "bar", "qwe"),
+                U.setSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet("foo", "bar", "qwe"),
+                U.setSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet())
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("foo", "bar", "qwe"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setSubtraction(newHashSet(), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setSubtraction(null, newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setSubtraction(newHashSet("foo", "bar", "qwe"), null)
+        );
+
+        assertEquals(
+                newHashSet(),
+                U.setSubtraction(null, null)
+        );
+    }
+
+    /**
+     * Test to verify the {@link U#setSubtractionSize(Set, Set)}.
+     */
+    @Test
+    public void testSetSubtractionSize() {
+        assertEquals(
+                2,
+                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                3,
+                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+        );
+
+        assertEquals(
+                3,
+                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet())
+        );
+
+        assertEquals(
+                0,
+                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("foo", "bar", "qwe"))
+        );
+
+        assertEquals(
+                0,
+                U.setSubtractionSize(newHashSet(), newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setSubtractionSize(null, newHashSet("bar", "xyz"))
+        );
+
+        assertEquals(
+                0,
+                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), null)
+        );
+
+        assertEquals(
+                0,
+                U.setSubtractionSize(null, null)
+        );
     }
 
     /**
