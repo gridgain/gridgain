@@ -1556,38 +1556,38 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#setIntersectionSize(Set, Set)}.
+     * Test to verify the {@link U#sizeOfSetIntersection(Set, Set)}.
      */
     @Test
-    public void testSetIntersectionSize() {
+    public void testSizeOfSetIntersection() {
         assertEquals(
                 1,
-                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+                U.sizeOfSetIntersection(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+                U.sizeOfSetIntersection(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setIntersectionSize(newHashSet(), newHashSet("bar", "xyz"))
+                U.sizeOfSetIntersection(newHashSet(), newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setIntersectionSize(null, newHashSet("bar", "xyz"))
+                U.sizeOfSetIntersection(null, newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setIntersectionSize(newHashSet("foo", "bar", "qwe"), null)
+                U.sizeOfSetIntersection(newHashSet("foo", "bar", "qwe"), null)
         );
 
         assertEquals(
                 0,
-                U.setIntersectionSize(null, null)
+                U.sizeOfSetIntersection(null, null)
         );
     }
 
@@ -1638,48 +1638,48 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#setSubtractionSize(Set, Set)}.
+     * Test to verify the {@link U#sizeOfSetSubtraction(Set, Set)}.
      */
     @Test
-    public void testSetSubtractionSize() {
+    public void testSizeOfSetSubtraction() {
         assertEquals(
                 2,
-                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
+                U.sizeOfSetSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 3,
-                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
+                U.sizeOfSetSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("abc", "xyz"))
         );
 
         assertEquals(
                 3,
-                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet())
+                U.sizeOfSetSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet())
         );
 
         assertEquals(
                 0,
-                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), newHashSet("foo", "bar", "qwe"))
+                U.sizeOfSetSubtraction(newHashSet("foo", "bar", "qwe"), newHashSet("foo", "bar", "qwe"))
         );
 
         assertEquals(
                 0,
-                U.setSubtractionSize(newHashSet(), newHashSet("bar", "xyz"))
+                U.sizeOfSetSubtraction(newHashSet(), newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setSubtractionSize(null, newHashSet("bar", "xyz"))
+                U.sizeOfSetSubtraction(null, newHashSet("bar", "xyz"))
         );
 
         assertEquals(
                 0,
-                U.setSubtractionSize(newHashSet("foo", "bar", "qwe"), null)
+                U.sizeOfSetSubtraction(newHashSet("foo", "bar", "qwe"), null)
         );
 
         assertEquals(
                 0,
-                U.setSubtractionSize(null, null)
+                U.sizeOfSetSubtraction(null, null)
         );
     }
 

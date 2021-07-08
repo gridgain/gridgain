@@ -139,7 +139,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.jar.JarFile;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
@@ -280,7 +279,6 @@ import org.apache.ignite.transactions.TransactionOptimisticException;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionSerializationException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
@@ -12516,7 +12514,7 @@ public abstract class IgniteUtils {
 
     /**
      * Calculates intersection between two sets.
-     * @see #setIntersectionSize(Set, Set)
+     * @see #sizeOfSetIntersection(Set, Set)
      *
      * @param lhs First set.
      * @param rhs Second set
@@ -12545,7 +12543,7 @@ public abstract class IgniteUtils {
      * @param <T> Element type.
      * @return Size of intersection between two sets.
      */
-    public static <T> int setIntersectionSize(Set<? extends T> lhs, Set<? extends T> rhs) {
+    public static <T> int sizeOfSetIntersection(Set<? extends T> lhs, Set<? extends T> rhs) {
         if (lhs == null || rhs == null)
             return 0;
 
@@ -12561,7 +12559,7 @@ public abstract class IgniteUtils {
     /**
      * Calculates relative complement of left set in right set.
      * In other word 'subtraction' of right set element from left set.
-     * @see #setSubtractionSize(Set, Set)
+     * @see #sizeOfSetSubtraction(Set, Set)
      *
      * @param lhs Left set.
      * @param rhs Right set.
@@ -12590,7 +12588,7 @@ public abstract class IgniteUtils {
      * @param <T> Element type.
      * @return Size of relative complement of lhs in rhs (lhs - rhs).
      */
-    public static <T> int setSubtractionSize(Set<? extends T> lhs, Set<? extends T> rhs) {
+    public static <T> int sizeOfSetSubtraction(Set<? extends T> lhs, Set<? extends T> rhs) {
         if (lhs == null || rhs == null)
             return 0;
 
