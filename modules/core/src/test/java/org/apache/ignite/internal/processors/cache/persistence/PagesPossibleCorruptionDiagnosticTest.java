@@ -112,6 +112,12 @@ public class PagesPossibleCorruptionDiagnosticTest extends GridCommonAbstractTes
         super.afterTest();
     }
 
+    /**
+     * @param ignite Ignite instance.
+     * @param partId Partition id.
+     * @return File page store for given partition id.
+     * @throws IgniteCheckedException If failed.
+     */
     private FilePageStore filePageStore(IgniteEx ignite, int partId) throws IgniteCheckedException {
         final PdsFolderSettings folderSettings = ignite.context().pdsFolderResolver().resolveFolders();
 

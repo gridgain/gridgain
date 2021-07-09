@@ -115,11 +115,6 @@ public class ReuseListImpl extends PagesList implements ReuseList {
     }
 
     /** {@inheritDoc} */
-    @Override protected int bucketsCnt() {
-        return 1;
-    }
-
-    /** {@inheritDoc} */
     @Override protected int getBucketIndex(int freeSpace) {
         return 0;
     }

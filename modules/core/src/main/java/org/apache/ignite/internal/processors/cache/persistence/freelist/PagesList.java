@@ -17,12 +17,9 @@
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
@@ -546,11 +543,6 @@ public abstract class PagesList extends DataStructure {
             }
         }
     }
-
-    /**
-     * @return Total buckets count.
-     */
-    protected abstract int bucketsCnt();
 
     /**
      * Gets bucket index by page freespace.
@@ -2003,107 +1995,6 @@ public abstract class PagesList extends DataStructure {
     }
 
     /**
-     * Collects the pages that list consists of.
-     *
-     * @param pageIds Initial list of pages ids, that will be added to result collection.
-     * @return Collection of pages that list consists of.
-     */
-    protected Collection<Long> pageIds(long... pageIds) {
-        Set<Long> res = new HashSet<>();
-
-        final int maxPages = 1000;
-
-        res.add(metaPageId);
-
-        for (long pageId : pageIds)
-            res.add(pageId);
-
-        // Iterate over buckets.
-        for (int i = 0; i < bucketsCnt(); i++) {
-            Stripe[] stripes = getBucket(i);
-
-            if (stripes != null) {
-                // Iterate over stripes in the bucket. It is safe because array of stripes is changed via CAS.
-                for (int j = 0; j < stripes.length; j++) {
-                    Stripe stripe = stripes[j];
-
-                    // Doing several lock attempts for stripe.
-                    for (int lockAttempt = 0; lockAttempt < TRY_LOCK_ATTEMPTS; lockAttempt++) {
-                        long tailId = stripe.tailId;
-
-                        res.add(tailId);
-
-                        if (res.size() == maxPages)
-                            return res;
-
-                        try {
-                            final long tailPage = pageMem.acquirePage(grpId, tailId, IoStatisticsHolderNoOp.INSTANCE);
-
-                            try {
-                                long tailAddr = pageMem.readLock(grpId, tailId, tailPage);
-
-                                try {
-                                    // Check that tail id wasn't changed concurrently.
-                                    if (stripe.tailId != tailId)
-                                        continue;
-
-                                    PagesListNodeIO io = PageIO.getPageIO(tailAddr);
-
-                                    long pageAddr = tailAddr;
-
-                                    // Iterate over page list nodes in stripe.
-                                    while (true) {
-                                        long nextId = io.getNextId(pageAddr);
-
-                                        if (nextId == 0 || nextId == tailId)
-                                            break;
-
-                                        res.add(nextId);
-
-                                        if (res.size() == maxPages)
-                                            return res;
-
-                                        long nextPage = pageMem.acquirePage(grpId, nextId, IoStatisticsHolderNoOp.INSTANCE);
-
-                                        try {
-                                            long nextAddr = pageMem.readLock(grpId, nextId, nextPage);
-
-                                            try {
-                                                io = PageIO.getPageIO(nextAddr);
-
-                                                pageAddr = nextAddr;
-                                            }
-                                            finally {
-                                                pageMem.readUnlock(grpId, nextId, nextPage);
-                                            }
-                                        }
-                                        finally {
-                                            pageMem.releasePage(grpId, nextId, nextPage);
-                                        }
-                                    }
-                                }
-                                finally {
-                                    pageMem.readLock(grpId, tailId, tailPage);
-                                }
-                            }
-                            finally {
-                                pageMem.releasePage(grpId, tailId, tailPage);
-                            }
-                        }
-                        catch (IgniteCheckedException ignore) {
-                            // No op - just retry.
-                        }
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        return res;
-    }
-
-    /**
      * @param err Error that caused this exception.
      * @param pageIds Ids of possibly corrupted pages.
      * @return Exception of type {@link CorruptedFreeListException} that wraps original error and ids of
@@ -2131,7 +2022,7 @@ public abstract class PagesList extends DataStructure {
      *  possibly corrupted pages.
      */
     protected CorruptedFreeListException corruptedFreeListException(String msg, @Nullable Throwable err, long... pageIds) {
-        return new CorruptedFreeListException(msg, err, grpId, pageIds(pageIds));
+        return new CorruptedFreeListException(msg, err, grpId, pageIds);
     }
 
     /**
