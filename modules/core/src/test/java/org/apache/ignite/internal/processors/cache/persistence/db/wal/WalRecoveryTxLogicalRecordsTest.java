@@ -517,19 +517,6 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Releases a WAL pointer for historical iterator.
-     *
-     * @param cctx Cache shared context.
-     * @param ptr WAL pointer to release.
-     * @throws IgniteCheckedException If the release failed.
-     */
-    private void releaseWalPointerForIterator(GridCacheSharedContext cctx, FileWALPointer ptr) throws IgniteCheckedException {
-        GridTestUtils.setFieldValue(cctx.database(), "reservedForPreloading", null);
-
-        cctx.wal().release(ptr);
-    }
-
-    /**
      * Test historical iterator works over WAL with reordered or missed data entries.
      *
      * @throws Exception if failed.
