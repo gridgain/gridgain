@@ -46,7 +46,6 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRecord;
-import org.apache.ignite.internal.processors.cache.CacheDiagnosticManager;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
@@ -61,7 +60,6 @@ import org.apache.ignite.internal.processors.cache.persistence.partstorage.Parti
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -137,14 +135,11 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
     /** */
     private final Marshaller marshaller = JdkMarshaller.DEFAULT;
 
-    /** */
-    private final FailureProcessor failureProcessor;
-
     /** Partition id. */
     private int partId;
 
     /** Cctx. */
-    private final GridCacheSharedContext cctx;
+    private final GridCacheSharedContext<?, ?> cctx;
 
     /** */
     public MetaStorage(
@@ -159,7 +154,6 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
         this.regionMetrics = regionMetrics;
         this.readOnly = readOnly;
         log = cctx.logger(getClass());
-        this.failureProcessor = cctx.kernalContext().failure();
     }
 
     /** */
@@ -199,6 +193,15 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                 }, dataRegion);
             }
         }
+    }
+
+    /** Frees the allocated resources. */
+    public void close() {
+        if (tree != null)
+            tree.close();
+
+        if (partStorage != null)
+            partStorage.close();
     }
 
     /**
@@ -250,8 +253,6 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
             getOrAllocateMetas(partId = METASTORE_PARTITION);
 
         if (!empty) {
-            CacheDiagnosticManager diagnosticMgr = cctx.diagnostic();
-
             String freeListName = METASTORAGE_CACHE_NAME + "##FreeList";
             String treeName = METASTORAGE_CACHE_NAME + "##Tree";
 
@@ -264,7 +265,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                 wal,
                 reuseListRoot.pageId().pageId(),
                 reuseListRoot.isAllocated(),
-                diagnosticMgr.pageLockTracker().createPageLockTracker(freeListName),
+                cctx.diagnostic().pageLockTracker(),
                 cctx.kernalContext(),
                 null,
                 FLAG_AUX
@@ -276,9 +277,20 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
 
             MetastorageRowStore rowStore = new MetastorageRowStore(partStorage, db);
 
-            tree = new MetastorageTree(METASTORAGE_CACHE_ID, treeName, dataRegion.pageMemory(), wal, rmvId,
-                partStorage, rowStore, treeRoot.pageId().pageId(), treeRoot.isAllocated(), failureProcessor, partId,
-                diagnosticMgr.pageLockTracker().createPageLockTracker(treeName));
+            tree = new MetastorageTree(
+                METASTORAGE_CACHE_ID,
+                treeName,
+                dataRegion.pageMemory(),
+                wal,
+                rmvId,
+                partStorage,
+                rowStore,
+                treeRoot.pageId().pageId(),
+                treeRoot.isAllocated(),
+                cctx.kernalContext().failure(),
+                cctx.diagnostic().pageLockTracker(),
+                partId
+            );
 
             if (!readOnly)
                 ((GridCacheDatabaseSharedManager)db).addCheckpointListener(this, dataRegion);

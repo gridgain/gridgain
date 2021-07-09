@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
@@ -153,7 +154,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
     private final GridMessageListener msgLsnr;
 
     /** */
-    private final CIX2<ClusterNode,Message> locNodeHnd = new CIX2<ClusterNode,Message>() {
+    private final CIX2<ClusterNode, Message> locNodeHnd = new CIX2<ClusterNode, Message>() {
         @Override public void applyx(ClusterNode locNode, Message msg) {
             onMessage0(locNode.id(), msg);
         }
@@ -342,6 +343,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     cctx.mvccEnabled(),
                     rowCache,
                     cctx.kernalContext().failure(),
+                    cctx.shared().diagnostic().pageLockTracker(),
                     log,
                     stats,
                     idxHelperFactory,
@@ -1030,10 +1032,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /**
      * Interface for {@link H2Tree} factory class.
      */
+    @FunctionalInterface
     public interface H2TreeFactory {
         /** */
         public H2Tree create(
-            GridCacheContext cctx,
+            GridCacheContext<?, ?> cctx,
             GridH2Table table,
             String name,
             String idxName,
@@ -1055,6 +1058,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             boolean mvccEnabled,
             @Nullable H2RowCache rowCache,
             @Nullable FailureProcessor failureProcessor,
+            PageLockTrackerManager pageLockTrackerManager,
             IgniteLogger log,
             IoStatisticsHolder stats,
             InlineIndexColumnFactory factory,
