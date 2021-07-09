@@ -278,6 +278,8 @@ namespace Apache.Ignite.Core.Client
         /// <returns>Deserialized instance.</returns>
         public static IgniteClientConfiguration FromXml(XmlReader reader)
         {
+            IgniteArgumentCheck.NotNull(reader, "reader");
+
             return IgniteConfigurationXmlSerializer.Deserialize<IgniteClientConfiguration>(reader);
         }
 

@@ -132,7 +132,7 @@ namespace Apache.Ignite.Core.Client.Transactions
         /// </summary>
         /// <param name="label">Label.</param>
         /// <returns>
-        /// <see cref="T:Apache.Ignite.Core.Client.Transactions.IClientTransactions" />
+        /// <see cref="Apache.Ignite.Core.Client.Transactions.ITransactionsClient" />
         /// </returns>
         ITransactionsClient WithLabel(string label);
     }

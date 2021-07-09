@@ -28,10 +28,17 @@ namespace Apache.Ignite.Core.Client
     /// </summary>
     public class SslStreamFactory : ISslStreamFactory
     {
+#if NETCOREAPP
+        /// <summary>
+        /// Default SSL protocols.
+        /// </summary>
+        public const SslProtocols DefaultSslProtocols = SslProtocols.None;
+#else
         /// <summary>
         /// Default SSL protocols.
         /// </summary>
         public const SslProtocols DefaultSslProtocols = SslProtocols.Tls;
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SslStreamFactory"/> class.
@@ -59,7 +66,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Validates the server certificate.
         /// </summary>
-        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, 
+        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain,
             SslPolicyErrors sslPolicyErrors)
         {
             if (SkipServerCertificateValidation)

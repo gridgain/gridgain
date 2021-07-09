@@ -85,7 +85,8 @@ namespace ignite
                 << config::ConnectionInfo::InfoTypeToString(type) << "), "
                 << std::hex << reinterpret_cast<size_t>(buf) << ", "
                 << buflen << ", "
-                << std::hex << reinterpret_cast<size_t>(reslen));
+                << std::hex << reinterpret_cast<size_t>(reslen)
+                << std::dec);
 
             IGNITE_ODBC_API_CALL(InternalGetInfo(type, buf, buflen, reslen));
         }
@@ -744,7 +745,10 @@ namespace ignite
                     }
                     catch (const IgniteError& err)
                     {
-                        LOG_MSG("Error while trying connect to " << addr.host << ":" << addr.port <<", " << err.GetText());
+                        std::stringstream msgBuilder;
+                        msgBuilder << "Error while trying connect to "
+                            << addr.host << ":" << addr.port <<", " << err.GetText();
+                        AddStatusRecord(SqlState::S08001_CANNOT_CONNECT, msgBuilder.str());
                     }
 
                     if (connected)
