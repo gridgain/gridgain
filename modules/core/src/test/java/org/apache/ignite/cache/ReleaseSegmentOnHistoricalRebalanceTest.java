@@ -46,6 +46,7 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -127,7 +128,7 @@ public class ReleaseSegmentOnHistoricalRebalanceTest extends GridCommonAbstractT
             GridCacheDatabaseSharedManager spy = spy(dbMgr(n));
 
             doAnswer(m -> {
-                release(n, getFieldValue(spy, "reservedForExchange"));
+                release(n, getFieldValueHierarchy(spy, "reservedForExchange"));
 
                 return m.callRealMethod();
             }).when(spy).releaseHistoryForExchange();
