@@ -1520,7 +1520,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#setIntersection(Set, Set)}.
+     * Test to verify the {@link U#setIntersection}.
      */
     @Test
     public void testSetIntersection() {
@@ -1556,7 +1556,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#sizeOfSetIntersection(Set, Set)}.
+     * Test to verify the {@link U#sizeOfSetIntersection}.
      */
     @Test
     public void testSizeOfSetIntersection() {
@@ -1592,7 +1592,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#setSubtraction(Set, Set)}.
+     * Test to verify the {@link U#setSubtraction}.
      */
     @Test
     public void testSetSubtraction() {
@@ -1638,7 +1638,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the {@link U#sizeOfSetSubtraction(Set, Set)}.
+     * Test to verify the {@link U#sizeOfSetSubtraction}.
      */
     @Test
     public void testSizeOfSetSubtraction() {

@@ -12514,91 +12514,136 @@ public abstract class IgniteUtils {
 
     /**
      * Calculates intersection between two sets.
-     * @see #sizeOfSetIntersection(Set, Set)
+     * @see #sizeOfSetIntersection
      *
-     * @param lhs First set.
-     * @param rhs Second set
+     * @param lhs Left set.
+     * @param rhs Right sets.
      * @param <T> Element type.
      * @return Set which is intersection between two sets.
      */
-    public static <T> Set<T> setIntersection(Set<? extends T> lhs, Set<? extends T> rhs) {
+    @SafeVarargs
+    public static <T> Set<T> setIntersection(Set<? extends T> lhs, Set<? extends T>... rhs) {
         if (lhs == null || rhs == null)
             return Collections.emptySet();
 
         Set<T> result = new HashSet<>();
 
-        for (T val : lhs)
-            if (rhs.contains(val))
+        for (T val : lhs) {
+            int contains = 0;
+
+            for (Set<? extends T> rSet : rhs) {
+                if (rSet.contains(val))
+                    contains++;
+                else
+                    break;
+            }
+
+            if (contains == rhs.length)
                 result.add(val);
+        }
 
         return result;
     }
 
     /**
      * Calculates cardinality (size) of intersection between two sets.
-     * @see #setIntersection(Set, Set)
+     * @see #setIntersection
      *
-     *  @param lhs First set.
-     * @param rhs Second set
+     * @param lhs Left set.
+     * @param rhs Right sets.
      * @param <T> Element type.
      * @return Size of intersection between two sets.
      */
-    public static <T> int sizeOfSetIntersection(Set<? extends T> lhs, Set<? extends T> rhs) {
+    @SafeVarargs
+    public static <T> int sizeOfSetIntersection(Set<? extends T> lhs, Set<? extends T>... rhs) {
         if (lhs == null || rhs == null)
             return 0;
 
         int result = 0;
 
-        for (T val : lhs)
-            if (rhs.contains(val))
+        for (T val : lhs) {
+            int contains = 0;
+
+            for (Set<? extends T> rSet : rhs) {
+                if (rSet.contains(val))
+                    contains++;
+                else
+                    break;
+            }
+
+            if (contains == rhs.length)
                 result++;
+        }
 
         return result;
     }
 
     /**
      * Calculates relative complement of left set in right set.
-     * In other word 'subtraction' of right set element from left set.
-     * @see #sizeOfSetSubtraction(Set, Set)
+     * In other words 'subtraction' of right set element from left set.
+     * @see #sizeOfSetSubtraction
      *
      * @param lhs Left set.
-     * @param rhs Right set.
+     * @param rhs Right sets.
      * @param <T> Element type.
      * @return Relative complement of lhs in rhs (lhs - rhs).
      */
-    public static <T> Set<T> setSubtraction(Set<? extends T> lhs, Set<? extends T> rhs) {
+    @SafeVarargs
+    public static <T> Set<T> setSubtraction(Set<? extends T> lhs, Set<? extends T>... rhs) {
         if (lhs == null || rhs == null)
             return Collections.emptySet();
 
         Set<T> result = new HashSet<>();
 
-        for (T val : lhs)
-            if (!rhs.contains(val))
+        for (T val : lhs) {
+            boolean contains = false;
+
+            for (Set<? extends T> rSet : rhs) {
+                if (rSet.contains(val)) {
+                    contains = true;
+
+                    break;
+                }
+            }
+
+            if (!contains)
                 result.add(val);
+        }
 
         return result;
     }
 
     /**
      * Calculates cardinality (size) of  relative complement of left set in right set.
-     * @see #setSubtraction(Set, Set)
+     * @see #setSubtraction
      *
      * @param lhs Left set.
      * @param rhs Right set.
      * @param <T> Element type.
      * @return Size of relative complement of lhs in rhs (lhs - rhs).
      */
-    public static <T> int sizeOfSetSubtraction(Set<? extends T> lhs, Set<? extends T> rhs) {
+    @SafeVarargs
+    public static <T> int sizeOfSetSubtraction(Set<? extends T> lhs, Set<? extends T>... rhs) {
         if (lhs == null || rhs == null)
             return 0;
 
         int result = 0;
 
-        for (T val : lhs)
-            if (!rhs.contains(val))
+        for (T val : lhs){
+            boolean contains = false;
+
+            for (Set<? extends T> rSet : rhs) {
+                if (rSet.contains(val)) {
+                    contains = true;
+
+                    break;
+                }
+            }
+
+            if (!contains)
                 result++;
+        }
 
         return result;
     }
-
 }
