@@ -12629,7 +12629,7 @@ public abstract class IgniteUtils {
 
         int result = 0;
 
-        for (T val : lhs){
+        for (T val : lhs) {
             boolean contains = false;
 
             for (Set<? extends T> rSet : rhs) {
