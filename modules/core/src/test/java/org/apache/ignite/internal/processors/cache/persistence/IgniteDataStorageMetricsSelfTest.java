@@ -422,6 +422,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         SegmentRouter router = walMgr.getSegmentRouter();
 
+        Thread.sleep(1000); //wait to avoid race condition with FileWriteAheadLogManager.FileArchiver#allocateRemainingFile where wal.tmp files are created.
         long totalSize = walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalWorkDir()));
 
         assertEquals(totalSize, dbMgr(n).persistentStoreMetrics().getWalTotalSize());
@@ -460,13 +461,13 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         SegmentRouter router = walMgr.getSegmentRouter();
 
+        Thread.sleep(1000); //wait to avoid race condition with FileWriteAheadLogManager.FileArchiver#allocateRemainingFile where wal.tmp files are created.
         long totalSize = walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalWorkDir()));
 
         assertTrue(router.hasArchive());
 
         totalSize += walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalArchiveDir()));
 
-        //the wal archive segements are not exactly 2K bytes.
         assertTrue(totalSize == dbMgr(n).persistentStoreMetrics().getWalTotalSize());
         assertTrue(totalSize == dsMetricsMXBean(n).getWalTotalSize());
         assertTrue(totalSize == ((LongGauge)dsMetricRegistry(n).findMetric("WalTotalSize")).value());
