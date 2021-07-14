@@ -28,6 +28,7 @@ import org.apache.ignite.testframework.GridTestSafeThreadFactory;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 import org.objectweb.jotm.Jotm;
+import org.objectweb.jotm.rmi.RmiLocalConfiguration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
@@ -48,7 +49,7 @@ public abstract class AbstractCacheJtaSelfTest extends GridCacheAbstractSelfTest
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        jotm = new Jotm(true, false);
+        jotm = new Jotm(true, false, new RmiLocalConfiguration());
 
         super.beforeTestsStarted();
     }
