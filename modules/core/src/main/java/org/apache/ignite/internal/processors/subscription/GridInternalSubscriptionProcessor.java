@@ -15,10 +15,8 @@
  */
 package org.apache.ignite.internal.processors.subscription;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
@@ -38,19 +36,20 @@ import static java.util.Objects.requireNonNull;
  */
 public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     /** */
-    private final List<MetastorageLifecycleListener> metastorageListeners = new ArrayList<>();
+    private final List<MetastorageLifecycleListener> metastorageListeners = new CopyOnWriteArrayList<>();
 
     /** */
     private final List<DistributedMetastorageLifecycleListener> distributedMetastorageListeners =
         new CopyOnWriteArrayList<>();
 
     /** */
-    private final List<DatabaseLifecycleListener> dbListeners = new ArrayList<>();
+    private final List<DatabaseLifecycleListener> dbListeners = new CopyOnWriteArrayList<>();
 
     /**
      * Listeners of distributed configuration controlled by {@link org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor}.
      */
-    private List<DistributedConfigurationLifecycleListener> distributedConfigurationListeners = new ArrayList<>();
+    private List<DistributedConfigurationLifecycleListener> distributedConfigurationListeners =
+        new CopyOnWriteArrayList<>();
 
     /**
      * @param ctx Kernal context.
