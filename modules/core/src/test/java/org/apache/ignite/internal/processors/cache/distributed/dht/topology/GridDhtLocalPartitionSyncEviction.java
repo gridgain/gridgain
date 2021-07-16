@@ -82,7 +82,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** {@inheritDoc} */
-    @Override protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
+    @Override protected long clearAll(EvictionContext evictionCtx, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
         EvictionContext spied = mode == 1 ? Mockito.spy(evictionCtx) : evictionCtx;
 
         if (mode == 3)
@@ -102,7 +102,7 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
             }).when(spied).shouldStop();
         }
 
-        long cnt = super.clearAll(spied);
+        long cnt = super.clearAll(spied, reason);
 
         if (mode == 2)
             sync();

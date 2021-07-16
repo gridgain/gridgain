@@ -38,6 +38,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -77,6 +78,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_OBJECT_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.CacheDataStore;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -636,6 +638,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (partState == EVICTED)
                 return false;
 
+            if (partState == MOVING) {
+                // The state is switched under global topology lock, safe to record version here.
+                clearVer = ctx.versions().localOrder();
+
+                return false;
+            }
+
             assert partState == OWNING || partState == RENTING :
                 "Only partitions in state OWNING or RENTING can be moved to MOVING state " + partState + " " + id;
 
@@ -959,7 +968,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return Number of rows cleared from page memory.
      * @throws NodeStoppingException If node stopping.
      */
-    protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
+    protected long clearAll(EvictionContext evictionCtx, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
         long order = clearVer;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
@@ -974,6 +983,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
         try {
+            if (reason == PartitionsEvictManager.EvictReason.CLEARING &&
+                    grp.walEnabled() && grp.config().getAtomicityMode() == ATOMIC)
+                ctx.wal().log(new PartitionClearingStarted(id, grp.groupId()));
+
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
 
             while (it0.hasNext()) {

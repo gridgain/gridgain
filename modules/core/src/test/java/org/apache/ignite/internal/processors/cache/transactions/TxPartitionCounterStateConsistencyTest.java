@@ -164,6 +164,119 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     }
 
     /**
+     * There is a key that was removed while a primary node was stopped.
+     * After start a primary node there is a full rebalance with clearing.
+     * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
+     * After restart a primary node need to rebalance the partition to clear the key.
+     */
+    @Test
+    public void testPartitionConsistencyNotRebalancedRemoveOpWithPrimaryRestart() throws Exception {
+        backups = 1;
+
+        Ignite prim = startGridsMultiThreaded(2);
+
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(prim.cache(DEFAULT_CACHE_NAME), partitions() * 2);
+
+        List<Integer> primaryPartKeys = new ArrayList<>();
+
+        int partId = -1;
+
+        for (Integer key : primaryKeys) {
+            if (partId == -1 || prim.affinity(DEFAULT_CACHE_NAME).partition(key) == partId) {
+                if (partId == -1)
+                    partId = prim.affinity(DEFAULT_CACHE_NAME).partition(key);
+
+                primaryPartKeys.add(key);
+
+                if (primaryPartKeys.size() == 2)
+                    break;
+            }
+        }
+
+        for (int i = 0; i < 2; i++) {
+            if (i == 0)
+                cache.put(primaryPartKeys.get(0), 1234567);
+
+            stopGrid(true, prim.name());
+
+            awaitPartitionMapExchange();
+            if (i == 0)
+                cache.remove(primaryPartKeys.get(0));
+
+            startGrid(prim.name());
+
+            awaitPartitionMapExchange(true, true, null);
+
+            if (i == 0)
+                cache.put(primaryPartKeys.get(1), 7654321);
+        }
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * There is a key that was removed while a backup node was stopped.
+     * After start a backup node there is a full rebalance with clearing.
+     * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
+     * After restart a backup node need to rebalance the partition to clear the key.
+     */
+    @Test
+    public void testPartitionConsistencyNotRebalancedRemoveOpWithBackupRestart() throws Exception {
+        backups = 1;
+
+        Ignite prim = startGridsMultiThreaded(2);
+
+        Ignite backup = grid(1);
+
+        IgniteEx client = startGrid("client");
+
+        IgniteCache<Object, Object> cache = client.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        List<Integer> backupKeys = backupKeys(backup.cache(DEFAULT_CACHE_NAME), partitions() * 2, 0);
+
+        List<Integer> backupPartKeys = new ArrayList<>();
+
+        int partId = -1;
+
+        for (Integer key : backupKeys) {
+            if (partId == -1 || backup.affinity(DEFAULT_CACHE_NAME).partition(key) == partId) {
+                if (partId == -1)
+                    partId = backup.affinity(DEFAULT_CACHE_NAME).partition(key);
+
+                backupPartKeys.add(key);
+
+                if (backupPartKeys.size() == 2)
+                    break;
+            }
+        }
+
+        for (int i = 0; i < 2; i++) {
+            if (i == 0)
+                cache.put(backupPartKeys.get(0), 1234567);
+
+            stopGrid(true, backup.name());
+
+            awaitPartitionMapExchange();
+
+            if (i == 0)
+                cache.remove(backupPartKeys.get(0));
+
+            startGrid(backup.name());
+
+            awaitPartitionMapExchange(true, true, null);
+
+            if (i == 0)
+                cache.put(backupPartKeys.get(1), 7654321);
+        }
+
+        assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
+    }
+
+    /**
      * Test primary-backup partitions consistency while restarting primary node under load.
      */
     @Test

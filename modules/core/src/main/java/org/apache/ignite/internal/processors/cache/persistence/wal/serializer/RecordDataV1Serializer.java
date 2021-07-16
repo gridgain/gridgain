@@ -40,6 +40,7 @@ import org.apache.ignite.internal.pagemem.wal.record.LazyDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
@@ -535,6 +536,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case TX_RECORD:
                 return txRecordSerializer.size((TxRecord)record);
+
+            case PARTITION_CLEARING_STARTED:
+                return 4 + 4;
 
             default:
                 throw new UnsupportedOperationException("Type: " + record.type());
@@ -1179,6 +1183,14 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case PARTITION_CLEARING_STARTED:
+                int partId0 = in.readInt();
+                int grpId = in.readInt();
+
+                res = new PartitionClearingStarted(partId0, grpId);
+
+                break;
+
             default:
                 throw new UnsupportedOperationException("Type: " + type);
         }
@@ -1764,6 +1776,15 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case SWITCH_SEGMENT_RECORD:
+                break;
+
+            case PARTITION_CLEARING_STARTED:
+                PartitionClearingStarted partitionClearingStarted = (PartitionClearingStarted)rec;
+
+                buf.putInt(partitionClearingStarted.partId());
+
+                buf.putInt(partitionClearingStarted.grpId());
+
                 break;
 
             default:

@@ -87,6 +87,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
@@ -2555,6 +2556,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
+        List<GroupPartitionId> partsNeedToRebalance = new ArrayList<>();
+
         try {
             while (it.hasNextX()) {
                 WALRecord rec = restoreLogicalState.next();
@@ -2691,6 +2694,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         break;
 
+                    case PARTITION_CLEARING_STARTED:
+                        PartitionClearingStarted rec0 = (PartitionClearingStarted) rec;
+
+                        GroupPartitionId grpPartpId = new GroupPartitionId(rec0.grpId(), rec0.partId());
+
+                        partsNeedToRebalance.add(grpPartpId);
+
+                        break;
+
                     default:
                         // Skip other records.
                 }
@@ -2702,6 +2714,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             if (!restoreMeta)
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
+
+        partsNeedToRebalance.forEach(groupPartitionId -> {
+            restoreLogicalState.partitionRecoveryStates.put(groupPartitionId, 0);
+        });
 
         awaitApplyComplete(exec, applyError);
 

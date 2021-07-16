@@ -32,6 +32,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
@@ -135,6 +136,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGES_LIST_SET_PREVIOUS;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGE_LIST_META_RESET_COUNT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PAGE_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_CLEARING_STARTED;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_DESTROY;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_META_PAGE_UPDATE_COUNTERS;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.PARTITION_META_PAGE_UPDATE_COUNTERS_V2;
@@ -220,6 +222,7 @@ public class RecordUtils {
             put(MVCC_TX_RECORD, RecordUtils::buildMvccTxRecord);
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
             put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
+            put(PARTITION_CLEARING_STARTED, RecordUtils::buildPartitionClearingStartedRecord);
         }};
 
     /** **/
@@ -571,6 +574,11 @@ public class RecordUtils {
     /** **/
     public static OutOfOrderDataRecord buildOutOfOrderRecord() {
         return new OutOfOrderDataRecord(Collections.emptyList());
+    }
+
+    /** **/
+    public static PartitionClearingStarted buildPartitionClearingStartedRecord() {
+        return new PartitionClearingStarted(12, 345);
     }
 
     /**

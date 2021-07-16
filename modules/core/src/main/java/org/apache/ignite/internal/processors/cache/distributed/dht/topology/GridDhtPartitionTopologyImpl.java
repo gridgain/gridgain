@@ -2518,8 +2518,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
         }
 
-        if (part.state() != MOVING)
-            part.moving();
+        part.moving();
 
         if (clear)
             exchFut.addClearingPartition(grp, part.id());
