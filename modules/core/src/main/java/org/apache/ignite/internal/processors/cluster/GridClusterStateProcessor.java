@@ -1472,6 +1472,41 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
         }
 
+        Map<String, Object> clusterAttrs = clusterBlt.attributes(node.consistentId());
+
+        if (globalState.state() != INACTIVE && clusterAttrs != null) {
+            Map<String, Object> nodeAttrs = node.attributes();
+
+            Map<String, Object> attrsMissingOnNode = new HashMap<>();
+
+            for (Map.Entry<String, Object> clusterAttr : clusterAttrs.entrySet()) {
+                final Object nodeAttrVal = nodeAttrs.get(clusterAttr.getKey());
+                final Object clusterAttrVal = clusterAttr.getValue();
+
+                if (nodeAttrVal == null && clusterAttrVal != null)
+                    attrsMissingOnNode.put(clusterAttr.getKey(), clusterAttrVal);
+            }
+
+            if (!attrsMissingOnNode.isEmpty()) {
+                SB sb = new SB();
+
+                sb.a("Some attributes in cluster baseline topology are missing on joining node. ")
+                    .a("To join this node you should add missing attributes to node configurations or ")
+                    .a("deactivate cluster, add the node and activate the cluster again.")
+                    .a("In this case options listed below will be removed from cluster baseline topology for joining node.")
+                    .a("\n")
+                    .a("Missing options:\n");
+
+                for (Map.Entry<String, Object> missingAttr : attrsMissingOnNode.entrySet()) {
+                    sb.a("Attr name: ").a(missingAttr.getKey()).a(" Attr val: ").a(missingAttr.getValue());
+                }
+
+                String msg = sb.toString();
+
+                return new IgniteNodeValidationResult(node.id(), msg);
+            }
+        }
+
         return null;
     }
 
@@ -1671,6 +1706,16 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
 
         writeBaselineTopology(blt, prevBltHistItem);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void addAttrsToCurrBlt(Object consId, Map<String, Object> newAttrs) throws IgniteCheckedException {
+        BaselineTopology blt = globalState.baselineTopology();
+
+        if (blt != null && metastorage != null) {
+            if (blt.addAttributesIfNeeded(consId, newAttrs))
+                writeBaselineTopology(blt, null);
+        }
     }
 
     /**
