@@ -50,12 +50,12 @@ namespace ignite
                         "expected", (impl::binary::IGNITE_TYPE_OBJECT & 0xFF));
                 }
 
-                return BinaryObjectHeader(mem.Data() + offset);
+                return BinaryObjectHeader(&mem, offset);
             }
 
             int8_t* BinaryObjectHeader::GetMem()
             {
-                return reinterpret_cast<int8_t*>(header);
+                return mem->Data() + offset;
             }
         }
     }
