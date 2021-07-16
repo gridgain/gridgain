@@ -398,7 +398,7 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
 
             nonHeapInit += m.getNonHeapMemoryInitialized();
 
-            upTime = max(upTime, m.getUpTime());
+            upTime += m.getUpTime();
 
             lastDataVer = max(lastDataVer, m.getLastDataVersion());
 
@@ -823,12 +823,12 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
 
     /** {@inheritDoc} */
     @Override public float getBusyTimePercentage() {
-        return 1 - getIdleTimePercentage();
+        return Math.max(100 - getIdleTimePercentage(), 0);
     }
 
     /** {@inheritDoc} */
     @Override public float getIdleTimePercentage() {
-        return getTotalIdleTime() / (float)getUpTime();
+        return Math.min((float)100. * getTotalIdleTime() / getUpTime(), (float)100.);
     }
 
     /** {@inheritDoc} */

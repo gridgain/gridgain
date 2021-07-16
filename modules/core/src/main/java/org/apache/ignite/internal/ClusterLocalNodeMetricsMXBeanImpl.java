@@ -85,7 +85,7 @@ public class ClusterLocalNodeMetricsMXBeanImpl implements ClusterMetricsMXBean {
 
     /** {@inheritDoc} */
     @Override public float getBusyTimePercentage() {
-        return node.metrics().getBusyTimePercentage() * 100;
+        return node.metrics().getBusyTimePercentage();
     }
 
     /** {@inheritDoc} */
@@ -160,7 +160,7 @@ public class ClusterLocalNodeMetricsMXBeanImpl implements ClusterMetricsMXBean {
 
     /** {@inheritDoc} */
     @Override public float getIdleTimePercentage() {
-        return node.metrics().getIdleTimePercentage() * 100;
+        return node.metrics().getIdleTimePercentage();
     }
 
     /** {@inheritDoc} */
