@@ -969,6 +969,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".CONTINUOUS_QUERIES.REMOTE_FILTER.null.2147483647",
                 sysSchemaName() + ".CONTINUOUS_QUERIES.CACHE_NAME.null.2147483647",
                 sysSchemaName() + ".CONTINUOUS_QUERIES.LOCAL_LISTENER.null.2147483647",
+                sysSchemaName() + ".CONTINUOUS_QUERIES.NODE_CONSISTENT_ID.null.2147483647",
                 sysSchemaName() + ".STRIPED_THREADPOOL_QUEUE.STRIPE_INDEX.null.10",
                 sysSchemaName() + ".STRIPED_THREADPOOL_QUEUE.DESCRIPTION.null.2147483647",
                 sysSchemaName() + ".STRIPED_THREADPOOL_QUEUE.THREAD_NAME.null.2147483647",

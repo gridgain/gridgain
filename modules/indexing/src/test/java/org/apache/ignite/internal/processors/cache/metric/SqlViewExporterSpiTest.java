@@ -567,12 +567,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
         assertEquals(100, cq.get(1));
         assertEquals(1000L, cq.get(2));
         assertEquals(ignite0.localNode().id(), cq.get(3));
-
-        if (loc)
-            assertTrue(cq.get(4).toString().startsWith(getClass().getName()));
-        else
-            assertNull(cq.get(4));
-
+        assertTrue(cq.get(4).toString().startsWith(getClass().getName()));
         assertTrue(cq.get(5).toString().startsWith(getClass().getName()));
         assertNull(cq.get(6));
     }

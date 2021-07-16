@@ -44,14 +44,36 @@ public class ContinuousQueryView {
     /** Routine id. */
     private final UUID routineId;
 
+    /** Node consistent ID */
+    private final String nodeConsistentId;
+
+    /** Class name of the local listener */
+    private final String locLsnr;
+
+    /** Class name of the local transformed listener */
+    private String localTransformedListener;
+
     /**
      * @param routineId Routine id.
      * @param qry Query info.
      */
-    public ContinuousQueryView(UUID routineId, RoutineInfo qry) {
+    public ContinuousQueryView(UUID routineId, RoutineInfo qry, String nodeConsistentId) {
         this.qry = qry;
         this.hnd = qry.handler();
         this.routineId = routineId;
+        this.nodeConsistentId = nodeConsistentId;
+
+        CacheContinuousQueryHandler hnd0 = cacheHandler();
+
+        if (hnd0 == null || hnd0.localListener() == null)
+            this.locLsnr = null;
+        else
+            this.locLsnr = toStringSafe(hnd0.localListener());
+
+        if (hnd0 == null || hnd0.localTransformedEventListener() == null)
+            this.localTransformedListener = null;
+        else
+            this.localTransformedListener = toStringSafe(hnd0.localTransformedEventListener());
     }
 
     /** @return Continuous query id. */
@@ -144,12 +166,7 @@ public class ContinuousQueryView {
      */
     @Order(1)
     public String localListener() {
-        CacheContinuousQueryHandler hnd0 = cacheHandler();
-
-        if (hnd0 == null || hnd0.localListener() == null)
-            return null;
-
-        return toStringSafe(hnd0.localListener());
+        return locLsnr;
     }
 
     /**
@@ -199,12 +216,15 @@ public class ContinuousQueryView {
      */
     @Order(4)
     public String localTransformedListener() {
-        CacheContinuousQueryHandler hnd0 = cacheHandler();
+        return localTransformedListener;
+    }
 
-        if (hnd0 == null || hnd0.localTransformedEventListener() == null)
-            return null;
-
-        return toStringSafe(hnd0.localTransformedEventListener());
+    /**
+     * @return String representation of consistent node ID
+     * */
+    @Order(5)
+    public String nodeConsistentId() {
+        return nodeConsistentId;
     }
 
     /** */
