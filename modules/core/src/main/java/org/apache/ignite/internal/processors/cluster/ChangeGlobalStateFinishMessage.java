@@ -52,6 +52,9 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     /** State change error. */
     private Boolean transitionRes;
 
+    /** */
+    private AffinityTopologyVersion topVer = AffinityTopologyVersion.NONE;
+
     /**
      * @param reqId State change request ID.
      * @param state New cluster state.
@@ -68,6 +71,22 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
         this.state = state;
         this.clusterActive = ClusterState.active(state);
         this.transitionRes = transitionRes;
+    }
+
+    /**
+     * @param reqId State change request ID.
+     * @param state New cluster state.
+     * @param topVer State change topology versoin.
+     */
+    public ChangeGlobalStateFinishMessage(
+        UUID reqId,
+        ClusterState state,
+        Boolean transitionRes,
+        AffinityTopologyVersion topVer
+    ) {
+        this(reqId, state, transitionRes);
+
+        this.topVer = topVer;
     }
 
     /**
@@ -108,6 +127,13 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
     public ClusterState state() {
         // Backward compatibility.
         return state != null ? state : (clusterActive ? ACTIVE : INACTIVE);
+    }
+
+    /**
+     * @return State change exchange version.
+     */
+    public AffinityTopologyVersion topVer() {
+        return topVer;
     }
 
     /** {@inheritDoc} */

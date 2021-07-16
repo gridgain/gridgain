@@ -4114,7 +4114,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ChangeGlobalStateFinishMessage stateFinishMsg = new ChangeGlobalStateFinishMessage(
                         req.requestId(),
                         state,
-                        !stateChangeErr
+                        !stateChangeErr,
+                        req.topologyVersion()
                     );
 
                     cctx.discovery().sendCustomEvent(stateFinishMsg);
