@@ -48,8 +48,10 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedEnumProperty;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -69,6 +71,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
@@ -402,7 +405,22 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         guard();
 
         try {
-            BaselineTopology blt = ctx.state().clusterState().baselineTopology();
+            DiscoveryDataClusterState state = ctx.state().clusterState();
+
+            BaselineTopology blt;
+
+            if (state.baselineChanging()) {
+                AffinityTopologyVersion topVer = state.transitionTopologyVersion();
+
+                AffinityTopologyVersion readyTopVer = ctx.cache().context().exchange().readyAffinityVersion();
+
+                if (readyTopVer.compareTo(topVer) >= 0)
+                    blt = state.baselineTopology();
+                else
+                    blt = state.previousBaselineTopology();
+            }
+            else
+                blt = state.baselineTopology();
 
             return blt != null ? blt.currentBaseline() : null;
         }
@@ -418,7 +436,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         try {
             ctx.state().validateBeforeBaselineChange(baselineTop);
 
-            ctx.state().changeGlobalState(true, baselineTop, true).get();
+            ctx.state().changeGlobalState(ACTIVE, baselineTop, true).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -469,7 +487,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
             ctx.state().validateBeforeBaselineChange(target);
 
-            ctx.state().changeGlobalState(true, target, true, isBaselineAutoAdjust).get();
+            ctx.state().changeGlobalState(ACTIVE, target, true, isBaselineAutoAdjust).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
