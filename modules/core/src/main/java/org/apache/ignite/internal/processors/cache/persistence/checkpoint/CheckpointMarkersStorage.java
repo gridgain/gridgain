@@ -304,7 +304,7 @@ public class CheckpointMarkersStorage {
 
             return new FileWALPointer(buf.getLong(), buf.getInt(), buf.getInt());
         }
-        catch (IOException e) {
+        catch (Exception e) {
             throw new IgniteCheckedException(
                 "Failed to read checkpoint pointer from marker file: " + cpMarkerFile.getAbsolutePath(), e);
         }
