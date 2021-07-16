@@ -106,11 +106,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         long updCntr = io.getUpdateCounter(pageAddr, idx);
 
-        cmp = Long.compare(updCntr, row.updCntr);
-
-        assert cmp != 0 || row.link == 0 /* search insertion poin */ || io.getLink(pageAddr, idx) == row.link /* remove row */;
-
-        return cmp;
+        return Long.compare(updCntr, row.updCntr);
     }
 
     /** {@inheritDoc} */

@@ -2838,13 +2838,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 clearPendingEntries(cctx, oldRow);
             }
 
-            if (oldRow != null) {
-                assert oldRow.link() != 0 : oldRow;
-
-                if (newRow.link() != oldRow.link())
-                    rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-            }
-
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
@@ -2852,6 +2845,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+            }
+
+            if (oldRow != null) {
+                assert oldRow.link() != 0 : oldRow;
+
+                if (newRow.link() != oldRow.link())
+                    rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
         }
 
@@ -3041,15 +3041,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
-
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
                     if (oldTombstone && tombstoneRow == null)
                         cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
                 }
+
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
+                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
             }
 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
@@ -3416,9 +3416,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            UpdateLogRow old = logTree.remove(row);
-
-            assert old == null || old.link() == row.link();
+            logTree.remove(row);
         }
 
         /**
@@ -3430,9 +3428,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            boolean res = logTree.putx(row);
-
-            assert !res;
+            logTree.putx(row);
         }
 
         /** {@inheritDoc} */
