@@ -626,6 +626,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     else {
                         DiscoveryDataClusterState state = cctx.kernalContext().state().clusterState();
 
+                        assert state.transition() : state + " evt: " + evt + " msg: " + customMsg;
+
                         baselineChanging = state.baselineChanging()
                             // Or it is the first activation.
                             || state.active() && !ClusterState.active(state.lastState()) && state.previousBaselineTopology() == null;
@@ -633,6 +635,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     exchFut.listen(f -> onClusterStateChangeFinish(f, exchActions, baselineChanging));
                 }
+
+                cctx.kernalContext().state().onChangeStateMessageWasProcessed();
             }
             else if (customMsg instanceof DynamicCacheChangeBatch) {
                 DynamicCacheChangeBatch batch = (DynamicCacheChangeBatch)customMsg;

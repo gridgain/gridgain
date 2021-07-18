@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.CacheKeepBinaryTransactionTes
 import org.apache.ignite.internal.processors.cache.CacheNearReaderUpdateTest;
 import org.apache.ignite.internal.processors.cache.CacheRebalancingSelfTest;
 import org.apache.ignite.internal.processors.cache.CacheSerializableTransactionsTest;
+import org.apache.ignite.internal.processors.cache.ChangeGlobalStateMessageOrderTest;
 import org.apache.ignite.internal.processors.cache.ClientSlowDiscoveryTopologyChangeTest;
 import org.apache.ignite.internal.processors.cache.ClientSlowDiscoveryTransactionRemapTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeTest;
@@ -109,6 +110,7 @@ public class IgniteCacheTestSuite5 {
         GridTestUtils.addTestIfNeeded(suite, ClusterStateClientReplicatedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterStateThinClientReplicatedSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterStateNoRebalanceReplicatedTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ChangeGlobalStateMessageOrderTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterReadOnlyModeTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheCreateDestroyClusterReadOnlyModeTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteCachePartitionLossPolicySelfTest.class, ignoredTests);

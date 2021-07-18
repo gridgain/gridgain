@@ -619,6 +619,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     boolean incMinorTopVer;
 
                     if (customMsg instanceof ChangeGlobalStateMessage) {
+                        ctx.state().onStateMessage();
+
                         incMinorTopVer = ctx.state().onStateChangeMessage(
                             new AffinityTopologyVersion(topVer, minorTopVer),
                             (ChangeGlobalStateMessage)customMsg,
