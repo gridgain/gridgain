@@ -2580,7 +2580,7 @@ public class GridNioServer<T> {
          * @param attach GridNioKeyAttachment.
          */
         private void procesKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
-            if (!X.hasCause(e, Exception.class)) {
+            if (X.hasCause(e, Error.class)) {
                 try {
                     U.sleep(1000);
                 }
