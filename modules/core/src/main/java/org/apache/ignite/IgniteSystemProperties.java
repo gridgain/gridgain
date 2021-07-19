@@ -860,13 +860,6 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT =
         "IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT";
 
-
-    /**
-     * Сache capacity for storing thin client security contexts.
-     */
-    public static final String IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY =
-            "IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY";
-
     /**
      * If a partition release future completion time during an exchange exceeds this threshold, the contents of
      * the future will be dumped to the log on exchange. Default is {@code 0} (disabled).

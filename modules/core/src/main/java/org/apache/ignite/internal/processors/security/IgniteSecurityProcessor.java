@@ -20,12 +20,10 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -50,8 +48,6 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY;
-import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
@@ -85,12 +81,6 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
 
-    /** Capacity of thin clients security contexts cache. */
-    private final int capSecCtxThinClients = getInteger(IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY, 5000);
-
-    /** LRU cache for security contexts for thin clients. Key is the thin client node's id. */
-    private final LRUCache secCtxThinClients;
-
     /** Logger. */
     private final IgniteLogger log;
 
@@ -110,8 +100,6 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         this.secPrc = secPrc;
 
         marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
-
-        secCtxThinClients = new LRUCache(capSecCtxThinClients);
     }
 
     /** {@inheritDoc} */
@@ -134,7 +122,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
         SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
                 uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
-                : secCtxThinClients.computeIfAbsent(subjId, uuid -> secPrc.securityContext(subjId));
+                : secCtxs.computeIfAbsent(subjId, uuid -> secPrc.securityContext(subjId));
 
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
@@ -185,6 +173,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public void onSessionExpired(UUID subjId) {
+        secCtxs.remove(subjId);
+
         secPrc.onSessionExpired(subjId);
     }
 
@@ -453,36 +443,6 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         /** {@inheritDoc} */
         @Override public Collection<SecurityPermission> systemPermissions() {
             return Collections.emptyList();
-        }
-    }
-
-    /** Implementation LRU cache for storing thin clients security contexts */
-    private static class LRUCache {
-        /** Cache capacity */
-        private final int CAPACITY;
-        /** Cache store */
-        private final LinkedHashMap<UUID, SecurityContext> map;
-
-        /**
-         * @param cap - cache capacity
-         */
-        public LRUCache(int cap) {
-            CAPACITY = cap;
-            map = new LinkedHashMap<UUID, SecurityContext>(cap, 0.75f, true) {
-                @Override protected boolean removeEldestEntry(Map.Entry eldest) {
-                    return size() > CAPACITY;
-                }
-            };
-        }
-
-        /**
-         * @param subjId - security subject id
-         * @param f - the function to compute a thin client security context
-         * @return the current (existing or computed) security context associated with the specified
-         * subjId, or null if the computed security context is null
-         */
-        public SecurityContext computeIfAbsent(UUID subjId, Function<UUID, SecurityContext> f) {
-            return map.computeIfAbsent(subjId, f);
         }
     }
 }
