@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.EncryptedRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.LazyDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
@@ -535,6 +536,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
             case TX_RECORD:
                 return txRecordSerializer.size((TxRecord)record);
+
+            case INDEX_ROOT_PAGE_RENAME_RECORD:
+                return ((IndexRenameRootPageRecord) record).dataSize();
 
             default:
                 throw new UnsupportedOperationException("Type: " + record.type());
@@ -1179,6 +1183,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
+            case INDEX_ROOT_PAGE_RENAME_RECORD:
+                res = new IndexRenameRootPageRecord(in);
+
+                break;
+
             default:
                 throw new UnsupportedOperationException("Type: " + type);
         }
@@ -1764,6 +1773,11 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 break;
 
             case SWITCH_SEGMENT_RECORD:
+                break;
+
+            case INDEX_ROOT_PAGE_RENAME_RECORD:
+                ((IndexRenameRootPageRecord)rec).writeRecord(buf);
+
                 break;
 
             default:
