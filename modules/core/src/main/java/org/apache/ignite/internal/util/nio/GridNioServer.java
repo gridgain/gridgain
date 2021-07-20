@@ -2511,7 +2511,7 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    procesKeysSelectionError(e, attach);
+                    processKeysSelectionError(e, attach);
 
                     GridSelectorNioSessionImpl ses = attach.session();
 
@@ -2568,7 +2568,7 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    procesKeysSelectionError(e, attach);
+                    processKeysSelectionError(e, attach);
                 }
             }
         }
@@ -2579,8 +2579,8 @@ public class GridNioServer<T> {
          * @param e Exception or error which occured.
          * @param attach GridNioKeyAttachment.
          */
-        private void procesKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
-            if (X.hasCause(e, Error.class)) {
+        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
+            if (X.hasCause(e, Error.class)) { // TODO IGNITE-2659.
                 try {
                     U.sleep(1000);
                 }
