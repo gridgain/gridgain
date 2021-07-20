@@ -72,6 +72,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -2510,19 +2511,9 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
+                    processKeysSelectionError(e, attach);
 
                     GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
 
                     // Can be null if async connect failed.
                     if (ses != null)
@@ -2577,21 +2568,33 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
-
-                    GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
+                    processKeysSelectionError(e, attach);
                 }
             }
+        }
+
+        /**
+         * Processes errors occured while processing selector keys.
+         *
+         * @param e Exception or error which occured.
+         * @param attach GridNioKeyAttachment.
+         */
+        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
+            if (X.hasCause(e, Error.class)) { // TODO IGNITE-2659.
+                try {
+                    U.sleep(1000);
+                }
+                catch (IgniteInterruptedCheckedException ignore) {
+                    // No-op.
+                }
+            }
+
+            GridSelectorNioSessionImpl ses = attach.session();
+
+            if (!closed)
+                U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
+            else if (log.isDebugEnabled())
+                log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
         }
 
         /**
