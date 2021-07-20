@@ -147,7 +147,7 @@ public class H2QueryInfo {
 
         msgSb.append(']');
 
-        LT.warn(log, msgSb.toString());
+        LT.warn(log, runningQryId + "#" + sql,  msgSb.toString());
     }
 
     /**
