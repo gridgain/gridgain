@@ -459,9 +459,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         for (File f : walWorkDir0.listFiles())
                             size += f.length();
 
-                        if (isArchiverEnabled())
+                        if (isArchiverEnabled()) {
                             for (File f : walArchiveDir0.listFiles())
                                 size += f.length();
+                        }
 
                         return size;
                     }
