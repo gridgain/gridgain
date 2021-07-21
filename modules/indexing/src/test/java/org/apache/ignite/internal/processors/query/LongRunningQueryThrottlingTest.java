@@ -20,13 +20,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
@@ -44,7 +42,10 @@ import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryMan
  */
 public class LongRunningQueryThrottlingTest extends AbstractIndexingCommonTest {
     /** Keys count. */
-    private static final int KEY_CNT = 1000 * 10;
+    private static final int QRY_PARALLELISM = 10;
+
+    /** Keys count. */
+    private static final int KEY_CNT = 1000 * QRY_PARALLELISM;
 
     /** Local query mode. */
     private boolean local;
@@ -68,8 +69,8 @@ public class LongRunningQueryThrottlingTest extends AbstractIndexingCommonTest {
                 .setKeyFieldName("id")
                 .setValueFieldName("val")
             ))
-            .setQueryParallelism(10)
-            .setSqlFunctionClasses(TestSQLFunctions.class));
+            .setQueryParallelism(QRY_PARALLELISM)
+            .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class));
 
         for (long i = 0; i < KEY_CNT; ++i)
             c.put(i, i);
@@ -82,48 +83,22 @@ public class LongRunningQueryThrottlingTest extends AbstractIndexingCommonTest {
         super.afterTest();
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testLongDistributed() {
         local = false;
         lazy = false;
 
         checkLongRunning();
-        checkFastQueries();
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testLongLocal() {
         local = true;
         lazy = false;
 
         checkLongRunning();
-        checkFastQueries();
-    }
-
-    /**
-     * Do several fast queries.
-     * Log messages must not contain info about long query.
-     */
-    private void checkFastQueries() {
-        ListeningTestLogger testLog = testLog();
-
-        LogListener lsnr = LogListener
-            .matches(Pattern.compile(LONG_QUERY_EXEC_MSG))
-            .build();
-
-        testLog.registerListener(lsnr);
-
-        // Several fast queries.
-        for (int i = 0; i < 10; ++i)
-            sql("SELECT * FROM test").getAll();
-
-        assertFalse(lsnr.check());
     }
 
     /**
@@ -168,7 +143,7 @@ public class LongRunningQueryThrottlingTest extends AbstractIndexingCommonTest {
      * Execute long running sql with a check for errors.
      */
     private void sqlCheckLongRunning() {
-        sqlCheckLongRunning("SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?", 0);
+        sqlCheckLongRunning("SELECT T0.id, delay(100) FROM test AS T0, test AS T1, test AS T2 where T0.id > ?", 0);
     }
 
     /**
@@ -183,27 +158,6 @@ public class LongRunningQueryThrottlingTest extends AbstractIndexingCommonTest {
             .setLazy(lazy)
             .setSchema("TEST")
             .setArgs(args), false);
-    }
-
-    /**
-     * Utility class with custom SQL functions.
-     */
-    public static class TestSQLFunctions {
-        /**
-         * @param v amount of milliseconds to sleep
-         * @return amount of milliseconds to sleep
-         */
-        @SuppressWarnings("unused")
-        @QuerySqlFunction
-        public static int sleep_func(int v) {
-            try {
-                Thread.sleep(v);
-            }
-            catch (InterruptedException ignored) {
-                // No-op
-            }
-            return v;
-        }
     }
 
     /**
