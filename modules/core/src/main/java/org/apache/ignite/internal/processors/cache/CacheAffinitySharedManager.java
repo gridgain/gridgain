@@ -2927,7 +2927,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param log Logger to print to.
      */
     public void printWaitInfo(IgniteLogger log) {
-        if (waitInfo == null || waitInfo.empty() || !log.isInfoEnabled())
+        if (waitInfo == null || waitInfo.assignments.isEmpty() || !log.isInfoEnabled())
             return;
 
         try {
