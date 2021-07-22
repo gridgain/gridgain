@@ -21,8 +21,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
@@ -71,12 +69,6 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     /** Listener calls. Updated via {@link #LSNR_CALLS_UPD}. */
     @SuppressWarnings("unused")
     private volatile int lsnrCalls;
-
-    /** The lock responds for a consistency of compounds. */
-    private ReentrantReadWriteLock compoundsLock = new ReentrantReadWriteLock();
-
-    /** Count of compounds in the future. */
-    private volatile int size;
 
     /**
      * Default constructor.
@@ -163,55 +155,18 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     }
 
     /**
-     * Locks compound to read.
-     */
-    protected void compoundsReadLock() {
-        compoundsLock.readLock().lock();
-    }
-
-    /**
-     * Unlocks compound to read.
-     */
-    protected void compoundsReadUnlock() {
-        compoundsLock.readLock().unlock();
-    }
-
-    /**
-     * Locks compounds list and executes code in {@code supplier}, when the lock holds.
-     *
-     * @param supplier Closure to execute some code when the compounds are locked exclusively.
-     * @return A result of the {@code supplier}.
-     */
-    protected Object compoundsLockedExclusively(Supplier<Object> supplier) {
-        compoundsLock.writeLock().lock();
-        try {
-            return supplier.get();
-        }
-        finally {
-            compoundsLock.writeLock().unlock();
-        }
-    }
-
-    /**
      * Gets collection of futures.
      *
      * @return Collection of futures.
      */
-    public final Collection<IgniteInternalFuture<T>> futures() {
-        compoundsLock.readLock().lock();
+    public final synchronized Collection<IgniteInternalFuture<T>> futures() {
+        if (futs == null)
+            return Collections.emptyList();
 
-        try {
-            if (futs == null)
-                return Collections.emptyList();
+        if (futs instanceof IgniteInternalFuture)
+            return Collections.singletonList((IgniteInternalFuture<T>)futs);
 
-            if (futs instanceof IgniteInternalFuture)
-                return Collections.singletonList((IgniteInternalFuture<T>)futs);
-
-            return new ArrayList<>((Collection<IgniteInternalFuture<T>>)futs);
-        }
-        finally {
-            compoundsLock.readLock().unlock();
-        }
+        return new ArrayList<>((Collection<IgniteInternalFuture<T>>)futs);
     }
 
     /**
@@ -243,24 +198,19 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      * @return {@code True} if there are pending futures.
      */
     protected final boolean hasPending() {
-        compoundsLock.readLock().lock();
-
-        try {
-            int size0 = size;
+        synchronized (this) {
+            int size = futuresCountNoLock();
 
             // Avoid iterator creation and collection copy.
-            for (int i = 0; i < size0; i++) {
+            for (int i = 0; i < size; i++) {
                 IgniteInternalFuture<T> fut = future(i);
 
                 if (!fut.isDone())
                     return true;
             }
+        }
 
-            return false;
-        }
-        finally {
-            compoundsLock.readLock().unlock();
-        }
+        return false;
     }
 
     /**
@@ -271,9 +221,7 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     public final GridCompoundFuture<T, R> add(IgniteInternalFuture<T> fut) {
         assert fut != null;
 
-        compoundsLock.writeLock().lock();
-
-        try {
+        synchronized (this) {
             if (futs == null)
                 futs = fut;
             else if (futs instanceof IgniteInternalFuture) {
@@ -286,11 +234,6 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
             }
             else
                 ((Collection<IgniteInternalFuture>)futs).add(fut);
-
-            size++;
-        }
-        finally {
-            compoundsLock.writeLock().unlock();
         }
 
         fut.listen(this);
@@ -310,16 +253,8 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
     /**
      * Clear futures.
      */
-    protected final void clear() {
-        compoundsLock.writeLock().lock();
-
-        try {
-            futs = null;
-            size = 0;
-        }
-        finally {
-            compoundsLock.writeLock().unlock();
-        }
+    protected final synchronized void clear() {
+        futs = null;
     }
 
     /**
@@ -344,7 +279,7 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      * Check completeness of the future.
      */
     private void checkComplete() {
-        if (initialized() && !isDone() && lsnrCalls == size) {
+        if (initialized() && !isDone() && lsnrCalls == futuresCount()) {
             try {
                 onDone(rdc != null ? rdc.reduce() : null);
             }
@@ -389,7 +324,8 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      */
     @SuppressWarnings("unchecked")
     protected final IgniteInternalFuture<T> future(int idx) {
-        assert futs != null && idx >= 0 && idx < size;
+        assert Thread.holdsLock(this);
+        assert futs != null && idx >= 0 && idx < futuresCountNoLock();
 
         if (futs instanceof IgniteInternalFuture) {
             assert idx == 0;
@@ -404,13 +340,28 @@ public class GridCompoundFuture<T, R> extends GridFutureAdapter<R> implements Ig
      * @return Futures size.
      */
     protected final int futuresCountNoLock() {
-        return size;
+        assert Thread.holdsLock(this);
+
+        if (futs == null)
+            return 0;
+
+        if (futs instanceof IgniteInternalFuture)
+            return 1;
+
+        return ((Collection<IgniteInternalFuture>)futs).size();
+    }
+
+    /**
+     * @return Futures size.
+     */
+    private synchronized int futuresCount() {
+        return futuresCountNoLock();
     }
 
     /**
      * @return {@code True} if has at least one future.
      */
-    protected final boolean hasFutures() {
+    protected final synchronized boolean hasFutures() {
         return futs != null;
     }
 

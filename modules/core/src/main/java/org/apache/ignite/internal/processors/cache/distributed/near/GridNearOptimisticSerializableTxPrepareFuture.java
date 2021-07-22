@@ -236,9 +236,7 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
      */
     private MiniFuture miniFuture(int miniId) {
         // We iterate directly over the futs collection here to avoid copy.
-        compoundsReadLock();
-
-        try {
+        synchronized (GridNearOptimisticSerializableTxPrepareFuture.this) {
             int size = futuresCountNoLock();
 
             // Avoid iterator creation.
@@ -257,9 +255,6 @@ public class GridNearOptimisticSerializableTxPrepareFuture extends GridNearOptim
                         return null;
                 }
             }
-        }
-        finally {
-            compoundsReadUnlock();
         }
 
         return null;

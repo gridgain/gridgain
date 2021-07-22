@@ -203,9 +203,7 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
         if (!isDone()) {
             FinishMiniFuture finishFut = null;
 
-            compoundsReadLock();
-
-            try {
+            synchronized (this) {
                 int size = futuresCountNoLock();
 
                 for (int i = 0; i < size; i++) {
@@ -223,9 +221,6 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                         }
                     }
                 }
-            }
-            finally {
-                compoundsReadUnlock();
             }
 
             if (finishFut != null)
@@ -1014,15 +1009,15 @@ public final class GridNearTxFinishFuture<K, V> extends GridCacheCompoundIdentit
                         Collection<UUID> backups = txNodes.get(nodeId);
 
                         if (!F.isEmpty(backups)) {
-                            CheckRemoteTxMiniFuture mini = (CheckRemoteTxMiniFuture)compoundsLockedExclusively(() -> {
+                            final CheckRemoteTxMiniFuture mini;
+
+                            synchronized (GridNearTxFinishFuture.this) {
                                 int futId = Integer.MIN_VALUE + futuresCountNoLock();
 
-                                CheckRemoteTxMiniFuture miniFut = new CheckRemoteTxMiniFuture(futId, new HashSet<>(backups));
+                                mini = new CheckRemoteTxMiniFuture(futId, new HashSet<>(backups));
 
-                                add(miniFut);
-
-                                return miniFut;
-                            });
+                                add(mini);
+                            }
 
                             GridDhtTxFinishRequest req = checkCommittedRequest(mini.futureId(), true);
 

@@ -196,9 +196,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
      * @return Keys for which {@code MiniFuture} isn't completed.
      */
     public Set<IgniteTxKey> requestedKeys() {
-        compoundsReadLock();
-
-        try {
+        synchronized (this) {
             int size = futuresCountNoLock();
 
             for (int i = 0; i < size; i++) {
@@ -218,9 +216,6 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                 }
             }
         }
-        finally {
-            compoundsReadUnlock();
-        }
 
         return null;
     }
@@ -233,9 +228,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
      */
     private MiniFuture miniFuture(int miniId) {
         // We iterate directly over the futs collection here to avoid copy.
-        compoundsReadLock();
-
-        try {
+        synchronized (this) {
             int size = futuresCountNoLock();
 
             // Avoid iterator creation.
@@ -254,9 +247,6 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                         return null;
                 }
             }
-        }
-        finally {
-            compoundsReadUnlock();
         }
 
         return null;
@@ -727,9 +717,7 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                 if (keyLockFut != null)
                     keys = new HashSet<>(keyLockFut.lockKeys);
                 else {
-                    compoundsReadLock();
-
-                    try {
+                    synchronized (this) {
                         int size = futuresCountNoLock();
 
                         for (int i = 0; i < size; i++) {
@@ -748,9 +736,6 @@ public class GridNearOptimisticTxPrepareFuture extends GridNearOptimisticTxPrepa
                                 break;
                             }
                         }
-                    }
-                    finally {
-                        compoundsReadUnlock();
                     }
                 }
 

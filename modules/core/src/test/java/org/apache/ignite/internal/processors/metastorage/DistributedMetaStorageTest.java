@@ -195,9 +195,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             try {
                 IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
 
-                return clientGrid != null
-                    && clientGrid.context().distributedMetastorage() != null
-                    && clientGrid.context().discovery().localNode() != null;
+                return clientGrid != null && clientGrid.context().distributedMetastorage() != null;
             }
             catch (Exception ignored) {
                 return false;
