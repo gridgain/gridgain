@@ -360,8 +360,6 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         }
     }
 
-
-
     /**
      * Checking that the metrics of the total logged bytes are working correctly.
      *
@@ -373,9 +371,8 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
             cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
 
         n.cluster().state(ACTIVE);
-        awaitPartitionMapExchange();
 
-        populateCache("cache", n);
+        populateCache(n);
 
         turnOffWal(n);
 
@@ -391,7 +388,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Check whether WAL is reporting correct usage when archiving was not needed.
      *
-     * @throws Exception if failed
+     * @throws Exception If failed
      */
     @Test
     public void testWalTotalSizeWithoutArchivingPerfomed() throws Exception {
@@ -400,17 +397,17 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         n.cluster().state(ACTIVE);
 
-        populateCache("cache", n);
+        populateCache(n);
 
         turnOffWal(n);
 
-        checkWalArchiveAndTotalSize(n, true, false);
+        checkWalArchiveAndTotalSize(n, true);
     }
 
     /**
      * Check whether WAL is reporting correct usage when archiving is performed.
      *
-     * @throws Exception if failed
+     * @throws Exception If failed
      */
     @Test
     public void testWalTotalSizeWithArchive() throws Exception {
@@ -419,20 +416,18 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         n.cluster().state(ACTIVE);
 
-        populateCache("cache", n);
-
         while (walMgr(n).lastArchivedSegment() < 3)
             n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
 
         turnOffWal(n);
 
-        checkWalArchiveAndTotalSize(n, true, true);
+        checkWalArchiveAndTotalSize(n, true);
     }
 
     /**
      * Check whether Wal is reporting correct usage when WAL Archive is turned off.
      *
-     * @throws Exception if failed
+     * @throws Exception If failed
      */
     @Test
     public void testWalTotalSizeWithArchiveTurnedOff() throws Exception {
@@ -441,11 +436,11 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
 
         n.cluster().state(ACTIVE);
 
-        populateCache("cache", n);
+        populateCache(n);
 
         turnOffWal(n);
 
-        checkWalArchiveAndTotalSize(n, false, false);
+        checkWalArchiveAndTotalSize(n, false);
     }
 
     /**
@@ -483,18 +478,19 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * populates a given cache w/32 KB of data
-     * @param cacheName  - name of cache to populate
-     * @param igniteEx - handle to ignite
+     * Populates a cache w/32 KB of data
+     *
+     * @param igniteEx - Node
      */
-    private void populateCache(String cacheName, IgniteEx igniteEx) {
+    private void populateCache(IgniteEx igniteEx) {
         for (int i = 0; i < 10; i++)
-            igniteEx.cache(cacheName).put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+            igniteEx.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
     }
 
     /**
-     * Turns off WAL.
-     * @param igniteEx - handle to ignite
+     * Turns off WAL logging.
+     *
+     * @param igniteEx - Node
      * @throws IgniteCheckedException
      */
     private void turnOffWal(IgniteEx igniteEx) throws IgniteCheckedException {
@@ -508,24 +504,27 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     *  check the state of wal archive, and whether the total size of wal and (possibly) wal archive match what is expected.
-     * @param igniteEx - handle to ignite
+     * Check the state of wal archive, and whether the total size of wal (and possibly wal archive) match what is expected.
+     *
+     * @param igniteEx      - Node
      * @param hasWalArchive - whether wal archiving is enabled
-     * @param addArchiveDirToTotalSize  -- whether the files in the wal archive dir are added tot total size
      * @throws IgniteCheckedException
      * @throws InterruptedException
      */
-    private void checkWalArchiveAndTotalSize(IgniteEx igniteEx, boolean hasWalArchive, boolean addArchiveDirToTotalSize) throws IgniteCheckedException, InterruptedException {
+    private void checkWalArchiveAndTotalSize(IgniteEx igniteEx,
+        boolean hasWalArchive) throws IgniteCheckedException, InterruptedException {
         FileWriteAheadLogManager walMgr = walMgr(igniteEx);
 
         SegmentRouter router = walMgr.getSegmentRouter();
 
         assertEquals(router.hasArchive(), hasWalArchive);
 
-        Thread.sleep(1000); //wait to avoid race condition with FileWriteAheadLogManager.FileArchiver#allocateRemainingFile where wal.tmp files are created.
+        //wait to avoid race condition where new segments(and corresponding .tmp files) are created after totalSize has been calculated.
+        igniteEx.context().cache().context().database().waitForCheckpoint("test");
+
         long totalSize = walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalWorkDir()));
 
-        if (addArchiveDirToTotalSize)
+        if (router.hasArchive())
             totalSize += walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalArchiveDir()));
 
         assertEquals(totalSize, dbMgr(igniteEx).persistentStoreMetrics().getWalTotalSize());
