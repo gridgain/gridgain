@@ -2927,7 +2927,13 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param log Logger to print to.
      */
     public void printWaitInfo(IgniteLogger log) {
-        if (waitInfo == null || waitInfo.assignments.isEmpty() || !log.isInfoEnabled())
+        WaitRebalanceInfo info;
+
+        synchronized (mux) {
+            info = waitInfo;
+        }
+
+        if (info == null || info.assignments.isEmpty() || !log.isInfoEnabled())
             return;
 
         try {
@@ -2935,7 +2941,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
             List<String> grpList = new ArrayList<>();
 
-            waitInfo.assignments.forEach((grpId, partsMap) -> {
+            info.assignments.forEach((grpId, partsMap) -> {
                 StringBuilder sb = new StringBuilder();
 
                 sb.append("grp=[grpId=").append(grpId).append(", nodes=[");
