@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -47,6 +48,7 @@ import org.apache.ignite.plugin.security.SecuritySubjectType;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
+import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -81,6 +83,9 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
 
+    /** Map of security contexts for thin clients. Key is the node's id. */
+    private final LRUCache thinCliSecCtxs;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -98,6 +103,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         this.ctx = ctx;
         this.log = ctx.log(IgniteSecurityProcessor.class);
         this.secPrc = secPrc;
+        this.thinCliSecCtxs = new LRUCache(100);
 
         marsh = MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
     }
@@ -122,7 +128,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
         SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
                 uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
-                : secCtxs.computeIfAbsent(subjId, uuid -> secPrc.securityContext(subjId));
+                : thinCliSecCtxs.computeIfAbsent(subjId, uuid -> secPrc.securityContext(subjId));
 
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
@@ -173,8 +179,6 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public void onSessionExpired(UUID subjId) {
-        secCtxs.remove(subjId);
-
         secPrc.onSessionExpired(subjId);
     }
 
@@ -443,6 +447,29 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         /** {@inheritDoc} */
         @Override public Collection<SecurityPermission> systemPermissions() {
             return Collections.emptyList();
+        }
+    }
+
+    /** Implementation LRU cache for storing thin clients security contexts */
+    private static class LRUCache {
+        /** Cache store */
+        private final Map<UUID, SecurityContext> map;
+
+        /**
+         * @param cap - cache capacity
+         */
+        public LRUCache(int cap) {
+            map = new ConcurrentLinkedHashMap<>(cap, 0.75f, Runtime.getRuntime().availableProcessors(), cap);
+        }
+
+        /**
+         * @param subjId - security subject id
+         * @param f - the function to compute a thin client security context
+         * @return the current (existing or computed) security context associated with the specified
+         * subjId, or null if the computed security context is null
+         */
+        public SecurityContext computeIfAbsent(UUID subjId, Function<UUID, SecurityContext> f) {
+            return map.computeIfAbsent(subjId, f);
         }
     }
 }
