@@ -1145,6 +1145,16 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable RootPage renameRootPageForIndex(
+        int cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException {
+        return indexStorage.renameCacheIndex(cacheId, oldIdxName, newIdxName, segment);
+    }
+
+    /** {@inheritDoc} */
     @Override public ReuseList reuseListForIndex(String idxName) {
         return reuseList;
     }
