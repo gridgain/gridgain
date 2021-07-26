@@ -80,7 +80,6 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.util.TimeBag;
@@ -297,8 +296,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
             String freeListName = memPlcCfg.getName() + "##FreeList";
 
-            PageLockListener lsnr = cctx.diagnostic().pageLockTracker().createPageLockTracker(freeListName);
-
             CacheFreeList freeList = new CacheFreeList(
                 0,
                 freeListName,
@@ -306,7 +303,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 persistenceEnabled ? cctx.wal() : null,
                 0L,
                 true,
-                lsnr,
+                cctx.diagnostic().pageLockTracker(),
                 cctx.kernalContext(),
                 null,
                 PageIdAllocator.FLAG_IDX
@@ -1628,6 +1625,9 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
      * @param shutdown {@code True} to force memory regions shutdown.
      */
     private void onDeActivate(boolean shutdown) {
+        if (freeListMap != null)
+            freeListMap.values().forEach(DataStructure::close);
+
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.beforeStop(this);
 
