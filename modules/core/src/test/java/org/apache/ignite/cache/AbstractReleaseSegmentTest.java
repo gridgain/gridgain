@@ -25,9 +25,12 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  * Base class for testing the release of segments when performing an operation.
@@ -90,5 +93,14 @@ public abstract class AbstractReleaseSegmentTest extends GridCommonAbstractTest 
     protected void release(IgniteEx n, @Nullable WALPointer reserved) {
         while (reserved != null && walMgr(n).reserved(reserved))
             walMgr(n).release(reserved);
+    }
+
+    /**
+     * Returns an instance of {@link SegmentAware} for the given ignite node.
+     *
+     * @return Segment aware.
+     */
+    protected SegmentAware segmentAware(IgniteEx n) {
+        return getFieldValue(walMgr(n), "segmentAware");
     }
 }

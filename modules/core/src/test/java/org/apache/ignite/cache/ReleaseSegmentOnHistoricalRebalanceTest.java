@@ -275,15 +275,6 @@ public class ReleaseSegmentOnHistoricalRebalanceTest extends AbstractReleaseSegm
     }
 
     /**
-     * Returns an instance of {@link SegmentAware} for the given ignite node.
-     *
-     * @return Segment aware.
-     */
-    private SegmentAware segmentAware(IgniteEx n) {
-        return getFieldValue(walMgr(n), "segmentAware");
-    }
-
-    /**
      * Returns an instance of {@link GridCacheOffheapManager} for the given ignite node.
      *
      * @param cache Cache.
