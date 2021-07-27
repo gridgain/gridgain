@@ -152,7 +152,7 @@ public interface ReconciliationResultCollector {
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
         /** Result of partition reconciliation of sizes. */
-        public final Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
+        public final Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
 
         /**
          * Creates a new SimpleCollector.

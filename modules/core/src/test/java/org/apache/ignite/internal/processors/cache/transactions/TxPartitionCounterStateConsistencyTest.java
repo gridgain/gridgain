@@ -178,8 +178,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 //        PartitionUpdateCounter cntr0 = counter(part, grid(0).name());
 //        PartitionUpdateCounter cntr1 = counter(part, grid(1).name());
 //
-//        cntr0.init(7, null);
-//        cntr1.init(5, null);
+//        cntr0.init(70, null);
+//        cntr1.init(50, null);
 //
 //        assertFalse("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1));
 //
@@ -188,22 +188,126 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 //        AffinityTopologyVersion topVerBeforeRepair = exchangeMgr.lastTopologyFuture().topologyVersion();
 //
 //        //repair counters
-//        grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+////        System.out.println("before FinalizeCountersDiscoveryMessage " + topVerBeforeRepair);
+//
+////        grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+//
+////        IgniteFuture<Void> fut = grid(0).compute().runAsync(() -> new IgniteRunnable() {
+////            @IgniteInstanceResource
+////            private Ignite ignite;
+////
+////            @Override public void run() {
+//////                try {
+////                    System.out.println("oiaehrguem");
+//////                    ((IgniteEx)ignite).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+//////                }
+//////                catch (IgniteCheckedException e) {
+//////                    throw new RuntimeException("eisghsiu", e);
+//////                }
+////            }
+////        });
+////
+////        fut.get();
+//
+//        doSleep(500);
 //        exchangeMgr.lastTopologyFuture().get();
+//
+//        awaitPartitionMapExchange(true, true, null);
 //
 //        GridTestUtils.waitForCondition(() -> exchangeMgr.lastTopologyFuture().topologyVersion()
 //            .equals(topVerBeforeRepair.nextMinorVersion()), 5000);
+//        System.out.println("after FinalizeCountersDiscoveryMessage");
 //
-//        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 7);
+//        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 70);
+//
+////        stopAllGrids();
+////
+////        startGrids(2);
+////
+////        grid(0).cluster().state(ClusterState.ACTIVE);
+////
+////        cntr0 = counter(part, grid(0).name());
+////        cntr1 = counter(part, grid(1).name());
+////
+////        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 70);
+//
+//    }
+//
+//    @Test
+//    public void testBrokenCounter2() throws Exception {
+//        backups = 1;
+//
+//        IgniteEx crd = startGrids(2);
+//
+//        crd.cluster().state(ClusterState.ACTIVE);
+//
+//        IgniteEx prim = grid(1);
+//
+//        int part = primaryKey(prim.cache(DEFAULT_CACHE_NAME));
+//
+//        crd.cache(DEFAULT_CACHE_NAME).put(part, 1);
+//
+//        PartitionUpdateCounter cntr0 = counter(part, grid(0).name());
+//        PartitionUpdateCounter cntr1 = counter(part, grid(1).name());
+//
+//        cntr0.update(12, 4);
+//        cntr1.update(13, 3);
+//
+////        cntr0.init(70, null);
+////        cntr1.init(50, null);
+//
+//        assertFalse("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1));
+//
+//        forceCheckpoint();
+//
+//        GridCachePartitionExchangeManager<Object, Object> exchangeMgr = grid(1).context().cache().context().exchange();
+//
+//        AffinityTopologyVersion topVerBeforeRepair = exchangeMgr.lastTopologyFuture().topologyVersion();
+//
+//        //repair counters
+////        System.out.println("before FinalizeCountersDiscoveryMessage " + topVerBeforeRepair);
+//
+//        grid(1).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+//
+////        IgniteFuture<Void> fut = grid(0).compute().runAsync(() -> new IgniteRunnable() {
+////            @IgniteInstanceResource
+////            private Ignite ignite;
+////
+////            @Override public void run() {
+//////                try {
+////                    System.out.println("oiaehrguem");
+//////                    ((IgniteEx)ignite).context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+//////                }
+//////                catch (IgniteCheckedException e) {
+//////                    throw new RuntimeException("eisghsiu", e);
+//////                }
+////            }
+////        });
+////
+////        fut.get();
+//
+////        doSleep(500);
+////        exchangeMgr.lastTopologyFuture().get();
+//
+////        awaitPartitionMapExchange(true, true, null);
+//
+//        GridTestUtils.waitForCondition(() -> exchangeMgr.lastTopologyFuture().topologyVersion()
+//            .equals(topVerBeforeRepair.nextMinorVersion()), 5000);
+//        System.out.println("after FinalizeCountersDiscoveryMessage");
+//
+//        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 16);
+//        System.out.println("sum_Counter0: " + cntr0 + ", counter1: " + cntr1);
 //
 //        stopAllGrids();
 //
 //        startGrids(2);
 //
+//        grid(0).cluster().state(ClusterState.ACTIVE);
+//
 //        cntr0 = counter(part, grid(0).name());
 //        cntr1 = counter(part, grid(1).name());
 //
-//        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 7);
+//        assertTrue("Counter0: " + cntr0 + ", counter1: " + cntr1, cntr0.equals(cntr1) && cntr0.get() == 16);
 //
 //    }
 //

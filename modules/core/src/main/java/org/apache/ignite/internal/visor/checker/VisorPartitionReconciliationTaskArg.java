@@ -31,6 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.PARTITION_COUNTER_CONSISTENCY;
 
 /**
  * Partition reconciliation task arguments.
@@ -367,7 +368,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
-            reconciliationTypes = new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY));
+            reconciliationTypes = new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY,  PARTITION_COUNTER_CONSISTENCY));
         }
 
         /**

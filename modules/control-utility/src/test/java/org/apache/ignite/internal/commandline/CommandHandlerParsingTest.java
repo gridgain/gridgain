@@ -848,6 +848,14 @@ public class CommandHandlerParsingTest {
         parseArgs(asList("--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation", "12345"));
 
         assertParseArgsThrows("The cache size reconciliation should be specified.", "--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation");
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation", "true"));
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation", "false"));
+
+        parseArgs(asList("--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation", "12345"));
+
+        assertParseArgsThrows("The partition counter reconciliation should be specified.", "--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation");
     }
 
     /**

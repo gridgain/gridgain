@@ -24,8 +24,8 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.lang.IgniteUuid;
-import org.jetbrains.annotations.Nullable;
 
+/** */
 public class FinalizeCountersDiscoveryMessage implements DiscoveryCustomMessage {
     /** */
     private static final long serialVersionUID = 0L;
@@ -33,24 +33,30 @@ public class FinalizeCountersDiscoveryMessage implements DiscoveryCustomMessage 
     /** Custom message ID. */
     private IgniteUuid id = IgniteUuid.randomUuid();
 
+    /** */
     public Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
 
+    /** {@inheritDoc} */
     @Override public IgniteUuid id() {
         return id;
     }
 
-    @Override public @Nullable DiscoveryCustomMessage ackMessage() {
+    /** {@inheritDoc} */
+    @Override public DiscoveryCustomMessage ackMessage() {
         return null;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean isMutable() {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean stopProcess() {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr, AffinityTopologyVersion topVer, DiscoCache discoCache) {
         return discoCache.copy(topVer, null);
     }

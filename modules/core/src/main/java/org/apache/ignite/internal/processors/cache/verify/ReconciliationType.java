@@ -26,7 +26,10 @@ public enum ReconciliationType {
     DATA_CONSISTENCY,
 
     /** Cache size reconciliation. */
-    CACHE_SIZE_CONSISTENCY;
+    CACHE_SIZE_CONSISTENCY,
+
+    /** Partition counter reconciliation. */
+    PARTITION_COUNTER_CONSISTENCY;
 
     /** Enumerated values. */
     private static final ReconciliationType[] VALS = values();

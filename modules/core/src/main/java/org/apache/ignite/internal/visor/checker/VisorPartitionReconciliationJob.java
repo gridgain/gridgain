@@ -16,10 +16,14 @@
 
 package org.apache.ignite.internal.visor.checker;
 
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.processors.cache.FinalizeCountersDiscoveryMessage;
+import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -61,6 +65,24 @@ public class VisorPartitionReconciliationJob<ResultT> extends VisorJob<VisorPart
     /** {@inheritDoc} */
     @Override protected ResultT run(@Nullable VisorPartitionReconciliationTaskArg arg) throws IgniteException {
         if (fut == null) {
+            try {
+                if (arg.reconTypes().contains(ReconciliationType.PARTITION_COUNTER_CONSISTENCY) &&
+                    arg.repair() &&
+                    IgniteFeatures.allNodesSupports(
+                        ignite.context(),
+                        ignite.context().discovery().allNodes(),
+                        IgniteFeatures.PARTITION_RECONCILIATION_V2)) {
+                    ignite.context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
+
+                    ignite.log().info("Counter reconciliation was started.");
+                }
+                else
+                    ignite.log().info("Counter reconciliation was not started due to partition reconciliation task arguments.");
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+
             fut = ignite.compute().executeAsync(taskCls, arg);
 
             if (!fut.isDone()) {

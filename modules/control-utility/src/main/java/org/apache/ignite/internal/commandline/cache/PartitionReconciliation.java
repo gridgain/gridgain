@@ -63,9 +63,11 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARALLELISM;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARTITION_COUNTER_CONSISTENCY_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.PARTITION_COUNTER_CONSISTENCY;
 
 /**
  * Partition reconciliation command.
@@ -125,10 +127,13 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                 " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
 
         paramsDesc.put(DATA_CONSISTENCY_RECONCILIATION.toString(),
-            "This option allows checking consistency of partitions. Default value is true.");
+            "This option allows checking data consistency of partitions. Default value is true.");
 
         paramsDesc.put(CACHE_SIZE_CONSISTENCY_RECONCILIATION.toString(),
-            "This option allows checking sizes of partitions. Default value is true.");
+            "This option allows checking sizes consistency of partitions. Default value is true.");
+
+        paramsDesc.put(PARTITION_COUNTER_CONSISTENCY_RECONCILIATION.toString(),
+            "This option allows checking counters consistency of partitions. Default value is true.");
 
         paramsDesc.put(INCLUDE_SENSITIVE.toString(),
             "Print data to result with sensitive information: keys and values." +
@@ -148,6 +153,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             optional(RECHECK_ATTEMPTS),
             optional(DATA_CONSISTENCY_RECONCILIATION),
             optional(CACHE_SIZE_CONSISTENCY_RECONCILIATION),
+            optional(PARTITION_COUNTER_CONSISTENCY_RECONCILIATION),
             optional(INCLUDE_SENSITIVE),
             optional(caches));
     }
@@ -199,7 +205,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             args.recheckAttempts,
             args.repairAlg,
             args.recheckDelay,
-            args.reconTypes()
+            args.reconciliationTypes()
         );
 
         List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
@@ -242,6 +248,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         int recheckDelay = (int)RECHECK_DELAY.defaultValue();
         boolean consistencyReconciliation = (boolean) DATA_CONSISTENCY_RECONCILIATION.defaultValue();
         boolean cacheSizeReconciliation = (boolean) CACHE_SIZE_CONSISTENCY_RECONCILIATION.defaultValue();
+        boolean partitionCounterReconciliation = (boolean) PARTITION_COUNTER_CONSISTENCY_RECONCILIATION.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -358,16 +365,23 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                         break;
 
                     case DATA_CONSISTENCY_RECONCILIATION:
-                        strVal = argIter.nextArg("The consistency reconciliation should be specified.");
+                        strVal = argIter.nextArg("The data consistency reconciliation should be specified.");
 
                         consistencyReconciliation = Boolean.parseBoolean(strVal);
 
                         break;
 
                     case CACHE_SIZE_CONSISTENCY_RECONCILIATION:
-                        strVal = argIter.nextArg("The cache size reconciliation should be specified.");
+                        strVal = argIter.nextArg("The cache size consistency reconciliation should be specified.");
 
                         cacheSizeReconciliation = Boolean.parseBoolean(strVal);
+
+                        break;
+
+                    case PARTITION_COUNTER_CONSISTENCY_RECONCILIATION:
+                        strVal = argIter.nextArg("The partition counter consistency reconciliation should be specified.");
+
+                        partitionCounterReconciliation = Boolean.parseBoolean(strVal);
 
                         break;
                 }
@@ -381,6 +395,9 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
         if (cacheSizeReconciliation)
             reconciliationTypes.add(ReconciliationType.CACHE_SIZE_CONSISTENCY);
+
+        if (partitionCounterReconciliation)
+            reconciliationTypes.add(PARTITION_COUNTER_CONSISTENCY);
 
         args = new Arguments(
             cacheNames,
@@ -655,7 +672,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         /**
          * @return Recheck delay.
          */
-        public Set<ReconciliationType> reconTypes() {
+        public Set<ReconciliationType> reconciliationTypes() {
             return reconciliationTypes;
         }
     }

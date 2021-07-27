@@ -1765,23 +1765,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             finalizePartitionCounters();
 
         if ((exchangeId().discoveryEvent() instanceof DiscoveryCustomEvent &&
-                (((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage()) instanceof FinalizeCountersDiscoveryMessage)) {
-            FinalizeCountersDiscoveryMessage msg = (FinalizeCountersDiscoveryMessage)(((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage());
-
-//            IgniteCache<Object, Object> cache = cctx.cache(partBatch.cacheName());
-//sharedContext().cacheContext(1).offheap()
-//            GridCacheContext<Object, Object> cctx = .cache().cache("default").context();
-//
-//            CacheGroupContext grpCtx = cctx.group();
-//
-//            int cacheId = cctx.cacheId();
-//
-//            grpCtx.offheap().dataStore(part)
-
-//            GridDhtLocalPartition part = cctx.cacheContext().topology().localPartition(partBatch.partitionId());
-
-//            finalizePartitionCounters();
-        }
+                (((DiscoveryCustomEvent)exchangeId().discoveryEvent()).customMessage()) instanceof FinalizeCountersDiscoveryMessage))
+            finalizePartitionCounters();
 
         cctx.exchange().exchangerBlockingSectionBegin();
 

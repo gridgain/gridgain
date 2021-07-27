@@ -64,7 +64,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     DATA_CONSISTENCY_RECONCILIATION("--data-consistency-reconciliation", Boolean.TRUE),
 
     /** Cache size consistency reconciliation. */
-    CACHE_SIZE_CONSISTENCY_RECONCILIATION("--cache-size-consistency-reconciliation", Boolean.TRUE);
+    CACHE_SIZE_CONSISTENCY_RECONCILIATION("--cache-size-consistency-reconciliation", Boolean.TRUE),
+
+    /** Partition counter consistency reconciliation. */
+    PARTITION_COUNTER_CONSISTENCY_RECONCILIATION("--partition-counter-consistency-reconciliation", Boolean.TRUE);
 
     /** Option name. */
     private final String name;

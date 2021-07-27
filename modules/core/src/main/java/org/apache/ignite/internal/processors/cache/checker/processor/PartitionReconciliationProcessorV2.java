@@ -332,7 +332,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                     schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
 
                 if (nextBatchKey == null) {
-                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new HashMap<>());
+                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
 
                     collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
                 }
