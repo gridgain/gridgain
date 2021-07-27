@@ -44,5 +44,8 @@ public class NodeUnreachableException extends IgniteSpiException {
     /** */
     public NodeUnreachableException(String msg) {
         super(msg);
+
+        System.out.println("<$> Unreachable exception created: " + msg);
+        Thread.dumpStack();
     }
 }
