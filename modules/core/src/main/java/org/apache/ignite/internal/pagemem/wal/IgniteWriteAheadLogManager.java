@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -139,9 +139,8 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * Invoke this method to release WAL history since provided pointer that was previously reserved.
      *
      * @param start WAL pointer.
-     * @throws IgniteException If failed to release.
      */
-    public void release(WALPointer start) throws IgniteCheckedException;
+    public void release(WALPointer start);
 
     /**
      * Gives a hint to WAL manager to clear entries logged before the given pointer. Some entries before the
