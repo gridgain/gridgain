@@ -370,15 +370,23 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * closed connection won't automatically reopen when we don't expect it.
      */
     private void interruptCommWorkerThreads(String clientName) {
+        log.info("<$> interruptCommWorkerThreads(" + clientName + ")");
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
             .filter(t -> t.getName().contains("tcp-comm-worker"))
+            .peek(thread -> log.info("<$> Worker thread found: " + thread.getName()))
             .filter(t -> t.getName().contains(clientName))
             .collect(Collectors.toList());
 
         for (Thread tcpCommWorkerThread : tcpCommWorkerThreads) {
+            log.info("<$> Interrupting worker thread " + tcpCommWorkerThread.getName());
+
             U.interrupt(tcpCommWorkerThread);
 
+            log.info("<$> Waiting for worker thread " + tcpCommWorkerThread.getName());
+
             U.join(tcpCommWorkerThread, log);
+
+            log.info("<$> Worker thread stopped: " + tcpCommWorkerThread.getName());
         }
     }
 
@@ -417,7 +425,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
 
         GridTestUtils.invoke(spi, "onNodeLeft", clientNode.consistentId(), clientNode.id());
 
-        IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() ->
+        GridTestUtils.runAsync(() ->
             srv.context().io().sendIoTest(clientNode, new byte[10], false).get()
         );
 
