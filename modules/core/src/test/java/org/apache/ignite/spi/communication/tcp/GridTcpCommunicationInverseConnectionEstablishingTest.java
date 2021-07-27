@@ -96,7 +96,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     private CacheConfiguration ccfg;
 
     /** */
-    private long failureDetectionTimeout = 8_000;
+    private long failureDetectionTimeout = 5_000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -429,7 +429,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             srv.context().io().sendIoTest(clientNode, new byte[10], false).get()
         );
 
-        assertTrue(GridTestUtils.waitForCondition(clientFailedEventFlag::get, 10_000));
+        assertTrue(GridTestUtils.waitForCondition(clientFailedEventFlag::get, 15_000));
     }
 
     /**
