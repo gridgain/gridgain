@@ -32,7 +32,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
@@ -56,7 +55,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singleton;
-import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 
 /**
  * Task for background cleaning of index trees.
@@ -233,8 +231,6 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
                     ) {
                         /** {@inheritDoc} */
                         @Override protected void body() {
-                            IoStatisticsHolderIndex stats = ioStatisticsHolderIndex(grpCtx, idxName);
-
                             try {
                                 Iterator<Map.Entry<Integer, RootPage>> it = rootPages.entrySet().iterator();
 
@@ -244,8 +240,7 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
                                     RootPage rootPage = e.getValue();
                                     int segment = e.getKey();
 
-                                    long pages =
-                                        destroyIndexTrees(grpCtx, rootPage, cacheName, newTreeName, idxName, segment, stats);
+                                    long pages = destroyIndexTrees(grpCtx, rootPage, cacheName, newTreeName, idxName, segment);
 
                                     if (pages > 0)
                                         pageCnt.addAndGet(pages);
@@ -259,8 +254,6 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
                                 fut.onDone(DurableBackgroundTaskResult.restart(t));
                             }
                             finally {
-                                ctx.metric().remove(stats.metricRegistryName());
-
                                 worker = null;
                             }
                         }
@@ -294,7 +287,6 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
      * @param treeName Name of underlying index tree name.
      * @param idxName Index name.
      * @param segment Segment number.
-     * @param stats Statistics holder.
      * @return Total number of pages recycled from this tree.
      * @throws IgniteCheckedException If failed.
      */
@@ -304,15 +296,14 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
         String cacheName,
         String treeName,
         String idxName,
-        int segment,
-        IoStatisticsHolderIndex stats
+        int segment
     ) throws IgniteCheckedException {
         long pageCnt = 0;
 
         grpCtx.shared().database().checkpointReadLock();
 
         try {
-            H2Tree tree = idxTreeFactory.create(grpCtx, rootPage, treeName, idxName, cacheName, stats);
+            H2Tree tree = idxTreeFactory.create(grpCtx, rootPage, treeName, idxName, cacheName);
 
             pageCnt += tree.destroy(null, true);
 
@@ -424,7 +415,6 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
          * @param treeName Name of underlying index tree name.
          * @param idxName Index name.
          * @param cacheName Cache name.
-         * @param stats Statistics holder.
          * @return New index tree.
          * @throws IgniteCheckedException If failed.
          */
@@ -433,8 +423,7 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
             RootPage rootPage,
             String treeName,
             String idxName,
-            String cacheName,
-            IoStatisticsHolderIndex stats
+            String cacheName
         ) throws IgniteCheckedException {
             IgniteCacheOffheapManager offheap = grpCtx.offheap();
 
@@ -465,7 +454,7 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
                 ctx.failure(),
                 grpCtx.shared().diagnostic().pageLockTracker(),
                 null,
-                stats,
+                null,
                 null,
                 0,
                 PageIoResolver.DEFAULT_PAGE_IO_RESOLVER
@@ -486,23 +475,6 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
                 }
             };
         }
-    }
-
-    /**
-     * Statistics holder creation.
-     *
-     * @param grpCtx Cache group context.
-     * @param idxName Index name.
-     * @return Statistics holder.
-     */
-    public static IoStatisticsHolderIndex ioStatisticsHolderIndex(CacheGroupContext grpCtx, String idxName) {
-        return new IoStatisticsHolderIndex(
-            SORTED_INDEX,
-            grpCtx.cacheOrGroupName(),
-            idxName,
-            grpCtx.statisticsHolderData(),
-            grpCtx.shared().kernalContext().metric()
-        );
     }
 
     /** {@inheritDoc} */

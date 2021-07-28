@@ -27,7 +27,6 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.Person;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -52,7 +51,6 @@ import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.destroyIndexTrees;
 import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.findIndexRootPages;
 import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory;
-import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.ioStatisticsHolderIndex;
 import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.toRootPages;
 import static org.apache.ignite.testframework.GridTestUtils.cacheContext;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
@@ -371,14 +369,13 @@ public class DropIndexTest extends AbstractRebuildIndexTest {
                 RootPage rootPage,
                 String treeName,
                 String idxName,
-                String cacheName,
-                IoStatisticsHolderIndex stats
+                String cacheName
             ) throws IgniteCheckedException {
                 startFut.onDone();
 
                 endFut.get(getTestTimeout());
 
-                return super.create(grpCtx, rootPage, treeName, idxName, cacheName, stats);
+                return super.create(grpCtx, rootPage, treeName, idxName, cacheName);
             }
         };
     }
@@ -538,10 +535,8 @@ public class DropIndexTest extends AbstractRebuildIndexTest {
 
         long pageCnt = 0;
 
-        IoStatisticsHolderIndex stat = ioStatisticsHolderIndex(cctx.group(), idxName);
-
         for (Map.Entry<Integer, RootPage> e : rootPages.entrySet())
-            pageCnt += destroyIndexTrees(cctx.group(), e.getValue(), cctx.name(), treeName, idxName, e.getKey(), stat);
+            pageCnt += destroyIndexTrees(cctx.group(), e.getValue(), cctx.name(), treeName, idxName, e.getKey());
 
         assertTrue(pageCnt >= expRes);
         assertTrue(findIndexRootPages(cctx.group(), cctx.name(), treeName, segments).isEmpty());

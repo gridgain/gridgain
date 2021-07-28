@@ -43,7 +43,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
@@ -843,8 +842,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
             RootPage rootPage,
             String treeName,
             String idxName,
-            String cacheName,
-            IoStatisticsHolderIndex stats
+            String cacheName
         ) throws IgniteCheckedException {
             IgniteCacheOffheapManager offheap = grpCtx.offheap();
 
@@ -875,7 +873,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                 ctx.failure(),
                 grpCtx.shared().diagnostic().pageLockTracker(),
                 null,
-                stats,
+                null,
                 null,
                 0,
                 PageIoResolver.DEFAULT_PAGE_IO_RESOLVER

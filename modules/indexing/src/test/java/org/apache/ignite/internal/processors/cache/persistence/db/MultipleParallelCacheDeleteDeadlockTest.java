@@ -31,7 +31,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
@@ -206,8 +205,7 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
             RootPage rootPage,
             String treeName,
             String idxName,
-            String cacheName,
-            IoStatisticsHolderIndex stats
+            String cacheName
         ) throws IgniteCheckedException {
             IgniteCacheOffheapManager offheap = grpCtx.offheap();
 
@@ -238,7 +236,7 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
                 ctx.failure(),
                 grpCtx.shared().diagnostic().pageLockTracker(),
                 null,
-                stats,
+                null,
                 null,
                 0,
                 PageIoResolver.DEFAULT_PAGE_IO_RESOLVER

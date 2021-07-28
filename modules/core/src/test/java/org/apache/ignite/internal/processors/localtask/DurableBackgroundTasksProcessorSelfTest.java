@@ -317,6 +317,9 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
 
         n.cluster().state(ACTIVE);
 
+        t2 = (SimpleTask)tasks(n).get(t2.name()).task();
+        t2.onExecFut.get(getTestTimeout());
+
         checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
     }
 

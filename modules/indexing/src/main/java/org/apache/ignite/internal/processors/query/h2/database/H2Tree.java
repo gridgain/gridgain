@@ -118,7 +118,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final String idxName;
 
     /** */
-    private final IoStatisticsHolder stats;
+    @Nullable private final IoStatisticsHolder stats;
 
     /** */
     private final Comparator<Value> comp = this::compareValues;
@@ -205,7 +205,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         @Nullable FailureProcessor failureProcessor,
         PageLockTrackerManager pageLockTrackerManager,
         IgniteLogger log,
-        IoStatisticsHolder stats,
+        @Nullable IoStatisticsHolder stats,
         InlineIndexColumnFactory factory,
         int configuredInlineSize,
         PageIoResolver pageIoRslvr
@@ -858,7 +858,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected IoStatisticsHolder statisticsHolder() {
-        return stats;
+        return stats != null ? stats : super.statisticsHolder();
     }
 
     /**
