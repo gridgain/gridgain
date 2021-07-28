@@ -576,8 +576,11 @@ public class GridNioServerWrapper {
                     }
 
                     // Inverse communication protocol works only for client nodes.
-                    if (node.isClient() && isNodeUnreachableException(e))
+                    if (node.isClient() && isNodeUnreachableException(e)) {
+                        e.printStackTrace();
+
                         failedAddrsSet.add(addr);
+                    }
 
                     if (isRecoverableException(e))
                         U.sleep(DFLT_RECONNECT_DELAY);
