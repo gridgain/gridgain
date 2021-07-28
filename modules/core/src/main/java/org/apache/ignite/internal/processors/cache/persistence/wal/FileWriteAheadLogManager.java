@@ -475,7 +475,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             if (isArchiverEnabled())
-                archiver = new FileArchiver(segmentAware, log);
+                archiver = new FileArchiver(log);
             else
                 archiver = null;
 
@@ -1736,14 +1736,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /**
          * Constructor.
          *
-         * @param segmentAware Segment aware.
          * @param log Logger.
          */
-        private FileArchiver(SegmentAware segmentAware, IgniteLogger log) throws IgniteCheckedException {
+        private FileArchiver(IgniteLogger log) {
             super(cctx.igniteInstanceName(), "wal-file-archiver%" + cctx.igniteInstanceName(), log,
                 cctx.kernalContext().workersRegistry());
-
-            init(segmentAware);
         }
 
         /**
