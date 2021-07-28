@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -521,6 +521,10 @@ public class SegmentAwareTest {
         //given: thread which awaited segment.
         SegmentAware aware = new SegmentAware(10, false, new NullLogger());
 
+        // Set limits.
+        aware.curAbsWalIdx(10);
+        aware.minReserveIndex(0);
+
         //when: reserve one segment twice and one segment once.
         aware.reserve(5);
         aware.reserve(5);
@@ -558,23 +562,16 @@ public class SegmentAwareTest {
     }
 
     /**
-     * Should fail when release unreserved segment.
+     * Shouldn't fail when release unreserved segment.
      */
     @Test
-    public void testAssertFail_WhenReleaseUnreservedSegment() {
+    public void testReleaseUnreservedSegment() {
         //given: thread which awaited segment.
         SegmentAware aware = new SegmentAware(10, false, new NullLogger());
 
         aware.reserve(5);
-        try {
 
-            aware.release(7);
-        }
-        catch (AssertionError e) {
-            return;
-        }
-
-        fail("Should fail with AssertError because this segment have not reserved");
+        aware.release(7);
     }
 
     /**
@@ -629,6 +626,28 @@ public class SegmentAwareTest {
         }
 
         fail("Should fail with AssertError because this segment have not reserved");
+    }
+
+    /**
+     * Check that the reservation border is working correctly.
+     */
+    @Test
+    public void testReservationBorder() {
+        SegmentAware aware = new SegmentAware(10, false, new NullLogger());
+
+        assertTrue(aware.reserve(0));
+        assertTrue(aware.reserve(1));
+
+        assertFalse(aware.minReserveIndex(0));
+        assertFalse(aware.minReserveIndex(1));
+
+        aware.release(0);
+
+        assertTrue(aware.minReserveIndex(0));
+        assertFalse(aware.minReserveIndex(1));
+
+        assertFalse(aware.reserve(0));
+        assertTrue(aware.reserve(1));
     }
 
     /**

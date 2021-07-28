@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,10 +185,14 @@ public class SegmentAware {
     }
 
     /**
+     * Segment reservation. It will be successful if segment is {@code >} than
+     * the {@link #minReserveIndex minimum}.
+     *
      * @param absIdx Index for reservation.
+     * @return {@code True} if the reservation was successful.
      */
-    public void reserve(long absIdx) {
-        reservationStorage.reserve(absIdx);
+    public boolean reserve(long absIdx) {
+        return reservationStorage.reserve(absIdx);
     }
 
     /**
@@ -209,9 +213,9 @@ public class SegmentAware {
     }
 
     /**
-     * Check if WAL segment locked (protected from move to archive)
+     * Check if WAL segment locked (protected from move to archive).
      *
-     * @param absIdx Index for check reservation.
+     * @param absIdx Index for check locking.
      * @return {@code True} if index is locked.
      */
     public boolean locked(long absIdx) {
@@ -274,5 +278,17 @@ public class SegmentAware {
         segmentCompressStorage.interrupt();
 
         segmentCurrStateStorage.forceInterrupt();
+    }
+
+    /**
+     * Increasing minimum segment index after that can be reserved.
+     * Value will be updated if it is greater than the current one.
+     * If segment is already reserved, the update will fail.
+     *
+     * @param absIdx Absolut segment index.
+     * @return {@code True} if update is successful.
+     */
+    public boolean minReserveIndex(long absIdx) {
+        return reservationStorage.minReserveIndex(absIdx);
     }
 }
