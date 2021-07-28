@@ -119,6 +119,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setFailureDetectionTimeout(failureDetectionTimeout);
+        cfg.setClientFailureDetectionTimeout(failureDetectionTimeout);
 
         cfg.setCommunicationSpi(
             new TestCommunicationSpi()
@@ -374,7 +375,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
             .filter(t -> t.getName().contains("tcp-comm-worker"))
             .peek(thread -> log.info("<$> Worker thread found: " + thread.getName()))
-//            .filter(t -> t.getName().contains(clientName))
+            .filter(t -> t.getName().contains(clientName))
             .collect(Collectors.toList());
 
         for (Thread tcpCommWorkerThread : tcpCommWorkerThreads) {

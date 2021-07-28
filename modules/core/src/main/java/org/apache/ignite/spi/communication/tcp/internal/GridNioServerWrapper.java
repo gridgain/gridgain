@@ -610,6 +610,11 @@ public class GridNioServerWrapper {
         }
 
         if (ses == null) {
+            log.info("<$> totalTimeout = " + totalTimeout);
+            log.info("cfg.failureDetectionTimeoutEnabled() = " + cfg.failureDetectionTimeoutEnabled());
+            log.info("node.isClient() = " + node.isClient());
+            log.info("stateProvider.clientFailureDetectionTimeout() = " + stateProvider.clientFailureDetectionTimeout());
+            log.info("cfg.failureDetectionTimeoutEnabled() = " + cfg.failureDetectionTimeoutEnabled());
             // If local node and remote node are configured to use paired connections we won't even request
             // inverse connection so no point in throwing NodeUnreachableException
             if (!cfg.usePairedConnections() || !Boolean.TRUE.equals(node.attribute(attrs.pairedConnection()))) {
