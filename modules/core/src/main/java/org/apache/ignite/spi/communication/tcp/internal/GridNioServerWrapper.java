@@ -351,6 +351,8 @@ public class GridNioServerWrapper {
             if (addr.isUnresolved()) {
                 failedAddrsSet.add(addr);
 
+                log.info("<$> failedAddrsSet.add " + addr);
+
                 continue;
             }
 
@@ -626,6 +628,8 @@ public class GridNioServerWrapper {
                         String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
                             "; inverse connection will be requested.";
 
+                        log.info("<$> addrs = " + addrs);
+                        log.info("<$> skippedAddrs = " + skippedAddrs);
                         throw new NodeUnreachableException(msg);
                     }
                 }
