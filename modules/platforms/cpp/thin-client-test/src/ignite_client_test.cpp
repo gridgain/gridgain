@@ -44,12 +44,15 @@ public:
 
     /**
      * Wait for connections.
+     * @param logger Logger.
+     * @param expect Expected connections number.
+     * @param timeout Timeout.
      * @return True if condition was met, false if timeout has been reached.
      */
-    bool WaitForConnections(size_t expected, int32_t timeout = 5000)
+    bool WaitForConnections(VectorLogger* logger, size_t expected, int32_t timeout = 5000)
     {
         return ignite_test::WaitForCondition(
-                boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, this, expected),
+                boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, this, logger, expected),
                 timeout);
     }
 
@@ -67,19 +70,20 @@ public:
         cfg.SetConnectionsLimit(limit);
         IgniteClient client = IgniteClient::Start(cfg);
 
-        BOOST_CHECK(WaitForConnections(expect));
+        BOOST_CHECK(WaitForConnections(logger, expect));
         BOOST_CHECK_EQUAL(GetActiveConnections(logger), expect);
     }
 
     /**
      * Check number of active connections.
      *
+     * @param logger Logger.
      * @param expect connections to expect.
      * @return @c true on success.
      */
-    bool CheckActiveConnections(size_t expect)
+    bool CheckActiveConnections(VectorLogger* logger, size_t expect)
     {
-        return GetActiveConnections() == expect;
+        return GetActiveConnections(logger) == expect;
     }
 
     /**
