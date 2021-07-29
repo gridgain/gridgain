@@ -37,6 +37,9 @@ import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.Slowd
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.StopBuildIndexConsumer;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusStorage;
+import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -47,6 +50,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addCacheRowConsumer;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addIdxCreateCacheRowConsumer;
 import static org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.nodeName;
+import static org.apache.ignite.testframework.GridTestUtils.cacheContext;
 import static org.apache.ignite.testframework.GridTestUtils.deleteIndexBin;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
@@ -329,5 +333,34 @@ public abstract class AbstractRebuildIndexTest extends GridCommonAbstractTest {
         }
 
         return null;
+    }
+
+    /**
+     * Getting the cache index.
+     *
+     * @param n Node.
+     * @param cache Cache.
+     * @param idxName Index name.
+     * @return Index.
+     */
+    @Nullable protected H2TreeIndex index(IgniteEx n, IgniteCache<Integer, Person> cache, String idxName) {
+        IgniteH2Indexing indexing = (IgniteH2Indexing)n.context().query().getIndexing();
+
+        return indexing.schemaManager().tablesForCache(cacheContext(cache).name()).stream()
+            .map(H2TableDescriptor::table)
+            .map(table -> table.getIndex(idxName))
+            .findAny()
+            .map(H2TreeIndex.class::cast)
+            .orElse(null);
+    }
+
+    /**
+     * Getting index tree name.
+     *
+     * @param idx Index.
+     * @return Index tree name.
+     */
+    protected String treeName(H2TreeIndex idx) {
+        return getFieldValue(idx, "treeName");
     }
 }
