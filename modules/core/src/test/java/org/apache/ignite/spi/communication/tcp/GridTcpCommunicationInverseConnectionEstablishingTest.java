@@ -430,7 +430,11 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             srv.context().io().sendIoTest(clientNode, new byte[10], false).get()
         );
 
-        assertTrue(GridTestUtils.waitForCondition(clientFailedEventFlag::get, 15_000));
+        Thread.sleep(5000);
+
+        U.dumpThreads(log);
+
+        assertTrue(GridTestUtils.waitForCondition(clientFailedEventFlag::get, 10_000));
     }
 
     /**
