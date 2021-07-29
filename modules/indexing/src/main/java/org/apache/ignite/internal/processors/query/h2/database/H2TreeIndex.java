@@ -53,7 +53,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseL
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTask;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -106,6 +106,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
@@ -589,44 +590,29 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         try {
             if (cctx.affinityNode() && rmvIdx) {
-                List<Long> rootPages = new ArrayList<>(segments.length);
-                List<H2Tree> trees = new ArrayList<>(segments.length);
+                for (H2Tree segment : segments) {
+                    segment.markDestroyed();
 
-                cctx.shared().database().checkpointReadLock();
-
-                try {
-                    for (int i = 0; i < segments.length; i++) {
-                        H2Tree tree = segments[i];
-
-                        tree.markDestroyed();
-
-                        rootPages.add(tree.getMetaPageId());
-                        trees.add(tree);
-
-                        dropMetaPage(i);
-                    }
-                }
-                finally {
-                    cctx.shared().database().checkpointReadUnlock();
+                    segment.close();
                 }
 
                 ctx.metric().remove(stats.metricRegistryName());
 
-                DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
-                        rootPages,
-                        trees,
-                        cctx.group().name() == null ? cctx.cache().name() : cctx.group().name(),
-                        cctx.cache().name(),
-                        table.getSchema().getName(),
+                if (cctx.group().persistenceEnabled() ||
+                    cctx.shared().kernalContext().state().clusterState().state() != INACTIVE) {
+                    DurableBackgroundTask<Long> task = new DurableBackgroundCleanupIndexTreeTaskV2(
+                        cctx.group().name(),
+                        cctx.name(),
+                        idxName,
                         treeName,
-                        idxName
-                );
+                        UUID.randomUUID().toString(),
+                        segments.length,
+                        segments
+                    );
 
-                cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
+                    cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
+                }
             }
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
         }
         finally {
             if (msgLsnr != null)
@@ -675,14 +661,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
     private static RootPage getMetaPage(IgniteCacheOffheapManager offheap, GridCacheContext<?, ?> cctx, String treeName, int segIdx)
         throws IgniteCheckedException {
         return offheap.rootPageForIndex(cctx.cacheId(), treeName, segIdx);
-    }
-
-    /**
-     * @param segIdx Segment index.
-     * @throws IgniteCheckedException If failed.
-     */
-    private void dropMetaPage(int segIdx) throws IgniteCheckedException {
-        cctx.offheap().dropRootPageForIndex(cctx.cacheId(), treeName, segIdx);
     }
 
     /** {@inheritDoc} */
