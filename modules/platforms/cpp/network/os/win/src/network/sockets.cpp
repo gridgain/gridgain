@@ -97,7 +97,9 @@ namespace ignite
                 fd_set fds;
 
                 do {
-                    struct timeval tv = { 0 };
+                    timeval tv;
+                    memset(&tv, 0, sizeof(tv));
+
                     tv.tv_sec = timeout;
 
                     FD_ZERO(&fds);

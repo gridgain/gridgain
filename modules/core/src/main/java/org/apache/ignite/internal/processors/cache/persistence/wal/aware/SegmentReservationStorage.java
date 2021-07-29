@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,16 +76,9 @@ class SegmentReservationStorage extends SegmentObservable {
         Long minReservedIdx;
 
         synchronized (this) {
-            minReservedIdx = trackingMinReservedIdx(reserved -> {
-                Integer cur = reserved.get(absIdx);
-
-                assert cur != null && cur >= 1 : "cur=" + cur + ", absIdx=" + absIdx;
-
-                if (cur == 1)
-                    reserved.remove(absIdx);
-                else
-                    reserved.put(absIdx, cur - 1);
-            });
+            minReservedIdx = trackingMinReservedIdx(
+                reserved -> reserved.computeIfPresent(absIdx, (i, cnt) -> cnt == 1 ? null : cnt - 1)
+            );
         }
 
         if (minReservedIdx != null)

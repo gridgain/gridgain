@@ -91,7 +91,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
@@ -165,10 +164,10 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFuture
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationException;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -2643,11 +2642,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String grpName = ctx.cache().cacheGroup(grpId).cacheOrGroupName();
 
-        PageLockListener lockLsnr = ctx.cache().context().diagnostic()
-            .pageLockTracker().createPageLockTracker(grpName + "IndexTree##" + indexName);
-
         BPlusTree<H2Row, H2Row> tree = new BPlusTree<H2Row, H2Row>(
-            indexName,
+            grpName + "IndexTree##" + indexName,
             grpId,
             grpName,
             pageMemory,
@@ -2659,13 +2655,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled),
             PageIdAllocator.FLAG_IDX,
             ctx.failure(),
-            lockLsnr
+            ctx.cache().context().diagnostic().pageLockTracker()
         ) {
-            @Override protected int compare(BPlusIO io, long pageAddr, int idx, H2Row row) {
+            @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx, H2Row row) {
                 throw new AssertionError();
             }
 
-            @Override public H2Row getRow(BPlusIO io, long pageAddr, int idx, Object x) {
+            @Override public H2Row getRow(BPlusIO<H2Row> io, long pageAddr, int idx, Object x) {
                 throw new AssertionError();
             }
         };

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,9 +100,8 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @param ptr WAL pointer.
      * @return WAL record.
      * @throws IgniteCheckedException If failed to read.
-     * @throws StorageException If IO error occurred while reading WAL entries.
      */
-    public WALRecord read(WALPointer ptr) throws IgniteCheckedException, StorageException;
+    public WALRecord read(WALPointer ptr) throws IgniteCheckedException;
 
     /**
      * Invoke this method to iterate over the written log entries.
@@ -139,9 +138,8 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * Invoke this method to release WAL history since provided pointer that was previously reserved.
      *
      * @param start WAL pointer.
-     * @throws IgniteException If failed to release.
      */
-    public void release(WALPointer start) throws IgniteCheckedException;
+    public void release(WALPointer start);
 
     /**
      * Gives a hint to WAL manager to clear entries logged before the given pointer.
