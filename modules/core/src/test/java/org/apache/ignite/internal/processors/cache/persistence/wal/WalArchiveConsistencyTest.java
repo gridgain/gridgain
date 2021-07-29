@@ -202,7 +202,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
 
         forceCheckpoint();
 
-        assertTrue(waitForCondition(() -> walMgr(n).lastTruncatedSegment() == 3, getTestTimeout()));
+        assertTrue(waitForCondition(() -> walMgr(n).lastTruncatedSegment() == 4, getTestTimeout()));
 
         // Guaranteed recovery from WAL segments.
         dbMgr(n).enableCheckpoints(false).get(getTestTimeout());
@@ -358,7 +358,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
                                               AtomicReference<String> workDirWalSegmentLocation,
                                               AtomicReference<String> tmpWalSegmentLocation) {
             this.delegate = delegate;
-            this.archivePath = archivePath;
+            this.archivePath = new File(archivePath).getPath();
             this.workDirWalSegmentLocation = workDirWalSegmentLocation;
             this.tmpWalSegmentLocation = tmpWalSegmentLocation;
         }
@@ -368,9 +368,8 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
             if (workDirWalSegmentLocation.get() == null
                 && WAL_NAME_PATTERN.matcher(file.getName()).matches()
                 && !file.getAbsolutePath().contains(archivePath)
-            ) {
+            )
                 workDirWalSegmentLocation.set(file.getParentFile().getAbsolutePath());
-            }
 
             if (tmpWalSegmentLocation.get() == null && WAL_TEMP_NAME_PATTERN.matcher(file.getName()).matches())
                 tmpWalSegmentLocation.set(file.toPath().toAbsolutePath().getParent().toAbsolutePath().toString());
