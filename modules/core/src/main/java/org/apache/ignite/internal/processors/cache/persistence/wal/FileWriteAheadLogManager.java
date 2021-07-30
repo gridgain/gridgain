@@ -565,18 +565,21 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     *  Collect wal segment files from low pointer (include) to high pointer (not include) and reserve low pointer.
+     * Collects WAL segments from the archive only if they are all present.
+     * Will wait for the last segment to be archived if it is not.
+     * If there are missing segments an empty collection is returned.
      *
-     * @param low Low bound.
-     * @param high High bound.
+     * @param low Low bound (include).
+     * @param high High bound (not include).
+     * @return WAL segments from the archive, or an empty collection if at
+     *      least a segment between {@code low} and {@code high} is missing.
+     * @throws IgniteCheckedException If failed.
      */
-    public Collection<File> getAndReserveWalFiles(FileWALPointer low, FileWALPointer high) throws IgniteCheckedException {
-        final long awaitIdx = high.index() - 1;
-
-        segmentAware.awaitSegmentArchived(awaitIdx);
-
-        if (!reserve(low))
-            throw new IgniteCheckedException("WAL archive segment has been deleted [idx=" + low.index() + "]");
+    public Collection<File> getWalFilesFromArchive(
+        FileWALPointer low,
+        FileWALPointer high
+    ) throws IgniteCheckedException {
+        segmentAware.awaitSegmentArchived(high.index() - 1);
 
         List<File> res = new ArrayList<>();
 
@@ -591,11 +594,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             else if (fileZip.exists())
                 res.add(fileZip);
             else {
-                if (log.isInfoEnabled()) {
+                if (log.isInfoEnabled())
                     log.info("Segment not found: " + file.getName() + "/" + fileZip.getName());
 
-                    log.info("Stopped iteration on idx: " + i);
-                }
+                res.clear();
 
                 break;
             }
@@ -923,7 +925,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException, StorageException {
+    @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException {
         try (WALIterator it = replay(ptr)) {
             IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
 
@@ -994,7 +996,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         // Segment presence check.
         if (reserved && !hasIndex(((FileWALPointer)start).index())) {
-            segmentAware.reserve(((FileWALPointer)start).index());
+            segmentAware.release(((FileWALPointer)start).index());
 
             reserved = false;
         }
