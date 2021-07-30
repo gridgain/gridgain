@@ -87,6 +87,17 @@ public:
     }
 
     /**
+     * Check number of active connections.
+     *
+     * @param expect connections to expect.
+     * @return @c true on success.
+     */
+    bool CheckActiveConnections(size_t expect)
+    {
+        return GetActiveConnections() == expect;
+    }
+
+    /**
      * Get Number of active connections.
      *
      * @param logger Logger.
