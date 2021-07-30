@@ -981,7 +981,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /**
      * @return Last checkpoint mark WAL pointer.
      */
-    public WALPointer lastCheckpointMarkWalPointer() {
+    @Nullable public WALPointer lastCheckpointMarkWalPointer() {
         return null;
     }
 
