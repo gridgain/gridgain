@@ -100,9 +100,8 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @param ptr WAL pointer.
      * @return WAL record.
      * @throws IgniteCheckedException If failed to read.
-     * @throws StorageException If IO error occurred while reading WAL entries.
      */
-    public WALRecord read(WALPointer ptr) throws IgniteCheckedException, StorageException;
+    public WALRecord read(WALPointer ptr) throws IgniteCheckedException;
 
     /**
      * Invoke this method to iterate over the written log entries.
