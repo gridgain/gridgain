@@ -83,6 +83,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -449,7 +450,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
 
         if (!ctx.discovery().localNode().isClient()) {
-            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+            cluster.setId(locClusterId != null ? locClusterId :
+                IgniteSystemProperties.getUUID(IGNITE_CLUSTER_ID, UUID.randomUUID()));
 
             cluster.setTag(locClusterTag != null ? locClusterTag :
                 ClusterTagGenerator.generateTag());
