@@ -21,32 +21,74 @@
 
 #include <ignite/common/platform_utils.h>
 
+// Original code is suggested by MSDN at
+// https://docs.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time
+// Modified to fit larger time values
+void TimeToFileTime(time_t tt, FILETIME& ft)
+{
+    ULARGE_INTEGER uli;
+    uli.QuadPart = tt * 10000000 + 116444736000000000LL;
+
+    ft.dwLowDateTime = uli.LowPart;
+    ft.dwHighDateTime = uli.HighPart;
+}
+
+bool SystemTimeToTime(const SYSTEMTIME& sysTime, time_t& tt)
+{
+    FILETIME ft;
+    if (!SystemTimeToFileTime(&sysTime, &ft))
+        return false;
+
+    ULARGE_INTEGER uli;
+    uli.LowPart = ft.dwLowDateTime;
+    uli.HighPart = ft.dwHighDateTime;
+
+    long long sli = static_cast<long long>(uli.QuadPart);
+
+    tt = static_cast<time_t>((sli - 116444736000000000LL) / 10000000);
+
+    return true;
+}
+
 namespace ignite
 {
     namespace common
     {
         time_t IgniteTimeGm(const tm& time)
         {
-            tm tmc = time;
+            SYSTEMTIME sysTime;
+            memset(&sysTime, 0, sizeof(sysTime));
 
-            return _mkgmtime(&tmc);
-        }
+            sysTime.wYear = time.tm_year + 1900;
+            sysTime.wMonth = time.tm_mon + 1;
+            sysTime.wDay = time.tm_mday;
+            sysTime.wHour = time.tm_hour;
+            sysTime.wMinute = time.tm_min;
+            sysTime.wSecond = time.tm_sec;
 
-        time_t IgniteTimeLocal(const tm& time)
-        {
-            tm tmc = time;
+            time_t res;
+            SystemTimeToTime(sysTime, res);
 
-            return mktime(&tmc);
+            return res;
         }
 
         bool IgniteGmTime(time_t in, tm& out)
         {
-            return gmtime_s(&out, &in) == 0;
-        }
+            FILETIME fileTime;
+            TimeToFileTime(in, fileTime);
 
-        bool IgniteLocalTime(time_t in, tm& out)
-        {
-            return localtime_s(&out, &in) == 0;
+            SYSTEMTIME systemTime;
+            if (!FileTimeToSystemTime(&fileTime, &systemTime))
+                return false;
+
+            out.tm_year = systemTime.wYear - 1900;
+            out.tm_mon = systemTime.wMonth - 1;
+            out.tm_mday = systemTime.wDay;
+            out.tm_hour = systemTime.wHour;
+            out.tm_min = systemTime.wMinute;
+            out.tm_sec = systemTime.wSecond;
+
+            return true;
         }
 
         std::string GetEnv(const std::string& name)

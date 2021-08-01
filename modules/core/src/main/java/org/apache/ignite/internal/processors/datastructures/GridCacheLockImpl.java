@@ -1484,6 +1484,6 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheLockImpl.class, this);
+        return S.toString(GridCacheLockImpl.class, this, super.toString());
     }
 }

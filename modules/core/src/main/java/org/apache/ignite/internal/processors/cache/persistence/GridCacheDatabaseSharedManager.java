@@ -47,7 +47,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
@@ -86,6 +85,7 @@ import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
@@ -105,6 +105,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -141,6 +142,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
@@ -180,6 +183,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_RECOVERY_SEMAPHORE
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.CHECKPOINT_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD;
@@ -233,11 +238,24 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     private static final double PAGE_LIST_CACHE_LIMIT_THRESHOLD = 0.1;
 
+    /**
+     * @see IgniteSystemProperties#IGNITE_PDS_WAL_REBALANCE_THRESHOLD
+     * @see #HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY
+     */
+    public static final int DFLT_PDS_WAL_REBALANCE_THRESHOLD = 500;
+
     /** @see IgniteSystemProperties#IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE */
     public static final int DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE = 60;
 
-    /** */
-    private final int walRebalanceThreshold = getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, 500);
+    /**
+     * Threshold value to use history or full rebalance for local partition.
+     * Master value contained in {@link #historicalRebalanceThreshold}.
+     */
+    private final int walRebalanceThresholdLegacy =
+            getInteger(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, DFLT_PDS_WAL_REBALANCE_THRESHOLD);
+
+    /** WAL rebalance threshold distributed configuration key */
+    public static final String HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY = "historical.rebalance.threshold";
 
     /** Prefer historical rebalance flag. */
     private final boolean preferWalRebalance = getBoolean(IGNITE_PREFER_WAL_REBALANCE);
@@ -300,11 +318,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Lock wait time. */
     private final long lockWaitTime;
 
-    /** This is the earliest WAL pointer that was reserved during exchange and would release after exchange completed. */
-    private WALPointer reservedForExchange;
+    /**
+     * This is the earliest WAL pointer that was reserved during exchange and would release after exchange completed.
+     * Guarded by {@code this}.
+     */
+    @Nullable private WALPointer reservedForExchange;
 
     /** This is the earliest WAL pointer that was reserved during preloading. */
-    private volatile WALPointer reservedForPreloading;
+    private final AtomicReference<WALPointer> reservedForPreloading = new AtomicReference<>();
 
     /** Snapshot manager. */
     private IgniteCacheSnapshotManager snapshotMgr;
@@ -316,6 +337,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * MetaStorage instance. Value {@code null} means storage not initialized yet.
      * Guarded by {@link GridCacheDatabaseSharedManager#checkpointReadLock()}
      */
+    @Nullable
     private MetaStorage metaStorage;
 
     /** Temporary metastorage to migration of index partition. {@see IGNITE-8735}. */
@@ -337,9 +359,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Page list cache limits per data region. */
     private final Map<String, AtomicLong> pageListCacheLimits = new ConcurrentHashMap<>();
 
-    /** Lock for releasing history for preloading. */
-    private final ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
-
     /** */
     private CachePartitionDefragmentationManager defrgMgr;
 
@@ -348,6 +367,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** Checkpoint frequency deviation. */
     private SimpleDistributedProperty<Integer> cpFreqDeviation;
+
+    /** WAL rebalance threshold. */
+    private final SimpleDistributedProperty<Integer> historicalRebalanceThreshold =
+        new SimpleDistributedProperty<>(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, Integer::parseInt);
 
     /**
      * @param ctx Kernal context.
@@ -487,6 +510,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         final GridKernalContext kernalCtx = cctx.kernalContext();
 
         assert !kernalCtx.clientNode();
+
+        initWalRebalanceThreshold();
 
         if (!kernalCtx.clientNode()) {
             kernalCtx.internalSubscriptionProcessor().registerDatabaseListener(new MetastorageRecoveryLifecycle());
@@ -673,6 +698,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 memEx.invalidate(grpDesc.groupId(), PageIdAllocator.INDEX_PARTITION);
             }
+
+            if (grpDesc.config().isEncryptionEnabled())
+                cctx.kernalContext().encryption().onCacheGroupStop(grpDesc.groupId());
         }
 
         if (!hasMvccCache && dataRegionMap.containsKey(TxLog.TX_LOG_CACHE_NAME)) {
@@ -826,6 +854,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     );
             }
             finally {
+                if (metaStorage != null)
+                    metaStorage.close();
+
                 metaStorage = null;
 
                 dataRegion(METASTORE_DATA_REGION_NAME).pageMemory().stop(false);
@@ -1098,6 +1129,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             MBEAN_GROUP,
             MBEAN_NAME
         );
+
+        if (metaStorage != null)
+            metaStorage.close();
 
         metaStorage = null;
     }
@@ -1454,7 +1488,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         for (GridCacheContext cacheCtx : contexts) {
             if (rebuildCond.test(cacheCtx)) {
-                IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx, force);
+                IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(
+                    cacheCtx,
+                    force || !qryProc.rebuildIndexesCompleted(cacheCtx)
+                );
 
                 if (rebuildFut != null) {
                     if (log.isInfoEnabled())
@@ -1610,13 +1647,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         checkpointReadLock();
 
+        WALPointer reservedCheckpointMark;
+
         try {
-            CheckpointHistoryResult checkpointHistoryResult = checkpointHistory().searchAndReserveCheckpoints(applicableGroupsAndPartitions);
+            CheckpointHistoryResult checkpointHistoryResult =
+                checkpointHistory().searchAndReserveCheckpoints(applicableGroupsAndPartitions);
 
             earliestValidCheckpoints = checkpointHistoryResult.earliestValidCheckpoints();
 
-            if (checkpointHistoryResult.reservedCheckoint() != null)
-                reservedForExchange = checkpointHistoryResult.reservedCheckoint().checkpointMark();
+            reservedForExchange = reservedCheckpointMark = checkpointHistoryResult.reservedCheckpointMark();
         }
         finally {
             checkpointReadUnlock();
@@ -1624,7 +1663,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map</*grpId*/Integer, Map</*partId*/Integer, /*updCntr*/Long>> grpPartsWithCnts = new HashMap<>();
 
-        for (Map.Entry<Integer, T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> e : earliestValidCheckpoints.entrySet()) {
+        for (Map.Entry<Integer, T2</*reason*/ReservationReason, Map</*partId*/Integer, CheckpointEntry>>> e :
+            earliestValidCheckpoints.entrySet()) {
             int grpId = e.getKey();
 
             if (e.getValue().get2() == null)
@@ -1635,8 +1675,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 int partId = e0.getKey();
 
-                assert cctx.wal().reserved(cpEntry.checkpointMark())
-                    : "WAL segment for checkpoint " + cpEntry + " has not reserved";
+                if (reservedCheckpointMark != null && !cctx.wal().reserved(reservedCheckpointMark)) {
+                    log.warning("Reservation failed because the segment was released: " + reservedCheckpointMark);
+
+                    reservedForExchange = null;
+
+                    grpPartsWithCnts.clear();
+
+                    return grpPartsWithCnts;
+                }
 
                 try {
                     Long updCntr = cpEntry.partitionCounter(cctx.wal(), grpId, partId);
@@ -1721,7 +1768,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 continue;
 
             for (GridDhtLocalPartition locPart : grp.topology().currentLocalPartitions()) {
-                if (locPart.state() == OWNING && (preferWalRebalance() || locPart.fullSize() > walRebalanceThreshold))
+                if (locPart.state() == OWNING && (preferWalRebalance() ||
+                    locPart.fullSize() > historicalRebalanceThreshold.getOrDefault(walRebalanceThresholdLegacy)))
                     res.computeIfAbsent(grp.groupId(), k -> new HashSet<>()).add(locPart.id());
             }
         }
@@ -1731,20 +1779,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public synchronized void releaseHistoryForExchange() {
-        if (reservedForExchange == null)
-            return;
-
-        assert cctx.wal().reserved(reservedForExchange)
-            : "Earliest checkpoint WAL pointer is not reserved for exchange: " + reservedForExchange;
-
-        try {
+        if (reservedForExchange != null) {
             cctx.wal().release(reservedForExchange);
-        }
-        catch (IgniteCheckedException e) {
-            log.error("Failed to release earliest checkpoint WAL pointer: " + reservedForExchange, e);
-        }
 
-        reservedForExchange = null;
+            reservedForExchange = null;
+        }
     }
 
     /** {@inheritDoc} */
@@ -1754,21 +1793,20 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (F.isEmpty(entries))
             return false;
 
-        WALPointer oldestWALPointerToReserve = null;
+        FileWALPointer oldestWALPointerToReserve = null;
 
-        for (GroupPartitionId key : entries.keySet()) {
-            WALPointer ptr = entries.get(key).checkpointMark();
+        for (CheckpointEntry cpE : entries.values()) {
+            FileWALPointer ptr = (FileWALPointer)cpE.checkpointMark();
 
             if (ptr == null)
                 return false;
 
-            if (oldestWALPointerToReserve == null ||
-                ((FileWALPointer)ptr).index() < ((FileWALPointer)oldestWALPointerToReserve).index())
+            if (oldestWALPointerToReserve == null || ptr.compareTo(oldestWALPointerToReserve) < 0)
                 oldestWALPointerToReserve = ptr;
         }
 
         if (cctx.wal().reserve(oldestWALPointerToReserve)) {
-            reservedForPreloading = oldestWALPointerToReserve;
+            reservedForPreloading.set(oldestWALPointerToReserve);
 
             return true;
         }
@@ -1778,28 +1816,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void releaseHistoryForPreloading() {
-        releaseHistForPreloadingLock.lock();
+        WALPointer prev = reservedForPreloading.getAndSet(null);
 
-        try {
-            if (reservedForPreloading != null) {
-                cctx.wal().release(reservedForPreloading);
-
-                reservedForPreloading = null;
-            }
-        }
-        catch (IgniteCheckedException ex) {
-            U.error(log, "Could not release WAL reservation", ex);
-
-            throw new IgniteException(ex);
-        }
-        finally {
-            releaseHistForPreloadingLock.unlock();
-        }
+        if (prev != null)
+            cctx.wal().release(prev);
     }
 
     /** {@inheritDoc} */
     @Override public WALPointer latestWalPointerReservedForPreloading() {
-        return reservedForPreloading;
+        return reservedForPreloading.get();
     }
 
     /**
@@ -2013,7 +2038,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         // We must return null for NULL_PTR record, because FileWriteAheadLogManager.resumeLogging
         // can't write header without that condition.
-        WALPointer lastReadPtr = logicalState.lastReadRecordPointer();
+        FileWALPointer lastReadPtr = logicalState.lastReadRecordPointer();
 
         if (lastFlushPtr != null && lastReadPtr == null)
             return lastFlushPtr;
@@ -2023,7 +2048,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         if (lastFlushPtr != null && lastReadPtr != null) {
             FileWALPointer lastFlushPtr0 = (FileWALPointer)lastFlushPtr;
-            FileWALPointer lastReadPtr0 = (FileWALPointer)lastReadPtr;
+            FileWALPointer lastReadPtr0 = lastReadPtr;
 
             return lastReadPtr0.compareTo(lastFlushPtr0) >= 0 ? lastReadPtr : lastFlushPtr0;
         }
@@ -2135,7 +2160,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         AtomicLong applied = new AtomicLong();
 
         try {
-            while (it.hasNextX()) {
+            while (restoreBinaryState.hasNext()) {
                 if (applyError.get() != null)
                     break;
 
@@ -2767,7 +2792,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         final IgniteTxManager txManager = cctx.tm();
 
         try {
-            while (it.hasNextX()) {
+            while (restoreLogicalState.hasNext()) {
                 WALRecord rec = restoreLogicalState.next();
 
                 if (rec == null)
@@ -2913,6 +2938,21 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         break;
 
+                    case INDEX_ROOT_PAGE_RENAME_RECORD:
+                        IndexRenameRootPageRecord record = (IndexRenameRootPageRecord)rec;
+
+                        int cacheId = record.cacheId();
+
+                        GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
+
+                        if (cacheCtx != null) {
+                            IgniteCacheOffheapManager offheap = cacheCtx.offheap();
+
+                            for (int i = 0; i < record.segments(); i++)
+                                offheap.renameRootPageForIndex(cacheId, record.oldTreeName(), record.newTreeName(), i);
+                        }
+
+                        break;
                     default:
                         // Skip other records.
                 }
@@ -3603,9 +3643,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @return WALRecord entry.
          * @throws IgniteCheckedException If CRC check fail during binary recovery state or another exception occurring.
          */
-        public WALRecord next() throws IgniteCheckedException {
+        @Nullable public WALRecord next() throws IgniteCheckedException {
             try {
-                for (;;) {
+                for (; ; ) {
                     if (!iterator.hasNextX())
                         return null;
 
@@ -3622,7 +3662,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                     // Filter out records by group id.
                     if (rec instanceof WalRecordCacheGroupAware) {
-                        WalRecordCacheGroupAware grpAwareRecord = (WalRecordCacheGroupAware) rec;
+                        WalRecordCacheGroupAware grpAwareRecord = (WalRecordCacheGroupAware)rec;
 
                         if (!cacheGroupPredicate.apply(grpAwareRecord.groupId()))
                             continue;
@@ -3630,24 +3670,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                     // Filter out data entries by group id.
                     if (rec instanceof DataRecord)
-                        rec = filterEntriesByGroupId((DataRecord) rec);
+                        rec = filterEntriesByGroupId((DataRecord)rec);
 
                     return rec;
                 }
             }
             catch (IgniteCheckedException e) {
-                boolean throwsCRCError = throwsCRCError();
+                IgniteCheckedException ex = throwsError(e);
 
-                if (X.hasCause(e, IgniteDataIntegrityViolationException.class)) {
-                    if (throwsCRCError)
-                        throw e;
-                    else
-                        return null;
-                }
-
-                log.error("There is an error during restore state [throwsCRCError=" + throwsCRCError + ']', e);
-
-                throw e;
+                if (ex != null)
+                    throw ex;
+                else
+                    return null;
             }
         }
 
@@ -3688,6 +3722,44 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         public boolean throwsCRCError() {
             return lastReadRecordPointer().index() <= lastArchivedSegment;
         }
+
+        /**
+         * Checks for more WALRecord entries.
+         *
+         * @return {@code True} if contains more WALRecord entries.
+         * @throws IgniteCheckedException If CRC check fail during binary recovery state or another exception occurring.
+         */
+        public boolean hasNext() throws IgniteCheckedException {
+            try {
+                return iterator.hasNextX();
+            }
+            catch (IgniteCheckedException e) {
+                IgniteCheckedException ex = throwsError(e);
+
+                if (ex != null)
+                    throw ex;
+                else
+                    return false;
+            }
+        }
+
+        /**
+         * Checks the need to throw an exception.
+         *
+         * @param e Thrown exception.
+         * @return Exception to be thrown.
+         */
+        @Nullable private IgniteCheckedException throwsError(IgniteCheckedException e) {
+            boolean throwsCRCError = throwsCRCError();
+
+            if (X.hasCause(e, IgniteDataIntegrityViolationException.class))
+                return throwsCRCError ? e : null;
+            else {
+                log.error("There is an error during restore state [throwsCRCError=" + throwsCRCError + ']', e);
+
+                return e;
+            }
+        }
     }
 
     /**
@@ -3721,7 +3793,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
          * @return WALRecord entry.
          * @throws IgniteCheckedException If CRC check fail during binary recovery state or another exception occurring.
          */
-        @Override public WALRecord next() throws IgniteCheckedException {
+        @Override @Nullable public WALRecord next() throws IgniteCheckedException {
             WALRecord rec = super.next();
 
             if (rec == null)
@@ -3793,5 +3865,28 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         public Map<GroupPartitionId, Integer> partitionRecoveryStates() {
             return Collections.unmodifiableMap(partitionRecoveryStates);
         }
+    }
+
+    /**
+     * Registers {@link #historicalRebalanceThreshold} property in distributed metastore.
+     */
+    private void initWalRebalanceThreshold() {
+        cctx.kernalContext().internalSubscriptionProcessor().registerDistributedConfigurationListener(
+            new DistributedConfigurationLifecycleListener() {
+                /** {@inheritDoc} */
+                @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
+                    String logMsgFmt = "Historical rebalance WAL threshold changed [property=%s, oldVal=%s, newVal=%s]";
+
+                    historicalRebalanceThreshold.addListener(makeUpdateListener(logMsgFmt, log));
+
+                    dispatcher.registerProperties(historicalRebalanceThreshold);
+                }
+
+                /** {@inheritDoc} */
+                @Override public void onReadyToWrite() {
+                    setDefaultValue(historicalRebalanceThreshold, walRebalanceThresholdLegacy, log);
+                }
+            }
+        );
     }
 }

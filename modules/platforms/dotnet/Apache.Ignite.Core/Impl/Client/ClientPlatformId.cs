@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.internal.IgniteInternalFuture;
+namespace Apache.Ignite.Core.Impl.Client
+{
+    /// <summary>
+    /// Platform ids.
+    /// <para />
+    /// See <c>org.apache.ignite.internal.processors.platform.client.ClientPlatform</c> in Java.
+    /// </summary>
+    internal static class ClientPlatformId
+    {
+        /** Java platform code. */
+        public const byte Java = 1;
 
-import java.util.UUID;
-
-/**
- * Future to track statistics gathering task. Allows to get collection id and targets immediately.
- */
-public interface StatisticsGatheringFuture<T> extends IgniteInternalFuture<T> {
-    /**
-     * @return Statistics gathering id.
-     */
-    public UUID gatId();
-
-    /**
-     * @return Targets, which covered by the future.
-     */
-    public StatisticsTarget[] targets();
+        /** .NET platform code. */
+        public const byte Dotnet = 2;
+    }
 }
-

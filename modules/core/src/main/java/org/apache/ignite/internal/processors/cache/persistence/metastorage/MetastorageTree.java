@@ -20,10 +20,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,6 +51,7 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
      * @param rowStore Row store.
      * @param initNew Init new flag, if {@code true}, then new tree will be allocated.
      * @param failureProcessor To call if the tree is corrupted.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @throws IgniteCheckedException If failed to initialize.
      */
     public MetastorageTree(
@@ -64,8 +65,8 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
         long metaPageId,
         boolean initNew,
         @Nullable FailureProcessor failureProcessor,
-        int partId,
-        @Nullable PageLockListener lockLsnr
+        PageLockTrackerManager pageLockTrackerManager,
+        int partId
     ) throws IgniteCheckedException {
         super(
             name,
@@ -80,7 +81,7 @@ public class MetastorageTree extends BPlusTree<MetastorageRow, MetastorageDataRo
             MetastorageBPlusIO.LEAF_IO_VERSIONS,
             FLAG_AUX,
             failureProcessor,
-            lockLsnr
+            pageLockTrackerManager
         );
 
         this.rowStore = rowStore;

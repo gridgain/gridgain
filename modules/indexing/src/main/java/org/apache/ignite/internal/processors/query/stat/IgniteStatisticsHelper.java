@@ -149,6 +149,18 @@ public class IgniteStatisticsHelper {
             colStats.put(col.getName(), stat);
         }
 
+        long overridedRowCnt = -1;
+
+        for (StatisticsColumnConfiguration ccfg : cfg.columns().values()) {
+            if (ccfg.overrides() != null && ccfg.overrides().total() != null) {
+                Long colRowCnt = ccfg.overrides().total();
+
+                overridedRowCnt = Math.max(overridedRowCnt, colRowCnt);
+            }
+        }
+
+        rowCnt = (overridedRowCnt == -1) ? rowCnt : overridedRowCnt;
+
         ObjectStatisticsImpl tblStats = new ObjectStatisticsImpl(rowCnt, colStats);
 
         return tblStats;

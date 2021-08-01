@@ -35,6 +35,7 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTaskResult;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -58,6 +59,8 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 
 /**
  * Tasks that cleans up index tree.
+ *
+ * @deprecated Use {@link DurableBackgroundCleanupIndexTreeTaskV2}.
  */
 public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundTask {
     /** */
@@ -252,6 +255,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                         false,
                         null,
                         ctx.failure(),
+                        ctx.cache().context().diagnostic().pageLockTracker(),
                         null,
                         stats,
                         null,
@@ -270,9 +274,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            for (int i = 0; i < trees0.size(); i++) {
-                BPlusTree tree = trees0.get(i);
-
+            for (BPlusTree<?, ?> tree : trees0) {
                 try {
                     tree.destroy(null, true);
                 }
@@ -331,6 +333,19 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     }
 
     /** {@inheritDoc} */
+    @Override public DurableBackgroundTask<?> convertAfterRestoreIfNeeded() {
+        return new DurableBackgroundCleanupIndexTreeTaskV2(
+            cacheGrpName,
+            cacheName,
+            idxName,
+            treeName,
+            UUID.randomUUID().toString(),
+            rootPages.size(),
+            null
+        );
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DurableBackgroundCleanupIndexTreeTask.class, this);
     }
@@ -367,6 +382,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
          * @param mvccEnabled             Mvcc flag.
          * @param rowCache                Row cache.
          * @param failureProcessor        if the tree is corrupted.
+         * @param pageLockTrackerManager  Page lock tracker manager.
          * @param log                     Logger.
          * @param stats                   Statistics holder.
          * @param factory                 Inline helper factory.
@@ -397,6 +413,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
             boolean mvccEnabled,
             @Nullable H2RowCache rowCache,
             @Nullable FailureProcessor failureProcessor,
+            PageLockTrackerManager pageLockTrackerManager,
             IgniteLogger log, IoStatisticsHolder stats,
             InlineIndexColumnFactory factory,
             int configuredInlineSize,
@@ -424,6 +441,7 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
                 mvccEnabled,
                 rowCache,
                 failureProcessor,
+                pageLockTrackerManager,
                 log,
                 stats,
                 factory,

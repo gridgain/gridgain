@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,37 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
-import org.apache.ignite.internal.util.typedef.T2;
-
 import java.util.Map;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Result of a checkpint search and reservation.
+ * Result of a checkpoint search and reservation.
  */
 public class CheckpointHistoryResult {
-
     /**
-     * Map (groupId, Reason why reservation cannot be made deeper): Map (partitionId, earliest valid checkpoint to
-     * history search)).
+     * Map (groupId, Reason why reservation cannot be made deeper):
+     * Map (partitionId, earliest valid checkpoint to history search)).
      */
     private final Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints;
 
     /** Reserved checkpoint. */
-    private final CheckpointEntry reservedCheckoint;
+    @Nullable private final CheckpointEntry reservedCheckpoint;
 
     /**
      * Constructor.
      *
      * @param earliestValidCheckpoints Map (groupId, Reason why reservation cannot be made deeper):
      * Map (partitionId, earliest valid checkpoint to history search)).
-     * @param reservedCheckoint Reserved checkpoint.
+     * @param reservedCheckpoint Reserved checkpoint.
      */
     public CheckpointHistoryResult(
         Map<Integer, T2<ReservationReason, Map<Integer, CheckpointEntry>>> earliestValidCheckpoints,
-        CheckpointEntry reservedCheckoint) {
+        @Nullable CheckpointEntry reservedCheckpoint
+    ) {
         this.earliestValidCheckpoints = earliestValidCheckpoints;
-        this.reservedCheckoint = reservedCheckoint;
+        this.reservedCheckpoint = reservedCheckpoint;
     }
 
     /**
@@ -57,9 +58,11 @@ public class CheckpointHistoryResult {
     }
 
     /**
-     * @return Reserved checkpoint.
+     * Returns the oldest reserved checkpoint marker.
+     *
+     * @return Checkpoint mark.
      */
-    public CheckpointEntry reservedCheckoint() {
-        return reservedCheckoint;
+    @Nullable public WALPointer reservedCheckpointMark() {
+        return reservedCheckpoint == null ? null : reservedCheckpoint.checkpointMark();
     }
 }
