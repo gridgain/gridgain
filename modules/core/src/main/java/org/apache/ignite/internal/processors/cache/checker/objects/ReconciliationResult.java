@@ -68,6 +68,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
 
     /**
      * @param partReconciliationRes Partition reconciliation response.
+     * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
      * @param nodeIdToFolder Node id to folder.
      * @param errors Errors.
      */
@@ -106,7 +107,9 @@ public class ReconciliationResult extends IgniteDataTransferObject {
         return res;
     }
 
-    /** */
+    /**
+     * @return Map of partition sizes for reconciliation of cache sizes.
+     */
     public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;
     }

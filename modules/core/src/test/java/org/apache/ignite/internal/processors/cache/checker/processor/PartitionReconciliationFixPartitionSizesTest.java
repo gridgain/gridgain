@@ -24,6 +24,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -58,6 +59,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     /** */
     protected boolean persistence;
 
+    /** */
     private Random rnd = new Random();
 
     /** {@inheritDoc} */
@@ -151,9 +153,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < 4; i++)
             loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
 
-        GridTestUtils.runMultiThreadedAsync(() -> {
-            reconResult.set(partitionReconciliation(client, builder));
-        }, 1, "reconciliation");
+        GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
+            1, "reconciliation");
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
@@ -179,10 +180,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             }
 
             assertEquals(endKey, client.cache(cacheName).size());
-
             assertEquals(endKey, allKeysCountForCacheGroup);
             assertEquals(endKey, allKeysCountForCache);
-
         }
 
         cache0.clear();
@@ -215,9 +214,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         for (int i = 0; i < 4; i++)
             loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
 
-        GridTestUtils.runMultiThreadedAsync(() -> {
-            reconResult.set(partitionReconciliation(client, builder));
-        }, 1, "reconciliation");
+        GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
+            1, "reconciliation");
 
         GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
 
@@ -240,10 +238,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
             }
 
             assertEquals(endKey, client.cache(cacheName).size());
-
             assertEquals(endKey, allKeysCountForCacheGroup);
             assertEquals(endKey, allKeysCountForCache);
-
         }
 
     }
@@ -252,12 +248,18 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testRepairPartOfCachesReconciliation() throws Exception {
-        CacheConfiguration ccfg0 = new CacheConfiguration("cache0");
-        CacheConfiguration ccfg1 = new CacheConfiguration("cache1");
-        CacheConfiguration ccfg2 = new CacheConfiguration("cache2_group0").setGroupName("group0");
-        CacheConfiguration ccfg3 = new CacheConfiguration("cache3_group0").setGroupName("group0");
-        CacheConfiguration ccfg4 = new CacheConfiguration("cache4_group1").setGroupName("group1");
-        CacheConfiguration ccfg5 = new CacheConfiguration("cache5_group1").setGroupName("group1");
+        CacheConfiguration ccfg0 = new CacheConfiguration("cache0")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
+        CacheConfiguration ccfg1 = new CacheConfiguration("cache1")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
+        CacheConfiguration ccfg2 = new CacheConfiguration("cache2_group0").setGroupName("group0")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
+        CacheConfiguration ccfg3 = new CacheConfiguration("cache3_group0").setGroupName("group0")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
+        CacheConfiguration ccfg4 = new CacheConfiguration("cache4_group1").setGroupName("group1")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
+        CacheConfiguration ccfg5 = new CacheConfiguration("cache5_group1").setGroupName("group1")
+            .setAffinity(new RendezvousAffinityFunction(false, 16));
 
         int nodesCnt = 3;
 
@@ -337,7 +339,6 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         assertTrue(cache2_group0.size() == 100);
         assertTrue(cache4_group1.size() == 100);
         assertTrue(cache5_group1.size() == 100);
-
     }
 
     /** Test size reconciliation for empty cache. */
@@ -608,5 +609,4 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         assertEquals(entryCount * (1 + backupCnt), allKeysCountForCacheGroup);
         assertEquals(entryCount * (1 + backupCnt), allKeysCountForCache);
     }
-
 }

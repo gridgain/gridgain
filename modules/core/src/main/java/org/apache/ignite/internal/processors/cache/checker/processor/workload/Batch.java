@@ -55,7 +55,7 @@ public class Batch extends PipelineWorkload {
     /** Lower key, uses for pagination. The first request should set this value to null. */
     private final KeyCacheObject lowerKey;
 
-    /** */
+    /** Map of partition sizes for reconciliation of cache sizes. */
     private Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
@@ -86,7 +86,19 @@ public class Batch extends PipelineWorkload {
      * @param lowerKey Lower key.
      * @param partSizesMap Map of partition sizes.
      */
-    public Batch(boolean dataReconciliation, boolean cacheSizeReconciliation, boolean repair, RepairAlgorithm repairAlg, long sesId, UUID workloadChainId, String cacheName, int cacheId, int partId, KeyCacheObject lowerKey, Map<UUID, NodePartitionSize> partSizesMap) {
+    public Batch(
+        boolean dataReconciliation,
+        boolean cacheSizeReconciliation,
+        boolean repair,
+        RepairAlgorithm repairAlg,
+        long sesId,
+        UUID workloadChainId,
+        String cacheName,
+        int cacheId,
+        int partId,
+        KeyCacheObject lowerKey,
+        Map<UUID, NodePartitionSize> partSizesMap
+    ) {
         super(sesId, workloadChainId);
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;

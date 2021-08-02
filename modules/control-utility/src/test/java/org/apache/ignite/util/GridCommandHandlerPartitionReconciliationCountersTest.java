@@ -33,19 +33,17 @@ import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalRebalanceTest;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
-/** */
+/** Tests for partition counter consistency reconciliation. */
 public class GridCommandHandlerPartitionReconciliationCountersTest extends GridCommandHandlerClusterPerMethodAbstractTest {
 
     /** */
@@ -57,9 +55,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
     /** */
     boolean persistenceEnabled;
 
-    /**
-     *
-     */
+    /** */
     private static CommandHandler hnd;
 
     /** {@inheritDoc} */
@@ -105,7 +101,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         return ccfg;
     }
 
-
+    /** */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
@@ -128,31 +124,35 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         cleanPersistenceDir();
     }
 
+    /** Partition counter consistency reconciliation of transactional cache. */
     @Test
     public void testReconciliationCountersFixedTransactionalCache() throws Exception {
         testReconciliationCountersFixed(TRANSACTIONAL, false,
             new String[]{"--cache", "partition_reconciliation", "--repair", "--local-output"});
     }
 
+    /** Partition counter consistency reconciliation of atomic cache. */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testReconciliationCountersFixedAtomicCache() throws Exception {
         testReconciliationCountersFixed(ATOMIC, false,
             new String[]{"--cache", "partition_reconciliation", "--repair", "--local-output"});
     }
 
+    /** Partition counter consistency reconciliation of transactional cache with persistence. */
     @Test
     public void testReconciliationCountersFixedTransactionalCachePersistence() throws Exception {
         testReconciliationCountersFixed(TRANSACTIONAL, true,
             new String[]{"--cache", "partition_reconciliation", "--repair", "--local-output"});
     }
 
+    /** Partition counter consistency reconciliation of atomic cache with persistence. */
     @Test
     public void testReconciliationCountersFixedAtomicCachePersistence() throws Exception {
         testReconciliationCountersFixed(ATOMIC, true,
             new String[]{"--cache", "partition_reconciliation", "--repair", "--local-output"});
     }
 
+    /** Partition counter consistency reconciliation with explicite arg in control.sh command. */
     @Test
     public void testReconciliationCountersFixedTransactionalCacheWithExplicitArg() throws Exception {
         testReconciliationCountersFixed(TRANSACTIONAL, false,
@@ -160,6 +160,16 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
                 "--partition-counter-consistency-reconciliation", "true"});
     }
 
+    /**
+     * <ul>
+     *   <li>Start two nodes.</li>
+     *   <li>Create cache.</li>
+     *   <li>Break counters.</li>
+     *   <li>Invoke a reconciliation util for partition counter consistency reconciliation.</li>
+     *   <li>Check that counters was fixed.</li>
+     *   <li>Restart grid and check counters again if persistence enabled.</li>
+     * </ul>
+     */
     public void testReconciliationCountersFixed(CacheAtomicityMode atomicityMode, boolean persistenceEnabled, String[] cmdArgs) throws Exception {
         this.atomicityMode = atomicityMode;
 
@@ -248,6 +258,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         }
     }
 
+    /** Test that partition counters not fixed if it's not need. */
     @Test
     public void testReconciliationCountersNotFixed1() throws Exception {
         testReconciliationCountersNotFixed(
@@ -256,6 +267,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         );
     }
 
+    /** Test that partition counters not fixed if it's not need. */
     @Test
     public void testReconciliationCountersNotFixed2() throws Exception {
         testReconciliationCountersNotFixed(
@@ -264,6 +276,15 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         );
     }
 
+    /**
+     * <ul>
+     *   <li>Start two nodes.</li>
+     *   <li>Create cache.</li>
+     *   <li>Break counters.</li>
+     *   <li>Invoke a reconciliation util for without partition counter consistency reconciliation.</li>
+     *   <li>Check that counters not was fixed.</li>
+     * </ul>
+     */
     public void testReconciliationCountersNotFixed(String[] cmdArgs) throws Exception {
         atomicityMode = TRANSACTIONAL;
 

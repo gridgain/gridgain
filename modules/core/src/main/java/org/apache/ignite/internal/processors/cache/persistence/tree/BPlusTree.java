@@ -72,7 +72,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseB
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.tree.SearchRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
@@ -1157,6 +1156,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return find(lower, upper, null, x, CursorType.RECONCILIATION, cacheId);
     }
 
+    /**
+     * @param lower Lower bound inclusive or {@code null} if unbounded.
+     * @param upper Upper bound inclusive or {@code null} if unbounded.
+     * @param c Filter closure.
+     * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+     * @return Cursor.
+     * @throws IgniteCheckedException If failed.
+     */
     public GridCursor<T> find(L lower, L upper, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
         return find(lower, upper, c, x, null, null);
     }
@@ -1166,6 +1173,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param upper Upper bound inclusive or {@code null} if unbounded.
      * @param c Filter closure.
      * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+     * @param cursorType Cursor type implementation.
+     * @param cacheId Cache ID.
      * @return Cursor.
      * @throws IgniteCheckedException If failed.
      */
@@ -3210,7 +3219,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         reconciliationCtx.putCacheKeyMap(row0.cacheId(), row0.key());
                 }
             }
-
         }
 
         /** Size reconciliation logic for remove entry from the cache. */
@@ -3234,7 +3242,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     else
                         return v;
                 });
-
             }
         }
 
@@ -4827,9 +4834,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             if (rmvd instanceof CacheDataRowAdapter) {
                 CacheDataRowAdapter row0 = (CacheDataRowAdapter)rmvd;
+
                 CacheDataRowAdapter oldRow0;
 
                 boolean oldIsTombstone = false;
+
                 oldRow0 = (CacheDataRowAdapter)rmvd;
 
                 if (oldRow0.tombstone())
@@ -6075,7 +6084,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /**
      * A cursor for cache consistency reconciliation
-     * which contains attitional logic for cache size consistency reconciliation.
+     * which contains additional logic for cache size consistency reconciliation.
      */
     private final class ReconciliationCursor extends ForwardCursor {
         /** Cache ID. */

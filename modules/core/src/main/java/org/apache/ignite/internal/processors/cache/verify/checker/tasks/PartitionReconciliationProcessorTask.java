@@ -74,6 +74,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** Flag indicates that the result of the utility should be logged to the console. */
     private boolean localOutoutMode;
 
+    /** {@code True} - if partition reconciliation with cache size consistency and
+     * partition counter consistency support . */
     private boolean sizeReconciliationSupport;
 
     /** {@inheritDoc} */
@@ -133,7 +135,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 jobs.put(new PartitionReconciliationJobV2(arg, startTime, sesId), node);
         }
         else {
-            log.warning("Partition size reconciliation is not supported by all nodes");
+            log.warning("Partition size consistency reconciliation is not supported by all nodes");
 
             for (ClusterNode node : subgrid)
                 jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
@@ -171,9 +173,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 data.get2().result().get2().entrySet().forEach(e -> {
                     partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
-                    e.getValue().entrySet().forEach(e0 -> {
-                        partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue());
-                    });
+                    e.getValue().entrySet().forEach(e0 -> partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue()));
 
                 });
 
@@ -341,7 +341,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             LocalDateTime startTime,
             long sesId
         ) {
-            System.out.println("dfljlhjfdb");
             this.reconciliationTaskArg = arg;
             this.startTime = startTime;
             this.sesId = sesId;
@@ -350,6 +349,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** {@inheritDoc} */
         @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
+
             Collection<String> cacheNames = ignite.context().cache().cacheNames();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -396,6 +396,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
             catch (Exception e) {
                 String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";
+
                 log.error(msg, e);
 
                 throw new IgniteException(msg + String.format(ERROR_REASON, e.getMessage(), e.getClass()), e);

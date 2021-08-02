@@ -260,9 +260,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         List<Integer> startSizes = new ArrayList<>();
 
-        for (IgniteCache<Object, Object> cache : caches) {
+        for (IgniteCache<Object, Object> cache : caches)
             startSizes.add(cache.size());
-        }
 
         List<IgniteEx> grids = new ArrayList<>();
 

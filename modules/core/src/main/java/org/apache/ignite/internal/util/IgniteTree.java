@@ -75,6 +75,18 @@ public interface IgniteTree<L, T> {
      */
     public GridCursor<T> find(L lower, L upper, Object x) throws IgniteCheckedException;
 
+    /**
+     * Returns a cursor from lower to upper bounds inclusive.
+     *
+     * @param lower Lower bound or {@code null} if unbounded.
+     * @param upper Upper bound or {@code null} if unbounded.
+     * @param x Implementation specific argument, {@code null} always means that we need to return full detached
+     *     data row.
+     * @param cursorType Cursor type.
+     * @param cacheId Cache ID.
+     * @return Cursor.
+     * @throws IgniteCheckedException If failed.
+     */
     public GridCursor<T> reconciliationFind(L lower, L upper, Object x, BPlusTree.CursorType cursorType, int cacheId) throws IgniteCheckedException;
 
     /**

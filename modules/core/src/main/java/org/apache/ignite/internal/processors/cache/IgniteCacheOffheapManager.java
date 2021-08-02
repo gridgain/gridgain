@@ -70,6 +70,7 @@ public interface IgniteCacheOffheapManager {
     /** Scan for both. */
     public static final int DATA_AND_TOMBSTONES = DATA | TOMBSTONES;
 
+    /** Scan for reconciliation. */
     public static final int RECONCILIATION = 4;
 
     /**
@@ -1133,6 +1134,7 @@ public interface IgniteCacheOffheapManager {
          * @param cacheId Cache ID.
          * @param lower Lower bound.
          * @param upper Upper bound.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
@@ -1155,6 +1157,7 @@ public interface IgniteCacheOffheapManager {
          * @param lower Lower bound.
          * @param upper Upper bound.
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */

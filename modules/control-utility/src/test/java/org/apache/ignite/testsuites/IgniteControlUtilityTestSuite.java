@@ -43,6 +43,7 @@ import org.apache.ignite.util.GridCommandHandlerMetadataTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicPersistentTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationCommonTest;
+import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationCountersTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationExtendedTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationReplicatedPersistentTest;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationReplicatedTest;
@@ -82,6 +83,7 @@ import org.junit.runners.Suite;
     GridCommandHandlerPartitionReconciliationReplicatedTest.class,
     GridCommandHandlerPartitionReconciliationTxPersistentTest.class,
     GridCommandHandlerPartitionReconciliationTxTest.class,
+    GridCommandHandlerPartitionReconciliationCountersTest.class,
 
     GridCommandHandlerSslWithSecurityTest.class,
 

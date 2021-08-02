@@ -74,10 +74,11 @@ public class VisorPartitionReconciliationJob<ResultT> extends VisorJob<VisorPart
                         IgniteFeatures.PARTITION_RECONCILIATION_V2)) {
                     ignite.context().discovery().sendCustomEvent(new FinalizeCountersDiscoveryMessage());
 
-                    ignite.log().info("Counter reconciliation was started.");
+                    ignite.log().info("Partition counter consistency reconciliation was started.");
                 }
                 else
-                    ignite.log().info("Counter reconciliation was not started due to partition reconciliation task arguments.");
+                    ignite.log().info("Partition counter consistency reconciliation was not started " +
+                        "due to partition reconciliation task arguments.");
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

@@ -1814,6 +1814,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 long newSize = reconciliationCtx().finishSize(CU.UNDEFINED_CACHE_ID).get();
 
                 nodePartitionSize.newCacheSize(newSize);
+
                 if (repair)
                     storageSize.set(newSize);
             }

@@ -42,14 +42,10 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
      */
     private RepairAlgorithm repairAlg;
 
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** */
     private Map<UUID, NodePartitionSize> partSizesMap;
 
     /**

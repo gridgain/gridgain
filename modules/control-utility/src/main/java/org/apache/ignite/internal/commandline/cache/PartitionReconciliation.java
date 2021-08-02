@@ -19,7 +19,6 @@ package org.apache.ignite.internal.commandline.cache;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -105,7 +104,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             "processed by " + PARTITION_RECONCILIATION + " command. If cache names are specified, in form of regular " +
             "expressions, only matching caches will be verified.";
 
-        Map<String, String> paramsDesc = new LinkedHashMap<>();
+        Map<String, String> paramsDesc = new HashMap<>();
 
         paramsDesc.put(FAST_CHECK.toString(),
             "This option allows checking and repairing only partitions that did not pass validation" +
@@ -246,9 +245,9 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         int recheckAttempts = (int)RECHECK_ATTEMPTS.defaultValue();
         RepairAlgorithm repairAlg = (RepairAlgorithm)REPAIR.defaultValue();
         int recheckDelay = (int)RECHECK_DELAY.defaultValue();
-        boolean consistencyReconciliation = (boolean) DATA_CONSISTENCY_RECONCILIATION.defaultValue();
-        boolean cacheSizeReconciliation = (boolean) CACHE_SIZE_CONSISTENCY_RECONCILIATION.defaultValue();
-        boolean partitionCounterReconciliation = (boolean) PARTITION_COUNTER_CONSISTENCY_RECONCILIATION.defaultValue();
+        boolean dataConsistencyReconciliation = (boolean)DATA_CONSISTENCY_RECONCILIATION.defaultValue();
+        boolean cacheSizeReconciliation = (boolean)CACHE_SIZE_CONSISTENCY_RECONCILIATION.defaultValue();
+        boolean partitionCounterReconciliation = (boolean)PARTITION_COUNTER_CONSISTENCY_RECONCILIATION.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -367,7 +366,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                     case DATA_CONSISTENCY_RECONCILIATION:
                         strVal = argIter.nextArg("The data consistency reconciliation should be specified.");
 
-                        consistencyReconciliation = Boolean.parseBoolean(strVal);
+                        dataConsistencyReconciliation = Boolean.parseBoolean(strVal);
 
                         break;
 
@@ -390,7 +389,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
         HashSet<ReconciliationType> reconciliationTypes = new HashSet<>();
 
-        if (consistencyReconciliation)
+        if (dataConsistencyReconciliation)
             reconciliationTypes.add(ReconciliationType.DATA_CONSISTENCY);
 
         if (cacheSizeReconciliation)
@@ -670,7 +669,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
         }
 
         /**
-         * @return Recheck delay.
+         * @return Reconciliation types.
          */
         public Set<ReconciliationType> reconciliationTypes() {
             return reconciliationTypes;

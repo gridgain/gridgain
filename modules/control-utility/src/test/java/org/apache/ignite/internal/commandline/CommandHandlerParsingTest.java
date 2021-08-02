@@ -755,10 +755,16 @@ public class CommandHandlerParsingTest {
      *      <invalid-recheck-attempts>. Int value between 1 and 5 should be used.) is expected.
      *
      * --data-consistency-reconciliation
-     *      if value is missing - IllegalArgumentException (The consistency reconciliation should be specified.) is expected.
+     *      Boolean value is expected.
+     *      if value is missing - IllegalArgumentException (The data consistency reconciliation should be specified.) is expected.
      *
      * --cache-size-consistency-reconciliation
-     *      if value is missing - IllegalArgumentException (The cache size reconciliation should be specified.) is expected.
+     *      Boolean value is expected.
+     *      if value is missing - IllegalArgumentException (The cache size consistency reconciliation should be specified.) is expected.
+     *
+     * --partition-counter-consistency-reconciliation
+     *      Boolean value is expected.
+     *      if value is missing - IllegalArgumentException (The partition counter consistency reconciliation should be specified.) is expected.
      *
      * As invalid values use values that produce NumberFormatException and out-of-range values.
      * Also ensure that in case of appropriate parameters parseArgs() doesn't throw any exceptions.
@@ -839,7 +845,7 @@ public class CommandHandlerParsingTest {
 
         parseArgs(asList("--cache", "partition_reconciliation", "--data-consistency-reconciliation", "fdkj"));
 
-        assertParseArgsThrows("The consistency reconciliation should be specified.", "--cache", "partition_reconciliation", "--data-consistency-reconciliation");
+        assertParseArgsThrows("The data consistency reconciliation should be specified.", "--cache", "partition_reconciliation", "--data-consistency-reconciliation");
 
         parseArgs(asList("--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation", "true"));
 
@@ -847,7 +853,7 @@ public class CommandHandlerParsingTest {
 
         parseArgs(asList("--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation", "12345"));
 
-        assertParseArgsThrows("The cache size reconciliation should be specified.", "--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation");
+        assertParseArgsThrows("The cache size consistency reconciliation should be specified.", "--cache", "partition_reconciliation", "--cache-size-consistency-reconciliation");
 
         parseArgs(asList("--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation", "true"));
 
@@ -855,7 +861,7 @@ public class CommandHandlerParsingTest {
 
         parseArgs(asList("--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation", "12345"));
 
-        assertParseArgsThrows("The partition counter reconciliation should be specified.", "--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation");
+        assertParseArgsThrows("The partition counter consistency reconciliation should be specified.", "--cache", "partition_reconciliation", "--partition-counter-consistency-reconciliation");
     }
 
     /**

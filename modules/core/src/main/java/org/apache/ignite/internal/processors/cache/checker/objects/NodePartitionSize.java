@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 
 /** Container for cache size consistency reconsiliztion result */
 public class NodePartitionSize extends IgniteDataTransferObject {
@@ -33,7 +32,7 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     /** */
     private boolean inProgress;
 
-    /** Brocken cache size from partition meta. */
+    /** Broken cache size from partition meta. */
     private long oldCacheSize;
 
     /** Real cache size. */

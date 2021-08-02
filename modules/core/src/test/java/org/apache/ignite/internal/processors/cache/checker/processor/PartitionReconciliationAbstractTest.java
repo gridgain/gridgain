@@ -192,7 +192,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
      *
      */
     protected void setPartitionSize(IgniteEx grid, String cacheName, int partId, int delta) {
-
         GridCacheContext<Object, Object> cctx = grid.context().cache().cache(cacheName).context();
 
         int cacheId = cctx.cacheId();
@@ -204,7 +203,6 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
      *
      */
     protected void updatePartitionsSize(IgniteEx grid, String cacheName) {
-
         GridCacheContext<Object, Object> cctx = grid
             .context()
             .cache()

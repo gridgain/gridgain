@@ -46,7 +46,6 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -69,14 +68,10 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<PartitionBatchRequestV2, ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>>> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** */
     private static final KeyComparator KEY_COMPARATOR = new KeyComparator();
 
     /** Injected logger. */
@@ -90,6 +85,8 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
     /** Partition batch. */
     private volatile PartitionBatchRequestV2 partBatch;
 
+    /** {@code True} - if partition reconciliation with cache size consistency and
+     * partition counter consistency support . */
     private boolean sizeReconciliationSupport;
 
     /** {@inheritDoc} */
@@ -261,6 +258,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
             boolean reconConsist = partBatch.dataReconciliation();
 
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
+
             boolean reconSize = partBatch.cacheSizeReconciliation() &&
                 (nodePartitionSize == null || nodePartitionSize.inProgress());
 
@@ -271,7 +269,9 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
             int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
             final int batchSize = partBatch.batchSize();
+
             final KeyCacheObject lowerKey;
+
             KeyCacheObject newLowerKey = null;
 
             try {

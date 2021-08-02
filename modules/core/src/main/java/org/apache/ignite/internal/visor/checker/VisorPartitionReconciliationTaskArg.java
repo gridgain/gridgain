@@ -368,7 +368,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             recheckAttempts = 2;
             recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
-            reconciliationTypes = new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY,  PARTITION_COUNTER_CONSISTENCY));
+            reconciliationTypes = new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY, PARTITION_COUNTER_CONSISTENCY));
         }
 
         /**

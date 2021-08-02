@@ -126,14 +126,15 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
      * @param sesId Session identifier that allows to identify different runs of the utility.
      * @param ignite Local Ignite instance to be used as an entry point for the execution of the utility.
      * @param caches Collection of cache names to be checked.
-     * @param repair Flag indicates that inconsistencies should be repaired.
      * @param partsToValidate Optional collection of partition which shoulb be validated.
      *                        If value is {@code null} all partitions will be validated.
+     * @param repair Flag indicates that inconsistencies should be repaired.
+     * @param repairAlg Repair algorithm to be used to fix inconsistency.
      * @param parallelismLevel Number of batches that can be handled simultaneously.
      * @param batchSize Amount of keys to retrieve within one job.
      * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
-     * @param repairAlg Repair algorithm to be used to fix inconsistency.
      * @param recheckDelay Specifies the time interval between two consequent attempts to check keys.
+     * @param reconciliationTypes Reconciliation types.
      * @param compact {@code true} if the result should be returned in compact form.
      * @param includeSensitive {@code true} if sensitive information should be included in the result.
      */
@@ -259,11 +260,6 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                     throw new IgniteException(err);
                 }
             }
-
-//            collector()
-
-//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size());
-//            System.out.println("qdserrfe msg.partSizesMap.size(): " + collector.partSizesMap().size() + " ||| " + collector.partSizesMap() + " ||| " + Thread.currentThread().getName());
 
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
         }
@@ -466,11 +462,6 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
         return new Repair(sesId, workloadChainId, cacheName, partId, res, repairAttempts);
     }
-
-//    private Repair repairSizes(String cacheName, int partId) {
-//        Map<Integer, Map<Integer, Map<UUID, Long>>> sizesMap = collector.partSizesMap();
-//
-//    }
 
     /**
      * This class allows tracking workload chains based on its lifecycle.

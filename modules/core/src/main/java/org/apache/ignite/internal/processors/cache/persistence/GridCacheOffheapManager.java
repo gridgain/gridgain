@@ -3218,8 +3218,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return EMPTY_CURSOR;
         }
 
-        @Override
-        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, int flags) throws IgniteCheckedException {
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, int flags) throws IgniteCheckedException {
             if (delegate != null)
                 return delegate.cursor(cacheId, lower, upper, flags);
 
@@ -3240,8 +3239,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             return EMPTY_CURSOR;
         }
 
-        @Override
-        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, CacheDataRowAdapter.RowData x, int flags) throws IgniteCheckedException {
+        @Override public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower, KeyCacheObject upper, CacheDataRowAdapter.RowData x, int flags) throws IgniteCheckedException {
             if (delegate != null)
                 return delegate.cursor(cacheId, lower, upper, x, flags);
 

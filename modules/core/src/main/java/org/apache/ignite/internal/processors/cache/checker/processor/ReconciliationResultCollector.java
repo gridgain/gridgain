@@ -404,7 +404,7 @@ public interface ReconciliationResultCollector {
 
                     result.append("\tpartition: " + partId + "\n");
 
-                    StringBuilder brokenSizes = new StringBuilder();//"Node UUID: "
+                    StringBuilder brokenSizes = new StringBuilder();
 
                     nodesSizes.entrySet().stream()
                         .forEach(entry -> {

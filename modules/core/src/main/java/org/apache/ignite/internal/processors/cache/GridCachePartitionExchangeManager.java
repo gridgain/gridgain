@@ -673,13 +673,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 exchFut = exchangeFuture(exchId, evt, null, null, null);
             }
-            else if (customMsg instanceof FinalizeCountersDiscoveryMessage) {
+            else if (customMsg instanceof WalStateAbstractMessage
+                && ((WalStateAbstractMessage)customMsg).needExchange()) {
                 exchId = exchangeId(n.id(), affinityTopologyVersion(evt), evt);
 
                 exchFut = exchangeFuture(exchId, evt, null, null, null);
             }
-            else if (customMsg instanceof WalStateAbstractMessage
-                && ((WalStateAbstractMessage)customMsg).needExchange()) {
+            else if (customMsg instanceof FinalizeCountersDiscoveryMessage) {
                 exchId = exchangeId(n.id(), affinityTopologyVersion(evt), evt);
 
                 exchFut = exchangeFuture(exchId, evt, null, null, null);

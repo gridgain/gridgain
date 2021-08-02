@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ public enum ReconciliationType {
     /** Data consistency reconciliation. */
     DATA_CONSISTENCY,
 
-    /** Cache size reconciliation. */
+    /** Cache size consistency reconciliation. */
     CACHE_SIZE_CONSISTENCY,
 
-    /** Partition counter reconciliation. */
+    /** Partition counter consistency reconciliation. */
     PARTITION_COUNTER_CONSISTENCY;
 
     /** Enumerated values. */
