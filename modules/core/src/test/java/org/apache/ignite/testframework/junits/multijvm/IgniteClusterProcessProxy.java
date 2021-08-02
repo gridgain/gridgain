@@ -178,6 +178,11 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
+    @Override public void checkpoint() throws IgniteException {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean disableWal(String cacheName) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }

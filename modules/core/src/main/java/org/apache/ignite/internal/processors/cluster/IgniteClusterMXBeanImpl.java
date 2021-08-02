@@ -58,4 +58,9 @@ public class IgniteClusterMXBeanImpl implements IgniteClusterMXBean {
             throw U.jmException(e);
         }
     }
+
+    /** {@inheritDoc} */
+    @Override public void checkpoint() {
+        cluster.checkpoint();
+    }
 }
