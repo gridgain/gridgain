@@ -1743,7 +1743,7 @@ public final class IgniteSystemProperties {
      *
      * @param name Name of the system property or environment variable.
      * @param dflt Default value.
-     * @return Integer value of the system property or environment variable.
+     * @return UUID value of the system property or environment variable.
      *         Returns default value in case neither system property
      *         nor environment variable with given name is found.
      */
