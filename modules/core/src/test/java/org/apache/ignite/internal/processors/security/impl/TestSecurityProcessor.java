@@ -186,6 +186,7 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
 
     /** {@inheritDoc} */
     @Override public SecurityContext securityContext(UUID subjId) {
+        log.info("========================== securityContext ========================== subjId=" + subjId + ", localNodeId=" + ctx.localNodeId());
         return SECURITY_CONTEXTS.get(subjId);
     }
 

@@ -45,6 +45,7 @@ import org.junit.runners.JUnit4;
 import static org.apache.ignite.internal.processors.security.impl.TestAdditionalSecurityProcessor.CLIENT;
 import static org.apache.ignite.plugin.security.SecurityPermission.ADMIN_OPS;
 import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_CREATE;
+import static org.apache.ignite.plugin.security.SecurityPermission.CACHE_PUT;
 import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.ALLOW_ALL;
 
 /**
@@ -70,8 +71,8 @@ public abstract class CommonSecurityCheckTest extends AbstractSecurityTest {
      */
     protected TestSecurityData[] clientData() {
         return new TestSecurityData[]{new TestSecurityData(CLIENT,
-            SecurityPermissionSetBuilder.create().defaultAllowAll(false)
-                .appendSystemPermissions(ADMIN_OPS, CACHE_CREATE)
+            SecurityPermissionSetBuilder.create().defaultAllowAll(true)
+//                .appendSystemPermissions(ADMIN_OPS, CACHE_CREATE, CACHE_PUT)
                 .build()
         )};
     }
@@ -84,7 +85,7 @@ public abstract class CommonSecurityCheckTest extends AbstractSecurityTest {
 
         cfg.setActiveOnStart(false);
 
-        boolean isClient = instanceName.endsWith("2");
+        boolean isClient = instanceName.endsWith("5");
         String name = isClient ? "client_" + instanceName : "srv_" + instanceName;
 
         cfg.setPluginProviders(getPluginProvider(name));

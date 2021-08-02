@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.security;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -80,6 +81,9 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
 
+    /** Map of security contexts for thin clients. Key is the node's id. */
+    private final Map<UUID, SecurityContext> thinCliSecCtxs = new ConcurrentHashMap<>();
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -119,9 +123,17 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         ClusterNode node = Optional.ofNullable(ctx.discovery().node(subjId))
             .orElseGet(() -> ctx.discovery().historicalNode(subjId));
 
+        System.out.println(LocalDateTime.now() +  " ====================== withContext subjId=" + subjId + ", localNodeId=" + ctx.localNodeId() + ", nodeIsNotNull=" + (node != null) + " START");
+
+        for (StackTraceElement stackTraceElement : Thread.currentThread().getStackTrace())
+            System.out.println("====================== " + stackTraceElement);
+
         SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
-            uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
-            : secPrc.securityContext(subjId);
+                uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
+                : thinCliSecCtxs.computeIfAbsent(subjId, uuid -> {
+                    System.out.println(LocalDateTime.now() +  " ======================= withContext, subjId=" + subjId + ", thinCliSecCtxs=" + thinCliSecCtxs);
+                    return secPrc.securityContext(subjId);
+        });
 
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
@@ -131,6 +143,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
             res = new DenyAllSecurityContext(subjId, type);
         }
+
+        System.out.println(LocalDateTime.now() +  " ====================== withContext END");
 
         return withContext(res);
     }
@@ -172,6 +186,9 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public void onSessionExpired(UUID subjId) {
+        thinCliSecCtxs.remove(subjId);
+        System.out.println(LocalDateTime.now() +  " ======================= onSessionExpired, subjId=" + subjId + ", localNodeId=" + ctx.localNodeId() + ", thinCliSecCtxs=" + thinCliSecCtxs);
+
         secPrc.onSessionExpired(subjId);
     }
 
