@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.net.InetAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -431,6 +432,9 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         );
 
         Thread.sleep(100);
+
+        //java.net.InetAddress.nameServices
+        System.out.println("<$> " + U.field(InetAddress.class, "nameServices"));
 
         U.dumpThreads(log);
 

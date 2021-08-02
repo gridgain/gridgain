@@ -9626,7 +9626,11 @@ public abstract class IgniteUtils {
 
             // Always append address because local and remote nodes may have the same hostname
             // therefore remote hostname will be always resolved to local address.
+            long start = System.currentTimeMillis();
             res.add(new InetSocketAddress(addr, port));
+            long dur = System.currentTimeMillis() - start;
+            if (dur > 100)
+                System.out.println("<$> " + Thread.currentThread().getName() + " toSocketAddresses took " + dur + "ms.");
         }
 
         return res;
