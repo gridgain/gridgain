@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2538,7 +2538,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.
      * @throws IgniteCheckedException If failed.
      */
-    public final long destroy(IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
+    public final long destroy(@Nullable IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
         close();
 
         if (!markDestroyed() && !forceDestroy)
@@ -2616,7 +2616,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         LongListReuseBag bag,
         long pageId,
         int lvl,
-        IgniteInClosure<L> c,
+        @Nullable IgniteInClosure<L> c,
         AtomicLong lockHoldStartTime,
         long lockMaxTime,
         Deque<GridTuple3<Long, Long, Long>> lockedPages

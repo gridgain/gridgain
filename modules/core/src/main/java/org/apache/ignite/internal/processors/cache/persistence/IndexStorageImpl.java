@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,6 +38,8 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Metadata storage.
@@ -143,16 +144,14 @@ public class IndexStorageImpl implements IndexStorage {
 
     /** {@inheritDoc} */
     @Override public RootPage allocateIndex(String idxName) throws IgniteCheckedException {
-        MetaTree tree = metaTree;
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
+
+        checkIndexName(idxNameBytes);
 
         synchronized (this) {
-            byte[] idxNameBytes = idxName.getBytes(StandardCharsets.UTF_8);
+            final MetaTree tree = metaTree;
 
-            if (idxNameBytes.length > MAX_IDX_NAME_LEN)
-                throw new IllegalArgumentException("Too long encoded indexName [maxAllowed=" + MAX_IDX_NAME_LEN +
-                    ", currentLength=" + idxNameBytes.length + ", name=" + idxName + "]");
-
-            IndexItem row = tree.findOne(new IndexItem(idxNameBytes, 0));
+            final IndexItem row = tree.findOne(new IndexItem(idxNameBytes, 0));
 
             if (row == null) {
                 long pageId = 0;
@@ -167,7 +166,7 @@ public class IndexStorageImpl implements IndexStorage {
                 return new RootPage(new FullPageId(pageId, grpId), true);
             }
             else {
-                FullPageId pageId = new FullPageId(row.pageId, grpId);
+                final FullPageId pageId = new FullPageId(row.pageId, grpId);
 
                 return new RootPage(pageId, false);
             }
@@ -180,26 +179,29 @@ public class IndexStorageImpl implements IndexStorage {
     {
         idxName = maskCacheIndexName(cacheId, idxName, segment);
 
-        byte[] idxNameBytes = idxName.getBytes(StandardCharsets.UTF_8);
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
 
-        IndexItem row = metaTree.findOne(new IndexItem(idxNameBytes, 0));
+        final IndexItem row = metaTree.findOne(new IndexItem(idxNameBytes, 0));
 
         return row != null ? new RootPage(new FullPageId(row.pageId, grpId), false) : null;
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage dropCacheIndex(Integer cacheId, String idxName, int segment)
-        throws IgniteCheckedException {
+    @Override public @Nullable RootPage dropCacheIndex(
+        Integer cacheId,
+        String idxName,
+        int segment
+    ) throws IgniteCheckedException {
         String maskedIdxName = maskCacheIndexName(cacheId, idxName, segment);
 
         return dropIndex(maskedIdxName);
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage dropIndex(String idxName) throws IgniteCheckedException {
-        byte[] idxNameBytes = idxName.getBytes(StandardCharsets.UTF_8);
+    @Override public @Nullable RootPage dropIndex(final String idxName) throws IgniteCheckedException {
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
 
-        IndexItem row = metaTree.remove(new IndexItem(idxNameBytes, 0));
+        final IndexItem row = metaTree.remove(new IndexItem(idxNameBytes, 0));
 
         if (row != null) {
             if (reuseList == null)
@@ -210,14 +212,35 @@ public class IndexStorageImpl implements IndexStorage {
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable RootPage renameCacheIndex(
+        Integer cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException {
+        byte[] oldIdxNameBytes = maskCacheIndexName(cacheId, oldIdxName, segment).getBytes(UTF_8);
+        byte[] newIdxNameBytes = maskCacheIndexName(cacheId, newIdxName, segment).getBytes(UTF_8);
+
+        checkIndexName(newIdxNameBytes);
+
+        IndexItem rmv = metaTree.remove(new IndexItem(oldIdxNameBytes, 0));
+
+        if (rmv != null) {
+            metaTree.putx(new IndexItem(newIdxNameBytes, rmv.pageId));
+
+            return new RootPage(new FullPageId(rmv.pageId, grpId), false);
+        }
+        else
+            return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public void destroy() throws IgniteCheckedException {
         metaTree.destroy();
     }
 
     /** {@inheritDoc} */
     @Override public Collection<String> getIndexNames() throws IgniteCheckedException {
-        assert metaTree != null;
-
         GridCursor<IndexItem> cursor = metaTree.find(null, null);
 
         ArrayList<String> names = new ArrayList<>((int)metaTree.size());
@@ -244,7 +267,7 @@ public class IndexStorageImpl implements IndexStorage {
      * @return Masked name.
      */
     private String maskCacheIndexName(Integer cacheId, String idxName, int segment) {
-        return (grpShared ? (Integer.toString(cacheId) + "_") : "") + idxName + "%" + segment;
+        return (grpShared ? cacheId + "_" : "") + idxName + "%" + segment;
     }
 
     /**
@@ -263,21 +286,22 @@ public class IndexStorageImpl implements IndexStorage {
          * @param reuseList Reuse list.
          * @param innerIos Inner IOs.
          * @param leafIos Leaf IOs.
+         * @param failureProcessor if the tree is corrupted.
          * @throws IgniteCheckedException If failed.
          */
         private MetaTree(
-            String treeName,
-            int cacheId,
-            int allocPartId,
-            byte allocSpace,
-            PageMemory pageMem,
-            IgniteWriteAheadLogManager wal,
-            AtomicLong globalRmvId,
-            long metaPageId,
-            ReuseList reuseList,
-            IOVersions<? extends BPlusInnerIO<IndexItem>> innerIos,
-            IOVersions<? extends BPlusLeafIO<IndexItem>> leafIos,
-            boolean initNew,
+            final String treeName,
+            final int cacheId,
+            final int allocPartId,
+            final byte allocSpace,
+            final PageMemory pageMem,
+            final IgniteWriteAheadLogManager wal,
+            final AtomicLong globalRmvId,
+            final long metaPageId,
+            final ReuseList reuseList,
+            final IOVersions<? extends BPlusInnerIO<IndexItem>> innerIos,
+            final IOVersions<? extends BPlusLeafIO<IndexItem>> leafIos,
+            final boolean initNew,
             @Nullable FailureProcessor failureProcessor,
             PageLockTrackerManager pageLockTrackerManager
         ) throws IgniteCheckedException {
@@ -309,19 +333,19 @@ public class IndexStorageImpl implements IndexStorage {
         }
 
         /** {@inheritDoc} */
-        @Override protected int compare(BPlusIO<IndexItem> io, long pageAddr, int idx,
-            IndexItem row) throws IgniteCheckedException {
-            int off = ((IndexIO)io).getOffset(pageAddr, idx);
+        @Override protected int compare(final BPlusIO<IndexItem> io, final long pageAddr, final int idx,
+            final IndexItem row) throws IgniteCheckedException {
+            final int off = ((IndexIO)io).getOffset(pageAddr, idx);
 
             int shift = 0;
 
             // Compare index names.
-            int len = PageUtils.getUnsignedByte(pageAddr, off + shift);
+            final int len = PageUtils.getUnsignedByte(pageAddr, off + shift);
 
             shift += BYTE_LEN;
 
             for (int i = 0; i < len && i < row.idxName.length; i++) {
-                int cmp = Byte.compare(PageUtils.getByte(pageAddr, off + i + shift), row.idxName[i]);
+                final int cmp = Byte.compare(PageUtils.getByte(pageAddr, off + i + shift), row.idxName[i]);
 
                 if (cmp != 0)
                     return cmp;
@@ -331,8 +355,8 @@ public class IndexStorageImpl implements IndexStorage {
         }
 
         /** {@inheritDoc} */
-        @Override public IndexItem getRow(BPlusIO<IndexItem> io, long pageAddr,
-            int idx, Object ignore) throws IgniteCheckedException {
+        @Override public IndexItem getRow(final BPlusIO<IndexItem> io, final long pageAddr,
+            final int idx, Object ignore) throws IgniteCheckedException {
             return readRow(pageAddr, ((IndexIO)io).getOffset(pageAddr, idx));
         }
     }
@@ -342,16 +366,16 @@ public class IndexStorageImpl implements IndexStorage {
      */
     public static class IndexItem {
         /** */
-        private byte[] idxName;
+        private final byte[] idxName;
 
         /** */
-        private long pageId;
+        private final long pageId;
 
         /**
          * @param idxName Index name.
          * @param pageId Page ID.
          */
-        private IndexItem(byte[] idxName, long pageId) {
+        private IndexItem(final byte[] idxName, final long pageId) {
             this.idxName = idxName;
             this.pageId = pageId;
         }
@@ -380,9 +404,9 @@ public class IndexStorageImpl implements IndexStorage {
      * @param row Row to store.
      */
     private static void storeRow(
-        long pageAddr,
+        final long pageAddr,
         int off,
-        IndexItem row
+        final IndexItem row
     ) {
         // Index name length.
         PageUtils.putUnsignedByte(pageAddr, off, row.idxName.length);
@@ -405,13 +429,13 @@ public class IndexStorageImpl implements IndexStorage {
      * @param srcOff Src buf offset.
      */
     private static void storeRow(
-        long dstPageAddr,
+        final long dstPageAddr,
         int dstOff,
-        long srcPageAddr,
+        final long srcPageAddr,
         int srcOff
     ) {
         // Index name length.
-        int len = PageUtils.getUnsignedByte(srcPageAddr, srcOff);
+        final int len = PageUtils.getUnsignedByte(srcPageAddr, srcOff);
         srcOff++;
 
         PageUtils.putUnsignedByte(dstPageAddr, dstOff, len);
@@ -432,17 +456,17 @@ public class IndexStorageImpl implements IndexStorage {
      * @param off Offset.
      * @return Read row.
      */
-    private static IndexItem readRow(long pageAddr, int off) {
+    private static IndexItem readRow(final long pageAddr, int off) {
         // Index name length.
-        int len = PageUtils.getUnsignedByte(pageAddr, off) & 0xFF;
+        final int len = PageUtils.getUnsignedByte(pageAddr, off) & 0xFF;
         off++;
 
         // Index name.
-        byte[] idxName = PageUtils.getBytes(pageAddr, off, len);
+        final byte[] idxName = PageUtils.getBytes(pageAddr, off, len);
         off += len;
 
         // Page ID.
-        long pageId = PageUtils.getLong(pageAddr, off);
+        final long pageId = PageUtils.getLong(pageAddr, off);
 
         return new IndexItem(idxName, pageId);
     }
@@ -471,7 +495,7 @@ public class IndexStorageImpl implements IndexStorage {
         /**
          * @param ver Version.
          */
-        private MetaStoreInnerIO(int ver) {
+        private MetaStoreInnerIO(final int ver) {
             // name bytes and 1 byte for length, 8 bytes pageId
             super(T_METASTORE_INNER, ver, false, RESERVED_IDX_NAME_LEN + 1 + 8);
         }
@@ -482,20 +506,20 @@ public class IndexStorageImpl implements IndexStorage {
         }
 
         /** {@inheritDoc} */
-        @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<IndexItem> srcIo,
-            long srcPageAddr,
-            int srcIdx) throws IgniteCheckedException {
+        @Override public void store(final long dstPageAddr, final int dstIdx, final BPlusIO<IndexItem> srcIo,
+            final long srcPageAddr,
+            final int srcIdx) throws IgniteCheckedException {
             storeRow(dstPageAddr, offset(dstIdx), srcPageAddr, ((IndexIO)srcIo).getOffset(srcPageAddr, srcIdx));
         }
 
         /** {@inheritDoc} */
-        @Override public IndexItem getLookupRow(BPlusTree<IndexItem, ?> tree, long pageAddr,
-            int idx) throws IgniteCheckedException {
+        @Override public IndexItem getLookupRow(final BPlusTree<IndexItem, ?> tree, final long pageAddr,
+            final int idx) throws IgniteCheckedException {
             return readRow(pageAddr, offset(idx));
         }
 
         /** {@inheritDoc} */
-        @Override public int getOffset(long pageAddr, int idx) {
+        @Override public int getOffset(long pageAddr, final int idx) {
             return offset(idx);
         }
     }
@@ -512,7 +536,7 @@ public class IndexStorageImpl implements IndexStorage {
         /**
          * @param ver Version.
          */
-        private MetaStoreLeafIO(int ver) {
+        private MetaStoreLeafIO(final int ver) {
             // 4 byte cache ID, UTF-16 symbols and 1 byte for length, 8 bytes pageId
             super(T_METASTORE_LEAF, ver, RESERVED_IDX_NAME_LEN + 1 + 8);
         }
@@ -523,24 +547,36 @@ public class IndexStorageImpl implements IndexStorage {
         }
 
         /** {@inheritDoc} */
-        @Override public void store(long dstPageAddr,
-            int dstIdx,
-            BPlusIO<IndexItem> srcIo,
-            long srcPageAddr,
-            int srcIdx) throws IgniteCheckedException {
+        @Override public void store(final long dstPageAddr,
+            final int dstIdx,
+            final BPlusIO<IndexItem> srcIo,
+            final long srcPageAddr,
+            final int srcIdx) throws IgniteCheckedException {
             storeRow(dstPageAddr, offset(dstIdx), srcPageAddr, ((IndexIO)srcIo).getOffset(srcPageAddr, srcIdx));
         }
 
         /** {@inheritDoc} */
-        @Override public IndexItem getLookupRow(BPlusTree<IndexItem, ?> tree,
-            long pageAddr,
-            int idx) throws IgniteCheckedException {
+        @Override public IndexItem getLookupRow(final BPlusTree<IndexItem, ?> tree,
+            final long pageAddr,
+            final int idx) throws IgniteCheckedException {
             return readRow(pageAddr, offset(idx));
         }
 
         /** {@inheritDoc} */
-        @Override public int getOffset(long pageAddr, int idx) {
+        @Override public int getOffset(long pageAddr, final int idx) {
             return offset(idx);
+        }
+    }
+
+    /**
+     * Checking the name of the index.
+     *
+     * @param idxName Index name bytes.
+     */
+    public static void checkIndexName(byte[] idxName) {
+        if (idxName.length > MAX_IDX_NAME_LEN) {
+            throw new IllegalArgumentException("Too long encoded indexName [maxAllowed=" + MAX_IDX_NAME_LEN +
+                ", currentLength=" + idxName.length + ", name=" + idxName + "]");
         }
     }
 }
