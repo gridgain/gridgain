@@ -520,7 +520,8 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         assertEquals(router.hasArchive(), hasWalArchive);
 
         //wait to avoid race condition where new segments(and corresponding .tmp files) are created after totalSize has been calculated.
-        igniteEx.context().cache().context().database().waitForCheckpoint("test");
+        igniteEx.cluster().state(ClusterState.INACTIVE);
+        igniteEx.cluster().state(ClusterState.ACTIVE);
 
         long totalSize = walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalWorkDir()));
 
