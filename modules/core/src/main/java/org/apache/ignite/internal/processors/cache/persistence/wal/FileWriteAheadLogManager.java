@@ -3116,7 +3116,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      *
      * @return Size in bytes.
      */
-    public long totalSize(FileDescriptor... fileDescriptors) {
+    public static long totalSize(FileDescriptor... fileDescriptors) {
         long len = 0;
 
         for (FileDescriptor descriptor : fileDescriptors)
@@ -3535,5 +3535,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         long min = dsCfg.getMinWalArchiveSize();
 
         return max == UNLIMITED_WAL_ARCHIVE ? max : min == HALF_MAX_WAL_ARCHIVE_SIZE ? max / 2 : min;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void startAutoReleaseSegments() {
+        segmentAware.startAutoReleaseSegments();
     }
 }
