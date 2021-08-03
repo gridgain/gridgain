@@ -119,10 +119,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
-            if (i < endKey) {
+            if (i < endKey)
                 cache0.put(i, i);
-                System.out.print(i + " ");
-            }
         }
 
         int startSize0 = cache0.size();
@@ -190,10 +188,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
-            if (i < endKey) {
+            if (i < endKey)
                 cache0.put(i, i);
-                System.out.print(i + " ");
-            }
         }
 
         startSize0 = cache0.size();

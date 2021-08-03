@@ -253,8 +253,6 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             if (i < endKey) {
                 for (IgniteCache<Object, Object> cache : caches)
                     cache.put(i, i);
-
-                System.out.print(i + " ");
             }
         }
 

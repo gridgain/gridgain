@@ -371,7 +371,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             try {
-                System.out.println("qiusdfuiv");
                 PartitionReconciliationProcessorV2 proc = new PartitionReconciliationProcessorV2(
                     sesId,
                     ignite,

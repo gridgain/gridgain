@@ -21,34 +21,23 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalRebalanceTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-import static java.util.concurrent.TimeUnit.DAYS;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
 /** Tests for partition counter consistency reconciliation. */
 public class GridCommandHandlerPartitionReconciliationCountersTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-
-    /** */
-    private static final int MB = 1024 * 1024;
-
     /** */
     CacheAtomicityMode atomicityMode;
 
@@ -62,25 +51,6 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        // Avoid spurious client disconnect under low resources pressure.
-        cfg.setClientFailureDetectionTimeout(30_000);
-
-        cfg.setActiveOnStart(false);
-
-        cfg.setConsistentId("node" + igniteInstanceName);
-        cfg.setFailureHandler(new StopNodeFailureHandler());
-        cfg.setRebalanceThreadPoolSize(4); // Necessary to reproduce some issues.
-
-        // TODO set this only for historical rebalance tests.
-        cfg.setCommunicationSpi(new IgniteWalRebalanceTest.WalRebalanceCheckingCommunicationSpi());
-
-        cfg.setDataStorageConfiguration(new DataStorageConfiguration().
-            setWalHistorySize(1000).
-            setWalSegmentSize(8 * MB).setWalMode(LOG_ONLY).setPageSize(1024).
-            setCheckpointFrequency(MILLISECONDS.convert(365, DAYS)).
-            setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(persistenceEnabled).
-                setInitialSize(100 * MB).setMaxSize(100 * MB)));
-
         cfg.setCacheConfiguration(cacheConfiguration(DEFAULT_CACHE_NAME));
 
         return cfg;
@@ -92,7 +62,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
     protected CacheConfiguration<Object, Object> cacheConfiguration(String name) {
         CacheConfiguration ccfg = new CacheConfiguration(name);
 
-        ccfg.setAtomicityMode(atomicityMode);//
+        ccfg.setAtomicityMode(atomicityMode);
         ccfg.setBackups(1);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setOnheapCacheEnabled(false);
@@ -281,7 +251,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
      *   <li>Start two nodes.</li>
      *   <li>Create cache.</li>
      *   <li>Break counters.</li>
-     *   <li>Invoke a reconciliation util for without partition counter consistency reconciliation.</li>
+     *   <li>Invoke a reconciliation util for partition counter consistency reconciliation.</li>
      *   <li>Check that counters not was fixed.</li>
      * </ul>
      */

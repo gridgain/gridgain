@@ -28,25 +28,25 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** If {@code true} - reconciliation of data consistency is needed. */
-    private boolean dataReconciliation;
+    private final boolean dataReconciliation;
 
     /** If {@code true} - reconciliation of cache size consistency is needed. */
-    private boolean cacheSizeReconciliation;
+    private final boolean cacheSizeReconciliation;
 
     /** If {@code true} - Partition Reconciliation&Fix. */
-    private boolean repair;
+    private final boolean repair;
 
     /**
      * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while
      * repairing doubtful keys.
      */
-    private RepairAlgorithm repairAlg;
+    private final RepairAlgorithm repairAlg;
 
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
-    private Map<UUID, NodePartitionSize> partSizesMap;
+    private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.

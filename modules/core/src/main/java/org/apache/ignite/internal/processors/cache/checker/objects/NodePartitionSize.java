@@ -21,15 +21,15 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
-/** Container for cache size consistency reconsiliztion result */
+/** Container for cache size consistency reconciliation result. */
 public class NodePartitionSize extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
+    /** Cache name. */
     private String cacheName;
 
-    /** */
+    /** Is reconciliation in progress. */
     private boolean inProgress;
 
     /** Broken cache size from partition meta. */
