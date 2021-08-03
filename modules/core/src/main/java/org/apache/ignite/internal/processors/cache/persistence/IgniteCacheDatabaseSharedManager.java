@@ -97,8 +97,10 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REUSE_MEMORY_ON_DEACTIVATE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA_REG_DEFAULT_NAME;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.HALF_MAX_WAL_ARCHIVE_SIZE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_HISTORY_SIZE;
+import static org.apache.ignite.configuration.DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 import static org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog.TX_LOG_CACHE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.METASTORE_DATA_REGION_NAME;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
@@ -157,7 +159,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
     /** First eviction was warned flag. */
     private volatile boolean firstEvictWarn;
-
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
@@ -583,7 +584,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
 
         checkDataRegionConfiguration(memCfg, regNames, memCfg.getDefaultDataRegionConfiguration(), warmUpStrategies);
 
-        checkWalArchiveSizeConfiguration(memCfg);
+        checkWalArchiveSizeConfiguration(memCfg, log);
 
         checkExistenceWarmUpConfiguration(
             memCfg.getDefaultWarmUpConfiguration(),
@@ -593,15 +594,21 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Check wal archive size configuration for correctness.
+     * Check wal archive sizes configuration for correctness.
      *
-     * @param memCfg durable memory configuration for an Apache Ignite node.
+     * @param memCfg Memory configuration.
+     * @throws IgniteCheckedException If WAL archive sizes is configured incorrectly.
      */
-    private void checkWalArchiveSizeConfiguration(DataStorageConfiguration memCfg) throws IgniteCheckedException {
+    static void checkWalArchiveSizeConfiguration(
+        DataStorageConfiguration memCfg,
+        IgniteLogger log
+    ) throws IgniteCheckedException {
+        long max = memCfg.getMaxWalArchiveSize();
+
         if (memCfg.getWalHistorySize() == DFLT_WAL_HISTORY_SIZE || memCfg.getWalHistorySize() == Integer.MAX_VALUE)
             LT.warn(log, "DataRegionConfiguration.maxWalArchiveSize instead DataRegionConfiguration.walHistorySize " +
             "would be used for removing old archive wal files");
-        else if (memCfg.getMaxWalArchiveSize() == DFLT_WAL_ARCHIVE_MAX_SIZE)
+        else if (max == DFLT_WAL_ARCHIVE_MAX_SIZE)
             LT.warn(log, "walHistorySize was deprecated and does not have any effect anymore. " +
                 "maxWalArchiveSize should be used instead");
         else
@@ -609,12 +616,39 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                 "(use DataRegionConfiguration.maxWalArchiveSize because DataRegionConfiguration.walHistorySize was deprecated)"
             );
 
-        if (memCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE
-                && memCfg.getMaxWalArchiveSize() < memCfg.getWalSegmentSize())
+        if (max != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE
+                && max < memCfg.getWalSegmentSize())
             throw new IgniteCheckedException(
                 "DataRegionConfiguration.maxWalArchiveSize should be greater than DataRegionConfiguration.walSegmentSize " +
                     "or must be equal to " + DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE + "."
             );
+
+        if (max != UNLIMITED_WAL_ARCHIVE) {
+            int walSegmentSize = memCfg.getWalSegmentSize();
+
+            if (max < walSegmentSize) {
+                throw new IgniteCheckedException(String.format(
+                    "DataRegionConfiguration.maxWalArchiveSize must be no less than " +
+                        "DataRegionConfiguration.walSegmentSize or equal to %d (unlimited size), " +
+                        "current settings:" + U.nl() +
+                        "DataRegionConfiguration.maxWalArchiveSize: %d bytes" + U.nl() +
+                        "DataRegionConfiguration.walSegmentSize: %d bytes",
+                    UNLIMITED_WAL_ARCHIVE, max, walSegmentSize
+                ));
+            }
+
+            long min = memCfg.getMinWalArchiveSize();
+
+            if (min != HALF_MAX_WAL_ARCHIVE_SIZE && min > max) {
+                throw new IgniteCheckedException(String.format(
+                    "DataRegionConfiguration.minWalArchiveSize must be less than or equal to " +
+                        "DataRegionConfiguration.maxWalArchiveSize or equal to %d " +
+                        "(to be half of maxWalArchiveSize), current settings:" + U.nl() +
+                        "DataRegionConfiguration.minWalArchiveSize: %d bytes" + U.nl() +
+                        "DataRegionConfiguration.maxWalArchiveSize: %d bytes",
+                    HALF_MAX_WAL_ARCHIVE_SIZE, min, max));
+            }
+        }
     }
 
     /**
