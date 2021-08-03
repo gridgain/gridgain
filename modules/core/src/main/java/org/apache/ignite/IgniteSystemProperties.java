@@ -1018,9 +1018,11 @@ public final class IgniteSystemProperties {
 
     /**
      * Whenever read load balancing is enabled, that means 'get' requests will be distributed between primary and backup
-     * nodes if it is possible and {@code CacheConfiguration#readFromBackup} is {@code true}.
+     * nodes if it is possible and {@link CacheConfiguration#isReadFromBackup()} is {@code true}.
      *
      * Default is {@code true}.
+     *
+     * @see CacheConfiguration#isReadFromBackup()
      */
     public static final String IGNITE_READ_LOAD_BALANCING = "IGNITE_READ_LOAD_BALANCING";
 

@@ -21,7 +21,6 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static java.lang.System.clearProperty;
 import static java.lang.System.setProperty;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.HALF_MAX_WAL_ARCHIVE_SIZE;
@@ -31,19 +30,12 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWr
 /**
  * Class for testing {@link FileWriteAheadLogManager}.
  */
-@WithSystemProperty(key = IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE, value = "-1")
 public class FileWriteAheadLogManagerSelfTest extends GridCommonAbstractTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        clearProperty(IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE);
-    }
-
     /**
      * Testing of {@link FileWriteAheadLogManager#minWalArchiveSize(DataStorageConfiguration)}.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE, value = "-1")
     public void testGettingMinWalArchiveSizeFromConfiguration() {
         DataStorageConfiguration cfg = new DataStorageConfiguration().setMaxWalArchiveSize(UNLIMITED_WAL_ARCHIVE);
 
