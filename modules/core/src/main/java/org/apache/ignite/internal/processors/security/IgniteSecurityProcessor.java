@@ -46,7 +46,10 @@ import org.apache.ignite.plugin.security.SecuritySubjectType;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
+import org.jsr166.ConcurrentLinkedHashMap;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
@@ -79,6 +82,13 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** Map of security contexts. Key is the node's id. */
     private final Map<UUID, SecurityContext> secCtxs = new ConcurrentHashMap<>();
+
+    /** Map of security contexts for thin clients. Key is the node's id. */
+    private final Map<UUID, SecurityContext> thinCliSecCtxs =
+            new ConcurrentLinkedHashMap<>(
+                    100, 0.75f, Runtime.getRuntime().availableProcessors(),
+                    getInteger(IGNITE_THIN_CLIENT_SECURITY_CONTEXT_CACHE_CAPACITY, 10_000)
+            );
 
     /** Logger. */
     private final IgniteLogger log;
@@ -120,8 +130,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             .orElseGet(() -> ctx.discovery().historicalNode(subjId));
 
         SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
-            uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
-            : secPrc.securityContext(subjId);
+                uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
+                : thinCliSecCtxs.computeIfAbsent(subjId, uuid -> secPrc.securityContext(subjId));
 
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
@@ -172,6 +182,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public void onSessionExpired(UUID subjId) {
+        thinCliSecCtxs.remove(subjId);
+
         secPrc.onSessionExpired(subjId);
     }
 
