@@ -1590,6 +1590,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** */
         private final GridSpinBusyLock busyLock;
 
+        /** */
         private volatile AtomicBoolean nodeIsStopping;
 
         /** Update counter. */
