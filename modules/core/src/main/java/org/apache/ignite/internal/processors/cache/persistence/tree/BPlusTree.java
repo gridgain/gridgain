@@ -52,6 +52,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
+import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -1114,6 +1115,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             return cursor;
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
         }
@@ -1149,6 +1153,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         try {
             cursor.iterate();
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
@@ -1292,6 +1299,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on first row lookup", e);
         }
@@ -1335,6 +1345,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return gLast.find();
             }
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on last row lookup", e);
         }
@@ -1375,6 +1388,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             doFind(g);
 
             return (R)g.row;
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on lookup row: " + row, e);
@@ -1937,7 +1953,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (UnregisteredClassException | UnregisteredBinaryTypeException e) {
+        catch (UnregisteredClassException | UnregisteredBinaryTypeException | AbstractCorruptedPersistenceException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -2095,6 +2111,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         return r.rmvd;
                 }
             }
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on search row: " + row, e);
@@ -2448,6 +2467,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         throw new IllegalStateException("Result: " + res);
                 }
             }
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on row: " + row, e);
@@ -5631,6 +5653,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     finally {
                         readUnlock(pageId, page, pageAddr);
                     }
+                }
+                catch (AbstractCorruptedPersistenceException e) {
+                    throw e;
                 }
                 catch (RuntimeException | AssertionError e) {
                     throw corruptedTreeException("Runtime failure on cursor iteration", e, grpId, pageId);
