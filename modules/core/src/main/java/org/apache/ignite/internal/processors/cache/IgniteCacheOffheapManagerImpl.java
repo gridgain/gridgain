@@ -3477,6 +3477,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             if (snapshot != null) {
                 assert grp.mvccEnabled();
+                assert flags != RECONCILIATION;
 
                 GridCacheContext cctx = grp.sharedGroup() ? grp.shared().cacheContext(cacheId) : grp.singleCacheContext();
 
