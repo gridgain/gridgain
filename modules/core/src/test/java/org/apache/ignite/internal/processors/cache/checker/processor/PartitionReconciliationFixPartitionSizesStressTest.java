@@ -38,12 +38,10 @@ import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -215,7 +213,6 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
      * </ul>
      */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void test() throws Exception {
         Set<ReconciliationType> reconciliationTypes = new HashSet<>();
 
@@ -284,7 +281,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
         for (int i = 0; i < loadThreadsCnt; i++)
-            caches.forEach(cache -> startAsyncLoad0(reconResult, cache, startKey, endKey, cacheClearOp));
+            caches.forEach(cache -> startAsyncLoad0(reconResult, client, cache, startKey, endKey, cacheClearOp));
 
         GridTestUtils.runMultiThreadedAsync(() -> {
             reconResult.set(partitionReconciliation(client, builder));

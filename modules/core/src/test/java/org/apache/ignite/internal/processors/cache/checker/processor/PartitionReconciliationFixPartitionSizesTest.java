@@ -149,7 +149,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
         for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+            loadFuts.add(startAsyncLoad0(reconResult, client, cache0, startKey, endKey, false));
 
         GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
             1, "reconciliation");
@@ -208,7 +208,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         loadFuts = new ArrayList<>();
 
         for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, cache0, startKey, endKey, false));
+            loadFuts.add(startAsyncLoad0(reconResult, client, cache0, startKey, endKey, false));
 
         GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
             1, "reconciliation");

@@ -31,7 +31,9 @@ import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -47,9 +49,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 
 /**
  * Abstract utility class for partition reconciliation testing.
@@ -273,9 +277,15 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     /**
      *
      */
-    protected IgniteInternalFuture startAsyncLoad0(AtomicReference<ReconciliationResult> reconResult, IgniteCache cache,
-        int startKey, int endKey, boolean clear) {
+    protected IgniteInternalFuture startAsyncLoad0(AtomicReference<ReconciliationResult> reconResult,
+        IgniteEx client,
+        IgniteCache<Object, Object> cache,
+        int startKey,
+        int endKey,
+        boolean clear) {
         Random rnd = new Random();
+
+        CacheAtomicityMode atomicityMode = cache.getConfiguration(CacheConfiguration.class).getAtomicityMode();
 
         return GridTestUtils.runAsync(() -> {
                 int op;
@@ -283,11 +293,12 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                 long n;
 
                 while (reconResult.get() == null) {
-
                     if (clear)
                         op = rnd.nextInt(8);
                     else
                         op = rnd.nextInt(7);
+
+                    boolean explicit = atomicityMode == TRANSACTIONAL && rnd.nextBoolean();
 
                     switch (op) {
                         case 0:
@@ -304,7 +315,13 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                             n = startKey + rnd.nextInt(endKey - startKey);
                             map.put(n, n);
 
-                            cache.putAll(map);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.putAll(map);
+                                }
+                            }
+                            else
+                                cache.putAll(map);
 
                             break;
 
@@ -322,35 +339,65 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                             n = startKey + rnd.nextInt(endKey - startKey);
                             set.add(n);
 
-                            cache.removeAll(set);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.removeAll(set);
+                                }
+                            }
+                            else
+                                cache.removeAll(set);
 
                             break;
 
                         case 2:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            cache.put(n, n);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.put(n, n);
+                                }
+                            }
+                            else
+                                cache.put(n, n);
 
                             break;
 
                         case 3:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            cache.remove(n);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.remove(n);
+                                }
+                            }
+                            else
+                                cache.remove(n);
 
                             break;
 
                         case 4:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            cache.getAndPut(n, n + 1);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.getAndPut(n, n + 1);
+                                }
+                            }
+                            else
+                                cache.getAndPut(n, n + 1);
 
                             break;
 
                         case 5:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            cache.getAndRemove(n);
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.getAndRemove(n);
+                                }
+                            }
+                            else
+                                cache.getAndRemove(n);
 
                             break;
 
@@ -359,20 +406,39 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
                             long n0 = n;
 
-                            cache.invoke(n, (k, v) -> {
-                                if (v == null)
-                                    return n0;
-                                else
-                                    return null;
-                            });
+                            if (explicit) {
+                                try (Transaction tx = client.transactions().txStart()) {
+                                    cache.invoke(n, (k, v) -> {
+                                        if (v == null)
+                                            return n0;
+                                        else
+                                            return null;
+                                    });
+                                }
+                            }
+                            else {
+                                cache.invoke(n, (k, v) -> {
+                                    if (v == null)
+                                        return n0;
+                                    else
+                                        return null;
+                                });
+                            }
 
                             break;
 
                         case 7:
                             n = startKey + rnd.nextInt(endKey - startKey);
 
-                            if (n % 10 == 0)
-                                cache.clear();
+                            if (n % 10 == 0) {
+                                if (explicit) {
+                                    try (Transaction tx = client.transactions().txStart()) {
+                                        cache.clear();
+                                    }
+                                }
+                                else
+                                    cache.clear();
+                            }
 
                             break;
                     }
