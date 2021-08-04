@@ -140,7 +140,10 @@ struct Operation
             SIZE = 48,
 
             /** Operation: SizeLoc(peekModes). */
-            SIZE_LOC = 56
+            SIZE_LOC = 56,
+
+            /** Operation: Invoke. */
+            INVOKE_JAVA = 98,
     };
 };
 
@@ -323,6 +326,11 @@ namespace ignite
             void CacheImpl::Invoke(InputOperation& inOp, OutputOperation& outOp, IgniteError& err)
             {
                 OutInOpX(Operation::INVOKE, inOp, outOp, err);
+            }
+
+            void CacheImpl::InvokeJava(InputOperation& inOp, OutputOperation& outOp, IgniteError& err)
+            {
+                OutInOpX(Operation::INVOKE_JAVA, inOp, outOp, err);
             }
 
             QueryCursorImpl* CacheImpl::QuerySqlFields(const SqlFieldsQuery& qry, IgniteError& err)

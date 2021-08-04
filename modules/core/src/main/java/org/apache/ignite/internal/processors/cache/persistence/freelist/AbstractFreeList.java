@@ -35,6 +35,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.DataPageUpdateRecord;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.Storable;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
@@ -43,8 +44,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongLi
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 
@@ -344,6 +345,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
      * @param wal Write ahead log manager.
      * @param metaPageId Metadata page ID.
      * @param initNew {@code True} if new metadata should be initialized.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @param pageFlag Default flag value for allocated pages.
      * @throws IgniteCheckedException If failed.
      */
@@ -351,16 +353,16 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         int cacheGrpId,
         String name,
         DataRegion dataRegion,
-        ReuseList reuseList,
-        IgniteWriteAheadLogManager wal,
+        @Nullable ReuseList reuseList,
+        @Nullable IgniteWriteAheadLogManager wal,
         long metaPageId,
         boolean initNew,
-        PageLockListener lockLsnr,
+        PageLockTrackerManager pageLockTrackerManager,
         GridKernalContext ctx,
-        AtomicLong pageListCacheLimit,
+        @Nullable AtomicLong pageListCacheLimit,
         byte pageFlag
     ) throws IgniteCheckedException {
-        super(cacheGrpId, name, dataRegion.pageMemory(), BUCKETS, wal, metaPageId, lockLsnr, ctx, pageFlag);
+        super(cacheGrpId, name, dataRegion.pageMemory(), BUCKETS, wal, metaPageId, pageLockTrackerManager, ctx, pageFlag);
 
         rmvRow = new RemoveRowHandler(cacheGrpId == 0);
 
@@ -448,7 +450,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
         if (dataPages > 0) {
             if (log.isInfoEnabled())
-                log.info("FreeList [name=" + name +
+                log.info("FreeList [name=" + name() +
                     ", buckets=" + BUCKETS +
                     ", dataPages=" + dataPages +
                     ", reusePages=" + bucketsSize.get(REUSE_BUCKET) + "]");
@@ -543,6 +545,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             }
             while (written != COMPLETE);
         }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
         catch (IgniteCheckedException | Error e) {
             throw e;
         }
@@ -595,6 +600,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             return updated;
         }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
         catch (IgniteCheckedException | Error e) {
             throw e;
         }
@@ -617,6 +625,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             assert updRes != null; // Can't fail here.
 
             return updRes;
+        }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
         }
         catch (IgniteCheckedException | Error e) {
             throw e;
@@ -653,6 +664,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             reuseList.addForRecycle(bag);
         }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
         catch (IgniteCheckedException | Error e) {
             throw e;
         }
@@ -671,7 +685,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         boolean res = buckets.compareAndSet(bucket, exp, upd);
 
         if (log.isDebugEnabled()) {
-            log.debug("CAS bucket [list=" + name + ", bucket=" + bucket + ", old=" + Arrays.toString(exp) +
+            log.debug("CAS bucket [list=" + name() + ", bucket=" + bucket + ", old=" + Arrays.toString(exp) +
                 ", new=" + Arrays.toString(upd) + ", res=" + res + ']');
         }
 
@@ -708,6 +722,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         try {
             put(bag, 0, 0, 0L, REUSE_BUCKET, IoStatisticsHolderNoOp.INSTANCE);
         }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
         catch (IgniteCheckedException | Error e) {
             throw e;
         }
@@ -722,6 +739,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
         try {
             return takeEmptyPage(REUSE_BUCKET, null, IoStatisticsHolderNoOp.INSTANCE);
+        }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
         }
         catch (IgniteCheckedException | Error e) {
             throw e;
@@ -738,6 +758,9 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         try {
             return storedPagesCount(REUSE_BUCKET);
         }
+        catch (AssertionError e) {
+            throw corruptedFreeListException(e);
+        }
         catch (IgniteCheckedException | Error e) {
             throw e;
         }
@@ -753,6 +776,6 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "FreeList [name=" + name + ']';
+        return "FreeList [name=" + name() + ']';
     }
 }
