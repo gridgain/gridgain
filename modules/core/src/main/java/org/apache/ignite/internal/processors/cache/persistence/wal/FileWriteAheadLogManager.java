@@ -2268,8 +2268,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         currSize = zip.length();
                         segmentSize.put(segIdx, currSize);
 
-                        metrics.onWalSegmentCompressed(currSize);
-
                         segmentAware.onSegmentCompressed(segIdx);
 
                         if (evt.isRecordable(EVT_WAL_SEGMENT_COMPACTED) && !cctx.kernalContext().recoveryMode())
