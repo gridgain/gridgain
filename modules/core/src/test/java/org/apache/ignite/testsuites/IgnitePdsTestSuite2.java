@@ -149,6 +149,8 @@ public class IgnitePdsTestSuite2 {
 
         GridTestUtils.addTestIfNeeded(suite, WalArchiveSizeConfigurationTest.class, ignoredTests);
 
+        GridTestUtils.addTestIfNeeded(suite, CheckpointTempFilesCleanupOnStartupTest.class, ignoredTests);
+
         return suite;
     }
 
