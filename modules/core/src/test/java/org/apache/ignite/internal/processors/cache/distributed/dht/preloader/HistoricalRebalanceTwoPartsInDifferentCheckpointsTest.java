@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.util.LinkedHashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -110,9 +111,9 @@ public class HistoricalRebalanceTwoPartsInDifferentCheckpointsTest extends GridC
             partKeys.addAll(partitionKeys(ignite0.cache(DEFAULT_CACHE_NAME), 0, 10, 0));
         }
 
-        IgniteCache cache = ignite0.cache(DEFAULT_CACHE_NAME);
-
-        partKeys.forEach(key -> cache.put(key, key));
+        try (IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
+            partKeys.forEach(key -> streamer.addData(key, key));
+        }
 
         info("Data preload completed.");
 
@@ -121,6 +122,8 @@ public class HistoricalRebalanceTwoPartsInDifferentCheckpointsTest extends GridC
         awaitPartitionMapExchange();
 
         info("Node stopped.");
+
+        IgniteCache cache = ignite0.cache(DEFAULT_CACHE_NAME);
 
         for (Integer key : partKeys) {
             cache.put(key, key + 1);
