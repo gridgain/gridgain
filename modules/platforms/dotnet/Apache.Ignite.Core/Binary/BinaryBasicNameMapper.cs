@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Binary
 {
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Text;
     using Apache.Ignite.Core.Impl.Binary;
@@ -134,6 +135,8 @@ namespace Apache.Ignite.Core.Binary
         /// <summary>
         /// Gets the type name from the parser.
         /// </summary>
+        [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase",
+            Justification = "Not applicable, lower case is required.")]
         private string GetTypeName(TypeNameParser name)
         {
             if (IsSimpleName)

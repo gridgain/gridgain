@@ -29,19 +29,23 @@ import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_LOG;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_STACK;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.OFF_HEAP_LOG;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.OFF_HEAP_STACK;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -117,7 +121,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         List<PageLockListener> pageLsnrs = new ArrayList<>();
 
         for (int i = 0; i < structuresCnt; i++)
-            pageLsnrs.add(sharedPageLockTracker.registrateStructure("my-structure-" + i));
+            pageLsnrs.add(sharedPageLockTracker.registerStructure("my-structure-" + i));
 
         AtomicBoolean stop = new AtomicBoolean();
 
@@ -205,7 +209,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         List<PageLockListener> pageLsnrs = new ArrayList<>();
 
         for (int i = 0; i < structuresCnt; i++)
-            pageLsnrs.add(sharedPageLockTracker.registrateStructure("my-structure-" + i));
+            pageLsnrs.add(sharedPageLockTracker.registerStructure("my-structure-" + i));
 
         AtomicBoolean stop = new AtomicBoolean();
 
@@ -302,7 +306,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         long page = 3;
         long pageAdder = 4;
 
-        PageLockListener lt = sharedPageLockTracker.registrateStructure("test");
+        PageLockListener lt = sharedPageLockTracker.registerStructure("test");
 
         List<Thread> threadsList = new ArrayList<>(threads);
 
@@ -351,7 +355,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
 
         }
 
-        Assert.assertEquals(1, dump.structureIdToStrcutureName.size());
+        assertEquals(1, dump.structureIdToStructureName.size());
 
         synchronized (sharedPageLockTracker) {
             Map<Long, Thread> threadMap0 = U.field(sharedPageLockTracker, "threadIdToThreadRef");
@@ -442,7 +446,7 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
         long page = 3;
         long pageAdder = 4;
 
-        PageLockListener lt = sharedPageLockTracker.registrateStructure("test");
+        PageLockListener lt = sharedPageLockTracker.registerStructure("test");
 
         Thread thInWait = new Thread(() -> {
             lt.onBeforeReadLock(cacheId, pageId, page);
@@ -500,6 +504,27 @@ public class SharedPageLockTrackerTest extends AbstractPageLockTest {
 
         if (error.get() != null)
             throw error.get();
+    }
+
+    /**
+     * Tests that a structure gets unregistered when a listener gets closed.
+     */
+    @Test
+    public void testCloseListener() {
+        SharedPageLockTracker tracker = new SharedPageLockTracker();
+
+        PageLockListener foo = tracker.registerStructure("foo");
+        PageLockListener bar = tracker.registerStructure("bar");
+
+        assertThat(tracker.dump().structureIdToStructureName.values(), containsInAnyOrder("foo", "bar"));
+
+        IgniteUtils.closeQuiet(foo);
+
+        assertThat(tracker.dump().structureIdToStructureName.values(), containsInAnyOrder("bar"));
+
+        IgniteUtils.closeQuiet(bar);
+
+        assertThat(tracker.dump().structureIdToStructureName.values(), is(empty()));
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,7 +74,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
@@ -117,7 +116,6 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -216,15 +214,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param cctx Cache context.
      * @throws IgniteCheckedException If failed.
      */
-    protected void initPendingTree(GridCacheContext cctx) throws IgniteCheckedException {
+    protected void initPendingTree(GridCacheContext<?, ?> cctx) throws IgniteCheckedException {
         assert !cctx.group().persistenceEnabled();
 
         if (cctx.affinityNode() && cctx.ttl().eagerTtlEnabled() && pendingEntries == null) {
             String pendingEntriesTreeName = cctx.name() + "##PendingEntries";
 
             long rootPage = allocateForTree();
-
-            PageLockListener lsnr = ctx.diagnostic().pageLockTracker().createPageLockTracker(pendingEntriesTreeName);
 
             pendingEntries = new PendingEntriesTree(
                 grp,
@@ -233,7 +229,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 rootPage,
                 grp.reuseList(),
                 true,
-                lsnr,
+                ctx.diagnostic().pageLockTracker(),
                 FLAG_IDX
             );
         }
@@ -247,7 +243,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public void stopCache(int cacheId, final boolean destroy) {
+    @Override public void stopCache(int cacheId, boolean destroy) {
         if (destroy && grp.affinityNode())
             removeCacheData(cacheId);
     }
@@ -413,12 +409,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (grp.isLocal())
             return singletonIterator(locCacheDataStore);
         else {
-            final Iterator<GridDhtLocalPartition> it = grp.topology().currentLocalPartitions().iterator();
+            Iterator<GridDhtLocalPartition> it = grp.topology().currentLocalPartitions().iterator();
 
             if (primary && backup)
                 return F.iterator(it, GridDhtLocalPartition::dataStore, true);
 
-            final IntSet parts = ImmutableIntSet.wrap(primary ? grp.affinity().primaryPartitions(ctx.localNodeId(), topVer) :
+            IntSet parts = ImmutableIntSet.wrap(primary ? grp.affinity().primaryPartitions(ctx.localNodeId(), topVer) :
                 grp.affinity().backupPartitions(ctx.localNodeId(), topVer));
 
             return F.iterator(it, GridDhtLocalPartition::dataStore, true, part -> parts.contains(part.id()));
@@ -567,7 +563,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (entry.detached() || entry.isNear())
             return;
 
-            dataStore(entry.localPartition()).mvccRemoveAll(entry.context(), entry.key());
+        dataStore(entry.localPartition()).mvccRemoveAll(entry.context(), entry.key());
     }
 
     /** {@inheritDoc} */
@@ -760,15 +756,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override public <K, V> GridCloseableIterator<Cache.Entry<K, V>> cacheEntriesIterator(
-        final GridCacheContext cctx,
-        final boolean primary,
-        final boolean backup,
-        final AffinityTopologyVersion topVer,
-        final boolean keepBinary,
-        @Nullable final MvccSnapshot mvccSnapshot,
+        GridCacheContext cctx,
+        boolean primary,
+        boolean backup,
+        AffinityTopologyVersion topVer,
+        boolean keepBinary,
+        @Nullable MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled
     ) {
-        final Iterator<CacheDataRow> it = cacheIterator(cctx.cacheId(), primary, backup,
+        Iterator<CacheDataRow> it = cacheIterator(cctx.cacheId(), primary, backup,
             topVer, mvccSnapshot, dataPageScanEnabled);
 
         return new GridCloseableIteratorAdapter<Cache.Entry<K, V>>() {
@@ -810,14 +806,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public GridCloseableIterator<KeyCacheObject> cacheKeysIterator(int cacheId, final int part)
+    @Override public GridCloseableIterator<KeyCacheObject> cacheKeysIterator(int cacheId, int part)
         throws IgniteCheckedException {
         CacheDataStore data = partitionData(part);
 
         if (data == null)
             return new GridEmptyCloseableIterator<>();
 
-        final GridCursor<? extends CacheDataRow> cur =
+        GridCursor<? extends CacheDataRow> cur =
             data.cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY);
 
         return new GridCloseableIteratorAdapter<KeyCacheObject>() {
@@ -852,7 +848,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         int cacheId,
         boolean primary,
         boolean backups,
-        final AffinityTopologyVersion topVer,
+        AffinityTopologyVersion topVer,
         @Nullable MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled
     ) {
@@ -888,9 +884,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param dataPageScanEnabled Flag to enable data page scan.
      * @return Rows iterator
      */
-    private GridCloseableIterator<CacheDataRow> iterator(final int cacheId,
-        final Iterator<CacheDataStore> dataIt,
-        final MvccSnapshot mvccSnapshot,
+    private GridCloseableIterator<CacheDataRow> iterator(int cacheId,
+        Iterator<CacheDataStore> dataIt,
+        MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled
     ) {
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
@@ -968,7 +964,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param dataIt Data store iterator.
      * @return Rows iterator
      */
-    private GridCloseableIterator<CacheDataRow> evictionSafeIterator(final int cacheId, final Iterator<CacheDataStore> dataIt) {
+    private GridCloseableIterator<CacheDataRow> evictionSafeIterator(int cacheId, Iterator<CacheDataStore> dataIt) {
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
             private GridCursor<? extends CacheDataRow> cur;
@@ -1061,7 +1057,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @return Single item iterator.
      * @param <T> Type of item.
      */
-    private <T> Iterator<T> singletonIterator(final T item) {
+    private <T> Iterator<T> singletonIterator(T item) {
         return new Iterator<T>() {
             /** */
             private boolean hasNext = true;
@@ -1117,8 +1113,22 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     }
 
     /** {@inheritDoc} */
-    @Override public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException {
-        // No-op.
+    @Override public @Nullable RootPage dropRootPageForIndex(
+        int cacheId,
+        String idxName,
+        int segment
+    ) throws IgniteCheckedException {
+        return null; // No-op.
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable RootPage renameRootPageForIndex(
+        int cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException {
+        return null; // No-op.
     }
 
     /** {@inheritDoc} */
@@ -1128,7 +1138,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public GridCloseableIterator<CacheDataRow> reservedIterator(int part, AffinityTopologyVersion topVer) {
-        final GridDhtLocalPartition loc = grp.topology().localPartition(part, topVer, false);
+        GridDhtLocalPartition loc = grp.topology().localPartition(part, topVer, false);
 
         if (loc == null || !loc.reserve())
             return null;
@@ -1140,7 +1150,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             return null;
         }
 
-        final CacheDataStore data = partitionData(part);
+        CacheDataStore data = partitionData(part);
 
         return new GridCloseableIteratorAdapter<CacheDataRow>() {
             /** */
@@ -1188,10 +1198,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /** {@inheritDoc} */
     @Override public IgniteRebalanceIterator rebalanceIterator(IgniteDhtDemandedPartitionsMap parts,
-        final AffinityTopologyVersion topVer)
+        AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
 
-        final TreeMap<Integer, GridCloseableIterator<CacheDataRow>> iterators = new TreeMap<>();
+        TreeMap<Integer, GridCloseableIterator<CacheDataRow>> iterators = new TreeMap<>();
 
         Set<Integer> missing = new HashSet<>();
 
@@ -1254,13 +1264,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @throws IgniteCheckedException If failed.
      */
     protected CacheDataStore createCacheDataStore0(int p) throws IgniteCheckedException {
-        final long rootPage = allocateForTree();
+        long rootPage = allocateForTree();
 
         CacheDataRowStore rowStore = new CacheDataRowStore(grp, grp.freeList(), p);
 
         String dataTreeName = grp.cacheOrGroupName() + "-" + treeName(p);
-
-        PageLockListener lsnr = ctx.diagnostic().pageLockTracker().createPageLockTracker(dataTreeName);
 
         CacheDataTree dataTree = new CacheDataTree(
             grp,
@@ -1269,7 +1277,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             rowStore,
             rootPage,
             true,
-            lsnr,
+            ctx.diagnostic().pageLockTracker(),
             FLAG_IDX
         );
 
@@ -1281,11 +1289,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         if (grp.isLocal())
             return Collections.singleton(locCacheDataStore);
 
-        return new Iterable<CacheDataStore>() {
-            @Override public Iterator<CacheDataStore> iterator() {
-                return partDataStores.values().iterator();
-            }
-        };
+        return () -> partDataStores.values().iterator();
     }
 
     /** {@inheritDoc} */
@@ -1449,7 +1453,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final AtomicLong storageSize = new AtomicLong();
 
         /** */
-        private final IntMap<AtomicLong> cacheSizes = new IntRWHashMap();
+        private final IntMap<AtomicLong> cacheSizes = new IntRWHashMap<>();
 
         /** Mvcc remove handler. */
         private final PageHandler<MvccUpdateDataRow, Boolean> mvccUpdateMarker;
@@ -1507,6 +1511,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
         }
 
+        /** {@inheritDoc} */
         @Override public CacheDataTree tree() {
             return dataTree;
         }
@@ -2807,8 +2812,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, Object x)
-            throws IgniteCheckedException {
+        @Override public GridCursor<CacheDataRow> mvccAllVersionsCursor(
+            GridCacheContext cctx, KeyCacheObject key, Object x
+        ) throws IgniteCheckedException {
             int cacheId = cctx.cacheId();
 
             GridCursor<CacheDataRow> cursor = dataTree.find(
@@ -2939,23 +2945,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void destroy() throws IgniteCheckedException {
-            final AtomicReference<IgniteCheckedException> exception = new AtomicReference<>();
+            AtomicReference<IgniteCheckedException> exception = new AtomicReference<>();
 
-            dataTree.destroy(new IgniteInClosure<CacheSearchRow>() {
-                @Override public void apply(CacheSearchRow row) {
-                    try {
-                        rowStore.removeRow(row.link(), grp.statisticsHolderData());
-                    }
-                    catch (IgniteCheckedException e) {
-                        U.error(log, "Failed to remove row [link=" + row.link() + "]");
+            dataTree.destroy(row -> {
+                try {
+                    rowStore.removeRow(row.link(), grp.statisticsHolderData());
+                }
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Failed to remove row [link=" + row.link() + "]");
 
-                        IgniteCheckedException ex = exception.get();
+                    IgniteCheckedException ex = exception.get();
 
-                        if (ex == null)
-                            exception.set(e);
-                        else
-                            ex.addSuppressed(e);
-                    }
+                    if (ex == null)
+                        exception.set(e);
+                    else
+                        ex.addSuppressed(e);
                 }
             }, false);
 

@@ -412,7 +412,7 @@ public class GridReduceQueryExecutor {
 
         final boolean skipMergeTbl = !qry.explain() && qry.skipMergeTable() || singlePartMode;
 
-        final int segmentsPerIdx = qry.explain() || qry.isReplicatedOnly() ? 1 :
+        final int segmentsPerIdx = qry.explain() || qry.isReplicatedOnly() || singlePartMode ? 1 :
             mapper.findFirstPartitioned(cacheIds).config().getQueryParallelism();
 
         final long retryTimeout = retryTimeout(timeoutMillis);

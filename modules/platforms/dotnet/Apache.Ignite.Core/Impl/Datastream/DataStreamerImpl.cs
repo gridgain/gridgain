@@ -108,6 +108,8 @@ namespace Apache.Ignite.Core.Impl.Datastream
         private readonly string _cacheName;
 
         /** Lock. */
+        [SuppressMessage("Microsoft.Design", "CA2213:DisposableFieldsShouldBeDisposed",
+            Justification = "WaitHandle is not used in ReaderWriterLockSlim, no need to dispose.")]
         private readonly ReaderWriterLockSlim _rwLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
         /** Close future. */

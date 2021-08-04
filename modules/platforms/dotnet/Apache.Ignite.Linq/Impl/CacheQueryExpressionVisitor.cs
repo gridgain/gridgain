@@ -69,7 +69,7 @@ namespace Apache.Ignite.Linq.Impl
         /// for the whole-table select as well as _key, _val.
         /// </param>
         /// <param name="visitEntireSubQueryModel">
-        /// Flag indicating that subquery 
+        /// Flag indicating that subquery
         /// should be visited as full query
         /// </param>
         public CacheQueryExpressionVisitor(CacheQueryModelVisitor modelVisitor, bool useStar, bool includeAllFields,
@@ -116,14 +116,12 @@ namespace Apache.Ignite.Linq.Impl
             switch (expression.NodeType)
             {
                 case ExpressionType.Negate:
-                    ResultBuilder.Append("(");
-                    ResultBuilder.Append("-");
+                    ResultBuilder.Append("(-");
                     closeBracket = true;
                     break;
 
                 case ExpressionType.Not:
-                    ResultBuilder.Append("(");
-                    ResultBuilder.Append("not ");
+                    ResultBuilder.Append("(not ");
                     closeBracket = true;
                     break;
 
@@ -138,7 +136,7 @@ namespace Apache.Ignite.Linq.Impl
             Visit(expression.Operand);
 
             if(closeBracket)
-                ResultBuilder.Append(")");
+                ResultBuilder.Append(')');
 
             return expression;
         }
@@ -160,7 +158,7 @@ namespace Apache.Ignite.Linq.Impl
             Visit(expression.Left);
             ResultBuilder.Append(", ");
             Visit(expression.Right);
-            ResultBuilder.Append(")");
+            ResultBuilder.Append(')');
 
             return true;
         }
@@ -173,7 +171,7 @@ namespace Apache.Ignite.Linq.Impl
             if (VisitBinaryFunc(expression))
                 return expression;
 
-            ResultBuilder.Append("(");
+            ResultBuilder.Append('(');
 
             Visit(expression.Left);
 
@@ -250,7 +248,7 @@ namespace Apache.Ignite.Linq.Impl
             }
 
             Visit(expression.Right);
-            ResultBuilder.Append(")");
+            ResultBuilder.Append(')');
 
             return expression;
         }
@@ -413,14 +411,14 @@ namespace Apache.Ignite.Linq.Impl
                     return e;
                 }
             }
-            
+
             return null;
         }
 
         /// <summary>
         /// Gets the name of the member field.
         /// </summary>
-        [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase", 
+        [SuppressMessage("Microsoft.Globalization", "CA1308:NormalizeStringsToUppercase",
             Justification = "Not applicable.")]
         private static string GetMemberFieldName(MemberInfo member)
         {
@@ -491,7 +489,7 @@ namespace Apache.Ignite.Linq.Impl
         /// </summary>
         public void AppendParameter(object value)
         {
-            ResultBuilder.Append("?");
+            ResultBuilder.Append('?');
 
             _modelVisitor.Parameters.Add(value);
         }
@@ -536,7 +534,7 @@ namespace Apache.Ignite.Linq.Impl
             ResultBuilder.AppendFormat(" as {0}), ", SqlTypes.GetSqlTypeName(expression.Type) ?? "other");
 
             Visit(expression.IfFalse);
-            ResultBuilder.Append(")");
+            ResultBuilder.Append(')');
 
             return expression;
         }
@@ -551,15 +549,15 @@ namespace Apache.Ignite.Linq.Impl
             var contains = subQueryModel.ResultOperators.FirstOrDefault() as ContainsResultOperator;
 
             // Check if IEnumerable.Contains is used.
-            if (subQueryModel.ResultOperators.Count == 1 && contains != null) 
+            if (subQueryModel.ResultOperators.Count == 1 && contains != null)
             {
                 VisitContains(subQueryModel, contains);
             }
             else if (_visitEntireSubQueryModel)
             {
-                ResultBuilder.Append("(");
+                ResultBuilder.Append('(');
                 _modelVisitor.VisitQueryModel(subQueryModel, false, true);
-                ResultBuilder.Append(")");
+                ResultBuilder.Append(')');
             }
             else
             {
@@ -575,7 +573,7 @@ namespace Apache.Ignite.Linq.Impl
         /// </summary>
         private void VisitContains(QueryModel subQueryModel, ContainsResultOperator contains)
         {
-            ResultBuilder.Append("(");
+            ResultBuilder.Append('(');
 
             var fromExpression = subQueryModel.MainFromClause.FromExpression;
 
@@ -594,8 +592,8 @@ namespace Apache.Ignite.Linq.Impl
                 {
                     _modelVisitor.VisitQueryModel(subQueryModel);
                 }
-                
-                ResultBuilder.Append(")");
+
+                ResultBuilder.Append(')');
             }
             else
             {
@@ -605,14 +603,14 @@ namespace Apache.Ignite.Linq.Impl
 
                 if (hasNulls)
                 {
-                    ResultBuilder.Append("(");
+                    ResultBuilder.Append('(');
                 }
 
                 Visit(contains.Item);
 
                 ResultBuilder.Append(" IN (");
                 AppendInParameters(inValues);
-                ResultBuilder.Append(")");
+                ResultBuilder.Append(')');
 
                 if (hasNulls)
                 {
@@ -622,7 +620,7 @@ namespace Apache.Ignite.Linq.Impl
                 }
             }
 
-            ResultBuilder.Append(")");
+            ResultBuilder.Append(')');
         }
 
         /// <summary>

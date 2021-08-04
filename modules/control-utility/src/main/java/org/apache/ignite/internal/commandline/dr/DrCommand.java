@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.dr;
 
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
@@ -40,7 +41,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
 
 /** */
-public class DrCommand implements Command<Object> {
+public class DrCommand extends AbstractCommand<Object> {
     /** */
     private Command<?> delegate;
 
