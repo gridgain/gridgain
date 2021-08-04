@@ -1957,6 +1957,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             cctx.tm().clearUncommitedStates();
 
+            cctx.wal().startAutoReleaseSegments();
+
             if (recoveryVerboseLogging && log.isInfoEnabled()) {
                 log.info("Partition states information after LOGICAL RECOVERY phase:");
 
