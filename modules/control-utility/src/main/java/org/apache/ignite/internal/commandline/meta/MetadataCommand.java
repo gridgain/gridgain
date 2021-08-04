@@ -34,6 +34,7 @@ package org.apache.ignite.internal.commandline.meta;
 
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.meta.subcommands.MetadataRemoveCommand;
@@ -56,7 +57,7 @@ import static org.apache.ignite.internal.commandline.meta.tasks.MetadataTypeArgs
 /**
  *
  */
-public class MetadataCommand implements Command<Object> {
+public class MetadataCommand extends AbstractCommand<Object> {
     /**
      *
      */

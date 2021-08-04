@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -796,7 +797,9 @@ public final class IgniteSystemProperties {
 
     /**
      * WAL rebalance threshold.
+     * @deprecated use Distributed MetaStorage property {@link GridCacheDatabaseSharedManager#HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY}.
      */
+    @Deprecated
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
@@ -862,14 +865,6 @@ public final class IgniteSystemProperties {
      * If this property is set, then Ignite will use Async File IO factory by default.
      */
     public static final String IGNITE_USE_ASYNC_FILE_IO_FACTORY = "IGNITE_USE_ASYNC_FILE_IO_FACTORY";
-
-    /**
-     * If the property is set {@link org.apache.ignite.internal.pagemem.wal.record.TxRecord} records
-     * will be logged to WAL.
-     *
-     * Default value is {@code false}.
-     */
-    public static final String IGNITE_WAL_LOG_TX_RECORDS = "IGNITE_WAL_LOG_TX_RECORDS";
 
     /** Max amount of remembered errors for {@link GridLogThrottle}. */
     public static final String IGNITE_LOG_THROTTLE_CAPACITY = "IGNITE_LOG_THROTTLE_CAPACITY";
@@ -980,10 +975,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
-     * Property for setup percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
-     * Default value is 0.5
+     * Property for setup percentage of WAL archive size to calculate
+     * threshold since which removing of old archive should be started.
+     * Default value is 0.5.
+     *
+     * @deprecated Use {@link DataStorageConfiguration#setMinWalArchiveSize}.
      */
-    public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
+    public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE =
+        "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
      * Threshold time (in millis) to print warning to log if waiting for next wal segment took longer than the threshold.
@@ -999,11 +998,11 @@ public final class IgniteSystemProperties {
 
     /**
      * Whenever read load balancing is enabled, that means 'get' requests will be distributed between primary and backup
-     * nodes if it is possible and {@link CacheConfiguration#readFromBackup} is {@code true}.
+     * nodes if it is possible and {@link CacheConfiguration#isReadFromBackup()} is {@code true}.
      *
      * Default is {@code true}.
      *
-     * @see CacheConfiguration#readFromBackup
+     * @see CacheConfiguration#isReadFromBackup()
      */
     public static final String IGNITE_READ_LOAD_BALANCING = "IGNITE_READ_LOAD_BALANCING";
 
@@ -1465,6 +1464,21 @@ public final class IgniteSystemProperties {
      * Default value is {@code false}. HashMap is used by default.
      */
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
+
+    /**
+     * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
+     * The default value is 1000.
+     */
+    public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
+
+    /**
+     * Set to true only during the junit tests.
+     * Signals that the cluster is running in a test environment.
+     *
+     * Can be used for changing behaviour of tightly coupled code pieces during the tests.
+     * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
+     */
+    public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
      * Enforces singleton.

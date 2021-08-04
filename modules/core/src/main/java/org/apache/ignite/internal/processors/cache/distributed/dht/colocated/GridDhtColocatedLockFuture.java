@@ -546,7 +546,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
     @SuppressWarnings({"IfMayBeConditional"})
     private MiniFuture miniFuture(int miniId) {
         // We iterate directly over the futs collection here to avoid copy.
-        synchronized (this) {
+        compoundsReadLock();
+
+        try {
             int size = futuresCountNoLock();
 
             // Avoid iterator creation.
@@ -565,6 +567,9 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
                         return null;
                 }
             }
+        }
+        finally {
+            compoundsReadUnlock();
         }
 
         return null;

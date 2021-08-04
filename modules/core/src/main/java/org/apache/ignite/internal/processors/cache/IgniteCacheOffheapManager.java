@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -545,11 +545,32 @@ public interface IgniteCacheOffheapManager {
     public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
+     * Dropping the root page of the index tree.
+     *
      * @param cacheId Cache ID.
      * @param idxName Index name.
+     * @param segment Segment index.
+     * @return Dropped root page of the index tree.
      * @throws IgniteCheckedException If failed.
      */
-    public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+    @Nullable RootPage dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * Renaming the root page of the index tree.
+     *
+     * @param cacheId Cache id.
+     * @param oldIdxName Old name of the index tree.
+     * @param newIdxName New name of the index tree.
+     * @param segment Segment index.
+     * @return Renamed root page of the index tree.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable RootPage renameRootPageForIndex(
+        int cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException;
 
     /**
      * @param idxName Index name.

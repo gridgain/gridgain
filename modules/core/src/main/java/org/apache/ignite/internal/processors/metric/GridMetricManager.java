@@ -36,7 +36,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
@@ -543,7 +542,9 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
      */
     private long totalSysMemory() {
         try {
-            return U.<Long>property(os, "totalPhysicalMemorySize");
+            com.sun.management.OperatingSystemMXBean sunOs = (com.sun.management.OperatingSystemMXBean) os;
+
+            return sunOs.getTotalPhysicalMemorySize();
         }
         catch (RuntimeException ignored) {
             return -1;
@@ -602,9 +603,11 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
             long cpuTime;
 
             try {
-                cpuTime = U.<Long>property(os, "processCpuTime");
+                com.sun.management.OperatingSystemMXBean sunOs = (com.sun.management.OperatingSystemMXBean) os;
+
+                cpuTime = sunOs.getProcessCpuTime();
             }
-            catch (IgniteException ignored) {
+            catch (RuntimeException ignored) {
                 return -1;
             }
 

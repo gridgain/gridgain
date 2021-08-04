@@ -570,9 +570,10 @@ public class SchemaManager {
 
         H2TableDescriptor desc = (schema != null ? schema.tableByName(tblName) : null);
 
-        if (desc == null)
+        if (desc == null) {
             throw new IgniteCheckedException("Table not found in internal H2 database [schemaName=" + schemaName +
                 ", tblName=" + tblName + ']');
+        }
 
         GridH2Table h2Tbl = desc.table();
 
@@ -582,12 +583,14 @@ public class SchemaManager {
         h2Tbl.proposeUserIndex(h2Idx);
 
         try {
-            // Populate index with existing cache data.
-            IndexRebuildPartialClosure idxBuild = new IndexRebuildPartialClosure(h2Tbl.cacheContext());
+            if (h2Tbl.cacheInfo().affinityNode()) {
+                // Populate index with existing cache data.
+                IndexRebuildPartialClosure idxBuild = new IndexRebuildPartialClosure(h2Tbl.cacheContext());
 
-            idxBuild.addIndex(h2Tbl, h2Idx);
+                idxBuild.addIndex(h2Tbl, h2Idx);
 
-            cacheVisitor.visit(idxBuild);
+                cacheVisitor.visit(idxBuild);
+            }
 
             // At this point index is in consistent state, promote it through H2 SQL statement, so that cached
             // prepared statements are re-built.

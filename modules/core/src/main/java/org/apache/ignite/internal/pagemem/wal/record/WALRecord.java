@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,7 +230,10 @@ public abstract class WALRecord {
         TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
 
         /** Atomic out-of-order update. */
-        OUT_OF_ORDER_UPDATE(62, LOGICAL);
+        OUT_OF_ORDER_UPDATE(62, LOGICAL),
+
+        /** Record for renaming the index root pages. */
+        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.AutoActivationPropertyTest;
 import org.apache.ignite.internal.processors.cache.ClusterStateOnStartPropertyTest;
 import org.apache.ignite.internal.processors.cache.IgniteClusterActivateDeactivateTestWithPersistence;
 import org.apache.ignite.internal.processors.cache.IgnitePdsDataRegionMetricsTxTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManagerSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheConfigurationFileConsistencyCheckTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheObjectBinaryProcessorOnDiscoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDestroyCacheTest;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.persistence.db.file.DefaultPa
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimpleTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsCheckpointSimulationWithRealCpDisabledTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsPageReplacementTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalArchiveSizeConfigurationTest;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.IgniteMetaStorageBasicTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.BPlusTreePageMemoryImplTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.BPlusTreeReuseListPageMemoryImplTest;
@@ -55,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPages
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTestPersistence;
 import org.apache.ignite.internal.processors.cache.persistence.wal.CpTriggeredWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ExplicitWalDeltaConsistencyTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManagerSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentedRingByteBufferTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SysPropWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveConsistencyTest;
@@ -140,6 +143,10 @@ public class IgnitePdsTestSuite {
         GridTestUtils.addTestIfNeeded(suite, WalEnableDisableWithRestartsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, WalArchiveConsistencyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, WalArchiveSizeConfigurationTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, FileWriteAheadLogManagerSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteCacheDatabaseSharedManagerSelfTest.class, ignoredTests);
 
         return suite;
     }

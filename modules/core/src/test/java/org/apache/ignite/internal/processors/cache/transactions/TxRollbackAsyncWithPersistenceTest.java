@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
-
 /**
  * Tests an ability to rollback near transactions.
  */
@@ -25,18 +23,6 @@ public class TxRollbackAsyncWithPersistenceTest extends TxRollbackAsyncTest {
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_WAL_LOG_TX_RECORDS, "true");
-
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        System.clearProperty(IGNITE_WAL_LOG_TX_RECORDS);
     }
 
     /** {@inheritDoc} */
