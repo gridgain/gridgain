@@ -111,6 +111,9 @@ public class HistoricalRebalanceTwoPartsInDifferentCheckpointsTest extends GridC
             partKeys.addAll(partitionKeys(ignite0.cache(DEFAULT_CACHE_NAME), 0, 10, 0));
         }
 
+        // Need to guarantee that all updates will be delivered to all nodes including backups.
+        // The reason for that requirement is the fact that historical rebalance is never used for "empty" partitions.
+        // It can be achieved by using full_sync write sync mode or by using a data streamer with allowOverwrite == false.
         try (IgniteDataStreamer streamer = ignite0.dataStreamer(DEFAULT_CACHE_NAME)) {
             partKeys.forEach(key -> streamer.addData(key, key));
         }
