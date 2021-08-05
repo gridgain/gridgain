@@ -192,4 +192,9 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     @Override public WALPointer lastWritePointer() {
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public void startAutoReleaseSegments() {
+        // No-op.
+    }
 }

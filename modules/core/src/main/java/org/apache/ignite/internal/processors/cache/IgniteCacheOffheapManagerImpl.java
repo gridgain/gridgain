@@ -2842,13 +2842,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 clearPendingEntries(cctx, oldRow);
             }
 
-            if (oldRow != null) {
-                assert oldRow.link() != 0 : oldRow;
-
-                if (newRow.link() != oldRow.link())
-                    rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
-            }
-
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
@@ -2856,6 +2849,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+            }
+
+            if (oldRow != null) {
+                assert oldRow.link() != 0 : oldRow;
+
+                if (newRow.link() != oldRow.link())
+                    rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
             }
         }
 
