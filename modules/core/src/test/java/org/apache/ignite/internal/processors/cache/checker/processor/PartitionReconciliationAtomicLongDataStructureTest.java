@@ -41,6 +41,7 @@ import org.junit.runners.Parameterized;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.PARTITION_COUNTER_CONSISTENCY;
 
 /**
  * Tests that reconciliation works with data structures.
@@ -165,6 +166,11 @@ public class PartitionReconciliationAtomicLongDataStructureTest extends Partitio
 
         if (rnd.nextBoolean())
             reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconciliationTypes.add(PARTITION_COUNTER_CONSISTENCY);
+
+        log.info(">>> Reconciliation types: " + reconciliationTypes);
 
         ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, reconciliationTypes, cacheName);
 

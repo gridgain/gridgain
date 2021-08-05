@@ -44,6 +44,7 @@ import org.junit.runners.Parameterized;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
+import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.PARTITION_COUNTER_CONSISTENCY;
 
 /**
  * Tests that reconciliation works with binary objects that are absent in the nodes classpath.
@@ -210,6 +211,9 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
 
         if (rnd.nextBoolean())
             reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
+
+        if (rnd.nextBoolean())
+            reconciliationTypes.add(PARTITION_COUNTER_CONSISTENCY);
 
         log.info(">>> Reconciliation types: " + reconciliationTypes);
 
