@@ -301,6 +301,16 @@ public class HibernateCacheProxy implements IgniteInternalCache<Object, Object> 
     }
 
     /** {@inheritDoc} */
+    @Override public GridNearTxLocal txStartEx(
+        TransactionConcurrency concurrency,
+        TransactionIsolation isolation,
+        long timeout,
+        int txSize
+    ) {
+        return delegate.get().txStartEx(concurrency, isolation, timeout, txSize);
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public GridNearTxLocal tx() {
         return delegate.get().tx();
     }

@@ -3225,6 +3225,18 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         return txs.txStartEx(ctx, concurrency, isolation, timeout, txSize).proxy();
     }
 
+    /** {@inheritDoc} */
+    @Override public GridNearTxLocal txStartEx(
+        TransactionConcurrency concurrency,
+        TransactionIsolation isolation,
+        long timeout,
+        int txSize
+    ) throws IllegalStateException {
+        IgniteTransactionsEx txs = ctx.kernalContext().cache().transactions();
+
+        return txs.txStartEx(ctx, concurrency, isolation, timeout, txSize);
+    }
+
     /**
      * Checks if cache is working in JTA transaction and enlist cache as XAResource if necessary.
      *

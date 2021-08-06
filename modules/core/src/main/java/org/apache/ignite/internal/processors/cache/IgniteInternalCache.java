@@ -918,6 +918,22 @@ public interface IgniteInternalCache<K, V> extends Iterable<Cache.Entry<K, V>> {
         int txSize);
 
     /**
+     * Starts transaction with specified isolation, concurrency, timeout, invalidation flag,
+     * and number of participating entries.
+     *
+     * @param concurrency Concurrency.
+     * @param isolation Isolation.
+     * @param timeout Timeout.
+     * @param txSize Number of entries participating in transaction (may be approximate).
+     * @return New transaction.
+     */
+    public GridNearTxLocal txStartEx(
+        TransactionConcurrency concurrency,
+        TransactionIsolation isolation,
+        long timeout,
+        int txSize);
+
+    /**
      * Gets transaction started by this thread or {@code null} if this thread does
      * not have a transaction.
      *

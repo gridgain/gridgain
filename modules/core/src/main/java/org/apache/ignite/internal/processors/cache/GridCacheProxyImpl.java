@@ -945,6 +945,23 @@ public class GridCacheProxyImpl<K, V> implements IgniteInternalCache<K, V>, Exte
     }
 
     /** {@inheritDoc} */
+    @Override public GridNearTxLocal txStartEx(
+        TransactionConcurrency concurrency,
+        TransactionIsolation isolation,
+        long timeout,
+        int txSize
+    ) {
+        CacheOperationContext prev = onEnter(opCtx);
+
+        try {
+            return delegate.txStartEx(concurrency, isolation, timeout, txSize);
+        }
+        finally {
+            onLeave(prev);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public GridNearTxLocal tx() {
         CacheOperationContext prev = onEnter(opCtx);
 
