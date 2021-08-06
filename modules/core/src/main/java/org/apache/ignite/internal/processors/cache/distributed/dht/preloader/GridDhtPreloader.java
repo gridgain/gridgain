@@ -180,17 +180,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut) {
-        if (ctx.kernalContext().clientNode())
-            return false; // No-op.
-
-        AffinityTopologyVersion lastAffChangeTopVer =
-            ctx.exchange().lastAffinityChangedTopologyVersion(exchFut.topologyVersion());
-
-        return lastAffChangeTopVer.equals(exchFut.topologyVersion());
-    }
-
-    /** {@inheritDoc} */
     @Override public GridDhtPreloaderAssignments generateAssignments(
         GridDhtPartitionExchangeId exchId,
         GridDhtPartitionsExchangeFuture exchFut
@@ -409,15 +398,20 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtPartitionDemander.RebalanceFuture addAssignments(
-        GridDhtPreloaderAssignments assignments,
-        boolean forceRebalance,
+    @Override public GridDhtPartitionDemander.RebalanceFuture prepare(
+        GridDhtPartitionExchangeId exchId,
+        GridDhtPartitionsExchangeFuture exchFut,
         long rebalanceId,
         final GridDhtPartitionDemander.RebalanceFuture next,
         @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
-        return demander.addAssignments(assignments, forceRebalance, rebalanceId, next, forcedRebFut, compatibleRebFut);
+        long delay = grp.config().getRebalanceDelay();
+        boolean forceRebalance = forcedRebFut != null;
+
+        // Don't delay for dummy reassigns to avoid infinite recursion.
+        return (delay == 0 || forceRebalance) ? demander.addAssignments(generateAssignments(exchId, exchFut), forceRebalance,
+            rebalanceId, next, forcedRebFut, compatibleRebFut) : null;
     }
 
     /**
