@@ -339,16 +339,17 @@ public class IgniteStatisticsConfigurationManager implements IgniteChangeGlobalS
 
     /** */
     private void scanAndCheckLocalStatistics(AffinityTopologyVersion topVer) {
-        if (!active) {
-            if (log.isDebugEnabled())
-                log.debug("Ignore statistics collection due to inactive cluster state.");
-
-            return;
-        }
         mgmtPool.submit(() -> {
             Map<StatisticsObjectConfiguration, Set<Integer>> res = new HashMap<>();
 
             try {
+                if (!active) {
+                    if (log.isDebugEnabled())
+                        log.debug("Ignore statistics collection due to inactive cluster state.");
+
+                    return;
+                }
+
                 distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
                     StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
 
