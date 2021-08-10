@@ -53,6 +53,7 @@ import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -1816,6 +1817,34 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** */
+    @Test
+    public void testCreateLuceneIndex() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test0(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        IgniteH2Indexing idx = ((IgniteH2Indexing)grid().context().query().getIndexing());
+
+        H2TableDescriptor tblDesc0 = idx.schemaManager().dataTable("PUBLIC", "TEST0")
+            .rowDescriptor().tableDescriptor();
+
+        assertNotNull(GridTestUtils.getFieldValue(tblDesc0, "luceneIdx"));
+
+        idx.distributedConfiguration().createLuceneIndexForStringValueType(true).get();
+
+        sql("create table test1(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        H2TableDescriptor tblDesc1 = idx.schemaManager().dataTable("PUBLIC", "TEST1")
+            .rowDescriptor().tableDescriptor();
+
+        assertNull(GridTestUtils.getFieldValue(tblDesc1, "luceneIdx"));
     }
 
     /** */
