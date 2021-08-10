@@ -26,6 +26,7 @@
 
 #include <ignite/common/common.h>
 
+#include <ignite/impl/binary/binary_utils.h>
 #include <ignite/impl/binary/binary_common.h>
 #include <ignite/impl/interop/interop_memory.h>
 
@@ -35,27 +36,6 @@ namespace ignite
     {
         namespace binary
         {
-
-            // This is a packed structure - we do not want padding for our fields here.
-#pragma pack(push, 1)
-
-            /**
-             * Binary object header layout.
-             */
-            struct BinaryObjectHeaderLayout
-            {
-                int8_t  headerType;
-                int8_t  version;
-                int16_t flags;
-                int32_t typeId;
-                int32_t hashCode;
-                int32_t length;
-                int32_t schemaId;
-                int32_t schemaOffset;
-            };
-
-#pragma pack(pop)
-
             /**
              * Binary object header class.
              *
@@ -65,7 +45,7 @@ namespace ignite
             {
             public:
                 // Header size in bytes.
-                enum { SIZE = sizeof(BinaryObjectHeaderLayout) };
+                enum { SIZE = IGNITE_DFLT_HDR_LEN };
 
                 /**
                  * Create from InteropMemory instance.
@@ -83,10 +63,11 @@ namespace ignite
                  *
                  * @param mem Pointer to header memory.
                  */
-                BinaryObjectHeader(void* mem) :
-                    header(reinterpret_cast<BinaryObjectHeaderLayout*>(mem))
+                explicit BinaryObjectHeader(interop::InteropMemory* mem, int32_t offset) :
+                    mem(mem),
+                    offset(offset)
                 {
-                    // No-op. 
+                    // No-op.
                 }
 
                 /**
@@ -95,20 +76,25 @@ namespace ignite
                  * @param other Instance to copy.
                  */
                 BinaryObjectHeader(const BinaryObjectHeader& other) : 
-                    header(other.header)
+                    mem(other.mem),
+                    offset(other.offset)
                 {
                     // No-op.
                 }
 
                 /**
-                 * Assingment operator.
+                 * Assignment operator.
                  *
                  * @param other Other instance.
                  * @return Reference to this.
                  */
                 BinaryObjectHeader& operator=(const BinaryObjectHeader& other)
                 {
-                    header = other.header;
+                    if (this != &other)
+                    {
+                        mem = other.mem;
+                        offset = other.offset;
+                    }
 
                     return *this;
                 }
@@ -120,7 +106,7 @@ namespace ignite
                  */
                 int8_t GetType() const
                 {
-                    return header->headerType;
+                    return BinaryUtils::ReadInt8(*mem, offset);
                 }
 
                 /**
@@ -130,7 +116,7 @@ namespace ignite
                  */
                 int8_t GetVersion() const
                 {
-                    return header->version;
+                    return BinaryUtils::ReadInt8(*mem, offset + IGNITE_OFFSET_PROTO_VER);
                 }
 
                 /**
@@ -140,7 +126,7 @@ namespace ignite
                  */
                 int16_t GetFlags() const
                 {
-                    return header->flags;
+                    return BinaryUtils::ReadInt16(*mem, offset + IGNITE_OFFSET_FLAGS);
                 }
 
                 /**
@@ -150,7 +136,7 @@ namespace ignite
                  */
                 int32_t GetTypeId() const
                 {
-                    return header->typeId;
+                    return BinaryUtils::ReadInt32(*mem, offset + IGNITE_OFFSET_TYPE_ID);
                 }
 
                 /**
@@ -160,7 +146,7 @@ namespace ignite
                  */
                 int32_t GetHashCode() const
                 {
-                    return header->hashCode;
+                    return BinaryUtils::ReadInt32(*mem, offset + IGNITE_OFFSET_HASH_CODE);
                 }
 
                 /**
@@ -170,7 +156,7 @@ namespace ignite
                  */
                 int32_t GetLength() const
                 {
-                    return header->length;
+                    return BinaryUtils::ReadInt32(*mem, offset + IGNITE_OFFSET_LEN);
                 }
 
                 /**
@@ -180,7 +166,7 @@ namespace ignite
                  */
                 int32_t GetSchemaId() const
                 {
-                    return header->schemaId;
+                    return BinaryUtils::ReadInt32(*mem, offset + IGNITE_OFFSET_SCHEMA_ID);
                 }
 
                 /**
@@ -190,7 +176,7 @@ namespace ignite
                  */
                 int32_t GetSchemaOffset() const
                 {
-                    return header->schemaOffset;
+                    return BinaryUtils::ReadInt32(*mem, offset + IGNITE_OFFSET_SCHEMA_OR_RAW_OFF);
                 }
 
                 /**
@@ -200,7 +186,7 @@ namespace ignite
                  */
                 bool HasSchema() const
                 {
-                    return (header->flags & IGNITE_BINARY_FLAG_HAS_SCHEMA) != 0;
+                    return (GetFlags() & IGNITE_BINARY_FLAG_HAS_SCHEMA) != 0;
                 }
 
                 /**
@@ -210,7 +196,7 @@ namespace ignite
                  */
                 bool IsUserType() const
                 {
-                    return (header->flags & IGNITE_BINARY_FLAG_USER_TYPE) != 0;
+                    return (GetFlags() & IGNITE_BINARY_FLAG_USER_TYPE) != 0;
                 }
 
                 /**
@@ -259,8 +245,11 @@ namespace ignite
                 int8_t* GetMem();
 
             private:
-                /** Header layout */
-                BinaryObjectHeaderLayout* header;
+                /** Memory containing binary object */
+                interop::InteropMemory* mem;
+
+                /** Position offset from the beginning of the memory. */
+                int32_t offset;
             };
         }
     }

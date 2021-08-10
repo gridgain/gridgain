@@ -156,28 +156,28 @@ namespace ignite
 
             int32_t BinaryObjectImpl::GetLength() const
             {
-                BinaryObjectHeader header(mem->Data() + start);
+                BinaryObjectHeader header(mem, start);
 
                 return header.GetDataLength();
             }
 
             int32_t BinaryObjectImpl::GetTypeId() const
             {
-                BinaryObjectHeader header(mem->Data() + start);
+                BinaryObjectHeader header(mem, start);
 
                 return header.GetTypeId();
             }
 
             int32_t BinaryObjectImpl::GetHashCode() const
             {
-                BinaryObjectHeader header(mem->Data() + start);
+                BinaryObjectHeader header(mem, start);
 
                 return header.GetHashCode();
             }
 
             int32_t BinaryObjectImpl::FindField(const int32_t fieldId) const
             {
-                BinaryObjectHeader header(mem->Data() + start);
+                BinaryObjectHeader header(mem, start);
                 int32_t flags = header.GetFlags();
 
                 int32_t footerBegin = header.GetFooterOffset() + start;
@@ -231,7 +231,7 @@ namespace ignite
 
                 assert(metaMgr != 0);
 
-                BinaryObjectHeader header(mem->Data() + start);
+                BinaryObjectHeader header(mem, start);
 
                 int32_t typeId = header.GetTypeId();
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 #include <cstdlib>
-#include <ignite/ignite_error.h>
 
+#include "ignite/impl/interop/interop_utils.h"
 #include "ignite/impl/interop/interop_memory.h"
 
 namespace ignite
@@ -26,42 +26,42 @@ namespace ignite
         {
             int8_t* InteropMemory::Data(const int8_t* memPtr)
             {
-                return reinterpret_cast<int8_t*>(*reinterpret_cast<const int64_t*>(memPtr));
+                return reinterpret_cast<int8_t*>(utils::RawReadInt64(memPtr));
             }
 
             void InteropMemory::Data(int8_t* memPtr, void* ptr)
             {
-                *reinterpret_cast<int64_t*>(memPtr) = reinterpret_cast<int64_t>(ptr);
+                utils::RawWriteInt64(memPtr, reinterpret_cast<int64_t>(ptr));
             }
 
             int32_t InteropMemory::Capacity(const int8_t* memPtr)
             {
-                return *reinterpret_cast<const int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_CAP);
+                return utils::RawReadInt32(memPtr + IGNITE_MEM_HDR_OFF_CAP);
             }
 
             void InteropMemory::Capacity(int8_t* memPtr, int32_t val)
             {
-                *reinterpret_cast<int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_CAP) = val;
+                utils::RawWriteInt32(memPtr + IGNITE_MEM_HDR_OFF_CAP, val);
             }
 
             int32_t InteropMemory::Length(const int8_t* memPtr)
             {
-                return *reinterpret_cast<const int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_LEN);
+                return utils::RawReadInt32(memPtr + IGNITE_MEM_HDR_OFF_LEN);
             }
 
             void InteropMemory::Length(int8_t* memPtr, int32_t val)
             {
-                *reinterpret_cast<int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_LEN) = val;
+                utils::RawWriteInt32(memPtr + IGNITE_MEM_HDR_OFF_LEN, val);
             }
 
             int32_t InteropMemory::Flags(const int8_t* memPtr)
             {
-                return *reinterpret_cast<const int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_FLAGS);
+                return utils::RawReadInt32(memPtr + IGNITE_MEM_HDR_OFF_FLAGS);
             }
 
             void InteropMemory::Flags(int8_t* memPtr, int32_t val)
             {
-                *reinterpret_cast<int32_t*>(memPtr + IGNITE_MEM_HDR_OFF_FLAGS) = val;
+                utils::RawWriteInt32(memPtr + IGNITE_MEM_HDR_OFF_FLAGS, val);
             }
 
             bool InteropMemory::IsExternal(const int8_t* memPtr)
