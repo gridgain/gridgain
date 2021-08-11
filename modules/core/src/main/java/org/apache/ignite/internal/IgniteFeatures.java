@@ -197,6 +197,9 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
+    /** Transaction distributed configuration. */
+    TRANSACTION_DISTRIBUTED_PROPERTIES(52),
+
     /** Custom snapshot operations. */
     CUSTOM_SNAPSHOT_OPERATIONS(53),
 
