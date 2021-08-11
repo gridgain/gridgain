@@ -211,6 +211,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             fut.setWorker(w);
 
             try {
+//                log.warning(">>>>> executing rest request [name=" + Thread.currentThread().getName() + ']');
                 ctx.getRestExecutorService().execute(w);
             }
             catch (RejectedExecutionException e) {

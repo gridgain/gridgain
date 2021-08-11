@@ -1833,22 +1833,25 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         doSleep(5000); // Give enough time to reach exchange future.
 
-        assertEquals(EXIT_CODE_OK, execute(h, "--tx"));
+        try {
+            assertEquals(EXIT_CODE_OK, execute(h, "--tx"));
 
-        // Test kill by xid.
-        validate(h, map -> {
-                assertEquals(1, map.size());
+            // Test kill by xid.
+            validate(h, map -> {
+                    assertEquals(1, map.size());
 
-                Map.Entry<ClusterNode, VisorTxTaskResult> killedEntry = map.entrySet().iterator().next();
+                    Map.Entry<ClusterNode, VisorTxTaskResult> killedEntry = map.entrySet().iterator().next();
 
-                VisorTxInfo info = killedEntry.getValue().getInfos().get(0);
+                    VisorTxInfo info = killedEntry.getValue().getInfos().get(0);
 
-                assertEquals(toKill[0].getXid(), info.getXid());
-            }, "--tx", "--kill",
-            "--xid", toKill[0].getXid().toString(), // Use saved on first run value.
-            "--nodes", grid(0).localNode().consistentId().toString());
-
-        unlockLatch.countDown();
+                    assertEquals(toKill[0].getXid(), info.getXid());
+                }, "--tx", "--kill",
+                "--xid", toKill[0].getXid().toString(), // Use saved on first run value.
+                "--nodes", grid(0).localNode().consistentId().toString());
+        }
+        finally {
+            unlockLatch.countDown();
+        }
 
         startFut.get();
 

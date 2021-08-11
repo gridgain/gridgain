@@ -284,6 +284,11 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                         try {
                             GridRestResponse restRes = fut.get();
 
+//                            log.warning(">>>>> requestHandled " + msg.getClass().getSimpleName() +
+//                                "[clientId=" + msg.clientId() + ", reqId=" + msg.requestId() +
+//                                ", status=" + restRes.getSuccessStatus() +
+//                                ", response=" + restRes.getResponse() + ", err=" + restRes.getError() + ']');
+//
                             res.sessionToken(restRes.sessionTokenBytes());
                             res.successStatus(restRes.getSuccessStatus());
                             res.errorMessage(restRes.getError());
@@ -297,6 +302,9 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                             res.result(o);
                         }
                         catch (IgniteCheckedException e) {
+                            log.warning(">>>>> requestHandled err " + msg.getClass().getSimpleName() +
+                                "[clientId=" + msg.clientId() + ", reqId=" + msg.requestId() + ']', e);
+
                             U.error(log, "Failed to process client request: " + msg, e);
 
                             res.successStatus(GridClientResponse.STATUS_FAILED);
@@ -409,6 +417,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @return REST request object.
      */
     @Nullable private GridRestRequest createRestRequest(GridNioSession ses, GridClientMessage msg) {
+//        log.warning(">>>>> createdRequest " + msg.getClass().getSimpleName() + "[clientId=" + msg.clientId() + ", reqId=" + msg.requestId() + ']');
         GridRestRequest restReq = null;
 
         if (msg instanceof GridClientAuthenticationRequest) {
