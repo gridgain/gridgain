@@ -1117,8 +1117,9 @@
                                         <exclude>src/test/tools/WEB-INF/web.xml</exclude>
                                         <!--Packaging -->
                                         <exclude>packaging/**</exclude>
-                                        <!-- Checkstyle -->
+                                        <!-- Checks -->
                                         <exclude>checkstyle/**</exclude>
+                                        <exclude>checkrules/*.txt</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>
