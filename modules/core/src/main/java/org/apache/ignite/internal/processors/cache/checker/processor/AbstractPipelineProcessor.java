@@ -264,7 +264,7 @@ public class AbstractPipelineProcessor {
     /**
      * @return Set of partition owners.
      */
-    private ClusterGroup partOwners(String cacheName, int partId) {
+    protected ClusterGroup partOwners(String cacheName, int partId) {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);
 
         return ignite.cluster().forNodes(nodes);

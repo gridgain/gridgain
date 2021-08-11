@@ -699,6 +699,11 @@ public interface IgniteCacheOffheapManager {
         public ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
 
         /**
+         * @return Clear cache sizes reconciliation context.
+         */
+        public void clearReconciliationCtx();
+
+        /**
          * @return Cache data tree object.
          */
         public CacheDataTree tree();

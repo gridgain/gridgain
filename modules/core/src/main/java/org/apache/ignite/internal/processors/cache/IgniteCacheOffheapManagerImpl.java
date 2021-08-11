@@ -1690,6 +1690,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
+        @Override public void clearReconciliationCtx() {
+            reconciliationCtx.set(null);
+
+            tree().reconciliationCtx(null);
+        }
+
+        /** {@inheritDoc} */
         @Override public CacheDataTree tree() {
             return dataTree;
         }

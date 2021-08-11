@@ -32,7 +32,11 @@ import javax.cache.expiry.EternalExpiryPolicy;
 import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
@@ -49,11 +53,14 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.resources.IgniteInstanceResource;
 
 import static java.util.Collections.EMPTY_SET;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
@@ -268,16 +275,86 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
             waitWorkFinish();
 
+            try {
+                clearReconciliationCtx();
+            }
+            catch (Exception e0) {
+                log.warning("Partition size consistency context was not cleared.");
+            }
+
             log.warning(errMsg, e);
 
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
         catch (Exception e) {
+            try {
+                clearReconciliationCtx();
+            }
+            catch (Exception e0) {
+                log.warning("Partition size consistency context was not cleared.");
+            }
+
             String errMsg = "Unexpected error.";
 
             log.error(errMsg, e);
 
             return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+        }
+    }
+
+    /** Closure for clearing context after size consistency reconciliation. */
+    private static class ClearSizeReconciliationContext implements IgniteRunnable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Ignite instance. */
+        @IgniteInstanceResource
+        private IgniteEx ignite0;
+
+        /** Cache name. */
+        String cacheName;
+
+        /** Partition ID. */
+        int partId;
+
+        /** */
+        public ClearSizeReconciliationContext(String cacheName, int partId) {
+            this.cacheName = cacheName;
+            this.partId = partId;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void run() {
+            GridCacheContext<Object, Object> cctx = ignite0.context().cache().cache(cacheName).context();
+
+            CacheGroupContext grpCtx = cctx.group();
+
+            GridDhtLocalPartition part = grpCtx.topology().localPartition(partId);
+
+            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+
+            cacheDataStore.clearReconciliationCtx();
+    }
+}
+
+    /**
+     * @return Reconciliation result collector which can be used to store the result to a file.
+     */
+    public void clearReconciliationCtx() {
+        for (String cacheName : caches) {
+            IgniteInternalCache<Object, Object> cachex = ignite.cachex(cacheName);
+
+            ExpiryPolicy expPlc = cachex.context().expiry();
+            if (expPlc != null && !(expPlc instanceof EternalExpiryPolicy))
+                continue;
+
+            int[] partitions = partitions(cacheName);
+
+            for (int part : partitions) {
+                ClusterGroup grp = partOwners(cacheName, part);
+
+                ignite.compute(grp).run(new ClearSizeReconciliationContext(cacheName, part));
+            }
         }
     }
 
