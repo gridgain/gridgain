@@ -142,6 +142,51 @@ public class GridSpinReadWriteLock {
     }
 
     /**
+     * Tries to acquire read lock with timeout.
+     *
+     * @param timeout Timeout.
+     * @param unit Unit.
+     * @return {@code True} if read lock has been acquired.
+     * @throws InterruptedException If interrupted.
+     */
+    public boolean tryReadLock(long timeout, TimeUnit unit) throws InterruptedException {
+        int cnt = readLockEntryCnt.get();
+
+        // Read lock reentry or acquiring read lock while holding write lock.
+        if (cnt > 0 || Thread.currentThread().getId() == writeLockOwner) {
+            assert state > 0 || state == -1;
+
+            readLockEntryCnt.set(cnt + 1);
+
+            return true;
+        }
+
+        long startNanos = System.nanoTime();
+
+        long timeoutNanos = unit.toNanos(timeout);
+
+        while (true) {
+            int cur = state;
+
+            if (System.nanoTime() - startNanos >= timeoutNanos)
+                return false;
+            else if (cur == -1 || pendingWLocks > 0) {
+                Thread.sleep(10);
+
+                continue;
+            }
+
+            if (compareAndSet(STATE_OFFS, cur, cur + 1)) {
+                readLockEntryCnt.set(1);
+
+                return true;
+            }
+
+            Thread.sleep(10);
+        }
+    }
+
+    /**
      * Read unlock.
      */
     public void readUnlock() {

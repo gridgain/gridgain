@@ -52,6 +52,17 @@ public class GridSpinBusyLock {
     }
 
     /**
+     * Enters "busy" state with timeout.
+     *
+     * @param millis Timeout.
+     * @return {@code True} if lock was acquired.
+     * @throws InterruptedException If interrupted.
+     */
+    public boolean tryEnterBusy(long millis) throws InterruptedException {
+        return !lock.writeLockedByCurrentThread() && lock.tryReadLock(millis, TimeUnit.MILLISECONDS);
+    }
+
+    /**
      * Checks if busy lock was blocked by current thread.
      *
      * @return {@code True} if busy lock was blocked by current thread.

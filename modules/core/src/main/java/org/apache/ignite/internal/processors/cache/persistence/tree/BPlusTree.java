@@ -105,11 +105,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  */
 @SuppressWarnings({"ConstantValueVariableUse"})
 public abstract class BPlusTree<L, T extends L> extends DataStructure implements IgniteTree<L, T> {
-    /**
-     * Cache sizes reconciliation context.
-     */
-    private ReconciliationContext reconciliationCtx;
-
     /** */
     private static final Object[] EMPTY = {};
 
@@ -164,6 +159,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** Flag for enabling single-threaded append-only tree creation. */
     private boolean sequentialWriteOptsEnabled;
+
+    /**
+     * Cache sizes reconciliation context.
+     */
+    private volatile ReconciliationContext reconciliationCtx;
 
     /** */
     private final GridTreePrinter<Long> treePrinter = new GridTreePrinter<Long>() {

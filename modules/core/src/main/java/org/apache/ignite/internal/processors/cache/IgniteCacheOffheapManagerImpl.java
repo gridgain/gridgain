@@ -127,7 +127,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Boolean.TRUE;
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -1626,7 +1625,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private final AtomicLong tombstonesCnt = new AtomicLong();
 
         /** Context for a cache size reconciliation. */
-        private volatile ReconciliationContext reconciliationCtx;
+        private final AtomicReference<ReconciliationContext> reconciliationCtx = new AtomicReference<>();
 
         /**
          * @param partId Partition number.
@@ -1668,31 +1667,25 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             mvccUpdateTxStateHint = new MvccUpdateTxStateHintHandler(grp);
             mvccApplyChanges = new MvccApplyChangesHandler(grp);
 
-            this.dataTree.reconciliationCtx(reconciliationCtx);
+            this.dataTree.reconciliationCtx(reconciliationCtx.get());
         }
 
         /** {@inheritDoc} */
         @Override public ReconciliationContext startReconciliation(int cacheId) {
-            if (reconciliationCtx == null) {
-                reconciliationCtx = new ReconciliationContext();
+            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
+                tree().reconciliationCtx(reconciliationCtx.get());
 
-                tree().reconciliationCtx(reconciliationCtx);
-            }
+            reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
-            reconciliationCtx.sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
-
-            return reconciliationCtx;
+            return reconciliationCtx.get();
         }
 
         /** {@inheritDoc} */
         @Override public ReconciliationContext reconciliationCtx() {
-            if (reconciliationCtx == null) {
-                reconciliationCtx = new ReconciliationContext();
+            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
+                tree().reconciliationCtx(reconciliationCtx.get());
 
-                tree().reconciliationCtx(reconciliationCtx);
-            }
-
-            return reconciliationCtx;
+            return reconciliationCtx.get();
 
         }
 
@@ -1821,7 +1814,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (reconciliationCtx().partSizeIsFinished()) {
-                reconciliationCtx = null;
+                reconciliationCtx.set(null);
 
                 tree().reconciliationCtx(null);
             }
@@ -1935,17 +1928,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void invoke(GridCacheContext cctx, KeyCacheObject key, OffheapInvokeClosure c)
             throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
-
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
@@ -2115,16 +2110,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         {
             assert mvccVer != null || newMvccVer == null : newMvccVer;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2189,16 +2187,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             List<GridCacheMvccEntryInfo> hist) throws IgniteCheckedException {
             assert !F.isEmpty(hist);
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2275,16 +2276,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             MvccVersion newMvccVer,
             byte mvccTxState,
             byte newMvccTxState) throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2339,16 +2343,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert mvccSnapshot != null;
             assert primary || !needHistory;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2557,16 +2564,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert primary || mvccSnapshot.activeTransactions().size() == 0 : mvccSnapshot;
             assert primary || !needHistory;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2632,16 +2642,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             MvccSnapshot mvccSnapshot) throws IgniteCheckedException {
             assert mvccSnapshot != null;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2690,16 +2703,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void mvccRemoveAll(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2760,16 +2776,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (F.isEmpty(cleanupRows))
                 return 0;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2844,16 +2863,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             assert oldRow == null || oldRow.link() != 0L : oldRow;
 
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -2911,16 +2933,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             long expireTime,
             MvccVersion mvccVer
         ) throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -3071,16 +3096,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
@@ -3167,16 +3195,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCacheVersion ver,
             GridDhtLocalPartition part
         ) throws IgniteCheckedException {
-            while (!busyLock.enterBusy()) {
-                if (nodeIsStopping.get())
-                    throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+            try {
+                if (!busyLock.enterBusy()) {
+                    if (nodeIsStopping.get())
+                        throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
-                try {
-                    sleep(5);
+                    while (!busyLock.tryEnterBusy(50)) {
+                        if (nodeIsStopping.get())
+                            throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
+                    }
                 }
-                catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            }
+            catch (InterruptedException e) {
+                throw new IgniteCheckedException(e);
             }
 
             try {
