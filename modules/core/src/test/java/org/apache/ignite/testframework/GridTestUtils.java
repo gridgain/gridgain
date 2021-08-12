@@ -1936,9 +1936,9 @@ public final class GridTestUtils {
     }
 
     /**
-     * Clear file without deletion
+     * Clear file without deletion.
      *
-     * @param path to file
+     * @param path to file.
      */
     public static void clearFile(Path path) throws IOException {
         Files.newOutputStream(path).close();
