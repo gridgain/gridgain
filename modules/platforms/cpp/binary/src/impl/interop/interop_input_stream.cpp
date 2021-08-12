@@ -43,18 +43,6 @@ namespace ignite
     {
         namespace interop 
         {
-            union BinaryInt32Float
-            {
-                int32_t i;
-                float f;
-            };
-
-            union BinaryInt64Double
-            {
-                int64_t i;
-                double d;
-            };
-
             InteropInputStream::InteropInputStream(InteropMemory* mem)
             {
                 this->mem = mem;
@@ -157,7 +145,7 @@ namespace ignite
 
             float InteropInputStream::ReadFloat()
             {
-                BinaryInt32Float u;
+                BinaryFloatInt32 u;
 
                 u.i = ReadInt32();
 
@@ -171,7 +159,7 @@ namespace ignite
 
             double InteropInputStream::ReadDouble()
             {
-                BinaryInt64Double u;
+                BinaryDoubleInt64 u;
 
                 u.i = ReadInt64();
 

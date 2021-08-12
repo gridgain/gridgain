@@ -1140,6 +1140,8 @@
                                         <!-- HLL -->
                                         <exclude>src/main/java/org/apache/ignite/internal/processors/query/stat/hll/**</exclude>
                                         <exclude>src/test/java/org/apache/ignite/internal/processors/query/stat/hll/**</exclude>
+                                        <!-- Checks -->
+                                        <exclude>checkrules/*.txt</exclude>
                                     </excludes>
                                 </configuration>
                             </execution>
