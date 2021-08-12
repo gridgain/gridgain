@@ -1697,6 +1697,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
+        @Override public boolean nodeIsStopping() {
+            return nodeIsStopping.get();
+        }
+
+        /** {@inheritDoc} */
         @Override public CacheDataTree tree() {
             return dataTree;
         }
@@ -3746,6 +3751,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void block() {
             busyLock.block();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean tryBlock(long millis) throws InterruptedException {
+            return busyLock.tryBlock(millis);
         }
 
         /** {@inheritDoc} */

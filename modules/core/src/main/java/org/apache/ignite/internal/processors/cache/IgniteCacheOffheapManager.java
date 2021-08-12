@@ -684,26 +684,6 @@ public interface IgniteCacheOffheapManager {
      */
     interface CacheDataStore {
         /**
-         * Preparing for start a reconciliation of cache sizes.
-         *
-         * @return Cache data tree object.
-         */
-        public ReconciliationContext startReconciliation(int cacheId);
-
-        /** Applying of a cache size consistency reconciliation result. */
-        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
-
-        /**
-         * @return Cache sizes reconciliation context.
-         */
-        public ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
-
-        /**
-         * @return Clear cache sizes reconciliation context.
-         */
-        public void clearReconciliationCtx();
-
-        /**
          * @return Cache data tree object.
          */
         public CacheDataTree tree();
@@ -1288,8 +1268,43 @@ public interface IgniteCacheOffheapManager {
         public void block();
 
         /**
+         * Try to block current thread till all operations end
+         * and prevents them to invoke new operations.
+         *
+         * @param millis Timeout.
+         * @return {@code True} if lock was acquired.
+         * @throws InterruptedException If interrupted.
+         */
+        public boolean tryBlock(long millis) throws InterruptedException;
+
+        /**
          * Makes possible for activities entering busy state again.
          */
         public void unblock();
+
+        /**
+         * Preparing for start a reconciliation of cache sizes.
+         *
+         * @return Cache data tree object.
+         */
+        public ReconciliationContext startReconciliation(int cacheId);
+
+        /** Applying of a cache size consistency reconciliation result. */
+        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
+
+        /**
+         * @return Cache sizes reconciliation context.
+         */
+        public ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
+
+        /**
+         * @return Clear cache sizes reconciliation context.
+         */
+        public void clearReconciliationCtx();
+
+        /**
+         * @return Node is stopping flag.
+         */
+        public boolean nodeIsStopping();
     }
 }

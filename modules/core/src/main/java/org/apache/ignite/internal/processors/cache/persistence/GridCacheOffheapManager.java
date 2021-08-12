@@ -2646,6 +2646,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 delegate.clearReconciliationCtx();
         }
 
+        /** {@inheritDoc} */
+        @Override public boolean nodeIsStopping() {
+            if (delegate != null)
+                return nodeIsStopping.get();
+            else
+                return true;
+        }
+
         /**
          * Checks that links to counter data page and partition meta store are both present or both absent in partition.
          *
@@ -3452,6 +3460,21 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return;
 
                 delegate0.block();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean tryBlock(long millis) throws InterruptedException {
+            try {
+                CacheDataStore delegate0 = init0(true);
+
+                if (delegate0 == null)
+                    return false;
+
+                return delegate0.tryBlock(millis);
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

@@ -34,6 +34,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
@@ -331,9 +332,34 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partId);
 
-            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+            part.reserve();
 
-            cacheDataStore.clearReconciliationCtx();
+            try {
+                IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
+
+                boolean isBlocked = false;
+
+                try {
+                    while (!cacheDataStore.tryBlock(100)) {
+                        if (cacheDataStore.nodeIsStopping())
+                            throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                    }
+
+                    isBlocked = true;
+
+                    cacheDataStore.clearReconciliationCtx();
+                }
+                catch (Exception e) {
+                    throw new IgniteException(e);
+                }
+                finally {
+                    if (isBlocked)
+                        cacheDataStore.unblock();
+                }
+            }
+            finally {
+                part.release();
+            }
     }
 }
 

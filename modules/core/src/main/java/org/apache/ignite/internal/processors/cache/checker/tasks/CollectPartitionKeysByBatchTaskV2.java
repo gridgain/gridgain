@@ -34,6 +34,7 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
@@ -291,8 +292,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             assert part != null;
 
-            part.reserve();
-
             ReconciliationContext partReconciliationCtx = null;
 
             NodePartitionSize nodeSize = nodePartitionSize == null ? new NodePartitionSize(partBatch.cacheName()) : nodePartitionSize;
@@ -303,126 +302,149 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             KeyCacheObject oldBorderKey = null;
 
-            if (reconSize) {
-                try {
-                    partReconciliationCtx = cacheDataStore.reconciliationCtx();
-                }
-                catch (IgniteCheckedException e) {
-                    throw new RuntimeException(e);
-                }
+            part.reserve();
 
-                if (partReconciliationCtx != null &&
-                    partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
-                    partReconciliationCtx.lastKey(cacheId) == null) {
-
-                    cacheDataStore.block();
-
+            try {
+                if (reconSize) {
                     try {
-                        nodeSize.inProgress(true);
-
-                        partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
-
-                        partReconciliationCtx.resetSize(cacheId);
-
-                        partReconciliationCtx.resetCacheKeysMap(cacheId);
+                        partReconciliationCtx = cacheDataStore.reconciliationCtx();
                     }
-                    finally {
-                        cacheDataStore.unblock();
+                    catch (IgniteCheckedException e) {
+                        throw new RuntimeException(e);
                     }
+
+                    if (partReconciliationCtx != null &&
+                        partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
+                        partReconciliationCtx.lastKey(cacheId) == null) {
+
+                        boolean isBlocked = false;
+
+                        try {
+                            while (!cacheDataStore.tryBlock(100)) {
+                                if (cacheDataStore.nodeIsStopping())
+                                    throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                            }
+
+                            isBlocked = true;
+
+                            nodeSize.inProgress(true);
+
+                            partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
+
+                            partReconciliationCtx.resetSize(cacheId);
+
+                            partReconciliationCtx.resetCacheKeysMap(cacheId);
+                        }
+                        catch (Exception e) {
+                            throw new IgniteException(e);
+                        }
+                        finally {
+                            if (isBlocked)
+                                cacheDataStore.unblock();
+                        }
+                    }
+                    else {
+                        if (nodePartitionSize != null)
+                            nodeSize = nodePartitionSize;
+                    }
+
+                    lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
+
+                    partSize = partReconciliationCtx.size(cacheId);
+
+                    oldBorderKey = partReconciliationCtx.lastKey(cacheId);
                 }
-                else {
-                    if (nodePartitionSize != null)
-                        nodeSize = nodePartitionSize;
-                }
 
-                lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
+                KeyCacheObject keyToStart = null;
 
-                partSize = partReconciliationCtx.size(cacheId);
+                if (reconConsist && lowerKey != null && reconSize && lastKeyForSizes != null)
+                    keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
+                else if (reconConsist && lowerKey != null)
+                    keyToStart = lowerKey;
+                else if (reconSize && lastKeyForSizes != null)
+                    keyToStart = lastKeyForSizes;
 
-                oldBorderKey = partReconciliationCtx.lastKey(cacheId);
-            }
-
-            KeyCacheObject keyToStart = null;
-
-            if (reconConsist && lowerKey != null && reconSize && lastKeyForSizes != null)
-                keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
-            else if (reconConsist && lowerKey != null)
-                keyToStart = lowerKey;
-            else if (reconSize && lastKeyForSizes != null)
-                keyToStart = lastKeyForSizes;
-
-            if (reconConsist || reconSize) {
-                try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
+                if (reconConsist || reconSize) {
+                    try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {
 
-                    List<VersionedKey> partEntryHashRecords = new ArrayList<>();
+                        List<VersionedKey> partEntryHashRecords = new ArrayList<>();
 
-                    boolean hasNext = cursor.next();
+                        boolean hasNext = cursor.next();
 
-                    for (int i = 0; (i < batchSize && hasNext); i++) {
-                        CacheDataRow row = cursor.get();
+                        for (int i = 0; (i < batchSize && hasNext); i++) {
+                            CacheDataRow row = cursor.get();
 
-                        if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
-                            i--;
-                        else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
-                            newLowerKey = row.key();
+                            if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
+                                i--;
+                            else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
+                                newLowerKey = row.key();
 
-                            partEntryHashRecords.add(new VersionedKey(
-                                ignite.localNode().id(),
-                                row.key(),
-                                row.version()
-                            ));
-                        }
-
-                        hasNext = cursor.next();
-                    }
-
-                    if (reconSize && !hasNext &&
-                        ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
-                            (lowerKey == null || lowerKey.equals(newLowerKey))) &&
-                        partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
-
-                        cacheDataStore.block();
-
-                        try {
-                            partReconciliationCtx.sizeReconciliationState(cacheId, FINISHED);
-
-                            Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = partReconciliationCtx.getCacheKeysIterator(cacheId);
-
-                            while (tempMapIter.hasNext()) {
-                                tempMapIter.next();
-
-                                partSize.incrementAndGet();
+                                partEntryHashRecords.add(new VersionedKey(
+                                    ignite.localNode().id(),
+                                    row.key(),
+                                    row.version()
+                                ));
                             }
 
-                            if (partBatch.repair())
-                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
-                            else
-                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
+                            hasNext = cursor.next();
+                        }
 
-                            nodeSize.inProgress(false);
+                        if (reconSize && !hasNext &&
+                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
+                                (lowerKey == null || lowerKey.equals(newLowerKey))) &&
+                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+
+                            boolean isBlocked = false;
+
+                            try {
+                                while (!cacheDataStore.tryBlock(100)) {
+                                    if (cacheDataStore.nodeIsStopping())
+                                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                                }
+
+                                isBlocked = true;
+
+                                partReconciliationCtx.sizeReconciliationState(cacheId, FINISHED);
+
+                                Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = partReconciliationCtx.getCacheKeysIterator(cacheId);
+
+                                while (tempMapIter.hasNext()) {
+                                    tempMapIter.next();
+
+                                    partSize.incrementAndGet();
+                                }
+
+                                if (partBatch.repair())
+                                    cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
+                                else
+                                    cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
+
+                                nodeSize.inProgress(false);
+                            }
+                            finally {
+                                if (isBlocked)
+                                    cacheDataStore.unblock();
+                            }
                         }
-                        finally {
-                            cacheDataStore.unblock();
-                        }
+
+                        return new ExecutionResult<>(new T2<>(partEntryHashRecords, nodeSize));
                     }
+                    catch (Exception e) {
+                        String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
 
-                    return new ExecutionResult<>(new T2<>(partEntryHashRecords, nodeSize));
-                }
-                catch (Exception e) {
-                    String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
+                        log.error(errMsg, e);
 
-                    log.error(errMsg, e);
-
-                    return new ExecutionResult<>(errMsg + " " + e.getMessage());
+                        return new ExecutionResult<>(errMsg + " " + e.getMessage());
+                    }
                 }
-                finally {
-                    part.release();
-                }
+                else
+                    return new ExecutionResult<>(new T2<>(new ArrayList<>(), nodeSize));
             }
-            else
-                return new ExecutionResult<>(new T2<>(new ArrayList<>(), nodeSize));
+            finally {
+                part.release();
+            }
         }
     }
 }
