@@ -2467,8 +2467,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @param validateClo Validate clo.
      * @param args Args.
      */
-    private void validate(CommandHandler h, IgniteInClosure<Map<ClusterNode, VisorTxTaskResult>> validateClo,
-        String... args) {
+    private void validate(
+        CommandHandler h,
+        IgniteInClosure<Map<ClusterNode, VisorTxTaskResult>> validateClo,
+        String... args
+    ) {
         assertEquals(EXIT_CODE_OK, execute(h, args));
 
         validateClo.apply(h.getLastOperationResult());
