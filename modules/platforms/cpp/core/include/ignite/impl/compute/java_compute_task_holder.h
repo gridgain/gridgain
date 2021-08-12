@@ -1,11 +1,12 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,11 +17,11 @@
 
 /**
  * @file
- * Declares ignite::impl::compute::SingleJobComputeTaskHolder class template.
+ * Declares ignite::impl::compute::JavaComputeTaskHolder class template.
  */
 
-#ifndef _IGNITE_IMPL_COMPUTE_SINGLE_JOB_COMPUTE_TASK
-#define _IGNITE_IMPL_COMPUTE_SINGLE_JOB_COMPUTE_TASK
+#ifndef _IGNITE_IMPL_COMPUTE_JAVA_COMPUTE_TASK_HOLDER
+#define _IGNITE_IMPL_COMPUTE_JAVA_COMPUTE_TASK_HOLDER
 
 #include <stdint.h>
 
@@ -37,20 +38,17 @@ namespace ignite
             /**
              * Compute task holder type-specific implementation.
              */
-            template<typename F, typename R>
-            class SingleJobComputeTaskHolder : public ComputeTaskHolder
+            template<typename R>
+            class JavaComputeTaskHolder : public ComputeTaskHolder
             {
             public:
-                typedef F JobType;
                 typedef R ResultType;
 
                 /**
                  * Constructor.
-                 *
-                 * @param handle Job handle.
                  */
-                SingleJobComputeTaskHolder(int64_t handle) :
-                    ComputeTaskHolder(handle)
+                JavaComputeTaskHolder() :
+                    ComputeTaskHolder(-1)
                 {
                     // No-op.
                 }
@@ -58,7 +56,7 @@ namespace ignite
                 /**
                  * Destructor.
                  */
-                virtual ~SingleJobComputeTaskHolder()
+                virtual ~JavaComputeTaskHolder()
                 {
                     // No-op.
                 }
@@ -69,14 +67,8 @@ namespace ignite
                  * @param job Job.
                  * @return Policy.
                  */
-                virtual int32_t JobResultLocal(ComputeJobHolder& job)
+                virtual int32_t JobResultLocal(ComputeJobHolder&)
                 {
-                    typedef ComputeJobHolderImpl<JobType, ResultType> ActualComputeJobHolder;
-
-                    ActualComputeJobHolder& job0 = static_cast<ActualComputeJobHolder&>(job);
-
-                    res = job0.GetResult();
-
                     return ComputeJobResultPolicy::WAIT;
                 }
 
@@ -86,10 +78,8 @@ namespace ignite
                  * @param reader Reader for stream with result.
                  * @return Policy.
                  */
-                virtual int32_t JobResultRemote(binary::BinaryReaderImpl& reader)
+                virtual int32_t JobResultRemote(binary::BinaryReaderImpl&)
                 {
-                    res.Read(reader);
-
                     return ComputeJobResultPolicy::WAIT;
                 }
 
@@ -160,19 +150,15 @@ namespace ignite
             /**
              * Compute task holder type-specific implementation.
              */
-            template<typename F>
-            class SingleJobComputeTaskHolder<F, void> : public ComputeTaskHolder
+            template<>
+            class JavaComputeTaskHolder<void> : public ComputeTaskHolder
             {
             public:
-                typedef F JobType;
-
                 /**
                  * Constructor.
-                 *
-                 * @param handle Job handle.
                  */
-                SingleJobComputeTaskHolder(int64_t handle) :
-                    ComputeTaskHolder(handle)
+                JavaComputeTaskHolder() :
+                    ComputeTaskHolder(-1)
                 {
                     // No-op.
                 }
@@ -180,7 +166,7 @@ namespace ignite
                 /**
                  * Destructor.
                  */
-                virtual ~SingleJobComputeTaskHolder()
+                virtual ~JavaComputeTaskHolder()
                 {
                     // No-op.
                 }
@@ -191,14 +177,8 @@ namespace ignite
                  * @param job Job.
                  * @return Policy.
                  */
-                virtual int32_t JobResultLocal(ComputeJobHolder& job)
+                virtual int32_t JobResultLocal(ComputeJobHolder&)
                 {
-                    typedef ComputeJobHolderImpl<JobType, void> ActualComputeJobHolder;
-
-                    ActualComputeJobHolder& job0 = static_cast<ActualComputeJobHolder&>(job);
-
-                    res = job0.GetResult();
-
                     return ComputeJobResultPolicy::WAIT;
                 }
 
@@ -208,10 +188,8 @@ namespace ignite
                  * @param reader Reader for stream with result.
                  * @return Policy.
                  */
-                virtual int32_t JobResultRemote(binary::BinaryReaderImpl& reader)
+                virtual int32_t JobResultRemote(binary::BinaryReaderImpl&)
                 {
-                    res.Read(reader);
-
                     return ComputeJobResultPolicy::WAIT;
                 }
 
@@ -282,4 +260,4 @@ namespace ignite
     }
 }
 
-#endif //_IGNITE_IMPL_COMPUTE_SINGLE_JOB_COMPUTE_TASK
+#endif //_IGNITE_IMPL_COMPUTE_JAVA_COMPUTE_TASK_HOLDER
