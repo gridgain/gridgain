@@ -223,4 +223,9 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
      * @return Last written pointer.
      */
     WALPointer lastWritePointer();
+
+    /**
+     * Start automatically releasing segments when reaching {@link DataStorageConfiguration#getMaxWalArchiveSize()}.
+     */
+    void startAutoReleaseSegments();
 }
