@@ -16,13 +16,18 @@
 
 namespace Apache.Ignite.Core.Tests
 {
+    using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Events;
     using NUnit.Framework;
+    using NUnit.Framework.Internal;
 
     /// <summary>
     /// Tests <see cref="IgniteConfiguration.LocalEventListeners" />.
@@ -31,6 +36,37 @@ namespace Apache.Ignite.Core.Tests
     {
         /** Cache name. */
         private const string CacheName = "cache";
+
+        [Test]
+        public void TestRemoval()
+        {
+            ICollection<int> evnts = new[]
+            {
+                EventType.CacheObjectRemoved,
+                EventType.CacheObjectExpired,
+                EventType.CacheEntryEvicted,
+            };
+
+            var listener = new Listener<CacheEvent>();
+
+            using (IIgnite ignite0 = Ignition.Start(GetConfig(listener, evnts, "RemovalEvents")))
+            {
+                var cache = ignite0.GetOrCreateCache<int, int>(CacheName).WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(2), null, null));
+
+                for (int i = 0; i < 2000; i++)
+                    cache.Put(i, i);
+                
+                Thread.Sleep(2000);
+
+                Assert.IsFalse(cache.ContainsKey(0));
+
+                while (true)
+                {
+                    Thread.Sleep(1000);
+                }
+               
+            }
+        }
 
         /// <summary>
         /// Tests the rebalance events which occur during node startup.
@@ -55,25 +91,18 @@ namespace Apache.Ignite.Core.Tests
                 
                 using (IIgnite ignite1 = Ignition.Start(GetConfig(listener, cacheRebalanceStopStartEvts)))
                 {
-                    AffinityTopologyVersion afterRebalanceTop =  new AffinityTopologyVersion(2, 1);
+                    var otherCache = ignite1.GetOrCreateCache<int, int>(CacheName);
                     
-                    Assert.True(ignite1.WaitTopology(afterRebalanceTop, CacheName), "Failed to wait topology " + afterRebalanceTop);
-                    
-                    var events = listener.GetEvents();
-
-                    Assert.AreEqual(2, events.Count);
-
-                    var rebalanceStart = events.First();
-
-                    Assert.AreEqual(CacheName, rebalanceStart.CacheName);
-                    Assert.AreEqual(EventType.CacheRebalanceStarted, rebalanceStart.Type);
-
-                    var rebalanceStop = events.Last();
-
-                    Assert.AreEqual(CacheName, rebalanceStop.CacheName);
-                    Assert.AreEqual(EventType.CacheRebalanceStopped, rebalanceStop.Type);
+                    for (int i = 0; i < 2000; i++)
+                        if (i % 4 == 0)
+                        {
+                            otherCache.Remove(i);
+                            Thread.Sleep(1000);
+                        }
                 }
             }
+            
+            Thread.Sleep(20000);
         }
 
         /// <summary>
@@ -199,6 +228,20 @@ namespace Apache.Ignite.Core.Tests
                 {
                     _events.Add(evt);
                 }
+
+                var cacheEvent = evt as CacheEvent;
+                if (cacheEvent != null)
+                {
+                    TestContext.Progress.WriteLine(cacheEvent);
+                    TestContext.Progress.Write(
+                        $"KEY={cacheEvent.Key}, OLD={cacheEvent.OldValue}, NEW={cacheEvent.NewValue}");
+                }
+                else
+                {
+                    TestContext.Progress.WriteLine(evt);
+                }
+
+
 
                 return true;
             }

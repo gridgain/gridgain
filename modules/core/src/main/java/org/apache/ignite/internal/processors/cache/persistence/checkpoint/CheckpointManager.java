@@ -86,6 +86,8 @@ public class CheckpointManager {
     /** Checkpointer builder. It allows to create a new checkpointer on each call. */
     private final Supplier<Checkpointer> checkpointerProvider;
 
+    private final MemoryCheckpointer memoryCheckpointer;
+
     /**
      * @param logger Logger producer.
      * @param igniteInstanceName Ignite instance name.
@@ -213,6 +215,12 @@ public class CheckpointManager {
             checkpointer,
             checkpointReadLockTimeout
         );
+
+        memoryCheckpointer = new MemoryCheckpointer(igniteInstanceName,
+            "memory-checkpointer",
+            workersRegistry,
+            dataRegions,
+            logger);
     }
 
     /**
@@ -408,6 +416,8 @@ public class CheckpointManager {
         assert checkpointer != null : "Checkpointer can't be null during the start";
 
         this.checkpointer.start();
+
+        this.memoryCheckpointer.start();
     }
 
     /**

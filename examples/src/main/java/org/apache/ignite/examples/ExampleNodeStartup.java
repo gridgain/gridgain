@@ -16,6 +16,8 @@
 
 package org.apache.ignite.examples;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
 
@@ -30,6 +32,12 @@ public class ExampleNodeStartup {
      * @throws IgniteException If failed.
      */
     public static void main(String[] args) throws IgniteException {
-        Ignition.start("examples/config/example-ignite.xml");
+        Ignite ignite = Ignition.start("examples/config/example-data-regions.xml");
+        ignite.cluster().active(true);
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache("myCache");
+        for (int i=0; i< 10; i++){
+            cache.put(i, i);
+        }
+
     }
 }
