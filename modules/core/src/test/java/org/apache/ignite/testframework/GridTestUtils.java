@@ -32,6 +32,8 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -1931,6 +1933,15 @@ public final class GridTestUtils {
         }
 
         return bytes;
+    }
+
+    /**
+     * Clear file without deletion.
+     *
+     * @param path to file.
+     */
+    public static void clearFile(Path path) throws IOException {
+        Files.newOutputStream(path).close();
     }
 
     /**
