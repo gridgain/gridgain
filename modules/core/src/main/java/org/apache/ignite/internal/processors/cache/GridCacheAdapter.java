@@ -2194,10 +2194,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                     (EntryProcessor<K, V, Object>)entryProcessor,
                     args);
 
-//                fut.listen(f -> {
-//                    log.warning(">>>>> invoke0 thread compeleted [name=" + Thread.currentThread().getName() + ']');
-//                });
-
                 Map<K, EntryProcessorResult<T>> resMap = fut.get().value();
 
                 if (statsEnabled)

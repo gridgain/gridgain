@@ -481,8 +481,6 @@ public class GridClientNioTcpConnection extends GridClientConnection {
 
             assert old == null;
 
-//            System.out.println(">>>>> sending msg... [msg=" + msg + ']');
-
             GridNioFuture<?> sndFut = ses.send(msg);
 
             lastMsgSndTime = System.currentTimeMillis();
@@ -540,8 +538,6 @@ public class GridClientNioTcpConnection extends GridClientConnection {
 
             return;
         }
-
-//        log.warning(">>>>> Received response from server node [reqId=" + res.requestId() + ", msg=" + res + ']');
 
         if (fut.forward()) {
             removePending(res.requestId());

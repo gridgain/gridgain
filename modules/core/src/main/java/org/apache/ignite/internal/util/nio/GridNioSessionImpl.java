@@ -118,15 +118,8 @@ public class GridNioSessionImpl implements GridNioSession {
         catch (IgniteCheckedException e) {
             close();
 
-//            System.out.println(">>>> send err [err=" + e + ']');
-//            e.printStackTrace();
-
             return new GridNioFinishedFuture<Object>(e);
         }
-//        catch (Throwable t) {
-//            System.out.println(">>>> send err [errt=" + t + ']');
-//            throw t;
-//        }
     }
 
     /** {@inheritDoc} */

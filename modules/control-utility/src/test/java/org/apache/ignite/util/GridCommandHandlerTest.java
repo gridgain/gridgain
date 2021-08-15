@@ -1730,110 +1730,111 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         CommandHandler h = new CommandHandler();
 
         final VisorTxInfo[] toKill = {null};
-
-        // Basic test.
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).cluster().localNode());
-
-            for (VisorTxInfo info : res.getInfos()) {
-                if (info.getSize() == 100) {
-                    toKill[0] = info; // Store for further use.
-
-                    break;
-                }
-            }
-
-            assertEquals(3, map.size());
-        }, "--tx");
-
-        assertNotNull(toKill[0]);
-
-        // Test filter by label.
-        validate(h, map -> {
-            ClusterNode node = grid(0).cluster().localNode();
-
-            for (Map.Entry<ClusterNode, VisorTxTaskResult> entry : map.entrySet())
-                assertEquals(entry.getKey().equals(node) ? 1 : 0, entry.getValue().getInfos().size());
-        }, "--tx", "--label", "label1");
-
-        // Test filter by label regex.
-        validate(h, map -> {
-            ClusterNode node1 = grid(0).cluster().localNode();
-            ClusterNode node2 = grid("client").cluster().localNode();
-
-            for (Map.Entry<ClusterNode, VisorTxTaskResult> entry : map.entrySet()) {
-                if (entry.getKey().equals(node1)) {
-                    assertEquals(1, entry.getValue().getInfos().size());
-
-                    assertEquals("label1", entry.getValue().getInfos().get(0).getLabel());
-                }
-                else if (entry.getKey().equals(node2)) {
-                    assertEquals(1, entry.getValue().getInfos().size());
-
-                    assertEquals("label2", entry.getValue().getInfos().get(0).getLabel());
-                }
-                else
-                    assertTrue(entry.getValue().getInfos().isEmpty());
-
-            }
-        }, "--tx", "--label", "^label[0-9]");
-
-        // Test filter by empty label.
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).localNode());
-
-            for (VisorTxInfo info : res.getInfos())
-                assertNull(info.getLabel());
-
-        }, "--tx", "--label", "null");
-
-        // test check minSize
-        int minSize = 10;
-
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).localNode());
-
-            assertNotNull(res);
-
-            for (VisorTxInfo txInfo : res.getInfos())
-                assertTrue(txInfo.getSize() >= minSize);
-        }, "--tx", "--min-size", Integer.toString(minSize));
-
-        // test order by size.
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).localNode());
-
-            assertTrue(res.getInfos().get(0).getSize() >= res.getInfos().get(1).getSize());
-        }, "--tx", "--order", "SIZE");
-
-        // test order by duration.
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).localNode());
-
-            assertTrue(res.getInfos().get(0).getDuration() >= res.getInfos().get(1).getDuration());
-        }, "--tx", "--order", "DURATION");
-
-        // test order by start_time.
-        validate(h, map -> {
-            VisorTxTaskResult res = map.get(grid(0).localNode());
-
-            for (int i = res.getInfos().size() - 1; i > 1; i--)
-                assertTrue(res.getInfos().get(i - 1).getStartTime() >= res.getInfos().get(i).getStartTime());
-        }, "--tx", "--order", "START_TIME");
-
-        // Trigger topology change and test connection.
-        IgniteInternalFuture<?> startFut = multithreadedAsync(() -> {
-            try {
-                startGrid(2);
-            }
-            catch (Exception e) {
-                fail();
-            }
-        }, 1, "start-node-thread");
-
-        doSleep(5000); // Give enough time to reach exchange future.
+        IgniteInternalFuture<?> startFut = null;
 
         try {
+            // Basic test.
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).cluster().localNode());
+
+                for (VisorTxInfo info : res.getInfos()) {
+                    if (info.getSize() == 100) {
+                        toKill[0] = info; // Store for further use.
+
+                        break;
+                    }
+                }
+
+                assertEquals(3, map.size());
+            }, "--tx");
+
+            assertNotNull(toKill[0]);
+
+            // Test filter by label.
+            validate(h, map -> {
+                ClusterNode node = grid(0).cluster().localNode();
+
+                for (Map.Entry<ClusterNode, VisorTxTaskResult> entry : map.entrySet())
+                    assertEquals(entry.getKey().equals(node) ? 1 : 0, entry.getValue().getInfos().size());
+            }, "--tx", "--label", "label1");
+
+            // Test filter by label regex.
+            validate(h, map -> {
+                ClusterNode node1 = grid(0).cluster().localNode();
+                ClusterNode node2 = grid("client").cluster().localNode();
+
+                for (Map.Entry<ClusterNode, VisorTxTaskResult> entry : map.entrySet()) {
+                    if (entry.getKey().equals(node1)) {
+                        assertEquals(1, entry.getValue().getInfos().size());
+
+                        assertEquals("label1", entry.getValue().getInfos().get(0).getLabel());
+                    }
+                    else if (entry.getKey().equals(node2)) {
+                        assertEquals(1, entry.getValue().getInfos().size());
+
+                        assertEquals("label2", entry.getValue().getInfos().get(0).getLabel());
+                    }
+                    else
+                        assertTrue(entry.getValue().getInfos().isEmpty());
+
+                }
+            }, "--tx", "--label", "^label[0-9]");
+
+            // Test filter by empty label.
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).localNode());
+
+                for (VisorTxInfo info : res.getInfos())
+                    assertNull(info.getLabel());
+
+            }, "--tx", "--label", "null");
+
+            // test check minSize
+            int minSize = 10;
+
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).localNode());
+
+                assertNotNull(res);
+
+                for (VisorTxInfo txInfo : res.getInfos())
+                    assertTrue(txInfo.getSize() >= minSize);
+            }, "--tx", "--min-size", Integer.toString(minSize));
+
+            // test order by size.
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).localNode());
+
+                assertTrue(res.getInfos().get(0).getSize() >= res.getInfos().get(1).getSize());
+            }, "--tx", "--order", "SIZE");
+
+            // test order by duration.
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).localNode());
+
+                assertTrue(res.getInfos().get(0).getDuration() >= res.getInfos().get(1).getDuration());
+            }, "--tx", "--order", "DURATION");
+
+            // test order by start_time.
+            validate(h, map -> {
+                VisorTxTaskResult res = map.get(grid(0).localNode());
+
+                for (int i = res.getInfos().size() - 1; i > 1; i--)
+                    assertTrue(res.getInfos().get(i - 1).getStartTime() >= res.getInfos().get(i).getStartTime());
+            }, "--tx", "--order", "START_TIME");
+
+            // Trigger topology change and test connection.
+            startFut = multithreadedAsync(() -> {
+                try {
+                    startGrid(2);
+                }
+                catch (Exception e) {
+                    fail();
+                }
+            }, 1, "start-node-thread");
+
+            doSleep(5000); // Give enough time to reach exchange future.
+
             assertEquals(EXIT_CODE_OK, execute(h, "--tx"));
 
             // Test kill by xid.
@@ -1853,7 +1854,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             unlockLatch.countDown();
         }
 
-        startFut.get();
+        if (startFut != null)
+            startFut.get();
 
         fut.get();
 
