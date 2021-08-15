@@ -22,11 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.util.typedef.G;
 
@@ -92,8 +95,23 @@ public class HibernateAccessStrategyFactory {
      * @param eConverter Exception converter.
      */
     HibernateAccessStrategyFactory(HibernateKeyTransformer keyTransformer, HibernateExceptionConverter eConverter) {
+        this(keyTransformer, eConverter, null);
+    }
+
+    /**
+     * @param keyTransformer Key transformer.
+     * @param eConverter Exception converter.
+     * @param ignite Ignite instance. Can be {@code null}, but in this case {@link #IGNITE_INSTANCE_NAME_PROPERTY}
+     *               or {@link #GRID_CONFIG_PROPERTY} should be provided via hibernate properties.
+     */
+    public HibernateAccessStrategyFactory(
+        HibernateKeyTransformer keyTransformer,
+        HibernateExceptionConverter eConverter,
+        Ignite ignite
+    ) {
         this.keyTransformer = keyTransformer;
         this.eConverter = eConverter;
+        this.ignite = ignite;
     }
 
     /**
@@ -104,20 +122,22 @@ public class HibernateAccessStrategyFactory {
 
         verifyAtomicity = Boolean.valueOf(cfgValues.getOrDefault(VERIFY_ATOMICITY, verifyAtomicity).toString());
 
-        Object gridCfg = cfgValues.get(GRID_CONFIG_PROPERTY);
-
         Object igniteInstanceName = cfgValues.get(IGNITE_INSTANCE_NAME_PROPERTY);
 
-        if (gridCfg != null) {
-            try {
-                ignite = G.start(gridCfg.toString());
+        if (ignite == null) {
+            Object gridCfg = cfgValues.get(GRID_CONFIG_PROPERTY);
+
+            if (gridCfg != null) {
+                try {
+                    ignite = G.start(gridCfg.toString());
+                }
+                catch (IgniteException e) {
+                    throw eConverter.convert(e);
+                }
             }
-            catch (IgniteException e) {
-                throw eConverter.convert(e);
-            }
+            else
+                ignite = Ignition.ignite(igniteInstanceName == null ? null : igniteInstanceName.toString());
         }
-        else
-            ignite = Ignition.ignite(igniteInstanceName == null ? null : igniteInstanceName.toString());
 
         for (Map.Entry entry : cfgValues.entrySet()) {
             String key = entry.getKey().toString();
@@ -188,7 +208,26 @@ public class HibernateAccessStrategyFactory {
             IgniteInternalCache<Object, Object> cache = reference.get();
 
             if (cache == null) {
-                cache = ((IgniteKernal)ignite).getCache(cacheName);
+                IgniteKernal ignite = (IgniteKernal)HibernateAccessStrategyFactory.this.ignite;
+
+                IgniteCacheProxy<Object, Object> jcache = (IgniteCacheProxy<Object, Object>)ignite.cache(cacheName);
+
+                if (jcache == null) {
+                    try {
+                        CacheConfiguration<?, ?> template = ignite.context().cache().getConfigFromTemplate(cacheName);
+
+                        if (template != null) {
+                            ignite.createCache(template);
+
+                            cache = ignite.getCache(cacheName);
+                        }
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IllegalArgumentException("Failed to get cache: " + e.getMessage(), e);
+                    }
+                }
+                else
+                    cache = jcache.internalProxy();
 
                 if (cache == null)
                     throw new IllegalArgumentException("Cache '" + cacheName + "' for region '" + regionName + "' is not configured.");
