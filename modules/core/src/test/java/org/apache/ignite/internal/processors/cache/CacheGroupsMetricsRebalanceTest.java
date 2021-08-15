@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.Arrays;
 import java.util.Collection;
-import com.google.common.collect.Lists;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
