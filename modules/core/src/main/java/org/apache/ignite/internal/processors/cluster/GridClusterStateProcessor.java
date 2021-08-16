@@ -207,13 +207,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /** Minimal IgniteProductVersion supporting BaselineTopology */
     private static final IgniteProductVersion MIN_BLT_SUPPORTING_VER = IgniteProductVersion.fromString("2.4.0");
 
-    /**
-     * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
-     * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
-     * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
-     */
-    private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
-
     /** Listener. */
     private final GridLocalEventListener lsr = new GridLocalEventListener() {
         @Override public void onEvent(Event evt) {
@@ -234,6 +227,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
         }
     };
+
+    /** */
+    private final ChangeStateSynchronizer changeStateSynchronizer = new ChangeStateSynchronizer();
 
     /**
      * @param ctx Kernal context.
@@ -541,7 +537,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onKernalStop(boolean cancel) {
         GridChangeGlobalStateFuture fut = this.stateChangeFut.get();
 
-        changeStatesInProgress.clear();
+        changeStateSynchronizer.clear();
 
         if (fut != null)
             fut.onDone(new NodeStoppingException("Failed to wait for cluster state change, node is stopping."));
@@ -635,28 +631,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
         DiscoveryDataClusterState discoClusterState = globalState;
 
-        if (ctx.clientNode() && !ctx.isDaemon()) {
-            UUID reqId = msg.requestId();
-
-            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-            if (changeStateLatch != null) {
-                boolean awaited = false;
-
-                try {
-                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
-                }
-                catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-
-                if (!awaited)
-                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                            "before ChangeGlobalStateMessage was processed.");
-
-                changeStatesInProgress.remove(reqId);
-            }
-        }
+        changeStateSynchronizer.onStateFinishMessage(msg);
 
         if (msg.requestId().equals(discoClusterState.transitionRequestId())) {
             if (log.isInfoEnabled())
@@ -699,24 +674,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** */
-    public void onStateMessage(ChangeGlobalStateMessage stateChangeMsg) {
-        if (ctx.clientNode() && !ctx.isDaemon())
-            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
-    }
-
-    /** */
-    public void onStateMessageProcessingFinished(ChangeGlobalStateMessage stateChangeMsg) {
-        if (ctx.clientNode() && !ctx.isDaemon()) {
-            CountDownLatch latch = changeStatesInProgress.get(stateChangeMsg.requestId());
-
-            if (latch != null)
-                latch.countDown();
-        }
+    public ChangeStateSynchronizer changeStateSynchronizer() {
+        return changeStateSynchronizer;
     }
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
-        changeStatesInProgress.clear();
+        changeStateSynchronizer.clear();
     }
 
     /** */
@@ -2546,6 +2510,63 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         BaselineStateAndHistoryData(DiscoveryDataClusterState globalState, BaselineTopologyHistory recentHistory) {
             this.globalState = globalState;
             this.recentHistory = recentHistory;
+        }
+    }
+
+    /** */
+    public class ChangeStateSynchronizer implements Serializable {
+        /**
+         * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
+         * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
+         * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
+         */
+        private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
+
+        /** */
+        public void onStateMessage(ChangeGlobalStateMessage stateChangeMsg) {
+            if (ctx.clientNode() && !ctx.isDaemon())
+                changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
+        }
+
+        /** */
+        public void onStateMessageProcessingFinished(ChangeGlobalStateMessage stateChangeMsg) {
+            if (ctx.clientNode() && !ctx.isDaemon()) {
+                CountDownLatch latch = changeStatesInProgress.get(stateChangeMsg.requestId());
+
+                if (latch != null)
+                    latch.countDown();
+            }
+        }
+
+        /** */
+        public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
+            if (ctx.clientNode() && !ctx.isDaemon()) {
+                UUID reqId = msg.requestId();
+
+                CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
+
+                if (changeStateLatch != null) {
+                    boolean awaited = false;
+
+                    try {
+                        awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
+                    }
+                    catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+
+                    if (!awaited)
+                        log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
+                                "before ChangeGlobalStateMessage was processed.");
+
+                    changeStatesInProgress.remove(reqId);
+                }
+            }
+        }
+
+        /** */
+        public void clear() {
+            changeStatesInProgress.clear();
         }
     }
 }
