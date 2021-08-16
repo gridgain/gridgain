@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.discovery;
+package org.apache.ignite.internal.processors.cache;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,16 +35,16 @@ import org.junit.Test;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 
 /**
- * Test check that disco-event-worker proccessed ChangeGlobalStateMessage before
- * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage
+ * Test check that disco-event-worker processed ChangeGlobalStateMessage before
+ * disco-notifier-worker start processing of ChangeGlobalStateFinishMessage.
  */
 public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     /** */
     @Test
     public void testChangeGlobalStateMessageOrder() throws Exception {
-        startGrid(0);
+        IgniteEx grid = startGrid(0);
 
-        IgniteEx client = startClientGrid("Client1");
+        IgniteEx client = startClientGrid(1);
 
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -54,14 +54,22 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         GridTestUtils.runAsync(() -> client.cluster().state(ClusterState.ACTIVE));
 
-        latch.await(20, TimeUnit.SECONDS);
+        latch.await(10, TimeUnit.SECONDS);
 
         assertTrue(client.cluster().state() == ClusterState.ACTIVE);
 
-        doSleep(2000);
+        //check that cluster state changing works
+        GridTestUtils.waitForCondition(() -> {
+                    try {
+                        client.cluster().state(ClusterState.INACTIVE);
+                    }
+                    catch (Exception e) {
+                        return false;
+                    }
 
-        //assert that cluster state changing works
-        client.cluster().state(ClusterState.INACTIVE);
+                    return true;
+                },
+                5000);
 
         assertTrue(client.cluster().state() == ClusterState.INACTIVE);
 
@@ -74,7 +82,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setActiveOnStart(false);
+        cfg.setClusterStateOnStart(ClusterState.INACTIVE);
 
         return cfg;
     }
@@ -86,7 +94,7 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /** */
+    /** This listener slow down processing of ChangeGlobalStateMessage in disco-event-worker thread. */
     private static class TestEventListener implements HighPriorityListener, DiscoveryEventListener {
         /** */
         IgniteEx client;
@@ -104,8 +112,8 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
         @Override public void onEvent(DiscoveryEvent evt, DiscoCache cache) {
             if (latch.getCount() > 0 && ((DiscoveryCustomEvent)evt).customMessage() instanceof ChangeGlobalStateMessage) {
                 try {
-                    assert GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 10000)
-                        : "Cluster state change is not in progress";
+                    assertTrue("Cluster state change is not in progress",
+                            GridTestUtils.waitForCondition(() -> client.context().state().clusterState().transition(), 5000));
 
                     doSleep(2000);
                 }

@@ -291,13 +291,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     /** Local node compatibility consistent ID. */
     private Serializable consistentId;
 
-    /**
-     * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
-     * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
-     * in the {@link GridCachePartitionExchangeManager} before the {@link ChangeGlobalStateFinishMessage} is processed.
-     */
-    private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
-
     /** @param ctx Context. */
     public GridDiscoveryManager(GridKernalContext ctx) {
         super(ctx, ctx.config().getDiscoverySpi());
@@ -630,39 +623,17 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     if (customMsg instanceof ChangeGlobalStateMessage) {
                         ChangeGlobalStateMessage stateChangeMsg = (ChangeGlobalStateMessage)customMsg;
 
-                        if (ctx.clientNode())
-                            changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
+                        ctx.state().onStateMessage(stateChangeMsg);
 
                         incMinorTopVer = ctx.state().onStateChangeMessage(
-                            new AffinityTopologyVersion(topVer, minorTopVer),
-                            stateChangeMsg,
-                            discoCache());
+                                new AffinityTopologyVersion(topVer, minorTopVer),
+                                stateChangeMsg,
+                                discoCache());
                     }
                     else if (customMsg instanceof ChangeGlobalStateFinishMessage) {
                         ChangeGlobalStateFinishMessage finishStateChangeMsg = (ChangeGlobalStateFinishMessage)customMsg;
 
-                        if (ctx.clientNode()) {
-                            UUID reqId = finishStateChangeMsg.requestId();
 
-                            CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-                            if (changeStateLatch != null) {
-                                boolean awaited = true;
-
-                                try {
-                                    awaited = changeStateLatch.await(DFLT_FAILURE_DETECTION_TIMEOUT, MILLISECONDS);
-                                }
-                                catch (InterruptedException e) {
-                                    Thread.currentThread().interrupt();
-                                }
-
-                                if (!awaited)
-                                    log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
-                                        "before ChangeGlobalStateMessage was processed.");
-
-                                changeStatesInProgress.remove(reqId);
-                            }
-                        }
 
                         ctx.state().onStateFinishMessage(finishStateChangeMsg);
 
@@ -2672,14 +2643,6 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         }
 
         return null;
-    }
-
-    /** */
-    public void setChangeStateMessageWasProcessed(UUID reqId) {
-        CountDownLatch changeStateLatch = changeStatesInProgress.get(reqId);
-
-        if (changeStateLatch != null)
-            changeStateLatch.countDown();
     }
 
     /** Worker for network segment checks. */

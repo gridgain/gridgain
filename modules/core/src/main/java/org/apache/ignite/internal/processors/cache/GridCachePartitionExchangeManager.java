@@ -636,8 +636,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     exchFut.listen(f -> onClusterStateChangeFinish(f, exchActions, baselineChanging));
                 }
 
-                if (cctx.localNode().isClient())
-                    cctx.discovery().setChangeStateMessageWasProcessed(stateChangeMsg.requestId());
+                cctx.kernalContext().state().onStateMessageProcessingFinished(stateChangeMsg);
             }
             else if (customMsg instanceof DynamicCacheChangeBatch) {
                 DynamicCacheChangeBatch batch = (DynamicCacheChangeBatch)customMsg;
