@@ -22,6 +22,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <ignite/common/common.h>
+
 namespace ignite
 {
     namespace network
@@ -33,7 +35,7 @@ namespace ignite
              *
              * @param addrs Addresses set.
              */
-            void GetLocalAddresses(std::set<std::string>& addrs);
+            void IGNITE_IMPORT_EXPORT GetLocalAddresses(std::set<std::string>& addrs);
         }
     }
 }

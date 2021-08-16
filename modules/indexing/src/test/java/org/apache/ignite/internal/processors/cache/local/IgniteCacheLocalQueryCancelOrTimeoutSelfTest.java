@@ -32,6 +32,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.timeout.TimedQueryHelper;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -45,18 +46,19 @@ import static org.apache.ignite.cache.CacheMode.LOCAL;
  */
 public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbstractTest {
     /** Cache size. */
-    private static final int CACHE_SIZE = 10_000;
+    private static final int CACHE_SIZE = 1_000;
 
     /** */
-    private static final String QUERY = "select a._val, b._val from String a, String b";
+    private static final String QUERY = "select a._val, b._val, longProcess(a._key, 5) from String a, String b";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
-        ccfg.setIndexedTypes(Integer.class, String.class);
-        ccfg.setCacheMode(LOCAL);
+        CacheConfiguration<Integer, String> ccfg = new CacheConfiguration<Integer, String>(DEFAULT_CACHE_NAME)
+            .setIndexedTypes(Integer.class, String.class)
+            .setCacheMode(LOCAL)
+            .setSqlFunctionClasses(TimedQueryHelper.class);
 
         cfg.setCacheConfiguration(ccfg);
         cfg.setSqlConfiguration(new SqlConfiguration().setSqlGlobalMemoryQuota("0"));

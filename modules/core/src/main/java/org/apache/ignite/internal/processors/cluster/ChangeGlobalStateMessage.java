@@ -77,6 +77,43 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
     @GridToStringExclude
     @Nullable private transient ServiceDeploymentActions serviceDeploymentActions;
 
+    /** If {@code true}, cluster deactivation will be forced. */
+    private final boolean forceDeactivation;
+
+    /**
+     * @param reqId State change request ID.
+     * @param initiatingNodeId Node initiated state change.
+     * @param storedCfgs Configurations read from persistent store.
+     * @param state New cluster state.
+     * @param forceDeactivation If {@code true}, cluster deactivation will be forced.
+     * @param baselineTopology Baseline topology.
+     * @param forceChangeBaselineTopology Force change baseline topology flag.
+     * @param timestamp Timestamp.
+     */
+    public ChangeGlobalStateMessage(
+        UUID reqId,
+        UUID initiatingNodeId,
+        @Nullable List<StoredCacheData> storedCfgs,
+        ClusterState state,
+        boolean forceDeactivation,
+        BaselineTopology baselineTopology,
+        boolean forceChangeBaselineTopology,
+        long timestamp
+    ) {
+        assert reqId != null;
+        assert initiatingNodeId != null;
+
+        this.reqId = reqId;
+        this.initiatingNodeId = initiatingNodeId;
+        this.storedCfgs = storedCfgs;
+        this.state = state;
+        activate = ClusterState.active(state);
+        this.baselineTopology = baselineTopology;
+        this.forceChangeBaselineTopology = forceChangeBaselineTopology;
+        this.timestamp = timestamp;
+        this.forceDeactivation = forceDeactivation;
+    }
+
     /**
      * @param reqId State change request ID.
      * @param initiatingNodeId Node initiated state change.
@@ -102,10 +139,11 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
         this.initiatingNodeId = initiatingNodeId;
         this.storedCfgs = storedCfgs;
         this.state = state;
-        this.activate = ClusterState.active(state);
+        activate = ClusterState.active(state);
         this.baselineTopology = baselineTopology;
         this.forceChangeBaselineTopology = forceChangeBaselineTopology;
         this.timestamp = timestamp;
+        forceDeactivation = false;
     }
 
     /**
@@ -210,6 +248,14 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
      */
     @Nullable public BaselineTopology baselineTopology() {
         return baselineTopology;
+    }
+
+    /**
+     * @return {@code True} if cluster deactivation will be forced. {@code False} otherwise.
+     * @see ClusterState#INACTIVE
+     */
+    public boolean forceDeactivation() {
+        return forceDeactivation;
     }
 
     /**

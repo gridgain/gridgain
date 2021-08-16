@@ -601,6 +601,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
                             cache.put(key, ret.get2());
 
                         tx.commit();
+
+                        if (log.isDebugEnabled())
+                            log.debug("New DataStructure has been created [" + ret.get1() + ", val=" + ret.get2() + "].");
                     }
                     catch (Error | Exception e) {
                         dsMap.remove(key);
@@ -734,7 +737,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
     }
 
     /**
-     * Would return this cache to normal work if it was suspened (and if it is atomics cache).
+     * Would return this cache to normal work if it was suspended (and if it is atomics cache).
      * @param cacheName To restart.
      */
     public void restart(String cacheName, IgniteInternalCache cache) {

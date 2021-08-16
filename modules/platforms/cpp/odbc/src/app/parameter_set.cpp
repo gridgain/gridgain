@@ -160,7 +160,7 @@ namespace ignite
 
             Parameter* ParameterSet::GetParameter(uint16_t idx)
             {
-                ParameterBindingMap::iterator it = parameters.find(currentParamIdx);
+                ParameterBindingMap::iterator it = parameters.find(idx);
 
                 if (it != parameters.end())
                     return &it->second;

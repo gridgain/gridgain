@@ -37,8 +37,6 @@ import org.apache.ignite.internal.managers.communication.IgniteCommunicationSslB
 import org.apache.ignite.internal.managers.communication.IgniteIoTestMessagesTest;
 import org.apache.ignite.internal.managers.communication.IgniteVariousConnectionNumberTest;
 import org.apache.ignite.internal.processors.cache.CacheAffinityCallSelfTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteQueueTest;
-import org.apache.ignite.internal.processors.cache.CacheDeferredDeleteSanitySelfTest;
 import org.apache.ignite.internal.processors.cache.CacheMvccTxFastFinishTest;
 import org.apache.ignite.internal.processors.cache.CacheTxFastFinishTest;
 import org.apache.ignite.internal.processors.cache.DataStorageConfigurationValidationTest;
@@ -62,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReplicatedLocalStore
 import org.apache.ignite.internal.processors.cache.GridCacheStopSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheTcpClientDiscoveryMultiThreadedTest;
 import org.apache.ignite.internal.processors.cache.GridDataStorageConfigurationConsistencySelfTest;
+import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicConcurrentUnorderedUpdateAllTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicInvokeTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalInvokeTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAtomicLocalWithStoreInvokeTest;
@@ -135,8 +134,6 @@ public class IgniteCacheMvccTestSuite1 {
         ignoredTests.add(IgniteCacheMessageRecoveryIdleConnectionTest.class);
         ignoredTests.add(IgniteCacheConnectionRecoveryTest.class);
         ignoredTests.add(IgniteCacheConnectionRecovery10ConnectionsTest.class);
-        ignoredTests.add(CacheDeferredDeleteSanitySelfTest.class);
-        ignoredTests.add(CacheDeferredDeleteQueueTest.class);
         ignoredTests.add(GridCacheStopSelfTest.class);
         ignoredTests.add(GridCacheBinariesNearPartitionedByteArrayValuesSelfTest.class);
         ignoredTests.add(GridCacheBinariesPartitionedOnlyByteArrayValuesSelfTest.class);
@@ -151,6 +148,7 @@ public class IgniteCacheMvccTestSuite1 {
         ignoredTests.add(IgniteCacheAtomicWithStoreInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicLocalInvokeTest.class);
         ignoredTests.add(IgniteCacheAtomicLocalWithStoreInvokeTest.class);
+        ignoredTests.add(IgniteCacheAtomicConcurrentUnorderedUpdateAllTest.class);
         ignoredTests.add(GridCachePartitionedLocalStoreSelfTest.class);
         ignoredTests.add(GridCacheReplicatedLocalStoreSelfTest.class);
         ignoredTests.add(CacheStoreReadFromBackupTest.class);

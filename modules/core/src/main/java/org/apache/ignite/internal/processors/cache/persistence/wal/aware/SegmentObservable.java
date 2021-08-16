@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 /**
  * Implementation of observer-observable pattern. For handling specific changes of segment.
  */
-public abstract class SegmentObservable {
+abstract class SegmentObservable {
     /** Observers for handle changes of archived index. */
     private final Queue<Consumer<Long>> observers = new ConcurrentLinkedQueue<>();
 

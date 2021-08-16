@@ -21,16 +21,19 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
@@ -42,9 +45,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteTooManyOpenFilesException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.managers.GridManager;
+import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
-import org.apache.ignite.internal.processors.timeout.GridSpiTimeoutObject;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
@@ -54,6 +57,7 @@ import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
 import org.apache.ignite.internal.util.nio.GridDirectParser;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
+import org.apache.ignite.internal.util.nio.GridNioException;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioMessageReaderFactory;
 import org.apache.ignite.internal.util.nio.GridNioMessageWriterFactory;
@@ -63,7 +67,6 @@ import org.apache.ignite.internal.util.nio.GridNioServerListener;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioTracerFilter;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
-import org.apache.ignite.internal.util.nio.ssl.BlockingSslHandler;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.nio.ssl.GridSslMeta;
 import org.apache.ignite.internal.util.typedef.X;
@@ -87,15 +90,14 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
 import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
+import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
-import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.COMMUNICATION_METRICS_GROUP_NAME;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.HANDSHAKE_WAIT_MSG_TYPE;
-import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.makeMessageType;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.handshakeTimeoutException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.isRecoverableException;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.nodeAddresses;
@@ -125,9 +127,6 @@ public class GridNioServerWrapper {
 
     /** Config. */
     private final TcpCommunicationConfiguration cfg;
-
-    /** Time object processor. */
-    private final GridTimeoutProcessor timeObjProcessor;
 
     /** Attribute names. */
     private final AttributeNames attrs;
@@ -184,12 +183,8 @@ public class GridNioServerWrapper {
     private volatile ThrowableSupplier<SocketChannel, IOException> socketChannelFactory = SocketChannel::open;
 
     /** Enable forcible node kill. */
-    private boolean enableForcibleNodeKill = IgniteSystemProperties
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
         .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
-
-    /** Enable troubleshooting logger. */
-    private boolean enableTroubleshootingLog = IgniteSystemProperties
-        .getBoolean(IgniteSystemProperties.IGNITE_TROUBLESHOOTING_LOGGER);
 
     /** NIO server. */
     private GridNioServer<Message> nioSrv;
@@ -200,10 +195,15 @@ public class GridNioServerWrapper {
     /** Client pool for client futures. */
     private ConnectionClientPool clientPool;
 
+    /** Scheduled executor service which closed the socket if handshake timeout is out. **/
+    private final ScheduledExecutorService handshakeTimeoutExecutorService;
+
+    /** Executor for establishing a connection to a node. */
+    private final TcpHandshakeExecutor tcpHandshakeExecutor;
+
     /**
      * @param log Logger.
      * @param cfg Config.
-     * @param timeObjProcessor Time object processor.
      * @param attributeNames Attribute names.
      * @param tracing Tracing.
      * @param nodeGetter Node getter.
@@ -216,11 +216,11 @@ public class GridNioServerWrapper {
      * @param srvLsnr Server listener.
      * @param igniteInstanceName Ignite instance name.
      * @param workersRegistry Workers registry.
+     * @param tcpHandshakeExecutor Executor for establishing a connection to a node.
      */
     public GridNioServerWrapper(
         IgniteLogger log,
         TcpCommunicationConfiguration cfg,
-        GridTimeoutProcessor timeObjProcessor,
         AttributeNames attributeNames,
         Tracing tracing,
         Function<UUID, ClusterNode> nodeGetter,
@@ -234,11 +234,11 @@ public class GridNioServerWrapper {
         String igniteInstanceName,
         WorkersRegistry workersRegistry,
         @Nullable GridMetricManager metricMgr,
-        ThrowableBiFunction<ClusterNode, Integer, GridCommunicationClient, IgniteCheckedException> createTcpClientFun
+        ThrowableBiFunction<ClusterNode, Integer, GridCommunicationClient, IgniteCheckedException> createTcpClientFun,
+        TcpHandshakeExecutor tcpHandshakeExecutor
     ) {
         this.log = log;
         this.cfg = cfg;
-        this.timeObjProcessor = timeObjProcessor;
         this.attrs = attributeNames;
         this.tracing = tracing;
         this.nodeGetter = nodeGetter;
@@ -253,6 +253,11 @@ public class GridNioServerWrapper {
         this.workersRegistry = workersRegistry;
         this.metricMgr = metricMgr;
         this.createTcpClientFun = createTcpClientFun;
+        this.tcpHandshakeExecutor = tcpHandshakeExecutor;
+
+        this.handshakeTimeoutExecutorService = newSingleThreadScheduledExecutor(
+            new IgniteThreadFactory(igniteInstanceName, "handshake-timeout-nio")
+        );
     }
 
     /**
@@ -270,6 +275,8 @@ public class GridNioServerWrapper {
             nioSrv.stop();
 
         stopping = true;
+
+        handshakeTimeoutExecutorService.shutdown();
     }
 
     /**
@@ -356,7 +363,7 @@ public class GridNioServerWrapper {
 
             while (ses == null) { // Reconnection on handshake timeout.
                 if (stopping)
-                    throw new IgniteSpiException("Node is stopping.");
+                    throw new GridNioException("Failed to create session, server is stopped.");
 
                 if (isLocalNodeAddress(addr)) {
                     if (log.isDebugEnabled())
@@ -418,6 +425,9 @@ public class GridNioServerWrapper {
                     GridSslMeta sslMeta = null;
 
                     try {
+                        if (stopping)
+                            throw new GridNioException("Failed to create session, server is stopped.");
+
                         timeout = connTimeoutStgy.nextTimeout();
 
                         ch.socket().connect(addr, (int)timeout);
@@ -452,8 +462,9 @@ public class GridNioServerWrapper {
                                 recoveryDesc.received(),
                                 connIdx));
 
-                        if (rcvCnt == ALREADY_CONNECTED)
+                        if (rcvCnt == ALREADY_CONNECTED) {
                             return null;
+                        }
                         else if (rcvCnt == NODE_STOPPING) {
                             // Safe to remap on remote node stopping.
                             throw new ClusterTopologyCheckedException("Remote node started stop procedure: " + node.id());
@@ -548,7 +559,7 @@ public class GridNioServerWrapper {
                     if (X.hasCause(e, "Too many open files", SocketException.class))
                         throw new IgniteTooManyOpenFilesException(e);
 
-                    // check if timeout occured in case of unrecoverable exception
+                    // check if timeout occurred in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
                         U.warn(log, "Connection timed out (will stop attempts to perform the connect) " +
                             "[node=" + node.id() + ", connTimeoutStgy=" + connTimeoutStgy +
@@ -604,12 +615,16 @@ public class GridNioServerWrapper {
         }
 
         if (ses == null) {
-            if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
-                if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
-                    String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
-                        "; inverse connection will be requested.";
+            // If local node and remote node are configured to use paired connections we won't even request
+            // inverse connection so no point in throwing NodeUnreachableException
+            if (!cfg.usePairedConnections() || !Boolean.TRUE.equals(node.attribute(attrs.pairedConnection()))) {
+                if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
+                    if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
+                        String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                            "; inverse connection will be requested.";
 
-                    throw new NodeUnreachableException(msg);
+                        throw new NodeUnreachableException(msg);
+                    }
                 }
             }
 
@@ -626,7 +641,7 @@ public class GridNioServerWrapper {
      * @return {@code True} if exception shows that client is unreachable, {@code false} otherwise.
      */
     private boolean isNodeUnreachableException(Exception e) {
-        return e instanceof SocketTimeoutException;
+        return e instanceof NodeUnreachableException || e instanceof SocketTimeoutException;
     }
 
     /**
@@ -721,37 +736,19 @@ public class GridNioServerWrapper {
     ) throws IgniteCheckedException {
         assert errs != null;
 
-        boolean commErrResolve = false;
+        if (!isRecoverableException(errs)
+            && !X.hasCause(errs, GridNioException.class))
+            throw errs;
 
         IgniteSpiContext ctx = stateProvider.getSpiContext();
 
-        if (isRecoverableException(errs) && ctx.communicationFailureResolveSupported()) {
-            commErrResolve = true;
-
+        if (ctx.communicationFailureResolveSupported())
             ctx.resolveCommunicationFailure(node, errs);
-        }
-
-        if (!commErrResolve && enableForcibleNodeKill) {
-            if (ctx.node(node.id()) != null
-                && node.isClient()
-                && !locNodeSupplier.get().isClient()
-                && isRecoverableException(errs)
-            ) {
-                // Only server can fail client for now, as in TcpDiscovery resolveCommunicationFailure() is not supported.
-                String msg = "TcpCommunicationSpi failed to establish connection to node, node will be dropped from " +
-                    "cluster [" + "rmtNode=" + node + ']';
-
-                if (enableTroubleshootingLog)
-                    U.error(log, msg, errs);
-                else
-                    U.warn(log, msg);
-
-                ctx.failNode(node.id(), "TcpCommunicationSpi failed to establish connection to node [" +
-                    "rmtNode=" + node +
-                    ", errs=" + errs +
-                    ", connectErrs=" + X.getSuppressedList(errs) + ']');
-            }
-        }
+        else if (forcibleNodeKillEnabled
+            && ctx.node(node.id()) != null
+            && node.isClient()
+            && !locNodeSupplier.get().isClient())
+            CommunicationTcpUtils.failNode(node, ctx, errs, log);
 
         throw errs;
     }
@@ -843,7 +840,13 @@ public class GridNioServerWrapper {
                 IgniteBiInClosure<GridNioSession, Integer> queueSizeMonitor =
                     !clientMode && cfg.slowClientQueueLimit() > 0 ? this::checkClientQueueSize : null;
 
-                GridNioFilter[] filters;
+                List<GridNioFilter> filters = new ArrayList<>();
+
+                if (tracing instanceof GridTracingManager && ((GridManager)tracing).enabled())
+                    filters.add(new GridNioTracerFilter(log, tracing));
+
+                filters.add(new GridNioCodecFilter(parser, log, true));
+                filters.add(new GridConnectionBytesVerifyFilter(log));
 
                 if (stateProvider.isSslEnabled()) {
                     GridNioSslFilter sslFilter =
@@ -855,19 +858,8 @@ public class GridNioServerWrapper {
                     sslFilter.wantClientAuth(true);
                     sslFilter.needClientAuth(true);
 
-                    filters = new GridNioFilter[] {
-                        new GridNioTracerFilter(log, tracing),
-                        new GridNioCodecFilter(parser, log, true),
-                        new GridConnectionBytesVerifyFilter(log),
-                        sslFilter
-                    };
+                    filters.add(sslFilter);
                 }
-                else
-                    filters = new GridNioFilter[] {
-                        new GridNioTracerFilter(log, tracing),
-                        new GridNioCodecFilter(parser, log, true),
-                        new GridConnectionBytesVerifyFilter(log)
-                    };
 
                 GridNioServer.Builder<Message> builder = GridNioServer.<Message>builder()
                     .address(cfg.localHost())
@@ -886,7 +878,7 @@ public class GridNioServerWrapper {
                     .directMode(true)
                     .writeTimeout(cfg.socketWriteTimeout())
                     .selectorSpins(cfg.selectorSpins())
-                    .filters(filters)
+                    .filters(filters.toArray(new GridNioFilter[filters.size()]))
                     .writerFactory(writerFactory)
                     .skipRecoveryPredicate(skipRecoveryPred)
                     .messageQueueSizeListener(queueSizeMonitor)
@@ -1011,189 +1003,12 @@ public class GridNioServerWrapper {
         GridSslMeta sslMeta,
         HandshakeMessage msg
     ) throws IgniteCheckedException {
-        HandshakeTimeoutObject obj = new HandshakeTimeoutObject<>(ch, U.currentTimeMillis() + timeout);
+        HandshakeTimeoutObject timeoutObject = new HandshakeTimeoutObject(ch);
 
-        if (timeObjProcessor != null)
-            timeObjProcessor.addTimeoutObject(new GridSpiTimeoutObject(obj));
-        else
-            stateProvider.getSpiContext().addTimeoutObject(obj);
-
-        long rcvCnt;
+        handshakeTimeoutExecutorService.schedule(timeoutObject, timeout, TimeUnit.MILLISECONDS);
 
         try {
-            BlockingSslHandler sslHnd = null;
-
-            ByteBuffer buf;
-
-            // Step 1. Get remote node response with the remote nodeId value.
-            if (stateProvider.isSslEnabled()) {
-                assert sslMeta != null;
-
-                sslHnd = new BlockingSslHandler(sslMeta.sslEngine(), ch, cfg.directBuffer(), ByteOrder.LITTLE_ENDIAN, log);
-
-                if (!sslHnd.handshake())
-                    throw new HandshakeException("SSL handshake is not completed.");
-
-                ByteBuffer handBuff = sslHnd.applicationBuffer();
-
-                if (handBuff.remaining() >= DIRECT_TYPE_SIZE) {
-                    short msgType = makeMessageType(handBuff.get(0), handBuff.get(1));
-
-                    if (msgType == HANDSHAKE_WAIT_MSG_TYPE)
-                        return NEED_WAIT;
-                }
-
-                if (handBuff.remaining() < NodeIdMessage.MESSAGE_FULL_SIZE) {
-                    buf = ByteBuffer.allocate(1000);
-
-                    int read = ch.read(buf);
-
-                    if (read == -1)
-                        throw new HandshakeException("Failed to read remote node ID (connection closed).");
-
-                    buf.flip();
-
-                    buf = sslHnd.decode(buf);
-
-                    if (handBuff.remaining() >= DIRECT_TYPE_SIZE) {
-                        short msgType = makeMessageType(handBuff.get(0), handBuff.get(1));
-
-                        if (msgType == HANDSHAKE_WAIT_MSG_TYPE)
-                            return NEED_WAIT;
-                    }
-                }
-                else
-                    buf = handBuff;
-            }
-            else {
-                buf = ByteBuffer.allocate(NodeIdMessage.MESSAGE_FULL_SIZE);
-
-                for (int i = 0; i < NodeIdMessage.MESSAGE_FULL_SIZE; ) {
-                    int read = ch.read(buf);
-
-                    if (read == -1)
-                        throw new HandshakeException("Failed to read remote node ID (connection closed).");
-
-                    if (read >= DIRECT_TYPE_SIZE) {
-                        short msgType = makeMessageType(buf.get(0), buf.get(1));
-
-                        if (msgType == HANDSHAKE_WAIT_MSG_TYPE)
-                            return NEED_WAIT;
-                    }
-
-                    i += read;
-                }
-            }
-
-            UUID rmtNodeId0 = U.bytesToUuid(buf.array(), DIRECT_TYPE_SIZE);
-
-            if (!rmtNodeId.equals(rmtNodeId0))
-                throw new HandshakeException("Remote node ID is not as expected [expected=" + rmtNodeId +
-                    ", rcvd=" + rmtNodeId0 + ']');
-            else if (log.isDebugEnabled())
-                log.debug("Received remote node ID: " + rmtNodeId0);
-
-            if (stateProvider.isSslEnabled()) {
-                assert sslHnd != null;
-
-                U.writeFully(ch, sslHnd.encrypt(ByteBuffer.wrap(U.IGNITE_HEADER)));
-            }
-            else
-                U.writeFully(ch, ByteBuffer.wrap(U.IGNITE_HEADER));
-
-            // Step 2. Prepare Handshake message to send to the remote node.
-            if (log.isDebugEnabled())
-                log.debug("Writing handshake message [rmtNode=" + rmtNodeId + ", msg=" + msg + ']');
-
-            buf = ByteBuffer.allocate(msg.getMessageSize());
-
-            buf.order(ByteOrder.LITTLE_ENDIAN);
-
-            boolean written = msg.writeTo(buf, null);
-
-            assert written;
-
-            buf.flip();
-
-            if (stateProvider.isSslEnabled()) {
-                assert sslHnd != null;
-
-                U.writeFully(ch, sslHnd.encrypt(buf));
-            }
-            else
-                U.writeFully(ch, buf);
-
-            if (log.isDebugEnabled())
-                log.debug("Waiting for handshake [rmtNode=" + rmtNodeId + ']');
-
-            // Step 3. Waiting for response from the remote node with their receive count message.
-            if (stateProvider.isSslEnabled()) {
-                assert sslHnd != null;
-
-                buf = ByteBuffer.allocate(1000);
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-
-                ByteBuffer decode = ByteBuffer.allocate(2 * buf.capacity());
-                decode.order(ByteOrder.LITTLE_ENDIAN);
-
-                for (int i = 0; i < RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE; ) {
-                    int read = ch.read(buf);
-
-                    if (read == -1)
-                        throw new HandshakeException("Failed to read remote node recovery handshake " +
-                            "(connection closed).");
-
-                    buf.flip();
-
-                    ByteBuffer decode0 = sslHnd.decode(buf);
-
-                    i += decode0.remaining();
-
-                    decode = appendAndResizeIfNeeded(decode, decode0);
-
-                    buf.clear();
-                }
-
-                decode.flip();
-
-                rcvCnt = decode.getLong(DIRECT_TYPE_SIZE);
-
-                if (decode.limit() > RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE) {
-                    decode.position(RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE);
-
-                    sslMeta.decodedBuffer(decode);
-                }
-
-                ByteBuffer inBuf = sslHnd.inputBuffer();
-
-                if (inBuf.position() > 0)
-                    sslMeta.encodedBuffer(inBuf);
-            }
-            else {
-                buf = ByteBuffer.allocate(RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE);
-
-                buf.order(ByteOrder.LITTLE_ENDIAN);
-
-                for (int i = 0; i < RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE; ) {
-                    int read = ch.read(buf);
-
-                    if (read == -1)
-                        throw new HandshakeException("Failed to read remote node recovery handshake " +
-                            "(connection closed).");
-
-                    i += read;
-                }
-
-                rcvCnt = buf.getLong(DIRECT_TYPE_SIZE);
-            }
-
-            if (log.isDebugEnabled())
-                log.debug("Received handshake message [rmtNode=" + rmtNodeId + ", rcvCnt=" + rcvCnt + ']');
-
-            if (rcvCnt == -1) {
-                if (log.isDebugEnabled())
-                    log.debug("Connection rejected, will retry client creation [rmtNode=" + rmtNodeId + ']');
-            }
+            return tcpHandshakeExecutor.tcpHandshake(ch, rmtNodeId, sslMeta, msg);
         }
         catch (IOException e) {
             if (log.isDebugEnabled())
@@ -1202,41 +1017,9 @@ public class GridNioServerWrapper {
             throw new IgniteCheckedException("Failed to read from channel.", e);
         }
         finally {
-            if (obj.cancel())
-                if (timeObjProcessor != null)
-                    timeObjProcessor.removeTimeoutObject(new GridSpiTimeoutObject(obj));
-                else
-                    stateProvider.getSpiContext().removeTimeoutObject(obj);
-            else
+            if (!timeoutObject.cancel())
                 throw handshakeTimeoutException();
         }
-
-        return rcvCnt;
-    }
-
-    /**
-     * @param target Target buffer to append to.
-     * @param src Source buffer to get data.
-     * @return Original or expanded buffer.
-     */
-    private ByteBuffer appendAndResizeIfNeeded(ByteBuffer target, ByteBuffer src) {
-        if (target.remaining() < src.remaining()) {
-            int newSize = Math.max(target.capacity() * 2, target.capacity() + src.remaining());
-
-            ByteBuffer tmp = ByteBuffer.allocate(newSize);
-
-            tmp.order(target.order());
-
-            target.flip();
-
-            tmp.put(target);
-
-            target = tmp;
-        }
-
-        target.put(src);
-
-        return target;
     }
 
     /**

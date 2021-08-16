@@ -18,15 +18,44 @@
 
 #include <cassert>
 
+#include <fstream>
+
 #include <ignite/common/platform_utils.h>
 
 #include "test_utils.h"
+
+namespace ignite
+{
+    Ignite IGNITE_IMPORT_EXPORT StartIgnite(const IgniteConfiguration& cfg, const char* name, IgniteError& err,
+        impl::Logger* logger);
+}
 
 namespace ignite_test
 {
     std::string GetTestConfigDir()
     {
-        return ignite::common::GetEnv("IGNITE_NATIVE_TEST_CPP_THIN_CONFIG_PATH");
+        using namespace ignite;
+
+        std::string cfgPath = common::GetEnv("IGNITE_NATIVE_TEST_CPP_THIN_CONFIG_PATH");
+
+        if (!cfgPath.empty())
+            return cfgPath;
+
+        std::string home = jni::ResolveIgniteHome();
+
+        if (home.empty())
+            return home;
+
+        std::stringstream path;
+
+        path << home << common::Fs
+             << "modules" << common::Fs
+             << "platforms" << common::Fs
+             << "cpp" << common::Fs
+             << "thin-client-test" << common::Fs
+             << "config";
+
+        return path.str();
     }
 
     void InitConfig(ignite::IgniteConfiguration& cfg, const char* cfgFile)
@@ -42,7 +71,6 @@ namespace ignite_test
         cfg.jvmOpts.push_back("-XX:+HeapDumpOnOutOfMemoryError");
         cfg.jvmOpts.push_back("-Duser.timezone=GMT");
         cfg.jvmOpts.push_back("-DIGNITE_QUIET=false");
-        cfg.jvmOpts.push_back("-DIGNITE_CONSOLE_APPENDER=false");
         cfg.jvmOpts.push_back("-DIGNITE_UPDATE_NOTIFIER=false");
         cfg.jvmOpts.push_back("-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=false");
         cfg.jvmOpts.push_back("-Duser.language=en");
@@ -60,10 +88,19 @@ namespace ignite_test
         cfg.jvmMaxMem = 4096;
 #endif
 
-        cfg.springCfgPath = GetTestConfigDir().append("/").append(cfgFile);
+        std::string cfgDir = GetTestConfigDir();
+
+        if (cfgDir.empty())
+            throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, "Failed to resolve test config directory");
+
+        std::stringstream path;
+
+        path << cfgDir << common::Fs << cfgFile;
+
+        cfg.springCfgPath = path.str();
     }
 
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name)
+    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
     {
         using namespace ignite;
 
@@ -73,10 +110,16 @@ namespace ignite_test
 
         InitConfig(cfg, cfgFile);
 
-        return Ignition::Start(cfg, name);
+        IgniteError err;
+
+        Ignite node = ignite::StartIgnite(cfg, name, err, logger);
+
+        IgniteError::ThrowIfNeeded(err);
+
+        return node;
     }
 
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name)
+    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
     {
         std::string config(cfgFile);
 
@@ -86,7 +129,7 @@ namespace ignite_test
         config += "-32.xml";
 #endif //IGNITE_TESTS_32
 
-        return StartServerNode(config.c_str(), name);
+        return StartServerNode(config.c_str(), name, logger);
     }
 
     std::string AppendPath(const std::string& base, const std::string& toAdd)

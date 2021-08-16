@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,13 @@ public interface DataStorageMetrics {
      * @return Total checkpoint duration in milliseconds.
      */
     public long getLastCheckpointDuration();
+
+    /**
+     * Returns time when the last checkpoint was started.
+     *
+     * @return Time when the last checkpoint was started.
+     * */
+    public long getLastCheckpointStarted();
 
     /**
      * Gets the duration of last checkpoint lock wait in milliseconds.
@@ -233,4 +240,18 @@ public interface DataStorageMetrics {
      *         or negative value is not supported.
      */
     public long getSparseStorageSize();
+
+    /**
+     * Getting the total number of logged bytes into the WAL.
+     *
+     * @return Number of bytes.
+     */
+    long getWalWrittenBytes();
+
+    /**
+     * Getting the total size of the compressed segments in bytes.
+     *
+     * @return Number of bytes.
+     */
+    long getWalCompressedBytes();
 }

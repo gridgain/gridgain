@@ -109,7 +109,6 @@ namespace ignite
                  * Process remote job result.
                  *
                  * @param reader Reader for stream with result.
-                 * @return Policy.
                  */
                 virtual void JobResultError(const IgniteError& err)
                 {
@@ -121,16 +120,41 @@ namespace ignite
                 }
 
                 /**
-                 * Process successfull result.
+                 * Process successful result.
+                 *
+                 * @param value Value.
+                 */
+                virtual void JobResultSuccess(int64_t value)
+                {
+                    ComputeJobResult<ResultType> res;
+
+                    res.SetResult(PrimitiveFutureResult<ResultType>(value));
+
+                    ProcessResult(res);
+                }
+
+                /**
+                 * Process successful result.
                  *
                  * @param reader Reader for stream with result.
-                 * @param err Error.
                  */
                 virtual void JobResultSuccess(binary::BinaryReaderImpl& reader)
                 {
                     ComputeJobResult<ResultType> res;
 
                     res.SetResult(reader.ReadObject<ResultType>());
+
+                    ProcessResult(res);
+                }
+
+                /**
+                 * Process successful null result.
+                 */
+                virtual void JobNullResultSuccess()
+                {
+                    ComputeJobResult<ResultType> res;
+
+                    res.SetResult(impl::binary::BinaryUtils::GetDefaultValue<ResultType>());
 
                     ProcessResult(res);
                 }
@@ -248,7 +272,6 @@ namespace ignite
                  * Process remote job result.
                  *
                  * @param reader Reader for stream with result.
-                 * @return Policy.
                  */
                 virtual void JobResultError(const IgniteError& err)
                 {
@@ -260,12 +283,37 @@ namespace ignite
                 }
 
                 /**
-                 * Process successfull result.
+                 * Process successful result.
+                 *
+                 * @param value Value.
+                 */
+                virtual void JobResultSuccess(int64_t)
+                {
+                    ComputeJobResult<void> res;
+
+                    res.SetResult();
+
+                    ProcessResult(res);
+                }
+
+                /**
+                 * Process successful result.
                  *
                  * @param reader Reader for stream with result.
-                 * @param err Error.
                  */
-                virtual void JobResultSuccess(binary::BinaryReaderImpl& reader)
+                virtual void JobResultSuccess(binary::BinaryReaderImpl&)
+                {
+                    ComputeJobResult<void> res;
+
+                    res.SetResult();
+
+                    ProcessResult(res);
+                }
+
+                /**
+                 * Process successful null result.
+                 */
+                virtual void JobNullResultSuccess()
                 {
                     ComputeJobResult<void> res;
 

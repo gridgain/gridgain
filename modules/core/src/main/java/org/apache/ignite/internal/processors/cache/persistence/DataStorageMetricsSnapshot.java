@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,9 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
 
     /** */
     private long lastCpDuration;
+
+    /** */
+    private long lastCpStart;
 
     /** */
     private long lastCpLockWaitDuration;
@@ -108,6 +111,12 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
     /** */
     private long sparseStorageSize;
 
+    /** Total number of logged bytes into the WAL. */
+    private long walWrittenBytes;
+
+    /** Total size of the compressed segments in bytes. */
+    private long walCompressedBytes;
+
     /**
      * @param metrics Metrics.
      */
@@ -118,6 +127,7 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
         walFsyncTimeAvg = metrics.getWalFsyncTimeAverage();
         walBuffPollSpinsNum = metrics.getWalBuffPollSpinsRate();
         lastCpDuration = metrics.getLastCheckpointDuration();
+        lastCpStart = metrics.getLastCheckpointStarted();
         lastCpLockWaitDuration = metrics.getLastCheckpointLockWaitDuration();
         lastCpMmarkDuration = metrics.getLastCheckpointMarkDuration();
         lastCpPagesWriteDuration = metrics.getLastCheckpointPagesWriteDuration();
@@ -140,6 +150,8 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
         totalAllocatedSize = metrics.getTotalAllocatedSize();
         storageSize = metrics.getStorageSize();
         sparseStorageSize = metrics.getSparseStorageSize();
+        walWrittenBytes = metrics.getWalWrittenBytes();
+        walCompressedBytes = metrics.getWalCompressedBytes();
     }
 
     /** {@inheritDoc} */
@@ -170,6 +182,11 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
     /** {@inheritDoc} */
     @Override public long getLastCheckpointDuration() {
         return lastCpDuration;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getLastCheckpointStarted() {
+        return lastCpStart;
     }
 
     /** {@inheritDoc} */
@@ -280,6 +297,16 @@ public class DataStorageMetricsSnapshot implements DataStorageMetrics {
     /** {@inheritDoc} */
     @Override public long getSparseStorageSize() {
         return sparseStorageSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getWalWrittenBytes() {
+        return walWrittenBytes;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getWalCompressedBytes() {
+        return walCompressedBytes;
     }
 
     /** {@inheritDoc} */

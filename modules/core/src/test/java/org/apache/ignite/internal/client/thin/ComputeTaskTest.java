@@ -34,8 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientClusterGroup;
@@ -44,22 +42,20 @@ import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
+import org.apache.ignite.client.Person;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskName;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.ThinClientConfiguration;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * Checks compute grid funtionality of thin client.
+ * Checks compute grid functionality of thin client.
  */
 public class ComputeTaskTest extends AbstractThinClientTest {
     /** Grids count. */
@@ -115,6 +111,18 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             assertEquals(nodeId(0), val.get1());
             assertEquals(new HashSet<>(F.nodeIds(grid(0).cluster().forServers().nodes())), val.get2());
+        }
+    }
+
+    /**
+     * Test that custom user type can be returned by task.
+     */
+    @Test
+    public void testExecuteWithCustomUserType() throws Exception {
+        try (IgniteClient client = startClient(0)) {
+            Person val = client.compute().execute(TestTaskCustomType.class.getName(), "person");
+
+            assertEquals("person", val.getName());
         }
     }
 
@@ -231,7 +239,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             assertTrue(fut.cancel(true));
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -260,7 +268,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             fut.cancel(true);
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
 
             assertTrue(fut.isCancelled());
             assertTrue(fut.isDone());
@@ -429,7 +437,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
 
             fut3.get(TIMEOUT, TimeUnit.MILLISECONDS);
 
-            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTaskFutures().isEmpty(), TIMEOUT));
+            assertTrue(GridTestUtils.waitForCondition(() -> compute.activeTasksCount() == 0, TIMEOUT));
         }
     }
 
@@ -515,7 +523,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
                 futs.add(compute.executeAsync(TestLatchTask.class.getName(), null));
 
             assertTrue(GridTestUtils.waitForCondition(
-                    () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().size() == ACTIVE_TASKS_LIMIT,
+                    () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == ACTIVE_TASKS_LIMIT,
                     TIMEOUT));
 
             // Check that we can't start more tasks.
@@ -614,7 +622,7 @@ public class ComputeTaskTest extends AbstractThinClientTest {
                 }, threadsCnt, "run-task-async");
 
             assertTrue(GridTestUtils.waitForCondition(
-                () -> ((ClientComputeImpl)client.compute()).activeTaskFutures().isEmpty(), TIMEOUT));
+                () -> ((ClientComputeImpl)client.compute()).activeTasksCount() == 0, TIMEOUT));
         }
     }
 
@@ -630,18 +638,6 @@ public class ComputeTaskTest extends AbstractThinClientTest {
             res.add(nodeId(i));
 
         return res;
-    }
-
-    /**
-     *
-     */
-    private void dropAllThinClientConnections() {
-        for (Ignite ignite : G.allGrids()) {
-            ClientProcessorMXBean mxBean = getMxBean(ignite.name(), "Clients",
-                ClientProcessorMXBean.class, ClientListenerProcessor.class);
-
-            mxBean.dropAllConnections();
-        }
     }
 
     /**

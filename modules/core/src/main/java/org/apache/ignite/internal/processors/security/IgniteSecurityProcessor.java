@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.processors.security;
 
+import java.io.Serializable;
+import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +40,9 @@ import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.plugin.security.SecuritySubject;
+import org.apache.ignite.plugin.security.SecuritySubjectType;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
@@ -118,8 +123,14 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
             : secPrc.securityContext(subjId);
 
-        if (res == null)
-            throw new IllegalStateException("Failed to find security context for subject with given ID : " + subjId);
+        if (res == null) {
+            SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
+
+            log.warning("Switched to the 'deny all' policy because of failing to find a security context " +
+                "[subjId=" + subjId + ", type=" + type + ']');
+
+            res = new DenyAllSecurityContext(subjId, type);
+        }
 
         return withContext(res);
     }
@@ -301,5 +312,134 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
      */
     public GridSecurityProcessor gridSecurityProcessor() {
         return secPrc;
+    }
+
+    /**
+     * Security context that deny all operation.
+     */
+    private static class DenyAllSecurityContext implements SecurityContext, Serializable {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** Security subject identifier. */
+        private final SecuritySubject secSubj;
+
+        /**
+         * Creates a new security context for the given subject and type.
+         *
+         * @param subjId Security subject identifier.
+         * @param subjType Subject type.
+         */
+        DenyAllSecurityContext(UUID subjId, SecuritySubjectType subjType) {
+            secSubj = new DenyAllSecuritySubject(subjId, subjType);
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecuritySubject subject() {
+            return secSubj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean taskOperationAllowed(String taskClsName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean cacheOperationAllowed(String cacheName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean serviceOperationAllowed(String srvcName, SecurityPermission perm) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean systemOperationAllowed(SecurityPermission perm) {
+            return false;
+        }
+    }
+
+    /**
+     * Security subject with empty permission set.
+     */
+    private static class DenyAllSecuritySubject implements SecuritySubject {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** Subject identifier. */
+        private final UUID subjId;
+
+        /** Security subject type. */
+        private final SecuritySubjectType subjType;
+
+        /**
+         * Creates a new security subject for the given subject id and type.
+         *
+         * @param subjId Subject identifier.
+         * @param subjType Subject type.
+         */
+        DenyAllSecuritySubject(UUID subjId, SecuritySubjectType subjType) {
+            this.subjId = subjId;
+            this.subjType = subjType;
+        }
+
+        /** {@inheritDoc} */
+        @Override public UUID id() {
+            return subjId;
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecuritySubjectType type() {
+            return subjType;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object login() {
+            return "";
+        }
+
+        /** {@inheritDoc} */
+        @Override public InetSocketAddress address() {
+            return null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public SecurityPermissionSet permissions() {
+            return new AllowNothingSecurityPermissionSet();
+        }
+    }
+
+    /**
+     * Empty permission set that deny all operations.
+     */
+    private static class AllowNothingSecurityPermissionSet implements SecurityPermissionSet {
+        /** Serial version uid. */
+        private static final long serialVersionUID = 0L;
+
+        /** {@inheritDoc} */
+        @Override public boolean defaultAllowAll() {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> taskPermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> cachePermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<String, Collection<SecurityPermission>> servicePermissions() {
+            return Collections.emptyMap();
+        }
+
+        /** {@inheritDoc} */
+        @Override public Collection<SecurityPermission> systemPermissions() {
+            return Collections.emptyList();
+        }
     }
 }

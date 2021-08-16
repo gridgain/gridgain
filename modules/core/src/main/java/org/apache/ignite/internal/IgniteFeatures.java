@@ -17,12 +17,17 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
+import java.util.Collection;
+import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.plugin.security.SecuritySubject;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -34,6 +39,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
@@ -49,7 +55,7 @@ public enum IgniteFeatures {
     /** Cache metrics v2 support. */
     CACHE_METRICS_V2(1),
 
-    /** Data paket compression. */
+    /** Data packet compression. */
     DATA_PACKET_COMPRESSION(3),
 
     /** Support of different rebalance size for nodes.  */
@@ -64,7 +70,7 @@ public enum IgniteFeatures {
      */
     TRANSACTION_OWNER_THREAD_DUMP_PROVIDING(6),
 
-    /** Displaying versbose transaction information: --info option of --tx control script command. */
+    /** Displaying verbose transaction information: --info option of --tx control script command. */
     TX_INFO_COMMAND(7),
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
@@ -178,7 +184,50 @@ public enum IgniteFeatures {
     SPLITTED_CACHE_CONFIGURATIONS_V2(46),
 
     /** Snapshots upload via sftp. */
-    SNAPSHOT_SFTP_UPLOAD(47);
+    SNAPSHOT_SFTP_UPLOAD(47),
+
+    /** Master key change. See {@link GridEncryptionManager#changeMasterKey(String)}. */
+    MASTER_KEY_CHANGE(48),
+
+    /** Incremental DR. */
+    INCREMENTAL_DR(49),
+
+    /** Cache encryption key change. See {@link IgniteEncryption#changeCacheGroupKey(Collection)}. */
+    CACHE_GROUP_KEY_CHANGE(50),
+
+    /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
+    SAFE_CLUSTER_DEACTIVATION(51),
+
+    /** Transaction distributed configuration. */
+    TRANSACTION_DISTRIBUTED_PROPERTIES(52),
+
+    /** Custom snapshot operations. */
+    CUSTOM_SNAPSHOT_OPERATIONS(53),
+
+    /** Point-in-time distributed property. */
+    POINT_IN_TIME_DISTRIBUTED_PROPERTY(54),
+
+    /** Statistics collection. */
+    STATISTICS_COLLECTION(55),
+
+    /** Warning is shown in server log and after schedule and snapshot commands if PITR is enabled and snapshot schedule
+     * is improper for PITR*/
+    IMPROPER_SCHEDULE_FOR_PITR_WARNING(56),
+
+    /** Node supports capturing incremental snapshot if previous snapshots mismatch from ones on another nodes. */
+    SNAPSHOT_LAST_SNAPSHOTS_MISMATCH_HANDLING_POLICY(57),
+
+    /** Rolling upgrade based on distributed metastorage. Improved handling of changing RU state. */
+    DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58),
+
+    /** Chains of snapshot operations. */
+    SNAPSHOT_OPERATIONS_CHAINING(59),
+
+    /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
+    SNAPSHOT_SFTP_UPLOAD_V2(60),
+
+    /** Certificates array in {@link SecuritySubject} implementations is deserialized lazily. */
+    LAZY_CERTIFICATE_DESERIALIZATION(61);
 
     /**
      * Unique feature identifier.
@@ -212,7 +261,7 @@ public enum IgniteFeatures {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
             if (status.enabled() && !status.forcedModeEnabled())
-                return status.supportedFeatures().contains(feature);
+                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
         }
 
         return nodeSupports(clusterNode.attribute(ATTR_IGNITE_FEATURES), feature);
@@ -254,8 +303,8 @@ public enum IgniteFeatures {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
-            if (status.enabled() && !status.forcedModeEnabled())
-                return status.supportedFeatures().contains(feature);
+            if (status.enabled() && !status.forcedModeEnabled() && status instanceof IgniteRollingUpgradeStatus)
+                return nodeSupports(((IgniteRollingUpgradeStatus)status).supportedFeatures(), feature);
         }
 
         for (ClusterNode next : nodes) {
@@ -336,12 +385,8 @@ public enum IgniteFeatures {
             if (IGNITE_SECURITY_PROCESSOR_V2 == value && !getBoolean(IGNITE_SECURITY_PROCESSOR_V2.name(), true))
                 continue;
 
-            //Disable new rolling upgrade
-            if (DISTRIBUTED_ROLLING_UPGRADE_MODE == value && !getBoolean(DISTRIBUTED_ROLLING_UPGRADE_MODE.name(), false))
-                continue;
-
             // Add only when indexing is enabled.
-            if (INDEXING == value && !ctx.query().moduleEnabled())
+            if (INDEXING == value && (ctx.query() == null || !ctx.query().moduleEnabled()))
                 continue;
 
             // Add only when tracing is enabled.
@@ -365,6 +410,9 @@ public enum IgniteFeatures {
                 continue;
 
             if (PME_FREE_SWITCH == value && isFeatureEnabled(IGNITE_PME_FREE_SWITCH_DISABLED))
+                continue;
+
+            if (SPECIFIED_SEQ_PK_KEYS == value && isFeatureEnabled(IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED))
                 continue;
 
             final int featureId = value.getFeatureId();

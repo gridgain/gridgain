@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
@@ -52,7 +53,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
 /**
  * Cache subcommand that triggers indexes force rebuild.
  */
-public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuild.Arguments> {
+public class CacheIndexesForceRebuild extends AbstractCommand<CacheIndexesForceRebuild.Arguments> {
     /** Command parsed arguments. */
     private Arguments args;
 
@@ -85,10 +86,14 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
         final UUID nodeId = args.nodeId;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
-                taskRes = TaskExecutor.executeTaskByNameOnNode(client, IndexForceRebuildTask.class.getName(), taskArg,
-                    nodeId, clientCfg);
-            }
+            if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT))
+                taskRes = TaskExecutor.executeTaskByNameOnNode(
+                    client,
+                    IndexForceRebuildTask.class.getName(),
+                    taskArg,
+                    nodeId,
+                    clientCfg
+                );
             else {
                 logger.info("Indexes force rebuild is not supported by node " + nodeId);
 
@@ -215,7 +220,7 @@ public class CacheIndexesForceRebuild implements Command<CacheIndexesForceRebuil
             IndexForceRebuildCommandArg arg = CommandArgUtils.of(nextArg, IndexForceRebuildCommandArg.class);
 
             if (arg == null)
-                throw new IllegalArgumentException("Unknown argument: " + arg.argName());
+                throw new IllegalArgumentException("Unknown argument: " + nextArg);
 
             switch (arg) {
                 case NODE_ID:

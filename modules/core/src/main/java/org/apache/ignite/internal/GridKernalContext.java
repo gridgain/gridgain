@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package org.apache.ignite.internal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
@@ -37,6 +39,7 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.IgniteDefragmentation;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
@@ -63,7 +66,7 @@ import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgrade;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -80,6 +83,7 @@ import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -201,6 +205,13 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Monitoring manager.
      */
     public GridMetricManager metric();
+
+    /**
+     * Gets maintenance registry.
+     *
+     * @return Maintenance registry.
+     */
+    public MaintenanceRegistry maintenanceRegistry();
 
     /**
      * Gets system view manager.
@@ -451,6 +462,13 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Encryption manager.
      */
     public GridEncryptionManager encryption();
+
+    /**
+     * Gets defragmentation manager.
+     *
+     * @return Defragmentation manager.
+     */
+    public IgniteDefragmentation defragmentation();
 
     /**
      * Gets workers registry.
@@ -753,12 +771,12 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      *
      * @return Rolling Upgrade processor.
      */
-    public RollingUpgradeProcessor rollingUpgrade();
+    public RollingUpgrade rollingUpgrade();
 
     /**
      * @return Local continuous tasks processor.
      */
-    public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor();
+    public DurableBackgroundTasksProcessor durableBackgroundTask();
 
     /**
      * Return Thread pool for create/rebuild indexes.
@@ -766,4 +784,11 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      * @return Thread pool for create/rebuild indexes.
      */
     public ExecutorService buildIndexExecutorService();
+
+    /**
+     * Executor that is in charge of processing user async continuations.
+     *
+     * @return Executor that is in charge of processing user async continuations.
+     */
+    public Executor getAsyncContinuationExecutor();
 }

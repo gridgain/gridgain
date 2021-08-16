@@ -139,46 +139,27 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
             GridCacheEntryInfo e = entry.info();
 
             if (e != null) {
-                GridCacheVersion enqueueVer = null;
+                ClusterNode primaryNode = cctx.affinity().primaryByKey(key, topVer);
+
+                lockEntry();
 
                 try {
-                    ClusterNode primaryNode = cctx.affinity().primaryByKey(key, topVer);
+                    checkObsolete();
 
-                    lockEntry();
+                    if (isNew() || !valid(topVer)) {
+                        // Version does not change for load ops.
+                        update(e.value(), e.expireTime(), e.ttl(), e.isNew() ? ver : e.version(), true);
 
-                    try {
-                        checkObsolete();
+                        if (primaryNode == null)
+                            this.topVer = AffinityTopologyVersion.NONE;
+                        else
+                            recordNodeId(primaryNode.id(), topVer);
 
-                        if (isNew() || !valid(topVer)) {
-                            // Version does not change for load ops.
-                            update(e.value(), e.expireTime(), e.ttl(), e.isNew() ? ver : e.version(), true);
-
-                            if (cctx.deferredDelete() && !isNew() && !isInternal()) {
-                                boolean deleted = val == null;
-
-                                if (deleted != deletedUnlocked()) {
-                                    deletedUnlocked(deleted);
-
-                                    if (deleted)
-                                        enqueueVer = e.version();
-                                }
-                            }
-
-                            if (primaryNode == null)
-                                this.topVer = AffinityTopologyVersion.NONE;
-                            else
-                                recordNodeId(primaryNode.id(), topVer);
-
-                            dhtVer = e.isNew() || e.isDeleted() ? null : e.version();
-                        }
-                    }
-                    finally {
-                        unlockEntry();
+                        dhtVer = e.isNew() || e.isDeleted() ? null : e.version();
                     }
                 }
                 finally {
-                    if (enqueueVer != null)
-                        cctx.onDeferredDelete(this, enqueueVer);
+                    unlockEntry();
                 }
             }
         }
@@ -393,15 +374,13 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         throws IgniteCheckedException, GridCacheEntryRemovedException {
         assert dhtVer != null;
 
-        GridCacheVersion enqueueVer = null;
-
         lockEntry();
 
         try {
             checkObsolete();
 
-                if (cctx.statisticsEnabled())
-                    cctx.cache().metrics0().onRead(false);
+            if (cctx.statisticsEnabled())
+                cctx.cache().metrics0().onRead(false);
 
             boolean ret = false;
 
@@ -415,17 +394,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
                 // Special case for platform cache: start tracking near entry.
                 updatePlatformCache(val, topVer);
-
-                if (cctx.deferredDelete() && !isInternal()) {
-                    boolean deleted = val == null;
-
-                    if (deleted != deletedUnlocked()) {
-                        deletedUnlocked(deleted);
-
-                        if (deleted)
-                            enqueueVer = ver;
-                    }
-                }
 
                 this.dhtVer = dhtVer;
 
@@ -452,9 +420,6 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         }
         finally {
             unlockEntry();
-
-            if (enqueueVer != null)
-                cctx.onDeferredDelete(this, enqueueVer);
         }
     }
 
@@ -463,8 +428,14 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
         // No-op: queries are disabled for near cache.
     }
 
+    /** {@inheritDoc}
+     * @param clearVer*/
+    @Override protected void removeValue(GridCacheVersion clearVer) {
+        // No-op.
+    }
+
     /** {@inheritDoc} */
-    @Override protected void removeValue() {
+    @Override protected void removeExpiredValue(GridCacheVersion clearVer) throws IgniteCheckedException {
         // No-op.
     }
 

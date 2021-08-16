@@ -186,7 +186,7 @@ namespace ignite
                     /** Number of elements that have been read by now. */
                     int32_t processed;
 
-                    IGNITE_NO_COPY_ASSIGNMENT(QueryFieldsRowImpl)
+                    IGNITE_NO_COPY_ASSIGNMENT(QueryFieldsRowImpl);
                 };
             }
         }

@@ -218,10 +218,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     private GridLocalEventListener lsnr;
 
     /** */
-    private boolean enabled;
+    private volatile boolean enabled;
 
     /** */
-    private boolean qryProcEnabled;
+    private volatile boolean qryProcEnabled;
 
     /** */
     private AffinityTopologyVersion qryTopVer;
@@ -295,6 +295,14 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      */
     public boolean enabled() {
         return enabled;
+    }
+
+    /**
+     * Enable query manager.
+     */
+    public void enable() {
+        qryProcEnabled = true;
+        enabled = true;
     }
 
     /** {@inheritDoc} */
@@ -423,7 +431,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
      */
     public void remove(KeyCacheObject key, @Nullable CacheDataRow prevRow)
         throws IgniteCheckedException {
-        if (!QueryUtils.isEnabled(cctx.config()))
+        if (!qryProcEnabled)
             return; // No-op.
 
         if (!enterBusy())
@@ -1227,8 +1235,8 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                         V val0 = null;
 
                         if (readEvt && cctx.gridEvents().hasListener(EVT_CACHE_QUERY_OBJECT_READ)) {
-                            key0 = (K)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, key, qry.keepBinary(), false);
-                            val0 = (V)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, val, qry.keepBinary(), false);
+                            key0 = (K)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, key, qry.keepBinary(), false, null);
+                            val0 = (V)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, val, qry.keepBinary(), false, null);
 
                             switch (type) {
                                 case SQL:
@@ -1277,9 +1285,9 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
                         if (rdc != null) {
                             if (key0 == null)
-                                key0 = (K)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, key, qry.keepBinary(), false);
+                                key0 = (K)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, key, qry.keepBinary(), false, null);
                             if (val0 == null)
-                                val0 = (V)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, val, qry.keepBinary(), false);
+                                val0 = (V)CacheObjectUtils.unwrapBinaryIfNeeded(objCtx, val, qry.keepBinary(), false, null);
 
                             Cache.Entry<K, V> entry = new CacheEntryImpl(key0, val0);
 
@@ -2767,6 +2775,30 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
     public <R> CacheQuery<R> createScanQuery(@Nullable IgniteBiPredicate<K, V> filter,
         @Nullable Integer part, boolean keepBinary, Boolean dataPageScanEnabled) {
         return createScanQuery(filter, null, part, keepBinary, false, dataPageScanEnabled);
+    }
+
+    /**
+     * Creates user's predicate based scan query.
+     *
+     * @param filter Scan filter.
+     * @param part Partition.
+     * @param keepBinary Keep binary flag.
+     * @param dataPageScanEnabled Flag to enable data page scan.
+     * @param timeout Timeout or zero if no timeout.
+     * @return Created query.
+     */
+    public <R> CacheQuery<R> createScanQuery(@Nullable IgniteBiPredicate<K, V> filter,
+                                             @Nullable Integer part, boolean keepBinary, Boolean dataPageScanEnabled,
+                                             long timeout) {
+        return new GridCacheQueryAdapter(cctx,
+                SCAN,
+                filter,
+                null,
+                part,
+                keepBinary,
+                false,
+                dataPageScanEnabled,
+                timeout);
     }
 
     /**

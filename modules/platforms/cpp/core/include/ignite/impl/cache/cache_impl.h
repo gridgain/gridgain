@@ -91,11 +91,9 @@ namespace ignite
                  *
                  * @param inOp Input.
                  * @param outOp Output.
-                 * @param peekModes Peek modes.
                  * @param err Error.
                  */
-                void LocalPeek(InputOperation& inOp, OutputOperation& outOp, 
-                    int32_t peekModes, IgniteError& err);
+                void LocalPeek(InputOperation& inOp, OutputOperation& outOp, IgniteError& err);
 
                 /**
                  * Perform Get.
@@ -329,6 +327,15 @@ namespace ignite
                 void Invoke(InputOperation& inOp, OutputOperation& outOp, IgniteError& err);
 
                 /**
+                 * Perform Invoke of Java entry processor.
+                 *
+                 * @param inOp Input.
+                 * @param outOp Output.
+                 * @param err Error.
+                 */
+                void InvokeJava(InputOperation& inOp, OutputOperation& outOp, IgniteError& err);
+
+                /**
                  * Start continuous query execution.
                  *
                  * @param qry Continuous query.
@@ -395,7 +402,7 @@ namespace ignite
                 void LocalLoadCache(IgniteError& err);
 
             private:
-                IGNITE_NO_COPY_ASSIGNMENT(CacheImpl)
+                IGNITE_NO_COPY_ASSIGNMENT(CacheImpl);
 
                 /** Name. */
                 char* name; 

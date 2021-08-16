@@ -33,7 +33,7 @@
     </parent>
 
     <artifactId>ignite-examples-ml</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
 
     <dependencies>
         <dependency>

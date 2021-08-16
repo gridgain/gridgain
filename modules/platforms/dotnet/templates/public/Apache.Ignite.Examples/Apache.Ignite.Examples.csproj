@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <PackageType>Template</PackageType>
+        <PackageVersion>8.8.127</PackageVersion>
+        <PackageId>GridGain.Ignite.Examples</PackageId>
+        <Title>GridGain Examples</Title>
+        <Authors>GridGain</Authors>
+        <Description>GridGain.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://www.gridgain.com/docs/latest/getting-started/quick-start/dotnet</Description>
+        <PackageTags>GridGain;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
+        <TargetFramework>netcoreapp2.1</TargetFramework>
+        <PackageProjectUrl>https://www.gridgain.com/products/software/community-edition</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/gridgain/gridgain</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+        <PackageIcon>logo_gg_64x64.png</PackageIcon>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <NoWarn>NU5119,NU5128</NoWarn>
+
+        <IncludeContentInPack>true</IncludeContentInPack>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <ContentTargetFolders>content</ContentTargetFolders>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="examples\**\*.*"
+                 Exclude="examples\**\bin\**;examples\**\obj\**;examples\.idea" />
+        <Compile Remove="**\*" />
+        <None Include="logo_gg_64x64.png" Pack="true" PackagePath="" />
+        <None Include="..\..\..\LICENSE" Pack="true" PackagePath="" />
+    </ItemGroup>
+
+</Project>

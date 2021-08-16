@@ -42,6 +42,7 @@ import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
@@ -153,6 +154,9 @@ public class CacheGroupContext {
     private final CacheObjectContext cacheObjCtx;
 
     /** */
+    private final EntryCompressionStrategy compressionStrategy;
+
+    /** */
     private final FreeList freeList;
 
     /** */
@@ -203,8 +207,9 @@ public class CacheGroupContext {
      * @param persistenceEnabled Persistence enabled flag.
      * @param walEnabled Wal enabled flag.
      * @param persistenceGroup {@code true} if this group was configured as persistence in despite of data region.
+     * @param compressionStrategy Entry compression strategy to use, or {@code null}
      */
-    CacheGroupContext(
+    public CacheGroupContext(
         GridCacheSharedContext ctx,
         int grpId,
         UUID rcvdFrom,
@@ -219,7 +224,8 @@ public class CacheGroupContext {
         boolean persistenceEnabled,
         boolean walEnabled,
         boolean recoveryMode,
-        boolean persistenceGroup) {
+        boolean persistenceGroup,
+        @Nullable EntryCompressionStrategy compressionStrategy) {
         assert ccfg != null;
         assert dataRegion != null || !affNode;
         assert grpId != 0 : "Invalid group ID [cache=" + ccfg.getName() + ", grpName=" + ccfg.getGroupName() + ']';
@@ -240,6 +246,7 @@ public class CacheGroupContext {
         this.localWalEnabled = true;
         this.recoveryMode = new AtomicBoolean(recoveryMode);
         this.persistenceGroup = persistenceGroup;
+        this.compressionStrategy = compressionStrategy;
 
         ioPlc = cacheType.ioPolicy();
 
@@ -341,9 +348,10 @@ public class CacheGroupContext {
      * @throws IgniteCheckedException If failed.
      */
     void onCacheStarted(GridCacheContext cctx) throws IgniteCheckedException {
-        addCacheContext(cctx);
-
+        // Initialize the cache before publishing the context.
         offheapMgr.onCacheStarted(cctx);
+
+        addCacheContext(cctx);
     }
 
     /**
@@ -854,6 +862,8 @@ public class CacheGroupContext {
         preldr.onKernalStop();
 
         ctx.io().removeCacheGroupHandlers(grpId);
+
+        U.close(compressionStrategy, log);
     }
 
     /**
@@ -885,6 +895,8 @@ public class CacheGroupContext {
         initializeIO();
 
         ctx.affinity().onCacheGroupCreated(this);
+
+        ctx.evict().onCacheGroupStarted(this);
     }
 
     /**
@@ -1133,6 +1145,20 @@ public class CacheGroupContext {
     }
 
     /**
+     * @return {@code true} if this group was configured as persistence in despite of data region.
+     */
+    public boolean persistenceGroup() {
+        return persistenceGroup;
+    }
+
+    /**
+     * @return Entry compression strategy to use with this group, or {@code null}.
+     */
+    @Nullable public EntryCompressionStrategy entryCompressionStrategy() {
+        return compressionStrategy;
+    }
+
+    /**
      * @param nodeId Node ID.
      * @param req Request.
      */
@@ -1319,6 +1345,13 @@ public class CacheGroupContext {
      */
     public boolean hasAtomicCaches() {
         return hasAtomicCaches;
+    }
+
+    /**
+     * @return {@code True} if need create temporary tombstones entries for removed data.
+     */
+    public boolean supportsTombstone() {
+        return !mvccEnabled && !isLocal();
     }
 
     /**

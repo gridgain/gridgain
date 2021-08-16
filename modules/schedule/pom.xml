@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-schedule</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.8.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <properties>
@@ -100,13 +100,6 @@
                     <instructions>
                         <Fragment-Host>org.apache.ignite.ignite-core</Fragment-Host>
                     </instructions>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
                 </configuration>
             </plugin>
 

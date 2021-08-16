@@ -51,7 +51,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridJobExecuteResponse;
@@ -118,6 +117,7 @@ import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -257,6 +257,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** No-op runnable. */
     private static final IgniteRunnable NOOP = () -> {};
+
+    /** Version of security processor feature supported by cluster, {@code null} if not supported. */
+    @Nullable private volatile IgniteFeatures secProcSupported;
 
     /**
      * @param ctx Grid kernal context.
@@ -797,7 +800,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** {@inheritDoc} */
     @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter"})
-    @Override public void onKernalStart0() throws IgniteCheckedException {
+    @Override public void onKernalStart0() {
         discoLsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
                 assert evt instanceof DiscoveryEvent : "Invalid event: " + evt;
@@ -863,6 +866,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     default:
                         assert false : "Unexpected event: " + evt;
                 }
+
+                secProcSupported = currentSecurityProcSupport();
             }
         };
 
@@ -941,6 +946,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 closedTopics.add(e.getKey());
             }
         }
+
+        secProcSupported = currentSecurityProcSupport();
     }
 
     /**
@@ -1777,19 +1784,18 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         assert !async || msg instanceof GridIoUserMessage : msg; // Async execution was added only for IgniteMessaging.
         assert topicOrd >= 0 || !(topic instanceof GridTopic) : msg;
 
-        try (TraceSurroundings ignored = support(null)) {
-            MTC.span().addLog(() -> "Create communication msg - " + traceName(msg));
+        MTC.span().addLog(() -> "Create communication msg - " + traceName(msg));
 
-            GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout);
+        GridIoMessage ioMsg = createGridIoMessage(topic, topicOrd, msg, plc, ordered, timeout, skipOnTimeout);
 
-            if (locNodeId.equals(node.id())) {
+        if (locNodeId.equals(node.id())) {
 
-                assert plc != P2P_POOL;
+            assert plc != P2P_POOL;
 
-                CommunicationListener commLsnr = this.commLsnr;
+            CommunicationListener commLsnr = this.commLsnr;
 
-                if (commLsnr == null)
-                    throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
+            if (commLsnr == null)
+                throw new IgniteCheckedException("Trying to send message when grid is not fully started.");
 
             if (ordered)
                 processOrderedMessage(locNodeId, ioMsg, plc, null);
@@ -1798,31 +1804,30 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             else
                 processRegularMessage0(ioMsg, locNodeId);
 
-                if (ackC != null)
-                    ackC.apply(null);
+            if (ackC != null)
+                ackC.apply(null);
+        }
+        else {
+            if (topicOrd < 0)
+                ioMsg.topicBytes(U.marshal(marsh, topic));
+
+            try {
+                if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
+                    getTcpCommunicationSpi().sendMessage(node, ioMsg, ackC);
+                else
+                    getSpi().sendMessage(node, ioMsg);
             }
-            else {
-                if (topicOrd < 0)
-                    ioMsg.topicBytes(U.marshal(marsh, topic));
+            catch (IgniteSpiException e) {
+                if (e.getCause() instanceof ClusterTopologyCheckedException)
+                    throw (ClusterTopologyCheckedException)e.getCause();
 
-                try {
-                    if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
-                        getTcpCommunicationSpi().sendMessage(node, ioMsg, ackC);
-                    else
-                        getSpi().sendMessage(node, ioMsg);
-                }
-                catch (IgniteSpiException e) {
-                    if (e.getCause() instanceof ClusterTopologyCheckedException)
-                        throw (ClusterTopologyCheckedException)e.getCause();
+                if (!ctx.discovery().alive(node))
+                    throw new ClusterTopologyCheckedException("Failed to send message, node left: " + node.id(), e);
 
-                    if (!ctx.discovery().alive(node))
-                        throw new ClusterTopologyCheckedException("Failed to send message, node left: " + node.id(), e);
-
-                    throw new IgniteCheckedException("Failed to send message (node may have left the grid or " +
-                        "TCP connection cannot be established due to firewall issues) " +
-                        "[node=" + node + ", topic=" + topic +
-                        ", msg=" + msg + ", policy=" + plc + ']', e);
-                }
+                throw new IgniteCheckedException("Failed to send message (node may have left the grid or " +
+                    "TCP connection cannot be established due to firewall issues) " +
+                    "[node=" + node + ", topic=" + topic +
+                    ", msg=" + msg + ", policy=" + plc + ']', e);
             }
         }
     }
@@ -1858,17 +1863,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     ) throws IgniteCheckedException {
         if (ctx.security().enabled() &&
             !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
-            // We don't need enabled v1 to enable v2.
-            boolean v2 = allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR_V2);
+            IgniteFeatures secProcSupported = this.secProcSupported;
 
-            if (v2 || allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
+            if (secProcSupported != null) {
                 SecurityContext secCtx = ctx.security().securityContext();
                 UUID subjId = secCtx.subject().id();
 
                 byte[] serSubj = null;
 
                 // Skip sending serialized subject if all nodes support IGNITE_SECURITY_PROCESSOR_V2 and state=ACTIVE.
-                if (!v2 || ctx.state().clusterState().state() == ClusterState.INACTIVE)
+                if (secProcSupported != IGNITE_SECURITY_PROCESSOR_V2 || ctx.state().clusterState().state() == INACTIVE)
                     serSubj = !locNodeId.equals(subjId) ? U.marshal(marsh, secCtx) : null;
 
                 return new GridIoSecurityAwareMessage(subjId, serSubj, plc, topic, topicOrd, msg, ordered, timeout,
@@ -1877,6 +1881,20 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         return new GridIoMessage(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout);
+    }
+
+    /**
+     * @return Version of security processor feature supported by cluster.
+     */
+    private IgniteFeatures currentSecurityProcSupport() {
+        Collection<ClusterNode> allNodes = ctx.discovery().allNodes();
+
+        if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR_V2))
+            return IGNITE_SECURITY_PROCESSOR_V2;
+        else if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR))
+            return IGNITE_SECURITY_PROCESSOR;
+        else
+            return null;
     }
 
     /**

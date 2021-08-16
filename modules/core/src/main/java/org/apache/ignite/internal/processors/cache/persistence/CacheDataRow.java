@@ -58,6 +58,16 @@ public interface CacheDataRow extends MvccUpdateVersionAware, CacheSearchRow, St
      */
     public void key(KeyCacheObject key);
 
+    /**
+     * @param cacheId Cache ID.
+     */
+    public void cacheId(int cacheId);
+
+    /**
+     * @return {@code True} if the row represents tombstone (empty value with remove version and update counter)
+     */
+    public boolean tombstone();
+
     /** {@inheritDoc} */
     @Override public default IOVersions<? extends AbstractDataPageIO> ioVersions() {
         return DataPageIO.VERSIONS;

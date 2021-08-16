@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,8 +35,6 @@ import java.util.UUID;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -46,6 +45,7 @@ import javax.cache.expiry.Duration;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
+import com.google.common.collect.ImmutableSet;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -61,6 +61,8 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
@@ -69,6 +71,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
+import org.apache.ignite.spi.systemview.view.SystemView;
+import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -76,6 +80,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -235,6 +240,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      * <li>{@link ClientCache#put(Object, Object)}</li>
      * <li>{@link ClientCache#get(Object)}</li>
      * <li>{@link ClientCache#containsKey(Object)}</li>
+     * <li>{@link ClientCache#clear(Object)}</li>
      * </ul>
      */
     @Test
@@ -255,6 +261,12 @@ public class FunctionalTest extends GridCommonAbstractTest {
             Person cachedVal = cache.get(key);
 
             assertEquals(val, cachedVal);
+
+            cache.clear(key);
+
+            assertFalse(cache.containsKey(key));
+
+            assertNull(cache.get(key));
         }
 
         // Non-existing cache, object key and primitive value
@@ -272,6 +284,12 @@ public class FunctionalTest extends GridCommonAbstractTest {
             Integer cachedVal = cache.get(key);
 
             assertEquals(val, cachedVal);
+
+            cache.clear(key);
+
+            assertFalse(cache.containsKey(key));
+
+            assertNull(cache.get(key));
         }
 
         // Object key and Object value
@@ -289,6 +307,12 @@ public class FunctionalTest extends GridCommonAbstractTest {
             Person cachedVal = cache.get(key);
 
             assertEquals(val, cachedVal);
+
+            cache.clear(key);
+
+            assertFalse(cache.containsKey(key));
+
+            assertNull(cache.get(key));
         }
     }
 
@@ -442,7 +466,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
      * <ul>
      * <li>{@link ClientCache#putAll(Map)}</li>
      * <li>{@link ClientCache#getAll(Set)}</li>
+     * <li>{@link ClientCache#containsKeys(Set)} (Set)}</li>
      * <li>{@link ClientCache#clear()}</li>
+     * <li>{@link ClientCache#clearAll(Set)} ()}</li>
      * </ul>
      */
     @Test
@@ -457,7 +483,11 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 .rangeClosed(1, 1000).boxed()
                 .collect(Collectors.toMap(i -> i, i -> new Person(i, String.format("Person %s", i))));
 
+            assertFalse(cache.containsKeys(data.keySet()));
+
             cache.putAll(data);
+
+            assertTrue(cache.containsKeys(data.keySet()));
 
             Map<Integer, Person> cachedData = cache.getAll(data.keySet());
 
@@ -474,14 +504,33 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 .rangeClosed(1, 1000).boxed()
                 .collect(Collectors.toMap(i -> new Person(i, String.format("Person %s", i)), i -> i));
 
+            assertFalse(cache.containsKeys(data.keySet()));
+
             cache.putAll(data);
+
+            assertTrue(cache.containsKeys(data.keySet()));
 
             Map<Person, Integer> cachedData = cache.getAll(data.keySet());
 
             assertEquals(data, cachedData);
 
+            Set<Person> clearKeys = new HashSet<>();
+
+            Iterator<Person> keyIter = data.keySet().iterator();
+
+            for (int i = 0; i < 100; i++)
+                clearKeys.add(keyIter.next());
+
+            cache.clearAll(clearKeys);
+
+            assertFalse(cache.containsKeys(clearKeys));
+            assertTrue(cache.containsKeys(
+                data.keySet().stream().filter(key -> !data.containsKey(key)).collect(Collectors.toSet())));
+            assertEquals(data.size() - clearKeys.size(), cache.size(CachePeekMode.ALL));
+
             cache.clear();
 
+            assertFalse(cache.containsKeys(data.keySet()));
             assertEquals(0, cache.size(CachePeekMode.ALL));
         }
     }
@@ -493,6 +542,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      * <li>{@link ClientCache#getAndRemove(Object)}</li>
      * <li>{@link ClientCache#getAndReplace(Object, Object)}</li>
      * <li>{@link ClientCache#putIfAbsent(Object, Object)}</li>
+     * <li>{@link ClientCache#getAndPutIfAbsent(Object, Object)}</li>
      * </ul>
      */
     @Test
@@ -514,6 +564,11 @@ public class FunctionalTest extends GridCommonAbstractTest {
             assertEquals("1", cache.getAndReplace(1, "1.1"));
             assertEquals("1.1", cache.getAndReplace(1, "1"));
             assertNull(cache.getAndReplace(2, "2"));
+
+            assertEquals("1", cache.getAndPutIfAbsent(1, "1.1"));
+            assertEquals("1", cache.get(1));
+            assertNull(cache.getAndPutIfAbsent(3, "3"));
+            assertEquals("3", cache.get(3));
         }
     }
 
@@ -628,14 +683,14 @@ public class FunctionalTest extends GridCommonAbstractTest {
             );
             cache.put(0, "value0");
 
-            Future<?> fut;
+            IgniteInternalFuture<?> fut;
 
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, isolation)) {
                 assertEquals("value0", cache.get(0));
 
                 CyclicBarrier barrier = new CyclicBarrier(2);
 
-                fut = ForkJoinPool.commonPool().submit(() -> {
+                fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
                         cache.put(0, "value2");
                         tx2.commit();
@@ -679,7 +734,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
                 assertEquals("value0", cache.get(0));
 
-                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
                         cache.put(0, "value2");
                         tx2.commit();
@@ -724,15 +779,13 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 cache.put(0, "value1");
 
-                Future<?> f = ForkJoinPool.commonPool().submit(() -> {
+                GridTestUtils.runAsync(() -> {
                     assertEquals("value0", cache.get(0));
 
                     cache.put(0, "value2");
 
                     assertEquals("value2", cache.get(0));
-                });
-
-                f.get();
+                }).get();
 
                 tx.commit();
             }
@@ -942,17 +995,23 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 cache.putAll(F.asMap(1, "value11", 3, "value12"));
                 cache.putIfAbsent(4, "value13");
 
-                // Operations: get, getAll, getAndPut, getAndRemove, getAndReplace.
+                // Operations: get, getAll, getAndPut, getAndRemove, getAndReplace, getAndPutIfAbsent.
                 assertEquals("value10", cache.get(2));
                 assertEquals(F.asMap(1, "value11", 2, "value10"),
                         cache.getAll(new HashSet<>(Arrays.asList(1, 2))));
                 assertEquals("value13", cache.getAndPut(4, "value14"));
+                assertEquals("value14", cache.getAndPutIfAbsent(4, "valueDiscarded"));
+                assertEquals("value14", cache.get(4));
                 assertEquals("value14", cache.getAndReplace(4, "value15"));
                 assertEquals("value15", cache.getAndRemove(4));
+                assertNull(cache.getAndPutIfAbsent(10, "valuePutIfAbsent"));
+                assertEquals("valuePutIfAbsent", cache.get(10));
 
                 // Operations: contains.
                 assertTrue(cache.containsKey(2));
                 assertFalse(cache.containsKey(4));
+                assertTrue(cache.containsKeys(ImmutableSet.of(2, 10)));
+                assertFalse(cache.containsKeys(ImmutableSet.of(2, 4)));
 
                 // Operations: replace.
                 cache.put(4, "");
@@ -980,7 +1039,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
                 cache.put(0, "value18");
 
-                Future<?> fut = ForkJoinPool.commonPool().submit(() -> {
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
                     try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                         cache.put(1, "value19");
 
@@ -1020,7 +1079,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                 cache.put(0, "value20");
 
-                ForkJoinPool.commonPool().submit(() -> {
+                GridTestUtils.runAsync(() -> {
                     // Implicit transaction started here.
                     cache.put(1, "value21");
 
@@ -1059,7 +1118,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 // Start implicit transaction after explicit transaction has been closed by another thread.
                 cache.put(0, "value22");
 
-                ForkJoinPool.commonPool().submit(() -> assertEquals("value22", cache.get(0))).get();
+                GridTestUtils.runAsync(() -> assertEquals("value22", cache.get(0))).get();
 
                 // New explicit transaction can be started after current transaction has been closed by another thread.
                 try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
@@ -1110,7 +1169,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
             // Test that implicit transaction started after commit of previous one without closing.
             cache.put(0, "value24");
 
-            ForkJoinPool.commonPool().submit(() -> assertEquals("value24", cache.get(0))).get();
+            GridTestUtils.runAsync(() -> assertEquals("value24", cache.get(0))).get();
         }
     }
 
@@ -1154,6 +1213,103 @@ public class FunctionalTest extends GridCommonAbstractTest {
             }
 
             assertEquals("value2", cache.get(1));
+        }
+    }
+
+    /**
+     * Test transactions with label.
+     */
+    @Test
+    public void testTransactionsWithLabel() throws Exception {
+        try (IgniteEx ignite = (IgniteEx)Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                .setName("cache")
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+
+            SystemView<TransactionView> txsView = ignite.context().systemView().view(TXS_MON_LIST);
+
+            cache.put(0, "value1");
+
+            try (ClientTransaction tx = client.transactions().withLabel("label").txStart()) {
+                cache.put(0, "value2");
+
+                assertEquals(1, F.size(txsView.iterator()));
+
+                TransactionView txv = txsView.iterator().next();
+
+                assertEquals("label", txv.label());
+
+                assertEquals("value2", cache.get(0));
+            }
+
+            assertEquals("value1", cache.get(0));
+
+            try (ClientTransaction tx = client.transactions().withLabel("label1").withLabel("label2").txStart()) {
+                cache.put(0, "value2");
+
+                assertEquals(1, F.size(txsView.iterator()));
+
+                TransactionView txv = txsView.iterator().next();
+
+                assertEquals("label2", txv.label());
+
+                tx.commit();
+            }
+
+            assertEquals("value2", cache.get(0));
+
+            // Test concurrent with label and without label transactions.
+            try (ClientTransaction tx = client.transactions().withLabel("label").txStart(PESSIMISTIC, READ_COMMITTED)) {
+                CyclicBarrier barrier = new CyclicBarrier(2);
+
+                cache.put(0, "value3");
+
+                IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() -> {
+                    try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                        cache.put(1, "value3");
+
+                        barrier.await();
+
+                        assertEquals("value2", cache.get(0));
+
+                        barrier.await();
+                    }
+                    catch (InterruptedException | BrokenBarrierException ignore) {
+                        // No-op.
+                    }
+                });
+
+                barrier.await();
+
+                assertNull(cache.get(1));
+
+                assertEquals(1, F.size(txsView.iterator(), txv -> txv.label() == null));
+                assertEquals(1, F.size(txsView.iterator(), txv -> "label".equals(txv.label())));
+
+                barrier.await();
+
+                fut.get();
+            }
+
+            // Test nested transactions is not possible.
+            try (ClientTransaction tx = client.transactions().withLabel("label1").txStart()) {
+                try (ClientTransaction tx1 = client.transactions().txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+
+                try (ClientTransaction tx1 = client.transactions().withLabel("label2").txStart()) {
+                    fail();
+                }
+                catch (ClientException expected) {
+                    // No-op.
+                }
+            }
         }
     }
 

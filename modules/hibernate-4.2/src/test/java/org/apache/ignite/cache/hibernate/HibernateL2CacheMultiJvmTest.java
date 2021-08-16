@@ -26,9 +26,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.lang.IgniteRunnable;
+import org.apache.ignite.logger.log4j.Log4JLogger;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.log4j.Logger;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
@@ -51,6 +53,9 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
     /** */
     private static final String TIMESTAMP_CACHE = "org.hibernate.cache.spi.UpdateTimestampsCache";
 
+    /** */
+    public static final String ROUTER_LOG_CFG = "modules/hibernate-4.2/config/ignite-log4j.xml";
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -68,6 +73,10 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
         cfg.setMarshaller(new BinaryMarshaller());
 
         cfg.setPeerClassLoadingEnabled(false);
+
+        Log4JLogger log = new Log4JLogger(ROUTER_LOG_CFG);
+
+        cfg.setGridLogger(log);
 
         return cfg;
     }
@@ -228,6 +237,11 @@ public class HibernateL2CacheMultiJvmTest extends GridCommonAbstractTest {
          */
         SessionFactory startHibernate(String igniteInstanceName) {
             log.info("Start hibernate on node: " + igniteInstanceName);
+
+            // Hibernate autoconfigures log4j logger with root level set to debug mode, this is causing
+            // exception on calling getTransactionIsolation from the hibernate internals with cause
+            // function LOCK_MODE not found.
+            Logger.getRootLogger().setLevel(org.apache.log4j.Level.INFO);
 
             Configuration cfg = hibernateConfiguration(igniteInstanceName);
 

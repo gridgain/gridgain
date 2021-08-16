@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 
 /**
  * Test for cursors leak on JDBC v2.
@@ -162,7 +163,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
 
         while (true) {
             List<List<?>> res = ign.context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT * FROM IGNITE.SQL_QUERIES"), false).getAll();
+                new SqlFieldsQuery("SELECT * FROM " + sysSchemaName() + ".SQL_QUERIES"), false).getAll();
 
             if (res.size() == 1)
                 return;

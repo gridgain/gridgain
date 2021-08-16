@@ -476,57 +476,64 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         @Nullable String lb,
         boolean forceTracing
     ) {
-        if (parentSpan instanceof DeferredSpan)
-            return create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
+        try {
+            if (parentSpan instanceof DeferredSpan)
+                return create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
 
-        if (parentSpan == NoopSpan.INSTANCE || parentSpan == null) {
-            if (spanTypeToCreate.rootSpan()) {
-                if (forceTracing) {
+            if (parentSpan == NoopSpan.INSTANCE || parentSpan == null) {
+                if (spanTypeToCreate.rootSpan()) {
+                    if (forceTracing) {
+                        return new SpanImpl(
+                            getSpi().create(
+                                spanTypeToCreate.spanName(),
+                                (SpiSpecificSpan)null),
+                            spanTypeToCreate,
+                            Collections.emptySet());
+                    }
+
+                    // Get tracing configuration.
+                    TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
+                        new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
+
+                    return shouldSample(tracingConfigurationParameters.samplingRate()) ?
+                        new SpanImpl(
+                            getSpi().create(
+                                spanTypeToCreate.spanName(),
+                                (SpiSpecificSpan)null),
+                            spanTypeToCreate,
+                            tracingConfigurationParameters.includedScopes()) :
+                        NoopSpan.INSTANCE;
+                }
+                else
+                    return NoopSpan.INSTANCE;
+            }
+            else {
+                // If there's is parent span and parent span supports given scope then...
+                if (parentSpan.isChainable(spanTypeToCreate.scope())) {
+                    // create new span as child span for parent span, using parents span included scopes.
+
+                    Set<Scope> mergedIncludedScopes = new HashSet<>(parentSpan.includedScopes());
+
+                    mergedIncludedScopes.add(parentSpan.type().scope());
+                    mergedIncludedScopes.remove(spanTypeToCreate.scope());
+
                     return new SpanImpl(
                         getSpi().create(
                             spanTypeToCreate.spanName(),
-                            (SpiSpecificSpan)null),
+                            ((SpanImpl)parentSpan).spiSpecificSpan()),
                         spanTypeToCreate,
-                        Collections.emptySet());
+                        mergedIncludedScopes);
                 }
-
-                // Get tracing configuration.
-                TracingConfigurationParameters tracingConfigurationParameters = tracingConfiguration.get(
-                    new TracingConfigurationCoordinates.Builder(spanTypeToCreate.scope()).withLabel(lb).build());
-
-                return shouldSample(tracingConfigurationParameters.samplingRate()) ?
-                    new SpanImpl(
-                        getSpi().create(
-                            spanTypeToCreate.spanName(),
-                            (SpiSpecificSpan)null),
-                        spanTypeToCreate,
-                        tracingConfigurationParameters.includedScopes()) :
-                    NoopSpan.INSTANCE;
+                else {
+                    // do nothing;
+                    return NoopSpan.INSTANCE;
+                }
             }
-            else
-                return NoopSpan.INSTANCE;
         }
-        else {
-            // If there's is parent span and parent span supports given scope then...
-            if (parentSpan.isChainable(spanTypeToCreate.scope())) {
-                // create new span as child span for parent span, using parents span included scopes.
+        catch (Exception e) {
+            LT.warn(log, "Failed to create span" + "[span=" + spanTypeToCreate + ", err=" + e.getMessage() + ']');
 
-                Set<Scope> mergedIncludedScopes = new HashSet<>(parentSpan.includedScopes());
-
-                mergedIncludedScopes.add(parentSpan.type().scope());
-                mergedIncludedScopes.remove(spanTypeToCreate.scope());
-
-                return new SpanImpl(
-                    getSpi().create(
-                        spanTypeToCreate.spanName(),
-                        ((SpanImpl)parentSpan).spiSpecificSpan()),
-                    spanTypeToCreate,
-                    mergedIncludedScopes);
-            }
-            else {
-                // do nothing;
-                return NoopSpan.INSTANCE;
-            }
+            return NoopSpan.INSTANCE;
         }
     }
 

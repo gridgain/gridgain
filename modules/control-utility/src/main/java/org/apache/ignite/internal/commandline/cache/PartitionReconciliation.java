@@ -33,6 +33,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
@@ -64,7 +65,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 /**
  * Partition reconciliation command.
  */
-public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
+public class PartitionReconciliation extends AbstractCommand<PartitionReconciliation.Arguments> {
     /** Parallelism format error message. */
     public static final String PARALLELISM_FORMAT_MESSAGE = "The positive integer should be specified, " +
         "or 0 (number of cores on a server node will be used as parallelism in such case). " +
@@ -385,8 +386,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a("], parallelism=[" + args.parallelism)
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
-            .a("], fix-alg=[" + args.repairAlg + "]")
-            .a("], recheck-delay=[" + args.recheckDelay + "]")
+            .a("], fix-alg=[" + args.repairAlg)
+            .a("], recheck-delay=[" + args.recheckDelay + ']')
             .a(System.lineSeparator());
 
         if (args.includeSensitive) {

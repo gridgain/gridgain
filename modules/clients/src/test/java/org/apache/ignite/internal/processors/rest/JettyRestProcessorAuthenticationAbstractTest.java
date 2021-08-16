@@ -73,11 +73,11 @@ public abstract class JettyRestProcessorAuthenticationAbstractTest extends Jetty
 
         DataRegionConfiguration testDataRegionCfg = new DataRegionConfiguration();
         testDataRegionCfg.setName("testDataRegion");
-        testDataRegionCfg.setMaxSize(10 * 1024 * 1024);
+        testDataRegionCfg.setMaxSize(18 * 1024 * 1024);
 
         DataRegionConfiguration authDataRegionCfg = new DataRegionConfiguration();
         authDataRegionCfg.setName("authDataRegion")
-            .setMaxSize(10 * 1024 * 1024)
+            .setMaxSize(18 * 1024 * 1024)
             .setPersistenceEnabled(true);
 
         dsCfg.setDataRegionConfigurations(testDataRegionCfg, authDataRegionCfg);

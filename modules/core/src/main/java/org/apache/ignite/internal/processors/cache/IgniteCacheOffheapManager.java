@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -27,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CacheSearchRow;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.RowStore;
@@ -34,9 +36,12 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDa
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
+import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccLinkAwareSearchRow;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridAtomicLong;
@@ -45,7 +50,7 @@ import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
-import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
+import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,6 +59,15 @@ import org.jetbrains.annotations.Nullable;
  */
 @SuppressWarnings("WeakerAccess")
 public interface IgniteCacheOffheapManager {
+    /** Scan for data. */
+    public static final int DATA = 1;
+
+    /** Scan for tombstones. */
+    public static final int TOMBSTONES = 2;
+
+    /** Scan for both. */
+    public static final int DATA_AND_TOMBSTONES = DATA | TOMBSTONES;
+
     /**
      * @param ctx Context.
      * @param grp Cache group.
@@ -86,11 +100,13 @@ public interface IgniteCacheOffheapManager {
     /**
      * Pre-create partitions that resides in page memory or WAL and restores their state.
      *
-     * @param partitionRecoveryStates Partition recovery states.
-     * @return Number of processed partitions.
+     * @param partRecoveryStates Partition recovery states.
+     * @return Processed partitions: partition id -> processing time in millis.
      * @throws IgniteCheckedException If failed.
      */
-    public long restorePartitionStates(Map<GroupPartitionId, Integer> partitionRecoveryStates) throws IgniteCheckedException;
+    Map<Integer, Long> restorePartitionStates(
+        Map<GroupPartitionId, Integer> partRecoveryStates
+    ) throws IgniteCheckedException;
 
     /**
      * Partition counter update callback. May be overridden by plugin-provided subclasses.
@@ -157,19 +173,33 @@ public interface IgniteCacheOffheapManager {
     public void destroyCacheDataStore(CacheDataStore store) throws IgniteCheckedException;
 
     /**
-     * TODO: GG-10884, used on only from initialValue.
-     */
-    public boolean containsKey(GridCacheMapEntry entry);
-
-    /**
-     * @param cctx Cache context.
      * @param c Closure.
      * @param amount Limit of processed entries by single call, {@code -1} for no limit.
+     * @param now Expire time.
      * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireRows(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
+
+    /**
+     * @param c Closure.
+     * @param amount Limit of processed entries by single call, {@code -1} for no limit. Real cleared
+     *               amount can be greater if a tombstone limit has been exceeded.
+     * @param now Expire time.
+     * @return {@code True} if unprocessed expired entries remains.
+     */
+    public boolean expireTombstones(IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now);
+
+    /**
+     * Fills the expiration queue by scanning suitable rows in PendingTree.
+     *
+     * @param tombstone {@code True} to process tombstones.
+     * @param amount The amount.
+     * @param upper Upper limit.
+     * @param c Fill closure.
+     * @return The number of entries loaded to expiration queue.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean expire(GridCacheContext cctx, IgniteInClosure2X<GridCacheEntryEx, GridCacheVersion> c, int amount)
-        throws IgniteCheckedException;
+    public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.
@@ -219,7 +249,7 @@ public interface IgniteCacheOffheapManager {
      * @return Iterator over all versions.
      * @throws IgniteCheckedException If failed.
      */
-    GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, Object x)
+    GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, CacheDataRowAdapter.RowData x)
         throws IgniteCheckedException;
 
     /**
@@ -400,6 +430,20 @@ public interface IgniteCacheOffheapManager {
     ) throws IgniteCheckedException;
 
     /**
+     * @param cctx Cache context.
+     * @param key Key.
+     * @param ver Version.
+     * @param part Partition.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void removeWithTombstone(
+        GridCacheContext cctx,
+        KeyCacheObject key,
+        GridCacheVersion ver,
+        GridDhtLocalPartition part
+    ) throws IgniteCheckedException;
+
+    /**
      * @param ldr Class loader.
      * @return Number of undeployed entries.
      */
@@ -436,12 +480,24 @@ public interface IgniteCacheOffheapManager {
 
     /**
      * @param part Partition number.
+     * @param flags Scan flags.
      * @return Iterator for given partition.
      * @throws IgniteCheckedException If failed.
      */
-    public GridIterator<CacheDataRow> partitionIterator(final int part) throws IgniteCheckedException;
+    public GridIterator<CacheDataRow> partitionIterator(final int part, int flags) throws IgniteCheckedException;
 
     /**
+     * @param part Partition number.
+     * @return Iterator for given partition that skips tombstones.
+     * @throws IgniteCheckedException If failed.
+     */
+    public default GridIterator<CacheDataRow> partitionIterator(final int part) throws IgniteCheckedException {
+        return partitionIterator(part, DATA);
+    }
+
+    /**
+     * Rebalancing supply iterator.
+     *
      * @param part Partition number.
      * @param topVer Topology version.
      * @return Iterator for given partition that will reserve partition state until it is closed.
@@ -541,7 +597,35 @@ public interface IgniteCacheOffheapManager {
      * @param idxName Index name.
      * @throws IgniteCheckedException If failed.
      */
-    public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+    public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * Dropping the root page of the index tree.
+     *
+     * @param cacheId Cache ID.
+     * @param idxName Index name.
+     * @param segment Segment index.
+     * @return Dropped root page of the index tree.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable RootPage dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * Renaming the root page of the index tree.
+     *
+     * @param cacheId Cache id.
+     * @param oldIdxName Old name of the index tree.
+     * @param newIdxName New name of the index tree.
+     * @param segment Segment index.
+     * @return Renamed root page of the index tree.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable RootPage renameRootPageForIndex(
+        int cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException;
 
     /**
      * @param idxName Index name.
@@ -563,12 +647,22 @@ public interface IgniteCacheOffheapManager {
     public long totalPartitionEntriesCount(int part);
 
     /**
+     * @return Total tombstones count for all partitions.
+     */
+    public long tombstonesCount();
+
+    /**
      * Preload a partition. Must be called under partition reservation for DHT caches.
      *
      * @param part Partition.
      * @throws IgniteCheckedException If failed.
      */
     public void preloadPartition(int part) throws IgniteCheckedException;
+
+    /**
+     * @param row Row.
+     */
+    public void removePendingRow(PendingRow row) throws IgniteCheckedException;
 
     /**
      *
@@ -584,6 +678,12 @@ public interface IgniteCacheOffheapManager {
      *
      */
     interface CacheDataStore {
+
+        /**
+         * @return Cache data tree object.
+         */
+        public CacheDataTree tree();
+
         /**
          * Initialize data store if it exists.
          *
@@ -706,7 +806,7 @@ public interface IgniteCacheOffheapManager {
          *
          * @param cctx Cache context.
          * @param row Row.
-         * @throws IgniteCheckedException
+         * @throws IgniteCheckedException If failed.
          */
         public void updateTxState(GridCacheContext cctx, CacheSearchRow row)
             throws IgniteCheckedException;
@@ -879,7 +979,7 @@ public interface IgniteCacheOffheapManager {
          * @param ver Version.
          * @param expireTime Expire time.
          * @param mvccVer Mvcc version.
-         * @throws IgniteCheckedException
+         * @throws IgniteCheckedException If failed.
          */
         public void mvccApplyUpdate(GridCacheContext cctx,
             KeyCacheObject key,
@@ -890,12 +990,30 @@ public interface IgniteCacheOffheapManager {
         ) throws IgniteCheckedException;
 
         /**
+         * Removes row without writing a tombstone (physical remove).
+         *
          * @param cctx Cache context.
          * @param key Key.
          * @param partId Partition number.
          * @throws IgniteCheckedException If failed.
          */
         public void remove(GridCacheContext cctx, KeyCacheObject key, int partId) throws IgniteCheckedException;
+
+        /**
+         * Replaces a row with a a tombstone (empty value with remove version and update counter).
+         *
+         * @param cctx Cache context.
+         * @param key Key.
+         * @param ver Version.
+         * @param part Partition.
+         * @throws IgniteCheckedException If failed.
+         */
+        public void removeWithTombstone(
+            GridCacheContext cctx,
+            KeyCacheObject key,
+            GridCacheVersion ver,
+            GridDhtLocalPartition part
+        ) throws IgniteCheckedException;
 
         /**
          * @param cctx Cache context.
@@ -914,7 +1032,7 @@ public interface IgniteCacheOffheapManager {
          * @return Iterator over all versions.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, Object x)
+        public GridCursor<CacheDataRow> mvccAllVersionsCursor(GridCacheContext cctx, KeyCacheObject key, CacheDataRowAdapter.RowData x)
             throws IgniteCheckedException;
 
         /**
@@ -941,14 +1059,23 @@ public interface IgniteCacheOffheapManager {
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor() throws IgniteCheckedException;
+        public default GridCursor<? extends CacheDataRow> cursor() throws IgniteCheckedException {
+            return cursor(DATA);
+        }
+
+        /**
+         * @param flags Scan flags.
+         * @return Data cursor.
+         * @throws IgniteCheckedException If failed.
+         */
+        public GridCursor<? extends CacheDataRow> cursor(int flags) throws IgniteCheckedException;
 
         /**
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor(Object x) throws IgniteCheckedException;
+        public GridCursor<? extends CacheDataRow> cursor(CacheDataRowAdapter.RowData x) throws IgniteCheckedException;
 
         /**
          * @param mvccSnapshot MVCC snapshot.
@@ -959,10 +1086,11 @@ public interface IgniteCacheOffheapManager {
 
         /**
          * @param cacheId Cache ID.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor(int cacheId) throws IgniteCheckedException;
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId, int flags) throws IgniteCheckedException;
 
         /**
          * @param cacheId Cache ID.
@@ -992,7 +1120,7 @@ public interface IgniteCacheOffheapManager {
          * @throws IgniteCheckedException If failed.
          */
         public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
-            KeyCacheObject upper, Object x) throws IgniteCheckedException;
+            KeyCacheObject upper, CacheDataRowAdapter.RowData x) throws IgniteCheckedException;
 
         /**
          * @param cacheId Cache ID.
@@ -1000,11 +1128,16 @@ public interface IgniteCacheOffheapManager {
          * @param upper Upper bound.
          * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
          * @param snapshot Mvcc snapshot.
+         * @param flags Scan flags.
          * @return Data cursor.
          * @throws IgniteCheckedException If failed.
          */
-        public GridCursor<? extends CacheDataRow> cursor(int cacheId, KeyCacheObject lower,
-            KeyCacheObject upper, Object x, MvccSnapshot snapshot) throws IgniteCheckedException;
+        public GridCursor<? extends CacheDataRow> cursor(int cacheId,
+            KeyCacheObject lower,
+            KeyCacheObject upper,
+            CacheDataRowAdapter.RowData x,
+            MvccSnapshot snapshot,
+            int flags) throws IgniteCheckedException;
 
         /**
          * Destroys the tree associated with the store.
@@ -1045,6 +1178,13 @@ public interface IgniteCacheOffheapManager {
         public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner);
 
         /**
+         * Return partition update log tree.
+         *
+         * @return PartitionLogTree instance.
+         */
+        PartitionLogTree logTree();
+
+        /**
          * Return PendingTree for data store.
          *
          * @return PendingTree instance.
@@ -1078,5 +1218,20 @@ public interface IgniteCacheOffheapManager {
          * Partition storage.
          */
         public PartitionMetaStorage<SimpleDataRow> partStorage();
+
+        /**
+         * @return Number of tombstone entries.
+         */
+        public long tombstonesCount();
+
+        /**
+         * Callback for tombstone removal.
+         */
+        public void tombstoneRemoved();
+
+        /**
+         * Callback for tombstone creation.
+         */
+        public void tombstoneCreated();
     }
 }

@@ -53,7 +53,8 @@ public class UserCacheObjectImpl extends CacheObjectImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
+        // Compression not implemented.
         try {
             IgniteCacheObjectProcessor proc = ctx.kernalContext().cacheObjects();
 

@@ -56,9 +56,6 @@ public class CommandLineTransformer {
     /** No pause mode. */
     private boolean noPause;
 
-    /** No JMX mode. */
-    private boolean noJMX;
-
     /** Supported parameter, parsed manually. */
     private String jvmOptions = "";
 
@@ -136,11 +133,6 @@ public class CommandLineTransformer {
 
                     break;
 
-                case "-nojmx":
-                    noJMX = true;
-
-                    break;
-
                 default:
                     argsList.add(arg);
             }
@@ -161,7 +153,6 @@ public class CommandLineTransformer {
         addArgWithValue(sb, "INTERACTIVE", formatBooleanValue(interactive));
         addArgWithValue(sb, "QUIET", "-DIGNITE_QUIET=" + !verbose);
         addArgWithValue(sb, "NO_PAUSE", formatBooleanValue(noPause));
-        addArgWithValue(sb, "NO_JMX", formatBooleanValue(noJMX));
 
         parseJvmOptionsAndSpringConfig(args);
 

@@ -39,6 +39,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.EncryptionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
@@ -53,6 +54,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -66,6 +68,10 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
+import static org.apache.ignite.configuration.EncryptionConfiguration.DFLT_REENCRYPTION_BATCH_SIZE;
+import static org.apache.ignite.configuration.EncryptionConfiguration.DFLT_REENCRYPTION_RATE_MBPS;
+import static org.apache.ignite.internal.encryption.AbstractEncryptionTest.KEYSTORE_PASSWORD;
+import static org.apache.ignite.internal.encryption.AbstractEncryptionTest.KEYSTORE_PATH;
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
 import static org.apache.ignite.testframework.GridTestUtils.cleanIdleVerifyLogFiles;
 import static org.apache.ignite.util.GridCommandHandlerTestUtils.addSslParams;
@@ -80,6 +86,9 @@ import static org.apache.ignite.util.GridCommandHandlerTestUtils.addSslParams;
 public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractTest {
     /** */
     protected static final String CLIENT_NODE_NAME_PREFIX = "client";
+
+    /** */
+    protected static final String DAEMON_NODE_NAME_PREFIX = "daemon";
 
     /** Option is used for auto confirmation. */
     protected static final String CMD_AUTO_CONFIRMATION = "--yes";
@@ -107,6 +116,15 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
 
     /** Enable automatic confirmation to avoid user interaction. */
     protected boolean autoConfirmation = true;
+
+    /** {@code True} if encription is enabled. */
+    protected boolean encryptionEnabled;
+
+    /**  Re-encryption rate limit in megabytes per second. */
+    protected double reencryptSpeed = DFLT_REENCRYPTION_RATE_MBPS;
+
+    /** The number of pages that is scanned during re-encryption under checkpoint lock. */
+    protected int reencryptBatchSize = DFLT_REENCRYPTION_BATCH_SIZE;
 
     /** Last operation result. */
     protected Object lastOperationResult;
@@ -163,6 +181,8 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
         log.info(testOut.toString());
 
         testOut.reset();
+
+        encryptionEnabled = false;
 
         GridClientFactory.stopAll(false);
     }
@@ -223,6 +243,24 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setClientMode(igniteInstanceName.startsWith(CLIENT_NODE_NAME_PREFIX));
+
+        cfg.setDaemon(igniteInstanceName.startsWith(DAEMON_NODE_NAME_PREFIX));
+
+        if (encryptionEnabled) {
+            KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
+
+            encSpi.setKeyStorePath(KEYSTORE_PATH);
+            encSpi.setKeyStorePassword(KEYSTORE_PASSWORD.toCharArray());
+
+            cfg.setEncryptionSpi(encSpi);
+
+            EncryptionConfiguration encCfg = new EncryptionConfiguration();
+
+            encCfg.setReencryptionRateLimit(reencryptSpeed);
+            encCfg.setReencryptionBatchSize(reencryptBatchSize);
+
+            dsCfg.setEncryptionConfiguration(encCfg);
+        }
 
         return cfg;
     }
@@ -400,7 +438,8 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
 
         CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, partitions))
-            .setBackups(1);
+            .setBackups(1)
+            .setEncryptionEnabled(encryptionEnabled);
 
         if (filter != null)
             ccfg.setNodeFilter(filter);

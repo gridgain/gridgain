@@ -23,9 +23,14 @@ import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
 
 /**
  * Information about found deadlock.
@@ -132,6 +137,8 @@ public class TxDeadlock {
         for (Map.Entry<IgniteTxKey, String> e : keyLabels.entrySet()) {
             IgniteTxKey txKey = e.getKey();
 
+            GridToStringBuilder.SensitiveDataLogging sensitiveDataLogging = S.getSensitiveDataLogging();
+
             try {
                 GridCacheContext cctx = ctx.cacheContext(txKey.cacheId());
 
@@ -139,10 +146,18 @@ public class TxDeadlock {
 
                 sb.append(e.getValue())
                     .append(" [");
-                if (S.includeSensitive())
+
+                if (sensitiveDataLogging == PLAIN) {
                     sb.append("key=")
-                        .append(val)
-                        .append(", ");
+                            .append(val)
+                            .append(", ");
+                }
+                else if (sensitiveDataLogging == HASH) {
+                    sb.append("key=")
+                            .append(val == null ? "null" : IgniteUtils.hash(val))
+                            .append(", ");
+                }
+
                 sb.append("cache=")
                     .append(cctx.name())
                     .append("]\n");

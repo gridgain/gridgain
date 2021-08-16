@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteUuid;
@@ -34,7 +35,7 @@ public class GridCacheContextInfo<K, V> {
     private final IgniteUuid dynamicDeploymentId;
 
     /** Cache configuration. */
-    private final CacheConfiguration config;
+    private volatile CacheConfiguration<K, V> config;
 
     /** Cache group ID. */
     private final int groupId;
@@ -43,7 +44,7 @@ public class GridCacheContextInfo<K, V> {
     private final int cacheId;
 
     /** Full cache context. Can be {@code null} in case a cache is not started. */
-    @Nullable private volatile GridCacheContext cctx;
+    @Nullable private volatile GridCacheContext<K, V> cctx;
 
     /**
      * Constructor of full cache context.
@@ -79,7 +80,7 @@ public class GridCacheContextInfo<K, V> {
     /**
      * @return Cache configuration.
      */
-    public CacheConfiguration config() {
+    public CacheConfiguration<K, V> config() {
         return config;
     }
 
@@ -123,7 +124,7 @@ public class GridCacheContextInfo<K, V> {
     /**
      * @return Cache context. {@code null} for not started cache.
      */
-    @Nullable public GridCacheContext cacheContext() {
+    @Nullable public GridCacheContext<K, V> cacheContext() {
         return cctx;
     }
 
@@ -131,7 +132,7 @@ public class GridCacheContextInfo<K, V> {
      * @return Dynamic deployment ID.
      */
     public IgniteUuid dynamicDeploymentId() {
-        GridCacheContext cctx0 = cctx;
+        GridCacheContext<K, V> cctx0 = cctx;
 
         if (cctx0 != null)
             return cctx0.dynamicDeploymentId();
@@ -146,7 +147,7 @@ public class GridCacheContextInfo<K, V> {
      *
      * @param cctx Initted cache context.
      */
-    public void initCacheContext(GridCacheContext<?, ?> cctx) {
+    public void initCacheContext(GridCacheContext<K, V> cctx) {
         assert this.cctx == null : this.cctx;
         assert cctx != null;
 
@@ -173,6 +174,24 @@ public class GridCacheContextInfo<K, V> {
      */
     public boolean isCacheContextInited() {
         return cctx != null;
+    }
+
+    /**
+     * Apply changes from {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param op Add query entity schema operation.
+     */
+    public void onSchemaAddQueryEntity(SchemaAddQueryEntityOperation op) {
+        if (cctx != null) {
+            cctx.onSchemaAddQueryEntity(op);
+
+            config = cctx.config();
+        }
+        else {
+            CacheConfiguration<K, V> oldCfg = config;
+
+            config = GridCacheUtils.patchCacheConfiguration(oldCfg, op);
+        }
     }
 
     /** {@inheritDoc} */

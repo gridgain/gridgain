@@ -80,12 +80,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             WithExpiryPolicy = 1 << 2
         }
 
-        /** Query filter platform code: Java filter. */
-        private const byte FilterPlatformJava = 1;
-
-        /** Query filter platform code: .NET filter. */
-        private const byte FilterPlatformDotnet = 2;
-
         /** Cache name. */
         private readonly string _name;
 
@@ -330,7 +324,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(val, "val");
 
             _ignite.Transactions.StartTxIfNeeded();
-            
+
             return DoOutInOpAffinity(ClientOp.CacheGetAndReplace, key, val, UnmarshalCacheResult<TV>);
         }
 
@@ -892,7 +886,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
                 writer.WriteObject(holder);
 
-                writer.WriteByte(FilterPlatformDotnet);
+                writer.WriteByte(ClientPlatformId.Dotnet);
             }
 
             writer.WriteInt(qry.PageSize);
@@ -950,6 +944,22 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             writer.WriteBoolean(qry.Lazy);
             writer.WriteTimeSpanAsLong(qry.Timeout);
             writer.WriteBoolean(includeColumns);
+
+            if (qry.Partitions != null)
+            {
+                writer.WriteInt(qry.Partitions.Length);
+
+                foreach (var part in qry.Partitions)
+                {
+                    writer.WriteInt(part);
+                }
+            }
+            else
+            {
+                writer.WriteInt(-1);
+            }
+
+            writer.WriteInt(qry.UpdateBatchSize);
         }
 
         /// <summary>
@@ -1084,7 +1094,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             var w = ctx.Writer;
             w.WriteInt(continuousQuery.BufferSize);
             w.WriteLong((long) continuousQuery.TimeInterval.TotalMilliseconds);
-            w.WriteBoolean(false); // Include expired.
+            w.WriteBoolean(continuousQuery.IncludeExpired);
 
             if (continuousQuery.Filter == null)
             {
@@ -1097,14 +1107,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 if (javaFilter != null)
                 {
                     w.WriteObject(javaFilter.GetRawProxy());
-                    w.WriteByte(FilterPlatformJava);
+                    w.WriteByte(ClientPlatformId.Java);
                 }
                 else
                 {
                     var filterHolder = new ContinuousQueryFilterHolder(continuousQuery.Filter, _keepBinary);
 
                     w.WriteObject(filterHolder);
-                    w.WriteByte(FilterPlatformDotnet);
+                    w.WriteByte(ClientPlatformId.Dotnet);
                 }
             }
 

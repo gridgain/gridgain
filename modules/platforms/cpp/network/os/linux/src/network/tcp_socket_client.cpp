@@ -52,7 +52,9 @@ namespace ignite
 
         bool TcpSocketClient::Connect(const char* hostname, uint16_t port, int32_t timeout)
         {
-            addrinfo hints = { 0 };
+            addrinfo hints;
+
+            std::memset(&hints, 0, sizeof(hints));
 
             hints.ai_family = AF_UNSPEC;
             hints.ai_socktype = SOCK_STREAM;

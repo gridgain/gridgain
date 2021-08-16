@@ -216,13 +216,13 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     ret = SQLBindCol(stmt, 7, SQL_C_BIT, boolFields, 0, boolFieldsInd);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    ret = SQLBindCol(stmt, 8, SQL_C_DATE, dateFields, 0, dateFieldsInd);
+    ret = SQLBindCol(stmt, 8, SQL_C_TYPE_DATE, dateFields, 0, dateFieldsInd);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    ret = SQLBindCol(stmt, 9, SQL_C_TIME, timeFields, 0, timeFieldsInd);
+    ret = SQLBindCol(stmt, 9, SQL_C_TYPE_TIME, timeFields, 0, timeFieldsInd);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    ret = SQLBindCol(stmt, 10, SQL_C_TIMESTAMP, timestampFields, 0, timestampFieldsInd);
+    ret = SQLBindCol(stmt, 10, SQL_C_TYPE_TIMESTAMP, timestampFields, 0, timestampFieldsInd);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     ret = SQLBindCol(stmt, 11, SQL_C_BINARY, i8ArrayFields, BUFFER_SIZE, i8ArrayFieldsLen);
@@ -245,7 +245,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
 
     for (int64_t i = 0; i < NumRowsFetched; i++)
     {
-        CHECK_TEST_VALUES(i, i);
+        CHECK_TEST_VALUES(i, static_cast<int>(i));
     }
 
     ret = SQLFetch(stmt);
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     for (int64_t i = 0; i < NumRowsFetched; i++)
     {
         int64_t testIdx = i + ROW_ARRAY_SIZE;
-        CHECK_TEST_VALUES(i, testIdx);
+        CHECK_TEST_VALUES(i, static_cast<int>(testIdx));
     }
 
     for (int64_t i = NumRowsFetched; i < ROW_ARRAY_SIZE; i++)

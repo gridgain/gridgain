@@ -55,6 +55,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
+import org.apache.ignite.internal.binary.BinaryClassDescriptor;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryEnumObjectImpl;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
@@ -83,6 +84,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.cache.IncompleteCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArrayImpl;
@@ -237,6 +239,11 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
                     );
                 }
 
+                @Override public void addMetaLocally(int typeId, BinaryType meta, boolean failIfUnregistered)
+                    throws BinaryObjectException {
+                    CacheObjectBinaryProcessorImpl.this.addMetaLocally(typeId, meta);
+                }
+
                 @Override public BinaryType metadata(int typeId) throws BinaryObjectException {
                     return CacheObjectBinaryProcessorImpl.this.metadata(typeId);
                 }
@@ -349,14 +356,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         super.onKernalStart(active);
 
         discoveryStarted = true;
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public CacheObject prepareForCache(@Nullable CacheObject obj, GridCacheContext cctx) {
-        if (obj == null)
-            return null;
-
-        return obj.prepareForCache(cctx.cacheObjectContext());
     }
 
     /** {@inheritDoc} */
@@ -1050,8 +1049,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
         boolean binaryEnabled = marsh instanceof BinaryMarshaller && !GridCacheUtils.isSystemCache(ccfg.getName());
 
-        AffinityKeyMapper cacheAffMapper = ccfg.getAffinityMapper();
-
         AffinityKeyMapper dfltAffMapper = binaryEnabled ?
             new CacheDefaultBinaryAffinityKeyMapper(ccfg.getKeyConfiguration()) :
             new GridCacheDefaultAffinityKeyMapper();
@@ -1226,6 +1223,12 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new CacheObjectImpl(null, bytes);
+
+            case CacheObject.TOMBSTONE:
+                return TombstoneCacheObject.INSTANCE;
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
@@ -1243,6 +1246,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new KeyCacheObjectImpl(ctx.kernalContext().cacheObjects().unmarshal(ctx, bytes, null), bytes, -1);
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                return new BinaryObjectImpl(binaryContext(), ctx.compressionStrategy().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
@@ -1545,6 +1551,13 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             throw new BinaryObjectException("Failed to remove metadata for type: " + typeId, ex);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public BinaryType registerClass(Class<?> cls) throws BinaryObjectException {
+        BinaryClassDescriptor clsDesc = binaryCtx.registerClass(cls, true, false);
+
+        return metadata(clsDesc.typeId());
     }
 
     /** */

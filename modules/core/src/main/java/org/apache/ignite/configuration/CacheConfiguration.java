@@ -32,6 +32,7 @@ import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheWriter;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cache.CacheInterceptor;
@@ -60,6 +61,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.CachePluginConfiguration;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
 import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * This class defines grid cache configuration. This configuration is passed to
@@ -419,6 +421,11 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     private boolean encryptionEnabled;
 
+    /**
+     * Cache entry compression configuration. If provided, data in cache will be compressed.
+     */
+    private EntryCompressionConfiguration entryCompressionCfg;
+
     /** Empty constructor (all values are initialized to their defaults). */
     public CacheConfiguration() {
         /* No-op. */
@@ -459,6 +466,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
         dfltLockTimeout = cc.getDefaultLockTimeout();
         eagerTtl = cc.isEagerTtl();
         encryptionEnabled = cc.isEncryptionEnabled();
+        entryCompressionCfg = cc.getEntryCompressionConfiguration();
         evictFilter = cc.getEvictionFilter();
         evictPlc = cc.getEvictionPolicy();
         evictPlcFactory = cc.getEvictionPolicyFactory();
@@ -2381,6 +2389,38 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      */
     public CacheConfiguration<K, V> setEncryptionEnabled(boolean encryptionEnabled) {
         this.encryptionEnabled = encryptionEnabled;
+
+        return this;
+    }
+
+    /**
+     * Gets compression configuration used to compress entries, {@code null} when compression is not used.
+     *
+     * @return Entry compression configuration.
+     */
+    @IgniteExperimental
+    @Nullable public EntryCompressionConfiguration getEntryCompressionConfiguration() {
+        return entryCompressionCfg;
+    }
+
+    /**
+     * Sets compression configuration to be used to compress entries. When provided, cache data will be considered
+     * for compression.
+     *
+     * If set to not-{@code null}, cache values (and possibly keys) will be stored in compressed format, provided that
+     * it is beneficial memory-wise. Entry key and entry value are compressed independently.
+     *
+     * Currently, only {@code BinaryObject} keys and values may be considered for compression.
+     *
+     * @see BinaryObject
+     *
+     * @param entryCompressionCfg Entry compression configuration.
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public CacheConfiguration<K, V> setEntryCompressionConfiguration(
+        @Nullable EntryCompressionConfiguration entryCompressionCfg) {
+        this.entryCompressionCfg = entryCompressionCfg;
 
         return this;
     }

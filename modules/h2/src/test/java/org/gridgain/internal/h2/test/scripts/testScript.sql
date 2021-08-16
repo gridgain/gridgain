@@ -497,13 +497,13 @@ insert into test values(1), (2), (3), (4);
 > update count: 4
 
 explain analyze select * from test where id is null;
->> SELECT "TEST"."ID" FROM "PUBLIC"."TEST" /* PUBLIC.PRIMARY_KEY_2: ID IS NULL */ /* scanCount: 1 */ WHERE "ID" IS NULL
+>> SELECT "TEST"."ID" FROM "PUBLIC"."TEST" /* PUBLIC.PRIMARY_KEY_2: ID IS NULL */ /* scanCount: 1 */ /* lookupCount: 1 */ WHERE "ID" IS NULL
 
 drop table test;
 > ok
 
 explain analyze select 1;
->> SELECT 1 FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX */ /* scanCount: 2 */
+>> SELECT 1 FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX */ /* scanCount: 2 */ /* lookupCount: 1 */
 
 create table test(id int);
 > ok
@@ -3155,14 +3155,15 @@ drop table test;
 > ok
 
 call select 1.0/3.0*3.0, 100.0/2.0, -25.0/100.0, 0.0/3.0, 6.9/2.0, 0.72179425150347250912311550800000 / 5314251955.21;
-> SELECT 0.999999999999999999999999990, 50, -0.25, 0, 3.45, 1.35822361752313607260107721120531135706133161972E-10 FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX */ /* scanCount: 2 */
-> -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+> SELECT 0.999999999999999999999999990, 50, -0.25, 0, 3.45, 1.35822361752313607260107721120531135706133161972E-10 FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX */ /* scanCount: 2 */ /* lookupCount: 1 */
+> --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------
 > ROW (0.999999999999999999999999990, 50, -0.25, 0, 3.45, 1.35822361752313607260107721120531135706133161972E-10)
 > rows: 1
 
 call (select x from dual where x is null);
-> SELECT X FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX: X IS NULL */ /* scanCount: 1 */ WHERE X IS NULL
-> -------------------------------------------------------------------------------------------------------
+> SELECT X FROM SYSTEM_RANGE(1, 1) /* PUBLIC.RANGE_INDEX: X IS NULL */ /* scanCount: 1 */ /* lookupCount: 1 */ WHERE X IS NULL
+> ----------------------------------------------------------------------------------------------------------------------------
 > null
 > rows: 1
 
@@ -3241,8 +3242,9 @@ select count(*) from test where id = ((select id from test fetch first row only)
 > exception COLUMN_COUNT_DOES_NOT_MATCH
 
 select (select id from test where 1=0) from test;
-> SELECT ID FROM PUBLIC.TEST /* PUBLIC.TEST.tableScan: FALSE */ WHERE FALSE
-> -------------------------------------------------------------------------
+> SELECT ID FROM PUBLIC.TEST /* PUBLIC.TEST.tableScan: FALSE */ /* lookupCount: 1 */ WHERE FALSE
+> ----------------------------------------------------------------------------------------------
+------------------------------
 > null
 > null
 > rows: 2
@@ -3263,14 +3265,16 @@ insert into test values(1, 'Y');
 > update count: 1
 
 call select a from test order by id;
-> SELECT A FROM PUBLIC.TEST /* PUBLIC.PRIMARY_KEY_2 */ /* scanCount: 2 */ ORDER BY =ID /* index sorted */
-> -------------------------------------------------------------------------------------------------------
+> SELECT A FROM PUBLIC.TEST /* PUBLIC.PRIMARY_KEY_2 */ /* scanCount: 2 */ /* lookupCount: 1 */ ORDER BY =ID /* index sorted */
+> ----------------------------------------------------------------------------------------------------------------------------
+------------------------------
 > TRUE
 > rows (ordered): 1
 
 select select a from test order by id;
-> SELECT A FROM PUBLIC.TEST /* PUBLIC.PRIMARY_KEY_2 */ /* scanCount: 2 */ ORDER BY =ID /* index sorted */
-> -------------------------------------------------------------------------------------------------------
+> SELECT A FROM PUBLIC.TEST /* PUBLIC.PRIMARY_KEY_2 */ /* scanCount: 2 */ /* lookupCount: 1 */ ORDER BY =ID /* index sorted */
+> ----------------------------------------------------------------------------------------------------------------------------
+------------------------------
 > TRUE
 > rows: 1
 
@@ -5436,7 +5440,7 @@ SELECT * FROM V_UNION WHERE ID=1;
 > rows: 2
 
 EXPLAIN SELECT * FROM V_UNION WHERE ID=1;
->> SELECT "V_UNION"."ID", "V_UNION"."NAME", "V_UNION"."CLASS" FROM "PUBLIC"."V_UNION" /* (SELECT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ WHERE CHILDREN.ID IS ?1) UNION ALL (SELECT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ WHERE CHILDREN.ID IS ?1): ID = 1 */ WHERE "ID" = 1
+>> SELECT "V_UNION"."ID", "V_UNION"."NAME", "V_UNION"."CLASS" FROM "PUBLIC"."V_UNION" /* (SELECT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE CHILDREN.ID IS ?1) UNION ALL (SELECT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE CHILDREN.ID IS ?1): ID = 1 */ WHERE "ID" = 1
 
 CREATE VIEW V_EXCEPT AS SELECT * FROM CHILDREN EXCEPT SELECT * FROM CHILDREN WHERE ID=2;
 > ok
@@ -5448,7 +5452,7 @@ SELECT * FROM V_EXCEPT WHERE ID=1;
 > rows: 1
 
 EXPLAIN SELECT * FROM V_EXCEPT WHERE ID=1;
->> SELECT "V_EXCEPT"."ID", "V_EXCEPT"."NAME", "V_EXCEPT"."CLASS" FROM "PUBLIC"."V_EXCEPT" /* (SELECT DISTINCT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ WHERE CHILDREN.ID IS ?1) EXCEPT (SELECT DISTINCT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID = 2 ++/ /++ scanCount: 2 ++/ WHERE ID = 2): ID = 1 */ WHERE "ID" = 1
+>> SELECT "V_EXCEPT"."ID", "V_EXCEPT"."NAME", "V_EXCEPT"."CLASS" FROM "PUBLIC"."V_EXCEPT" /* (SELECT DISTINCT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE CHILDREN.ID IS ?1) EXCEPT (SELECT DISTINCT CHILDREN.ID, CHILDREN.NAME, CHILDREN.CLASS FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID = 2 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE ID = 2): ID = 1 */ WHERE "ID" = 1
 
 CREATE VIEW V_INTERSECT AS SELECT ID, NAME FROM CHILDREN INTERSECT SELECT * FROM CLASSES;
 > ok
@@ -5459,7 +5463,7 @@ SELECT * FROM V_INTERSECT WHERE ID=1;
 > rows: 0
 
 EXPLAIN SELECT * FROM V_INTERSECT WHERE ID=1;
->> SELECT "V_INTERSECT"."ID", "V_INTERSECT"."NAME" FROM "PUBLIC"."V_INTERSECT" /* (SELECT DISTINCT ID, NAME FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ WHERE ID IS ?1) INTERSECT (SELECT DISTINCT CLASSES.ID, CLASSES.NAME FROM PUBLIC.CLASSES /++ PUBLIC.PRIMARY_KEY_5: ID IS ?1 ++/ /++ scanCount: 2 ++/ WHERE CLASSES.ID IS ?1): ID = 1 */ WHERE "ID" = 1
+>> SELECT "V_INTERSECT"."ID", "V_INTERSECT"."NAME" FROM "PUBLIC"."V_INTERSECT" /* (SELECT DISTINCT ID, NAME FROM PUBLIC.CHILDREN /++ PUBLIC.PRIMARY_KEY_9: ID IS ?1 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE ID IS ?1) INTERSECT (SELECT DISTINCT CLASSES.ID, CLASSES.NAME FROM PUBLIC.CLASSES /++ PUBLIC.PRIMARY_KEY_5: ID IS ?1 ++/ /++ scanCount: 2 ++/ /++ lookupCount: 1 ++/ WHERE CLASSES.ID IS ?1): ID = 1 */ WHERE "ID" = 1
 
 DROP VIEW V_UNION;
 > ok
@@ -5900,19 +5904,21 @@ SELECT * FROM TEST T WHERE T.ID = (SELECT T2.ID FROM TEST T2 WHERE T2.ID=T.ID);
 > rows: 3
 
 SELECT (SELECT T2.NAME FROM TEST T2 WHERE T2.ID=T.ID), T.NAME FROM TEST T;
-> SELECT T2.NAME FROM PUBLIC.TEST T2 /* PUBLIC.PRIMARY_KEY_2: ID = T.ID */ /* scanCount: 2 */ WHERE T2.ID = T.ID NAME
-> -------------------------------------------------------------------------------------------------------------- -----
-> Hello                                                                                                          Hello
-> World                                                                                                          World
-> null                                                                                                           null
+> SELECT T2.NAME FROM PUBLIC.TEST T2 /* PUBLIC.PRIMARY_KEY_2: ID = T.ID */ /* scanCount: 2 */ /* lookupCount: 1 */ WHERE T2.ID = T.ID NAME
+> ----------------------------------------------------------------------------------------------------------------------------------- -----
+------------------------------
+> Hello                                                                                                                               Hello
+> World                                                                                                                               World
+> null                                                                                                                                null
 > rows: 3
 
 SELECT (SELECT SUM(T2.ID) FROM TEST T2 WHERE T2.ID>T.ID), T.ID FROM TEST T;
-> SELECT SUM(T2.ID) FROM PUBLIC.TEST T2 /* PUBLIC.PRIMARY_KEY_2: ID > T.ID */ /* scanCount: 2 */ WHERE T2.ID > T.ID ID
-> ----------------------------------------------------------------------------------------------------------------- --
-> 2                                                                                                                 1
-> 3                                                                                                                 0
-> null                                                                                                              2
+> SELECT SUM(T2.ID) FROM PUBLIC.TEST T2 /* PUBLIC.PRIMARY_KEY_2: ID > T.ID */ /* scanCount: 2 */ /* lookupCount: 1 */ WHERE T2.ID > T.ID ID
+> -------------------------------------------------------------------------------------------------------------------------------------- --
+------------------------------
+> 2                                                                                                                                      1
+> 3                                                                                                                                      0
+> null                                                                                                                                   2
 > rows: 3
 
 select * from test t where t.id+1 in (select id from test);

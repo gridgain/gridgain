@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientCache
 import org.apache.ignite.internal.processors.rest.client.message.GridClientCacheRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequest;
+import org.apache.ignite.internal.processors.rest.client.message.GridClientClusterStateRequestV2;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientHandshakeRequest;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeBean;
@@ -842,6 +843,17 @@ public class GridClientNioTcpConnection extends GridClientConnection {
         msg.active(active);
 
         return makeRequest(msg, destNodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public GridClientFuture<?> changeState(
+        ClusterState state,
+        UUID destNodeId,
+        boolean forceDeactivation
+    ) throws GridClientClosedException, GridClientConnectionResetException {
+        GridArgumentCheck.notNull(state, "state");
+
+        return makeRequest(GridClientClusterStateRequestV2.state(state, forceDeactivation), destNodeId);
     }
 
     /** {@inheritDoc} */

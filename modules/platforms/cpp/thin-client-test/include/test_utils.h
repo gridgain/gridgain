@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@
 #define _IGNITE_THIN_CLIENT_TEST_TEST_UTILS
 
 #include <string>
+
+#include <boost/chrono.hpp>
+#include <boost/thread.hpp>
 
 #include <ignite/ignition.h>
 
@@ -57,23 +60,60 @@ namespace ignite_test
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Start Ignite node with config path corrected for specific platform.
      *
      * @param cfgFile Ignite node config file name without path.
      * @param name Node name.
+     * @param logger Logger to use.
      * @return New node.
      */
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name);
+    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger = 0);
 
     /**
      * Remove all the LFS artifacts.
      */
     void ClearLfs();
+
+    /**
+     * Get a number of occurrences of a given string in the specified file.
+     * @param filePath File path.
+     * @param line Line to find.
+     * @return Number of occurrences.
+     */
+    size_t GetLineOccurrencesInFile(const std::string& filePath, const std::string& line);
+
+    /**
+     * Wait for condition.
+     * @tparam T Type of condition function.
+     * @param func Function that should check for condition and return true once it's performed.
+     * @param timeout Timeout to wait.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    template<typename F>
+    bool WaitForCondition(F func, int32_t timeout)
+    {
+        using namespace boost::chrono;
+
+        const int32_t span = 200;
+
+        steady_clock::time_point begin = steady_clock::now();
+
+        while (!func())
+        {
+            boost::this_thread::sleep_for(milliseconds(span));
+
+            if (timeout && duration_cast<milliseconds>(steady_clock::now() - begin).count() >= timeout)
+                return func();
+        }
+
+        return true;
+    }
 }
 
 #endif // _IGNITE_THIN_CLIENT_TEST_TEST_UTILS

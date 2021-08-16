@@ -21,10 +21,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.LongConsumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.store.PageStore;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.lang.IgniteOutClosure;
 
 /**
@@ -49,6 +49,9 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
     /** Memory configuration. */
     private final DataStorageConfiguration memCfg;
 
+    /** Latest version. */
+    private final int latestVer;
+
     /**
      * @param fileIOFactory File IO factory.
      * @param fileIOFactoryStoreV1 File IO factory for V1 page store and for version checking.
@@ -62,13 +65,28 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
         this.fileIOFactory = fileIOFactory;
         this.fileIOFactoryStoreV1 = fileIOFactoryStoreV1;
         this.memCfg = memCfg;
+
+        int latestVer0 = LATEST_VERSION;
+
+        String latestVerProp = System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY);
+
+        if (latestVerProp != null) {
+            try {
+                latestVer0 = Integer.parseInt(latestVerProp);
+            }
+            catch (NumberFormatException ignore) {
+                // No override.
+            }
+        }
+
+        latestVer = latestVer0;
     }
 
     /** {@inheritDoc} */
     @Override public PageStore createPageStore(
         byte type,
         IgniteOutClosure<Path> pathProvider,
-        LongAdderMetric allocatedTracker) throws IgniteCheckedException {
+        LongConsumer allocatedTracker) throws IgniteCheckedException {
         Path filePath = pathProvider.apply();
 
         if (!Files.exists(filePath))
@@ -101,14 +119,6 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
      * Resolves latest page store version.
      */
     public int latestVersion() {
-        int latestVer = LATEST_VERSION;
-
-        try {
-            latestVer = Integer.parseInt(System.getProperty(LATEST_VERSION_OVERRIDE_PROPERTY));
-        } catch (NumberFormatException e) {
-            // No override.
-        }
-
         return latestVer;
     }
 
@@ -123,7 +133,7 @@ public class FileVersionCheckingFactory implements FilePageStoreFactory {
         byte type,
         IgniteOutClosure<Path> pathProvider,
         int ver,
-        LongAdderMetric allocatedTracker) {
+        LongConsumer allocatedTracker) {
 
         switch (ver) {
             case FilePageStore.VERSION:

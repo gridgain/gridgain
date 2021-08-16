@@ -47,6 +47,7 @@ import org.apache.ignite.binary.BinaryField;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.CacheInterceptor;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -74,7 +75,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTransactionalCache;
-import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
+import org.apache.ignite.internal.processors.cache.dr.GridCacheReplicationManager;
 import org.apache.ignite.internal.processors.cache.jta.CacheJtaManagerAdapter;
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
@@ -94,6 +95,7 @@ import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProces
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.plugin.CachePluginManager;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.lang.GridFunc;
@@ -156,7 +158,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     private IgniteLogger log;
 
     /** Cache configuration. */
-    private CacheConfiguration cacheCfg;
+    private volatile CacheConfiguration cacheCfg;
 
     /** Affinity manager. */
     private GridCacheAffinityManager affMgr;
@@ -186,7 +188,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     private CacheCompressionManager compressMgr;
 
     /** Replication manager. */
-    private GridCacheDrManager drMgr;
+    private GridCacheReplicationManager drMgr;
 
     /** Conflict resolver manager. */
     private CacheConflictResolutionManager rslvrMgr;
@@ -256,9 +258,6 @@ public class GridCacheContext<K, V> implements Externalizable {
 
     /** Deployment enabled flag for this specific cache */
     private boolean depEnabled;
-
-    /** */
-    private boolean deferredDel;
 
     /** Whether {@link EventType#EVT_CACHE_REBALANCE_STARTED} was sent (used only for REPLICATED cache). */
     private volatile boolean rebalanceStartedEvtSent;
@@ -343,7 +342,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         CacheContinuousQueryManager contQryMgr,
         CacheDataStructuresManager dataStructuresMgr,
         GridCacheTtlManager ttlMgr,
-        GridCacheDrManager drMgr,
+        GridCacheReplicationManager drMgr,
         CacheConflictResolutionManager<K, V> rslvrMgr,
         CachePluginManager pluginMgr,
         GridCacheAffinityManager affMgr,
@@ -632,9 +631,6 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     public void cache(GridCacheAdapter<K, V> cache) {
         this.cache = cache;
-
-        deferredDel = cache.isDht() || cache.isDhtAtomic() || cache.isColocated() ||
-            (cache.isNear() && cache.configuration().getAtomicityMode() == ATOMIC);
     }
 
     /**
@@ -708,17 +704,9 @@ public class GridCacheContext<K, V> implements Externalizable {
     }
 
     /**
-     * @return {@code True} if entries should not be deleted from cache immediately.
-     */
-    public boolean deferredDelete() {
-        return deferredDel;
-    }
-
-    /**
      * @param e Entry.
      */
     public void incrementPublicSize(GridCacheMapEntry e) {
-        assert deferredDelete();
         assert e != null;
         assert !e.isInternal() : e;
 
@@ -729,7 +717,6 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param e Entry.
      */
     public void decrementPublicSize(GridCacheMapEntry e) {
-        assert deferredDelete();
         assert e != null;
         assert !e.isInternal() : e;
 
@@ -1167,7 +1154,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     /**
      * @return DR manager.
      */
-    public GridCacheDrManager dr() {
+    public GridCacheReplicationManager dr() {
         return drMgr;
     }
 
@@ -1700,19 +1687,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     }
 
     /**
-     * @param entry Entry.
-     * @param ver Version.
-     */
-    public void onDeferredDelete(GridCacheEntryEx entry, GridCacheVersion ver) {
-        assert entry != null;
-        assert !entry.lockedByCurrentThread() : entry;
-        assert ver != null;
-        assert deferredDelete() : cache;
-
-        cache.onDeferredDelete(entry, ver);
-    }
-
-    /**
      * @param interceptorRes Result of {@link CacheInterceptor#onBeforeRemove} callback.
      * @return {@code True} if interceptor cancels remove.
      */
@@ -1791,10 +1765,11 @@ public class GridCacheContext<K, V> implements Externalizable {
      *
      * @param o Object to unwrap.
      * @param keepBinary Keep binary flag.
+     * @param ldr Class loader, used for deserialization from binary representation.
      * @return Unwrapped object.
      */
-    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary) {
-        return unwrapBinaryIfNeeded(o, keepBinary, true);
+    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, @Nullable ClassLoader ldr) {
+        return unwrapBinaryIfNeeded(o, keepBinary, true, ldr);
     }
 
     /**
@@ -1803,10 +1778,11 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param o Object to unwrap.
      * @param keepBinary Keep binary flag.
      * @param cpy Copy value flag.
+     * @param ldr Class loader, used for deserialization from binary representation.
      * @return Unwrapped object.
      */
-    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, boolean cpy) {
-        return cacheObjCtx.unwrapBinaryIfNeeded(o, keepBinary, cpy);
+    public Object unwrapBinaryIfNeeded(Object o, boolean keepBinary, boolean cpy, @Nullable ClassLoader ldr) {
+        return cacheObjCtx.unwrapBinaryIfNeeded(o, keepBinary, cpy, ldr);
     }
 
     /**
@@ -1822,7 +1798,7 @@ public class GridCacheContext<K, V> implements Externalizable {
 
                     if (invokeRes.result() != null)
                         res = CacheInvokeResult.fromResult(unwrapBinaryIfNeeded(invokeRes.result(),
-                            keepBinary, false));
+                            keepBinary, false, null));
                 }
 
                 return res;
@@ -1910,6 +1886,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param deserializeBinary Deserialize binary flag.
      * @param cpy Copy flag.
      * @param ver GridCacheVersion.
+     * @param ldr Class loader, used for deserialization from binary representation.
      */
     public <K1, V1> void addResult(Map<K1, V1> map,
         KeyCacheObject key,
@@ -1920,10 +1897,11 @@ public class GridCacheContext<K, V> implements Externalizable {
         boolean cpy,
         final GridCacheVersion ver,
         final long expireTime,
-        final long ttl) {
+        final long ttl,
+        @Nullable ClassLoader ldr) {
         // Creates EntryGetResult
         addResult(map, key, val, skipVals, keepCacheObjects, deserializeBinary, cpy, null,
-            ver, expireTime, ttl, ver != null);
+            ver, expireTime, ttl, ver != null, ldr);
     }
 
     /**
@@ -1946,7 +1924,7 @@ public class GridCacheContext<K, V> implements Externalizable {
         boolean needVer) {
         // Uses getRes as result.
         addResult(map, key, getRes.<CacheObject>value(), skipVals, keepCacheObjects, deserializeBinary, cpy, getRes,
-            null, 0, 0, needVer);
+            null, 0, 0, needVer, null);
     }
 
     /**
@@ -1962,6 +1940,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @param expireTime Entry expire time.
      * @param ttl Entry TTL.
      * @param needVer Need version flag.
+     * @param ldr Class loader, used for deserialization from binary representation.
      */
     public <K1, V1> void addResult(Map<K1, V1> map,
         KeyCacheObject key,
@@ -1974,14 +1953,15 @@ public class GridCacheContext<K, V> implements Externalizable {
         final GridCacheVersion ver,
         final long expireTime,
         final long ttl,
-        boolean needVer) {
+        boolean needVer,
+        @Nullable ClassLoader ldr) {
         assert key != null;
         assert val != null || skipVals;
 
         if (!keepCacheObjects) {
-            Object key0 = unwrapBinaryIfNeeded(key, !deserializeBinary, cpy);
+            Object key0 = unwrapBinaryIfNeeded(key, !deserializeBinary, cpy, ldr);
 
-            Object val0 = skipVals ? true : unwrapBinaryIfNeeded(val, !deserializeBinary, cpy);
+            Object val0 = skipVals ? true : unwrapBinaryIfNeeded(val, !deserializeBinary, cpy, ldr);
 
             assert key0 != null : key;
             assert val0 != null : val;
@@ -2338,6 +2318,39 @@ public class GridCacheContext<K, V> implements Externalizable {
     public boolean hasContinuousQueryListeners(@Nullable IgniteInternalTx tx) {
         return grp.sharedGroup() ? grp.hasContinuousQueryCaches() :
             contQryMgr.notifyContinuousQueries(tx) && !F.isEmpty(contQryMgr.updateListeners(false, false));
+    }
+
+    /**
+     * Apply changes from {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param op Add query entity schema operation.
+     */
+    public void onSchemaAddQueryEntity(SchemaAddQueryEntityOperation op) {
+        onSchemaAddQueryEntity(op.entities(), op.schemaName(), op.isSqlEscape(),
+                op.queryParallelism());
+    }
+
+    /**
+     * Apply changes on enable indexing.
+     *
+     * @param entities New query entities.
+     * @param sqlSchema Sql schema name.
+     * @param isSqlEscape Sql escape flag.
+     * @param qryParallelism Query parallelism parameter.
+     */
+    public void onSchemaAddQueryEntity(
+            Collection<QueryEntity> entities,
+            String sqlSchema,
+            boolean isSqlEscape,
+            int qryParallelism
+    ) {
+        CacheConfiguration oldCfg = cacheCfg;
+
+        if (oldCfg != null)
+            cacheCfg = GridCacheUtils.patchCacheConfiguration(oldCfg, entities, sqlSchema, isSqlEscape, qryParallelism);
+
+        if (qryMgr != null)
+            qryMgr.enable();
     }
 
     /**

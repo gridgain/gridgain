@@ -16,17 +16,19 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.internal.RaceOnDeployClassesWithSameAliases;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentMessageCountSelfTest;
+import org.apache.ignite.internal.managers.deployment.GridDifferentLocalDeploymentSelfTest;
+import org.apache.ignite.internal.managers.deployment.P2PCacheOperationIntoComputeTest;
 import org.apache.ignite.p2p.DeploymentClassLoaderCallableTest;
 import org.apache.ignite.p2p.GridP2PClassLoadingSelfTest;
 import org.apache.ignite.p2p.GridP2PComputeWithNestedEntryProcessorTest;
+import org.apache.ignite.p2p.GridP2PContinuousDeploymentClientDisconnectTest;
 import org.apache.ignite.p2p.GridP2PContinuousDeploymentSelfTest;
+import org.apache.ignite.p2p.GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest;
 import org.apache.ignite.p2p.GridP2PDifferentClassLoaderSelfTest;
 import org.apache.ignite.p2p.GridP2PDoubleDeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PHotRedeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PJobClassLoaderSelfTest;
-import org.apache.ignite.p2p.GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest;
 import org.apache.ignite.p2p.GridP2PLocalDeploymentSelfTest;
 import org.apache.ignite.p2p.GridP2PMissedResourceCacheSizeSelfTest;
 import org.apache.ignite.p2p.GridP2PNodeLeftSelfTest;
@@ -70,7 +72,9 @@ import org.junit.runners.Suite;
     GridP2PComputeWithNestedEntryProcessorTest.class,
     GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest.class,
     GridP2PScanQueryWithTransformerTest.class,
-    RaceOnDeployClassesWithSameAliases.class
+    P2PCacheOperationIntoComputeTest.class,
+    GridDifferentLocalDeploymentSelfTest.class,
+    GridP2PContinuousDeploymentClientDisconnectTest.class,
 })
 public class IgniteP2PSelfTestSuite {
 }

@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
@@ -103,7 +104,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
 
             /** <inheritdoc /> */
-            public bool RegisterType(int id, string typeName)
+            public bool RegisterType(int id, string typeName, bool registerSameJavaType)
             {
                 return false;
             }
@@ -115,7 +116,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
 
             /** <inheritdoc /> */
-            public string GetTypeName(int id)
+            public string GetTypeName(int id, byte platformId, Func<Exception, string> errorAction)
             {
                 return null;
             }

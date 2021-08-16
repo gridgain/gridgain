@@ -292,7 +292,8 @@ public class Function extends Expression implements FunctionCall {
         // date
         addFunctionNotDeterministic("CURRENT_DATE", CURRENT_DATE, 0, Value.DATE, true);
         addFunctionNotDeterministic("CURDATE", CURRENT_DATE, 0, Value.DATE);
-        addFunctionNotDeterministic("SYSDATE", CURRENT_DATE, 0, Value.DATE, false);
+        addFunctionNotDeterministic("SYSDATE", CURRENT_TIMESTAMP, 0, Value.TIMESTAMP, false);
+
         addFunctionNotDeterministic("TODAY", CURRENT_DATE, 0, Value.DATE, false);
 
         addFunctionNotDeterministic("CURRENT_TIME", CURRENT_TIME, VAR_ARGS, Value.TIME);
@@ -301,8 +302,8 @@ public class Function extends Expression implements FunctionCall {
         addFunctionNotDeterministic("SYSTIME", LOCALTIME, 0, Value.TIME, false);
         addFunctionNotDeterministic("CURTIME", LOCALTIME, VAR_ARGS, Value.TIME);
 
-        addFunctionNotDeterministic("CURRENT_TIMESTAMP", CURRENT_TIMESTAMP, VAR_ARGS, Value.TIMESTAMP_TZ, false);
-        addFunctionNotDeterministic("SYSTIMESTAMP", CURRENT_TIMESTAMP, VAR_ARGS, Value.TIMESTAMP_TZ, false);
+        addFunctionNotDeterministic("CURRENT_TIMESTAMP", CURRENT_TIMESTAMP, VAR_ARGS, Value.TIMESTAMP, false);
+        addFunctionNotDeterministic("SYSTIMESTAMP", CURRENT_TIMESTAMP, VAR_ARGS, Value.TIMESTAMP, false);
 
         addFunctionNotDeterministic("LOCALTIMESTAMP", LOCALTIMESTAMP, VAR_ARGS, Value.TIMESTAMP, false);
         addFunctionNotDeterministic("NOW", LOCALTIMESTAMP, VAR_ARGS, Value.TIMESTAMP);
@@ -825,7 +826,7 @@ public class Function extends Expression implements FunctionCall {
             ValueTimestampTimeZone vt = database.getMode().dateTimeValueWithinTransaction
                     ? session.getTransactionStart()
                     : session.getCurrentCommandStart();
-            result = vt.convertScale(false, v0 == null ? 6 : v0.getInt());
+            result = vt.convertScale(false, v0 == null ? 6 : v0.getInt()).convertTo(Value.TIMESTAMP);
             break;
         }
         case LOCALTIMESTAMP: {

@@ -30,6 +30,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -37,10 +38,12 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -75,7 +78,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
-    private final GridCacheContext cctx;
+    private final GridCacheContext<?, ?> cctx;
 
     /** Owning table. */
     private final GridH2Table table;
@@ -115,7 +118,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final String idxName;
 
     /** */
-    private final IoStatisticsHolder stats;
+    @Nullable private final IoStatisticsHolder stats;
 
     /** */
     private final Comparator<Value> comp = this::compareValues;
@@ -169,6 +172,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param mvccEnabled Mvcc flag.
      * @param rowCache Row cache.
      * @param failureProcessor if the tree is corrupted.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @param log Logger.
      * @param stats Statistics holder.
      * @param factory Inline helper factory.
@@ -177,7 +181,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @throws IgniteCheckedException If failed.
      */
     public H2Tree(
-        GridCacheContext cctx,
+        @Nullable GridCacheContext<?, ?> cctx,
         GridH2Table table,
         String name,
         String idxName,
@@ -199,10 +203,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         boolean mvccEnabled,
         @Nullable H2RowCache rowCache,
         @Nullable FailureProcessor failureProcessor,
+        PageLockTrackerManager pageLockTrackerManager,
         IgniteLogger log,
-        IoStatisticsHolder stats,
+        @Nullable IoStatisticsHolder stats,
         InlineIndexColumnFactory factory,
-        int configuredInlineSize
+        int configuredInlineSize,
+        PageIoResolver pageIoRslvr
     ) throws IgniteCheckedException {
         super(
             name,
@@ -213,8 +219,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             globalRmvId,
             metaPageId,
             reuseList,
+            PageIdAllocator.FLAG_IDX,
             failureProcessor,
-            null
+            pageLockTrackerManager,
+            pageIoRslvr
         );
 
         this.cctx = cctx;
@@ -338,7 +346,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      *
      * @return Indexed columns.
      */
-    IndexColumn[] cols() {
+    public IndexColumn[] cols() {
         return cols;
     }
 
@@ -350,11 +358,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @throws IgniteCheckedException if failed.
      */
     public H2Row createRow(long link) throws IgniteCheckedException {
+        return createRow(link, true);
+    }
+
+    public H2Row createRow(long link, boolean follow) throws IgniteCheckedException {
         if (rowCache != null) {
             H2CacheRow row = rowCache.get(link);
 
             if (row == null) {
-                row = createRow0(link);
+                row = createRow0(link, follow);
 
                 rowCache.put(row);
             }
@@ -362,7 +374,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             return row;
         }
         else
-            return createRow0(link);
+            return createRow0(link, follow);
     }
 
     /**
@@ -374,14 +386,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return Row.
      * @throws IgniteCheckedException If failed.
      */
-    private H2CacheRow createRow0(long link) throws IgniteCheckedException {
+    private H2CacheRow createRow0(long link, boolean follow) throws IgniteCheckedException {
         CacheDataRowAdapter row = new CacheDataRowAdapter(link);
 
-        row.initFromLink(
-            cctx.group(),
-            CacheDataRowAdapter.RowData.FULL,
-            true
-        );
+        if (follow) {
+            row.initFromLink(
+                    cctx.group(),
+                    CacheDataRowAdapter.RowData.FULL,
+                    true
+            );
+        }
 
         return table.rowDescriptor().createRow(row);
     }
@@ -394,12 +408,35 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return Row.
      * @throws IgniteCheckedException if failed.
      */
-    public H2Row createMvccRow(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr) throws IgniteCheckedException {
+    public H2Row createMvccRow(
+        long link,
+        long mvccCrdVer,
+        long mvccCntr,
+        int mvccOpCntr
+    ) throws IgniteCheckedException {
+        return createMvccRow(link, mvccCrdVer, mvccCntr, mvccOpCntr, null);
+    }
+
+    /**
+     * Create row from link.
+     *
+     * @param link Link.
+     * @param mvccOpCntr MVCC operation counter.
+     * @return Row.
+     * @throws IgniteCheckedException if failed.
+     */
+    public H2Row createMvccRow(
+        long link,
+        long mvccCrdVer,
+        long mvccCntr,
+        int mvccOpCntr,
+        CacheDataRowAdapter.RowData rowData
+    ) throws IgniteCheckedException {
         if (rowCache != null) {
             H2CacheRow row = rowCache.get(link);
 
             if (row == null) {
-                row = createMvccRow0(link, mvccCrdVer, mvccCntr, mvccOpCntr);
+                row = createMvccRow0(link, mvccCrdVer, mvccCntr, mvccOpCntr, rowData);
 
                 rowCache.put(row);
             }
@@ -407,7 +444,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             return row;
         }
         else
-            return createMvccRow0(link, mvccCrdVer, mvccCntr, mvccOpCntr);
+            return createMvccRow0(link, mvccCrdVer, mvccCntr, mvccOpCntr, rowData);
+    }
+
+    public boolean getPk() {
+        return pk;
+    }
+
+    public boolean getAffinityKey() {
+        return affinityKey;
     }
 
     /**
@@ -417,8 +462,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param mvccOpCntr Mvcc operation counter.
      * @return Row.
      */
-    private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr)
-        throws IgniteCheckedException {
+    private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr, CacheDataRowAdapter.RowData rowData)
+            throws IgniteCheckedException {
         int partId = PageIdUtils.partId(PageIdUtils.pageId(link));
 
         MvccDataRow row = new MvccDataRow(
@@ -426,7 +471,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             0,
             link,
             partId,
-            null,
+            rowData,
             mvccCrdVer,
             mvccCntr,
             mvccOpCntr,
@@ -453,7 +498,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return Inline size.
      * @throws IgniteCheckedException If failed.
      */
-    private MetaPageInfo getMetaInfo() throws IgniteCheckedException {
+    public MetaPageInfo getMetaInfo() throws IgniteCheckedException {
         final long metaPage = acquirePage(metaPageId);
 
         try {
@@ -498,6 +543,38 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 if (wal != null)
                     wal.log(new PageSnapshot(new FullPageId(metaPageId, grpId),
                         pageAddr, pageMem.pageSize(), pageMem.realPageSize(grpId)));
+            }
+            finally {
+                writeUnlock(metaPageId, metaPage, pageAddr, true);
+            }
+        }
+        finally {
+            releasePage(metaPageId, metaPage);
+        }
+    }
+
+    /**
+     * Copy info from another meta page.
+     * @param info Meta page info.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void copyMetaInfo(MetaPageInfo info) throws IgniteCheckedException {
+        final long metaPage = acquirePage(metaPageId);
+
+        try {
+            long pageAddr = writeLock(metaPageId, metaPage); // Meta can't be removed.
+
+            assert pageAddr != 0 : "Failed to read lock meta page [metaPageId=" +
+                U.hexLong(metaPageId) + ']';
+
+            try {
+                BPlusMetaIO.setValues(
+                    pageAddr,
+                    info.inlineSize,
+                    info.useUnwrappedPk,
+                    info.inlineObjSupported,
+                    info.inlineObjHash
+                );
             }
             finally {
                 writeUnlock(metaPageId, metaPage, pageAddr, true);
@@ -626,6 +703,40 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
+     * Checks both rows are the same. <p/>
+     * Primarily used to verify both search rows are the same and we can apply
+     * the single row lookup optimization.
+     *
+     * @param r1 The first row.
+     * @param r2 Another row.
+     * @return {@code true} in case both rows are efficiently the same, {@code false} otherwise.
+     */
+    boolean checkRowsTheSame(H2Row r1, H2Row r2) {
+        if (r1 == r2)
+            return true;
+
+        for (int i = 0, len = cols.length; i < len; i++) {
+            IndexColumn idxCol = cols[i];
+
+            int idx = idxCol.column.getColumnId();
+
+            Value v1 = r1.getValue(idx);
+            Value v2 = r2.getValue(idx);
+
+            if (v1 == null && v2 == null)
+                continue;
+
+            if (v1 == null || v2 == null)
+                return false;
+
+            if (compareValues(v1, v2) != 0)
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
      * @param io IO.
      * @param pageAddr Page address.
      * @param idx Item index.
@@ -747,7 +858,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected IoStatisticsHolder statisticsHolder() {
-        return stats;
+        return stats != null ? stats : super.statisticsHolder();
     }
 
     /**

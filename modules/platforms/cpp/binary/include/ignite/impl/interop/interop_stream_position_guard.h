@@ -69,7 +69,7 @@ namespace ignite
                 /** Saved position. */
                 int32_t pos;
 
-                IGNITE_NO_COPY_ASSIGNMENT(InteropStreamPositionGuard)
+                IGNITE_NO_COPY_ASSIGNMENT(InteropStreamPositionGuard);
             };
         }
     }

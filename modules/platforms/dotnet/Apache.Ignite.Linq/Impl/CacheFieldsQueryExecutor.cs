@@ -37,7 +37,7 @@ namespace Apache.Ignite.Linq.Impl
     {
         /** */
         private readonly ICacheInternal _cache;
-        
+
         /** */
         private readonly QueryOptions _options;
 
@@ -209,7 +209,9 @@ namespace Apache.Ignite.Linq.Impl
                 Colocated = _options.Colocated,
                 Local = _options.Local,
                 Arguments = args,
-                Lazy = _options.Lazy
+                Lazy = _options.Lazy,
+                UpdateBatchSize = _options.UpdateBatchSize,
+                Partitions = _options.Partitions
             };
         }
 

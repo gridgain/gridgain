@@ -35,7 +35,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_SYSTEM_SCHEMA_
 /**
  * Ensure that change of the system schema name has no effect on sys table content.
  */
-@WithSystemProperty(key = IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, value = "false")
+@WithSystemProperty(key = IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, value = "true")
 public class JdbcThinSystemSchemaDurabilityTest extends JdbcThinAbstractSelfTest {
     /** URL. */
     protected static final String BASE_URL = "jdbc:ignite:thin://127.0.0.1/";
@@ -75,7 +75,7 @@ public class JdbcThinSystemSchemaDurabilityTest extends JdbcThinAbstractSelfTest
         try (Connection conn = DriverManager.getConnection(BASE_URL); Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE TTT (id int primary key, a long)");
 
-            ensureTblPresent(stmt, "SYS", "TTT");
+            ensureTblPresent(stmt, "IGNITE", "TTT");
 
             stmt.execute(" INSERT INTO TTT (id, a) VALUES (0, 1)");
         }
@@ -89,7 +89,7 @@ public class JdbcThinSystemSchemaDurabilityTest extends JdbcThinAbstractSelfTest
         startAndActivateGrid();
 
         try (Connection conn = DriverManager.getConnection(BASE_URL); Statement stmt = conn.createStatement()) {
-            ensureTblPresent(stmt, "IGNITE", "TTT");
+            ensureTblPresent(stmt, "SYS", "TTT");
         }
     }
 

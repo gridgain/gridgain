@@ -44,7 +44,7 @@ namespace ignite
 
                 virtual void Reallocate(int32_t cap);
             private:
-                IGNITE_NO_COPY_ASSIGNMENT(InteropExternalMemory)
+                IGNITE_NO_COPY_ASSIGNMENT(InteropExternalMemory);
             };
         }
     }

@@ -1,10 +1,10 @@
 Control utility [ver. <!any!>
-2020 Copyright(C) GridGain Systems, Inc. and Contributors
+2021 Copyright(C) GridGain Systems, Inc. and Contributors
 User: <!any!>
 Time: <!any!>
 Control utility script is used to execute admin commands on cluster or get common cluster info. The command has the following syntax:
 
-  control.(sh|bat) [--host HOST_OR_IP] [--port PORT] [--user USER] [--password PASSWORD] [--ping-interval PING_INTERVAL] [--ping-timeout PING_TIMEOUT] [--verbose] [--ssl-protocol SSL_PROTOCOL[, SSL_PROTOCOL_2, ..., SSL_PROTOCOL_N]] [--ssl-cipher-suites SSL_CIPHER_1[, SSL_CIPHER_2, ..., SSL_CIPHER_N]] [--ssl-key-algorithm SSL_KEY_ALGORITHM] [--keystore-type KEYSTORE_TYPE] [--keystore KEYSTORE_PATH] [--keystore-password KEYSTORE_PASSWORD] [--truststore-type TRUSTSTORE_TYPE] [--truststore TRUSTSTORE_PATH] [--truststore-password TRUSTSTORE_PASSWORD] [command] <command_parameters>
+  control.(sh|bat) [--host HOST_OR_IP] [--port PORT] [--user USER] [--password PASSWORD] [--ping-interval PING_INTERVAL] [--ping-timeout PING_TIMEOUT] [--connection-timeout CONNECTION_TIMEOUT] [--verbose] [--ssl-protocol SSL_PROTOCOL[, SSL_PROTOCOL_2, ..., SSL_PROTOCOL_N]] [--ssl-cipher-suites SSL_CIPHER_1[, SSL_CIPHER_2, ..., SSL_CIPHER_N]] [--ssl-key-algorithm SSL_KEY_ALGORITHM] [--keystore-type KEYSTORE_TYPE] [--keystore KEYSTORE_PATH] [--keystore-password KEYSTORE_PASSWORD] [--truststore-type TRUSTSTORE_TYPE] [--truststore TRUSTSTORE_PATH] [--truststore-password TRUSTSTORE_PASSWORD] [command] <command_parameters>
 
 
 This utility can do the following commands:
@@ -19,7 +19,7 @@ This utility can do the following commands:
     control.(sh|bat) --state
 
   Change cluster state:
-    control.(sh|bat) --set-state INACTIVE|ACTIVE|ACTIVE_READ_ONLY [--yes]
+    control.(sh|bat) --set-state INACTIVE|ACTIVE|ACTIVE_READ_ONLY [--force] [--yes]
 
     Parameters:
       ACTIVE            - Activate cluster. Cache updates are allowed.
@@ -27,7 +27,10 @@ This utility can do the following commands:
       ACTIVE_READ_ONLY  - Activate cluster. Cache updates are denied.
 
   Print cluster baseline topology:
-    control.(sh|bat) --baseline
+    control.(sh|bat) --baseline [--verbose]
+
+    Parameters:
+      verbose  - Show the full list of node ips.
 
   Add nodes into baseline topology:
     control.(sh|bat) --baseline add consistentId1[,consistentId2,....,consistentIdN] [--yes]
@@ -62,11 +65,41 @@ This utility can do the following commands:
   View diagnostic information in a cluster:
     control.(sh|bat) --diagnostic
 
+  Print the current master key name:
+    control.(sh|bat) --encryption get_master_key_name
+
+  Change the master key:
+    control.(sh|bat) --encryption change_master_key newMasterKeyName
+
+  Change the encryption key of the cache group:
+    control.(sh|bat) --encryption change_cache_key cacheGroupName
+
+  View encryption key identifiers of the cache group:
+    control.(sh|bat) --encryption cache_key_ids cacheGroupName
+
+  Display re-encryption status of the cache group:
+    control.(sh|bat) --encryption reencryption_status cacheGroupName
+
+  Suspend re-encryption of the cache group:
+    control.(sh|bat) --encryption suspend_reencryption cacheGroupName
+
+  Resume re-encryption of the cache group:
+    control.(sh|bat) --encryption resume_reencryption cacheGroupName
+
+  View/change re-encryption rate limit:
+    control.(sh|bat) --encryption reencryption_rate_limit [new_limit]
+
+    Parameters:
+      new_limit  - Decimal value to change re-encryption rate limit (MB/s).
+
   Enable rolling upgrade:
-    control.(sh|bat) --rolling-upgrade on
+    control.(sh|bat) --rolling-upgrade start [--yes]
 
   Disable rolling upgrade:
-    control.(sh|bat) --rolling-upgrade off
+    control.(sh|bat) --rolling-upgrade finish [--yes]
+
+  Enable force rolling upgrade mode:
+    control.(sh|bat) --rolling-upgrade force [--yes]
 
   Get rolling upgrade status:
     control.(sh|bat) --rolling-upgrade status
@@ -102,19 +135,19 @@ This utility can do the following commands:
     control.(sh|bat) --tracing-configuration
 
   Print tracing configuration:
-    control.(sh|bat) --tracing-configuration get_all [--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ]
+    control.(sh|bat) --tracing-configuration get_all [--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL]
 
   Print specific tracing configuration based on specified --scope and --label:
-    control.(sh|bat) --tracing-configuration get (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ) [--label]
+    control.(sh|bat) --tracing-configuration get (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL) [--label]
 
   Reset all specific tracing configuration the to default. If --scope is specified, then remove all label specific configuration for the given scope and reset given scope specific configuration to the default, if --scope is skipped then reset all tracing configurations to the default. Print tracing configuration.
-    control.(sh|bat) --tracing-configuration reset_all [--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ]
+    control.(sh|bat) --tracing-configuration reset_all [--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL]
 
   Reset specific tracing configuration to the default. If both --scope and --label are specified then remove given configuration, if only --scope is specified then reset given configuration to the default. Print reseted configuration.
-    control.(sh|bat) --tracing-configuration reset (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ) [--label]
+    control.(sh|bat) --tracing-configuration reset (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL) [--label]
 
   Set new tracing configuration. If both --scope and --label are specified then add or override label specific configuration, if only --scope is specified, then override scope specific configuration. Print applied configuration.
-    control.(sh|bat) --tracing-configuration set (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ [--label] [--sampling-rate Decimal value between 0 and 1, where 0 means never and 1 means always. More or less reflects the probability of sampling specific trace.] [--included-scopes Set of scopes with comma as separator  DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ])
+    control.(sh|bat) --tracing-configuration set (--scope DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL [--label] [--sampling-rate Decimal value between 0 and 1, where 0 means never and 1 means always. More or less reflects the probability of sampling specific trace.] [--included-scopes Set of scopes with comma as separator  DISCOVERY|EXCHANGE|COMMUNICATION|TX|CACHE_API_WRITE|CACHE_API_READ|SQL])
 
   Set or display shutdown policy:
     control.(sh|bat) --shutdown-policy [IMMEDIATE|GRACEFUL]
@@ -144,11 +177,44 @@ If the file name isn't specified the output file name is: '<typeId>.bin'
   Print list of available properties:
     control.(sh|bat) --property list
 
-  Get the property value
+  Get the property value:
     control.(sh|bat) --property get --name <property_name>
 
-  Set the property value
+  Set the property value:
     control.(sh|bat) --property set --name <property_name> --val <property_value>
+
+  Print information about potentially corrupted caches on local node:
+    control.(sh|bat) --persistence
+
+  The same information is printed when info subcommand is passed:
+    control.(sh|bat) --persistence info
+
+  Clean directories of caches with corrupted data files:
+    control.(sh|bat) --persistence clean corrupted
+
+  Clean directories of all caches:
+    control.(sh|bat) --persistence clean all
+
+  Clean directories of only given caches:
+    control.(sh|bat) --persistence clean caches cache1,cache2,cache3
+
+  Backup data files of corrupted caches only:
+    control.(sh|bat) --persistence backup corrupted
+
+  Backup data files of all caches:
+    control.(sh|bat) --persistence backup all
+
+  Backup data files of only given caches:
+    control.(sh|bat) --persistence backup caches cache1,cache2,cache3
+
+  Schedule PDS defragmentation on given nodes for all caches:
+    control.(sh|bat) --defragmentation schedule --nodes consistentId0,consistentId1
+
+  Schedule PDS defragmentation on given nodes but only for given caches:
+    control.(sh|bat) --defragmentation schedule --nodes consistentId0,consistentId1 --caches cache1,cache2,cache3
+
+  Cancel scheduled or active PDS defragmentation on underlying node:
+    control.(sh|bat) --defragmentation cancel
 
 By default commands affecting the cluster require interactive confirmation.
 Use --yes option to disable it.
@@ -158,6 +224,7 @@ Default values:
     PORT=11211
     PING_INTERVAL=5000
     PING_TIMEOUT=30000
+    CONNECTION_TIMEOUT=10000
     SSL_PROTOCOL=TLS
     SSL_KEY_ALGORITHM=SunX509
     KEYSTORE_TYPE=JKS

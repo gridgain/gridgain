@@ -737,4 +737,11 @@ public interface Ignite extends AutoCloseable {
      */
     @IgniteExperimental
     public @NotNull TracingConfigurationManager tracingConfiguration();
+
+    /**
+     * Gets an instance of {@link IgniteEncryption} interface.
+     *
+     * @return Instance of {@link IgniteEncryption} interface.
+     */
+    public IgniteEncryption encryption();
 }

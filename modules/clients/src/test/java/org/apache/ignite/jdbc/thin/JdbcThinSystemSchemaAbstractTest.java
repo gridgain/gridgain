@@ -75,7 +75,6 @@ public abstract class JdbcThinSystemSchemaAbstractTest extends JdbcThinAbstractS
 
     /** */
     @Test
-    @SuppressWarnings("ThrowableNotThrown")
     public void testSysSchema() throws Exception {
         final String schemaName = "SYS";
 
@@ -88,7 +87,6 @@ public abstract class JdbcThinSystemSchemaAbstractTest extends JdbcThinAbstractS
 
     /** */
     @Test
-    @SuppressWarnings("ThrowableNotThrown")
     public void testIgniteSchema() throws SQLException {
         final String schemaName = "IGNITE";
 

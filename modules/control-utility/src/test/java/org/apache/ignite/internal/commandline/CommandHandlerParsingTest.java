@@ -33,12 +33,12 @@ import org.apache.ignite.internal.commandline.cache.CacheValidateIndexes;
 import org.apache.ignite.internal.commandline.cache.FindAndDeleteGarbage;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
-import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.tx.VisorTxOperation;
 import org.apache.ignite.internal.visor.tx.VisorTxProjection;
 import org.apache.ignite.internal.visor.tx.VisorTxSortOrder;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskArg;
+import org.apache.ignite.spi.tracing.Scope;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -501,17 +501,20 @@ public class CommandHandlerParsingTest {
             assertEquals(DFLT_PORT, args.port());
 
             args = parseArgs(asList("--port", "12345", "--host", "test-host", "--ping-interval", "5000",
-                "--ping-timeout", "40000", cmd.text()));
+                "--ping-timeout", "40000", "--connection-timeout", "1000", cmd.text()));
 
             assertEquals(cmd.command(), args.command());
             assertEquals("test-host", args.host());
             assertEquals("12345", args.port());
             assertEquals(5000, args.pingInterval());
             assertEquals(40000, args.pingTimeout());
+            assertEquals(1_000, args.connectionTimeout());
 
             assertParseArgsThrows("Invalid value for port: wrong-port", "--port", "wrong-port", cmd.text());
             assertParseArgsThrows("Invalid value for ping interval: -10", "--ping-interval", "-10", cmd.text());
             assertParseArgsThrows("Invalid value for ping timeout: -20", "--ping-timeout", "-20", cmd.text());
+            assertParseArgsThrows("Invalid value for connection timeout: -30", "--connection-timeout",
+                "-30", cmd.text());
         }
     }
 
@@ -1012,6 +1015,18 @@ public class CommandHandlerParsingTest {
 
         assertParseArgsThrows("Scope attribute is missing. Following values can be used: "
             + Arrays.toString(Scope.values()) + '.', "--tracing-configuration", "set");
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "DISCOVERY"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "discovery"));
+
+        parseArgs(asList("--tracing-configuration", "set", "--scope", "Discovery"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "TX"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "tx"));
+
+        parseArgs(asList("--tracing-configuration", "get", "--scope", "Tx"));
     }
 
     /**
@@ -1099,8 +1114,10 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
+            cmd == CommandList.ENCRYPTION ||
             cmd == CommandList.METADATA ||
             cmd == CommandList.WARM_UP ||
-            cmd == CommandList.PROPERTY;
+            cmd == CommandList.PROPERTY ||
+            cmd == CommandList.DEFRAGMENTATION;
     }
 }

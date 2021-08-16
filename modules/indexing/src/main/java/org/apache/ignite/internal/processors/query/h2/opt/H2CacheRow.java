@@ -39,7 +39,7 @@ import org.gridgain.internal.h2.result.Row;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueNull;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 
 /**
  * Table row implementation based on {@link GridQueryTypeDescriptor}.
@@ -191,11 +191,20 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         }
     }
 
+    public CacheDataRow getRow() {
+        return row;
+    }
+
     /**
      * @return {@code True} if this is removed row (doesn't have value).
      */
     private boolean removedRow() {
         return row.value() == null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean tombstone() {
+        return row.tombstone();
     }
 
     /** {@inheritDoc} */
@@ -246,6 +255,11 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
     /** {@inheritDoc} */
     @Override public int cacheId() {
         return row.cacheId();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void cacheId(int cacheId) {
+        row.cacheId(cacheId);
     }
 
     /** {@inheritDoc} */
@@ -371,7 +385,7 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
 
         v = valueWrapped();
         sb.a(", val: ").a(v == null ? "nil" : (S.includeSensitive() ? v.getString() :
-            "Data hidden due to " + IGNITE_TO_STRING_INCLUDE_SENSITIVE + " flag."));
+            "Data hidden due to " + IGNITE_SENSITIVE_DATA_LOGGING + " flag."));
 
         sb.a(" ][ ");
 
@@ -395,5 +409,9 @@ public class H2CacheRow extends H2Row implements CacheDataRow {
         sb.a(" ]");
 
         return sb.toString();
+    }
+
+    public GridH2RowDescriptor getDesc() {
+        return desc;
     }
 }

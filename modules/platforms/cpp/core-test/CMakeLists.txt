@@ -18,13 +18,14 @@ project(ignite-tests)
 
 set(TARGET ${PROJECT_NAME})
 
-find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread system)
-
 if (WIN32)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
 
-include_directories(include ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
+find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread system)
+
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
+include_directories(include)
 
 set(SOURCES src/reference_test.cpp
         src/bits_test.cpp
@@ -35,6 +36,7 @@ set(SOURCES src/reference_test.cpp
         src/continuous_query_test.cpp
         src/concurrent_test.cpp
         src/compute_test.cpp
+        src/compute_java_test.cpp
         src/ignition_test.cpp
         src/interop_memory_test.cpp
         src/interop_test.cpp

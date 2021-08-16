@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.cache.tree;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
@@ -27,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CacheSearchRow;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -35,14 +38,12 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageP
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccDataPageClosure;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -83,6 +84,8 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
      * @param rowStore Row store.
      * @param metaPageId Meta page ID.
      * @param initNew Initialize new index.
+     * @param pageFlag Default flag value for allocated pages.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @throws IgniteCheckedException If failed.
      */
     public CacheDataTree(
@@ -92,7 +95,8 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         CacheDataRowStore rowStore,
         long metaPageId,
         boolean initNew,
-        PageLockListener lockLsnr
+        PageLockTrackerManager pageLockTrackerManager,
+        byte pageFlag
     ) throws IgniteCheckedException {
         super(
             name,
@@ -105,8 +109,9 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             reuseList,
             innerIO(grp),
             leafIO(grp),
+            pageFlag,
             grp.shared().kernalContext().failure(),
-            lockLsnr
+            pageLockTrackerManager
         );
 
         assert rowStore != null;
@@ -148,7 +153,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
     @Override public GridCursor<CacheDataRow> find(
         CacheSearchRow lower,
         CacheSearchRow upper,
-        TreeRowClosure<CacheSearchRow,CacheDataRow> c,
+        TreeRowClosure<CacheSearchRow, CacheDataRow> c,
         Object x
     ) throws IgniteCheckedException {
         // If there is a group of caches, lower and upper bounds will not be null here.
@@ -461,38 +466,42 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                     if (grp.storeCacheIdInDataPage())
                         addr += 4; // Skip cache id.
 
-                    final int len = PageUtils.getInt(addr, 0);
+                    byte type = PageUtils.getByte(addr, 4);
 
-                    int lenCmp = Integer.compare(len, bytes.length);
+                    if (type != CacheObject.TYPE_BINARY_COMPRESSED) {
+                        final int len = PageUtils.getInt(addr, 0);
 
-                    if (lenCmp != 0)
-                        return lenCmp;
+                        int lenCmp = Integer.compare(len, bytes.length);
 
-                    addr += 5; // Skip length and type byte.
+                        if (lenCmp != 0)
+                            return lenCmp;
 
-                    final int words = len / 8;
+                        addr += 5; // Skip length and type byte.
 
-                    for (int i = 0; i < words; i++) {
-                        int off = i * 8;
+                        final int words = len / 8;
 
-                        long b1 = PageUtils.getLong(addr, off);
-                        long b2 = GridUnsafe.getLong(bytes, GridUnsafe.BYTE_ARR_OFF + off);
+                        for (int i = 0; i < words; i++) {
+                            int off = i * 8;
 
-                        int cmp = Long.compare(b1, b2);
+                            long b1 = PageUtils.getLong(addr, off);
+                            long b2 = GridUnsafe.getLong(bytes, GridUnsafe.BYTE_ARR_OFF + off);
 
-                        if (cmp != 0)
-                            return cmp;
+                            int cmp = Long.compare(b1, b2);
+
+                            if (cmp != 0)
+                                return cmp;
+                        }
+
+                        for (int i = words * 8; i < len; i++) {
+                            byte b1 = PageUtils.getByte(addr, i);
+                            byte b2 = bytes[i];
+
+                            if (b1 != b2)
+                                return b1 > b2 ? 1 : -1;
+                        }
+
+                        return 0;
                     }
-
-                    for (int i = words * 8; i < len; i++) {
-                        byte b1 = PageUtils.getByte(addr, i);
-                        byte b2 = bytes[i];
-
-                        if (b1 != b2)
-                            return b1 > b2 ? 1 : -1;
-                    }
-
-                    return 0;
                 }
             }
             finally {

@@ -46,7 +46,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.cache.CacheServerNotFoundException;
@@ -57,6 +56,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.EntryCompressionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.configuration.WarmUpConfiguration;
@@ -69,6 +69,8 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.LocalAffinityFunction;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
+import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategySupplier;
 import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockCancelledException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
@@ -87,6 +89,7 @@ import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.IgniteInClosureX;
@@ -116,9 +119,9 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.nonNull;
 import static java.util.stream.Stream.concat;
 import static java.util.stream.Stream.of;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -135,10 +138,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.REA
 public class GridCacheUtils {
     /** Cheat cache ID for debugging and benchmarking purposes. */
     public static final int cheatCacheId;
-
-    /** Each cache operation removes this amount of entries with expired TTL. */
-    private static final int TTL_BATCH_SIZE = IgniteSystemProperties.getInteger(
-        IgniteSystemProperties.IGNITE_TTL_EXPIRE_BATCH_SIZE, 5);
 
     /** */
     public static final int UNDEFINED_CACHE_ID = 0;
@@ -881,7 +880,8 @@ public class GridCacheUtils {
     public static void unwindEvicts(GridCacheContext ctx) {
         assert ctx != null;
 
-        ctx.ttl().expire(TTL_BATCH_SIZE);
+        if (ctx.started())
+            ctx.ttl().expire();
     }
 
     /**
@@ -2030,9 +2030,13 @@ public class GridCacheUtils {
      * @return Page size without encryption overhead.
      */
     public static int encryptedPageSize(int pageSize, EncryptionSpi encSpi) {
+        // If encryption is enabled, a space of one encryption block is reserved to store CRC and encryption key ID.
+        // If encryption is disabled, NoopEncryptionSPI with a zero encryption block size is used.
+        assert encSpi.blockSize() >= /* CRC */ 4 + /* Key ID */ 1 || encSpi.blockSize() == 0;
+
         return pageSize
             - (encSpi.encryptedSizeNoPadding(pageSize) - pageSize)
-            - encSpi.blockSize(); /* For CRC. */
+            - encSpi.blockSize(); /* For CRC and encryption key ID. */
     }
 
     /**
@@ -2115,6 +2119,66 @@ public class GridCacheUtils {
         }
 
         return strategies;
+    }
+
+    /**
+     * Getting available cache entry compression strategies.
+     *
+     * @param kernalCtx Kernal context.
+     * @return Mapping of configuration class to strategy class.
+     */
+    public static Map<Class<? extends EntryCompressionConfiguration>,
+        IgniteClosure<EntryCompressionConfiguration, EntryCompressionStrategy>>
+        entryCompressionStrategies(GridKernalContext kernalCtx) {
+        Map strategies = new HashMap<>();
+
+        // Adding strategies from plugins.
+        EntryCompressionStrategySupplier[] suppliers = kernalCtx.plugins()
+            .extensions(EntryCompressionStrategySupplier.class);
+
+        if (suppliers != null) {
+            for (EntryCompressionStrategySupplier supplier : suppliers)
+                strategies.putAll(supplier.strategies());
+        }
+
+        return strategies;
+    }
+
+    /**
+     * Patch cache configuration with {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param oldCfg Old cache config.
+     * @param op Schema add query entity operation.
+     */
+    public static <K, V> CacheConfiguration<K, V> patchCacheConfiguration(
+        CacheConfiguration<K, V> oldCfg,
+        SchemaAddQueryEntityOperation op
+    ) {
+        return patchCacheConfiguration(oldCfg, op.entities(), op.schemaName(), op.isSqlEscape(),
+                op.queryParallelism());
+    }
+
+    /**
+     * Patch cache configuration with {@link SchemaAddQueryEntityOperation}.
+     *
+     * @param oldCfg Old cache config.
+     * @param entities New query entities.
+     * @param sqlSchema Sql schema name.
+     * @param isSqlEscape Sql escape flag.
+     * @param qryParallelism Query parallelism parameter.
+     */
+    public static <K, V> CacheConfiguration<K, V> patchCacheConfiguration(
+        CacheConfiguration<K, V> oldCfg,
+        Collection<QueryEntity> entities,
+        String sqlSchema,
+        boolean isSqlEscape,
+        int qryParallelism
+    ) {
+        return new CacheConfiguration<>(oldCfg)
+                .setQueryEntities(entities)
+                .setSqlSchema(sqlSchema)
+                .setSqlEscapeAll(isSqlEscape)
+                .setQueryParallelism(qryParallelism);
     }
 
     /**

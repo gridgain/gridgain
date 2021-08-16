@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  *
  */
+@Deprecated
 public class GridClientClusterStateRequest extends GridClientAbstractMessage {
     /** */
     private static final long serialVersionUID = 0L;

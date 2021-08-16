@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -363,7 +363,7 @@ public class CacheMetricsImpl implements CacheMetrics {
             "True if index rebuild is in progress.");
 
         mreg.register("IsIndexRebuildInProgress", () -> {
-            IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+            IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
 
             return fut != null && !fut.isDone();
         }, "True if index rebuild is in progress.");
@@ -1455,11 +1455,13 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /**
      * Rebalance entry store callback.
+     *
+     * @param keys Key count.
      */
-    public void onRebalanceKeyReceived() {
-        rebalancedKeys.increment();
+    public void onRebalanceKeyReceived(long keys) {
+        rebalancedKeys.add(keys);
 
-        rebalancingKeysRate.increment();
+        rebalancingKeysRate.add(keys);
     }
 
     /**
@@ -1536,7 +1538,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public boolean isIndexRebuildInProgress() {
-        IgniteInternalFuture fut = cctx.shared().database().indexRebuildFuture(cctx.cacheId());
+        IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
 
         return fut != null && !fut.isDone();
     }

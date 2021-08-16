@@ -368,7 +368,7 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
         boolean checkData,
         boolean willRollback) {
         TestKey key = key(rnd);
-        TestValue val = new TestValue(rnd.nextLong());
+        TestValue val = val(rnd);
 
         switch (rnd.nextInt(8)) {
             case 0: {
@@ -474,6 +474,14 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
 
     /**
      * @param rnd Random.
+     * @return Value.
+     */
+    protected TestValue val(Random rnd) {
+        return new TestValue(rnd.nextLong());
+    }
+
+    /**
+     * @param rnd Random.
      * @return Key.
      */
     private TestKey key(Random rnd) {
@@ -528,9 +536,12 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private static class TestValue implements Serializable {
+    protected static class TestValue implements Serializable {
         /** */
         private long val;
+
+        /** */
+        private String pad;
 
         /**
          * @param val Value.
@@ -544,6 +555,16 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
          */
         public long value() {
             return val;
+        }
+
+        /** */
+        public String pad() {
+            return pad;
+        }
+
+        /** */
+        public void setPad(String pad) {
+            this.pad = pad;
         }
 
         /** {@inheritDoc} */
@@ -583,8 +604,14 @@ public class CrossCacheTxRandomOperationsTest extends GridCommonAbstractTest {
         @Override public TestValue process(MutableEntry<TestKey, TestValue> e, Object... args) {
             TestValue old = e.getValue();
 
-            if (val != null)
-                e.setValue(new TestValue(val));
+            if (val != null) {
+                TestValue v = new TestValue(val);
+
+                if (old != null)
+                    v.setPad(old.pad());
+
+                e.setValue(v);
+            }
 
             return old;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,6 +144,9 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import static java.util.Collections.newSetFromMap;
 import static java.util.Objects.requireNonNull;
@@ -153,14 +156,20 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANG
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCO_FAILED_CLIENT_RECONNECT_DELAY;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TEST_ENV;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getString;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
 import static org.apache.ignite.internal.IgnitionEx.gridx;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.NONE;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.convertSensitiveDataLogging;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
@@ -279,8 +288,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         System.setProperty(IGNITE_DISCO_FAILED_CLIENT_RECONNECT_DELAY, "1");
         System.setProperty(IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT, "1000");
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
+        System.setProperty(IGNITE_TEST_ENV, "true");
 
-        S.setIncludeSensitiveSupplier(() -> getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, true));
+        S.setSensitiveDataLoggingSupplier(() -> {
+            String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
+
+            if (sysStrToStringIncludeSensitive != null)
+                return getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
+            else
+                return convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+        });
 
         if (GridTestClockTimer.startTestTimer()) {
             Thread timer = new Thread(new GridTestClockTimer(), "ignite-clock-for-tests");
@@ -805,7 +822,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return First started grid.
      * @throws Exception If failed.
      */
-    protected final IgniteEx startGrids(int cnt) throws Exception {
+    protected IgniteEx startGrids(int cnt) throws Exception {
         assert cnt > 0;
 
         IgniteEx ignite = null;
@@ -977,6 +994,25 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
+     * Starts new grid with given configuration and overriding {@link DependencyResolver}.
+     *
+     * @param cfg Configuration.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(IgniteConfiguration cfg, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return (IgniteEx)startGrid(cfg.getIgniteInstanceName(), cfg, null);
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
+    }
+
+    /**
      * Starts new grid with given index.
      *
      * @param idx Index of the grid to start.
@@ -986,6 +1022,42 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
         return startGrid(getTestIgniteInstanceName(idx), cfgOp);
+    }
+
+    /**
+     * Starts new grid with given index and overriding {@link DependencyResolver}.
+     *
+     * @param idx Index of the grid to start.
+     * @param cfgC Configuration mutator. Can be used to avoid oversimplification of {@link #getConfiguration()}.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, Consumer<IgniteConfiguration> cfgC) throws Exception {
+        return startGrid(getTestIgniteInstanceName(idx), cfg -> {
+            cfgC.accept(cfg);
+
+            return cfg;
+        });
+    }
+
+    /**
+     * Starts new grid with given index.
+     *
+     * @param idx Index of the grid to start.
+     * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.
+     * @param rslvr Dependency provider.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGridWithCfg(int idx, UnaryOperator<IgniteConfiguration> cfgOp, DependencyResolver rslvr) throws Exception {
+        IgnitionEx.dependencyResolver(rslvr);
+
+        try {
+            return startGrid(getTestIgniteInstanceName(idx), cfgOp);
+        }
+        finally {
+            IgnitionEx.dependencyResolver(null);
+        }
     }
 
     /**
@@ -1660,6 +1732,58 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return G.start(cfg);
         else
             return startRemoteGrid(igniteInstanceName, cfg, null);
+    }
+
+    /**
+     * Loads configuration from the given Spring XML file.
+     * Do not remove this method as it is used in extensions tests.
+     *
+     * @param springCfgPath Path to file.
+     * @return Grid configuration.
+     * @throws IgniteCheckedException If load failed.
+     */
+    @SuppressWarnings("deprecation")
+    protected IgniteConfiguration loadConfiguration(String springCfgPath) throws IgniteCheckedException {
+        URL cfgLocation = U.resolveIgniteUrl(springCfgPath);
+
+        if (cfgLocation == null)
+            cfgLocation = U.resolveIgniteUrl(springCfgPath, false);
+
+        assert cfgLocation != null;
+
+        ApplicationContext springCtx;
+
+        try {
+            springCtx = new FileSystemXmlApplicationContext(cfgLocation.toString());
+        }
+        catch (BeansException e) {
+            throw new IgniteCheckedException("Failed to instantiate Spring XML application context.", e);
+        }
+
+        Map<?, ?> cfgMap;
+
+        try {
+            // Note: Spring is not generics-friendly.
+            cfgMap = springCtx.getBeansOfType(IgniteConfiguration.class);
+        }
+        catch (BeansException e) {
+            throw new IgniteCheckedException("Failed to instantiate bean [type=" + IgniteConfiguration.class + ", err=" +
+                e.getMessage() + ']', e);
+        }
+
+        if (cfgMap == null)
+            throw new IgniteCheckedException("Failed to find a single grid factory configuration in: " + springCfgPath);
+
+        if (cfgMap.isEmpty())
+            throw new IgniteCheckedException("Can't find grid factory configuration in: " + springCfgPath);
+        else if (cfgMap.size() > 1)
+            throw new IgniteCheckedException("More than one configuration provided for cache load test: " + cfgMap.values());
+
+        IgniteConfiguration cfg = (IgniteConfiguration)cfgMap.values().iterator().next();
+
+        cfg.setNodeId(UUID.randomUUID());
+
+        return cfg;
     }
 
     /**

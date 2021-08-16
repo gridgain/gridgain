@@ -221,7 +221,6 @@ public class GridDhtPartitionSupplyMessage extends GridCacheGroupIdMessage imple
     void addEntry0(int p, boolean historical, GridCacheEntryInfo info, GridCacheSharedContext ctx, CacheObjectContext cacheObjCtx) throws IgniteCheckedException {
         assert info != null;
         assert info.key() != null : info;
-        assert info.value() != null || historical : info;
 
         // Need to call this method to initialize info properly.
         marshalInfo(info, ctx, cacheObjCtx);

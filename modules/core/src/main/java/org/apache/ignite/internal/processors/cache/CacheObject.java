@@ -37,12 +37,28 @@ public interface CacheObject extends Message {
     /** */
     public static final byte TYPE_BINARY_ENUM = 101;
 
+    /** */
+    public static final byte TYPE_BINARY_COMPRESSED = -TYPE_BINARY;
+
+    /** */
+    public static final byte TOMBSTONE = -1;
+
     /**
      * @param ctx Context.
      * @param cpy If {@code true} need to copy value.
      * @return Value.
      */
     @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy);
+
+    /**
+     * Deserializes a value from an internal representation.
+     *
+     * @param ctx Context.
+     * @param cpy If {@code true} need to copy value.
+     * @param ldr Class loader, if it is {@code null}, default class loader will be used.
+     * @return Value.
+     */
+    @Nullable public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr);
 
     /**
      * @param ctx Context.
@@ -101,9 +117,10 @@ public interface CacheObject extends Message {
      * Prepares cache object for cache (e.g. copies user-provided object if needed).
      *
      * @param ctx Cache context.
+     * @param compress Compression enabled for this cache object if flag is {@code true}.
      * @return Instance to store in cache.
      */
-    public CacheObject prepareForCache(CacheObjectContext ctx);
+    public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException;
 
     /**
      * @param ctx Context.

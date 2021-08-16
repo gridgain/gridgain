@@ -32,7 +32,9 @@ import org.apache.ignite.internal.StripedExecutorMXBeanAdapter;
 import org.apache.ignite.internal.ThreadPoolMXBeanAdapter;
 import org.apache.ignite.internal.TransactionMetricsMxBeanImpl;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
+import org.apache.ignite.internal.managers.encryption.EncryptionMXBeanImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMXBeanImpl;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationMXBeanImpl;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpMXBeanImpl;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustMXBeanImpl;
 import org.apache.ignite.internal.processors.metric.MetricsMxBeanImpl;
@@ -45,6 +47,8 @@ import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.mxbean.BaselineAutoAdjustMXBean;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
 import org.apache.ignite.mxbean.DataStorageMXBean;
+import org.apache.ignite.mxbean.DefragmentationMXBean;
+import org.apache.ignite.mxbean.EncryptionMXBean;
 import org.apache.ignite.mxbean.FailureHandlingMxBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.mxbean.IoStatisticsMetricsMXBean;
@@ -163,6 +167,15 @@ public class IgniteMBeansManager {
             registerMBean("Baseline", baselineAutoAdjustMXBean.getClass().getSimpleName(), baselineAutoAdjustMXBean,
                 BaselineAutoAdjustMXBean.class);
         }
+
+        // Encryption
+        EncryptionMXBean encryptionMXBean = new EncryptionMXBeanImpl(ctx);
+        registerMBean("Encryption", encryptionMXBean.getClass().getSimpleName(), encryptionMXBean,
+            EncryptionMXBean.class);
+
+        // Defragmentation.
+        DefragmentationMXBean defragMXBean = new DefragmentationMXBeanImpl(ctx);
+        registerMBean("Defragmentation", defragMXBean.getClass().getSimpleName(), defragMXBean, DefragmentationMXBean.class);
 
         // Metrics configuration
         MetricsMxBean metricsMxBean = new MetricsMxBeanImpl(ctx.metric(), log);

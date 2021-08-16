@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.pagemem.FullPageId;
+import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -33,11 +34,12 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeaf
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Metadata storage.
@@ -74,22 +76,33 @@ public class IndexStorageImpl implements IndexStorage {
     private final byte allocSpace;
 
     /**
+     * @param treeName Tree name.
      * @param pageMem Page memory.
      * @param wal Write ahead log manager.
+     * @param globalRmvId Global remove id.
+     * @param grpId Group id.
+     * @param grpShared Group shared.
+     * @param allocPartId Alloc partition id.
+     * @param allocSpace Alloc space.
+     * @param reuseList Reuse list.
+     * @param rootPageId Root page id.
+     * @param initNew If index tree should be (re)created.
+     * @param pageLockTrackerManager Page lock tracker manager.
      */
     public IndexStorageImpl(
-        final PageMemory pageMem,
-        final IgniteWriteAheadLogManager wal,
-        final AtomicLong globalRmvId,
-        final int grpId,
+        String treeName,
+        PageMemory pageMem,
+        @Nullable IgniteWriteAheadLogManager wal,
+        AtomicLong globalRmvId,
+        int grpId,
         boolean grpShared,
-        final int allocPartId,
-        final byte allocSpace,
-        final ReuseList reuseList,
-        final long rootPageId,
-        final boolean initNew,
-        final FailureProcessor failureProcessor,
-        final PageLockListener lockLsnr
+        int allocPartId,
+        byte allocSpace,
+        ReuseList reuseList,
+        long rootPageId,
+        boolean initNew,
+        @Nullable FailureProcessor failureProcessor,
+        PageLockTrackerManager pageLockTrackerManager
     ) {
         try {
             this.pageMem = pageMem;
@@ -100,6 +113,7 @@ public class IndexStorageImpl implements IndexStorage {
             this.reuseList = reuseList;
 
             metaTree = new MetaTree(
+                treeName,
                 grpId,
                 allocPartId,
                 allocSpace,
@@ -112,7 +126,7 @@ public class IndexStorageImpl implements IndexStorage {
                 MetaStoreLeafIO.VERSIONS,
                 initNew,
                 failureProcessor,
-                lockLsnr
+                pageLockTrackerManager
             );
         }
         catch (IgniteCheckedException e) {
@@ -130,14 +144,12 @@ public class IndexStorageImpl implements IndexStorage {
 
     /** {@inheritDoc} */
     @Override public RootPage allocateIndex(String idxName) throws IgniteCheckedException {
-        final MetaTree tree = metaTree;
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
+
+        checkIndexName(idxNameBytes);
 
         synchronized (this) {
-            byte[] idxNameBytes = idxName.getBytes(StandardCharsets.UTF_8);
-
-            if (idxNameBytes.length > MAX_IDX_NAME_LEN)
-                throw new IllegalArgumentException("Too long encoded indexName [maxAllowed=" + MAX_IDX_NAME_LEN +
-                    ", currentLength=" + idxNameBytes.length + ", name=" + idxName + "]");
+            final MetaTree tree = metaTree;
 
             final IndexItem row = tree.findOne(new IndexItem(idxNameBytes, 0));
 
@@ -162,16 +174,32 @@ public class IndexStorageImpl implements IndexStorage {
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage dropCacheIndex(Integer cacheId, String idxName, int segment)
-        throws IgniteCheckedException {
+    @Override public @Nullable RootPage findCacheIndex(Integer cacheId, String idxName, int segment)
+        throws IgniteCheckedException
+    {
+        idxName = maskCacheIndexName(cacheId, idxName, segment);
+
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
+
+        final IndexItem row = metaTree.findOne(new IndexItem(idxNameBytes, 0));
+
+        return row != null ? new RootPage(new FullPageId(row.pageId, grpId), false) : null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable RootPage dropCacheIndex(
+        Integer cacheId,
+        String idxName,
+        int segment
+    ) throws IgniteCheckedException {
         String maskedIdxName = maskCacheIndexName(cacheId, idxName, segment);
 
         return dropIndex(maskedIdxName);
     }
 
     /** {@inheritDoc} */
-    @Override public RootPage dropIndex(final String idxName) throws IgniteCheckedException {
-        byte[] idxNameBytes = idxName.getBytes(StandardCharsets.UTF_8);
+    @Override public @Nullable RootPage dropIndex(final String idxName) throws IgniteCheckedException {
+        byte[] idxNameBytes = idxName.getBytes(UTF_8);
 
         final IndexItem row = metaTree.remove(new IndexItem(idxNameBytes, 0));
 
@@ -184,14 +212,35 @@ public class IndexStorageImpl implements IndexStorage {
     }
 
     /** {@inheritDoc} */
+    @Override public @Nullable RootPage renameCacheIndex(
+        Integer cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException {
+        byte[] oldIdxNameBytes = maskCacheIndexName(cacheId, oldIdxName, segment).getBytes(UTF_8);
+        byte[] newIdxNameBytes = maskCacheIndexName(cacheId, newIdxName, segment).getBytes(UTF_8);
+
+        checkIndexName(newIdxNameBytes);
+
+        IndexItem rmv = metaTree.remove(new IndexItem(oldIdxNameBytes, 0));
+
+        if (rmv != null) {
+            metaTree.putx(new IndexItem(newIdxNameBytes, rmv.pageId));
+
+            return new RootPage(new FullPageId(rmv.pageId, grpId), false);
+        }
+        else
+            return null;
+    }
+
+    /** {@inheritDoc} */
     @Override public void destroy() throws IgniteCheckedException {
         metaTree.destroy();
     }
 
     /** {@inheritDoc} */
     @Override public Collection<String> getIndexNames() throws IgniteCheckedException {
-        assert metaTree != null;
-
         GridCursor<IndexItem> cursor = metaTree.find(null, null);
 
         ArrayList<String> names = new ArrayList<>((int)metaTree.size());
@@ -218,7 +267,7 @@ public class IndexStorageImpl implements IndexStorage {
      * @return Masked name.
      */
     private String maskCacheIndexName(Integer cacheId, String idxName, int segment) {
-        return (grpShared ? (Integer.toString(cacheId) + "_") : "") + idxName + "%" + segment;
+        return (grpShared ? cacheId + "_" : "") + idxName + "%" + segment;
     }
 
     /**
@@ -241,6 +290,7 @@ public class IndexStorageImpl implements IndexStorage {
          * @throws IgniteCheckedException If failed.
          */
         private MetaTree(
+            final String treeName,
             final int cacheId,
             final int allocPartId,
             final byte allocSpace,
@@ -253,10 +303,10 @@ public class IndexStorageImpl implements IndexStorage {
             final IOVersions<? extends BPlusLeafIO<IndexItem>> leafIos,
             final boolean initNew,
             @Nullable FailureProcessor failureProcessor,
-            @Nullable PageLockListener lockLsnr
+            PageLockTrackerManager pageLockTrackerManager
         ) throws IgniteCheckedException {
             super(
-                treeName("meta", "Meta"),
+                treeName,
                 cacheId,
                 null,
                 pageMem,
@@ -266,8 +316,9 @@ public class IndexStorageImpl implements IndexStorage {
                 reuseList,
                 innerIos,
                 leafIos,
+                PageIdAllocator.FLAG_IDX,
                 failureProcessor,
-                lockLsnr
+                pageLockTrackerManager
             );
 
             this.allocPartId = allocPartId;
@@ -315,10 +366,10 @@ public class IndexStorageImpl implements IndexStorage {
      */
     public static class IndexItem {
         /** */
-        private byte[] idxName;
+        private final byte[] idxName;
 
         /** */
-        private long pageId;
+        private final long pageId;
 
         /**
          * @param idxName Index name.
@@ -514,6 +565,18 @@ public class IndexStorageImpl implements IndexStorage {
         /** {@inheritDoc} */
         @Override public int getOffset(long pageAddr, final int idx) {
             return offset(idx);
+        }
+    }
+
+    /**
+     * Checking the name of the index.
+     *
+     * @param idxName Index name bytes.
+     */
+    public static void checkIndexName(byte[] idxName) {
+        if (idxName.length > MAX_IDX_NAME_LEN) {
+            throw new IllegalArgumentException("Too long encoded indexName [maxAllowed=" + MAX_IDX_NAME_LEN +
+                ", currentLength=" + idxName.length + ", name=" + idxName + "]");
         }
     }
 }

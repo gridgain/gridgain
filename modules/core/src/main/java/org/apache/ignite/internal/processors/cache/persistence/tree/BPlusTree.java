@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
 import org.apache.ignite.internal.UnregisteredClassException;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -50,29 +52,28 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
+import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
-import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridTreePrinter;
 import org.apache.ignite.internal.util.lang.GridTuple3;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -90,6 +91,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlus
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Result.NOT_FOUND;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Result.RETRY;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Result.RETRY_ROOT;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver.DEFAULT_PAGE_IO_RESOLVER;
 
 /**
  * Abstract B+Tree.
@@ -122,9 +124,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     private final AtomicBoolean destroyed = new AtomicBoolean(false);
 
     /** */
-    private final String name;
-
-    /** */
     private final float minFill;
 
     /** */
@@ -150,6 +149,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /** Failure processor. */
     private final FailureProcessor failureProcessor;
+
+    /** Flag for enabling single-threaded append-only tree creation. */
+    private boolean sequentialWriteOptsEnabled;
 
     /** */
     private final GridTreePrinter<Long> treePrinter = new GridTreePrinter<Long>() {
@@ -754,7 +756,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param reuseList Reuse list.
      * @param innerIos Inner IO versions.
      * @param leafIos Leaf IO versions.
+     * @param pageFlag Default flag value for allocated pages.
      * @param failureProcessor if the tree is corrupted.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @throws IgniteCheckedException If failed.
      */
     protected BPlusTree(
@@ -762,14 +766,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         int cacheGrpId,
         String cacheGrpName,
         PageMemory pageMem,
-        IgniteWriteAheadLogManager wal,
+        @Nullable IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
         long metaPageId,
-        ReuseList reuseList,
+        @Nullable ReuseList reuseList,
         IOVersions<? extends BPlusInnerIO<L>> innerIos,
         IOVersions<? extends BPlusLeafIO<L>> leafIos,
+        byte pageFlag,
         @Nullable FailureProcessor failureProcessor,
-        @Nullable PageLockListener lockLsnr
+        PageLockTrackerManager pageLockTrackerManager
     ) throws IgniteCheckedException {
         this(
             name,
@@ -780,8 +785,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             globalRmvId,
             metaPageId,
             reuseList,
+            pageFlag,
             failureProcessor,
-            lockLsnr
+            pageLockTrackerManager,
+            DEFAULT_PAGE_IO_RESOLVER
         );
 
         setIos(innerIos, leafIos);
@@ -796,24 +803,25 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param globalRmvId Remove ID.
      * @param metaPageId Meta page ID.
      * @param reuseList Reuse list.
+     * @param pageFlag Default flag value for allocated pages.
      * @param failureProcessor if the tree is corrupted.
-     * @throws IgniteCheckedException If failed.
+     * @param pageLockTrackerManager Page lock tracker manager.
      */
     protected BPlusTree(
         String name,
         int cacheGrpId,
         String grpName,
         PageMemory pageMem,
-        IgniteWriteAheadLogManager wal,
+        @Nullable IgniteWriteAheadLogManager wal,
         AtomicLong globalRmvId,
         long metaPageId,
         ReuseList reuseList,
+        byte pageFlag,
         @Nullable FailureProcessor failureProcessor,
-        @Nullable PageLockListener lsnr
-    ) throws IgniteCheckedException {
-        super(cacheGrpId, grpName, pageMem, wal, lsnr);
-
-        assert !F.isEmpty(name);
+        PageLockTrackerManager pageLockTrackerManager,
+        PageIoResolver pageIoRslvr
+    ) {
+        super(name, cacheGrpId, grpName, pageMem, wal, pageLockTrackerManager, pageIoRslvr, pageFlag);
 
         // TODO make configurable: 0 <= minFill <= maxFill <= 1
         minFill = 0f; // Testing worst case when merge happens only on empty page.
@@ -822,7 +830,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         assert metaPageId != 0L;
 
         this.metaPageId = metaPageId;
-        this.name = name;
         this.reuseList = reuseList;
         this.globalRmvId = globalRmvId;
         this.failureProcessor = failureProcessor;
@@ -867,11 +874,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         this.leafIos = leafIos;
     }
 
-    /**
-     * @return Tree name.
-     */
-    public final String getName() {
-        return name;
+    /** Flag for enabling single-threaded append-only tree creation. */
+    public void enableSequentialWriteMode() {
+        sequentialWriteOptsEnabled = true;
     }
 
     /**
@@ -1070,7 +1075,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     protected final void checkDestroyed() throws IgniteCheckedException {
         if (destroyed.get())
-            throw new IgniteCheckedException(CONC_DESTROY_MSG + getName());
+            throw new IgniteCheckedException(CONC_DESTROY_MSG + name());
     }
 
     /** {@inheritDoc} */
@@ -1103,6 +1108,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             cursor.find();
 
             return cursor;
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
@@ -1139,6 +1147,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         try {
             cursor.iterate();
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on bounds: [lower=" + lower + ", upper=" + upper + "]", e);
@@ -1282,6 +1293,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on first row lookup", e);
         }
@@ -1325,6 +1339,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return gLast.find();
             }
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on last row lookup", e);
         }
@@ -1366,6 +1383,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             return (R)g.row;
         }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
+        }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on lookup row: " + row, e);
         }
@@ -1391,6 +1411,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     private void doFind(Get g) throws IgniteCheckedException {
+        assert !sequentialWriteOptsEnabled;
+
         for (;;) { // Go down with retries.
             g.init();
 
@@ -1610,7 +1632,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     return io.getLookupRow(this, pageAddr, cnt - 1);
                 }
 
-                long rightId = inner(io).getLeft(pageAddr, cnt);// The same as getRight(cnt - 1), but good for routing pages.
+                long rightId = inner(io).getLeft(pageAddr, cnt); // The same as getRight(cnt - 1), but good for routing pages.
 
                 return getGreatestRowInSubTree(rightId);
             }
@@ -1927,7 +1949,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (UnregisteredClassException | UnregisteredBinaryTypeException e) {
+        catch (UnregisteredClassException | UnregisteredBinaryTypeException | AbstractCorruptedPersistenceException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -2047,6 +2069,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     private T doRemove(L row, boolean needOld) throws IgniteCheckedException {
+        assert !sequentialWriteOptsEnabled;
+
         checkDestroyed();
 
         Remove r = new Remove(row, needOld);
@@ -2085,6 +2109,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         return r.rmvd;
                 }
             }
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on search row: " + row, e);
@@ -2389,7 +2416,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      * @return {@code True} if replaced existing row.
      */
-    public boolean putx(T row) throws IgniteCheckedException {
+    public final boolean putx(T row) throws IgniteCheckedException {
         Boolean res = (Boolean)doPut(row, false);
 
         return res != null ? res : false;
@@ -2438,6 +2465,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         throw new IllegalStateException("Result: " + res);
                 }
             }
+        }
+        catch (AbstractCorruptedPersistenceException e) {
+            throw e;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteCheckedException("Runtime failure on row: " + row, e);
@@ -2508,7 +2538,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.
      * @throws IgniteCheckedException If failed.
      */
-    public final long destroy(IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
+    public final long destroy(@Nullable IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
+        close();
+
         if (!markDestroyed() && !forceDestroy)
             return 0;
 
@@ -2584,7 +2616,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         LongListReuseBag bag,
         long pageId,
         int lvl,
-        IgniteInClosure<L> c,
+        @Nullable IgniteInClosure<L> c,
         AtomicLong lockHoldStartTime,
         long lockMaxTime,
         Deque<GridTuple3<Long, Long, Long>> lockedPages
@@ -2704,7 +2736,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         long pageId, long page, long pageAddr, BPlusIO io, long fwdId, long fwdBuf, int idx
     ) throws IgniteCheckedException {
         int cnt = io.getCount(pageAddr);
-        int mid = cnt >>> 1;
+
+        int mid = sequentialWriteOptsEnabled ? (int)(cnt * 0.85) : cnt >>> 1;
 
         boolean res = false;
 
@@ -2715,7 +2748,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         // Update forward page.
-        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageSize());
+        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageSize(), metrics);
 
         // Update existing page.
         io.splitExistingPage(pageAddr, mid, fwdId);
@@ -2760,7 +2793,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Result code.
      * @throws IgniteCheckedException If failed.
      */
-    private Result putDown(final Put p, final long pageId, final long fwdId, final int lvl)
+    private Result putDown(final Put p, final long pageId, final long fwdId, int lvl)
         throws IgniteCheckedException {
         assert lvl >= 0 : lvl;
 
@@ -3121,7 +3154,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @param x Implementation specific argument.
          * @param findLast Ignore row passed, find last row
          */
-        private GetOne(L row, TreeRowClosure<L,T> c, Object x, boolean findLast) {
+        private GetOne(L row, TreeRowClosure<L, T> c, Object x, boolean findLast) {
             super(row, findLast);
 
             this.x = x;
@@ -3134,7 +3167,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (lvl != 0 && !canGetRowFromInner)
                 return false;
 
-            row = c == null || c.apply(BPlusTree.this, io,pageAddr, idx) ? getRow(io, pageAddr, idx, x) : null;
+            row = c == null || c.apply(BPlusTree.this, io, pageAddr, idx) ? getRow(io, pageAddr, idx, x) : null;
 
             return true;
         }
@@ -3732,7 +3765,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         if (idx == cnt && !io.isLeaf()) {
                             inner(io).setLeft(fwdPageAddr, 0, rightId);
 
-                            if (needWalDeltaRecord(fwdId, fwdPage, fwdPageWalPlc)) // Rare case, we can afford separate WAL record to avoid complexity.
+                            // Rare case, we can afford separate WAL record to avoid complexity.
+                            if (needWalDeltaRecord(fwdId, fwdPage, fwdPageWalPlc))
                                 wal.log(new FixLeftmostChildRecord(grpId, fwdId, rightId));
                         }
                     }
@@ -3777,7 +3811,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                                     null,
                                     fwdId,
                                     pageSize(),
-                                    needWal);
+                                    needWal,
+                                    metrics);
 
                                 if (needWal)
                                     wal.log(new NewRootInitRecord<>(grpId, newRootId, newRootId,
@@ -5295,6 +5330,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         throws IgniteCheckedException {
         assert row != null;
 
+        if (sequentialWriteOptsEnabled) {
+            assert io.getForward(buf) == 0L;
+
+            return -cnt - 1;
+        }
+
         int high = cnt - 1;
 
         while (low <= high) {
@@ -5618,6 +5659,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     finally {
                         readUnlock(pageId, page, pageAddr);
                     }
+                }
+                catch (AbstractCorruptedPersistenceException e) {
+                    throw e;
                 }
                 catch (RuntimeException | AssertionError e) {
                     throw corruptedTreeException("Runtime failure on cursor iteration", e, grpId, pageId);

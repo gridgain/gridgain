@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.authentication;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -228,9 +229,7 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
      * Exception messages from {@code org.apache.ignite.internal.managers.communication.GridIoManager#send}.
      */
     private boolean serverDownMessage(String text) {
-        return text.contains("Failed to send message (node may have left the grid or "
-            + "TCP connection cannot be established due to firewall issues)")
-            || text.contains("Failed to send message, node left");
+        return Pattern.matches(".*Failed to send message.*node.*left.*", text);
     }
 
     /**

@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.TaskExecutor;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.commandline.cache.argument.IndexListCommandArg
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.cache.index.IndexListInfoContainer;
+import org.apache.ignite.internal.visor.cache.index.IndexListTask;
 import org.apache.ignite.internal.visor.cache.index.IndexListTaskArg;
 
 import static org.apache.ignite.internal.IgniteFeatures.INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT;
@@ -49,7 +51,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.IndexListCom
 /**
  * Cache subcommand that allows to show indexes.
  */
-public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
+public class CacheIndexesList extends AbstractCommand<CacheIndexesList.Arguments> {
     /** Command parsed arguments. */
     private Arguments args;
 
@@ -91,7 +93,7 @@ public class CacheIndexesList implements Command<CacheIndexesList.Arguments> {
         try (GridClient client = Command.startClient(clientCfg)) {
             if (nodeSupports(nodeId, client, INDEXES_MANIPULATIONS_FROM_CONTROL_SCRIPT)) {
                 taskRes = TaskExecutor.executeTaskByNameOnNode(client,
-                    "org.apache.ignite.internal.visor.cache.index.IndexListTask", taskArg, nodeId, clientCfg);
+                        IndexListTask.class.getName(), taskArg, nodeId, clientCfg);
             }
             else {
                 if (nodeId == null)

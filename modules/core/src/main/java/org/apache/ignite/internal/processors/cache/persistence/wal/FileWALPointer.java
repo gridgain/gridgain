@@ -30,13 +30,13 @@ public class FileWALPointer implements WALPointer, Comparable<FileWALPointer> {
     /** Pointer serialized size. */
     public static final int POINTER_SIZE = 16;
 
-    /** Absolute WAL segment file index (incrementing counter) */
+    /** Absolute WAL segment file index (incrementing counter). */
     private final long idx;
 
-    /** */
+    /** Offset in file, from the beginning. */
     private final int fileOff;
 
-    /** Written record length */
+    /** Written record length. */
     private int len;
 
     /**

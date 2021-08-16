@@ -20,6 +20,6 @@ package org.apache.ignite.jdbc.thin;
 public class JdbcThinSystemSchemaImplicitSchemaNamePropTest extends JdbcThinSystemSchemaAbstractTest {
     /** {@inheritDoc} */
     @Override protected String expectedSysSchemaName() {
-        return "IGNITE";
+        return "SYS";
     }
 }

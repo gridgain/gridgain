@@ -22,6 +22,7 @@ import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,15 +42,18 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -85,7 +89,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** {@code True} If composite index required. */
     private static boolean createCompositeIdx;
 
-    /** {@code True} If cache nedd to be created throught static config. */
+    /** {@code True} If cache need to be created throught static config. */
     private static boolean createStaticCache = true;
 
     /** Default table name. */
@@ -332,6 +336,102 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Checks that fields in primary index have correct order after node restart.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorrectPkFldsSequenceAfterRestart() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(getConfiguration("0").setDataStorageConfiguration(
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration().setPersistenceEnabled(true)
+            )
+        ));
+
+        ig0.cluster().state(ClusterState.ACTIVE);
+
+        {
+            GridQueryProcessor qryProc = ig0.context().query();
+
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+            String tblName = "T1";
+
+            qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+                "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+            List<String> expect = Arrays.asList("F2", "F1");
+
+            checkPkFldSequence(tblName, expect, idx);
+        }
+
+        stopAllGrids();
+
+        ig0 = startGrid(getConfiguration("0").setDataStorageConfiguration(
+            new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration().setPersistenceEnabled(true)
+            )
+        ));
+
+        ig0.cluster().state(ClusterState.ACTIVE);
+
+        {
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig0).context().query().getIndexing();
+
+            String tblName = "T1";
+
+            List<String> expect = Arrays.asList("F2", "F1");
+
+            checkPkFldSequence(tblName, expect, idx);
+        }
+    }
+
+    /**
+     * Checks that fields in primary index have incorrect order
+     * if grid has a node that doesn't support this feature.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPkFldsSequenceFeatureUnsupported() throws Exception {
+        inlineSize = 10;
+
+        List<IgniteEx> nodes = new ArrayList<>();
+
+        nodes.add(startGrid(0));
+
+        String prev = System.getProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED);
+
+        try {
+            System.setProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED, "true");
+
+            nodes.add(startGrid(1));
+        }
+        finally {
+            if (prev == null)
+                System.clearProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED);
+            else
+                System.setProperty(SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED, prev);
+        }
+
+        int i = 0;
+        for (IgniteEx ig : nodes) {
+            GridQueryProcessor qryProc = ig.context().query();
+
+            IgniteH2Indexing idx = (IgniteH2Indexing)(ig).context().query().getIndexing();
+
+            String tblName = "T" + i++;
+
+            qryProc.querySqlFields(new SqlFieldsQuery("CREATE TABLE PUBLIC." + tblName + " (F1 VARCHAR, F2 VARCHAR, F3 VARCHAR, " +
+                "CONSTRAINT PK PRIMARY KEY (F2, F1))"), true).getAll();
+
+            checkPkFldSequence(tblName, Arrays.asList("F1", "F2"), idx);
+        }
+    }
+
+    /**
      * Fields correctness checker.
      *
      * @param tblName Table name.
@@ -522,17 +622,47 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertFalse(lsnrIdx7.check());
     }
 
+    /**
+     * Check that specified index is used in query plan with specified where clause tables.
+     *
+     * @param qryProc Query processor to run queries on.
+     * @param idxName Index name to test.
+     * @param tblName Table to query.
+     * @param reqFlds Fields to add into where clause.
+     */
+    private void checkIdxIsUsed(GridQueryProcessor qryProc, String idxName, String tblName, String... reqFlds) {
+       checkIdxUsage(qryProc, idxName, null, tblName, reqFlds);
+    }
+
+    /**
+     * Check that specified index is used in query plan with specified where clause tables.
+     *
+     * @param qryProc Query processor to run queries on.
+     * @param idxName Index name to test.
+     * @param tblName Table to query.
+     * @param reqFlds Fields to add into where clause.
+     */
+    private void checkIdxIsNotUsed(GridQueryProcessor qryProc, String idxName, String tblName, String... reqFlds) {
+        checkIdxUsage(qryProc, null, idxName, tblName, reqFlds);
+    }
+
     /** */
-    private boolean checkIdxUsed(GridQueryProcessor qryProc, @Nullable String idxName, String tblName, String... reqFlds) {
+    private void checkIdxUsage(GridQueryProcessor qryProc, String reqIdxName, String forbIdxname, String tblName, String... reqFlds) {
         String sql = "explain select * from " + tblName + " where ";
 
         for (int i = 0; i < reqFlds.length; ++i)
             sql += reqFlds[i] + " > 0 " + ((i < reqFlds.length - 1) ? " and " : "");
 
         String plan = qryProc.querySqlFields(new SqlFieldsQuery(sql), true)
-            .getAll().get(0).get(0).toString().toUpperCase();
+                .getAll().get(0).get(0).toString().toUpperCase();
 
-        return idxName != null ? (!plan.contains(SCAN_INDEX_NAME_SUFFIX) && plan.contains(idxName.toUpperCase())) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
+        if (reqIdxName != null)
+            assertTrue(String.format("Plan \n%s\ndoesn't contain index %s", plan, reqIdxName),
+                    plan.contains(reqIdxName.toUpperCase()));
+
+        if (forbIdxname != null)
+            assertTrue(String.format("Plan \n%s\ncontains index %s", plan, forbIdxname),
+                    !plan.contains(forbIdxname.toUpperCase()));
     }
 
     /** */
@@ -549,6 +679,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         srvLog.registerListener(lsnrIdx);
 
         qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+
+        srvLog.unregisterListener(lsnrIdx);
 
         return lsnrIdx.check();
     }
@@ -650,14 +782,10 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
             "ADDRESS", "LANG");
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LANG"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME"));
-
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME"));
-
-        assertTrue(checkIdxUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LANG");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
         assertTrue(checkIdxAlreadyExistLog(
             qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
@@ -666,11 +794,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
 
-        assertTrue(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
+        checkIdxIsUsed(qryProc, "idx2", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "ADDRESS", "LANG"));
+        checkIdxIsUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG");
     }
 
     /**
@@ -692,20 +818,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx), true).getAll();
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS"));
-
-        assertTrue(checkIdxUsed(qryProc, "idx1", TEST_TBL_NAME, "LANG"));
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS");
+        checkIdxIsUsed(qryProc,"idx1", TEST_TBL_NAME, "LANG");
 
         // first idx fields not belongs to request fields.
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS", "LAST_NAME"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS", "ADDRESS"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "ADDRESS"));
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS", "LAST_NAME");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "ADDRESS");
     }
 
     /**
@@ -716,59 +837,48 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testPartialTableFieldsCoveredByIdx() throws Exception {
         inlineSize = 10;
 
-        String msg0 = "Index with the given set or subset of columns already exists";
-
         srvLog = new ListeningTestLogger(false, log);
 
         IgniteEx ig0 = startGrid(0);
 
         GridQueryProcessor qryProc = ig0.context().query();
 
-        String cacheName = QueryUtils.createTableCacheName("PUBLIC", "TEST_TABLE");
-
         populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME",
             "ADDRESS", "LANG", "GENDER");
 
-        IgniteCache<Object, Object> jcache = ig0.cache(cacheName);
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LANG");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
 
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LANG"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME"));
-
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME"));
-
-        assertTrue(checkIdxUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
-
-        assertTrue(checkIdxAlreadyExistLog(
-            qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
+        assertTrue(checkIdxAlreadyExistLog(qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME"));
 
         String sqlIdx2 = String.format("create index \"idx2\" on %s(LANG, ADDRESS)", TEST_TBL_NAME);
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx2), true).getAll();
 
         // PK_IDX_NAME used.
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "LANG", "ADDRESS"));
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG");
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME",
-            "LAST_NAME", "ADDRESS", "LANG"));
         // first idx fields not belongs to request fields.
-        assertFalse(checkIdxUsed(qryProc, "idx2", TEST_TBL_NAME, "ADDRESS",
-            "LAST_NAME"));
+        checkIdxIsNotUsed(qryProc, "idx2", TEST_TBL_NAME, "ADDRESS", "LAST_NAME");
 
-        assertFalse(checkIdxAlreadyExistLog(
-            qryProc, "idx3", TEST_TBL_NAME, "ADDRESS", "LANG"));
+        assertFalse(checkIdxAlreadyExistLog(qryProc, "idx3", TEST_TBL_NAME, "ADDRESS", "LANG"));
 
         assertTrue(checkIdxAlreadyExistLog(
-            qryProc, "idx4", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG"));
+                qryProc, "idx4", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG"));
 
+        assertTrue(checkIdxAlreadyExistLog(qryProc, "idx5", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG", "ADDRESS"));
+
+        String msg0 = "Index with the given set or subset of columns already exists";
         LogListener lsnrIdx4 = LogListener.matches(msg0).andMatches(PK_IDX_NAME).build();
 
         srvLog.registerListener(lsnrIdx4);
 
-        String sqlIdx5 = String.format("create index \"idx5\" on %s(FIRST_NAME, LAST_NAME, LANG, ADDRESS)", TEST_TBL_NAME);
-
+        String sqlIdx5 = String.format("create index \"idx6\" on %s(FIRST_NAME, LAST_NAME, LANG, ADDRESS)", TEST_TBL_NAME);
+        String cacheName = QueryUtils.createTableCacheName("PUBLIC", "TEST_TABLE");
+        IgniteCache<Object, Object> jcache = ig0.cache(cacheName);
         jcache.query(new SqlFieldsQuery(sqlIdx5)).getAll();
 
         assertTrue(lsnrIdx4.check());
@@ -789,11 +899,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         populateTable(qryProc, TEST_TBL_NAME, 3, "c1", "c2", "c3", "c4", "c5", "c6");
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c1"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c2"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "c3"));
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "c1");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "c2");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "c3");
     }
 
     /**
@@ -1147,11 +1255,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG"));
-
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }
 
     /**
@@ -1173,11 +1279,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
 
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG"));
-
-        assertTrue(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS"));
-
-        assertFalse(checkIdxUsed(qryProc, null, TEST_TBL_NAME, "LAST_NAME", "ADDRESS"));
+        checkIdxIsUsed(qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }
 
     /** */
@@ -1627,6 +1731,21 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertFalse(grid().context().isStopping());
     }
 
+    /** */
+    @Test
+    public void testOpenRangePredicateOnCompoundPk() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test (id1 int, id2 int, val int, constraint pk primary key (id1, id2))");
+
+        for (int i = 1; i <= 5; i++)
+            sql("insert into test (id1, id2, val) values (?, ?, ?)", 0, i, i);
+
+        assertEquals(5, sql("select * from test where id1 = 0 and id2 > 0").getAll().size());
+    }
+
     /**
      * Checks index creation does not affect used index.
      *
@@ -1698,6 +1817,34 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** */
+    @Test
+    public void testCreateLuceneIndex() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test0(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        IgniteH2Indexing idx = ((IgniteH2Indexing)grid().context().query().getIndexing());
+
+        H2TableDescriptor tblDesc0 = idx.schemaManager().dataTable("PUBLIC", "TEST0")
+            .rowDescriptor().tableDescriptor();
+
+        assertNotNull(GridTestUtils.getFieldValue(tblDesc0, "luceneIdx"));
+
+        idx.distributedConfiguration().disableCreateLuceneIndexForStringValueType(true).get();
+
+        sql("create table test1(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        H2TableDescriptor tblDesc1 = idx.schemaManager().dataTable("PUBLIC", "TEST1")
+            .rowDescriptor().tableDescriptor();
+
+        assertNull(GridTestUtils.getFieldValue(tblDesc1, "luceneIdx"));
     }
 
     /** */

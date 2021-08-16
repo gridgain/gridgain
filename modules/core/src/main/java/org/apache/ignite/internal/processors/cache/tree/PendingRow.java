@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteUuid;
 
 /**
  *
@@ -37,7 +38,13 @@ public class PendingRow {
     public int cacheId;
 
     /** */
+    public Boolean tombstone;
+
+    /** */
     public KeyCacheObject key;
+
+    /** A cache deployment the row belongs to. */
+    public IgniteUuid deploymentId;
 
     /**
      * Creates a new instance which represents an upper or lower bound
@@ -51,13 +58,13 @@ public class PendingRow {
 
     /**
      * @param cacheId Cache ID.
+     * @param tombstone {@code True} if the row is created for a tombstone.
      * @param expireTime Expire time.
      * @param link Link
      */
-    public PendingRow(int cacheId, long expireTime, long link) {
-        assert expireTime != 0;
-
+    public PendingRow(int cacheId, boolean tombstone, long expireTime, long link) {
         this.cacheId = cacheId;
+        this.tombstone = tombstone;
         this.expireTime = expireTime;
         this.link = link;
     }
@@ -78,6 +85,7 @@ public class PendingRow {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PendingRow.class, this);
+        return S.toString(PendingRow.class, this, "expireTime", expireTime, "link", link, "cacheId", cacheId,
+            "tombstone", tombstone, "key", key);
     }
 }

@@ -54,7 +54,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.scanne
 import static org.apache.ignite.internal.processors.cache.persistence.wal.scanner.ScannerHandlers.printToLog;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.scanner.WalScanner.buildWalScanner;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -358,7 +358,7 @@ public class WalScannerTest {
     public static byte[] dummyPage(int pageSize, long pageId) {
         ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
 
-        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), pageId, pageSize);
+        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), pageId, pageSize, null);
 
         byte[] pageData = new byte[pageSize];
 

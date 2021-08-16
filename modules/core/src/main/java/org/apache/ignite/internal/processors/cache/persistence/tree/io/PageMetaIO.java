@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.jetbrains.annotations.NotNull;
 
@@ -55,7 +56,8 @@ public class PageMetaIO extends PageIO {
 
     /** */
     public static final IOVersions<PageMetaIO> VERSIONS = new IOVersions<>(
-        new PageMetaIO(1)
+        new PageMetaIO(1),
+        new PageMetaIOV2(2)
     );
 
     /**
@@ -74,8 +76,8 @@ public class PageMetaIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setTreeRoot(pageAddr, 0);
         setReuseListRoot(pageAddr, 0);
@@ -246,7 +248,8 @@ public class PageMetaIO extends PageIO {
 
     /** {@inheritDoc} */
     @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
-        sb.a("PageMeta[\n\ttreeRoot=").a(getReuseListRoot(addr))
+        sb.a("PageMeta[\n\ttreeRoot=").a(getTreeRoot(addr))
+            .a(",\n\treuseListRoot=").a(getReuseListRoot(addr))
             .a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(addr))
             .a(",\n\tlastSuccessfulSnapshotId=").a(getLastSuccessfulSnapshotId(addr))
             .a(",\n\tnextSnapshotTag=").a(getNextSnapshotTag(addr))

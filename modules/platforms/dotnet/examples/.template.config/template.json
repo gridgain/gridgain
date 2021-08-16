@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "GridGain",
+  "classifications": [
+    "GridGain Ignite",
+    "Console",
+    "Examples"
+  ],
+  "identity": "GridGain.Ignite.Examples",
+  "name": "GridGain Examples",
+  "shortName": "gridgain-examples",
+  "preferNameDirectory": true,
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}

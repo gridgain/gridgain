@@ -437,7 +437,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
             if (pessimistic() || isSystemInvalidate())
                 state(PREPARED);
         }
-        catch (IgniteCheckedException e) {
+        catch (IgniteCheckedException | IgniteException e) {
             setRollbackOnly();
 
             throw e;
@@ -498,7 +498,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                     if (!near() && !local() && onePhaseCommit()) {
                         if (needReturnValue()) {
-                            ret = new GridCacheReturn(null, cctx.localNodeId().equals(otherNodeId()), true, null, true);
+                            ret = new GridCacheReturn(null, cctx.localNodeId().equals(otherNodeId()), true, null, null, true);
 
                             UUID origNodeId = otherNodeId(); // Originating node.
 
@@ -539,7 +539,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         batchStoreCommit(writeMap().values(), taskName);
 
-                        // Node that for near transactions we grab all entries.
+                        // Note that for near transactions we grab all entries.
                         for (IgniteTxEntry txEntry : entries) {
                             GridCacheContext cacheCtx = txEntry.context();
 
@@ -847,7 +847,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                             }
                         }
 
-                        if (ptr != null && !cctx.tm().logTxRecords())
+                        if (ptr != null)
                             cctx.wal().flush(ptr, false);
                     }
                     catch (Throwable ex) {

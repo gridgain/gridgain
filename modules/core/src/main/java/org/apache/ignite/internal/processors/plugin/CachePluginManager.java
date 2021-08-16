@@ -31,7 +31,7 @@ import org.apache.ignite.internal.processors.cache.CacheOsConflictResolutionMana
 import org.apache.ignite.internal.processors.cache.GridCacheManagerAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
-import org.apache.ignite.internal.processors.cache.dr.GridCacheDrManager;
+import org.apache.ignite.internal.processors.cache.dr.GridCacheReplicationManager;
 import org.apache.ignite.internal.processors.cache.dr.GridOsCacheDrManager;
 import org.apache.ignite.internal.processors.cache.store.CacheOsStoreManager;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
@@ -116,7 +116,7 @@ public class CachePluginManager extends GridCacheManagerAdapter {
                 return res;
         }
         
-        if (cls.equals(GridCacheDrManager.class))
+        if (cls.equals(GridCacheReplicationManager.class))
             return (T)new GridOsCacheDrManager();
         else if (cls.equals(CacheConflictResolutionManager.class)) {
             T cmp = (T)ctx.createComponent(CacheConflictResolutionManager.class);

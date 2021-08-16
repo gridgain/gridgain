@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -102,6 +105,81 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         ).getAll().get(0).get(0);
 
         assertTrue("Unexpected plan: " + plan, plan.contains("IDX_VAL0_VAL1"));
+    }
+
+    /**
+     */
+    @Test
+    public void testIntervalOperation() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS INT)");
+        sql("CREATE INDEX IDX_VAL_TS ON TEST(VAL_TS)");
+
+        int rows = 10;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST (ID, VAL_INT, VAL_TS) VALUES " +
+                    "(?, ?, TRUNCATE(TIMESTAMP '2015-12-31 23:59:59') - CAST(TRUNC(?) AS TIMESTAMP))",
+                i, i, new Date(2015 - 1900, 11, 31 - i, 12, i, i));
+        }
+
+        List<List<?>> res = sql("SELECT ID, VAL_TS FROM TEST").getAll();
+
+        assertEquals(rows, res.size());
+
+        for (List<?> r : res)
+            assertEquals(r.get(0), r.get(1));
+    }
+
+    /**
+     */
+    @Test
+    public void testSysdate() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
+
+        int rows = 100;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST VALUES " +
+                    "(?, ?, ?)",
+                i, i, new Timestamp(ThreadLocalRandom.current().nextLong()));
+        }
+
+        List<List<?>> res0 = sql("SELECT ID, SYSDATE, SYSDATE() FROM TEST").getAll();
+
+        assertEquals(rows, res0.size());
+
+        List<List<?>> res1 = sql("SELECT VAL_TS - SYSDATE() FROM TEST").getAll();
+
+        assertEquals(rows, res1.size());
+
+        res1.forEach(r -> assertTrue("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res1, r.get(0) instanceof Long));
+
+        List<List<?>> res2 = execute(new SqlFieldsQuery("SELECT VAL_TS - SYSDATE() FROM TEST").setLocal(true)).getAll();
+
+        assertTrue(!res2.isEmpty());
+
+        res2.forEach(r -> assertTrue("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res2, r.get(0) instanceof Long));
+    }
+
+    /**
+     */
+    @Test
+    public void testCastIntToInterval() {
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_TS TIMESTAMP)");
+
+        int rows = 100;
+        for (int i = 0; i < rows; ++i) {
+            sql("INSERT INTO TEST VALUES " +
+                    "(?, ?, ?)",
+                i, i, new Timestamp(System.currentTimeMillis() + 3600 * 24 + 3600 * i));
+        }
+
+        List<List<?>> res0 = sql("SELECT CASE WHEN (VAL_TS - SYSDATE) > 0 THEN 'A' END FROM TEST").getAll();
+
+        assertEquals(rows, res0.size());
+
+        res0.forEach(r -> assertEquals("Invalid result type: " +
+            r.get(0) + ",\n at results: " + res0, "A", r.get(0)));
     }
 
     /**

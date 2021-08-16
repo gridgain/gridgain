@@ -234,6 +234,10 @@ public class GridAffinityNoCacheSelfTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy) {
+            return value(ctx, cpy, null);
+        }
+
+        @Override public <T> @Nullable T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
             A.notNull(ctx, "ctx");
 
             return (T)val;
@@ -276,7 +280,7 @@ public class GridAffinityNoCacheSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+        @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
             throw new UnsupportedOperationException();
         }
 

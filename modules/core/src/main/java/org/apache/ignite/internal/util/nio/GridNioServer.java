@@ -72,6 +72,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -91,10 +92,11 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SOCKET_WRITE_BYTES;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.MSG_WRITER;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.NIO_OPERATION;
-import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
 
 /**
  * TCP NIO server. Due to asynchronous nature of connections processing
@@ -921,7 +923,7 @@ public class GridNioServer<T> {
             }
             else
                 return new GridNioFinishedFuture<>(
-                    new IgniteCheckedException("Failed to create session, server is stopped."));
+                    new GridNioException("Failed to create session, server is stopped."));
         }
         catch (IOException e) {
             return new GridNioFinishedFuture<>(e);
@@ -1240,6 +1242,8 @@ public class GridNioServer<T> {
 
                         if (log.isTraceEnabled())
                             log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
+
+                        span.addTag(SOCKET_WRITE_BYTES, () -> Integer.toString(cnt));
 
                         if (sentBytesCntMetric != null)
                             sentBytesCntMetric.add(cnt);
@@ -1571,14 +1575,18 @@ public class GridNioServer<T> {
             Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
 
             try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
-                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
+                span.addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 assert msg != null;
 
                 if (writer != null)
                     writer.setCurrentWriteClass(msg.getClass());
 
+                int startPos = buf.position();
+
                 finished = msg.writeTo(buf, writer);
+
+                span.addTag(SOCKET_WRITE_BYTES, () -> Integer.toString(buf.position() - startPos));
 
                 if (finished) {
                     pendingRequests.add(req);
@@ -1752,12 +1760,16 @@ public class GridNioServer<T> {
             Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
 
             try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
-                MTC.span().addTag(SpanTags.MESSAGE, () -> traceName(msg));
+                span.addTag(SpanTags.MESSAGE, () -> traceName(msg));
 
                 if (writer != null)
                     writer.setCurrentWriteClass(msg.getClass());
 
+                int startPos = buf.position();
+
                 finished = msg.writeTo(buf, writer);
+
+                span.addTag(SOCKET_WRITE_BYTES, () -> Integer.toString(buf.position() - startPos));
 
                 if (finished) {
                     onMessageWritten(ses, msg);
@@ -2242,15 +2254,21 @@ public class GridNioServer<T> {
                         if (!changeReqs.isEmpty())
                             continue;
 
-                        updateHeartbeat();
+                        blockingSectionBegin();
 
                         // Wake up every 2 seconds to check if closed.
-                        if (selector.select(2000) > 0) {
+                        int numKeys = selector.select(2000);
+
+                        blockingSectionEnd();
+
+                        if (numKeys > 0) {
                             // Walk through the ready keys collection and process network events.
                             if (selectedKeys == null)
                                 processSelectedKeys(selector.selectedKeys());
                             else
                                 processSelectedKeysOptimized(selectedKeys.flip());
+
+                            updateHeartbeat();
                         }
 
                         // select() call above doesn't throw on interruption; checking it here to propagate timely.
@@ -2493,19 +2511,9 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
+                    processKeysSelectionError(e, attach);
 
                     GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
 
                     // Can be null if async connect failed.
                     if (ses != null)
@@ -2560,21 +2568,33 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
-
-                    GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
+                    processKeysSelectionError(e, attach);
                 }
             }
+        }
+
+        /**
+         * Processes errors occured while processing selector keys.
+         *
+         * @param e Exception or error which occured.
+         * @param attach GridNioKeyAttachment.
+         */
+        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
+            if (X.hasCause(e, Error.class)) { // TODO IGNITE-2659.
+                try {
+                    U.sleep(1000);
+                }
+                catch (IgniteInterruptedCheckedException ignore) {
+                    // No-op.
+                }
+            }
+
+            GridSelectorNioSessionImpl ses = attach.session();
+
+            if (!closed)
+                U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
+            else if (log.isDebugEnabled())
+                log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
         }
 
         /**
@@ -2772,11 +2792,10 @@ public class GridNioServer<T> {
          */
         protected boolean close(final GridSelectorNioSessionImpl ses, @Nullable final IgniteCheckedException e) {
             if (e != null) {
-                // Print stack trace only if has runtime exception in it's cause.
                 if (e.hasCause(IOException.class))
                     U.warn(log, "Client disconnected abruptly due to network connection loss or because " +
                         "the connection was left open on application shutdown. [cls=" + e.getClass() +
-                        ", msg=" + e.getMessage() + ']');
+                        ", msg=" + e.getMessage() + ']', e);
                 else
                     U.error(log, "Closing NIO session because of unhandled exception.", e);
             }
@@ -3029,14 +3048,19 @@ public class GridNioServer<T> {
         private void accept() throws IgniteCheckedException {
             try {
                 while (!closed && selector.isOpen() && !Thread.currentThread().isInterrupted()) {
-                    updateHeartbeat();
+                    blockingSectionBegin();
 
                     // Wake up every 2 seconds to check if closed.
-                    if (selector.select(2000) > 0)
+                    int numKeys = selector.select(2000);
+
+                    blockingSectionEnd();
+
+                    if (numKeys > 0) {
                         // Walk through the ready keys collection and process date requests.
                         processSelectedKeys(selector.selectedKeys());
-                    else
+
                         updateHeartbeat();
+                    }
 
                     if (balancer != null)
                         balancer.run();

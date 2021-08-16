@@ -131,10 +131,10 @@ public class IndexMetricsTest extends AbstractIndexingCommonTest {
         int entryCnt2 = 200;
 
         for (int i = 0; i < entryCnt1; i++)
-            cache1.put(new KeyClass(i), new ValueClass(String.valueOf(i)));
+            cache1.put(new KeyClass(i), new ValueClass((long) i));
 
         for (int i = 0; i < entryCnt2; i++)
-            cache2.put(new KeyClass(i), new ValueClass(String.valueOf(i)));
+            cache2.put(new KeyClass(i), new ValueClass((long) i));
 
         List<Path> idxPaths = getIndexBinPaths(cacheName1);
 
@@ -277,7 +277,7 @@ public class IndexMetricsTest extends AbstractIndexingCommonTest {
         IgniteEx n,
         String cacheName,
         Class<? super T> cls
-    ) throws Exception {
+    ) {
         requireNonNull(n);
         requireNonNull(cacheName);
         requireNonNull(cls);

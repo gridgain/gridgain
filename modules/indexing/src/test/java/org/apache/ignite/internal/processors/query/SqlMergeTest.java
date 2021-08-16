@@ -102,6 +102,12 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
 
         sql("CREATE TABLE test2 (id INT, id2 INT, name VARCHAR, PRIMARY KEY (id, id2))");
 
+        checkMergeQuery("MERGE INTO test2 (id, id2, name) VALUES (100, 1, 'Boba')", 1L);
+        checkSqlResults("SELECT id, id2, name FROM test2 WHERE id = 100",
+            Arrays.asList(100, 1, "Boba"));
+        assertFalse(logLsnr.check());
+        logLsnr.reset();
+
         checkMergeQuery("MERGE INTO test2 (id, id2, name) KEY(_key) VALUES (100, 1, 'Bob')", 1L);
         checkSqlResults("SELECT id, id2, name FROM test2 WHERE id = 100",
             Arrays.asList(100, 1, "Bob"));

@@ -69,7 +69,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheEntry;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
-import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheLazyPlainVersionedEntry;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -197,6 +196,10 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** Transaction timeout. */
     @GridToStringInclude
     protected long timeout;
+
+    /** Deployment class loader id which will be used for deserialization of entries on a distributed task. */
+    @GridToStringExclude
+    protected IgniteUuid deploymentLdrId;
 
     /** Invalidate flag. */
     protected volatile boolean invalidate;
@@ -345,6 +348,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         this.txSize = txSize;
         this.subjId = subjId;
         this.taskNameHash = taskNameHash;
+        this.deploymentLdrId = U.contextDeploymentClassLoaderId(cctx.kernalContext());
 
         nodeId = cctx.discovery().localNode().id();
 
@@ -1237,7 +1241,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                     seal();
 
                 if (state == PREPARED || state == COMMITTED || state == ROLLED_BACK) {
-                    cctx.tm().setMvccState(this, toMvccState(state));
+                    cctx.tm().setMvccState(this, state);
 
                     ptr = cctx.tm().logTxRecord(this);
 
@@ -1268,20 +1272,6 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         }
 
         return valid;
-    }
-
-    /** */
-    private byte toMvccState(TransactionState state) {
-        switch (state) {
-            case PREPARED:
-                return TxState.PREPARED;
-            case COMMITTED:
-                return TxState.COMMITTED;
-            case ROLLED_BACK:
-                return TxState.ABORTED;
-            default:
-                throw new IllegalStateException("Unexpected state: " + state);
-        }
     }
 
     /** */
@@ -1517,7 +1507,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                                         key,
                                         e.cached().rawGet(),
                                         e.keepBinary()),
-                                    cacheCtx.cacheObjectContext().unwrapBinaryIfNeeded(val, e.keepBinary(), false));
+                                    cacheCtx.cacheObjectContext().unwrapBinaryIfNeeded(val, e.keepBinary(), false, null));
 
                                 if (interceptorVal == null)
                                     continue;
@@ -1657,8 +1647,14 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
             return F.t(cacheCtx.writeThrough() ? RELOAD : DELETE, null);
 
         if (F.isEmpty(txEntry.entryProcessors())) {
-            if (ret != null)
-                ret.value(cacheCtx, txEntry.value(), txEntry.keepBinary());
+            if (ret != null) {
+                ret.value(
+                    cacheCtx,
+                    txEntry.value(),
+                    txEntry.keepBinary(),
+                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId)
+                );
+            }
 
             return F.t(txEntry.op(), txEntry.value());
         }
@@ -1832,7 +1828,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
                 newTtl = CU.TTL_ETERNAL;
             else {
                 newTtl = old.rawTtl();
-                newExpireTime = old.rawExpireTime();
+                newExpireTime = old.deleted() ? CU.EXPIRE_TIME_ETERNAL : old.rawExpireTime();
             }
         }
 

@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mapping.PropertyPath;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.parser.Part;
 import org.springframework.data.repository.query.parser.PartTree;
@@ -28,13 +30,25 @@ import org.springframework.data.repository.query.parser.PartTree;
  * Ignite query generator for Spring Data framework.
  */
 public class IgniteQueryGenerator {
+    /** */
+    private IgniteQueryGenerator() {
+        // No-op.
+    }
+
     /**
      * @param mtd Method.
      * @param metadata Metadata.
      * @return Generated ignite query.
      */
     @NotNull public static IgniteQuery generateSql(Method mtd, RepositoryMetadata metadata) {
-        PartTree parts = new PartTree(mtd.getName(), metadata.getDomainType());
+        PartTree parts;
+
+        try {
+            parts = new PartTree(mtd.getName(), metadata.getDomainType());
+        }
+        catch (PropertyReferenceException e) {
+            parts = new PartTree(mtd.getName(), metadata.getIdType());
+        }
 
         boolean isCountOrFieldQuery = parts.isCountProjection();
 
@@ -55,7 +69,7 @@ public class IgniteQueryGenerator {
             if (isCountOrFieldQuery)
                 sql.append("COUNT(1) ");
             else
-                sql.append(" * ");
+                sql.append("* ");
         }
 
         sql.append("FROM ").append(metadata.getDomainType().getSimpleName());
@@ -67,7 +81,7 @@ public class IgniteQueryGenerator {
                 sql.append("(");
 
                 for (Part part : orPart) {
-                    handleQueryPart(sql, part);
+                    handleQueryPart(sql, part, metadata.getDomainType());
                     sql.append(" AND ");
                 }
 
@@ -86,7 +100,7 @@ public class IgniteQueryGenerator {
             sql.append(parts.getMaxResults().intValue());
         }
 
-        return new IgniteQuery(sql.toString(), isCountOrFieldQuery, getOptions(mtd));
+        return new IgniteQuery(sql.toString(), isCountOrFieldQuery, false, true, getOptions(mtd));
     }
 
     /**
@@ -113,6 +127,7 @@ public class IgniteQueryGenerator {
                         case NULLS_LAST:
                             sql.append("LAST");
                             break;
+                        default:
                     }
                 }
                 sql.append(", ");
@@ -132,8 +147,8 @@ public class IgniteQueryGenerator {
      * @return Builder instance.
      */
     public static StringBuilder addPaging(StringBuilder sql, Pageable pageable) {
-        if (pageable.getSort() != null)
-            addSorting(sql, pageable.getSort());
+
+        addSorting(sql, pageable.getSort());
 
         sql.append(" LIMIT ").append(pageable.getPageSize()).append(" OFFSET ").append(pageable.getOffset());
 
@@ -170,12 +185,24 @@ public class IgniteQueryGenerator {
     }
 
     /**
-     * Transform part to sql expression
+     * Check and correct table name if using column name from compound key.
      */
-    private static void handleQueryPart(StringBuilder sql, Part part) {
+    private static String getColumnName(Part part, Class<?> domainType) {
+        PropertyPath prperty = part.getProperty();
+
+        if (prperty.getType() != domainType)
+            return domainType.getSimpleName() + "." + prperty.getSegment();
+        else
+            return part.toString();
+    }
+
+    /**
+     * Transform part to qryStr expression
+     */
+    private static void handleQueryPart(StringBuilder sql, Part part, Class<?> domainType) {
         sql.append("(");
 
-        sql.append(part.getProperty());
+        sql.append(getColumnName(part, domainType));
 
         switch (part.getType()) {
             case SIMPLE_PROPERTY:
@@ -211,15 +238,13 @@ public class IgniteQueryGenerator {
             case TRUE:
                 sql.append(" = TRUE");
                 break;
+            //TODO: review this legacy code, LIKE should be -> LIKE ?
+            case LIKE:
             case CONTAINING:
                 sql.append(" LIKE '%' || ? || '%'");
                 break;
             case NOT_CONTAINING:
-                sql.append(" NOT LIKE '%' || ? || '%'");
-                break;
-            case LIKE:
-                sql.append(" LIKE '%' || ? || '%'");
-                break;
+                //TODO: review this legacy code, NOT_LIKE should be -> NOT LIKE ?
             case NOT_LIKE:
                 sql.append(" NOT LIKE '%' || ? || '%'");
                 break;

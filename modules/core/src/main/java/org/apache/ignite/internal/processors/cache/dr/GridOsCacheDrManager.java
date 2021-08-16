@@ -27,9 +27,9 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * No-op implementation for {@link GridCacheDrManager}.
+ * No-op implementation for {@link GridCacheReplicationManager}.
  */
-public class GridOsCacheDrManager implements GridCacheDrManager {
+public class GridOsCacheDrManager implements GridCacheReplicationManager {
     /** {@inheritDoc} */
     @Override public boolean enabled() {
         return false;

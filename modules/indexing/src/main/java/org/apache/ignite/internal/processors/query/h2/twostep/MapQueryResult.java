@@ -17,11 +17,14 @@
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import java.lang.reflect.Field;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.events.CacheQueryReadEvent;
 import org.apache.ignite.internal.GridKernalContext;
@@ -37,17 +40,23 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
+import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
+import org.apache.ignite.internal.processors.tracing.MTC;
+import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.jdbc.JdbcResultSet;
 import org.gridgain.internal.h2.result.LazyResult;
 import org.gridgain.internal.h2.result.ResultInterface;
+import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_OBJECT_READ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_MAP_END;
 
 /**
  * Mapper result for a single part of the query.
@@ -133,8 +142,8 @@ class MapQueryResult {
     }
 
     /** */
-    void openResult(@NotNull ResultSet rs, MapH2QueryInfo qryInfo) {
-        res = new Result(rs, qryInfo);
+    void openResult(@NotNull ResultSet rs, MapH2QueryInfo qryInfo, Tracing tracing) {
+        res = new Result(rs, qryInfo, tracing);
     }
 
     /**
@@ -194,7 +203,7 @@ class MapQueryResult {
                 if (!res.res.next())
                     return true;
 
-                Value[] row = res.res.currentRow();
+                Value[] row = convertIntervalTypes(res.res.currentRow());
 
                 if (cpNeeded) {
                     boolean copied = false;
@@ -243,7 +252,7 @@ class MapQueryResult {
                         row(row)));
                 }
 
-                rows.add(res.res.currentRow());
+                rows.add(row);
 
                 res.fetchSizeInterceptor.checkOnFetchNext();
             }
@@ -266,6 +275,16 @@ class MapQueryResult {
             res.add(v.getObject());
 
         return res;
+    }
+
+    /** */
+    private static Value[] convertIntervalTypes(Value[] row) {
+        for (int i = 0; i < row.length; i++) {
+            if (DataType.isIntervalType(row[i].getValueType()))
+                row[i] = row[i].convertTo(Value.LONG);
+        }
+
+        return row;
     }
 
     /**
@@ -341,13 +360,17 @@ class MapQueryResult {
         /** */
         private final H2QueryFetchSizeInterceptor fetchSizeInterceptor;
 
+        /** */
+        private final Tracing tracing;
+
         /**
          * Constructor.
          *
          * @param rs H2 result set.
          */
-        Result(@NotNull ResultSet rs, MapH2QueryInfo qryInfo) {
+        Result(@NotNull ResultSet rs, MapH2QueryInfo qryInfo, Tracing tracing) {
             this.rs = rs;
+            this.tracing = tracing;
 
             try {
                 res = (ResultInterface)RESULT_FIELD.get(rs);
@@ -363,10 +386,29 @@ class MapQueryResult {
         }
 
         /** */
-        void close() {
-            fetchSizeInterceptor.checkOnClose();
+        private String plan() {
+            try {
+                Prepared stmt = GridSqlQueryParser.prepared((PreparedStatement)rs.getStatement());
 
-            U.close(rs, log);
+                return stmt.getPlanSQL(false);
+            }
+            catch (SQLException ex) {
+                log.error("Unexpected exception", ex);
+
+                return "Error on fetch plan: " + ex.getMessage();
+            }
+        }
+
+        /** */
+        void close() {
+            try (MTC.TraceSurroundings ignored =
+                     MTC.support(tracing.create(SQL_QRY_MAP_END, MTC.span())
+                         .addLog(this::plan))
+            ) {
+                fetchSizeInterceptor.checkOnClose();
+
+                U.close(rs, log);
+            }
         }
     }
 }

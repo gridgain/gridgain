@@ -49,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheReturn;
 import org.apache.ignite.internal.processors.cache.GridChangeGlobalStateMessageResponse;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.TombstoneCacheObject;
 import org.apache.ignite.internal.processors.cache.WalStateAckMessage;
 import org.apache.ignite.internal.processors.cache.binary.MetadataRequestMessage;
 import org.apache.ignite.internal.processors.cache.binary.MetadataResponseMessage;
@@ -177,6 +178,7 @@ import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridMessageCollection;
 import org.apache.ignite.internal.util.UUIDCollectionMessage;
+import org.apache.ignite.internal.util.distributed.SingleNodeMessage;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
@@ -371,9 +373,13 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register(GridQueryKillResponse.TYPE_CODE, GridQueryKillResponse::new);
         factory.register(GridIoSecurityAwareMessage.TYPE_CODE, GridIoSecurityAwareMessage::new);
         factory.register((short)175, TcpInverseConnectionResponseMessage::new);
+        factory.register(SingleNodeMessage.TYPE_CODE, SingleNodeMessage::new); // TDE
+        // [177, 178] - Incremental DR
+        factory.register(TombstoneCacheObject.TYPE_CODE, TombstoneCacheObject::new);
 
         // [-3..119] [124..129] [-23..-28] [-36..-55] - this
-        // [120..123] - DR
+        // [120..123] [177, 178] - DR
+        // [180..188] - Statistics
         // [-4..-22, -30..-35] - SQL
         // [2048..2053] - Snapshots
     }

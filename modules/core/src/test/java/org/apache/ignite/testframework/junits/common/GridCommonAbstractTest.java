@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -85,9 +86,12 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
+import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -97,7 +101,9 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxyImpl;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.WalStateManager.WALDisableContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
@@ -111,14 +117,16 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
-import org.apache.ignite.internal.processors.cache.verify.PartitionKeyV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
@@ -127,9 +135,6 @@ import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTask;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorIdleAnalyzeTaskResult;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskV2;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -150,6 +155,7 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
@@ -159,6 +165,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
@@ -2310,14 +2317,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteCheckedException If checkpoint was failed.
      */
     protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
+        forceCheckpoint(nodes, "test");
+    }
+
+    /**
+     * Forces checkpoint on all specified nodes.
+     *
+     * @param nodes Nodes to force checkpoint on them.
+     * @param reason Reason for checkpoint wakeup if it would be required.
+     * @throws IgniteCheckedException If checkpoint was failed.
+     */
+    protected void forceCheckpoint(Collection<Ignite> nodes, String reason) throws IgniteCheckedException {
         for (Ignite ignite : nodes) {
-            if (ignite.cluster().localNode().isClient())
-                continue;
-
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                    .cache().context().database();
-
-            dbMgr.waitForCheckpoint("test");
+            if (!ignite.cluster().localNode().isClient())
+                dbMgr((IgniteEx)ignite).waitForCheckpoint(reason);
         }
     }
 
@@ -2325,6 +2338,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * Compares checksums between primary and backup partitions of specified caches.
      * Works properly only on idle cluster - there may be false positive conflict reports if data in cluster is being
      * concurrently updated.
+     * <p>
+     * Note: tombstones are excluded from validation due to it's volatile nature.
      *
      * @param ig Ignite instance.
      * @param caches Cache names (if null, all user caches will be verified).
@@ -2535,43 +2550,18 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     protected void assertPartitionsSame(IdleVerifyResultV2 res) throws AssertionFailedError {
         if (res.hasConflicts()) {
-            printDivergedKeyAfterUnsuccessfulIdleVerify(res);
+            try {
+                ConsistencyUtils.printDivergenceDetailsForKey(res, log);
+            }
+            catch (Throwable e) {
+                log.error("Cannot print diverged key history", e);
+            }
 
             StringBuilder b = new StringBuilder();
 
             res.print(b::append);
 
             fail(b.toString());
-        }
-    }
-
-    /**
-     * Call this method to find and log first diverged key after unsuccessful idle_verify check.
-     * @param res Result of idle_verify.
-     */
-    protected void printDivergedKeyAfterUnsuccessfulIdleVerify(IdleVerifyResultV2 res) {
-        if (res.hasConflicts()) {
-            Map<PartitionKeyV2, List<PartitionHashRecordV2>> conflicts = res.hashConflicts();
-
-            if (F.isEmpty(conflicts))
-                conflicts = res.counterConflicts();
-
-            PartitionKeyV2 partKeyV2 = conflicts.keySet().iterator().next();
-
-            VisorIdleAnalyzeTaskArg taskArg = new VisorIdleAnalyzeTaskArg(new PartitionKey(
-                partKeyV2.groupId(), partKeyV2.partitionId(), partKeyV2.groupName()));
-
-            Ignite node = G.allGrids().stream()
-                .filter(ig -> !ig.cluster().localNode().isClient())
-                .findAny()
-                .orElseThrow(() -> new AssertionError("No server node found to execute analyze task"));
-
-            VisorIdleAnalyzeTaskResult analyzeRes = node.compute().execute(
-                VisorIdleAnalyzeTask.class.getName(),
-                new VisorTaskArgument<>(node.cluster().localNode().id(), taskArg, false)
-            );
-
-            log.error("Idle analyze result: " + analyzeRes.toString());
         }
     }
 
@@ -2798,6 +2788,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteCheckedException If failed.
      */
     protected void enableCheckpoints(Collection<Ignite> nodes, boolean enable) throws IgniteCheckedException {
+        GridCompoundFuture<Void, Void> fut = new GridCompoundFuture<>();
+
         for (Ignite node : nodes) {
             assert !node.cluster().localNode().isClient();
 
@@ -2808,8 +2800,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             GridCacheDatabaseSharedManager dbMgr0 = (GridCacheDatabaseSharedManager) dbMgr;
 
-            dbMgr0.enableCheckpoints(enable).get();
+            fut.add(dbMgr0.enableCheckpoints(enable));
         }
+
+        fut.markInitialized();
+
+        fut.get();
     }
 
     /**
@@ -2839,6 +2835,126 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
                 s.addData(key, key);
             }
+        }
+    }
+
+    /**
+     * Clears tombstones on a DHT node.
+     *
+     * @param cache Cache.
+     */
+    protected void clearTombstones(IgniteCache<?, ?> cache) throws IgniteCheckedException {
+        IgniteEx ignite = cache.unwrap(IgniteEx.class);
+
+        GridCacheContext<Object, Object> grpCtx = ignite.cachex(cache.getName()).context();
+
+        if (!grpCtx.group().supportsTombstone())
+            return;
+
+        List<GridDhtLocalPartition> locParts = grpCtx.topology().localPartitions();
+
+        for (GridDhtLocalPartition locPart : locParts)
+            locPart.clearTombstonesAsync().get();
+    }
+
+     /**
+      * Getting WAL manager.
+      *
+      * @param n Node.
+      * @return WAL manger.
+     */
+     protected static FileWriteAheadLogManager walMgr(IgniteEx n) {
+         return (FileWriteAheadLogManager)n.context().cache().context().wal();
+     }
+
+    /**
+     * Disable/enable VAL.
+     *
+     * @param n Node.
+     * @param disable Disable flag.
+     * @throws Exception If failed.
+     */
+    protected static void disableWal(IgniteEx n, boolean disable) throws Exception {
+        WALDisableContext walDisableCtx = n.context().cache().context().walState().walDisableContext();
+
+        setFieldValue(walDisableCtx, "disableWal", disable);
+
+        assertEquals(disable, walDisableCtx.check());
+
+        WALPointer logPtr = walMgr(n).log(new DataRecord(emptyList()));
+
+        if (disable)
+            assertNull(logPtr);
+        else
+            assertNotNull(logPtr);
+    }
+
+    /**
+     * Initiate an asynchronous forced index rebuild for caches.
+     *
+     * @param n Node.
+     * @param cacheCtxs Cache contexts.
+     * @return Cache contexts for which index rebuilding is not initiated by
+     *      this call because they are already in the process of rebuilding.
+     */
+    protected Collection<GridCacheContext> forceRebuildIndexes(IgniteEx n, GridCacheContext... cacheCtxs) {
+        return n.context().cache().context().database().forceRebuildIndexes(F.asList(cacheCtxs));
+    }
+
+    /**
+     * Getting rebuild index future for the cache.
+     *
+     * @param n Node.
+     * @param cacheId Cache id.
+     * @return Rebuild index future.
+     */
+    @Nullable protected IgniteInternalFuture<?> indexRebuildFuture(IgniteEx n, int cacheId) {
+        return n.context().query().indexRebuildFuture(cacheId);
+    }
+
+    /**
+     * Getting cache metrics.
+     *
+     * @param n Node.
+     * @param cacheName Cache name.
+     * @return Cache metrics.
+     */
+    @Nullable protected CacheMetricsImpl cacheMetrics0(IgniteEx n, String cacheName) {
+        return Optional.ofNullable(n.cachex(cacheName)).map(IgniteInternalCache::context)
+            .map(GridCacheContext::cache).map(GridCacheAdapter::metrics0).orElse(null);
+    }
+
+    /**
+     * Getting database manager.
+     *
+     * @param n Node.
+     * @return Database manager.
+     */
+    protected GridCacheDatabaseSharedManager dbMgr(IgniteEx n) {
+        return (GridCacheDatabaseSharedManager)n.context().cache().context().database();
+    }
+
+    /**
+     * Performing an operation on a MetaStorage.
+     *
+     * @param n Node.
+     * @param fun Function for working with MetaStorage, the argument can be {@code null}.
+     * @return The function result.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected <R> R metaStorageOperation(
+        IgniteEx n,
+        IgniteThrowableFunction<MetaStorage, R> fun
+    ) throws IgniteCheckedException {
+        GridCacheDatabaseSharedManager dbMgr = dbMgr(n);
+
+        dbMgr.checkpointReadLock();
+
+        try {
+            return fun.apply(dbMgr.metaStorage());
+        }
+        finally {
+            dbMgr.checkpointReadUnlock();
         }
     }
 }

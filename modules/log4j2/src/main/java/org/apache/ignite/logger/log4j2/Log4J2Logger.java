@@ -36,6 +36,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
@@ -45,11 +46,14 @@ import org.apache.logging.log4j.core.appender.routing.RoutingAppender;
 import org.apache.logging.log4j.core.config.AppenderControl;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.filter.ThresholdFilter;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONSOLE_APPENDER;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
+import static org.apache.logging.log4j.core.appender.ConsoleAppender.Target.SYSTEM_ERR;
+import static org.apache.logging.log4j.core.appender.ConsoleAppender.Target.SYSTEM_OUT;
 
 /**
  * Log4j2-based implementation for logging. This logger should be used
@@ -113,6 +117,25 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
     private volatile UUID nodeId;
 
     /**
+     * Creates new logger with default implementation.
+     */
+    public Log4J2Logger() {
+         addConsoleAppenderIfNeeded(new C1<Boolean, Logger>() {
+            @Override public Logger apply(Boolean init) {
+                return (Logger)LogManager.getRootLogger();
+            }
+        });
+
+        createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER, SYSTEM_OUT, ThresholdFilter.createFilter(Level.ERROR, Filter.Result.DENY, Filter.Result.ACCEPT));
+        createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER + "Error", SYSTEM_ERR, null);
+
+        quiet = quiet0;
+        cfg = null;
+
+        Log4jBridgeHandler.install();
+    }
+
+    /**
      * Creates new logger with given implementation.
      *
      * @param impl Log4j implementation to use.
@@ -128,6 +151,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -156,6 +181,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = path;
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -184,6 +211,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgFile.getPath();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -207,6 +236,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
 
         quiet = quiet0;
         cfg = cfgUrl.getPath();
+
+        Log4jBridgeHandler.install();
     }
 
     /**
@@ -274,6 +305,17 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
             return path;
 
         return path.replace('/', File.separatorChar);
+    }
+
+    /**
+     * Checks if Log4j is already configured within this VM or not.
+     *
+     * @return {@code True} if log4j was already configured, {@code false} otherwise.
+     */
+    public static boolean isConfigured() {
+        final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+
+        return ctx.getConfiguration().getAppenders().size() > 1;
     }
 
     /**
@@ -353,6 +395,18 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
      * @return Logger with auto configured console appender.
      */
     public Logger createConsoleLogger() {
+        return createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER,null, null);
+    }
+
+    /**
+     * Creates console appender with some reasonable default logging settings with parameters.
+     *
+     * @param appenderName Appender name.
+     * @param target Target.
+     * @param filter Filter.
+     * @return Logger with auto configured console appender.
+     */
+    private Logger createDefaultConsoleLoggerParametrized(String appenderName, ConsoleAppender.Target target, Filter filter) {
         // from http://logging.apache.org/log4j/2.x/manual/customconfig.html
         final LoggerContext ctx = impl.getContext();
 
@@ -367,15 +421,18 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAware {
         PatternLayout layout = builder.build();
 
         ConsoleAppender.Builder consoleAppenderBuilder = ConsoleAppender.newBuilder()
-            .withName(CONSOLE_APPENDER)
+            .withName(appenderName)
             .withLayout(layout);
+
+        if (target != null)
+            consoleAppenderBuilder.setTarget(target);
 
         ConsoleAppender consoleApp = consoleAppenderBuilder.build();
 
         consoleApp.start();
 
         cfg.addAppender(consoleApp);
-        cfg.getRootLogger().addAppender(consoleApp, Level.TRACE, null);
+        cfg.getRootLogger().addAppender(consoleApp, Level.TRACE, filter);
 
         ctx.updateLoggers(cfg);
 

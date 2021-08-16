@@ -478,7 +478,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                 GridCacheVersion ver = null;
 
                 if (readNoEntry) {
-                    KeyCacheObject key0 = (KeyCacheObject)cctx.cacheObjects().prepareForCache(key, cctx);
+                    KeyCacheObject key0 = (key == null ? null :
+                        key.prepareForCache(cctx.cacheObjectContext(), false));
 
                     CacheDataRow row = cctx.mvccEnabled() ?
                         cctx.offheap().mvccRead(cctx, key0, mvccSnapshot()) :
@@ -569,7 +570,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                         ver,
                         0,
                         0,
-                        needVer);
+                        needVer,
+                        U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
 
                     return true;
                 }
@@ -652,7 +654,8 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                     false,
                     needVer ? info.version() : null,
                     0,
-                    0);
+                    0,
+                    U.deploymentClassLoader(cctx.kernalContext(), deploymentLdrId));
             }
 
             return map;

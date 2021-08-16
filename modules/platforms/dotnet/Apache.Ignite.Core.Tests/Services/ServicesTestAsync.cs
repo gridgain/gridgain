@@ -17,10 +17,13 @@
 namespace Apache.Ignite.Core.Tests.Services
 {
     using Apache.Ignite.Core.Services;
+    using NUnit.Framework;
 
     /// <summary>
     /// Services async tests.
     /// </summary>
+    [TestFixture]
+    [Category(TestUtils.CategoryIntensive)]
     public class ServicesTestAsync : ServicesTest
     {
         /** <inheritdoc /> */

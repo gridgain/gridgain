@@ -41,6 +41,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+
 /** */
 public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     /** */
@@ -105,7 +107,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
 
         for (Ignite ign : G.allGrids()) {
             GridTestUtils.assertThrowsWithCause(
-                () -> execSql(ign, "SELECT * FROM IGNITE.INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
+                () -> execSql(ign, "SELECT * FROM " + sysSchemaName() + ".INDEXES ORDER BY TABLE_NAME, INDEX_NAME"),
                 IgniteException.class);
         }
 
@@ -267,7 +269,7 @@ public class SqlIndexesSystemViewTest extends GridCommonAbstractTest {
     private void checkIndexes(Predicate<List<List<?>>> checker) throws Exception {
         for (Ignite ign : G.allGrids()) {
             assertTrue(GridTestUtils.waitForCondition(() -> {
-                List<List<?>> indexes = execSql(ign, "SELECT * FROM IGNITE.INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
+                List<List<?>> indexes = execSql(ign, "SELECT * FROM " + sysSchemaName() + ".INDEXES ORDER BY CACHE_NAME, INDEX_NAME");
 
                 return checker.test(indexes);
             }, 1000));

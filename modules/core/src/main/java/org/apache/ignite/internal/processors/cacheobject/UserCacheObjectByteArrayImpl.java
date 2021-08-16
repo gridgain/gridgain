@@ -46,11 +46,17 @@ public class UserCacheObjectByteArrayImpl extends CacheObjectByteArrayImpl {
 
     /** {@inheritDoc} */
     @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy) {
-        return super.value(ctx, false); // Do not need copy since user value is not in cache.
+        return value(ctx, cpy, null);
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Nullable @Override public <T> T value(CacheObjectValueContext ctx, boolean cpy, ClassLoader ldr) {
+        return super.value(ctx, false, ldr); // Do not need copy since user value is not in cache.
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
+        // Compression not implemented.
         byte[] valCpy = Arrays.copyOf(val, val.length);
 
         return new CacheObjectByteArrayImpl(valCpy);

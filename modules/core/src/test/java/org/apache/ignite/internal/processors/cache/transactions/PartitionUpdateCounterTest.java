@@ -39,6 +39,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounterErrorWrapper;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounterVolatileImpl;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounterTrackingImpl;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
@@ -354,8 +355,13 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
 
         Random r = new Random();
 
-        for (int c = 1; c < 500; c++)
+        for (int c = 0; c < 500; c++)
             pc.update(c * 4, r.nextInt(3) + 1);
+
+        pc.updateTombstoneClearCounter(0);
+        long state0 = pc.tombstoneClearCounter();
+
+        assertTrue(state0 != 0);
 
         final byte[] bytes = pc.getBytes();
 
@@ -366,6 +372,30 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         NavigableMap q1 = U.field(pc2, "queue");
 
         assertEquals(q0, q1);
+        assertEquals(state0, pc2.tombstoneClearCounter());
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testSerialization2() throws IgniteCheckedException {
+        PartitionUpdateCounter pc = new PartitionUpdateCounterVolatileImpl(null);
+
+        pc.update(10);
+        pc.update(11);
+
+        pc.updateTombstoneClearCounter(11);
+        long state0 = pc.tombstoneClearCounter();
+
+        assertTrue(state0 != 0);
+
+        final byte[] bytes = pc.getBytes();
+
+        PartitionUpdateCounter pc2 = new PartitionUpdateCounterVolatileImpl(null);
+        pc2.init(0, bytes);
+
+        assertEquals(state0, pc2.tombstoneClearCounter());
     }
 
     /**
@@ -402,10 +432,14 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
 
             PartitionUpdateCounter cntr = counter(0, grid0.name());
 
+            assertTrue(cntr instanceof PartitionUpdateCounterErrorWrapper);
+
+            PartitionUpdateCounter delegate = U.field(cntr, "delegate");
+
             if (mode == CacheAtomicityMode.TRANSACTIONAL)
-                assertTrue(cntr instanceof PartitionUpdateCounterTrackingImpl);
+                assertTrue(delegate instanceof PartitionUpdateCounterTrackingImpl);
             else if (mode == CacheAtomicityMode.ATOMIC)
-                assertTrue(cntr instanceof PartitionUpdateCounterVolatileImpl);
+                assertTrue(delegate instanceof PartitionUpdateCounterVolatileImpl);
 
             assertEquals(cntr.initial(), cntr.get());
         }

@@ -90,6 +90,9 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
     /** Metrics check attempts. */
     private static final int METRICS_CHECK_ATTEMPTS = 10;
 
+    /** Activate lazy by default. */
+    private final boolean activateLazyByDflt = GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY");
+
     /** */
     private boolean isPersistenceEnabled;
 
@@ -500,8 +503,8 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
                 CacheException.class,
             "Exception calling user-defined function");
 
-        String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME " +
-            "FROM " + sysSchemaName() + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
+        String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME, ENFORCE_JOIN_ORDER " +
+            ", DISTRIBUTED_JOINS, LAZY FROM " + sysSchemaName() + ".SQL_QUERIES_HISTORY ORDER BY LAST_START_TIME";
 
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
         cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
@@ -545,6 +548,15 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         //LAST_START_TIME
         assertFalse(((Timestamp)firstRow.get(7)).before(new Timestamp(tsBeforeRun)));
         assertFalse(((Timestamp)firstRow.get(7)).after(new Timestamp(tsAfterRun)));
+
+        //ENFORCE_JOIN_ORDER
+        assertEquals(false, secondRow.get(8));
+
+        //DISTRIBUTED_JOINS
+        assertEquals(false, secondRow.get(9));
+
+        //LAZY
+        assertEquals(activateLazyByDflt, secondRow.get(10));
     }
 
     /**
@@ -560,7 +572,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         cache.put(100,"200");
 
-        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION FROM " +
+        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION, ENFORCE_JOIN_ORDER, DISTRIBUTED_JOINS, LAZY FROM " +
             sysSchemaName() + ".SQL_QUERIES";
 
         FieldsQueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLocal(true));
@@ -585,6 +597,15 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         assertEquals(sql, res1.get(0));
 
         assertTrue((Boolean)res0.get(3));
+
+        // ENFORCE_JOIN_ORDER
+        assertFalse((Boolean)res0.get(6));
+
+        // DISTRIBUTED_JOINS
+        assertFalse((Boolean)res0.get(7));
+
+        // LAZY
+        assertEquals(activateLazyByDflt, res0.get(8));
 
         String id0 = (String)res0.get(1);
         String id1 = (String)res1.get(1);

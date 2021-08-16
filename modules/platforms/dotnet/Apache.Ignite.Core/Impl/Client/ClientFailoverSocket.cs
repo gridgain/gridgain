@@ -25,10 +25,12 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Net.Sockets;
     using System.Threading;
     using System.Threading.Tasks;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Client.Binary;
     using Apache.Ignite.Core.Impl.Client.Cache;
     using Apache.Ignite.Core.Impl.Client.Transactions;
     using Apache.Ignite.Core.Impl.Log;
@@ -41,7 +43,7 @@ namespace Apache.Ignite.Core.Impl.Client
     {
         /** Unknown topology version. */
         private const long UnknownTopologyVersion = -1;
-        
+
         /** Underlying socket. */
         private ClientSocket _socket;
 
@@ -128,14 +130,15 @@ namespace Apache.Ignite.Core.Impl.Client
             }
 
             _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
-            
-            Connect();
+
+            ConnectDefaultSocket();
+            OnFirstConnection();
         }
 
         /// <summary>
         /// Performs a send-receive operation.
         /// </summary>
-        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction, 
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc,
             Func<ClientStatusCode, string, T> errorFunc = null)
         {
@@ -177,7 +180,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Performs an async send-receive operation.
         /// </summary>
-        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction, 
+        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             return GetSocket().DoOutInOpAsync(opId, writeAction, readFunc, errorFunc);
@@ -245,7 +248,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     continue;
                 }
-                
+
                 yield return new ClientConnection(socket.LocalEndPoint, socket.RemoteEndPoint,
                     socket.ServerNodeId.GetValueOrDefault());
             }
@@ -254,7 +257,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Checks the disposed state.
         /// </summary>
-        private ClientSocket GetSocket()
+        internal ClientSocket GetSocket()
         {
             var tx = _transactions.Tx;
             if (tx != null)
@@ -268,17 +271,17 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (_socket == null || (_socket.IsDisposed && !_config.ReconnectDisabled))
                 {
-                    Connect();
+                    ConnectDefaultSocket();
                 }
 
                 return _socket;
             }
         }
 
-        private ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
+        internal ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
         {
             ThrowIfDisposed();
-            
+
             if (!_config.EnablePartitionAwareness)
             {
                 return null;
@@ -335,8 +338,9 @@ namespace Apache.Ignite.Core.Impl.Client
             Justification = "There is no finalizer.")]
         public void Dispose()
         {
-            lock (_socketLock)
+            // Lock order: same as in OnAffinityTopologyVersionChange. 
             lock (_topologyUpdateLock)
+            lock (_socketLock)
             {
                 _disposed = true;
 
@@ -415,12 +419,20 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /// <summary>
-        /// Connects the socket.
+        /// Connects the default socket.
         /// </summary>
-        private void Connect()
+        private void ConnectDefaultSocket()
         {
             _socket = GetNextSocket();
 
+            OnNewDefaultConnection();
+        }
+
+        /// <summary>
+        /// Performs feature checks when a new default connection is established.
+        /// </summary>
+        private void OnNewDefaultConnection()
+        {
             if (_config.EnablePartitionAwareness && !_socket.Features.HasOp(ClientOp.CachePartitions))
             {
                 _config.EnablePartitionAwareness = false;
@@ -437,6 +449,54 @@ namespace Apache.Ignite.Core.Impl.Client
                 _enableDiscovery = false;
 
                 _logger.Warn("Automatic server node discovery is not supported by the server");
+            }
+        }
+
+        /// <summary>
+        /// Performs initial checks when the first connection to the cluster has been established.
+        /// </summary>
+        private void OnFirstConnection()
+        {
+            if (_socket.Features.HasFeature(ClientBitmaskFeature.BinaryConfiguration))
+            {
+                var serverBinaryCfg = _socket.DoOutInOp(
+                    ClientOp.BinaryConfigurationGet,
+                    ctx => { },
+                    ctx => new BinaryConfigurationClientInternal(ctx.Reader.Stream));
+
+                _logger.Debug("Server binary configuration retrieved: " + serverBinaryCfg);
+
+                if (serverBinaryCfg.CompactFooter && !_marsh.CompactFooter)
+                {
+                    // Changing from full to compact is not safe: some clients do not support compact footers.
+                    // Log information, but don't change the configuration.
+                    _logger.Info("BinaryConfiguration.CompactFooter is true on the server, but false on the client." +
+                                 "Consider enabling this setting to reduce cache entry size.");
+                }
+
+                if (!serverBinaryCfg.CompactFooter && _marsh.CompactFooter)
+                {
+                    // Changing from compact to full footer is safe, do it automatically.
+                    _marsh.CompactFooter = false;
+
+                    if (_config.BinaryConfiguration == null)
+                    {
+                        _config.BinaryConfiguration = new BinaryConfiguration();
+                    }
+
+                    _config.BinaryConfiguration.CompactFooter = false;
+
+                    _logger.Info("BinaryConfiguration.CompactFooter set to false on client " +
+                                  "according to server configuration.");
+                }
+
+                var localNameMapperMode = GetLocalNameMapperMode();
+
+                if (localNameMapperMode != serverBinaryCfg.NameMapperMode)
+                {
+                    _logger.Warn("Binary name mapper mismatch: local={0}, server={1}",
+                        localNameMapperMode, serverBinaryCfg.NameMapperMode);
+                }
             }
         }
 
@@ -698,7 +758,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 // Dispose and remove any connections not in current topology.
                 var toRemove = new List<Guid>();
-                
+
                 foreach (var pair in map)
                 {
                     if (!_discoveryNodes.ContainsKey(pair.Key))
@@ -738,7 +798,7 @@ namespace Apache.Ignite.Core.Impl.Client
                     }
                 }
             }
-            
+
             _nodeSocketMap = map;
         }
 
@@ -785,7 +845,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 return;
             }
-            
+
             var newVer = GetTopologyVersion();
 
             if (newVer <= _discoveryTopologyVersion)
@@ -799,7 +859,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _discoveryTopologyVersion = GetServerEndpoints(
                 _discoveryTopologyVersion, newVer, discoveryNodes);
-            
+
             _discoveryNodes = discoveryNodes;
         }
 
@@ -827,7 +887,7 @@ namespace Apache.Ignite.Core.Impl.Client
                         var id = BinaryUtils.ReadGuid(s);
                         var port = s.ReadInt();
                         var addresses = ctx.Reader.ReadStringCollection();
-                        
+
                         dict[id] = new ClientDiscoveryNode(id, port, addresses);
                     }
 
@@ -837,7 +897,7 @@ namespace Apache.Ignite.Core.Impl.Client
                     {
                         dict.Remove(BinaryUtils.ReadGuid(s));
                     }
-                    
+
                     return topVer;
                 });
         }
@@ -848,8 +908,27 @@ namespace Apache.Ignite.Core.Impl.Client
         private long GetTopologyVersion()
         {
             var ver = _affinityTopologyVersion;
-            
+
             return ver == null ? UnknownTopologyVersion : ((AffinityTopologyVersion) ver).Version;
+        }
+
+        /// <summary>
+        /// Gets the local binary name mapper mode.
+        /// </summary>
+        private BinaryNameMapperMode GetLocalNameMapperMode()
+        {
+            if (_config.BinaryConfiguration == null || _config.BinaryConfiguration.NameMapper == null)
+            {
+                return BinaryNameMapperMode.BasicFull;
+            }
+
+            var basicMapper = _config.BinaryConfiguration.NameMapper as BinaryBasicNameMapper;
+
+            return basicMapper == null
+                ? BinaryNameMapperMode.Custom
+                : basicMapper.IsSimpleName
+                    ? BinaryNameMapperMode.BasicSimple
+                    : BinaryNameMapperMode.BasicFull;
         }
     }
 }

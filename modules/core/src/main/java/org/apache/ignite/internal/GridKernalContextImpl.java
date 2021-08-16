@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -37,6 +40,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.maintenance.MaintenanceProcessor;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManager;
 import org.apache.ignite.internal.managers.collision.GridCollisionManager;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
@@ -55,6 +59,8 @@ import org.apache.ignite.internal.processors.cache.CacheConflictResolutionManage
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.IgniteDefragmentation;
+import org.apache.ignite.internal.processors.cache.persistence.defragmentation.IgniteDefragmentationImpl;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFoldersResolver;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
@@ -83,7 +89,7 @@ import org.apache.ignite.internal.processors.port.GridPortProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.rest.GridRestProcessor;
-import org.apache.ignite.internal.processors.ru.RollingUpgradeProcessor;
+import org.apache.ignite.internal.processors.ru.RollingUpgrade;
 import org.apache.ignite.internal.processors.schedule.IgniteScheduleProcessorAdapter;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.segmentation.GridSegmentationProcessor;
@@ -106,6 +112,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
@@ -175,6 +182,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private GridEncryptionManager encryptionMgr;
+
+    /** */
+    @GridToStringExclude
+    private IgniteDefragmentation defragMgr;
 
     /** */
     @GridToStringExclude
@@ -331,7 +342,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    RollingUpgradeProcessor rollingUpgradeProc;
+    RollingUpgrade rollingUpgradeProc;
+
+    /** */
+    @GridToStringExclude
+    private MaintenanceProcessor maintenanceProc;
 
     /** */
     @GridToStringExclude
@@ -556,6 +571,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
         marshCtx = new MarshallerContextImpl(plugins, clsFilter);
 
+        defragMgr = new IgniteDefragmentationImpl(this);
+
         try {
             spring = SPRING.create(false);
         }
@@ -703,10 +720,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             txDrProc = (TransactionalDrProcessor)comp;
         else if (comp instanceof DiagnosticProcessor)
             diagnosticProcessor = (DiagnosticProcessor)comp;
-        else if (comp instanceof RollingUpgradeProcessor)
-            rollingUpgradeProc = (RollingUpgradeProcessor)comp;
+        else if (comp instanceof RollingUpgrade)
+            rollingUpgradeProc = (RollingUpgrade)comp;
         else if (comp instanceof DurableBackgroundTasksProcessor)
             durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
+        else if (comp instanceof MaintenanceProcessor)
+            maintenanceProc = (MaintenanceProcessor) comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -797,6 +816,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public GridSystemViewManager systemView() {
         return sysViewMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public MaintenanceRegistry maintenanceRegistry() {
+        return maintenanceProc;
     }
 
     /** {@inheritDoc} */
@@ -910,6 +934,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public GridEncryptionManager encryption() {
         return encryptionMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteDefragmentation defragmentation() {
+        return defragMgr;
     }
 
     /** {@inheritDoc} */
@@ -1290,12 +1319,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public RollingUpgradeProcessor rollingUpgrade() {
+    @Override public RollingUpgrade rollingUpgrade() {
         return rollingUpgradeProc;
     }
 
     /** {@inheritDoc} */
-    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTask() {
         return durableBackgroundTasksProcessor;
     }
 
@@ -1307,5 +1336,12 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridKernalContextImpl.class, this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Executor getAsyncContinuationExecutor() {
+        return config().getAsyncContinuationExecutor() == null
+                ? ForkJoinPool.commonPool()
+                : config().getAsyncContinuationExecutor();
     }
 }

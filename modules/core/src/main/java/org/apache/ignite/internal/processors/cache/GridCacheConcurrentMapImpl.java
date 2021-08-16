@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Set;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -53,19 +55,32 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
     @Nullable @Override public GridCacheMapEntry getEntry(GridCacheContext ctx, KeyCacheObject key) {
         CacheMapHolder hld = entriesMapIfExists(ctx.cacheIdBoxed());
 
-        key = (KeyCacheObject)ctx.kernalContext().cacheObjects().prepareForCache(key, ctx);
+        return getEntry0(hld, ctx, key);
+    }
+
+    /** */
+    @Nullable private GridCacheMapEntry getEntry0(
+        @Nullable CacheMapHolder hld,
+        GridCacheContext ctx,
+        KeyCacheObject key) {
+        try {
+            if (key != null)
+                key = key.prepareForCache(ctx.cacheObjectContext(), false);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
 
         return hld != null ? hld.map.get(key) : null;
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
+    @Override public GridCacheMapEntry putEntryIfObsoleteOrAbsent(
         GridCacheContext ctx,
         final AffinityTopologyVersion topVer,
         KeyCacheObject key,
-        final boolean create,
-        final boolean touch) {
-        return putEntryIfObsoleteOrAbsent(null, ctx, topVer, key, create, touch);
+        final boolean create) {
+        return putEntryIfObsoleteOrAbsent(null, ctx, topVer, key, create);
     }
 
     /**
@@ -74,15 +89,13 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
      * @param topVer Topology version.
      * @param key Key.
      * @param create Create flag.
-     * @param clearing {@code True} if called by partition clearing.
      */
     protected final GridCacheMapEntry putEntryIfObsoleteOrAbsent(
         @Nullable CacheMapHolder hld,
         GridCacheContext ctx,
         final AffinityTopologyVersion topVer,
         KeyCacheObject key,
-        final boolean create,
-        final boolean clearing
+        final boolean create
     ) {
         if (hld == null)
             hld = entriesMapIfExists(ctx.cacheIdBoxed());
@@ -93,12 +106,12 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
         GridCacheMapEntry doomed = null;
 
         boolean done = false;
-        boolean reserved = clearing;
+        boolean reserved = false;
         int sizeChange = 0;
 
         try {
             while (!done) {
-                GridCacheMapEntry entry = hld != null ? hld.map.get(ctx.kernalContext().cacheObjects().prepareForCache(key, ctx)) : null;
+                GridCacheMapEntry entry = getEntry0(hld, ctx, key);
                 created = null;
                 doomed = null;
 
@@ -162,15 +175,7 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
             sizeChange = 0;
 
             if (doomed != null) {
-                doomed.lockEntry();
-
-                try {
-                    if (!doomed.deleted())
-                        sizeChange--;
-                }
-                finally {
-                    doomed.unlockEntry();
-                }
+                sizeChange--;
 
                 if (ctx.events().isRecordable(EVT_CACHE_ENTRY_DESTROYED))
                     ctx.events().addEvent(doomed.partition(),
@@ -216,23 +221,15 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
             return cur;
         }
         finally {
-            if (!clearing) {
-                if (reserved)
-                    release(sizeChange, hld, cur);
-                else {
-                    if (sizeChange != 0) {
-                        assert sizeChange == -1;
-                        assert doomed != null;
-
-                        decrementPublicSize(hld, doomed);
-                    }
-                }
-            }
+            if (reserved)
+                release(sizeChange, hld, cur);
             else {
-                if (sizeChange == 1)
-                    incrementPublicSize(hld, cur);
-                else if (sizeChange == -1)
+                if (sizeChange != 0) {
+                    assert sizeChange == -1;
+                    assert doomed != null;
+
                     decrementPublicSize(hld, doomed);
+                }
             }
         }
     }
@@ -306,8 +303,7 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
             entry.lockEntry();
 
             try {
-                if (!entry.deleted())
-                    decrementPublicSize(hld, entry);
+                decrementPublicSize(hld, entry);
             }
             finally {
                 entry.unlockEntry();

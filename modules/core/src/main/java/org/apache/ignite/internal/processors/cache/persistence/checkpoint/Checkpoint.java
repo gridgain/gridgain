@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -33,30 +32,25 @@ class Checkpoint {
     /** Checkpoint pages. */
     final GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> cpPages;
 
-    /**
-     *
-     */
+    /** Checkpoint progress status. */
     final CheckpointProgressImpl progress;
-
-    /** Number of deleted WAL files. */
-    int walFilesDeleted;
 
     /** WAL segments fully covered by this checkpoint. */
     IgniteBiTuple<Long, Long> walSegsCoveredRange;
 
-    /**
-     *
-     */
+    /** Number of dirty pages. */
     final int pagesSize;
 
     /**
+     * Constructor.
+     *
      * @param cpEntry Checkpoint entry.
      * @param cpPages Pages to write to the page store.
      * @param progress Checkpoint progress status.
      */
     Checkpoint(
         @Nullable CheckpointEntry cpEntry,
-        @NotNull GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> cpPages,
+        GridConcurrentMultiPairQueue<PageMemoryEx, FullPageId> cpPages,
         CheckpointProgressImpl progress
     ) {
         this.cpEntry = cpEntry;
@@ -71,13 +65,6 @@ class Checkpoint {
      */
     public boolean hasDelta() {
         return pagesSize != 0;
-    }
-
-    /**
-     * @param walFilesDeleted Wal files deleted.
-     */
-    public void walFilesDeleted(int walFilesDeleted) {
-        this.walFilesDeleted = walFilesDeleted;
     }
 
     /**

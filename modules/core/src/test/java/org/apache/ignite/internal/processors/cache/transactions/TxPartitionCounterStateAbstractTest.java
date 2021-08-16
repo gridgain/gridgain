@@ -72,6 +72,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -91,6 +92,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
  * Test framework for ordering transaction's prepares and commits by intercepting messages and releasing then
  * in user defined order.
  */
+@WithSystemProperty(key = "TOMBSTONES_EVICTION_FREQ", value = "10000000") // Disable background tombstone clearing.
 public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbstractTest {
     /** IP finder. */
     protected static final TcpDiscoveryVmIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
@@ -514,7 +516,8 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     private GridFutureAdapter<?> createSendFuture(TestRecordingCommunicationSpi wrapperSpi, Message msg) {
         GridFutureAdapter<?> fut = new GridFutureAdapter<>();
 
-        fut.listen(fut1 -> wrapperSpi.stopBlock(true, objects -> objects.get2().message() == msg, false, true));
+        fut.listen(fut1 -> wrapperSpi.stopBlock(true, blockedMsg ->
+            blockedMsg.ioMessage().message() == msg, false, true));
 
         return fut;
     }

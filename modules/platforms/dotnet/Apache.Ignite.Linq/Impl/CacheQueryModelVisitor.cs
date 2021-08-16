@@ -153,7 +153,7 @@ namespace Apache.Ignite.Linq.Impl
 
                 _builder.Append("top ");
                 BuildSqlExpression(resOp.Count);
-                _builder.Append(" ");
+                _builder.Append(' ');
             }
             else if (resultOps.Count > 2)
             {
@@ -209,7 +209,7 @@ namespace Apache.Ignite.Linq.Impl
             {
                 // FIELD1, FIELD2
                 BuildSqlExpression(queryModel.SelectClause.Selector, parenCount > 0, includeAllFields);
-                _builder.Append(')', parenCount).Append(" ");
+                _builder.Append(')', parenCount).Append(' ');
             }
         }
 
@@ -223,7 +223,7 @@ namespace Apache.Ignite.Linq.Impl
 
             foreach (var op in queryModel.ResultOperators.Reverse())
             {
-                if (op is CountResultOperator || op is AnyResultOperator)
+                if (op is CountResultOperator || op is AnyResultOperator || op is LongCountResultOperator)
                 {
                     _builder.Append("count (");
                     parenCount++;
@@ -324,7 +324,7 @@ namespace Apache.Ignite.Linq.Impl
                         VisitQueryModel(queryable.GetQueryModel());
                     }
 
-                    _builder.Append(")");
+                    _builder.Append(')');
                 }
             }
         }
@@ -347,7 +347,7 @@ namespace Apache.Ignite.Linq.Impl
             {
                 // Workaround for unlimited offset (IGNITE-2602)
                 // H2 allows NULL & -1 for unlimited, but Ignite indexing does not
-                // Maximum limit that works is (int.MaxValue - offset) 
+                // Maximum limit that works is (int.MaxValue - offset)
 
                 if (offset.Count is ParameterExpression)
                     throw new NotSupportedException("Skip() without Take() is not supported in compiled queries.");
@@ -430,7 +430,7 @@ namespace Apache.Ignite.Linq.Impl
             }
 
             ValidateFromClause(fromClause);
-            _aliases.AppendAsClause(_builder, fromClause).Append(" ");
+            _aliases.AppendAsClause(_builder, fromClause).Append(' ');
 
             var i = 0;
             foreach (var additionalFrom in queryModel.BodyClauses.OfType<AdditionalFromClause>())
@@ -482,7 +482,7 @@ namespace Apache.Ignite.Linq.Impl
 
             BuildSqlExpression(whereClause.Predicate);
 
-            _builder.Append(" ");
+            _builder.Append(' ');
         }
 
         /** <inheritdoc /> */
@@ -500,16 +500,16 @@ namespace Apache.Ignite.Linq.Impl
                 if (i > 0)
                     _builder.Append(", ");
 
-                _builder.Append("(");
+                _builder.Append('(');
 
                 BuildSqlExpression(ordering.Expression);
 
-                _builder.Append(")");
+                _builder.Append(')');
 
                 _builder.Append(ordering.OrderingDirection == OrderingDirection.Asc ? " asc" : " desc");
             }
 
-            _builder.Append(" ");
+            _builder.Append(' ');
         }
 
         /** <inheritdoc /> */
@@ -561,7 +561,7 @@ namespace Apache.Ignite.Linq.Impl
             var subQuery = fromClause.FromExpression as SubQueryExpression;
             if (subQuery != null)
             {
-                _builder.Append("(");
+                _builder.Append('(');
 
                 VisitQueryModel(subQuery.QueryModel, true);
 
@@ -570,7 +570,7 @@ namespace Apache.Ignite.Linq.Impl
             }
             else
             {
-                _aliases.AppendAsClause(_builder, fromClause).Append(" ");
+                _aliases.AppendAsClause(_builder, fromClause).Append(' ');
             }
         }
 
@@ -624,10 +624,10 @@ namespace Apache.Ignite.Linq.Impl
             var tableAlias = _aliases.GetTableAlias(joinClause);
             var fieldAlias = _aliases.GetFieldAlias(joinClause.InnerKeySelector);
 
-            _builder.AppendFormat("{0} join table ({1} {2} = ?) {3} on (", 
+            _builder.AppendFormat("{0} join table ({1} {2} = ?) {3} on (",
                 isOuter ? "left outer" : "inner",
                 fieldAlias,
-                sqlTypeName, 
+                sqlTypeName,
                 tableAlias);
 
             Parameters.Add(values);
@@ -714,7 +714,7 @@ namespace Apache.Ignite.Linq.Impl
                     BuildSqlExpression(update.Value, visitSubqueryModel: true);
                 }
 
-                _builder.Append(" ");
+                _builder.Append(' ');
             }
         }
     }

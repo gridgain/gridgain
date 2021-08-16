@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.systemview.view.SqlQueryHistoryView;
@@ -51,6 +52,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL_FIELDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
+import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_ID;
 
 /**
  * Keep information about all running queries.
@@ -188,17 +191,20 @@ public class RunningQueryManager {
      * @param schemaName Schema name.
      * @param loc Local query flag.
      * @param cancel Query cancel. Should be passed in case query is cancelable, or {@code null} otherwise.
+     * @param enforceJoinOrder Enforce join order flag.
+     * @param lazy Lazy flag.
+     * @param distributedJoins Distributed joins flag.
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
         @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel,
-        String qryInitiatorId) {
+        String qryInitiatorId, boolean enforceJoinOrder, boolean lazy, boolean distributedJoins) {
         long qryId = qryIdGen.incrementAndGet();
 
         if (qryInitiatorId == null)
             qryInitiatorId = SqlFieldsQuery.threadedQueryInitiatorId();
 
-        GridRunningQueryInfo run = new GridRunningQueryInfo(
+        final GridRunningQueryInfo run = new GridRunningQueryInfo(
             qryId,
             locNodeId,
             qry,
@@ -208,7 +214,10 @@ public class RunningQueryManager {
             cancel,
             loc,
             memTracker == null ? DUMMY_TRACKER : memTracker,
-            qryInitiatorId
+            qryInitiatorId,
+            enforceJoinOrder,
+            lazy,
+            distributedJoins
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);
@@ -251,6 +260,8 @@ public class RunningQueryManager {
             }
         }
 
+        run.span().addTag(SQL_QRY_ID, run::globalQueryId);
+
         return qryId;
     }
 
@@ -272,58 +283,64 @@ public class RunningQueryManager {
         if (qry == null)
             return;
 
-        if (qry.memoryMetricProvider() instanceof AutoCloseable)
-            U.close((AutoCloseable)qry.memoryMetricProvider(), log);
+        Span qrySpan = qry.span();
 
-        if (log.isDebugEnabled()) {
-            log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
-                "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
-                ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
-        }
+        try {
+            if (failed)
+                qrySpan.addTag(ERROR, failReason::getMessage);
 
-        if (!qryFinishedListeners.isEmpty()) {
-            GridQueryFinishedInfo info = new GridQueryFinishedInfo(
-                qry.id(),
-                locNodeId,
-                qry.query(),
-                qry.queryType(),
-                qry.schemaName(),
-                qry.startTime(),
-                System.currentTimeMillis(),
-                qry.local(),
-                failed,
-                qry.queryInitiatorId()
-            );
+            if (qry.memoryMetricProvider() instanceof AutoCloseable)
+                U.close((AutoCloseable)qry.memoryMetricProvider(), log);
 
-            try {
-                closure.runLocal(
-                    () -> qryFinishedListeners.forEach(lsnr -> {
-                        try {
-                            lsnr.accept(info);
-                        }
-                        catch (Exception ex) {
-                            log.error("Listener fails during handling query finished" +
-                                    " event [qryId=" + qryId + "]", ex);
-                        }
-                    }),
-                    GridIoPolicy.PUBLIC_POOL
+            if (log.isDebugEnabled()) {
+                log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
+                    "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
+                    ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
+            }
+
+            if (!qryFinishedListeners.isEmpty()) {
+                GridQueryFinishedInfo info = new GridQueryFinishedInfo(
+                    qry.id(),
+                    locNodeId,
+                    qry.query(),
+                    qry.queryType(),
+                    qry.schemaName(),
+                    qry.startTime(),
+                    System.currentTimeMillis(),
+                    qry.local(),
+                    failed,
+                    qry.queryInitiatorId()
                 );
+
+                try {
+                    closure.runLocal(
+                        () -> qryFinishedListeners.forEach(lsnr -> {
+                            try {
+                                lsnr.accept(info);
+                            }
+                            catch (Exception ex) {
+                                log.error("Listener fails during handling query finished" +
+                                    " event [qryId=" + qryId + "]", ex);
+                            }
+                        }),
+                        GridIoPolicy.PUBLIC_POOL
+                    );
+                }
+                catch (IgniteCheckedException ex) {
+                    throw new IgniteException(ex.getMessage(), ex);
+                }
             }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteException(ex.getMessage(), ex);
-            }
-        }
 
-        //We need to collect query history and metrics only for SQL queries.
-        if (isSqlQuery(qry)) {
-            qry.runningFuture().onDone();
+            //We need to collect query history and metrics only for SQL queries.
+            if (isSqlQuery(qry)) {
+                qry.runningFuture().onDone();
 
-            qryHistTracker.collectHistory(qry, failed);
+                qryHistTracker.collectHistory(qry, failed);
 
-            if (!failed)
-                successQrsCnt.increment();
-            else {
-                failedQrsCnt.increment();
+                if (!failed)
+                    successQrsCnt.increment();
+                else {
+                    failedQrsCnt.increment();
 
                 // We measure cancel metric as "number of times user's queries ended up with query cancelled exception",
                 // not "how many user's KILL QUERY command succeeded". These may be not the same if cancel was issued
@@ -332,7 +349,11 @@ public class RunningQueryManager {
                     canceledQrsCnt.increment();
                 else if (QueryUtils.isLocalOrReduceOom(failReason))
                     oomQrsCnt.increment();
+                }
             }
+        }
+        finally {
+            qrySpan.end();
         }
     }
 

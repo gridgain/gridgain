@@ -22,14 +22,18 @@ import java.util.TimeZone;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -45,6 +49,29 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     /** */
     @After
     public void clear() {
+    }
+
+    /**
+     * Check the command '--property help'.
+     * Steps:
+     */
+    @Test
+    public void testHelp() {
+        assertEquals(EXIT_CODE_OK, execute("--property", "help"));
+
+        String out = testOut.toString();
+
+        assertContains(log, out, "Print property command help:");
+        assertContains(log, out, "control.(sh|bat) --property help");
+
+        assertContains(log, out, "Print list of available properties:");
+        assertContains(log, out, "control.(sh|bat) --property list");
+
+        assertContains(log, out, "Get the property value:");
+        assertContains(log, out, "control.(sh|bat) --property get --name <property_name>");
+
+        assertContains(log, out, "Set the property value:");
+        assertContains(log, out, "control.(sh|bat) --property set --name <property_name> --val <property_value>");
     }
 
     /**
@@ -104,6 +131,43 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     }
 
     /**
+     * Checks the set command for property 'checkpoint.deviation'.
+     */
+    @Test
+    public void testPropertyCheckpointDeviation() {
+        for (Ignite ign : G.allGrids()) {
+            if (ign.configuration().isClientMode())
+                continue;
+
+            SimpleDistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
+                "cpFreqDeviation");
+
+            assertNull(cpFreqDeviation.get());
+        }
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", "checkpoint.deviation",
+                "--val", "20"
+            )
+        );
+
+        for (Ignite ign : G.allGrids()) {
+            if (ign.configuration().isClientMode())
+                continue;
+
+            SimpleDistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
+                "cpFreqDeviation");
+
+            assertNotNull(cpFreqDeviation.get());
+
+            assertEquals(20, cpFreqDeviation.get().intValue());
+        }
+    }
+
+    /**
      * Check the set command for property 'sql.defaultQueryTimeout'.
      * Steps:
      */
@@ -154,6 +218,49 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
                 ((IgniteH2Indexing)((IgniteEx)ign).context().query().getIndexing())
                     .distributedConfiguration().timeZone()
             );
+        }
+    }
+
+    /**
+     * Check the set command for property 'wal.rebalance.threshold'.
+     */
+    @Test
+    public void testPropertyWalRebalanceThreshold() {
+        assertDistributedPropertyEquals(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, DFLT_PDS_WAL_REBALANCE_THRESHOLD, true);
+
+        int newVal = DFLT_PDS_WAL_REBALANCE_THRESHOLD * 2;
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY,
+                "--val", Integer.toString(newVal)
+            )
+        );
+
+        assertDistributedPropertyEquals(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, newVal, true);
+    }
+
+    /**
+     * Validates that distributed property has specified value across all nodes.
+     *
+     * @param propName Distributed property name.
+     * @param expected Expected property value.
+     * @param onlyServerMode Ignore client nodes.
+     * @param <T> Property type.
+     */
+    private <T extends Serializable> void assertDistributedPropertyEquals(String propName, T expected, boolean onlyServerMode) {
+        for (Ignite ign : G.allGrids()) {
+            IgniteEx ignEx = (IgniteEx) ign;
+
+            if (onlyServerMode && ign.configuration().isClientMode())
+                continue;
+
+            DistributedChangeableProperty<Serializable> prop =
+                ignEx.context().distributedConfiguration().property(propName);
+
+            assertEquals(prop.get(), expected);
         }
     }
 }

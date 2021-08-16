@@ -301,7 +301,7 @@ public final class GridCacheAtomicStampedImpl<T, S> extends AtomicDataStructureP
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return GridToStringBuilder.toString(StampedSetEntryProcessor.class, this);
+            return GridToStringBuilder.toString(StampedSetEntryProcessor.class, this, super.toString());
         }
     }
 

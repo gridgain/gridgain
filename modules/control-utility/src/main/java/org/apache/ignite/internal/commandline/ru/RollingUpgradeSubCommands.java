@@ -25,12 +25,17 @@ public enum RollingUpgradeSubCommands {
     /**
      * Enable rolling upgrade.
      */
-    ENABLE("on", RollingUpgradeCommandArg.class),
+    START("start"),
 
     /**
      * Disable rolling upgrade.
      */
-    DISABLE("off"),
+    FINISH("finish"),
+
+    /**
+     * Enable force rolling upgrade mode.
+     */
+    FORCE("force"),
 
     /**
      * Rolling Upgrade status.

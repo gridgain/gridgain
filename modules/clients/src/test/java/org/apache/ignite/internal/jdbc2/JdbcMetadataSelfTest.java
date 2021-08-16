@@ -47,7 +47,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteVersionUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
-import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -63,6 +62,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 
 /**
  * Metadata tests.
@@ -345,7 +345,10 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "STRIPED_THREADPOOL_QUEUE",
             "DATASTREAM_THREADPOOL_QUEUE",
             "CACHE_GROUP_PAGE_LISTS",
-            "METRICS"
+            "METRICS",
+            "STATISTICS_CONFIGURATION",
+            "STATISTICS_PARTITION_DATA",
+            "STATISTICS_LOCAL_DATA"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
@@ -363,7 +366,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
 
                 assertEquals(JdbcUtils.CATALOG_NAME, rs.getString("TABLE_CAT"));
 
-                assertEquals(QueryUtils.sysSchemaName(), rs.getString("TABLE_SCHEM"));
+                assertEquals(sysSchemaName(), rs.getString("TABLE_SCHEM"));
 
                 actViews.add(rs.getString("TABLE_NAME"));
             }
@@ -744,7 +747,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
         try (Connection conn = DriverManager.getConnection(BASE_URL)) {
             ResultSet rs = conn.getMetaData().getSchemas();
 
-            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("pers", "org", "metaTest", "dep", "PUBLIC", "IGNITE", "PREDEFINED_CLIENT_SCHEMA"));
+            Set<String> expSchemas = new HashSet<>(Arrays.asList("pers", "org", "metaTest", "dep", "PUBLIC", sysSchemaName(), "PREDEFINED_CLIENT_SCHEMA"));
 
             Set<String> schemas = new HashSet<>();
 
@@ -755,7 +758,7 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
                     JdbcUtils.CATALOG_NAME, rs.getString(2));
             }
 
-            assertEquals(expectedSchemas, schemas);
+            assertEquals(expSchemas, schemas);
         }
     }
 

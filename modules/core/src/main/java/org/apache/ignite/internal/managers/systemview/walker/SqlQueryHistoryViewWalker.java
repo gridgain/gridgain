@@ -43,6 +43,9 @@ public class SqlQueryHistoryViewWalker implements SystemViewRowAttributeWalker<S
         v.accept(11, "diskAllocationTotalMin", long.class);
         v.accept(12, "memoryMax", long.class);
         v.accept(13, "memoryMin", long.class);
+        v.accept(14, "distributedJoins", boolean.class);
+        v.accept(15, "enforceJoinOrder", boolean.class);
+        v.accept(16, "lazy", boolean.class);
     }
 
     /** {@inheritDoc} */
@@ -61,10 +64,13 @@ public class SqlQueryHistoryViewWalker implements SystemViewRowAttributeWalker<S
         v.acceptLong(11, "diskAllocationTotalMin", row.diskAllocationTotalMin());
         v.acceptLong(12, "memoryMax", row.memoryMax());
         v.acceptLong(13, "memoryMin", row.memoryMin());
+        v.acceptBoolean(14, "distributedJoins", row.distributedJoins());
+        v.acceptBoolean(15, "enforceJoinOrder", row.enforceJoinOrder());
+        v.acceptBoolean(16, "lazy", row.lazy());
     }
 
     /** {@inheritDoc} */
     @Override public int count() {
-        return 14;
+        return 17;
     }
 }

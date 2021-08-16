@@ -32,6 +32,7 @@ import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.processors.datastreamer.DataStreamerImpl;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -64,28 +65,31 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     public static final int MAX_MISSED_UPDATES = 10_000;
 
     /** Counter updates serialization version. */
-    private static final byte VERSION = 1;
+    private static final byte VERSION = 2;
 
     /** Queue of applied out of order counter updates. */
-    private NavigableMap<Long, Item> queue = new TreeMap<>();
+    protected NavigableMap<Long, Item> queue = new TreeMap<>();
 
     /** LWM. */
-    private final AtomicLong cntr = new AtomicLong();
+    protected final AtomicLong cntr = new AtomicLong();
 
     /** HWM. */
     protected final AtomicLong reserveCntr = new AtomicLong();
 
     /** */
-    private boolean first = true;
+    protected boolean first = true;
 
     /** */
     protected final CacheGroupContext grp;
+
+    /** Tombstones clear counter. */
+    private volatile long clearCntr;
 
     /**
      * Initial counter points to last sequential update after WAL recovery.
      * @deprecated TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11794
      */
-    @Deprecated private volatile long initCntr;
+    @Deprecated protected volatile long initCntr;
 
     /**
      * @param grp Group.
@@ -95,12 +99,12 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
-    @Override public void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
+    @Override public synchronized void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
         cntr.set(initUpdCntr);
 
         reserveCntr.set(initCntr = initUpdCntr);
 
-        queue = fromBytes(cntrUpdData);
+        fromBytes(cntrUpdData);
     }
 
     /** {@inheritDoc} */
@@ -259,7 +263,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
         long reserved = reserveCntr.getAndAdd(delta);
 
-        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved;
+        assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved + ", cntr=" + toString();
 
         return reserved;
     }
@@ -276,7 +280,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public synchronized @Nullable byte[] getBytes() {
-        if (queue.isEmpty())
+        if (queue.isEmpty() && clearCntr == 0)
             return null;
 
         try {
@@ -295,6 +299,8 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
                 dos.writeLong(item.delta);
             }
 
+            dos.writeLong(clearCntr);
+
             bos.close();
 
             return bos.toByteArray();
@@ -305,30 +311,33 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
     }
 
     /**
+     * Initializes state from raw bytes.
+     *
      * @param raw Raw bytes.
      */
-    private @Nullable NavigableMap<Long, Item> fromBytes(@Nullable byte[] raw) {
-        NavigableMap<Long, Item> ret = new TreeMap<>();
+    private void fromBytes(@Nullable byte[] raw) {
+        queue = new TreeMap<>();
 
         if (raw == null)
-            return ret;
+            return;
 
         try {
             ByteArrayInputStream bis = new ByteArrayInputStream(raw);
 
             DataInputStream dis = new DataInputStream(bis);
 
-            dis.readByte(); // Version.
+            byte ver = dis.readByte();// Version.
 
             int cnt = dis.readInt(); // Holes count.
 
             while (cnt-- > 0) {
                 Item item = new Item(dis.readLong(), dis.readLong());
 
-                ret.put(item.start, item);
+                queue.put(item.start, item);
             }
 
-            return ret;
+            if (ver > 1)
+                clearCntr = dis.readLong();
         }
         catch (IOException e) {
             throw new IgniteException(e);
@@ -446,12 +455,54 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "Counter [lwm=" + get() + ", holes=" + queue +
-            ", maxApplied=" + highestAppliedCounter() + ", hwm=" + reserveCntr.get() + ']';
+        String quequeStr;
+        long lwm;
+        long hwm;
+        long maxApplied;
+        long clearCntr;
+
+        synchronized (this) {
+            quequeStr = queue.toString();
+
+            lwm = get();
+
+            hwm = reserveCntr.get();
+
+            maxApplied = highestAppliedCounter();
+
+            clearCntr = tombstoneClearCounter();
+        }
+
+        return new SB()
+            .a("Counter [lwm=")
+            .a(lwm)
+            .a(", holes=")
+            .a(quequeStr)
+            .a(", maxApplied=")
+            .a(maxApplied)
+            .a(", hwm=")
+            .a(hwm)
+            .a(", clearCntr=")
+            .a(clearCntr)
+            .a(']')
+            .toString();
     }
 
     /** {@inheritDoc} */
     @Override public CacheGroupContext context() {
         return grp;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void updateTombstoneClearCounter(long cntr) {
+        if (cntr > clearCntr)
+            clearCntr = cntr;
+        else if (cntr == 0)
+            clearCntr = get(); // Pessimitic approach to handle compatibility.
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long tombstoneClearCounter() {
+        return clearCntr;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -313,16 +313,16 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
     /** */
     @GridToStringExclude
-    private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
+    private final IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
     /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
-    private Set<UUID> exclusionsFromHistoricalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<UUID> exclusionsFromHistoricalRebalance = ConcurrentHashMap.newKeySet();
 
     /**
      * Set of nodes that cannot be used for full rebalancing due missed partitions.
      * Mapping pair of groupId and nodeId to set of partitions.
      */
-    private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
+    private final Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
     private volatile Map<Integer/** Group. */, Map<Integer/** Partition */, Long/** Counter. */>> partHistReserved;
@@ -572,8 +572,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     public List<UUID> partitionHistorySupplier(int grpId, int partId, long cntrSince) {
         List<UUID> histSuppliers = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
 
-        return histSuppliers.stream().filter((supplier) -> !exclusionsFromHistoricalRebalance.contains(supplier))
-            .collect(Collectors.toList());
+        histSuppliers.removeIf(exclusionsFromHistoricalRebalance::contains);
+
+        return histSuppliers;
     }
 
     /**
@@ -594,8 +595,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param p Partition id.
      */
     public void markNodeAsInapplicableForFullRebalance(UUID nodeId, int grpId, int p) {
-        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(new T2<>(grpId, nodeId), t2 ->
-            Collections.newSetFromMap(new ConcurrentHashMap<>())
+        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(
+            new T2<>(grpId, nodeId), t2 -> ConcurrentHashMap.newKeySet()
         );
 
         parts.add(p);
@@ -2415,8 +2416,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 ", wasRebalanced=" + wasRebalanced() + ']');
         }
 
-        assert res != null || err != null;
-
         if (res != null) {
             span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),
                 () -> String.valueOf(res.topologyVersion()));
@@ -2429,6 +2428,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             span.addTag(SpanTags.ERROR, errf::toString);
         }
+
+        boolean cleanIdxRebuildFutures = true;
 
         try {
             waitUntilNewCachesAreRegistered();
@@ -2520,15 +2521,18 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (localReserved != null) {
                 boolean success = cctx.database().reserveHistoryForPreloading(localReserved);
 
-                // TODO: how to handle?
-                if (!success)
-                    err = new IgniteCheckedException("Could not reserve history");
+                if (!success) {
+                    log.warning("Could not reserve history for historical rebalance " +
+                        "(possible it happened because WAL space is exhausted).");
+                }
             }
 
             cctx.database().releaseHistoryForExchange();
 
             if (err == null) {
                 cctx.database().rebuildIndexesIfNeeded(this);
+
+                cleanIdxRebuildFutures = false;
 
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
@@ -2548,6 +2552,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         final Throwable err0 = err;
+
+        if (err0 != null && cleanIdxRebuildFutures)
+            cctx.kernalContext().query().removeIndexRebuildFuturesOnExchange(this, null);
 
         // Should execute this listener first, before any external listeners.
         // Listeners use stack as data structure.
@@ -3374,10 +3381,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top, boolean resetOwners) {
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
         Map<Integer, TreeSet<Long>> varCntrs = new HashMap<>();
+        Map<Integer, Long> maxClearCntrs = new HashMap<>();
 
         for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e : msgs.entrySet()) {
             CachePartitionPartialCountersMap nodeCntrs = e.getValue().partitionUpdateCounters(top.groupId(),
                 top.partitions());
+
+            Map<Integer, Long> clearCntrs = e.getValue().partitionClearCounters(top.groupId());
 
             assert nodeCntrs != null;
 
@@ -3406,6 +3416,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     maxCntrs.put(p, new CounterWithNodes(cntr, e.getValue().partitionSizes(top.groupId()).get(p), remoteNodeId));
                 else if (cntr == maxCntr.cnt)
                     maxCntr.nodes.add(remoteNodeId);
+
+                // Calculate maximal clear counter of all owners. If a demander has LWM less than this value
+                // the partition should be cleared before rebalancing.
+                Long maxClearCntr = maxClearCntrs.get(p);
+                Long testCntr = clearCntrs.getOrDefault(p, 0L);
+
+                if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
+                    maxClearCntrs.put(p, testCntr);
             }
         }
 
@@ -3441,14 +3459,45 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 maxCntrs.put(part.id(), new CounterWithNodes(cntr, part.fullSize(), cctx.localNodeId()));
             else if (cntr == maxCntr.cnt)
                 maxCntr.nodes.add(cctx.localNodeId());
+
+            // Same for local node.
+            Long maxClearCntr = maxClearCntrs.get(part.id());
+            Long testCntr = part.dataStore().partUpdateCounter() == null ? 0 :
+                part.dataStore().partUpdateCounter().tombstoneClearCounter();
+
+            if (testCntr != 0 && (maxClearCntr == null || testCntr > maxClearCntr))
+                maxClearCntrs.put(part.id(), testCntr);
         }
 
-        Set<Integer> haveHistory = new HashSet<>();
+        Set<Integer> haveHist = new HashSet<>();
 
-        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHistory);
+        List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHist);
 
         if (resetOwners)
-            resetOwnersByCounter(top, maxCntrs, haveHistory);
+            resetOwnersByCounter(top, maxCntrs, haveHist);
+
+        for (Map.Entry<Integer, TreeSet<Long>> sortedCnrs : varCntrs.entrySet()) {
+            Integer part = sortedCnrs.getKey();
+
+            // Check if all owners are eligible for fast full rebalancing by comparting tombstone clear counter(TSCC) and
+            // partition's LWM. If LWM is after LSCC, partition can be safely fast rebalanced, because doesn't require
+            // cleared tombstone to restore consistency.
+            Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
+
+            if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().first() <= maxClearCntr) {
+                for (UUID nodeId : msgs.keySet()) {
+                    if (nodeId.equals(cctx.localNodeId())) {
+                        GridDhtLocalPartition locPart = top.localPartition(part);
+
+                        if (locPart != null && locPart.state() == GridDhtPartitionState.MOVING)
+                            addClearingPartition(top.groupId(), part);
+                    }
+
+                    // Set partition as not applicable for fast full rebalancing.
+                    partsToReload.put(nodeId, top.groupId(), part);
+                }
+            }
+        }
 
         return list;
     }
@@ -3459,10 +3508,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      * @param top Topology.
      * @param maxCntrs Max counter partiton map.
-     * @param haveHistory Set of partitions witch have historical supplier.
+     * @param haveHist Set of partitions witch have historical supplier.
      */
     private void resetOwnersByCounter(GridDhtPartitionTopology top,
-        Map<Integer, CounterWithNodes> maxCntrs, Set<Integer> haveHistory) {
+        Map<Integer, CounterWithNodes> maxCntrs, Set<Integer> haveHist) {
         Map<Integer, Set<UUID>> ownersByUpdCounters = U.newHashMap(maxCntrs.size());
         Map<Integer, Long> partSizes = U.newHashMap(maxCntrs.size());
 
@@ -3473,17 +3522,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         top.globalPartSizes(partSizes);
-
-        Map<UUID, Set<Integer>> partitionsToRebalance = top.resetOwners(
-            ownersByUpdCounters, haveHistory, this);
-
-        for (Map.Entry<UUID, Set<Integer>> e : partitionsToRebalance.entrySet()) {
-            UUID nodeId = e.getKey();
-            Set<Integer> parts = e.getValue();
-
-            for (int part : parts)
-                partsToReload.put(nodeId, top.groupId(), part);
-        }
+        top.resetOwners(ownersByUpdCounters, haveHist, this);
     }
 
     /**
@@ -3492,20 +3531,20 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param top Topology.
      * @param maxCntrs Max counter partiton map.
      * @param varCntrs Various counters for each partition.
-     * @param haveHistory Set of partitions witch have historical supplier.
+     * @param haveHist Set of partitions witch have historical supplier.
      * @return List of partitions which does not have historical supplier.
      */
     private List<SupplyPartitionInfo> assignHistoricalSuppliers(
         GridDhtPartitionTopology top,
         Map<Integer, CounterWithNodes> maxCntrs,
         Map<Integer, TreeSet<Long>> varCntrs,
-        Set<Integer> haveHistory
+        Set<Integer> haveHist
     ) {
         Map<Integer, Map<Integer, Long>> partHistReserved0 = partHistReserved;
 
         int grpId = top.groupId();
 
-        Map<Integer, Long> localReserved = partHistReserved0 != null ? partHistReserved0.get(grpId) : null;
+        Map<Integer, Long> locReserved = partHistReserved0 != null ? partHistReserved0.get(grpId) : null;
 
         List<SupplyPartitionInfo> list = new ArrayList<>();
 
@@ -3526,12 +3565,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             T2<UUID, Long> deepestReserved = new T2<>(null, Long.MAX_VALUE);
 
-            if (localReserved != null) {
-                Long localHistCntr = localReserved.get(p);
+            if (locReserved != null) {
+                Long locHistCntr = locReserved.get(p);
 
-                if (localHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
-                    findCounterForReservation(grpId, p, maxCntr, localHistCntr, maxCntrObj.size, cctx.localNodeId(),
-                        nonMaxCntrs, haveHistory, deepestReserved);
+                if (locHistCntr != null && maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                    findCounterForReservation(grpId, p, maxCntr, locHistCntr, maxCntrObj.size, cctx.localNodeId(),
+                        nonMaxCntrs, haveHist, deepestReserved);
                 }
             }
 
@@ -3540,12 +3579,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 if (histCntr != null && maxCntrObj.nodes.contains(e0.getKey())) {
                     findCounterForReservation(grpId, p, maxCntr, histCntr, maxCntrObj.size, e0.getKey(),
-                        nonMaxCntrs, haveHistory, deepestReserved);
+                        nonMaxCntrs, haveHist, deepestReserved);
                 }
             }
 
             // No one reservation matched for this partition.
-            if (!haveHistory.contains(p)) {
+            if (!haveHist.contains(p)) {
                 list.add(new SupplyPartitionInfo(
                     p,
                     nonMaxCntrs.last(),
@@ -3570,7 +3609,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param ownerSize Size of owned partition.
      * @param ownerId Owner node id.
      * @param nonMaxCntrs Sorted set of non max counters.
-     * @param haveHistory Modifiable collection for partitions that will be rebalanced historically.
+     * @param haveHist Modifiable collection for partitions that will be rebalanced historically.
      * @param deepestReserved The Deepest reservation per node id.
      */
     private void findCounterForReservation(
@@ -3581,7 +3620,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         long ownerSize,
         UUID ownerId,
         NavigableSet<Long> nonMaxCntrs,
-        Set<Integer> haveHistory,
+        Set<Integer> haveHist,
         T2<UUID, Long> deepestReserved
     ) {
         boolean preferWalRebalance = ((GridCacheDatabaseSharedManager)cctx.database()).preferWalRebalance();
@@ -3595,7 +3634,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (preferWalRebalance || maxOwnerCntr - ceilingMinReserved < ownerSize) {
                 partHistSuppliers.put(ownerId, grpId, p, ceilingMinReserved);
 
-                haveHistory.add(p);
+                haveHist.add(p);
 
                 break;
             }
@@ -5630,15 +5669,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Marks a partition for clearing before rebalance.
      * Fully cleared partitions should never be historically rebalanced.
      *
-     * @param grp Group.
-     * @param part Partition.
+     * @param grpId Group id.
+     * @param part Partition id.
      */
-    public void addClearingPartition(CacheGroupContext grp, int part) {
-        if (!grp.persistenceEnabled())
-            return;
-
+    public void addClearingPartition(int grpId, int part) {
         synchronized (mux) {
-            clearingPartitions.computeIfAbsent(grp.groupId(), k -> new HashSet()).add(part);
+            clearingPartitions.computeIfAbsent(grpId, k -> new HashSet()).add(part);
         }
     }
 

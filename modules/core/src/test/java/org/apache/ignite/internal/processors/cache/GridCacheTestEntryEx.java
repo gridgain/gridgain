@@ -866,7 +866,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
-    @Override public boolean onTtlExpired(GridCacheVersion obsoleteVer) {
+    @Override public boolean onTtlExpired(long expireTime) {
         return false;
     }
 
@@ -937,11 +937,6 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     @Nullable @Override public CacheObject peek()
         throws GridCacheEntryRemovedException, IgniteCheckedException {
         return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onUnlock() {
-        // No-op.
     }
 
     /** {@inheritDoc} */
