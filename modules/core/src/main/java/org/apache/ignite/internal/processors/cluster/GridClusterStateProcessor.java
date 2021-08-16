@@ -229,7 +229,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     };
 
     /** */
-    private final ChangeStateSynchronizer changeStateSynchronizer = new ChangeStateSynchronizer();
+    private final ClientStateChangeSynchronizer clientStateChangeSynchronizer = new ClientStateChangeSynchronizer();
 
     /**
      * @param ctx Kernal context.
@@ -537,7 +537,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onKernalStop(boolean cancel) {
         GridChangeGlobalStateFuture fut = this.stateChangeFut.get();
 
-        changeStateSynchronizer.clear();
+        clientStateChangeSynchronizer.clear();
 
         if (fut != null)
             fut.onDone(new NodeStoppingException("Failed to wait for cluster state change, node is stopping."));
@@ -631,7 +631,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     @Override public void onStateFinishMessage(ChangeGlobalStateFinishMessage msg) {
         DiscoveryDataClusterState discoClusterState = globalState;
 
-        changeStateSynchronizer.onStateFinishMessage(msg);
+        clientStateChangeSynchronizer.onStateFinishMessage(msg);
 
         if (msg.requestId().equals(discoClusterState.transitionRequestId())) {
             if (log.isInfoEnabled())
@@ -674,13 +674,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** */
-    public ChangeStateSynchronizer changeStateSynchronizer() {
-        return changeStateSynchronizer;
+    public ClientStateChangeSynchronizer changeStateSynchronizer() {
+        return clientStateChangeSynchronizer;
     }
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
-        changeStateSynchronizer.clear();
+        clientStateChangeSynchronizer.clear();
     }
 
     /** */
@@ -2513,8 +2513,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
     }
 
-    /** */
-    public class ChangeStateSynchronizer implements Serializable {
+    /** Synchronizer for {@link ChangeGlobalStateMessage} and {@link ChangeGlobalStateFinishMessage} on client node. */
+    public class ClientStateChangeSynchronizer {
         /**
          * Map of requestIds of {@link ChangeGlobalStateMessage} messages in progress
          * This map is used to ensure that on client nodes the {@link ChangeGlobalStateMessage} is fully processed
@@ -2554,12 +2554,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
+                    finally {
+                        changeStatesInProgress.remove(reqId);
+                    }
 
                     if (!awaited)
                         log.warning("Timeout was reached while processing ChangeGlobalStateFinishMessage " +
                                 "before ChangeGlobalStateMessage was processed.");
-
-                    changeStatesInProgress.remove(reqId);
                 }
             }
         }
