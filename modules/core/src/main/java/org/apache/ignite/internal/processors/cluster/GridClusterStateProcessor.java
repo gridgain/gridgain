@@ -2523,15 +2523,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         private final Map<UUID, CountDownLatch> changeStatesInProgress = new ConcurrentHashMap<>();
 
         /** */
-        public void onStateMessage(ChangeGlobalStateMessage stateChangeMsg) {
+        public void onStateMessage(ChangeGlobalStateMessage changeStateMsg) {
             if (ctx.clientNode() && !ctx.isDaemon())
-                changeStatesInProgress.put((stateChangeMsg).requestId(), new CountDownLatch(1));
+                changeStatesInProgress.put((changeStateMsg).requestId(), new CountDownLatch(1));
         }
 
         /** */
-        public void onStateMessageProcessingFinished(ChangeGlobalStateMessage stateChangeMsg) {
+        public void onStateMessageProcessingFinished(ChangeGlobalStateMessage changeStateMsg) {
             if (ctx.clientNode() && !ctx.isDaemon()) {
-                CountDownLatch latch = changeStatesInProgress.get(stateChangeMsg.requestId());
+                CountDownLatch latch = changeStatesInProgress.get(changeStateMsg.requestId());
 
                 if (latch != null)
                     latch.countDown();

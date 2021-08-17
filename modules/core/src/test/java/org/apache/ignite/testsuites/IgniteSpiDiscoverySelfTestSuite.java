@@ -107,6 +107,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
     TcpDiscoveryMarshallerCheckSelfTest.class,
     TcpDiscoverySnapshotHistoryTest.class,
     TcpDiscoveryNodeJoinAndFailureTest.class,
+    ChangeGlobalStateMessageOrderTest.class,
 
     GridTcpSpiForwardingSelfTest.class,
 
