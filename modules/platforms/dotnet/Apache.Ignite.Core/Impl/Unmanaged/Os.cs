@@ -38,7 +38,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                         || platform == PlatformID.Win32S
                         || platform == PlatformID.Win32Windows;
 
-            IsMacOs = IsLinux && Shell.BashExecute("uname").Contains("Darwin");
+            IsMacOs = IsLinux && 
+                      Shell.ExecuteSafe("uname", string.Empty).IndexOf("Darwin", StringComparison.Ordinal) >= 0;
+            
             IsMono = Type.GetType("Mono.Runtime") != null;
             IsNetCore = !IsMono;
         }
@@ -46,7 +48,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// <summary>
         /// .NET Core.
         /// </summary>
-        public static bool IsNetCore { get; set; }
+        public static bool IsNetCore { get; private set; }
 
         /// <summary>
         /// Mono.

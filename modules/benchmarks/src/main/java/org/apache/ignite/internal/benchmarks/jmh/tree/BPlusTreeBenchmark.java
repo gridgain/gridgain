@@ -30,6 +30,7 @@ import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -48,6 +49,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -195,7 +197,7 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
                 new IOVersions<>(new LongLeafIO()),
                 PageIdAllocator.FLAG_IDX,
                 null,
-                null
+                mockPageLockTrackerManager()
             );
 
             PageIO.registerTest(latestInnerIO(), latestLeafIO());
@@ -217,6 +219,15 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
             assert io.canGetRow() : io;
 
             return io.getLookupRow(this, pageAddr, idx);
+        }
+
+        /** */
+        private static PageLockTrackerManager mockPageLockTrackerManager() {
+            PageLockTrackerManager manager = mock(PageLockTrackerManager.class);
+
+            when(manager.createPageLockTracker(anyString())).thenReturn(PageLockTrackerManager.NOOP_LSNR);
+
+            return manager;
         }
     }
 
@@ -307,7 +318,7 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
         }
 
         /** {@inheritDoc} */
-        @Override public Long getLookupRow(BPlusTree<Long,?> tree, long pageAddr, int idx) {
+        @Override public Long getLookupRow(BPlusTree<Long, ?> tree, long pageAddr, int idx) {
             return PageUtils.getLong(pageAddr, offset(idx));
         }
     }
@@ -343,7 +354,7 @@ public class BPlusTreeBenchmark extends JmhAbstractBenchmark {
         }
 
         /** {@inheritDoc} */
-        @Override public Long getLookupRow(BPlusTree<Long,?> tree, long pageAddr, int idx) {
+        @Override public Long getLookupRow(BPlusTree<Long, ?> tree, long pageAddr, int idx) {
             return PageUtils.getLong(pageAddr, offset(idx));
         }
     }

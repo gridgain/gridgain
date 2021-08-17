@@ -50,11 +50,6 @@ namespace ignite
             return gmtime_r(&in, &out) != NULL;
         }
 
-        bool IgniteLocalTime(time_t in, tm& out)
-        {
-            return localtime_r(&in, &out) == 0;
-        }
-
         std::string GetEnv(const std::string& name)
         {
             static const std::string empty;

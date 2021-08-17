@@ -25,7 +25,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.client.Person;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -98,8 +97,6 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
                         new DataRegionConfiguration()
                             .setMaxSize(12 * 1024 * 1024) // 12 MB
                             .setPersistenceEnabled(true)
-                            .setPageEvictionMode(DataPageEvictionMode.RANDOM_LRU)
-                            .setEvictionThreshold(0.1)
                     )
             );
     }
@@ -124,6 +121,8 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             // insert data into the cache until some index pages get displaced to the storage
             for (int i = 0; i < 100; i++, personId++)
                 cache.put(personId, new Person(personId, "foobar"));
+
+            forceCheckpoint(grid);
 
             idxPagesOnDisk = getIdxPagesOnDisk(grpId).size();
             idxPagesInMemory = idxPageCounter.countIdxPagesInMemory(grpId);

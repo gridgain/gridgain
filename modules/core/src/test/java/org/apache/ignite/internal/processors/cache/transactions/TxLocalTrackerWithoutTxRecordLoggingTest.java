@@ -27,7 +27,6 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PENDING_TX_TRACKER_ENABLED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -36,7 +35,6 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
 /**
  *
  */
-@WithSystemProperty(key = IGNITE_WAL_LOG_TX_RECORDS, value = "false")
 @WithSystemProperty(key = IGNITE_PENDING_TX_TRACKER_ENABLED, value = "true")
 public class TxLocalTrackerWithoutTxRecordLoggingTest extends GridCommonAbstractTest {
     /** */

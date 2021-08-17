@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -75,22 +76,22 @@ public class IgniteWalIteratorExceptionDuringReadTest extends GridCommonAbstract
      */
     @Test
     public void test() throws Exception {
-        IgniteEx ig = (IgniteEx)startGrid();
+        IgniteEx ig = startGrid();
 
-        ig.cluster().active(true);
+        ig.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<Integer, byte[]> cache = ig.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < 20 * 4; i++)
             cache.put(i, new byte[1024 * 1024]);
 
-        ig.cluster().active(false);
+        ig.cluster().state(ClusterState.INACTIVE);
 
-        IgniteWalIteratorFactory iteratorFactory = new IgniteWalIteratorFactory(log);
+        IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory(log);
 
         FileWALPointer failOnPtr = new FileWALPointer(3, 1024 * 1024 * 5, 0);
 
-        String failMessage = "test fail message";
+        String failMsg = "test fail message";
 
         IteratorParametersBuilder builder = new IteratorParametersBuilder()
             .filesOrDirs(U.defaultWorkDirectory())
@@ -98,31 +99,30 @@ public class IgniteWalIteratorExceptionDuringReadTest extends GridCommonAbstract
                 FileWALPointer ptr0 = (FileWALPointer)ptr;
 
                 if (ptr0.compareTo(failOnPtr) >= 0)
-                    throw new TestRuntimeException(failMessage);
+                    throw new TestRuntimeException(failMsg);
 
                 return true;
             });
 
-        try (WALIterator it = iteratorFactory.iterator(builder)) {
+        try (WALIterator it = iterFactory.iterator(builder)) {
             FileWALPointer ptr = null;
 
             boolean failed = false;
 
-            while (it.hasNext()) {
-                try {
+            try {
+                while (it.hasNext()) {
+
                     IgniteBiTuple<WALPointer, WALRecord> tup = it.next();
 
                     ptr = (FileWALPointer)tup.get1();
                 }
-                catch (IgniteException e) {
-                    Assert.assertNotNull(ptr);
-                    Assert.assertEquals(failOnPtr.index(), ptr.index());
-                    Assert.assertTrue(ptr.compareTo(failOnPtr) < 0);
+            }
+            catch (IgniteException e) {
+                Assert.assertNotNull(ptr);
+                Assert.assertEquals(failOnPtr.index(), ptr.index());
+                Assert.assertTrue(ptr.compareTo(failOnPtr) < 0);
 
-                    failed = X.hasCause(e, TestRuntimeException.class);
-
-                    break;
-                }
+                failed = X.hasCause(e, TestRuntimeException.class);
             }
 
             assertTrue(failed);

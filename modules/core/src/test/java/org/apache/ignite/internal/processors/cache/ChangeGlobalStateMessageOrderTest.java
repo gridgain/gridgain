@@ -60,15 +60,15 @@ public class ChangeGlobalStateMessageOrderTest extends GridCommonAbstractTest {
 
         //check that cluster state changing works
         GridTestUtils.waitForCondition(() -> {
-            try {
-                client.cluster().state(ClusterState.INACTIVE);
-            }
-            catch (Exception e) {
-                return false;
-            }
+                    try {
+                        client.cluster().state(ClusterState.INACTIVE);
+                    }
+                    catch (Exception e) {
+                        return false;
+                    }
 
-            return true;
-        },
+                    return true;
+                },
                 5000);
 
         assertTrue(client.cluster().state() == ClusterState.INACTIVE);
