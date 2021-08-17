@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,10 +128,21 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
     }
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** @throws Exception If failed. */
@@ -722,8 +733,6 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
      */
     @Test
     public void testWalArchiveCleanup() throws Exception {
-        cleanPersistenceDir();
-
         IgniteEx node = startGrid(GRID_0);
 
         node.cluster().state(ClusterState.ACTIVE);
@@ -735,18 +744,12 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
         IgniteWriteAheadLogManager walMgr = node.context().cache().context().wal();
 
         long reservedIdx = walMgr.currentSegment();
+        assertTrue(walMgr.reserve(new FileWALPointer(reservedIdx, 0, 0)));
 
-        boolean reserved = walMgr.reserve(new FileWALPointer(reservedIdx, 0, 0));
-        assertTrue(reserved);
+        while (walMgr.lastArchivedSegment() < reservedIdx) {
+            long val = ThreadLocalRandom.current().nextLong();
 
-        IgniteInternalFuture<?> loadFut = loadDataAsync(node);
-
-        // Wait until the reserved segment is moved to the archive.
-        try {
-            boolean success = waitForCondition(() -> walMgr.lastArchivedSegment() >= reservedIdx, MAX_AWAIT_MILLIS);
-            assertTrue(success);
-        } finally {
-            loadFut.cancel();
+            node.cache(cacheName()).put(val, String.valueOf(val));
         }
 
         forceCheckpoint();
@@ -768,16 +771,10 @@ public class CacheGroupKeyChangeTest extends AbstractEncryptionTest {
 
         node.cluster().state(ClusterState.ACTIVE);
 
-        loadFut = loadDataAsync(node);
+        while (node.context().encryption().groupKeyIds(grpId).size() != 1) {
+            long val = ThreadLocalRandom.current().nextLong();
 
-        // Make sure that unused encryption key has been deleted.
-        try {
-            GridEncryptionManager encryptMgr = node.context().encryption();
-
-            boolean success = waitForCondition(() -> encryptMgr.groupKeyIds(grpId).size() == 1, MAX_AWAIT_MILLIS);
-            assertTrue(success);
-        } finally {
-            loadFut.cancel();
+            node.cache(cacheName()).put(val, String.valueOf(val));
         }
 
         checkGroupKey(grpId, INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
