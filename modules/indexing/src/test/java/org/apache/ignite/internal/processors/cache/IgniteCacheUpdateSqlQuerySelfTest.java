@@ -20,7 +20,11 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -240,11 +244,24 @@ public class IgniteCacheUpdateSqlQuerySelfTest extends IgniteCacheAbstractSqlDml
             expInnerType.innerLongCol = 5L;
 
             assertEquals(expInnerType, res.innerTypeCol);
-            assertEquals(new SimpleDateFormat("yyyy-MM-dd HH:mm:SS").parse("2016-11-30 12:00:00"), res.dateCol);
-            assertEquals(new SimpleDateFormat("yyyy-MM-dd HH:mm:SS").parse("2016-12-03 00:02:00"), res.tsCol);
+
+            DateTimeFormatter timestampFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+            Instant expectedInstant = timestampFormat
+                .withZone(ZoneId.systemDefault())
+                .parse("2016-11-30 12:00:00", Instant::from);
+
+            assertEquals(Date.from(expectedInstant), res.dateCol);
+
+            LocalDateTime expectedDateTime = LocalDateTime.parse("2016-12-03 00:02:00", timestampFormat);
+
+            assertEquals(Timestamp.valueOf(expectedDateTime), res.tsCol);
             assertEquals(2, res.intCol);
             assertEquals(AllTypes.EnumType.ENUMTRUE, res.enumCol);
-            assertEquals(new java.sql.Date(new SimpleDateFormat("yyyy-MM-dd").parse("2016-12-02").getTime()), res.sqlDateCol);
+
+            LocalDate expectedDate = LocalDate.parse("2016-12-02", DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+            assertEquals(java.sql.Date.valueOf(expectedDate), res.sqlDateCol);
 
             // 49th week, right?
             assertEquals(49, res.shortCol);
@@ -299,7 +316,12 @@ public class IgniteCacheUpdateSqlQuerySelfTest extends IgniteCacheAbstractSqlDml
             expInnerType.innerLongCol = 5L;
 
             assertEquals(expInnerType, res.innerTypeCol);
-            assertEquals(new SimpleDateFormat("yyyy-MM-dd HH:mm:SS").parse("2016-11-30 12:00:00"), res.dateCol);
+
+            Instant expectedDate = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.systemDefault())
+                .parse("2016-11-30 12:00:00", Instant::from);
+
+            assertEquals(Date.from(expectedDate), res.dateCol);
             assertNull(res.tsCol);
             assertEquals(2, res.intCol);
             assertEquals(AllTypes.EnumType.ENUMTRUE, res.enumCol);

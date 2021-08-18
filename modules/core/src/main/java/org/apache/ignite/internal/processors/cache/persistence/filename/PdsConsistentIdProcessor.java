@@ -20,7 +20,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -264,9 +265,8 @@ public class PdsConsistentIdProcessor extends GridProcessorAdapter implements Pd
 
         res.a(params.size);
         res.a(" bytes, modified ");
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm a");
 
-        res.a(simpleDateFormat.format(params.lastModified));
+        res.a(IgniteUtils.LONG_DATE_FMT.format(Instant.ofEpochMilli(params.lastModified)));
         res.a(" ");
 
         return res.toString();
@@ -562,5 +562,3 @@ public class PdsConsistentIdProcessor extends GridProcessorAdapter implements Pd
         }
     }
 }
-
-

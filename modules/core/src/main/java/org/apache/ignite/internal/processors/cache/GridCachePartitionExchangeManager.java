@@ -16,13 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -275,9 +273,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** */
     private int longRunningOpsDumpStep;
-
-    /** */
-    private DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
 
     /** Events received while cluster state transition was in progress. */
     private final List<PendingDiscoveryEvent> pendingEvts = new ArrayList<>();
@@ -2243,7 +2238,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param curTime Current timestamp.
      * @return Warning string.
      */
-    private String longRunningTransactionWarning(IgniteInternalTx tx, long curTime) {
+    private static String longRunningTransactionWarning(IgniteInternalTx tx, long curTime) {
         GridStringBuilder warning = new GridStringBuilder()
             .a(">>> Transaction [startTime=")
             .a(formatTime(tx.startTime()))
@@ -2512,8 +2507,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @param time Time.
      * @return Time string.
      */
-    private String formatTime(long time) {
-        return dateFormat.format(new Date(time));
+    private static String formatTime(long time) {
+        return IgniteUtils.DEBUG_DATE_FMT.format(Instant.ofEpochMilli(time));
     }
 
     /**
