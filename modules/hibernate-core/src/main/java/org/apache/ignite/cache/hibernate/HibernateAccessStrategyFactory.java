@@ -210,13 +210,17 @@ public class HibernateAccessStrategyFactory {
             if (cache == null) {
                 IgniteKernal ignite = (IgniteKernal)HibernateAccessStrategyFactory.this.ignite;
 
+                // Here we use Ignite#cache, because Ignite#getCache throws IllegalArgumentException if the cache
+                // doesn't exist
                 IgniteCacheProxy<Object, Object> jcache = (IgniteCacheProxy<Object, Object>)ignite.cache(cacheName);
 
                 if (jcache == null) {
                     try {
+                        // Find template cache configuration and create a configuration from it
                         CacheConfiguration<?, ?> template = ignite.context().cache().getConfigFromTemplate(cacheName);
 
                         if (template != null) {
+                            // Create a cache if template exists and get ignite internal cache
                             ignite.createCache(template);
 
                             cache = ignite.getCache(cacheName);

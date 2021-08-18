@@ -90,13 +90,12 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
 
         discoSpi.setIpFinder(new TcpDiscoveryVmIpFinder(true));
 
-        cfg.setDiscoverySpi(discoSpi);
-
-        cfg.setCacheConfiguration(
-            cacheConfiguration(TIMESTAMP_CACHE),
-            cacheConfiguration(QUERY_CACHE),
-            cacheConfiguration("org.apache.ignite.cache.hibernate.*")
-        );
+        cfg.setDiscoverySpi(discoSpi)
+            .setCacheConfiguration(
+                cacheConfiguration(TIMESTAMP_CACHE),
+                cacheConfiguration(QUERY_CACHE),
+                cacheConfiguration("org.apache.ignite.cache.hibernate.*")
+            );
 
         return cfg;
     }
@@ -105,54 +104,43 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
      * @param cacheName Cache name.
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration(String cacheName) {
-        CacheConfiguration cfg = new CacheConfiguration();
-
-        cfg.setName(cacheName);
-
-        cfg.setCacheMode(PARTITIONED);
-
-        cfg.setAtomicityMode(ATOMIC);
-
-        cfg.setStatisticsEnabled(true);
-
-        return cfg;
+    private CacheConfiguration<?, ?> cacheConfiguration(String cacheName) {
+        return new CacheConfiguration<>()
+            .setName(cacheName)
+            .setCacheMode(PARTITIONED)
+            .setAtomicityMode(ATOMIC)
+            .setStatisticsEnabled(true);
     }
 
     /**
      * @param igniteInstanceName Ignite instance name.
      * @return Hibernate configuration.
      */
-    protected Configuration hibernateConfiguration(String igniteInstanceName) {
-        Configuration cfg = new Configuration();
-
-        cfg.addAnnotatedClass(Entity1.class);
-        cfg.addAnnotatedClass(NotCachedEntity.class);
-
-        cfg.setProperty(DFLT_ACCESS_TYPE_PROPERTY, AccessType.NONSTRICT_READ_WRITE.name());
-
-        cfg.setProperty(HBM2DDL_AUTO, "create");
-
-        cfg.setProperty(GENERATE_STATISTICS, "true");
-
-        cfg.setProperty(USE_SECOND_LEVEL_CACHE, "true");
-
-        cfg.setProperty(USE_QUERY_CACHE, "true");
-
-        cfg.setProperty(CACHE_REGION_FACTORY, HibernateRegionFactory.class.getName());
-
-        cfg.setProperty(RELEASE_CONNECTIONS, "on_close");
-
-        cfg.setProperty(IGNITE_INSTANCE_NAME_PROPERTY, igniteInstanceName);
-
-        cfg.setProperty(REGION_CACHE_PROPERTY + TIMESTAMP_CACHE, TIMESTAMP_CACHE);
-        cfg.setProperty(REGION_CACHE_PROPERTY + QUERY_CACHE, QUERY_CACHE);
-
-        return cfg;
+    private Configuration hibernateConfiguration(String igniteInstanceName) {
+        return new Configuration()
+            .addAnnotatedClass(Entity1.class)
+            .addAnnotatedClass(NotCachedEntity.class)
+            .setProperty(DFLT_ACCESS_TYPE_PROPERTY, AccessType.NONSTRICT_READ_WRITE.name())
+            .setProperty(HBM2DDL_AUTO, "create")
+            .setProperty(GENERATE_STATISTICS, "true")
+            .setProperty(USE_SECOND_LEVEL_CACHE, "true")
+            .setProperty(USE_QUERY_CACHE, "true")
+            .setProperty(CACHE_REGION_FACTORY, HibernateRegionFactory.class.getName())
+            .setProperty(RELEASE_CONNECTIONS, "on_close")
+            .setProperty(IGNITE_INSTANCE_NAME_PROPERTY, igniteInstanceName)
+            .setProperty(REGION_CACHE_PROPERTY + TIMESTAMP_CACHE, TIMESTAMP_CACHE)
+            .setProperty(REGION_CACHE_PROPERTY + QUERY_CACHE, QUERY_CACHE);
     }
 
     /**
      * Tests ignite template cache configuration for Hibernate L2 cache.
+     * Description:
+     * 1. Save two @{@link Cacheable} entities into the database, one of them ({@link Entity1}) has an L2 cache
+     * created from the template and the other one ({@link NotCachedEntity}) doesn't. Note that Hibernate4 inserts
+     * entities skipping L2 cache that's why exception occurs only on retrieval.
+     * 2. Try to read them.
+     * 3. Get {@link IllegalArgumentException} as {@link NotCachedEntity} doesn't have an Ignite cache configured.
+     * 4. Test that {@link Entity1} has been successfully inserted into L2 cache.
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -168,19 +156,7 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
 
                 ses.save(new NotCachedEntity());
 
-                tx.commit();
-            }
-            finally {
-                ses.close();
-            }
-
-            ses = sesFactory.openSession();
-
-            try {
-                Transaction tx = ses.beginTransaction();
-
-                ses.save(new Entity1());
-
+                // This should work as inserting doesn't put data into the L2 cache.
                 tx.commit();
             }
             finally {
@@ -191,7 +167,7 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
 
             try {
                 List<HibernateL2CacheConfigurationSelfTest.Entity1> list1 = ses.createCriteria(ENTITY1_NAME).list();
-                assertEquals(2, list1.size());
+                assertEquals(1, list1.size());
             }
             finally {
                 ses.close();
@@ -201,11 +177,13 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
                 + "' is not configured.";
 
             assertThrowsAnyCause(log, () -> {
+                // Cacheable entities are put into the L2 cache upon retrieval, but
+                // NotCachedEntity has no cache configured, so this should fail
+
                 Session session = sesFactory.openSession();
 
                 try {
-                    List<NotCachedEntity> listNotCached = session.createCriteria(NOT_CACHED_ENTITY_NAME).list();
-                    assertEquals(1, listNotCached.size());
+                    session.createCriteria(NOT_CACHED_ENTITY_NAME).list();
                 }
                 finally {
                     session.close();
@@ -216,7 +194,7 @@ public class HibernateL2CacheTemplateConfigurationSelfTest extends GridCommonAbs
 
             IgniteCache<Object, Object> cache1 = grid(0).cache(ENTITY1_NAME);
 
-            assertEquals(2, cache1.size());
+            assertEquals(1, cache1.size());
 
             IgniteCache<Object, Object> cache = grid(0).cache(NOT_CACHED_ENTITY_NAME);
 
