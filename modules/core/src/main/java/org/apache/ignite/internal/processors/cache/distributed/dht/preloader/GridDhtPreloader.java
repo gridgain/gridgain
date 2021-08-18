@@ -38,7 +38,6 @@ import org.apache.ignite.internal.processors.cache.GridCachePreloaderAdapter;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -410,11 +409,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public RebalanceFuture addAssignments(
+    @Override public GridDhtPartitionDemander.RebalanceFuture addAssignments(
         GridDhtPreloaderAssignments assignments,
         boolean forceRebalance,
         long rebalanceId,
-        final RebalanceFuture next,
+        final GridDhtPartitionDemander.RebalanceFuture next,
         @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
         GridCompoundFuture<Boolean, Boolean> compatibleRebFut
     ) {
