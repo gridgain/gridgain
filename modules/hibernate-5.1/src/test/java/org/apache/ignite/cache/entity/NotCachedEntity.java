@@ -20,9 +20,14 @@ import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import org.apache.ignite.cache.hibernate.HibernateL2CacheTemplateConfigurationSelfTest;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+/**
+ * {@link Cacheable} entity without an Ignite cache configured for the Hibernate L2 cache.
+ * Used in the {@link HibernateL2CacheTemplateConfigurationSelfTest}.
+ */
 @Entity
 @Cacheable
 @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
