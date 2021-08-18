@@ -41,6 +41,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
 import org.apache.ignite.internal.managers.encryption.ReencryptStateUtils;
@@ -2625,7 +2626,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
+        @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair)
+            throws NodeStoppingException, InterruptedException {
             if (delegate != null)
                 delegate.flushReconciliationResult(cacheId, nodePartitionSize, repair);
         }
@@ -3445,51 +3447,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return;
 
                 delegate0.tombstoneCreated();
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void block() {
-            try {
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 == null)
-                    return;
-
-                delegate0.block();
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryBlock(long millis) throws InterruptedException {
-            try {
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 == null)
-                    return false;
-
-                return delegate0.tryBlock(millis);
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unblock() {
-            try {
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 == null)
-                    return;
-
-                delegate0.unblock();
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

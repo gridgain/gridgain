@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -34,7 +33,6 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
@@ -60,7 +58,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.RECONCILIATION;
-import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -86,8 +83,10 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
     /** Partition batch. */
     private volatile PartitionBatchRequestV2 partBatch;
 
-    /** {@code True} - if partition reconciliation with cache size consistency and
-     * partition counter consistency support . */
+    /**
+     * {@code true} - if partition reconciliation with cache size consistency and
+     * partition counter consistency support.
+     */
     private boolean sizeReconciliationSupport;
 
     /** {@inheritDoc} */
@@ -298,8 +297,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
 
             KeyCacheObject lastKeyForSizes = null;
 
-            AtomicLong partSize = null;
-
             KeyCacheObject oldBorderKey = null;
 
             part.reserve();
@@ -316,32 +313,9 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     if (partReconciliationCtx != null &&
                         partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
                         partReconciliationCtx.lastKey(cacheId) == null) {
+                        nodeSize.inProgress(true);
 
-                        boolean isBlocked = false;
-
-                        try {
-                            while (!cacheDataStore.tryBlock(100)) {
-                                if (cacheDataStore.nodeIsStopping())
-                                    throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
-                            }
-
-                            isBlocked = true;
-
-                            nodeSize.inProgress(true);
-
-                            partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
-
-                            partReconciliationCtx.resetSize(cacheId);
-
-                            partReconciliationCtx.resetCacheKeysMap(cacheId);
-                        }
-                        catch (Exception e) {
-                            throw new IgniteException(e);
-                        }
-                        finally {
-                            if (isBlocked)
-                                cacheDataStore.unblock();
-                        }
+                        partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
                     }
                     else {
                         if (nodePartitionSize != null)
@@ -349,8 +323,6 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     }
 
                     lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
-
-                    partSize = partReconciliationCtx.size(cacheId);
 
                     oldBorderKey = partReconciliationCtx.lastKey(cacheId);
                 }
@@ -395,38 +367,12 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+                            if (partBatch.repair())
+                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
+                            else
+                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
 
-                            boolean isBlocked = false;
-
-                            try {
-                                while (!cacheDataStore.tryBlock(100)) {
-                                    if (cacheDataStore.nodeIsStopping())
-                                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
-                                }
-
-                                isBlocked = true;
-
-                                partReconciliationCtx.sizeReconciliationState(cacheId, FINISHED);
-
-                                Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = partReconciliationCtx.getCacheKeysIterator(cacheId);
-
-                                while (tempMapIter.hasNext()) {
-                                    tempMapIter.next();
-
-                                    partSize.incrementAndGet();
-                                }
-
-                                if (partBatch.repair())
-                                    cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
-                                else
-                                    cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
-
-                                nodeSize.inProgress(false);
-                            }
-                            finally {
-                                if (isBlocked)
-                                    cacheDataStore.unblock();
-                            }
+                            nodeSize.inProgress(false);
                         }
 
                         return new ExecutionResult<>(new T2<>(partEntryHashRecords, nodeSize));

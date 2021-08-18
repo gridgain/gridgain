@@ -365,7 +365,6 @@ public interface ReconciliationResultCollector {
             Map<String, Map<String, Map<String, String>>> strBrokenSizes = new HashMap<>();
 
             partSizesMap().entrySet().forEach(cacheSizes -> {
-                Integer cacheId = cacheSizes.getKey();
                 Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
 
                 partsSizes.entrySet().forEach(partSizes -> {

@@ -22,6 +22,7 @@ import java.util.function.ToIntFunction;
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
@@ -1262,27 +1263,6 @@ public interface IgniteCacheOffheapManager {
         public void tombstoneCreated();
 
         /**
-         * Blocks current thread till all operations end
-         * and prevents them to invoke new operations.
-         */
-        public void block();
-
-        /**
-         * Try to block current thread till all operations end
-         * and prevents them to invoke new operations.
-         *
-         * @param millis Timeout.
-         * @return {@code True} if lock was acquired.
-         * @throws InterruptedException If interrupted.
-         */
-        public boolean tryBlock(long millis) throws InterruptedException;
-
-        /**
-         * Makes possible for activities entering busy state again.
-         */
-        public void unblock();
-
-        /**
          * Preparing for start a reconciliation of cache sizes.
          *
          * @return Cache data tree object.
@@ -1290,7 +1270,7 @@ public interface IgniteCacheOffheapManager {
         public ReconciliationContext startReconciliation(int cacheId);
 
         /** Applying of a cache size consistency reconciliation result. */
-        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair);
+        public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair) throws InterruptedException, NodeStoppingException;
 
         /**
          * @return Cache sizes reconciliation context.

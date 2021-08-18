@@ -130,6 +130,7 @@ import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
+import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.INITIAL_VERSION;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_COUNTER_NA;
@@ -1672,10 +1673,32 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public ReconciliationContext startReconciliation(int cacheId) {
-            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
-                tree().reconciliationCtx(reconciliationCtx.get());
+            boolean isBlocked = false;
 
-            reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
+            try {
+                while (!busyLock.tryBlock(100)) {
+                    if (nodeIsStopping())
+                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                }
+
+                isBlocked = true;
+
+                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
+                    tree().reconciliationCtx(reconciliationCtx.get());
+
+                reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
+
+                reconciliationCtx.get().resetSize(cacheId);
+
+                reconciliationCtx.get().resetCacheKeysMap(cacheId);
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+            finally {
+                if (isBlocked)
+                    busyLock.unblock();
+            }
 
             return reconciliationCtx.get();
         }
@@ -1691,9 +1714,27 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void clearReconciliationCtx() {
-            reconciliationCtx.set(null);
+            boolean isBlocked = false;
 
-            tree().reconciliationCtx(null);
+            try {
+                while (!busyLock.tryBlock(100)) {
+                    if (nodeIsStopping())
+                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                }
+
+                isBlocked = true;
+
+                reconciliationCtx.set(null);
+
+                tree().reconciliationCtx(null);
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+            finally {
+                if (isBlocked)
+                    busyLock.unblock();
+            }
         }
 
         /** {@inheritDoc} */
@@ -1795,40 +1836,69 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair) {
-            if (grp.sharedGroup()) {
-                AtomicLong cacheSize = cacheSizes.get(cacheId);
+        @Override public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartitionSize, boolean repair)
+            throws InterruptedException, NodeStoppingException {
 
-                nodePartitionSize.oldCacheSize(cacheSize != null ? cacheSize.get() : 0);
+            boolean isBlocked = false;
 
-                long newSize = reconciliationCtx().finishSize(cacheId).get();
+            try {
+                while (!busyLock.tryBlock(100)) {
+                    if (nodeIsStopping())
+                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                }
 
-                nodePartitionSize.newCacheSize(newSize);
+                isBlocked = true;
 
-                if (repair) {
-                    if (cacheSize != null)
-                        cacheSize.set(newSize);
-                    else if (newSize != 0)
-                        cacheSizes.put(cacheId, new AtomicLong(newSize));
+                reconciliationCtx().sizeReconciliationState(cacheId, FINISHED);
 
-                    storageSize.set(cacheSizes.values().stream().map(AtomicLong::get).reduce(0L, Long::sum));
+                Iterator<Map.Entry<KeyCacheObject, Boolean>> tempMapIter = reconciliationCtx().getCacheKeysIterator(cacheId);
+
+                AtomicLong partSize = reconciliationCtx().size(cacheId);
+
+                while (tempMapIter.hasNext()) {
+                    tempMapIter.next();
+
+                    partSize.incrementAndGet();
+                }
+
+                if (grp.sharedGroup()) {
+                    AtomicLong cacheSize = cacheSizes.get(cacheId);
+
+                    nodePartitionSize.oldCacheSize(cacheSize != null ? cacheSize.get() : 0);
+
+                    long newSize = reconciliationCtx().finishSize(cacheId).get();
+
+                    nodePartitionSize.newCacheSize(newSize);
+
+                    if (repair) {
+                        if (cacheSize != null)
+                            cacheSize.set(newSize);
+                        else if (newSize != 0)
+                            cacheSizes.put(cacheId, new AtomicLong(newSize));
+
+                        storageSize.set(cacheSizes.values().stream().map(AtomicLong::get).reduce(0L, Long::sum));
+                    }
+                }
+                else {
+                    nodePartitionSize.oldCacheSize(storageSize.get());
+
+                    long newSize = reconciliationCtx().finishSize(CU.UNDEFINED_CACHE_ID).get();
+
+                    nodePartitionSize.newCacheSize(newSize);
+
+                    if (repair)
+                        storageSize.set(newSize);
+                }
+
+                if (reconciliationCtx().partSizeIsFinished()) {
+                    reconciliationCtx.set(null);
+
+                    tree().reconciliationCtx(null);
                 }
             }
-            else {
-                nodePartitionSize.oldCacheSize(storageSize.get());
-
-                long newSize = reconciliationCtx().finishSize(CU.UNDEFINED_CACHE_ID).get();
-
-                nodePartitionSize.newCacheSize(newSize);
-
-                if (repair)
-                    storageSize.set(newSize);
-            }
-
-            if (reconciliationCtx().partSizeIsFinished()) {
-                reconciliationCtx.set(null);
-
-                tree().reconciliationCtx(null);
+            finally {
+                if (isBlocked)
+                    busyLock.unblock();
             }
         }
 
@@ -3746,21 +3816,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          */
         @Override public void tombstoneCreated() {
             tombstonesCnt.incrementAndGet();
-        }
-
-        /** {@inheritDoc} */
-        @Override public void block() {
-            busyLock.block();
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean tryBlock(long millis) throws InterruptedException {
-            return busyLock.tryBlock(millis);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unblock() {
-            busyLock.unblock();
         }
 
         /**

@@ -337,25 +337,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
             try {
                 IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
 
-                boolean isBlocked = false;
-
-                try {
-                    while (!cacheDataStore.tryBlock(100)) {
-                        if (cacheDataStore.nodeIsStopping())
-                            throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
-                    }
-
-                    isBlocked = true;
-
-                    cacheDataStore.clearReconciliationCtx();
-                }
-                catch (Exception e) {
-                    throw new IgniteException(e);
-                }
-                finally {
-                    if (isBlocked)
-                        cacheDataStore.unblock();
-                }
+                cacheDataStore.clearReconciliationCtx();
             }
             finally {
                 part.release();
@@ -416,7 +398,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTaskV2.class,
-            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.repair(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 

@@ -59,7 +59,7 @@ public class ReconciliationContext {
     private final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
 
     /**
-     * Size that evensually will be equals the real size of partition.
+     * Size that eventually will be equals the real size of partition.
      */
     private final Map<Integer, AtomicLong> sizes = new ConcurrentHashMap<>();
 

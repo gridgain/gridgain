@@ -16,25 +16,21 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.lang.IgniteUuid;
 
-/** Discovery message for partition counter consistency reconciliation. */
+/**
+ * Discovery message for partition counter consistency reconciliation.
+ */
 public class FinalizeCountersDiscoveryMessage implements DiscoveryCustomMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Custom message ID. */
-    private IgniteUuid id = IgniteUuid.randomUuid();
-
-    /** */
-    public Map<Integer, Map<Integer, Map<UUID, Long>>> partSizesMap = new HashMap();
+    private final IgniteUuid id = IgniteUuid.randomUuid();
 
     /** {@inheritDoc} */
     @Override public IgniteUuid id() {

@@ -36,13 +36,15 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
-/** Tests for partition counter consistency reconciliation. */
+/**
+ * Tests for partition counter consistency reconciliation.
+ */
 public class GridCommandHandlerPartitionReconciliationCountersTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
-    CacheAtomicityMode atomicityMode;
+    private CacheAtomicityMode atomicityMode;
 
     /** */
-    boolean persistenceEnabled;
+    private boolean persistenceEnabled;
 
     /** */
     private static CommandHandler hnd;
@@ -58,6 +60,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
 
     /**
      * @param name Name.
+     * @return Cache configuration.
      */
     protected CacheConfiguration<Object, Object> cacheConfiguration(String name) {
         CacheConfiguration ccfg = new CacheConfiguration(name);
@@ -71,7 +74,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
         return ccfg;
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
@@ -136,7 +139,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
      *   <li>Create cache.</li>
      *   <li>Break counters.</li>
      *   <li>Invoke a reconciliation util for partition counter consistency reconciliation.</li>
-     *   <li>Check that counters was fixed.</li>
+     *   <li>Check that counters were fixed.</li>
      *   <li>Restart grid and check counters again if persistence enabled.</li>
      * </ul>
      */
@@ -255,7 +258,7 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
      *   <li>Check that counters not was fixed.</li>
      * </ul>
      */
-    public void testReconciliationCountersNotFixed(String[] cmdArgs) throws Exception {
+    private void testReconciliationCountersNotFixed(String[] cmdArgs) throws Exception {
         atomicityMode = TRANSACTIONAL;
 
         int finalCounterValue = 16;
@@ -286,10 +289,6 @@ public class GridCommandHandlerPartitionReconciliationCountersTest extends GridC
 
         if (persistenceEnabled)
             forceCheckpoint();
-
-        GridCachePartitionExchangeManager<Object, Object> exchangeMgr = grid(1).context().cache().context().exchange();
-
-        AffinityTopologyVersion topVerBeforeRepair = exchangeMgr.lastTopologyFuture().topologyVersion();
 
         assertEquals(EXIT_CODE_OK, execute(hnd, cmdArgs));
 

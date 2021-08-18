@@ -27,6 +27,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Pageable partition batch request.
  */
 public class PartitionBatchRequestV2 extends PartitionBatchRequest {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** If {@code true} - reconciliation of data consistency is needed. */
     private final boolean dataReconciliation;
 
@@ -36,23 +39,13 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** If {@code true} - Partition Reconciliation&Fix. */
     private final boolean repair;
 
-    /**
-     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while
-     * repairing doubtful keys.
-     */
-    private final RepairAlgorithm repairAlg;
-
-    /** */
-    private static final long serialVersionUID = 0L;
-
     /** */
     private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
-     * @param repair Flag indicates that an inconsistency should be fixed in accordance with {@code repairAlg} parameter.
-     * @param repairAlg Partition reconciliation repair algorithm to be used.
+     * @param repair Flag indicates that an inconsistency should be fixed.
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
@@ -66,7 +59,6 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
         boolean dataReconciliation,
         boolean cacheSizeReconciliation,
         boolean repair,
-        RepairAlgorithm repairAlg,
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -80,7 +72,6 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;
         this.repair = repair;
-        this.repairAlg = repairAlg;
         this.partSizesMap = partSizesMap;
     }
 

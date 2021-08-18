@@ -204,7 +204,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
             args.recheckAttempts,
             args.repairAlg,
             args.recheckDelay,
-            args.reconciliationTypes()
+            args.reconciliationTypes
         );
 
         List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()

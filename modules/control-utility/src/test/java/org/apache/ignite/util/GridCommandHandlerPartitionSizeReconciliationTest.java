@@ -32,10 +32,12 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
-/** Tests for partition size consistency reconciliation. */
+/**
+ * Tests for partition size consistency reconciliation.
+ */
 public class GridCommandHandlerPartitionSizeReconciliationTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
-    static final long BROKEN_PART_SIZE = 10;
+    private static final long BROKEN_PART_SIZE = 10;
 
     /** */
     private static CommandHandler hnd;
@@ -51,6 +53,7 @@ public class GridCommandHandlerPartitionSizeReconciliationTest extends GridComma
 
     /**
      * @param name Name.
+     * @return Cache configuration.
      */
     protected CacheConfiguration<Object, Object> cacheConfiguration(String name) {
         CacheConfiguration ccfg = new CacheConfiguration(name);
@@ -62,7 +65,7 @@ public class GridCommandHandlerPartitionSizeReconciliationTest extends GridComma
         return ccfg;
     }
 
-    /** */
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
