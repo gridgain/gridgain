@@ -34,31 +34,28 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationProcessorResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
-import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitioResultByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -183,7 +180,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> execute() {
+    public ExecutionResult<PartitionReconciliationProcessorResult> execute() {
         if (log.isInfoEnabled()) {
             log.info(String.format(
                 START_EXECUTION_MSG,
@@ -269,7 +266,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 }
             }
 
-            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()));
+            return new ExecutionResult<>(new PartitionReconciliationProcessorResult(collector.result(), collector.partSizesMap()));
         }
         catch (InterruptedException | IgniteException e) {
             String errMsg = "Partition reconciliation was interrupted.";
@@ -285,7 +282,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
             log.warning(errMsg, e);
 
-            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new PartitionReconciliationProcessorResult(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
         catch (Exception e) {
             try {
@@ -299,7 +296,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(new T2<>(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(new PartitionReconciliationProcessorResult(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
     }
 
@@ -397,25 +394,25 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
      */
     private void handle(Batch workload) throws InterruptedException {
         compute(
-            CollectPartitionKeysByBatchTaskV2.class,
+            CollectPartitioResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.repair(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
-                KeyCacheObject nextBatchKey = res.get1();
+                KeyCacheObject nextBatchKey = res.getKey();
 
-                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.get2();
+                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.getDataMap();
 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.get3().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
+                boolean reconSize = res.getSizeMap().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.get3()));
+                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.getSizeMap()));
 
                 if (nextBatchKey == null) {
                     collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
 
-                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.get3());
+                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
                 }
 
                 if (!recheckKeys.isEmpty()) {

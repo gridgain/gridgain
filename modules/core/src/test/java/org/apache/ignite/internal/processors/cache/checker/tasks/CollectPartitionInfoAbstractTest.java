@@ -41,10 +41,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionExecutionJobResultByBatch;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -109,7 +109,7 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
 
             NodePartitionSize nodeSize = new NodePartitionSize(ctxo.cacheName());
 
-            res.add(new ComputeJobResultStub<>(new T2(partKeyVer, nodeSize)));
+            res.add(new ComputeJobResultStub<>(new PartitionExecutionJobResultByBatch(partKeyVer, nodeSize)));
         }
 
         return res;
@@ -133,12 +133,12 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         /**
          *
          */
-        private final T2<List<T>, NodePartitionSize> data;
+        private final PartitionExecutionJobResultByBatch data;
 
         /**
          *
          */
-        private ComputeJobResultStub(T2<List<T>, NodePartitionSize> data) {
+        private ComputeJobResultStub(PartitionExecutionJobResultByBatch data) {
             this.data = data;
         }
 
@@ -148,7 +148,7 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDocl} */
-        @Override public ExecutionResult<T2<List<T>, NodePartitionSize>> getData() {
+        @Override public ExecutionResult<PartitionExecutionJobResultByBatch> getData() {
             return new ExecutionResult<>(data);
         }
 

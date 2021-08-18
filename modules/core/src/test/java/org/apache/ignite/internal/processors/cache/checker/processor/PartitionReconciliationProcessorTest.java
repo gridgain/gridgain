@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionExecutionTaskResultByBatch;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
@@ -55,7 +56,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskV2;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitioResultByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -64,7 +65,6 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
-import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.ConsoleTestLogger;
 import org.apache.ignite.testframework.GridTestNode;
@@ -111,11 +111,11 @@ public class PartitionReconciliationProcessorTest {
 
         Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
 
-        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(null, new HashMap<>(), partSizesMap));
+        ExecutionResult<PartitionExecutionTaskResultByBatch> emptyRes = new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(null, new HashMap<>(), partSizesMap));
 
         processor.addTask(new Batch(true, true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
-            .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
+            .whereResult(CollectPartitioResultByBatchTaskV2.class, emptyRes)
             .execute();
 
         processor.verify(never()).schedule(any());
@@ -134,11 +134,11 @@ public class PartitionReconciliationProcessorTest {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
         batchRes.put(nextKey, new HashMap<>());
         Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
-        ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> emptyRes = new ExecutionResult<>(new T3<>(nextKey, batchRes, partSizesMap));
+        ExecutionResult<PartitionExecutionTaskResultByBatch> emptyRes = new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(nextKey, batchRes, partSizesMap));
 
         processor.addTask(new Batch(true, true, true, RepairAlgorithm.PRINT_ONLY, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
-            .whereResult(CollectPartitionKeysByBatchTaskV2.class, emptyRes)
+            .whereResult(CollectPartitioResultByBatchTaskV2.class, emptyRes)
             .execute();
 
         processor.verify(times(1)).schedule(any(Batch.class));

@@ -39,6 +39,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationJobResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationProcessorResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -167,20 +169,20 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             if (sizeReconciliationSupport) {
-                T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> data = result.getData();
+                PartitionReconciliationJobResult data = result.<ExecutionResult<PartitionReconciliationJobResult>>getData().result();
 
-                res.merge(data.get2().result().get1());
+                res.merge(data.getReconciliationAffectedEntries());
 
-                data.get2().result().get2().entrySet().forEach(e -> {
+                data.getPartSizesMap().entrySet().forEach(e -> {
                     partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
                     e.getValue().entrySet().forEach(e0 -> partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue()));
 
                 });
 
-                if (data.get2().errorMessage() != null)
-                    errors.add(nodeId + " - " + data.get2().errorMessage());
+                if (data.getErrorMsg() != null)
+                    errors.add(nodeId + " - " + data.getErrorMsg());
 
-                nodeIdToFolder.put(nodeId, data.get1());
+                nodeIdToFolder.put(nodeId, data.getFilePath());
             }
             else {
                 T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
@@ -347,7 +349,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>>> execute() throws IgniteException {
+        @Override public ExecutionResult<PartitionReconciliationJobResult> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             Collection<String> cacheNames = ignite.context().cache().cacheNames();
@@ -364,7 +366,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new T2(new ReconciliationAffectedEntriesExtended(), new HashMap()), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new ExecutionResult<>(new PartitionReconciliationJobResult(null, new ReconciliationAffectedEntriesExtended(), new HashMap(), null), "The cache '" + cacheRegexp + "' doesn't exist.");
 
                     caches.addAll(acceptedCaches);
                 }
@@ -387,11 +389,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.includeSensitive()
                     );
 
-                ExecutionResult<T2<ReconciliationAffectedEntries, Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>>> reconciliationRes = proc.execute();
+                ExecutionResult<PartitionReconciliationProcessorResult> reconciliationRes = proc.execute();
 
                 File path = proc.collector().flushResultsToFile(startTime);
 
-                return new T2<>((path != null) ? path.getAbsolutePath() : null, reconciliationRes);
+                return new ExecutionResult(
+                    new PartitionReconciliationJobResult(
+                        (path != null) ? path.getAbsolutePath() : null,
+                        reconciliationRes.result().getReconciliationAffectedEntries(),
+                        reconciliationRes.result().getPartSizesMap(),
+                        reconciliationRes.errorMessage()
+                    )
+                );
             }
             catch (Exception e) {
                 String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";

@@ -41,6 +41,8 @@ import org.apache.ignite.internal.processors.cache.checker.ReconciliationContext
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionExecutionJobResultByBatch;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionExecutionTaskResultByBatch;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -48,8 +50,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
-import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -65,7 +65,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<PartitionBatchRequestV2, ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>>> {
+public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<PartitionBatchRequestV2, ExecutionResult<PartitionExecutionTaskResultByBatch>> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -102,7 +102,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
             IgniteFeatures.PARTITION_RECONCILIATION_V2);
 
         for (ClusterNode node : subgrid)
-            jobs.put(new CollectPartitionKeysByBatchJobV2(partBatch), node);
+            jobs.put(new CollectPartitionResultByBatchJobV2(partBatch), node);
 
         return jobs;
     }
@@ -123,7 +123,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable ExecutionResult<T3<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>, Map<UUID, NodePartitionSize>>> reduce(
+    @Override public @Nullable ExecutionResult<PartitionExecutionTaskResultByBatch> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
@@ -145,12 +145,12 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                 if (exc != null)
                     return new ExecutionResult<>(exc.getMessage());
 
-                ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> nodeRes = results.get(i).getData();
+                ExecutionResult<PartitionExecutionJobResultByBatch> nodeRes = results.get(i).getData();
 
                 if (nodeRes.errorMessage() != null)
                     return new ExecutionResult<>(nodeRes.errorMessage());
 
-                for (VersionedKey partKeyVer : nodeRes.result().get1()) {
+                for (VersionedKey partKeyVer : nodeRes.result().versionedKeys()) {
                     try {
                         KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 
@@ -170,10 +170,10 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     }
                 }
 
-                partSizesMap.put(nodeId, nodeRes.result().get2());
+                partSizesMap.put(nodeId, nodeRes.result().nodePartitionSize());
             }
 
-            return new ExecutionResult<>(new T3<>(lastKey, totalRes, partSizesMap));
+            return new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(lastKey, totalRes, partSizesMap));
         }
         else {
             for (int i = 0; i < results.size(); i++) {
@@ -208,7 +208,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                 }
             }
 
-            return new ExecutionResult<>(new T3<>(lastKey, totalRes, null));
+            return new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(lastKey, totalRes, null));
         }
     }
 
@@ -232,7 +232,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
     /**
      *
      */
-    public static class CollectPartitionKeysByBatchJobV2 extends ReconciliationResourceLimitedJob {
+    public static class CollectPartitionResultByBatchJobV2 extends ReconciliationResourceLimitedJob {
         /**
          *
          */
@@ -244,7 +244,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
         /**
          * @param partBatch Partition key.
          */
-        private CollectPartitionKeysByBatchJobV2(PartitionBatchRequestV2 partBatch) {
+        private CollectPartitionResultByBatchJobV2(PartitionBatchRequestV2 partBatch) {
             this.partBatch = partBatch;
         }
 
@@ -254,7 +254,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
         }
 
         /** {@inheritDoc} */
-        @Override protected ExecutionResult<T2<List<VersionedKey>, NodePartitionSize>> execute0() {
+        @Override protected ExecutionResult<PartitionExecutionJobResultByBatch> execute0() {
             boolean reconConsist = partBatch.dataReconciliation();
 
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
@@ -375,7 +375,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                             nodeSize.inProgress(false);
                         }
 
-                        return new ExecutionResult<>(new T2<>(partEntryHashRecords, nodeSize));
+                        return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));
                     }
                     catch (Exception e) {
                         String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
@@ -386,7 +386,7 @@ public class CollectPartitionKeysByBatchTaskV2 extends ComputeTaskAdapter<Partit
                     }
                 }
                 else
-                    return new ExecutionResult<>(new T2<>(new ArrayList<>(), nodeSize));
+                    return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(new ArrayList<>(), nodeSize));
             }
             finally {
                 part.release();
