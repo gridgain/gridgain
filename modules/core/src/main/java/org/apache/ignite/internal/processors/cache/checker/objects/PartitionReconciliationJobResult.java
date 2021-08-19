@@ -65,6 +65,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
         out.writeObject(filePath);
         out.writeObject(reconciliationAffectedEntries);
         out.writeObject(partSizesMap);
+        out.writeObject(errorMsg);
     }
 
     /** {@inheritDoc} */
@@ -73,5 +74,6 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
         filePath = (String)in.readObject();
         reconciliationAffectedEntries = (ReconciliationAffectedEntries)in.readObject();
         partSizesMap = (Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
+        errorMsg = (String)in.readObject();
     }
 }
