@@ -42,15 +42,18 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationProcessorResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionSizeRepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
+import org.apache.ignite.internal.processors.cache.checker.processor.workload.PartitionSizeRepair;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitioResultByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.PartitionSizeRepairRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
@@ -257,6 +260,8 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                     handle((Recheck)workload);
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
+                else if (workload instanceof PartitionSizeRepair)
+                    handle((PartitionSizeRepair)workload);
                 else {
                     String err = "Unsupported workload type: " + workload;
 
@@ -404,16 +409,23 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.getSizeMap().entrySet().stream().anyMatch((entry -> entry.getValue().inProgress()));
+                boolean reconSize = res.getSizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
 
                 if (reconConsist || reconSize)
                     schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.getSizeMap()));
-
-                if (nextBatchKey == null) {
-                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
-
-                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
+                else if (workload.cacheSizeReconciliation()) {
+                    scheduleHighPriority(
+                        new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
+                            workload.cacheName(), workload.cacheId(), workload.partitionId(),
+                            repair && workload.cacheSizeReconciliation(), res.getSizeMap())
+                    );
                 }
+
+//                if (nextBatchKey == null) {
+//                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
+//
+//                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
+//                }
 
                 if (!recheckKeys.isEmpty()) {
                     schedule(
@@ -519,6 +531,20 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                             ));
                     }
                 }
+            });
+    }
+
+    /**
+     * @param workload Workload.
+     */
+    private void handle(PartitionSizeRepair workload) throws InterruptedException {
+        compute(
+            PartitionSizeRepairRequestTask.class,
+            new PartitionSizeRepairRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), workload.isRepair(), startTopVer, workload.partSizesMap()),
+            res -> {
+                collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
+
+                collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
             });
     }
 
