@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.plugin.security.SecuritySubject;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -224,10 +223,7 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATIONS_CHAINING(59),
 
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
-    SNAPSHOT_SFTP_UPLOAD_V2(60),
-
-    /** Certificates array in {@link SecuritySubject} implementations is deserialized lazily. */
-    LAZY_CERTIFICATE_DESERIALIZATION(61);
+    SNAPSHOT_SFTP_UPLOAD_V2(60);
 
     /**
      * Unique feature identifier.
