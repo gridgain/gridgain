@@ -46,6 +46,8 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
 
@@ -103,6 +105,9 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
     public static boolean cacheClearOp;
 
     /** */
+    CacheWriteSynchronizationMode rndMode;
+
+    /** */
     static Random rnd = new Random();
 
     /** */
@@ -130,6 +135,10 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        rndMode = rnd.nextBoolean() ? FULL_SYNC : PRIMARY_SYNC;
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -140,6 +149,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** */
@@ -148,7 +159,11 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         ccfg.setName(name);
         if (cacheGroup != null)
             ccfg.setGroupName(cacheGroup);
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+
+        log.info(">>> CacheWriteSynchronizationMode: " + rndMode);
+
+        ccfg.setWriteSynchronizationMode(rndMode);
+
         ccfg.setAffinity(new RendezvousAffinityFunction(false, partCount));
         ccfg.setBackups(backupCount);
         ccfg.setAtomicityMode(cacheAtomicityMode);
@@ -300,6 +315,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             for (IgniteCache<Object, Object> cache : caches)
                 cache.put(i, i);
         }
+
+        awaitPartitionMapExchange();
 
         long allKeysCountForCacheGroup;
         long allKeysCountForCache;

@@ -60,7 +60,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
     /** */
-    static final long BROKEN_PART_SIZE = 10;
+    private Random rnd = new Random();
 
     /** */
     public static ReconciliationResult partitionReconciliation(
@@ -215,7 +215,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
         int cacheId = cctx.cacheId();
 
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE));
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, rnd.nextInt(100_000)));
     }
 
     /**

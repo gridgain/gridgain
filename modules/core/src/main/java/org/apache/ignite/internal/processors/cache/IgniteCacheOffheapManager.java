@@ -1265,6 +1265,7 @@ public interface IgniteCacheOffheapManager {
         /**
          * Preparing for start a reconciliation of cache sizes.
          *
+         * @param cacheId Cache ID.
          * @return Cache data tree object.
          */
         public ReconciliationContext startReconciliation(int cacheId);

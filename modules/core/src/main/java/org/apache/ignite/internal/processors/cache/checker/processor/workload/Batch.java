@@ -37,12 +37,6 @@ public class Batch extends PipelineWorkload {
     /** If {@code true} - Partition Reconciliation&Fix. */
     private boolean repair;
 
-    /**
-     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while
-     * repairing doubtful keys.
-     */
-    private RepairAlgorithm repairAlg;
-
     /** Cache name. */
     private final String cacheName;
 
@@ -79,7 +73,6 @@ public class Batch extends PipelineWorkload {
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
      * @param repair Flag indicates that an inconsistency should be fixed in accordance with {@code repairAlg} parameter.
-     * @param repairAlg Partition reconciliation repair algorithm to be used.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param cacheId cache id.
@@ -90,7 +83,6 @@ public class Batch extends PipelineWorkload {
         boolean dataReconciliation,
         boolean cacheSizeReconciliation,
         boolean repair,
-        RepairAlgorithm repairAlg,
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -103,7 +95,6 @@ public class Batch extends PipelineWorkload {
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;
         this.repair = repair;
-        this.repairAlg = repairAlg;
 
         this.cacheName = cacheName;
         this.partId = partId;
@@ -131,13 +122,6 @@ public class Batch extends PipelineWorkload {
      */
     public boolean repair() {
         return repair;
-    }
-
-    /**
-     * @return Repair algorithm.
-     */
-    public RepairAlgorithm repairAlg() {
-        return repairAlg;
     }
 
     /**

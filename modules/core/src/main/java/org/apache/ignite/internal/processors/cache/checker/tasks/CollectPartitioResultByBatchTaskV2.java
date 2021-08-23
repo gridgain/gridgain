@@ -232,7 +232,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
     /**
      *
      */
-    public static class CollectPartitionResultByBatchJobV2 extends ReconciliationResourceLimitedJob {
+    private static class CollectPartitionResultByBatchJobV2 extends ReconciliationResourceLimitedJob {
         /**
          *
          */

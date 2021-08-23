@@ -76,8 +76,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** Flag indicates that the result of the utility should be logged to the console. */
     private boolean localOutoutMode;
 
-    /** {@code True} - if partition reconciliation with cache size consistency and
-     * partition counter consistency support . */
+    /**
+     * {@code true} - if partition reconciliation with cache size consistency and
+     * partition counter consistency support.
+     */
     private boolean sizeReconciliationSupport;
 
     /** {@inheritDoc} */
@@ -258,14 +260,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** {@inheritDoc} */
         @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
+            Collection<String> cacheNames = ignite.context().cache().cacheNames();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
-                caches.addAll(ignite.context().cache().publicCacheNames());
+                caches.addAll(cacheNames);
             else {
                 for (String cacheRegexp : reconciliationTaskArg.caches()) {
                     List<String> acceptedCaches = new ArrayList<>();
 
-                    for (String cacheName : ignite.context().cache().publicCacheNames()) {
+                    for (String cacheName : cacheNames) {
                         if (cacheName.matches(cacheRegexp))
                             acceptedCaches.add(cacheName);
                     }

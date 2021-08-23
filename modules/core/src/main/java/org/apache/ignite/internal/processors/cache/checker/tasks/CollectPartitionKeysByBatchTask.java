@@ -174,7 +174,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     /**
      *
      */
-    public static class CollectPartitionKeysByBatchJob extends ReconciliationResourceLimitedJob {
+    private static class CollectPartitionKeysByBatchJob extends ReconciliationResourceLimitedJob {
         /**
          *
          */

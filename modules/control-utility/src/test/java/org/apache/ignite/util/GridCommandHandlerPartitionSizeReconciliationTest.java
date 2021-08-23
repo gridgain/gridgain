@@ -20,8 +20,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -30,6 +32,8 @@ import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.junit.Test;
 
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 
 /**
@@ -37,10 +41,13 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
  */
 public class GridCommandHandlerPartitionSizeReconciliationTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
-    private static final long BROKEN_PART_SIZE = 10;
+    private Random rnd = new Random();
 
     /** */
     private static CommandHandler hnd;
+
+    /** */
+    CacheWriteSynchronizationMode rndMode;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -61,6 +68,9 @@ public class GridCommandHandlerPartitionSizeReconciliationTest extends GridComma
         ccfg.setBackups(1);
         ccfg.setOnheapCacheEnabled(false);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, 16));
+        ccfg.setWriteSynchronizationMode(rndMode);
+
+        log.info(">>> CacheWriteSynchronizationMode: " + rndMode);
 
         return ccfg;
     }
@@ -76,16 +86,18 @@ public class GridCommandHandlerPartitionSizeReconciliationTest extends GridComma
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        rndMode = rnd.nextBoolean() ? FULL_SYNC : PRIMARY_SYNC;
+
         cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** Partition size consistency reconciliation. */
@@ -183,6 +195,6 @@ public class GridCommandHandlerPartitionSizeReconciliationTest extends GridComma
 
         int cacheId = cctx.cacheId();
 
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, BROKEN_PART_SIZE));
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, rnd.nextInt(100_000)));
     }
 }

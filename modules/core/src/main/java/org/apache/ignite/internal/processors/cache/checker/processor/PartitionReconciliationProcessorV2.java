@@ -212,7 +212,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), repair, repairAlg, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), repair, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -412,7 +412,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconSize = res.getSizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.repairAlg(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.getSizeMap()));
+                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.getSizeMap()));
                 else if (workload.cacheSizeReconciliation()) {
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
