@@ -367,8 +367,9 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWalWrittenBytes() throws Exception {
-        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
-            cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
+        IgniteEx n = startGrid(0,
+                     (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration()
+                     .setWalSegmentSize((int)(2 * U.MB)));
 
         n.cluster().state(ACTIVE);
 
@@ -392,8 +393,9 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWalTotalSizeWithoutArchivingPerfomed() throws Exception {
-        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
-            cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
+        IgniteEx n = startGrid(0,
+                     (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration()
+                     .setWalSegmentSize((int)(2 * U.MB)));
 
         n.cluster().state(ACTIVE);
 
@@ -411,8 +413,9 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWalTotalSizeWithArchive() throws Exception {
-        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
-            cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB)));
+        IgniteEx n = startGrid(0,
+                    (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration()
+                    .setWalSegmentSize((int)(2 * U.MB)));
 
         n.cluster().state(ACTIVE);
 
@@ -431,8 +434,10 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWalTotalSizeWithArchiveTurnedOff() throws Exception {
-        IgniteEx n = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
-            cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath()).setWalSegmentSize((int)(2 * U.MB)));
+        IgniteEx n = startGrid(0,
+                     (Consumer<IgniteConfiguration>)cfg ->
+                     cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath())
+                     .setWalSegmentSize((int)(2 * U.MB)));
 
         n.cluster().state(ACTIVE);
 
@@ -450,8 +455,9 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWalCompressedBytes() throws Exception {
-        IgniteEx n0 = startGrid(0, (Consumer<IgniteConfiguration>)cfg ->
-            cfg.getDataStorageConfiguration().setWalCompactionEnabled(true).setWalSegmentSize((int)(2 * U.MB)));
+        IgniteEx n0 = startGrid(0,
+                      (Consumer<IgniteConfiguration>)cfg ->
+                      cfg.getDataStorageConfiguration().setWalCompactionEnabled(true).setWalSegmentSize((int)(2 * U.MB)));
 
         n0.cluster().state(ACTIVE);
         awaitPartitionMapExchange();
@@ -480,7 +486,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Populates a cache w/32 KB of data
      *
-     * @param igniteEx - Node
+     * @param igniteEx  Node.
      */
     private void populateCache(IgniteEx igniteEx) {
         for (int i = 0; i < 10; i++)
@@ -490,10 +496,10 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Turns off WAL logging.
      *
-     * @param igniteEx - Node
-     * @throws IgniteCheckedException
+     * @param  igniteEx  Node.
+     * @throws Exception If failed.
      */
-    private void turnOffWal(IgniteEx igniteEx) throws IgniteCheckedException {
+    private void turnOffWal(IgniteEx igniteEx) throws Exception {
         WALDisableContext walDisableCtx = igniteEx.context().cache().context().walState().walDisableContext();
         assertNotNull(walDisableCtx);
 
@@ -504,15 +510,14 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Check the state of wal archive, and whether the total size of wal (and possibly wal archive) match what is expected.
+     * Check the state of wal archive, and whether the total size of
+     * wal (and possibly wal archive) match what is expected.
      *
-     * @param igniteEx      - Node
-     * @param hasWalArchive - whether wal archiving is enabled
-     * @throws IgniteCheckedException
-     * @throws InterruptedException
+     * @param igniteEx       Node.
+     * @param hasWalArchive  Whether wal archiving is enabled.
+     * @throws Exception     If failed.
      */
-    private void checkWalArchiveAndTotalSize(IgniteEx igniteEx,
-        boolean hasWalArchive) throws IgniteCheckedException, InterruptedException {
+    private void checkWalArchiveAndTotalSize(IgniteEx igniteEx, boolean hasWalArchive) throws Exception {
         FileWriteAheadLogManager walMgr = walMgr(igniteEx);
 
         SegmentRouter router = walMgr.getSegmentRouter();
@@ -520,8 +525,13 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         assertEquals(router.hasArchive(), hasWalArchive);
 
         //wait to avoid race condition where new segments(and corresponding .tmp files) are created after totalSize has been calculated.
-        igniteEx.cluster().state(ClusterState.INACTIVE);
-        igniteEx.cluster().state(ClusterState.ACTIVE);
+        if (router.hasArchive()) {
+            assertTrue(waitForCondition(
+                       () -> walMgr.walWorkFiles().length == igniteEx.configuration().getDataStorageConfiguration().getWalSegments(),
+                3000l)
+            );
+            assertTrue(waitForCondition(() -> walMgr.lastArchivedSegment() == walMgr.currentSegment() - 1, 3000l));
+        }
 
         long totalSize = walMgr.totalSize(FileWriteAheadLogManager.loadFileDescriptors(router.getWalWorkDir()));
 
