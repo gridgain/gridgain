@@ -456,8 +456,7 @@ public class IgniteApplicationMasterSelfTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public void requestContainerResourceChange(Container container, Resource resource) {
+        @Override public void requestContainerResourceChange(Container container, Resource resource) {
             // No-op.
         }
 
@@ -518,8 +517,7 @@ public class IgniteApplicationMasterSelfTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public void increaseContainerResource(Container container) throws YarnException, IOException {
+        @Override public void increaseContainerResource(Container container) throws YarnException, IOException {
             // No-op.
         }
 
