@@ -220,7 +220,12 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATIONS_CHAINING(59),
 
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
-    SNAPSHOT_SFTP_UPLOAD_V2(60);
+    SNAPSHOT_SFTP_UPLOAD_V2(60),
+
+    /**
+     * Snapshot operation can handle cache groups in {@code --caches} parameter and {@code --exclude_caches}.
+     */
+    SNAPSHOT_OPERATION_WITH_EXCLUDE_CACHES(61);
 
     /**
      * Unique feature identifier.
