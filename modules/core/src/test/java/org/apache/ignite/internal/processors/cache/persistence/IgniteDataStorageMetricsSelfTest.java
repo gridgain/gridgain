@@ -28,7 +28,6 @@ import java.util.regex.Pattern;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataStorageMetrics;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -389,7 +388,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Check whether WAL is reporting correct usage when archiving was not needed.
      *
-     * @throws Exception If failed
+     * @throws Exception If failed.
      */
     @Test
     public void testWalTotalSizeWithoutArchivingPerfomed() throws Exception {
@@ -409,7 +408,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Check whether WAL is reporting correct usage when archiving is performed.
      *
-     * @throws Exception If failed
+     * @throws Exception If failed.
      */
     @Test
     public void testWalTotalSizeWithArchive() throws Exception {
@@ -430,7 +429,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     /**
      * Check whether Wal is reporting correct usage when WAL Archive is turned off.
      *
-     * @throws Exception If failed
+     * @throws Exception If failed.
      */
     @Test
     public void testWalTotalSizeWithArchiveTurnedOff() throws Exception {
