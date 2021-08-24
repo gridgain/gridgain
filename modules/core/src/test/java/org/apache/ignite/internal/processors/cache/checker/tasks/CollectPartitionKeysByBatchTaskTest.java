@@ -92,7 +92,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         Field igniteField = U.findField(task.getClass(), "ignite");
         igniteField.set(task, node);
         task.map(Collections.EMPTY_LIST, new PartitionBatchRequestV2(
-            true, true, true,
+            true, true,
             ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), ver));
 
@@ -101,8 +101,8 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(new int[][] {{EMPTY}, {EMPTY}, {EMPTY}}, ctxo))
                 .result();
 
-            assertEquals(null, reduce.getKey());
-            assertEquals(0, reduce.getDataMap().size());
+            assertEquals(null, reduce.key());
+            assertEquals(0, reduce.dataMap().size());
         }
 
         {
@@ -110,9 +110,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(new int[][] {{EMPTY}, {132}, {EMPTY}}, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(132), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(132), reduce.key().value(null, false));
             assertEquals(1, rechecks.size());
             assertTrue(rechecks.containsKey(key(132, ctxo)));
             assertEquals(1, rechecks.get(key(132, ctxo)).size());
@@ -123,9 +123,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(new int[][] {{500}, {500}, {EMPTY}}, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(500), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(500), reduce.key().value(null, false));
             assertEquals(1, rechecks.size());
             assertTrue(rechecks.containsKey(key(500, ctxo)));
             assertEquals(2, rechecks.get(key(500, ctxo)).size());
@@ -136,9 +136,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(new int[][] {{100}, {200}, {EMPTY}}, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(200), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(200), reduce.key().value(null, false));
             assertEquals(2, rechecks.size());
             assertTrue(rechecks.containsKey(key(100, ctxo)));
             assertTrue(rechecks.containsKey(key(200, ctxo)));
@@ -151,9 +151,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(new int[][] {{9}, {9}, {9}}, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(9), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(9), reduce.key().value(null, false));
             assertEquals(0, rechecks.size());
         }
 
@@ -162,9 +162,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(valuesDiffVersion(new int[][] {{1}, {1}, {1}}, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(1), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(1), reduce.key().value(null, false));
             assertEquals(1, rechecks.size());
             assertEquals(3, rechecks.get(key(1, ctxo)).size());
         }
@@ -180,9 +180,9 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(valuesDiffVersion(bigDataset, ctxo))
                 .result();
 
-            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.getDataMap();
+            Map<KeyCacheObject, Map<UUID, GridCacheVersion>> rechecks = reduce.dataMap();
 
-            assertEquals(Integer.valueOf(6), reduce.getKey().value(null, false));
+            assertEquals(Integer.valueOf(6), reduce.key().value(null, false));
 
             assertEquals(6, rechecks.size());
             assertEquals(1, rechecks.get(key(1, ctxo)).size()); // 1
@@ -198,7 +198,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
                 .reduce(values(bigDataset, ctxo))
                 .result();
 
-            assertEquals(5, reduce.getDataMap().size());
+            assertEquals(5, reduce.dataMap().size());
         }
     }
 
@@ -242,32 +242,32 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         PartitionExecutionTaskResultByBatch firstBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
-            new PartitionBatchRequestV2(true, true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), ver)
         ).result();
 
-        fetched.addAll(firstBatch.getDataMap().keySet());
+        fetched.addAll(firstBatch.dataMap().keySet());
 
-        KeyCacheObject firstMaxKey = firstBatch.getKey();
+        KeyCacheObject firstMaxKey = firstBatch.key();
 
         PartitionExecutionTaskResultByBatch secondBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
-            new PartitionBatchRequestV2(true, true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), ver)
         ).result();
 
-        KeyCacheObject secondMaxKey = secondBatch.getKey();
+        KeyCacheObject secondMaxKey = secondBatch.key();
 
-        fetched.addAll(secondBatch.getDataMap().keySet());
+        fetched.addAll(secondBatch.dataMap().keySet());
 
         PartitionExecutionTaskResultByBatch thirdBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
-            new PartitionBatchRequestV2(true, true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+            new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), ver)
         ).result();
 
-        assertNull(thirdBatch.getKey());
-        assertEquals(0, thirdBatch.getDataMap().size());
+        assertNull(thirdBatch.key());
+        assertEquals(0, thirdBatch.dataMap().size());
 
         assertEquals(elements, fetched.size());
     }

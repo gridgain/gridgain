@@ -87,7 +87,7 @@ public class PartitionSizeRepairRequestTask extends ComputeTaskAdapter<Partition
                         repairReq,
                         repairReq.startTopologyVersion(),
                         repairReq.partitionId(),
-                        repairReq.isRepair(),
+                        repairReq.repair(),
                         repairReq.partSizesMap()),
                     node);
         }
@@ -124,7 +124,7 @@ public class PartitionSizeRepairRequestTask extends ComputeTaskAdapter<Partition
             if (excRes.errorMessage() != null)
                 return new ExecutionResult<>(excRes.errorMessage());
 
-            aggregatedRepairRes.getSizeMap().put(result.getNode().id(), excRes.result().getNodePartitionSize());
+            aggregatedRepairRes.sizeMap().put(result.getNode().id(), excRes.result().nodePartitionSize());
         }
 
         return new ExecutionResult<>(aggregatedRepairRes);

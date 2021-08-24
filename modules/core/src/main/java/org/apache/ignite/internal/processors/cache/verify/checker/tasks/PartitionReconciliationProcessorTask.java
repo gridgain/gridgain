@@ -173,18 +173,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             if (sizeReconciliationSupport) {
                 PartitionReconciliationJobResult data = result.<ExecutionResult<PartitionReconciliationJobResult>>getData().result();
 
-                res.merge(data.getReconciliationAffectedEntries());
+                res.merge(data.reconciliationAffectedEntries());
 
-                data.getPartSizesMap().entrySet().forEach(e -> {
+                data.partSizesMap().entrySet().forEach(e -> {
                     partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
                     e.getValue().entrySet().forEach(e0 -> partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue()));
 
                 });
 
-                if (data.getErrorMsg() != null)
-                    errors.add(nodeId + " - " + data.getErrorMsg());
+                if (data.errorMsg() != null)
+                    errors.add(nodeId + " - " + data.errorMsg());
 
-                nodeIdToFolder.put(nodeId, data.getFilePath());
+                nodeIdToFolder.put(nodeId, data.filePath());
             }
             else {
                 T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
@@ -399,8 +399,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 return new ExecutionResult(
                     new PartitionReconciliationJobResult(
                         (path != null) ? path.getAbsolutePath() : null,
-                        reconciliationRes.result().getReconciliationAffectedEntries(),
-                        reconciliationRes.result().getPartSizesMap(),
+                        reconciliationRes.result().reconciliationAffectedEntries(),
+                        reconciliationRes.result().partSizesMap(),
                         reconciliationRes.errorMessage()
                     )
                 );

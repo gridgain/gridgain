@@ -35,16 +35,12 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** If {@code true} - reconciliation of cache size consistency is needed. */
     private final boolean cacheSizeReconciliation;
 
-    /** If {@code true} - Partition Reconciliation&Fix. */
-    private final boolean repair;
-
     /** */
     private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
-     * @param repair Flag indicates that an inconsistency should be fixed.
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
@@ -57,7 +53,6 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     public PartitionBatchRequestV2(
         boolean dataReconciliation,
         boolean cacheSizeReconciliation,
-        boolean repair,
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -70,7 +65,6 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
         super(sesId, workloadChainId, cacheName, partId, batchSize, lowerKey, startTopVer);
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;
-        this.repair = repair;
         this.partSizesMap = partSizesMap;
     }
 
@@ -86,13 +80,6 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
      */
     public boolean cacheSizeReconciliation() {
         return cacheSizeReconciliation;
-    }
-
-    /**
-     * @return Repair.
-     */
-    public boolean repair() {
-        return repair;
     }
 
     /**

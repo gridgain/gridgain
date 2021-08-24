@@ -33,6 +33,7 @@ public class PartitionSizeRepairRequest extends CachePartitionRequest {
     /** Partition id. */
     private int partId;
 
+    /** */
     private boolean repair;
 
     /** Start topology version. */
@@ -65,11 +66,13 @@ public class PartitionSizeRepairRequest extends CachePartitionRequest {
         return partId;
     }
 
-    public boolean isRepair() {
+    /** */
+    public boolean repair() {
         return repair;
     }
 
-    public void setRepair(boolean repair) {
+    /** */
+    public void repair(boolean repair) {
         this.repair = repair;
     }
 

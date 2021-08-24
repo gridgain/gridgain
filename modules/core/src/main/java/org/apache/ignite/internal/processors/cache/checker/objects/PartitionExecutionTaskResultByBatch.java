@@ -54,33 +54,33 @@ public class PartitionExecutionTaskResultByBatch extends IgniteDataTransferObjec
     }
 
     /** */
-    public KeyCacheObject getKey() {
+    public KeyCacheObject key() {
         return key;
     }
 
     /** */
-    public void setKey(KeyCacheObject key) {
+    public void key(KeyCacheObject key) {
         this.key = key;
     }
 
     /** */
-    public Map<KeyCacheObject, Map<UUID, GridCacheVersion>> getDataMap() {
+    public Map<KeyCacheObject, Map<UUID, GridCacheVersion>> dataMap() {
         return dataMap;
     }
 
     /** */
-    public void setDataMap(
+    public void dataMap(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> dataMap) {
         this.dataMap = dataMap;
     }
 
     /** */
-    public Map<UUID, NodePartitionSize> getSizeMap() {
+    public Map<UUID, NodePartitionSize> sizeMap() {
         return sizeMap;
     }
 
     /** */
-    public void setSizeMap(
+    public void sizeMap(
         Map<UUID, NodePartitionSize> sizeMap) {
         this.sizeMap = sizeMap;
     }

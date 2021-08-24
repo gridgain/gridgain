@@ -22,7 +22,6 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
-import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 
 /**
  * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
@@ -33,9 +32,6 @@ public class Batch extends PipelineWorkload {
 
     /** If reconciliation of cache sizes is needed. */
     private boolean cacheSizeReconciliation;
-
-    /** If {@code true} - Partition Reconciliation&Fix. */
-    private boolean repair;
 
     /** Cache name. */
     private final String cacheName;
@@ -72,7 +68,6 @@ public class Batch extends PipelineWorkload {
      * @param workloadChainId Workload chain id.
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
-     * @param repair Flag indicates that an inconsistency should be fixed in accordance with {@code repairAlg} parameter.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param cacheId cache id.
@@ -82,7 +77,6 @@ public class Batch extends PipelineWorkload {
     public Batch(
         boolean dataReconciliation,
         boolean cacheSizeReconciliation,
-        boolean repair,
         long sesId,
         UUID workloadChainId,
         String cacheName,
@@ -94,7 +88,6 @@ public class Batch extends PipelineWorkload {
         super(sesId, workloadChainId);
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;
-        this.repair = repair;
 
         this.cacheName = cacheName;
         this.partId = partId;
@@ -115,13 +108,6 @@ public class Batch extends PipelineWorkload {
      */
     public boolean cacheSizeReconciliation() {
         return cacheSizeReconciliation;
-    }
-
-    /**
-     * @return Repair.
-     */
-    public boolean repair() {
-        return repair;
     }
 
     /**

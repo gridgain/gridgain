@@ -95,11 +95,13 @@ public class PartitionSizeRepair extends PipelineWorkload {
         return partSizesMap;
     }
 
-    public boolean isRepair() {
+    /** */
+    public boolean repair() {
         return repair;
     }
 
-    public void setRepair(boolean repair) {
+    /** */
+    public void repair(boolean repair) {
         this.repair = repair;
     }
 }

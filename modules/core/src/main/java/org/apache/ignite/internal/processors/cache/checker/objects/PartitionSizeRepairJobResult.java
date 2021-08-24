@@ -16,10 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import java.io.Serializable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
 /** Result of {@code RepairResultTask}. */
-public class PartitionSizeRepairJobResult implements Serializable {
+public class PartitionSizeRepairJobResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -33,12 +36,25 @@ public class PartitionSizeRepairJobResult implements Serializable {
         // No-op
     }
 
-    public NodePartitionSize getNodePartitionSize() {
+    /** */
+    public NodePartitionSize nodePartitionSize() {
         return nodePartitionSize;
     }
 
+    /** */
     public void setNodePartitionSize(
         NodePartitionSize sizeMap) {
         this.nodePartitionSize = sizeMap;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+        out.writeObject(nodePartitionSize);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void readExternalData(byte protoVer,
+        ObjectInput in) throws IOException, ClassNotFoundException {
+        nodePartitionSize = (NodePartitionSize)in.readObject();
     }
 }

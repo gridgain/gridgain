@@ -212,7 +212,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), repair, sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -400,24 +400,24 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitioResultByBatchTaskV2.class,
-            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.repair(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
             res -> {
-                KeyCacheObject nextBatchKey = res.getKey();
+                KeyCacheObject nextBatchKey = res.key();
 
-                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.getDataMap();
+                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.dataMap();
 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.getSizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
+                boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.repair(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.getSizeMap()));
+                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.sizeMap()));
                 else if (workload.cacheSizeReconciliation()) {
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
                             workload.cacheName(), workload.cacheId(), workload.partitionId(),
-                            repair && workload.cacheSizeReconciliation(), res.getSizeMap())
+                            repair && workload.cacheSizeReconciliation(), res.sizeMap())
                     );
                 }
 
@@ -540,11 +540,11 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(PartitionSizeRepair workload) throws InterruptedException {
         compute(
             PartitionSizeRepairRequestTask.class,
-            new PartitionSizeRepairRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), workload.isRepair(), startTopVer, workload.partSizesMap()),
+            new PartitionSizeRepairRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), workload.repair(), startTopVer, workload.partSizesMap()),
             res -> {
                 collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
 
-                collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
+                collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.sizeMap());
             });
     }
 

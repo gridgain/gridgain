@@ -57,22 +57,22 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public String getFilePath() {
+    public String filePath() {
         return filePath;
     }
 
     /** */
-    public ReconciliationAffectedEntries getReconciliationAffectedEntries() {
+    public ReconciliationAffectedEntries reconciliationAffectedEntries() {
         return reconciliationAffectedEntries;
     }
 
     /** */
-    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> getPartSizesMap() {
+    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;
     }
 
     /** */
-    public String getErrorMsg() {
+    public String errorMsg() {
         return errorMsg;
     }
 

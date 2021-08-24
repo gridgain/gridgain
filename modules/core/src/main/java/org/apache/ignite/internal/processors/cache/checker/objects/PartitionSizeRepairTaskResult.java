@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import java.io.Serializable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
 /** Result of {@code RepairResultTask}. */
-public class PartitionSizeRepairTaskResult implements Serializable {
+public class PartitionSizeRepairTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -36,42 +39,25 @@ public class PartitionSizeRepairTaskResult implements Serializable {
         // No-op
     }
 
-//    /**
-//     * Constructor.
-//     *
-//     * @param keysToRepair Keys to repair within next recheck-repair iteration.
-//     * @param repairedKeys Repaired keys.
-//     */
-//    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-//    public PartitionSizeRepairJobResult(
-//        Map<VersionedKey, Map<UUID, VersionedValue>> keysToRepair,
-//        Map<VersionedKey, RepairMeta> repairedKeys) {
-//        this.keysToRepair = keysToRepair;
-//        this.repairedKeys = repairedKeys;
-//    }
-
-//    /**
-//     * @return Keys to repair.
-//     */
-//    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-//    public Map<VersionedKey, Map<UUID, VersionedValue>> keysToRepair() {
-//        return keysToRepair;
-//    }
-//
-//    /**
-//     * @return Repaired keys.
-//     */
-//    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-//    public Map<VersionedKey, RepairMeta> repairedKeys() {
-//        return repairedKeys;
-//    }
-
-    public Map<UUID, NodePartitionSize> getSizeMap() {
+    /** */
+    public Map<UUID, NodePartitionSize> sizeMap() {
         return sizeMap;
     }
 
-    public void setSizeMap(
+    /** */
+    public void sizeMap(
         Map<UUID, NodePartitionSize> sizeMap) {
         this.sizeMap = sizeMap;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+        out.writeObject(sizeMap);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void readExternalData(byte protoVer,
+        ObjectInput in) throws IOException, ClassNotFoundException {
+        sizeMap = (Map<UUID, NodePartitionSize>)in.readObject();
     }
 }
