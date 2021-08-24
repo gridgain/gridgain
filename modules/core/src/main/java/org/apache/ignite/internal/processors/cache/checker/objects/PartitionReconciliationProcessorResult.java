@@ -29,14 +29,14 @@ public class PartitionReconciliationProcessorResult extends IgniteDataTransferOb
 
     private ReconciliationAffectedEntries reconciliationAffectedEntries;
 
-    private Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
+    private Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     public PartitionReconciliationProcessorResult() {
 
     }
 
     public PartitionReconciliationProcessorResult(ReconciliationAffectedEntries reconciliationAffectedEntries,
-        Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap) {
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap) {
         this.reconciliationAffectedEntries = reconciliationAffectedEntries;
         this.partSizesMap = partSizesMap;
     }
@@ -45,7 +45,7 @@ public class PartitionReconciliationProcessorResult extends IgniteDataTransferOb
         return reconciliationAffectedEntries;
     }
 
-    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
+    public Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;
     }
 
@@ -59,6 +59,6 @@ public class PartitionReconciliationProcessorResult extends IgniteDataTransferOb
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
         reconciliationAffectedEntries = (ReconciliationAffectedEntries)in.readObject();
-        partSizesMap = (Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
+        partSizesMap = (Map<String, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
     }
 }

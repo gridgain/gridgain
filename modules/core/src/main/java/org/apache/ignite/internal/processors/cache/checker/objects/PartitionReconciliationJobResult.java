@@ -35,7 +35,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     private ReconciliationAffectedEntries reconciliationAffectedEntries;
 
     /** */
-    private Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
+    private Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     /** */
     private String errorMsg;
@@ -48,7 +48,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     /** */
     public PartitionReconciliationJobResult(String filePath,
         ReconciliationAffectedEntries reconciliationAffectedEntries,
-        Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap,
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap,
         String errorMsg) {
         this.filePath = filePath;
         this.reconciliationAffectedEntries = reconciliationAffectedEntries;
@@ -67,7 +67,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     }
 
     /** */
-    public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
+    public Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;
     }
 
@@ -89,7 +89,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
         ObjectInput in) throws IOException, ClassNotFoundException {
         filePath = (String)in.readObject();
         reconciliationAffectedEntries = (ReconciliationAffectedEntries)in.readObject();
-        partSizesMap = (Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
+        partSizesMap = (Map<String, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
         errorMsg = (String)in.readObject();
     }
 }

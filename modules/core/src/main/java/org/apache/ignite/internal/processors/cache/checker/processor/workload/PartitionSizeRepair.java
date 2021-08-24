@@ -29,9 +29,6 @@ public class PartitionSizeRepair extends PipelineWorkload {
     /** Cache name. */
     private final String cacheName;
 
-    /** Cache id. */
-    private int cacheId;
-
     /** Partition id. */
     private final int partId;
 
@@ -46,14 +43,12 @@ public class PartitionSizeRepair extends PipelineWorkload {
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
-     * @param cacheId cache id.
      * @param partSizesMap Map of partition sizes.
      */
     public PartitionSizeRepair(
         long sesId,
         UUID workloadChainId,
         String cacheName,
-        int cacheId,
         int partId,
         boolean repair,
         Map<UUID, NodePartitionSize> partSizesMap
@@ -63,7 +58,6 @@ public class PartitionSizeRepair extends PipelineWorkload {
         this.cacheName = cacheName;
         this.partId = partId;
         this.repair = repair;
-        this.cacheId = cacheId;
         this.partSizesMap = partSizesMap;
     }
 
@@ -72,13 +66,6 @@ public class PartitionSizeRepair extends PipelineWorkload {
      */
     public String cacheName() {
         return cacheName;
-    }
-
-    /**
-     * @return Cache ID.
-     */
-    public int cacheId() {
-        return cacheId;
     }
 
     /**

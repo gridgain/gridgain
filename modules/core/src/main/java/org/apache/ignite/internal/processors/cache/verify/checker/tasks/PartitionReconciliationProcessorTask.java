@@ -158,7 +158,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         List<String> errors = new ArrayList<>();
 
-        Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap<>();
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap<>();
 
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();

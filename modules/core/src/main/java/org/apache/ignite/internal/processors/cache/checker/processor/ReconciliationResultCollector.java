@@ -127,7 +127,7 @@ public interface ReconciliationResultCollector {
     File flushResultsToFile(LocalDateTime startTime);
 
     /** @return Result of partition reconciliation of sizes. */
-    Map<Integer/*cache id*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap();
+    Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap();
 
     /**
      * Represents a collector of inconsistent and repaired entries.
@@ -152,7 +152,7 @@ public interface ReconciliationResultCollector {
         protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
         /** Result of partition reconciliation of sizes. */
-        public final Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
+        public final Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
 
         /**
          * Creates a new SimpleCollector.
@@ -180,7 +180,7 @@ public interface ReconciliationResultCollector {
         }
 
         /** {@inheritDoc} */
-        @Override public Map<Integer, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
+        @Override public Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
             return partSizesMap;
         }
 

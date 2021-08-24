@@ -36,9 +36,6 @@ public class Batch extends PipelineWorkload {
     /** Cache name. */
     private final String cacheName;
 
-    /** Cache id. */
-    private int cacheId;
-
     /** Partition id. */
     private final int partId;
 
@@ -70,7 +67,6 @@ public class Batch extends PipelineWorkload {
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
      * @param cacheName Cache name.
      * @param partId Partition id.
-     * @param cacheId cache id.
      * @param lowerKey Lower key.
      * @param partSizesMap Map of partition sizes.
      */
@@ -80,7 +76,6 @@ public class Batch extends PipelineWorkload {
         long sesId,
         UUID workloadChainId,
         String cacheName,
-        int cacheId,
         int partId,
         KeyCacheObject lowerKey,
         Map<UUID, NodePartitionSize> partSizesMap
@@ -91,7 +86,6 @@ public class Batch extends PipelineWorkload {
 
         this.cacheName = cacheName;
         this.partId = partId;
-        this.cacheId = cacheId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
     }
@@ -115,13 +109,6 @@ public class Batch extends PipelineWorkload {
      */
     public String cacheName() {
         return cacheName;
-    }
-
-    /**
-     * @return Cache ID.
-     */
-    public int cacheId() {
-        return cacheId;
     }
 
     /**

@@ -366,14 +366,8 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         if (reconSize && !hasNext &&
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
-                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
-//                            if (partBatch.repair())
-//                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
-//                            else
-//                                cacheDataStore.flushReconciliationResult(cacheId, nodeSize, false);
-
+                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS)
                             nodeSize.inProgress(false);
-                        }
 
                         return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));
                     }

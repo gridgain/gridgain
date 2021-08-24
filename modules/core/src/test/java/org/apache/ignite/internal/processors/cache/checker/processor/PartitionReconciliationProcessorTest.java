@@ -114,7 +114,7 @@ public class PartitionReconciliationProcessorTest {
         ExecutionResult<PartitionExecutionTaskResultByBatch> emptyRes = new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(null, new HashMap<>(), partSizesMap));
 
         processor.addTask(new Batch(true, false, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-            DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
+            DEFAULT_CACHE, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitioResultByBatchTaskV2.class, emptyRes)
             .execute();
 
@@ -137,7 +137,7 @@ public class PartitionReconciliationProcessorTest {
         ExecutionResult<PartitionExecutionTaskResultByBatch> emptyRes = new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(nextKey, batchRes, partSizesMap));
 
         processor.addTask(new Batch(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-            DEFAULT_CACHE, 0, PARTITION_ID, null, new HashMap<>()))
+            DEFAULT_CACHE, PARTITION_ID, null, new HashMap<>()))
             .whereResult(CollectPartitioResultByBatchTaskV2.class, emptyRes)
             .execute();
 

@@ -212,7 +212,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), sesId, UUID.randomUUID(), cache, cacheId, partId, null, new HashMap<>());
+                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), sesId, UUID.randomUUID(), cache, partId, null, new HashMap<>());
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -412,20 +412,14 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.cacheId(), workload.partitionId(), nextBatchKey, res.sizeMap()));
+                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey, res.sizeMap()));
                 else if (workload.cacheSizeReconciliation()) {
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
-                            workload.cacheName(), workload.cacheId(), workload.partitionId(),
+                            workload.cacheName(), workload.partitionId(),
                             repair && workload.cacheSizeReconciliation(), res.sizeMap())
                     );
                 }
-
-//                if (nextBatchKey == null) {
-//                    collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
-//
-//                    collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.getSizeMap());
-//                }
 
                 if (!recheckKeys.isEmpty()) {
                     schedule(
@@ -542,9 +536,9 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
             PartitionSizeRepairRequestTask.class,
             new PartitionSizeRepairRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), workload.repair(), startTopVer, workload.partSizesMap()),
             res -> {
-                collector.partSizesMap().putIfAbsent(workload.cacheId(), new ConcurrentHashMap<>());
+                collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
 
-                collector.partSizesMap().get(workload.cacheId()).put(workload.partitionId(), res.sizeMap());
+                collector.partSizesMap().get(workload.cacheName()).put(workload.partitionId(), res.sizeMap());
             });
     }
 
