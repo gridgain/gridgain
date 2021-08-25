@@ -819,7 +819,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             A.notEmpty(evts, "events " + exchActions);
 
-            cctx.kernalContext().getSystemExecutorService()
+            cctx.kernalContext().pools().getSystemExecutorService()
                 .submit(() -> evts.forEach(e -> cctx.kernalContext().event().record(e)));
         }
     }

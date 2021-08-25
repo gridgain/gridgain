@@ -1779,7 +1779,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 // Independently called on all nodes.
                 doInParallel(
                     U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.kernalContext().pools().getSystemExecutorService(),
                     cctx.affinity().cacheGroups().values(),
                     desc -> {
                         if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -3672,7 +3672,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // Reserve at least 2 threads for system operations.
             doInParallelUninterruptibly(
                 U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 cctx.affinity().cacheGroups().values(),
                 desc -> {
                     if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -3703,7 +3703,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             doInParallelUninterruptibly(
                 U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 cctx.affinity().caches().values(),
                 desc -> {
                     if (desc.cacheConfiguration().getCacheMode() == CacheMode.LOCAL)
@@ -3897,7 +3897,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 doInParallel(
                     parallelismLvl,
-                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.kernalContext().pools().getSystemExecutorService(),
                     cctx.affinity().cacheGroups().values(),
                     desc -> {
                         if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -3926,7 +3926,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             doInParallel(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 msgs.values(),
                 msg -> {
                     processSingleMessageOnCrdFinish(msg, joinedNodeAff);
@@ -4221,7 +4221,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private void validatePartitionsState() {
         try {
             U.doInParallel(
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroupDescriptors(),
                 grpDesc -> {
                     CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpDesc.groupId());
@@ -4277,7 +4277,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         try {
             U.doInParallel(
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroupDescriptors(),
                 grpDesc -> {
                     CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpDesc.groupId());
@@ -4379,7 +4379,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             U.<CacheGroupContext, Void>doInParallelUninterruptibly(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroups(),
                 grp -> {
                     Set<Integer> parts;
@@ -4843,7 +4843,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             doInParallel(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 msg.partitions().keySet(), grpId -> {
                     CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
 
@@ -4922,7 +4922,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             @Override public void run() {
                 // The rollbackExchange() method has to wait for checkpoint.
                 // That operation is time consumed, and therefore it should be executed outside the discovery thread.
-                cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+                cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
                     @Override public void run() {
                         if (isDone() || !enterBusy())
                             return;
@@ -5228,7 +5228,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             if (allReceived) {
                                 boolean wasMerged0 = wasMerged;
 
-                                cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+                                cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
                                     @Override public void run() {
                                         awaitSingleMapUpdates();
 
@@ -5302,7 +5302,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     try {
                         U.doInParallel(
                             parallelismLvl,
-                            cctx.kernalContext().getSystemExecutorService(),
+                            cctx.kernalContext().pools().getSystemExecutorService(),
                             msgs.entrySet(),
                             entry -> {
                                 this.msgs.put(entry.getKey().id(), entry.getValue());
@@ -5725,7 +5725,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         final ClusterNode newCrd = crd;
 
-        cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+        cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
             @Override public void run() {
                 sendPartitions(newCrd);
             }
