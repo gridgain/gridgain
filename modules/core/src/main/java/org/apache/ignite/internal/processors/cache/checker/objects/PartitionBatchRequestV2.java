@@ -35,7 +35,7 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** If {@code true} - reconciliation of cache size consistency is needed. */
     private final boolean cacheSizeReconciliation;
 
-    /** */
+    /** Map with size of partitions*/
     private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**

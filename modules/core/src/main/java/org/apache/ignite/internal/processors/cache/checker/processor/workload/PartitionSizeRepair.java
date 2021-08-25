@@ -20,10 +20,10 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.PartitionSizeRepairRequestTask;
 
 /**
- * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
+ * Describes batch workload for {@link PartitionSizeRepairRequestTask}.
  */
 public class PartitionSizeRepair extends PipelineWorkload {
     /** Cache name. */
@@ -32,7 +32,10 @@ public class PartitionSizeRepair extends PipelineWorkload {
     /** Partition id. */
     private final int partId;
 
-    /** */
+    /**
+     * If {@code true} need to check and repair.
+     * If {@code false} need to check only.
+     */
     private boolean repair;
 
     /** Map of partition sizes for reconciliation of cache sizes. */
@@ -82,12 +85,16 @@ public class PartitionSizeRepair extends PipelineWorkload {
         return partSizesMap;
     }
 
-    /** */
+    /**
+     * @return Repair.
+     */
     public boolean repair() {
         return repair;
     }
 
-    /** */
+    /**
+     * @param repair Repair.
+     */
     public void repair(boolean repair) {
         this.repair = repair;
     }

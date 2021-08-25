@@ -38,7 +38,7 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
     /** Skipped entries count. */
     private int skippedEntriesCnt;
 
-    /** Skipped entries count. */
+    /** Partitions with broken size count. */
     private int partSizeConflictsCnt;
 
     /**
@@ -54,6 +54,7 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      * @param inconsistentKeysCnt Inconsistent keys count.
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
+     * @param partSizeConflictsCnt Partitions with broken size count.
      */
     public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt, int partSizeConflictsCnt) {
         this.inconsistentKeysCnt = inconsistentKeysCnt;
@@ -62,9 +63,7 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         this.partSizeConflictsCnt = partSizeConflictsCnt;
     }
 
-    /**
-     * @return Transfer object version.
-     */
+    /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
         return V2;
     }
@@ -115,7 +114,7 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
     }
 
     /**
-     * @return Skipped entries count.
+     * @return Partitions with broken size count.
      */
     @Override public int partSizeConflictsCnt() {
         return partSizeConflictsCnt;
@@ -144,6 +143,6 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
             printer.accept("\nSKIPPED ENTRIES: " + skippedEntriesCount() + "\n\n");
 
         if (partSizeConflictsCnt != 0)
-            printer.accept("\nPARTITION WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
+            printer.accept("\nPARTITIONS WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
     }
 }

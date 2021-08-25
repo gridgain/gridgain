@@ -36,7 +36,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /** Result. */
     private ReconciliationAffectedEntries res;
 
-    /** Map of partition sizes for reconciliation of cache sizes. */
+    /** Result of cache size consistency reconciliation. */
     private Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
 
     /** Folders with local results. */
@@ -68,7 +68,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
 
     /**
      * @param partReconciliationRes Partition reconciliation response.
-     * @param partSizesMap Map of partition sizes for reconciliation of cache sizes.
+     * @param partSizesMap Map of partition sizes for cache size consistency reconciliation.
      * @param nodeIdToFolder Node id to folder.
      * @param errors Errors.
      */
@@ -85,10 +85,17 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(res);
         U.writeMap(out, nodeIdToFolder);
         U.writeCollection(out, errors);
+
+        U.writeMap(out, partSizesMap);
     }
 
     /** {@inheritDoc} */
@@ -98,6 +105,9 @@ public class ReconciliationResult extends IgniteDataTransferObject {
         nodeIdToFolder = U.readMap(in);
 
         errors = U.readList(in);
+
+        if (protoVer >= V2)
+            partSizesMap = U.readMap(in);
     }
 
     /**
@@ -108,7 +118,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Map of partition sizes for reconciliation of cache sizes.
+     * @return Result of cache size consistency reconciliation.
      */
     public Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
         return partSizesMap;

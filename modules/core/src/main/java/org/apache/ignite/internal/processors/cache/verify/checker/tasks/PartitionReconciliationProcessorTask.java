@@ -139,7 +139,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 jobs.put(new PartitionReconciliationJobV2(arg, startTime, sesId), node);
         }
         else {
-            log.warning("Partition size consistency reconciliation is not supported by all nodes");
+            log.warning("Cache size consistency reconciliation is not supported by all nodes");
 
             for (ClusterNode node : subgrid)
                 jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);

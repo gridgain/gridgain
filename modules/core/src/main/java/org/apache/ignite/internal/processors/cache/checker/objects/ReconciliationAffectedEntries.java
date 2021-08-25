@@ -58,7 +58,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
         skippedEntries = new HashMap<>();
 
-    /** Result of partition reconciliation of sizes. */
+    /** Result of cache size consistency reconciliation. */
     public Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
 
     /**
@@ -71,6 +71,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
      * @param nodesIdsToConsistentIdsMap Nodes ids to consistent ids map.
      * @param inconsistentKeys Inconsistent keys.
      * @param skippedEntries Skipped entries.
+     * @param partSizesMap Map of partition sizes.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public ReconciliationAffectedEntries(
@@ -90,6 +91,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
      * @param inconsistentKeys Inconsistent keys.
      * @param skippedCaches Skipped caches.
      * @param skippedEntries Skipped entries.
+     * @param partSizesMap Map of partition sizes.
      */
     public ReconciliationAffectedEntries(
         Map<UUID, String> nodesIdsToConsistentIdsMap,
@@ -300,6 +302,9 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         return res.toString();
     }
 
+    /**
+     * @return Returns string representation of broken partition sizes.
+     */
     public String getBrokenSizesAsString() {
         Map<String, Map<String, Map<String, String>>> strBrokenSizes = new HashMap<>();
 
@@ -325,7 +330,6 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
                                     ", real cache size " + entry.getValue().newCacheSize());
                     });
             });
-
         });
 
         StringBuilder res = new StringBuilder();

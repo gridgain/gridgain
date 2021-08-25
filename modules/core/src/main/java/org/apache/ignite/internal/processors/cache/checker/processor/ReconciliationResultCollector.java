@@ -525,7 +525,7 @@ public interface ReconciliationResultCollector {
         }
 
         /**
-         * @return {@code True} if reconciliation result doesn't contain neither inconsistent keys, nor skipped caches, etc.
+         * @return Partitions with broken size count.
          */
         public int partSizeConflicts() {
             return (int)partSizesMap.entrySet().stream().mapToLong(cacheSizes -> {
@@ -538,7 +538,6 @@ public interface ReconciliationResultCollector {
                             .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
                             .count();
                     }).sum();
-
                 }).sum();
         }
     }

@@ -22,6 +22,7 @@ import java.io.ObjectOutput;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /** */
 public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
@@ -80,7 +81,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(filePath);
         out.writeObject(reconciliationAffectedEntries);
-        out.writeObject(partSizesMap);
+        U.writeMap(out, partSizesMap);
         out.writeObject(errorMsg);
     }
 
@@ -89,7 +90,7 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
         ObjectInput in) throws IOException, ClassNotFoundException {
         filePath = (String)in.readObject();
         reconciliationAffectedEntries = (ReconciliationAffectedEntries)in.readObject();
-        partSizesMap = (Map<String, Map<Integer, Map<UUID, NodePartitionSize>>>)in.readObject();
+        partSizesMap = U.readMap(in);
         errorMsg = (String)in.readObject();
     }
 }

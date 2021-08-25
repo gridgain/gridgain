@@ -212,7 +212,16 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(reconciliationTypes.contains(DATA_CONSISTENCY), reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY), sesId, UUID.randomUUID(), cache, partId, null, new HashMap<>());
+                    Batch workload = new Batch(
+                        reconciliationTypes.contains(DATA_CONSISTENCY),
+                        reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY),
+                        sesId,
+                        UUID.randomUUID(),
+                        cache,
+                        partId,
+                        null,
+                        new HashMap<>()
+                    );
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -301,7 +310,13 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(new PartitionReconciliationProcessorResult(collector.result(), collector.partSizesMap()), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(
+                new PartitionReconciliationProcessorResult(
+                    collector.result(),
+                    collector.partSizesMap()),
+                errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()
+                )
+            );
         }
     }
 
@@ -400,7 +415,18 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitioResultByBatchTaskV2.class,
-            new PartitionBatchRequestV2(workload.dataReconciliation(), workload.cacheSizeReconciliation(), workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), workload.partSizesMap(), startTopVer),
+            new PartitionBatchRequestV2(
+                workload.dataReconciliation(),
+                workload.cacheSizeReconciliation(),
+                workload.sessionId(),
+                workload.workloadChainId(),
+                workload.cacheName(),
+                workload.partitionId(),
+                batchSize,
+                workload.lowerKey(),
+                workload.partSizesMap(),
+                startTopVer
+            ),
             res -> {
                 KeyCacheObject nextBatchKey = res.key();
 
@@ -412,7 +438,16 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
 
                 if (reconConsist || reconSize)
-                    schedule(new Batch(reconConsist, reconSize, workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey, res.sizeMap()));
+                    schedule(new Batch(
+                        reconConsist,
+                        reconSize,
+                        workload.sessionId(),
+                        workload.workloadChainId(),
+                        workload.cacheName(),
+                        workload.partitionId(),
+                        nextBatchKey,
+                        res.sizeMap())
+                    );
                 else if (workload.cacheSizeReconciliation()) {
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
@@ -534,7 +569,15 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private void handle(PartitionSizeRepair workload) throws InterruptedException {
         compute(
             PartitionSizeRepairRequestTask.class,
-            new PartitionSizeRepairRequest(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), workload.repair(), startTopVer, workload.partSizesMap()),
+            new PartitionSizeRepairRequest(
+                workload.sessionId(),
+                workload.workloadChainId(),
+                workload.cacheName(),
+                workload.partitionId(),
+                workload.repair(),
+                startTopVer,
+                workload.partSizesMap()
+            ),
             res -> {
                 collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
 
