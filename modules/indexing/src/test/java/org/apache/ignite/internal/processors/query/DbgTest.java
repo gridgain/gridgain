@@ -82,6 +82,7 @@ public class DbgTest extends AbstractIndexingCommonTest {
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
+                            .setMaxSize(100_000_000L)
                             .setPersistenceEnabled(true)
                     )
             );
@@ -132,18 +133,18 @@ public class DbgTest extends AbstractIndexingCommonTest {
             }
         );
 
-        GridTestUtils.runAsync(() -> {
-                while (true) {
-                    U.sleep(10_000);
-
-                    stopGrid(1);
-
-                    U.sleep(10_000);
-
-                    startGrid(1);
-                }
-            }
-        );
+//        GridTestUtils.runAsync(() -> {
+//                while (true) {
+//                    U.sleep(10_000);
+//
+//                    stopGrid(1);
+//
+//                    U.sleep(10_000);
+//
+//                    startGrid(1);
+//                }
+//            }
+//        );
 
         GridTestUtils.runMultiThreaded(() -> {
             long cnt = 0;

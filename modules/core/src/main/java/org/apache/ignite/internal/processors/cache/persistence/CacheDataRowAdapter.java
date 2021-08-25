@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.nio.ByteBuffer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTreeRun
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CacheVersionIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -57,30 +59,42 @@ import static org.apache.ignite.internal.processors.cache.persistence.CacheDataR
  * Cache data row adapter.
  */
 public class CacheDataRowAdapter implements CacheDataRow {
-    /** */
+    /**
+     *
+     */
     @GridToStringExclude
     protected long link;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     protected KeyCacheObject key;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     protected CacheObject val;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     protected long expireTime = -1;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     protected GridCacheVersion ver;
 
     /** Whether version is ready. */
     protected boolean verReady;
 
-    /** */
+    /**
+     *
+     */
     @GridToStringInclude
     protected int cacheId;
 
@@ -132,8 +146,8 @@ public class CacheDataRowAdapter implements CacheDataRow {
     }
 
     /**
-     * Read row from data pages.
-     * Can be called with cctx == null, if cache instance is unknown, but its ID is stored in the data row.
+     * Read row from data pages. Can be called with cctx == null, if cache instance is unknown, but its ID is stored in
+     * the data row.
      *
      * @param grp Cache group.
      * @param sharedCtx Shared context.
@@ -258,13 +272,19 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
                         int itemId = itemId(nextLink);
 
-                        incomplete = readIncomplete(incomplete, sharedCtx, coctx, pageMem,
-                            grpId, pageAddr, itemId, io, rowData, readCacheId, skipVer);
+                        try {
+                            incomplete = readIncomplete(incomplete, sharedCtx, coctx, pageMem,
+                                grpId, pageAddr, itemId, io, rowData, readCacheId, skipVer);
 
-                        if (incomplete == null || (rowData == KEY_ONLY && key != null))
-                            return;
+                            if (incomplete == null || (rowData == KEY_ONLY && key != null))
+                                return;
 
-                        nextLink = incomplete.getNextLink();
+                            nextLink = incomplete.getNextLink();
+                        }
+                        catch (Throwable e) {
+                            System.err.println("+++ PAGE BY LINK\n" + PageIO.printPage(pageAddr, 4096));
+                            throw e;
+                        }
                     }
                     finally {
                         pageMem.readUnlock(grpId, pageId, page);
@@ -381,8 +401,8 @@ public class CacheDataRowAdapter implements CacheDataRow {
      * @param readCacheId {@code true} If need to read cache ID.
      * @param incomplete Incomplete object.
      * @param skipVer Whether version read should be skipped.
-     * @throws IgniteCheckedException If failed.
      * @return Read object.
+     * @throws IgniteCheckedException If failed.
      */
     protected IncompleteObject<?> readFragment(
         GridCacheSharedContext<?, ?> sharedCtx,
@@ -729,7 +749,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
     }
 
     /**
-     *
      * @param grpId Group id.
      * @param link Link.
      * @param pageId PageId.
@@ -913,23 +932,38 @@ public class CacheDataRowAdapter implements CacheDataRow {
         return TxState.NA;
     }
 
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(CacheDataRowAdapter.class, this, "link", U.hexLong(link));
+    }
+
     /**
      *
      */
     public enum RowData {
-        /** */
+        /**
+         *
+         */
         FULL,
 
-        /** */
+        /**
+         *
+         */
         KEY_ONLY,
 
-        /** */
+        /**
+         *
+         */
         NO_KEY,
 
-        /** */
+        /**
+         *
+         */
         LINK_ONLY,
 
-        /** */
+        /**
+         *
+         */
         LINK_WITH_HEADER,
 
         /** Force instant hints actualization for rebalance (to avoid races with vacuum). */
@@ -937,10 +971,5 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         /** Force instant hints actualization for update operation with history (to avoid races with vacuum). */
         NO_KEY_WITH_HINTS
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(CacheDataRowAdapter.class, this, "link", U.hexLong(link));
     }
 }

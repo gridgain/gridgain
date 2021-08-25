@@ -150,37 +150,18 @@ public class NodeStartup {
         try (IgniteEx ign = (IgniteEx)Ignition.start(cfg)) {
             ign.cluster().state(ClusterState.ACTIVE);
 
-//            U.sleep(Long.MAX_VALUE);
-
             while (true) {
                 try {
-//                    FieldsQueryCursor<List<?>> cur = ign.context().query().querySqlFields(new SqlFieldsQuery(
-//                        "SELECT * FROM PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES AS AA " +
-//                            " LEFT JOIN (SELECT * FROM PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES USE INDEX(PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES_IDX_ASSET_ID_LANGUAGE)) AS IDX " +
-//                            "ON AA.ASSET_ID=IDX.ASSET_ID " +
-//                            "AND AA.ATTRIBUTE_ID=IDX.ATTRIBUTE_ID " +
-//                            "AND AA.LANGUAGE=IDX.LANGUAGE " +
-//                            "AND AA.ATTRIBUTE_VALUE=IDX.ATTRIBUTE_VALUE"), true);
-
-//                    FieldsQueryCursor<List<?>> cur = ign.context().query().querySqlFields(new SqlFieldsQuery(
-//                        "SELECT * FROM PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES"), true);
-//
-//                    int cnt = 0;
-//                    for (List<?> r : cur) {
-//                        System.out.println("+++" + r);
-//                        cnt++;
-//                    }
-//
-//                    System.out.println("cnt=" + cnt);
-//                    System.out.println("size=" + ign.cache("WCSC10").size());
-
                     QueryCursor<Cache.Entry<BinaryObject, BinaryObject>> cur =
                         ign.cache("WCSC10").withKeepBinary().query(new ScanQuery<>());
 
                     int example = 0;
+
                     for (Cache.Entry<BinaryObject, BinaryObject> e : cur) {
                         List<List<?>> res = ign.context().query().querySqlFields(new SqlFieldsQuery(
-                            "SELECT * FROM PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES WHERE " +
+                            "SELECT * FROM PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES " +
+                            "USE INDEX (PIM_WCS_ASSET_DYNAMIC_ATTRIBUTES_IDX_ASSET_ID_LANGUAGE) " +
+                            "WHERE " +
                             "ASSET_ID=? " +
                             "AND ATTRIBUTE_ID=? " +
                             "AND LANGUAGE=? " +

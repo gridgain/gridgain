@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -39,9 +40,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTreeRuntimeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
@@ -73,7 +76,9 @@ import static org.apache.ignite.internal.processors.query.h2.database.inlinecolu
  * H2 tree index implementation.
  */
 public class H2Tree extends BPlusTree<H2Row, H2Row> {
-    /** */
+    /**
+     *
+     */
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
@@ -82,7 +87,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Owning table. */
     private final GridH2Table table;
 
-    /** */
+    /**
+     *
+     */
     private final int inlineSize;
 
     /** List of helpers to work with inline values on the page. */
@@ -92,34 +99,49 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final IndexColumn[] cols;
 
     /**
-     * Columns that will be used for inlining.
-     * Could differ from actual columns {@link #cols} in case of
-     * meta page were upgraded from older version.
+     * Columns that will be used for inlining. Could differ from actual columns {@link #cols} in case of meta page were
+     * upgraded from older version.
      */
     private final IndexColumn[] inlineCols;
 
-    /** */
+    /**
+     *
+     */
     private final boolean mvccEnabled;
 
-    /** */
+    /**
+     *
+     */
     private final boolean pk;
 
-    /** */
+    /**
+     *
+     */
     private final boolean affinityKey;
 
-    /** */
+    /**
+     *
+     */
     private final String cacheName;
 
-    /** */
+    /**
+     *
+     */
     private final String tblName;
 
-    /** */
+    /**
+     *
+     */
     private final String idxName;
 
-    /** */
+    /**
+     *
+     */
     private final IoStatisticsHolder stats;
 
-    /** */
+    /**
+     *
+     */
     private final Comparator<Value> comp = this::compareValues;
 
     /** Row cache. */
@@ -135,7 +157,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Keep max calculated inline size for current index. */
     private final AtomicInteger maxCalculatedInlineSize;
 
-    /** */
+    /**
+     *
+     */
     private final IgniteLogger log;
 
     /** Whether PK is stored in unwrapped form. */
@@ -160,12 +184,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param wal Write ahead log manager.
      * @param globalRmvId Global remove ID counter.
      * @param metaPageId Meta page ID.
-     * @param initNew if {@code true} new tree will be initialized,
-     * else meta page info will be read.
+     * @param initNew if {@code true} new tree will be initialized, else meta page info will be read.
      * @param unwrappedCols Unwrapped indexed columns.
      * @param wrappedCols Original indexed columns.
-     * @param maxCalculatedInlineSize Keep max calculated inline size
-     * for current index.
+     * @param maxCalculatedInlineSize Keep max calculated inline size for current index.
      * @param pk {@code true} for primary key.
      * @param affinityKey {@code true} for affinity key.
      * @param mvccEnabled Mvcc flag.
@@ -174,8 +196,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param log Logger.
      * @param stats Statistics holder.
      * @param factory Inline helper factory.
-     * @param configuredInlineSize Size that has been set by user during
-     * index creation.
+     * @param configuredInlineSize Size that has been set by user during index creation.
      * @throws IgniteCheckedException If failed.
      */
     public H2Tree(
@@ -312,6 +333,17 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
+     * Perform sort order correction.
+     *
+     * @param c Compare result.
+     * @param sortType Sort type.
+     * @return Fixed compare result.
+     */
+    private static int fixSort(int c, int sortType) {
+        return sortType == SortOrder.ASCENDING ? c : -c;
+    }
+
+    /**
      * @param metaInfo Metapage info.
      * @param inlineIdxs Base collection of index helpers.
      * @return {@code true} if inline object is supported by exists tree.
@@ -375,9 +407,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
-     * !!! This method must be invoked in read or write lock of referring index page. It is needed to
-     * !!! make sure that row at this link will be invisible, when the link will be removed from
-     * !!! from all the index pages, so that row can be safely erased from the data page.
+     * !!! This method must be invoked in read or write lock of referring index page. It is needed to !!! make sure that
+     * row at this link will be invisible, when the link will be removed from !!! from all the index pages, so that row
+     * can be safely erased from the data page.
      *
      * @param link Link.
      * @return Row.
@@ -388,9 +420,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         if (follow) {
             row.initFromLink(
-                    cctx.group(),
-                    CacheDataRowAdapter.RowData.FULL,
-                    true
+                cctx.group(),
+                CacheDataRowAdapter.RowData.FULL,
+                true
             );
         }
 
@@ -459,8 +491,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param mvccOpCntr Mvcc operation counter.
      * @return Row.
      */
-    private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr, CacheDataRowAdapter.RowData rowData)
-            throws IgniteCheckedException {
+    private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr,
+        CacheDataRowAdapter.RowData rowData)
+        throws IgniteCheckedException {
         int partId = PageIdUtils.partId(PageIdUtils.pageId(link));
 
         MvccDataRow row = new MvccDataRow(
@@ -519,8 +552,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
-     * Update root meta page if need (previous version not supported features flags
-     * and created product version on root meta page).
+     * Update root meta page if need (previous version not supported features flags and created product version on root
+     * meta page).
      *
      * @param inlineObjSupported inline POJO by created tree flag.
      * @throws IgniteCheckedException On error.
@@ -552,6 +585,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /**
      * Copy info from another meta page.
+     *
      * @param info Meta page info.
      * @throws IgniteCheckedException If failed.
      */
@@ -581,7 +615,6 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             releasePage(metaPageId, metaPage);
         }
     }
-
 
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
@@ -625,44 +658,39 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
                 inlineSizeRecomendation(row);
 
-                SearchRow rowData = getRow(io, pageAddr, idx);
+                try {
+                    SearchRow rowData = getRow(io, pageAddr, idx);
+                    for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
+                        IndexColumn col = cols[i];
+                        int idx0 = col.column.getColumnId();
 
-                for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
-                    IndexColumn col = cols[i];
-                    int idx0 = col.column.getColumnId();
+                        Value v2 = row.getValue(idx0);
 
-                    Value v2 = row.getValue(idx0);
+                        if (v2 == null) {
+                            // Can't compare further.
+                            return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                        }
 
-                    if (v2 == null) {
-                        // Can't compare further.
-                        return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                        Value v1 = rowData.getValue(idx0);
+
+                        int c = compareValues(v1, v2);
+
+                        if (c != 0)
+                            return fixSort(c, col.sortType);
                     }
 
-                    Value v1 = rowData.getValue(idx0);
-
-                    int c = compareValues(v1, v2);
-
-                    if (c != 0)
-                        return fixSort(c, col.sortType);
+                    return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
                 }
+                catch (BPlusTreeRuntimeException e) {
+                    System.err.println("+++ IDX PAGE\n" + PageIO.printPage(pageAddr, 4096));
 
-                return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                    throw e;
+                }
             }
         }
         catch (DbException ex) {
             throw new IgniteCheckedException("Rows cannot be compared", ex);
         }
-    }
-
-    /**
-     * Perform sort order correction.
-     *
-     * @param c Compare result.
-     * @param sortType Sort type.
-     * @return Fixed compare result.
-     */
-    private static int fixSort(int c, int sortType) {
-        return sortType == SortOrder.ASCENDING ? c : -c;
     }
 
     /**
@@ -700,9 +728,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
-     * Checks both rows are the same. <p/>
-     * Primarily used to verify both search rows are the same and we can apply
-     * the single row lookup optimization.
+     * Checks both rows are the same. <p/> Primarily used to verify both search rows are the same and we can apply the
+     * single row lookup optimization.
      *
      * @param r1 The first row.
      * @param r2 Another row.
@@ -873,28 +900,96 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     }
 
     /**
+     * @param v1 First value.
+     * @param v2 Second value.
+     * @return Comparison result.
+     */
+    public int compareValues(Value v1, Value v2) {
+        return v1 == v2 ? 0 : table.compareValues(v1, v2);
+    }
+
+    /**
+     * @return {@code True} if index was created during curren node's lifetime, {@code False} if it was restored from
+     * disk.
+     */
+    public boolean created() {
+        return created;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(H2Tree.class, this, "super", super.toString());
+    }
+
+    /**
+     * Construct the exception and invoke failure processor.
+     *
+     * @param msg Message.
+     * @param cause Cause.
+     * @param grpId Group id.
+     * @param pageIds Pages ids.
+     * @return New CorruptedTreeException instance.
+     */
+    @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId,
+        long... pageIds) {
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
+
+        processFailure(FailureType.CRITICAL_ERROR, e);
+
+        return e;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void temporaryReleaseLock() {
+        cctx.kernalContext().cache().context().database().checkpointReadUnlock();
+        cctx.kernalContext().cache().context().database().checkpointReadLock();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long maxLockHoldTime() {
+        long sysWorkerBlockedTimeout = cctx.kernalContext().workersRegistry().getSystemWorkerBlockedTimeout();
+
+        // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
+        return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+    }
+
+    /**
      *
      */
     public static class MetaPageInfo {
-        /** */
+        /**
+         *
+         */
         int inlineSize;
 
-        /** */
+        /**
+         *
+         */
         boolean useUnwrappedPk;
 
-        /** */
+        /**
+         *
+         */
         boolean flagsSupported;
 
-        /** */
+        /**
+         *
+         */
         boolean inlineObjSupported;
 
-        /** */
+        /**
+         *
+         */
         boolean inlineObjHash;
 
-        /** */
+        /**
+         *
+         */
         boolean inlineDecimalSupported;
 
-        /** */
+        /**
+         *
+         */
         IgniteProductVersion createdVer;
 
         /**
@@ -956,58 +1051,5 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         public boolean inlineDecimalSupported() {
             return inlineDecimalSupported;
         }
-    }
-
-    /**
-     * @param v1 First value.
-     * @param v2 Second value.
-     * @return Comparison result.
-     */
-    public int compareValues(Value v1, Value v2) {
-        return v1 == v2 ? 0 : table.compareValues(v1, v2);
-    }
-
-    /**
-     * @return {@code True} if index was created during curren node's lifetime, {@code False} if it was restored from
-     * disk.
-     */
-    public boolean created() {
-        return created;
-    }
-
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(H2Tree.class, this, "super", super.toString());
-    }
-
-    /**
-     * Construct the exception and invoke failure processor.
-     *
-     * @param msg Message.
-     * @param cause Cause.
-     * @param grpId Group id.
-     * @param pageIds Pages ids.
-     * @return New CorruptedTreeException instance.
-     */
-    @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
-
-        processFailure(FailureType.CRITICAL_ERROR, e);
-
-        return e;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void temporaryReleaseLock() {
-        cctx.kernalContext().cache().context().database().checkpointReadUnlock();
-        cctx.kernalContext().cache().context().database().checkpointReadLock();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected long maxLockHoldTime() {
-        long sysWorkerBlockedTimeout = cctx.kernalContext().workersRegistry().getSystemWorkerBlockedTimeout();
-
-        // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
-        return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
     }
 }
