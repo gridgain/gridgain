@@ -2188,6 +2188,8 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                     loadedPages.remove(fullPageId.groupId(), fullPageId.effectivePageId());
 
+                    removeIdxPageFromStat(absPtr, fullPageId);
+
                     return true;
                 }
 
@@ -2198,8 +2200,18 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                 loadedPages.remove(fullPageId.groupId(), fullPageId.effectivePageId());
 
+                removeIdxPageFromStat(absPtr, fullPageId);
+
                 // Page was not modified, ok to evict.
                 return true;
+            }
+        }
+
+        /** Change index page usage statistic. */
+        private void removeIdxPageFromStat(long absPtr, FullPageId fullPageId) {
+            if (PageIO.isIndexPage(PageIO.getType(absPtr + PAGE_OVERHEAD))) {
+                int grpId = fullPageId.groupId();
+                dataRegionMetrics.cacheGrpPageMetrics(grpId).indexPages().decrement();
             }
         }
 
