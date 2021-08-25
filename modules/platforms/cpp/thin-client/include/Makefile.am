@@ -32,8 +32,7 @@ nobase_include_HEADERS = \
     ignite/impl/thin/writable.h \
     ignite/impl/thin/cache/cache_client_proxy.h \
     ignite/impl/thin/cache/query/query_fields_cursor_impl.h \
-    ignite/impl/thin/cache/query/query_fields_row_impl.h \
-    ignite/impl/thin/compute/compute_client_impl.h
+    ignite/impl/thin/cache/query/query_fields_row_impl.h
 
 uninstall-hook:
 	if [ -d ${includedir}/ignite ]; then find ${includedir}/ignite -type d -empty -delete; fi
