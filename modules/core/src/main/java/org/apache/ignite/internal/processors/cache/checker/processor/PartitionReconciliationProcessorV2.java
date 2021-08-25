@@ -417,7 +417,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
                             workload.cacheName(), workload.partitionId(),
-                            repair && workload.cacheSizeReconciliation(), res.sizeMap())
+                            repair, res.sizeMap())
                     );
                 }
 

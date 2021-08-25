@@ -178,7 +178,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 data.partSizesMap().entrySet().forEach(e -> {
                     partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
                     e.getValue().entrySet().forEach(e0 -> partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue()));
-
                 });
 
                 if (data.errorMsg() != null)

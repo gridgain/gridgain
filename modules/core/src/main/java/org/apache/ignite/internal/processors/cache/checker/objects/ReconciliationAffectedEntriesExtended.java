@@ -38,6 +38,9 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
     /** Skipped entries count. */
     private int skippedEntriesCnt;
 
+    /** Skipped entries count. */
+    private int partSizeConflictsCnt;
+
     /**
      * Default constructor for externalization.
      */
@@ -52,10 +55,18 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      */
-    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
+    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt, int partSizeConflictsCnt) {
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;
         this.skippedEntriesCnt = skippedEntriesCnt;
+        this.partSizeConflictsCnt = partSizeConflictsCnt;
+    }
+
+    /**
+     * @return Transfer object version.
+     */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */
@@ -65,6 +76,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         out.writeInt(skippedCachesCnt);
 
         out.writeInt(skippedEntriesCnt);
+
+        out.writeInt(partSizeConflictsCnt);
     }
 
     /** {@inheritDoc} */
@@ -75,6 +88,9 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         skippedCachesCnt = in.readInt();
 
         skippedEntriesCnt = in.readInt();
+
+        if (protoVer >= V2)
+            partSizeConflictsCnt = in.readInt();
     }
 
     /**
@@ -98,6 +114,12 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         return skippedEntriesCnt;
     }
 
+    /**
+     * @return Skipped entries count.
+     */
+    @Override public int partSizeConflictsCnt() {
+        return partSizeConflictsCnt;
+    }
 
     /** @inheritDoc */
     @Override public void merge(ReconciliationAffectedEntries outer) {
@@ -120,5 +142,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
 
         if (skippedEntriesCnt != 0)
             printer.accept("\nSKIPPED ENTRIES: " + skippedEntriesCount() + "\n\n");
+
+        if (partSizeConflictsCnt != 0)
+            printer.accept("\nPARTITION WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
     }
 }

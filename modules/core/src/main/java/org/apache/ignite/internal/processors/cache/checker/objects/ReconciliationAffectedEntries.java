@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
@@ -57,6 +58,9 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
         skippedEntries = new HashMap<>();
 
+    /** Result of partition reconciliation of sizes. */
+    public Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
+
     /**
      * Default constructor for externalization.
      */
@@ -73,10 +77,12 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         Map<UUID, String> nodesIdsToConsistentIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
-            skippedEntries) {
+            skippedEntries,
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap) {
         this.nodesIdsToConsistentIdsMap = nodesIdsToConsistentIdsMap;
         this.inconsistentKeys = inconsistentKeys;
         this.skippedEntries = skippedEntries;
+        this.partSizesMap = partSizesMap;
     }
 
     /**
@@ -90,11 +96,18 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
-            skippedEntries) {
+            skippedEntries,
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap) {
         this.nodesIdsToConsistentIdsMap = nodesIdsToConsistentIdsMap;
         this.inconsistentKeys = inconsistentKeys;
         this.skippedCaches = skippedCaches;
         this.skippedEntries = skippedEntries;
+        this.partSizesMap = partSizesMap;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
     }
 
     /** {@inheritDoc} */
@@ -106,6 +119,8 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         U.writeCollection(out, skippedCaches);
 
         U.writeMap(out, skippedEntries);
+
+        U.writeMap(out, partSizesMap);
     }
 
     /** {@inheritDoc} */
@@ -118,6 +133,9 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         skippedCaches = U.readSet(in);
 
         skippedEntries = U.readMap(in);
+
+        if (protoVer >= V2)
+            partSizesMap = U.readMap(in);
     }
 
     /**
@@ -149,6 +167,14 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
             printer.accept("\nSKIPPED ENTRIES: " + skippedEntriesCount() + "\n\n");
 
             printer.accept(skippedEntries(skippedEntries));
+        }
+
+        String brokenSizes = getBrokenSizesAsString();
+
+        if (brokenSizes != null) {
+            printer.accept("\nPARTITIONS WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
+
+            printer.accept(brokenSizes);
         }
     }
 
@@ -274,6 +300,59 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         return res.toString();
     }
 
+    public String getBrokenSizesAsString() {
+        Map<String, Map<String, Map<String, String>>> strBrokenSizes = new HashMap<>();
+
+        partSizesMap.entrySet().forEach(cacheSizes -> {
+            Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
+
+            partsSizes.entrySet().forEach(partSizes -> {
+                Integer partId = partSizes.getKey();
+                Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
+
+                nodesSizes.entrySet().stream()
+                    .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
+                    .forEach(entry -> {
+                        strBrokenSizes.putIfAbsent(entry.getValue().cacheName(), new HashMap<>());
+
+                        strBrokenSizes.get(entry.getValue().cacheName())
+                            .putIfAbsent(Integer.toString(partId), new HashMap<>());
+
+                        strBrokenSizes.get(entry.getValue().cacheName())
+                            .get(Integer.toString(partId))
+                            .put(entry.getKey().toString(),
+                                "cache size from partition meta " + entry.getValue().oldCacheSize() +
+                                    ", real cache size " + entry.getValue().newCacheSize());
+                    });
+            });
+
+        });
+
+        StringBuilder res = new StringBuilder();
+
+        strBrokenSizes.entrySet().forEach(cacheSizes -> {
+            String cacheName = cacheSizes.getKey();
+            Map<String, Map<String, String>> partsSizes = cacheSizes.getValue();
+
+            res.append("Cache: " + cacheName + "\n");
+
+            partsSizes.entrySet().forEach(partSizes -> {
+                String partId = partSizes.getKey();
+                Map<String, String> nodesSizes = partSizes.getValue();
+
+                res.append("\tpartition: " + partId + "\n");
+
+                nodesSizes.entrySet().stream()
+                    .forEach(entry -> {
+                        res.append("\t\tnode: " + entry.getKey() + "\n");
+                        res.append("\t\t\t" + entry.getValue() + "\n");
+                    });
+            });
+        });
+
+        return res.toString();
+    }
+
     /**
      * Added outer value to this class.
      */
@@ -303,7 +382,18 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
      * @return {@code True} if reconciliation result doesn't contain neither inconsistent keys, nor skipped caches, etc.
      */
     public boolean isEmpty() {
-        return inconsistentKeys.isEmpty() && skippedCaches.isEmpty() && skippedEntries().isEmpty();
+        return inconsistentKeys.isEmpty() && skippedCaches.isEmpty() && skippedEntries().isEmpty() &&
+            partSizesMap.entrySet().stream().noneMatch(cacheSizes -> {
+                Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
+
+                return partsSizes.entrySet().stream().noneMatch(partSizes -> {
+                    Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
+
+                    return nodesSizes.entrySet().stream()
+                        .noneMatch(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize());
+                });
+
+            });
     }
 
     /**
@@ -353,5 +443,23 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
      */
     public int skippedEntriesCount() {
         return skippedEntries.size();
+    }
+
+    /**
+     * @return Skipped entries count.
+     */
+    public int partSizeConflictsCnt() {
+        return (int)partSizesMap.entrySet().stream().mapToLong(cacheSizes -> {
+                Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
+
+                return partsSizes.entrySet().stream().mapToLong(partSizes -> {
+                    Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
+
+                    return nodesSizes.entrySet().stream()
+                        .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
+                        .count();
+                }).sum();
+
+            }).sum();
     }
 }

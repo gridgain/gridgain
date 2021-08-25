@@ -320,7 +320,8 @@ public interface ReconciliationResultCollector {
                             ClusterNode::id,
                             n -> n.consistentId().toString())),
                         inconsistentKeys,
-                        skippedEntries
+                        skippedEntries,
+                        partSizesMap
                     );
                 }
             }
@@ -340,14 +341,6 @@ public interface ReconciliationResultCollector {
                             pw.flush();
                         }
 
-                        String brokenSizes = generateSizeResult();
-
-                        if (!brokenSizes.isEmpty()) {
-                            pw.write(brokenSizes);
-
-                            pw.flush();
-                        }
-
                         return file;
                     }
                     catch (IOException e) {
@@ -359,62 +352,6 @@ public interface ReconciliationResultCollector {
                 }
 
             return null;
-        }
-
-        public String generateSizeResult() {
-            Map<String, Map<String, Map<String, String>>> strBrokenSizes = new HashMap<>();
-
-            partSizesMap().entrySet().forEach(cacheSizes -> {
-                Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
-
-                partsSizes.entrySet().forEach(partSizes -> {
-                    Integer partId = partSizes.getKey();
-                    Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
-
-                    nodesSizes.entrySet().stream()
-                        .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
-                        .forEach(entry -> {
-                            strBrokenSizes.putIfAbsent(entry.getValue().cacheName(), new HashMap<>());
-
-                            strBrokenSizes.get(entry.getValue().cacheName())
-                                .putIfAbsent(Integer.toString(partId), new HashMap<>());
-
-                            strBrokenSizes.get(entry.getValue().cacheName())
-                                .get(Integer.toString(partId))
-                                .put(entry.getKey().toString(),
-                                    "cache size from partition meta " + entry.getValue().oldCacheSize() +
-                                        ", real cache size " + entry.getValue().newCacheSize());
-                        });
-                });
-
-            });
-
-            StringBuilder result = new StringBuilder();
-
-            strBrokenSizes.entrySet().forEach(cacheSizes -> {
-                String cacheName = cacheSizes.getKey();
-                Map<String, Map<String, String>> partsSizes = cacheSizes.getValue();
-
-                result.append("Cache: " + cacheName + "\n");
-
-                partsSizes.entrySet().forEach(partSizes -> {
-                    String partId = partSizes.getKey();
-                    Map<String, String> nodesSizes = partSizes.getValue();
-
-                    result.append("\tpartition: " + partId + "\n");
-
-                    StringBuilder brokenSizes = new StringBuilder();
-
-                    nodesSizes.entrySet().stream()
-                        .forEach(entry -> {
-                            result.append("\t\tnode: " + entry.getKey() + "\n");
-                            result.append("\t\t\t" + entry.getValue() + "\n");
-                        });
-                });
-
-            });
-
-            return result.toString();
         }
     }
 
@@ -481,7 +418,8 @@ public interface ReconciliationResultCollector {
                     return new ReconciliationAffectedEntriesExtended(
                         totalKeysCnt.get(),
                         0, // skipped caches count which is not tracked/used.
-                        skippedEntries.size());
+                        skippedEntries.size(),
+                        partSizeConflicts());
                 }
             }
         }
@@ -584,6 +522,24 @@ public interface ReconciliationResultCollector {
                     log.error("Cannot store partition's data [cacheName=" + cacheName + ", partId" + partId + ']');
                 }
             }
+        }
+
+        /**
+         * @return {@code True} if reconciliation result doesn't contain neither inconsistent keys, nor skipped caches, etc.
+         */
+        public int partSizeConflicts() {
+            return (int)partSizesMap.entrySet().stream().mapToLong(cacheSizes -> {
+                    Map<Integer, Map<UUID, NodePartitionSize>> partsSizes = cacheSizes.getValue();
+
+                    return partsSizes.entrySet().stream().mapToLong(partSizes -> {
+                        Map<UUID, NodePartitionSize> nodesSizes = partSizes.getValue();
+
+                        return nodesSizes.entrySet().stream()
+                            .filter(entry -> entry.getValue().oldCacheSize() != entry.getValue().newCacheSize())
+                            .count();
+                    }).sum();
+
+                }).sum();
         }
     }
 }
