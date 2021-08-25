@@ -19,6 +19,7 @@
 
 #include "impl/ignite_client_impl.h"
 #include "impl/cache/cache_client_impl.h"
+#include "impl/compute/compute_client_impl.h"
 
 using namespace ignite::impl::thin;
 using namespace cache;
@@ -64,6 +65,11 @@ namespace ignite
         IgniteClient::SP_Void IgniteClient::InternalTransactions()
         {
             return static_cast<SP_Void>(GetClientImpl(impl).ClientTransactions());
+        }
+
+        IgniteClient::SP_Void IgniteClient::InternalCompute()
+        {
+            return static_cast<SP_Void>(GetClientImpl(impl).GetCompute());
         }
 
         IgniteClient::IgniteClient(SP_Void& impl)
