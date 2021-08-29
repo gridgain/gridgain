@@ -1668,15 +1668,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /**
-     * Files from {@link #walWorkDir}.
-     *
-     * @return Raw WAL segments from working directory.
-     */
-    public FileDescriptor[] walWorkFiles() {
-        return scan(walWorkDir.listFiles(WAL_SEGMENT_FILE_FILTER));
-    }
-
-    /**
      * @return Sorted WAL files descriptors.
      */
     public static FileDescriptor[] scan(@Nullable File[] allFiles) {
