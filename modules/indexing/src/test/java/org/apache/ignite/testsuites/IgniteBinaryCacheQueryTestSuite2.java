@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCachePartitionedQueryMu
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryEvictsMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlQueryMultiThreadedSelfTest;
+import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlTest;
 import org.apache.ignite.internal.processors.cache.QueryJoinWithDifferentNodeFiltersTest;
 import org.apache.ignite.internal.processors.cache.SqlCacheStartStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedTxMultiNodeSelfTest;
@@ -230,6 +231,7 @@ import org.junit.runners.Suite;
 
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,
+    PartitionReconciliationFixPartitionSizesStressSqlTest.class,
 
     // Memory quota tests.
     SqlStatisticsMemoryQuotaTest.class,

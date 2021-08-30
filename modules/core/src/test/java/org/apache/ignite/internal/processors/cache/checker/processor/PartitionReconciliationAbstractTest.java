@@ -32,6 +32,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -277,17 +278,17 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     /**
      *
      */
-    protected IgniteInternalFuture startAsyncLoad0(AtomicReference<ReconciliationResult> reconResult,
+    protected IgniteInternalFuture startAsyncLoad(AtomicReference<ReconciliationResult> reconResult,
         IgniteEx client,
         IgniteCache<Object, Object> cache,
         int startKey,
         int endKey,
         boolean clear) {
-        Random rnd = new Random();
-
-        CacheAtomicityMode atomicityMode = cache.getConfiguration(CacheConfiguration.class).getAtomicityMode();
-
         return GridTestUtils.runAsync(() -> {
+                Random rnd = new Random();
+
+                CacheAtomicityMode atomicityMode = cache.getConfiguration(CacheConfiguration.class).getAtomicityMode();
+
                 int op;
 
                 long n;
@@ -445,5 +446,53 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
                 }
             },
             "LoadThread");
+    }
+
+    /**
+     *
+     */
+    protected IgniteInternalFuture startAsyncSqlLoad(AtomicReference<ReconciliationResult> reconResult,
+        IgniteEx client,
+        IgniteCache<Object, Object> cache,
+        String table,
+        List<Long> keysInTable,
+        int startKey,
+        int endKey) {
+        return GridTestUtils.runAsync(() -> {
+                Random rnd = new Random();
+
+                int op;
+
+                long n;
+
+                while (reconResult.get() == null) {
+                    op = rnd.nextInt(2);
+
+                    switch (op) {
+                        case 0:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            if (!keysInTable.contains(n)) {
+                                cache.query(new SqlFieldsQuery("insert into " + table + "(id, p) values (" + n + ", " + n + ")")).getAll();
+
+                                keysInTable.add(n);
+                            }
+
+                            break;
+
+                        case 1:
+                            n = startKey + rnd.nextInt(endKey - startKey);
+
+                            if (keysInTable.contains(n)) {
+                                cache.query(new SqlFieldsQuery("delete from " + table + " where id = " + n)).getAll();
+
+                                keysInTable.remove(n);
+                            }
+
+                            break;
+                    }
+                }
+            },
+            "SqlLoadThread");
     }
 }

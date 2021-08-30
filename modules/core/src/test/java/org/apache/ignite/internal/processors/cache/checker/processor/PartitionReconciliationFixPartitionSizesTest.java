@@ -98,7 +98,7 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
         cleanPersistenceDir();
     }
 
-    /** Tests that two size reconciliationы in a row work sucessfully. */
+    /** Tests that two size reconciliation in a row work sucessfully. */
     @Test
     @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
     public void testTwoReconciliationInRow() throws Exception {
@@ -115,129 +115,69 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         IgniteCache<Object, Object> cache0 = client.createCache(DEFAULT_CACHE_NAME);
 
-        //first reconciliation
-
-        for (long i = startKey; i < endKey; i++) {
-            i += 1;
-            if (i < endKey)
-                cache0.put(i, i);
-        }
-
-        int startSize0 = cache0.size();
-
-        List<IgniteEx> grids = new ArrayList<>();
-
-        for (int i = 0; i < nodesCnt; i++)
-            grids.add(grid(i));
-
-        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
-
-        assertFalse(cache0.size() == startSize0);
-
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(10);
-        Set<String> cacheNames = new HashSet<>();
-        cacheNames.add(DEFAULT_CACHE_NAME);
-        builder.caches(cacheNames);
+        builder.caches(new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
         builder.batchSize(10);
         builder.reconTypes(new HashSet(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)));
         builder.repairAlg(RepairAlgorithm.PRIMARY);
 
-        reconResult = new AtomicReference<>();
+        for (int j = 0; j < 2; j++) {
+            int startSize0;
 
-        List<IgniteInternalFuture> loadFuts = new ArrayList<>();
-
-        for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, client, cache0, startKey, endKey, false));
-
-        GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
-            1, "reconciliation");
-
-        GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
-
-        for (IgniteInternalFuture fut : loadFuts)
-            fut.get();
-
-        for (long i = startKey; i < endKey; i++)
-            cache0.put(i, i);
-
-        long allKeysCountForCacheGroup;
-        long allKeysCountForCache;
-
-        for (String cacheName : cacheNames) {
-            allKeysCountForCacheGroup = 0;
-            allKeysCountForCache = 0;
-
-            for (int i = 0; i < nodesCnt; i++) {
-                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
-                allKeysCountForCacheGroup += i0;
-
-                long i1 = getPartitionsSizeForCache(grid(i), cacheName);
-                allKeysCountForCache += i1;
+            for (long i = startKey; i < endKey; i++) {
+                i += 1;
+                if (i < endKey)
+                    cache0.put(i, i);
             }
 
-            assertEquals(endKey, client.cache(cacheName).size());
-            assertEquals(endKey, allKeysCountForCacheGroup);
-            assertEquals(endKey, allKeysCountForCache);
-        }
+            startSize0 = cache0.size();
 
-        cache0.clear();
+            List<IgniteEx> grids = new ArrayList<>();
 
-        //second reconciliation
+            for (int i = 0; i < nodesCnt; i++)
+                grids.add(grid(i));
 
-        for (long i = startKey; i < endKey; i++) {
-            i += 1;
-            if (i < endKey)
+            breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
+
+            assertFalse(cache0.size() == startSize0);
+
+            reconResult = new AtomicReference<>();
+
+            List<IgniteInternalFuture> loadFuts = new ArrayList<>();
+
+            for (int i = 0; i < 4; i++)
+                loadFuts.add(startAsyncLoad(reconResult, client, cache0, startKey, endKey, false));
+
+            GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
+                1, "reconciliation");
+
+            GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
+
+            for (IgniteInternalFuture fut : loadFuts)
+                fut.get();
+
+            for (long i = startKey; i < endKey; i++)
                 cache0.put(i, i);
-        }
 
-        startSize0 = cache0.size();
-
-        grids = new ArrayList<>();
-
-        for (int i = 0; i < nodesCnt; i++)
-            grids.add(grid(i));
-
-        breakCacheSizes(grids, new HashSet<>(Arrays.asList(DEFAULT_CACHE_NAME)));
-
-        assertFalse(cache0.size() == startSize0);
-
-        reconResult = new AtomicReference<>();
-
-        loadFuts = new ArrayList<>();
-
-        for (int i = 0; i < 4; i++)
-            loadFuts.add(startAsyncLoad0(reconResult, client, cache0, startKey, endKey, false));
-
-        GridTestUtils.runMultiThreadedAsync(() -> reconResult.set(partitionReconciliation(client, builder)),
-            1, "reconciliation");
-
-        GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
-
-        for (IgniteInternalFuture fut : loadFuts)
-            fut.get();
-
-        for (long i = startKey; i < endKey; i++)
-            cache0.put(i, i);
-
-        for (String cacheName : cacheNames) {
-            allKeysCountForCacheGroup = 0;
-            allKeysCountForCache = 0;
+            long allKeysCountForCacheGroup = 0;
+            long allKeysCountForCache = 0;
 
             for (int i = 0; i < nodesCnt; i++) {
-                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), cacheName);
+                long i0 = getFullPartitionsSizeForCacheGroup(grid(i), DEFAULT_CACHE_NAME);
                 allKeysCountForCacheGroup += i0;
 
-                long i1 = getPartitionsSizeForCache(grid(i), cacheName);
+                long i1 = getPartitionsSizeForCache(grid(i), DEFAULT_CACHE_NAME);
                 allKeysCountForCache += i1;
             }
 
-            assertEquals(endKey, client.cache(cacheName).size());
+            assertEquals(endKey, client.cache(DEFAULT_CACHE_NAME).size());
             assertEquals(endKey, allKeysCountForCacheGroup);
             assertEquals(endKey, allKeysCountForCache);
-        }
 
+            cache0.clear();
+        }
     }
 
     /** Tests that only sizes of repaired caches fixed. */
