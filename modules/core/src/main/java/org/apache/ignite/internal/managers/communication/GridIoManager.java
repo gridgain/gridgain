@@ -1721,7 +1721,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         IgniteSecurity sec = ctx.security();
 
-        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(subjId)) {
+        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(nodeId, subjId)) {
             lsnr.onMessage(nodeId, msg, plc);
         }
         finally {
