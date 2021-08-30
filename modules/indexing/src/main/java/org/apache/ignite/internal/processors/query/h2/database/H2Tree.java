@@ -682,7 +682,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                     return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
                 }
                 catch (BPlusTreeRuntimeException e) {
-                    System.err.println("+++ IDX PAGE\n" + PageIO.printPage(pageAddr, 4096));
+                    System.err.println("+++ IDX PAGE idx=" + idx + "\n" + PageIO.printPage(pageAddr, 4096));
 
                     throw e;
                 }

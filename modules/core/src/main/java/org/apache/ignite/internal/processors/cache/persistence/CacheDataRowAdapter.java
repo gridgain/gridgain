@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -256,8 +258,10 @@ public class CacheDataRowAdapter implements CacheDataRow {
 
         long nextLink = link;
 
+        List<Long> links = new ArrayList<>();
         do {
             final long pageId = pageId(nextLink);
+            links.add(nextLink);
 
             try {
                 final long page = pageMem.acquirePage(grpId, pageId, statHolder);
@@ -282,7 +286,9 @@ public class CacheDataRowAdapter implements CacheDataRow {
                             nextLink = incomplete.getNextLink();
                         }
                         catch (Throwable e) {
-                            System.err.println("+++ PAGE BY LINK\n" + PageIO.printPage(pageAddr, 4096));
+                            System.err.println("+++ PAGE BY LINK " +
+                                "itemId=" + itemId + " "
+                                + "\n" + PageIO.printPage(pageAddr, 4096));
                             throw e;
                         }
                     }

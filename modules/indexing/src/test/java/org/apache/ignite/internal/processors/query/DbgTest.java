@@ -20,6 +20,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -133,18 +134,22 @@ public class DbgTest extends AbstractIndexingCommonTest {
             }
         );
 
-//        GridTestUtils.runAsync(() -> {
-//                while (true) {
-//                    U.sleep(10_000);
-//
+        AtomicInteger key = new AtomicInteger(10);
+
+        GridTestUtils.runAsync(() -> {
+                while (true) {
+                    U.sleep(1_000);
+
+                    key.incrementAndGet();
+
 //                    stopGrid(1);
-//
+
 //                    U.sleep(10_000);
 //
 //                    startGrid(1);
-//                }
-//            }
-//        );
+                }
+            }
+        );
 
         GridTestUtils.runMultiThreaded(() -> {
             long cnt = 0;
@@ -177,6 +182,28 @@ public class DbgTest extends AbstractIndexingCommonTest {
                 }
             }
         }, 10, "sql-upd");
+
+        GridTestUtils.runMultiThreaded(() -> {
+            long cnt = 0;
+
+            while (true) {
+                try {
+                    sql("DELETE FROM TEST WHERE ASSET_ID=? ", row(key.get())[0]);
+                    sql("INSERT INTO TEST VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", row(key.get()));
+
+                }
+                catch (Exception e) {
+                    String msg = e.getMessage();
+
+                    if (
+                        !msg.contains("Ignite instance with provided name doesn't exist")
+                            && !msg.contains("Failed to execute query (grid is stopping)")
+                    )
+                        log.error("+++ ", e);
+                }
+            }
+        }, 10, "sql-upd");
+
     }
 
     /**

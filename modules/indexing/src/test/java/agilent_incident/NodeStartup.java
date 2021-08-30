@@ -173,12 +173,12 @@ public class NodeStartup {
                                 e.getKey().field("ATTRIBUTE_VALUE")
                                 ), true).getAll();
 
-                        if (res.isEmpty())
-                            System.out.println("+++ " + e);
-                        else if (example < 10){
-                            example++;
-//                            System.out.println("--- " + e);
-                        }
+//                        if (res.isEmpty())
+//                            System.out.println("+++ " + e);
+//                        else if (example < 10){
+//                            example++;
+////                            System.out.println("--- " + e);
+//                        }
 
                     }
 
