@@ -223,9 +223,10 @@ public enum IgniteFeatures {
     SNAPSHOT_SFTP_UPLOAD_V2(60),
 
     /**
-     * Snapshot operation can handle cache groups in {@code --caches} parameter and {@code --exclude_caches}.
+     * Snapshot operation can handle {@code --exclude_caches} parameter
+     * and cache groups in {@code --caches} and {@code --excluded_caches} parameters.
      */
-    SNAPSHOT_OPERATION_WITH_EXCLUDE_CACHES(61);
+    SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62);
 
     /**
      * Unique feature identifier.
