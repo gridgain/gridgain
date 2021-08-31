@@ -115,6 +115,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -1660,6 +1661,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final GridNearAtomicAbstractUpdateRequest req,
         final UpdateReplyClosure completionCb
     ) {
+        try {
+            if (ctx.kernalContext().security().enabled())
+                ctx.kernalContext().security().authorize(ctx.name(), SecurityPermission.CACHE_PUT);
+        } catch (SecurityException e) {
+            log.warning("Security permission violation [nodeId=" + node.id() + ']');
+
+            onUpdateKeysError(node.id(), req, completionCb, e);
+
+            return;
+        }
+
         IgniteInternalFuture<Object> forceFut = ctx.group().preloader().request(ctx, req, req.topologyVersion());
 
         if (forceFut == null || forceFut.isDone()) {
@@ -1671,7 +1683,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 return;
             }
             catch (IgniteCheckedException e) {
-                onForceKeysError(node.id(), req, completionCb, e);
+                onUpdateKeysError(node.id(), req, completionCb, e);
 
                 return;
             }
@@ -1688,7 +1700,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         return;
                     }
                     catch (IgniteCheckedException e) {
-                        onForceKeysError(node.id(), req, completionCb, e);
+                        onUpdateKeysError(node.id(), req, completionCb, e);
 
                         return;
                     }
@@ -1705,10 +1717,10 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
      * @param completionCb Completion callback.
      * @param e Error.
      */
-    private void onForceKeysError(final UUID nodeId,
+    private void onUpdateKeysError(final UUID nodeId,
         final GridNearAtomicAbstractUpdateRequest req,
         final UpdateReplyClosure completionCb,
-        IgniteCheckedException e
+        Exception e
     ) {
         GridNearAtomicUpdateResponse res = new GridNearAtomicUpdateResponse(ctx.cacheId(),
             nodeId,

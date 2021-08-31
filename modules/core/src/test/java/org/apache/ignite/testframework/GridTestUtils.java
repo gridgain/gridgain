@@ -46,6 +46,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -622,6 +623,52 @@ public final class GridTestUtils {
                 }
 
                 t = t.getCause();
+            }
+
+            fail("Unexpected exception", e);
+        }
+
+        throw new AssertionError("Exception has not been thrown.");
+    }
+
+    /**
+     * Checks whether callable throws an exception with specified cause or supressed.
+     *
+     * @param log Logger (optional).
+     * @param call Callable.
+     * @param cls Exception class.
+     * @param msg Exception message (optional). If provided exception message
+     *      and this message should be equal.
+     * @return Thrown throwable.
+     */
+    public static Throwable assertThrowsAnyCauseAndSuppressed(@Nullable IgniteLogger log, Callable<?> call,
+        Class<? extends Throwable> cls, @Nullable String msg) {
+        assert call != null;
+        assert cls != null;
+
+        try {
+            call.call();
+        }
+        catch (Throwable e) {
+            Throwable t;
+
+            Queue<Throwable> rootErrors = new LinkedList<>();
+
+            rootErrors.add(e);
+
+            while ((t = rootErrors.poll()) != null) {
+                if (cls == t.getClass() && (msg == null || (t.getMessage() != null && t.getMessage().contains(msg)))) {
+                    if (log != null && log.isInfoEnabled())
+                        log.info("Caught expected exception: " + t.getMessage());
+
+                    return t;
+                }
+
+                if (t.getCause() != null)
+                    rootErrors.add(t.getCause());
+
+                if (t.getSuppressed().length != 0)
+                    Arrays.stream(t.getSuppressed()).forEach(rootErrors::add);
             }
 
             fail("Unexpected exception", e);

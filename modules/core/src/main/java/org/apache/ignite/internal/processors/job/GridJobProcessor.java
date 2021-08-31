@@ -67,8 +67,8 @@ import org.apache.ignite.internal.managers.systemview.walker.ComputeJobViewWalke
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridReservable;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsSnapshot;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
@@ -87,6 +87,8 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.plugin.security.SecurityException;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.systemview.view.ComputeJobView;
 import org.apache.ignite.spi.systemview.view.ComputeJobView.ComputeJobState;
@@ -2139,7 +2141,21 @@ public class GridJobProcessor extends GridProcessorAdapter {
 
             assert node != null;
 
-            processJobExecuteRequest(node, (GridJobExecuteRequest)msg);
+            GridJobExecuteRequest jobReqMsg = (GridJobExecuteRequest)msg;
+
+            try {
+                if (ctx.security().enabled())
+                    ctx.security().authorize(SecurityPermission.TASK_EXECUTE);
+            }
+            catch (SecurityException ex) {
+                log.warning("Security permission violation [nodeId=" + node.id() + ']');
+
+                handleException(node, jobReqMsg, ex, 0);
+
+                return;
+            }
+
+            processJobExecuteRequest(node, jobReqMsg);
         }
     }
 
