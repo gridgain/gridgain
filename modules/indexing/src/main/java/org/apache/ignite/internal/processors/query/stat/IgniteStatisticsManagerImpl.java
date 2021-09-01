@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -429,6 +430,10 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
            throw new IgniteCheckedException(String.format(
                "Unable to perform %s due to not all server nodes supports STATISTICS_COLLECTION feature.", op));
        }
+
+       if (ctx.state().clusterState().state() != ClusterState.ACTIVE)
+           throw new IgniteException(String.format(
+               "Unable to perform %s due to cluster state [state=%s]", op, ctx.state().clusterState().state()));
    }
 
     /**

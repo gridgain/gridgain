@@ -290,7 +290,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     @Override protected void start0() throws IgniteCheckedException {
         super.start0();
 
-        executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
+        executor = (IgniteThreadPoolExecutor) cctx.kernalContext().pools().getRebalanceExecutorService();
 
         // Start processing tombstones.
         processEvictions(true);

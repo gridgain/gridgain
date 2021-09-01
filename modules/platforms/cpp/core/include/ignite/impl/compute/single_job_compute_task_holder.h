@@ -97,7 +97,6 @@ namespace ignite
                  * Process remote job result.
                  *
                  * @param reader Reader for stream with result.
-                 * @return Policy.
                  */
                 virtual void JobResultError(const IgniteError& err)
                 {
@@ -105,14 +104,31 @@ namespace ignite
                 }
 
                 /**
-                 * Process successfull result.
+                 * Process successful result.
+                 *
+                 * @param value Value.
+                 */
+                virtual void JobResultSuccess(int64_t value)
+                {
+                    res.SetResult(PrimitiveFutureResult<ResultType>(value));
+                }
+
+                /**
+                 * Process successful result.
                  *
                  * @param reader Reader for stream with result.
-                 * @param err Error.
                  */
                 virtual void JobResultSuccess(binary::BinaryReaderImpl& reader)
                 {
                     res.SetResult(reader.ReadObject<ResultType>());
+                }
+
+                /**
+                 * Process successful null result.
+                 */
+                virtual void JobNullResultSuccess()
+                {
+                    res.SetResult(impl::binary::BinaryUtils::GetDefaultValue<ResultType>());
                 }
 
                 /**
@@ -203,7 +219,6 @@ namespace ignite
                  * Process remote job result.
                  *
                  * @param reader Reader for stream with result.
-                 * @return Policy.
                  */
                 virtual void JobResultError(const IgniteError& err)
                 {
@@ -211,12 +226,29 @@ namespace ignite
                 }
 
                 /**
-                 * Process successfull result.
+                 * Process successful result.
+                 *
+                 * @param value Value.
+                 */
+                virtual void JobResultSuccess(int64_t)
+                {
+                    res.SetResult();
+                }
+
+                /**
+                 * Process successful result.
                  *
                  * @param reader Reader for stream with result.
-                 * @param err Error.
                  */
                 virtual void JobResultSuccess(binary::BinaryReaderImpl&)
+                {
+                    res.SetResult();
+                }
+
+                /**
+                 * Process successful null result.
+                 */
+                virtual void JobNullResultSuccess()
                 {
                     res.SetResult();
                 }
