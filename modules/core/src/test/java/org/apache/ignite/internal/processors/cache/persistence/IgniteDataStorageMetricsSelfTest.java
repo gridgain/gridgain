@@ -490,7 +490,7 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Populates a cache w/32 KB of data
+     * Populates a cache w/32 KB of data.
      *
      * @param igniteEx Node.
      */
