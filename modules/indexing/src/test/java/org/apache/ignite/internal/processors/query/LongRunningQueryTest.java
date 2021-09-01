@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -62,6 +63,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         super.beforeTest();
 
         startGrid();
+        startGrid(0);
 
         IgniteCache c = grid().createCache(new CacheConfiguration<Long, Long>()
             .setName("test")
@@ -164,6 +166,69 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     *
+     */
+    @Test
+    public void testLikeCondition() throws Exception {
+        local = false;
+        lazy = false;
+
+        sql("CREATE TABLE test_like (id INT PRIMARY KEY, val0 INT, val1 VARCHAR)");
+
+        for (int i = 0; i < KEY_CNT; ++i)
+            sql("INSERT INTO test_like VALUES(?, ?, ?)", i, i, "val_" + i);
+
+        ListeningTestLogger testLog = testLog();
+
+        LogListener lsnr = LogListener
+            .matches(hugeResultsPattern())
+            .build();
+
+        testLog.registerListener(lsnr);
+
+        ((IgniteH2Indexing)grid().context().query().getIndexing()).longRunningQueries().setTimeout(1);
+        ((IgniteH2Indexing)grid(0).context().query().getIndexing()).longRunningQueries().setTimeout(1);
+        ((IgniteH2Indexing)grid().context().query().getIndexing()).longRunningQueries().setTimeoutMultiplier(Integer.MAX_VALUE);
+
+        try (FieldsQueryCursor cur = sql("SELECT id FROM test_like WHERE val1 like ?", "val_5%")) {
+            Iterator it = cur.iterator();
+
+            while (it.hasNext())
+                it.next();
+        }
+
+        ((IgniteH2Indexing)grid().context().query().getIndexing()).longRunningQueries().setTimeout(Integer.MAX_VALUE);
+        ((IgniteH2Indexing)grid(0).context().query().getIndexing()).longRunningQueries().setTimeout(Integer.MAX_VALUE);
+
+        for (int i = 0; i < 10000; ++i) {
+            try (FieldsQueryCursor cur = sql("SELECT id, sleep_func(?) FROM test_like WHERE val1 like ?", 0,"val_9%")) {
+                Iterator it = cur.iterator();
+
+                while (it.hasNext())
+                    it.next();
+            }
+        }
+
+        sql("CREATE INDEX test_like_idx_val1 on test_like(val1)");
+
+        System.out.println("+++");
+
+        U.sleep(2000);
+
+        ((IgniteH2Indexing)grid().context().query().getIndexing()).longRunningQueries().setTimeout(0);
+        ((IgniteH2Indexing)grid(0).context().query().getIndexing()).longRunningQueries().setTimeout(0);
+
+        try (FieldsQueryCursor cur = sql("SELECT id, sleep_func(?) FROM test_like WHERE val1 like ?",  10, "val_9%")) {
+            Iterator it = cur.iterator();
+
+            while (it.hasNext())
+                it.next();
+        }
+
+//        assertTrue(lsnr.check(1_000));
+    }
+
+    /**
      * Do several fast queries.
      * Log messages must not contain info about long query.
      */
@@ -243,7 +308,7 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, true)
+        return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, null)
             .setTimeout(10, TimeUnit.SECONDS)
             .setLocal(local)
             .setLazy(lazy)
@@ -263,7 +328,8 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
         @QuerySqlFunction
         public static int sleep_func(int v) {
             try {
-                Thread.sleep(v);
+                if (v > 0)
+                    Thread.sleep(v);
             }
             catch (InterruptedException ignored) {
                 // No-op
