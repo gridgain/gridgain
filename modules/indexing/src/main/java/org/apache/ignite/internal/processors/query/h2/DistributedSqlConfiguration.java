@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
@@ -81,6 +82,13 @@ public class DistributedSqlConfiguration {
         SimpleDistributedProperty::parseNonNegativeInteger
     );
 
+    /**
+     * Disable creation Lucene index for String value type by default.
+     * See: 'H2TableDescriptor#luceneIdx'.
+     */
+    private final DistributedBooleanProperty disableCreateLuceneIndexForStringValueType =
+        DistributedBooleanProperty.detachedBooleanProperty("sql.disableCreateLuceneIndexForStringValueType");
+
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -106,6 +114,7 @@ public class DistributedSqlConfiguration {
                     });
 
                     dispatcher.registerProperties(disabledSqlFuncs, timeZone, dfltQueryTimeout);
+                    dispatcher.registerProperties(disableCreateLuceneIndexForStringValueType);
                 }
 
                 @Override public void onReadyToWrite() {
@@ -121,6 +130,11 @@ public class DistributedSqlConfiguration {
                             dfltQueryTimeout,
                             (int)ctx.config().getSqlConfiguration().getDefaultQueryTimeout(),
                             log);
+
+                        setDefaultValue(
+                            disableCreateLuceneIndexForStringValueType,
+                            false,
+                            log);
                     }
                     else {
                         log.warning("Distributed metastorage is not supported. " +
@@ -129,6 +143,7 @@ public class DistributedSqlConfiguration {
                         // Set properties to default.
                         disabledSqlFuncs.localUpdate(null);
                         dfltQueryTimeout.localUpdate((int)ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
+                        disableCreateLuceneIndexForStringValueType.localUpdate(false);
                     }
                 }
             }
@@ -226,5 +241,18 @@ public class DistributedSqlConfiguration {
     /** */
     public void listenDefaultQueryTimeout(DistributePropertyListener<Integer> lsnr) {
         dfltQueryTimeout.addListener(lsnr);
+    }
+
+    /** */
+    public boolean isDisableCreateLuceneIndexForStringValueType() {
+        Boolean ret = disableCreateLuceneIndexForStringValueType.get();
+
+        return ret != null && ret;
+    }
+
+    /** */
+    public GridFutureAdapter<?> disableCreateLuceneIndexForStringValueType(boolean disableCreateIdx)
+        throws IgniteCheckedException {
+        return disableCreateLuceneIndexForStringValueType.propagateAsync(disableCreateIdx);
     }
 }

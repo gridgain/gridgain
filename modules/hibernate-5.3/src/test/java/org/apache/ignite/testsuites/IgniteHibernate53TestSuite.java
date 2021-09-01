@@ -20,6 +20,7 @@ import org.apache.ignite.cache.hibernate.HibernateL2CacheConfigurationSelfTest;
 import org.apache.ignite.cache.hibernate.HibernateL2CacheMultiJvmTest;
 import org.apache.ignite.cache.hibernate.HibernateL2CacheSelfTest;
 import org.apache.ignite.cache.hibernate.HibernateL2CacheStrategySelfTest;
+import org.apache.ignite.cache.hibernate.HibernateL2CacheTemplateConfigurationSelfTest;
 import org.apache.ignite.cache.hibernate.HibernateL2CacheTransactionalSelfTest;
 import org.apache.ignite.cache.hibernate.HibernateL2CacheTransactionalUseSyncSelfTest;
 import org.apache.ignite.cache.store.hibernate.CacheHibernateBlobStoreNodeRestartTest;
@@ -38,6 +39,7 @@ import org.junit.runners.Suite;
     HibernateL2CacheTransactionalSelfTest.class,
     HibernateL2CacheTransactionalUseSyncSelfTest.class,
     HibernateL2CacheConfigurationSelfTest.class,
+    HibernateL2CacheTemplateConfigurationSelfTest.class,
     HibernateL2CacheStrategySelfTest.class,
     HibernateL2CacheMultiJvmTest.class,
     CacheHibernateBlobStoreSelfTest.class,

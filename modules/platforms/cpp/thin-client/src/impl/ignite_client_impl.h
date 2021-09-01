@@ -23,6 +23,7 @@
 #include "impl/data_router.h"
 #include "impl/cache/cache_client_impl.h"
 #include "impl/transactions/transactions_impl.h"
+#include "impl/compute/compute_client_impl.h"
 
 namespace ignite
 {
@@ -82,10 +83,22 @@ namespace ignite
                  */
                 common::concurrent::SharedPointer<cache::CacheClientImpl> CreateCache(const char* name);
 
-                /** */
+                /**
+                 * Get transactions.
+                 *
+                 * @return Transactions impl.
+                 */
                 transactions::SP_TransactionsImpl ClientTransactions() const
                 {
                     return txImpl;
+                }
+
+                /**
+                 * Get client compute API.
+                 */
+                compute::SP_ComputeClientImpl GetCompute()
+                {
+                    return computeImpl;
                 }
 
                 /**
@@ -135,6 +148,9 @@ namespace ignite
 
                 /** Transactions. */
                 transactions::SP_TransactionsImpl txImpl;
+
+                /** Compute. */
+                compute::SP_ComputeClientImpl computeImpl;
             };
         }
     }

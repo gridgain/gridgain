@@ -491,7 +491,7 @@ public class GridDhtPartitionDemander {
             for (Integer p : supplyMsg.infos().keySet())
                 fut.queued.get(p).increment();
 
-            ctx.kernalContext().getRebalanceExecutorService().execute(r);
+            ctx.kernalContext().pools().getRebalanceExecutorService().execute(r);
         }
     }
 
@@ -779,7 +779,7 @@ public class GridDhtPartitionDemander {
 
                 ctx.kernalContext().timeout().addTimeoutObject(new GridTimeoutObjectAdapter(100) {
                     @Override public void onTimeout() {
-                        ctx.kernalContext().getRebalanceExecutorService().execute(() ->
+                        ctx.kernalContext().pools().getRebalanceExecutorService().execute(() ->
                             ownPartition(fut, part, nodeId, supplyMsg));
                     }
                 });
