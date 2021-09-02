@@ -428,6 +428,8 @@ public class GridTcpCommunicationSpiRecoveryAckSelfTest<T extends CommunicationS
 
             node.setAttributes(spi.getNodeAttributes());
 
+            node.setPhysicalAddress(spi.getLocalAddress());
+
             spis.add(spi);
 
             spi.onContextInitialized(ctx);

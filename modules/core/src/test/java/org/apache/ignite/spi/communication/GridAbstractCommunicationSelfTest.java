@@ -343,6 +343,8 @@ public abstract class GridAbstractCommunicationSelfTest<T extends CommunicationS
 
             node.setAttributes(spi.getNodeAttributes());
 
+            node.setPhysicalAddress(rsrcs.getLocalHost());
+
             spis.put(rsrcs.getNodeId(), spi);
 
             spi.onContextInitialized(ctx);

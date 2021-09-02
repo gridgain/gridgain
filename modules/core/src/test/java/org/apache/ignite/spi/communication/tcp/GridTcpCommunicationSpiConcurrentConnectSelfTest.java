@@ -388,7 +388,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @return SPI.
      */
-    private CommunicationSpi<Message> createSpi() {
+    private TcpCommunicationSpi createSpi() {
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
         spi.setLocalAddress("127.0.0.1");
@@ -420,7 +420,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         timeoutProcessor.onKernalStart(true);
 
         for (int i = 0; i < SPI_CNT; i++) {
-            CommunicationSpi<Message> spi = createSpi();
+            TcpCommunicationSpi spi = createSpi();
 
             IgniteTestResources rsrcs = new IgniteTestResources();
 
@@ -470,6 +470,8 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
             spi.spiStart(getTestIgniteInstanceName() + (i + 1));
 
             node.setAttributes(spi.getNodeAttributes());
+
+            node.setPhysicalAddress(spi.getLocalAddress());
 
             spis.add(spi);
 

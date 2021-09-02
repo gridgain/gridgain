@@ -759,6 +759,8 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
 
             node.setAttributes(spi.getNodeAttributes());
 
+            node.setPhysicalAddress(spi.getLocalAddress());
+
             spis.add(spi);
 
             spi.onContextInitialized(ctx);

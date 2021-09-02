@@ -433,7 +433,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
     /**
      * @return Spi.
      */
-    private CommunicationSpi<Message> newCommunicationSpi() {
+    private TcpCommunicationSpi newCommunicationSpi() {
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
         if (!useShmem)
@@ -468,7 +468,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
         timeoutProcessor.onKernalStart(true);
 
         for (int i = 0; i < getSpiCount(); i++) {
-            CommunicationSpi<Message> spi = newCommunicationSpi();
+            TcpCommunicationSpi spi = newCommunicationSpi();
 
             GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
@@ -510,6 +510,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
 
             node.setAttributes(spi.getNodeAttributes());
             node.setAttribute(ATTR_MACS, F.concat(U.allLocalMACs(), ", "));
+            node.setPhysicalAddress(spi.getLocalAddress());
 
             spis.put(rsrcs.getNodeId(), spi);
 
