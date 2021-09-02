@@ -492,6 +492,13 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
             return;
         }
+        else {
+            if (!rmtNode.addresses().contains(ses.remoteAddress().getAddress().getHostAddress())) {
+                ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());
+
+                return;
+            }
+        }
 
         ses.addMeta(CONSISTENT_ID_META, rmtNode.consistentId());
 
