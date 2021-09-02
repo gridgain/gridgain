@@ -44,6 +44,9 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Defines supported features and check its on other nodes.
+ *
+ * Note: for creating new feature and assigning ID, please update
+ * <a href ="https://ggsystems.atlassian.net/wiki/spaces/GG/pages/1192198276/Community+edition+features+list">page</a>.
  */
 public enum IgniteFeatures {
     /**
