@@ -813,7 +813,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @throws SecurityException If security check failed.
      */
     public void checkSecurity(SecurityPermission op) throws SecurityException {
-        if (CU.isSystemCache(name()))
+        if (CU.isSystemCache(name()) && !ctx.clientNode())
             return;
 
         ctx.security().authorize(name(), op);
