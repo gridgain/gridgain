@@ -260,7 +260,9 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
 
             boolean reconSize = partBatch.cacheSizeReconciliation() &&
-                (nodePartitionSize == null || nodePartitionSize.inProgress());
+                (nodePartitionSize == null ||
+                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS ||
+                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
@@ -313,7 +315,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                     if (partReconciliationCtx != null &&
                         partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
                         partReconciliationCtx.lastKey(cacheId) == null) {
-                        nodeSize.inProgress(true);
+                        nodeSize.state(NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
                         partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
                     }
@@ -366,8 +368,12 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         if (reconSize && !hasNext &&
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
-                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS)
-                            nodeSize.inProgress(false);
+                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+                            if (partBatch.dataReconciliation())
+                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+                            else
+                                nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
+                        }
 
                         return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));
                     }
