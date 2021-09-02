@@ -264,7 +264,9 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
             NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
 
             boolean sizeReconciliation = partBatch.cacheSizeReconciliation() &&
-                (nodePartitionSize == null || nodePartitionSize.inProgress());
+                (nodePartitionSize == null ||
+                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS ||
+                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
 
             int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -305,7 +307,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                     }
 
                     if (partReconciliationCtx.sizeReconciliationState(cacheId) == null) {
-                        nodeSize.inProgress(true);
+                        nodeSize.state(NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
                         partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
                     }
@@ -351,7 +353,10 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             log.warning("ewriugtriu in Batch tack " +
                                 " " + nodeSize.cacheName());
 
-                            nodeSize.inProgress(false);
+                            if (partBatch.dataReconciliation())
+                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+                            else
+                                nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
                         }
 
                         return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));

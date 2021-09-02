@@ -168,7 +168,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        params.add(new Object[] {1, 0, 1000, ATOMIC, PARTITIONED, 0, 1, null, 100, 1, 8, false});
+//        params.add(new Object[] {1, 0, 1000, ATOMIC, PARTITIONED, 0, 1, null, 100, 1, 8, false});
 
         params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, "testCacheGroup1", 100, 1, 8, false});
 
@@ -176,7 +176,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
 
         params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 100, 1, 8, false});
 
-        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 10, 3, 8, false});
+//        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 10, 3, 8, false});
 
         params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 1, 12, null, 10, 3, 8, false});
 
@@ -184,7 +184,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
 
         params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 17, null, 10, 3, 8, false});
 
-        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, false});
+//        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, false});
 
         params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, false});
 

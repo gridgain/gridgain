@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.NodePartitionSize;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequestV2;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationProcessorResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionSizeRepairRequest;
@@ -437,9 +438,10 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().inProgress());
+                boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS || entry.getValue().state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
 
-                if (reconConsist || reconSize)
+                if (workload.dataReconciliation() && reconConsist ||
+                    !workload.dataReconciliation() && reconSize)
                     schedule(new Batch(
                         reconConsist,
                         reconSize,

@@ -104,8 +104,8 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest5.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest6.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest7.class, ignoredTests);
-//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest8.class, ignoredTests);
-//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest9.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest8.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest9.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesPersistenceStressTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesTest.class, ignoredTests);
 

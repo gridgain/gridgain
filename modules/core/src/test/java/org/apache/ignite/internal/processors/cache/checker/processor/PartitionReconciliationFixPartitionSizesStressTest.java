@@ -139,7 +139,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             fut.get();
 
         awaitPartitionMapExchange();
-        doSleep(15000);
+        doSleep(10000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         for (long i = startKey; i < endKey; i++) {
@@ -148,7 +148,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         }
 
         awaitPartitionMapExchange();
-        doSleep(10000);
+        doSleep(5000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         long allKeysCountForCacheGroup;

@@ -39,9 +39,6 @@ public class ReconciliationContext {
     /** */
     public enum SizeReconciliationState {
         /** */
-        NOT_STARTED,
-
-        /** */
         IN_PROGRESS,
 
         /** */

@@ -29,8 +29,8 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     /** Cache name. */
     private String cacheName;
 
-    /** Is reconciliation in progress. */
-    private boolean inProgress;
+    /** Size reconciliation state. */
+    private SizeReconciliationState state;
 
     /** Broken cache size from partition meta. */
     private long oldCacheSize;
@@ -58,13 +58,13 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     }
 
     /** */
-    public boolean inProgress() {
-        return inProgress;
+    public SizeReconciliationState state() {
+        return state;
     }
 
     /** */
-    public void inProgress(boolean inProgress) {
-        this.inProgress = inProgress;
+    public void state(SizeReconciliationState state) {
+        this.state = state;
     }
 
     /** */
@@ -90,7 +90,7 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(cacheName);
-        out.writeBoolean(inProgress);
+        out.writeObject(state);
         out.writeLong(oldCacheSize);
         out.writeLong(newCacheSize);
     }
@@ -99,15 +99,32 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
         cacheName = (String)in.readObject();
-        inProgress = in.readBoolean();
+        state = (SizeReconciliationState)in.readObject();
         oldCacheSize = in.readLong();
         newCacheSize = in.readLong();
+    }
+
+
+
+    /** */
+    public enum SizeReconciliationState {
+        /** */
+        NOT_STARTED,
+
+        /** */
+        IN_PROGRESS,
+
+        /** */
+        NEED_TO_FINISHED,
+
+        /** */
+        FINISHED
     }
 
     @Override public String toString() {
         return "NodePartitionSize{" +
             "cacheName='" + cacheName + '\'' +
-            ", inProgress=" + inProgress +
+            ", state=" + state +
             ", oldCacheSize=" + oldCacheSize +
             ", newCacheSize=" + newCacheSize +
             '}';
