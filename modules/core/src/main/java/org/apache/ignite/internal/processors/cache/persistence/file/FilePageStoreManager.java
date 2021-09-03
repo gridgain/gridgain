@@ -103,16 +103,19 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     /** File suffix. */
     public static final String FILE_SUFFIX = ".bin";
 
-    /** Suffix for zip files */
+    /** Suffix for zip files. */
     public static final String ZIP_SUFFIX = ".zip";
 
-    /** Suffix for ZSTD compressed files */
+    /** Suffix for ZSTD compressed files. */
     public static final String ZSTD_SUFFIX = ".zst";
 
-    /** Suffix for LZ4 compressed files */
+    /** Suffix for LZ4 compressed files. */
     public static final String LZ4_SUFFIX = ".lz4";
 
-    /** Suffix for tmp files */
+    /** Suffix for SNAPPY compressed files. */
+    public static final String SNAPPY_SUFFIX = ".snappy";
+
+    /** Suffix for tmp files. */
     public static final String TMP_SUFFIX = ".tmp";
 
     /** Partition file prefix. */
