@@ -1239,8 +1239,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
         }
 
-        prim.context().cache().context().exchange().rebalanceDelay(500);
-
         Random r = new Random();
 
         AtomicBoolean stop = new AtomicBoolean();
