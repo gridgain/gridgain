@@ -1523,6 +1523,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
 
     /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message.
+     */
+    public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
+        "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

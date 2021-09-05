@@ -170,11 +170,11 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
     public void testIPv6NodeSuccessfullyConnectesToNodeWithIPv4Only() throws Exception {
         remoteNodePrefersIPv4 = false;
         replacingAttrSpi = false;
+        localAddrStr = "127.0.0.1";
 
         IgniteEx ig = startGrid(0);
 
         replacingAttrSpi = true;
-        localAddrStr = "127.0.0.1";
         externalAddr = new InetSocketAddress("127.0.0.1", 45010);
         startGrid(1);
 
@@ -214,9 +214,8 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
         GridTestUtils.runAsync(() -> {
                 IgniteCache<Object, Object> cache = ig.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-                for (int i = 0; i < 100; i++) {
+                for (int i = 0; i < 100; i++)
                     cache.put(i, i);
-                }
 
                 cacheCreatedAndLoaded.set(true);
             }, "start_cache_thread");

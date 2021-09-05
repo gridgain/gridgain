@@ -80,9 +80,8 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
-        for (IgniteTestResources itr : resourcesToClean) {
+        for (IgniteTestResources itr : resourcesToClean)
             itr.stopThreads();
-        }
 
         for (CommunicationSpi commSpi : spisToStop) {
             commSpi.onContextDestroyed();
@@ -163,6 +162,7 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
 
         GridTestNode sendingNode = new GridTestNode();
         sendingNode.order(0);
+        sendingNode.setPhysicalAddress("127.0.0.1");
         GridSpiTestContext sendingCtx = initSpiContext();
 
         TcpCommunicationSpi sendingSpi = initializeSpi(sendingCtx, sendingNode, listeningLogger, false);

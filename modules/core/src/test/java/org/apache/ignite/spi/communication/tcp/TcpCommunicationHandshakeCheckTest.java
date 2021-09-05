@@ -26,6 +26,7 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.IgniteSpi;
@@ -33,9 +34,11 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
@@ -47,6 +50,7 @@ import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastRecei
 /**
  * Tests handshake procedure from security point of view.
  */
+@WithSystemProperty(key = IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, value = "true")
 public class TcpCommunicationHandshakeCheckTest extends GridCommonAbstractTest {
     /**
      * Tests that the replacement of node id in handshake message leads to failure of handshake procedure.

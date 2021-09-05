@@ -56,6 +56,8 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
@@ -76,6 +78,14 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * before it starts being visible for server)
      */
     private static final IgniteProductVersion VERSION_SINCE_CLIENT_COULD_WAIT_TO_CONNECT = IgniteProductVersion.fromString("2.1.4");
+
+    /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message. In other words, the remote address of sender is equal to the already known address
+     * which corresponds to received node id in the message.
+     */
+    private final boolean checkCoomHandshakeSender =
+        getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, true);
 
     /** Message tracker meta for session. */
     private static final int TRACKER_META = GridNioSessionMetaKey.nextUniqueKey();
@@ -493,7 +503,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             return;
         }
         else {
-            if (!rmtNode.addresses().contains(ses.remoteAddress().getAddress().getHostAddress())) {
+            if (checkCoomHandshakeSender && !rmtNode.addresses().contains(ses.remoteAddress().getAddress().getHostAddress())) {
+                U.warn(log, "Closing incoming connection, unexpected remote address [nodeId=" + sndId + ", ses=" + ses + ']');
+
                 ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());
 
                 return;
