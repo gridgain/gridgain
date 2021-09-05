@@ -85,7 +85,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * which corresponds to received node id in the message.
      */
     private final boolean checkCoomHandshakeSender =
-        getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, false);
+        getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, true);
 
     /** Message tracker meta for session. */
     private static final int TRACKER_META = GridNioSessionMetaKey.nextUniqueKey();
