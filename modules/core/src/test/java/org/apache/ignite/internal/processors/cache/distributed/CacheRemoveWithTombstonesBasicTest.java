@@ -1554,7 +1554,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1")
-    @WithSystemProperty(key = "REBALANCE_DELAY", value = "1000") // Wait one second before generating assignments.
     public void testOutdatedTombstoneNotExpired() throws Exception {
         assumeTrue(persistence);
 
