@@ -138,6 +138,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
+        awaitPartitionMapExchange();
+
         for (long i = startKey; i < endKey; i++) {
             for (IgniteCache<Object, Object> cache : caches)
                 cache.put(i, i);
