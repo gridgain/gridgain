@@ -296,10 +296,18 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
+        awaitPartitionMapExchange();
+
+        cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
+
         for (long i = startKey; i < endKey; i++) {
             for (IgniteCache<Object, Object> cache : caches)
                 cache.put(i, i);
         }
+
+        awaitPartitionMapExchange();
+
+        cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         long allKeysCountForCacheGroup;
         long allKeysCountForCache;
