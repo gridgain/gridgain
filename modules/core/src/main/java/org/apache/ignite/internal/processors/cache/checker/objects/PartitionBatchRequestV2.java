@@ -38,6 +38,9 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
     /** Map with size of partitions*/
     private final Map<UUID, NodePartitionSize> partSizesMap;
 
+    /** Indicates that inconsistent partition sizes should be repaired. */
+    private final boolean repair;
+
     /**
      * @param dataReconciliation Flag indicates that data consistency reconciliation is requested.
      * @param cacheSizeReconciliation Flag indicates that cache size consistency reconciliation is requested.
@@ -48,6 +51,7 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
      * @param partSizesMap Map of partition sizes.
+     * @param repair Repair partition sizes flag.
      * @param startTopVer Start topology version.
      */
     public PartitionBatchRequestV2(
@@ -60,12 +64,14 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
         int batchSize,
         KeyCacheObject lowerKey,
         Map<UUID, NodePartitionSize> partSizesMap,
+        boolean repair,
         AffinityTopologyVersion startTopVer
     ) {
         super(sesId, workloadChainId, cacheName, partId, batchSize, lowerKey, startTopVer);
         this.dataReconciliation = dataReconciliation;
         this.cacheSizeReconciliation = cacheSizeReconciliation;
         this.partSizesMap = partSizesMap;
+        this.repair = repair;
     }
 
     /**
@@ -87,6 +93,13 @@ public class PartitionBatchRequestV2 extends PartitionBatchRequest {
      */
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
+    }
+
+    /**
+     * @return Repair partition sizes flag.
+     */
+    public boolean repair() {
+        return repair;
     }
 
     /** {@inheritDoc} */

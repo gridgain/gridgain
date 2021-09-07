@@ -94,7 +94,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         task.map(Collections.EMPTY_LIST, new PartitionBatchRequestV2(
             true, true,
             ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-            DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), ver));
+            DEFAULT_CACHE_NAME, 1, 1000, null, new HashMap<>(), false, ver));
 
         {
             PartitionExecutionTaskResultByBatch reduce = task
@@ -243,7 +243,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         PartitionExecutionTaskResultByBatch firstBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), false, ver)
         ).result();
 
         fetched.addAll(firstBatch.dataMap().keySet());
@@ -253,7 +253,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         PartitionExecutionTaskResultByBatch secondBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), false, ver)
         ).result();
 
         KeyCacheObject secondMaxKey = secondBatch.key();
@@ -263,7 +263,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         PartitionExecutionTaskResultByBatch thirdBatch = node.compute(group(node, nodes)).execute(
             CollectPartitioResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), ver)
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), false, ver)
         ).result();
 
         assertNull(thirdBatch.key());

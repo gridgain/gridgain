@@ -192,7 +192,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int[] partitions = partitions(cache);
 
                 for (int partId : partitions) {
-                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, partId, null);
+                    Batch workload = new Batch(sesId, UUID.randomUUID(), cache, partId, null, repair);
 
                     workloadTracker.addTrackingChain(workload);
 
@@ -311,7 +311,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 if (nextBatchKey != null)
-                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
+                    schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey, repair));
 
                 if (!recheckKeys.isEmpty()) {
                     schedule(

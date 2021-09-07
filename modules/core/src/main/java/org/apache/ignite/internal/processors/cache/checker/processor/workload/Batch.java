@@ -45,19 +45,24 @@ public class Batch extends PipelineWorkload {
     /** Map of partition sizes for reconciliation of cache sizes. */
     private Map<UUID, NodePartitionSize> partSizesMap;
 
+    /** Indicates that inconsistent partition sizes should be repaired. */
+    private final boolean repair;
+
     /**
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param lowerKey Lower key.
+     * @param repair Repair partition sizes flag.
      */
-    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
+    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey, boolean repair) {
         super(sesId, workloadChainId);
 
         this.cacheName = cacheName;
         this.partId = partId;
         this.lowerKey = lowerKey;
+        this.repair = repair;
     }
 
     /**
@@ -69,6 +74,7 @@ public class Batch extends PipelineWorkload {
      * @param partId Partition id.
      * @param lowerKey Lower key.
      * @param partSizesMap Map of partition sizes.
+     * @param repair Repair partition sizes flag.
      */
     public Batch(
         boolean dataReconciliation,
@@ -78,7 +84,8 @@ public class Batch extends PipelineWorkload {
         String cacheName,
         int partId,
         KeyCacheObject lowerKey,
-        Map<UUID, NodePartitionSize> partSizesMap
+        Map<UUID, NodePartitionSize> partSizesMap,
+        boolean repair
     ) {
         super(sesId, workloadChainId);
         this.dataReconciliation = dataReconciliation;
@@ -88,6 +95,7 @@ public class Batch extends PipelineWorkload {
         this.partId = partId;
         this.lowerKey = lowerKey;
         this.partSizesMap = partSizesMap;
+        this.repair = repair;
     }
 
     /**
@@ -123,6 +131,13 @@ public class Batch extends PipelineWorkload {
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
+    }
+
+    /**
+     * @return Repair partition sizes flag.
+     */
+    public boolean repair() {
+        return repair;
     }
 
     /**
