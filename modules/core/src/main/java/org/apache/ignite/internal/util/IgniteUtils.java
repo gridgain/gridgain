@@ -454,11 +454,14 @@ public abstract class IgniteUtils {
     /** Indicates whether current OS is of RedHat family. */
     private static boolean redHat;
 
-    /** Indicates whether current OS architecture is Sun Sparc. */
+    /** Indicates whether current CPU architecture is Sun Sparc. */
     private static boolean sparc;
 
-    /** Indicates whether current OS architecture is Intel X86. */
+    /** Indicates whether current CPU architecture is Intel X86. */
     private static boolean x86;
+
+    /** Indicates whether current CPU architecture is AMD64. */
+    private static boolean amd64;
 
     /** Name of the underlying OS. */
     private static String osName;
@@ -716,6 +719,8 @@ public abstract class IgniteUtils {
             x86 = true;
         else if (archStr.contains("sparc"))
             sparc = true;
+        else if (archStr.contains("amd64"))
+            amd64 = true;
 
         String javaRtName = System.getProperty("java.runtime.name");
         String javaRtVer = System.getProperty("java.runtime.version");
@@ -6874,6 +6879,24 @@ public abstract class IgniteUtils {
      */
     public static boolean isSolarisX86() {
         return solaris && x86;
+    }
+
+    /**
+     * Indicates whether current architecture is Intel x86.
+     *
+     * @return {@code true} if current architecture is Intel x86 - {@code false} otherwise.
+     */
+    public static boolean isX86() {
+        return x86;
+    }
+
+    /**
+     * Indicates whether current architecture is AMD64.
+     *
+     * @return {@code true} if current architecture is AMD64 - {@code false} otherwise.
+     */
+    public static boolean isAmd64() {
+        return amd64;
     }
 
     /**

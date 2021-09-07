@@ -220,7 +220,10 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATIONS_CHAINING(59),
 
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
-    SNAPSHOT_SFTP_UPLOAD_V2(60);
+    SNAPSHOT_SFTP_UPLOAD_V2(60),
+
+    /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
+    SNAPSHOT_COMPRESSION_FAST_OPTION(63);
 
     /**
      * Unique feature identifier.
