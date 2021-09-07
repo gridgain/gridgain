@@ -223,7 +223,13 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATIONS_CHAINING(59),
 
     /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
-    SNAPSHOT_SFTP_UPLOAD_V2(60);
+    SNAPSHOT_SFTP_UPLOAD_V2(60),
+
+    /**
+     * The feature allows authenticating a node remotely.
+     * It is need when the one node which does not have an authentication required to authorize itself or another one.
+     */
+    REMOTE_AUTH(61);
 
     /**
      * Unique feature identifier.
