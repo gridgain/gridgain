@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -28,6 +30,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
@@ -74,6 +77,7 @@ import static org.apache.ignite.internal.processors.query.h2.database.inlinecolu
  * H2 tree index implementation.
  */
 public class H2Tree extends BPlusTree<H2Row, H2Row> {
+    private Map<Integer, Object> objectsMap = new ConcurrentHashMap<>();
     /** */
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
@@ -607,6 +611,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                     if (v2 == null)
                         return 0;
 
+                    int hash = v2.getObject().hashCode();
+
+                    if (objectsMap.containsKey(hash) && !objectsMap.get(hash).equals(v2.getObject())) {
+                        log.warning("zzz collision, hash=" + hash + ", obj1=" + objectsMap.get(hash));
+                        log.warning("zzz collision, hash=" + hash + ", obj2=" + v2.getObject());
+                    }
+                    else
+                        objectsMap.put(hash, v2.getObject());
+
                     int c = inlineIdx.compare(pageAddr, off + fieldOff, inlineSize() - fieldOff, v2, comp);
 
                     if (c == CANT_BE_COMPARE)
@@ -794,8 +807,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         boolean throttle = invokeCnt % THROTTLE_INLINE_SIZE_CALCULATION != 0;
 
-        if (throttle)
-            return;
+        //if (throttle)
+        //    return;
 
         int newSize = 0;
 
