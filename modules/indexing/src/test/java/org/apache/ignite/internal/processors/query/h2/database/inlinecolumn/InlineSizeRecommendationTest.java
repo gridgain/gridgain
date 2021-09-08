@@ -37,7 +37,7 @@ import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGN
 /**
  * Tests that correct warning is printed when hash collision on Java Object PK happened.
  */
-public class InlineHashTest extends GridCommonAbstractTest {
+public class InlineSizeRecommendationTest extends GridCommonAbstractTest {
     /** */
     private static final String KEY_FIELD = "name";
 
@@ -77,7 +77,7 @@ public class InlineHashTest extends GridCommonAbstractTest {
         cache.put(new KeyClass("k1117323", 1117323), 1);
         cache.put(new KeyClass("k4059899", 4059899), 1);
 
-        assertTrue(logLsnr.check(10_000));
+        assertTrue(logLsnr.check(3_000));
     }
 
     /**
