@@ -16,94 +16,86 @@
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
 import java.util.HashSet;
-import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
 
 /**
- *
+ * Tests that correct warning is printed when hash collision on Java Object PK happened.
  */
 public class InlineHashTest extends GridCommonAbstractTest {
+    /** */
+    private static final String KEY_FIELD = "name";
+
+    /** */
+    private static final Pattern WARN_PTRN = Pattern.compile(
+        "Indexed columns of a row cannot be fully inlined.*?" +
+        "idxCols=\\[\\[column=_KEY, type=19, inlineSize=5\\], \\[column=NAME, type=13, inlineSize=11\\]\\].*?" +
+        "idxIncludesInlinedHash=true.*"
+    );
+
+    /** */
+    private final LogListener logLsnr = LogListener.matches(WARN_PTRN).build();
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setGridLogger(new ListeningTestLogger(log).registerListener(logLsnr))
             .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
                 .setQueryEntities(asList(
-                    new QueryEntity(KeyClass.class, ValClass.class)
-                        .setKeyFields(new HashSet<>(asList("name", "int0")))
-                    //.setIndexes(asList(new QueryIndex()))
+                    new QueryEntity(KeyClass.class, Integer.class)
+                        .setKeyFields(new HashSet<>(asList(KEY_FIELD)))
                 ))
-                //.setKeyConfiguration(new CacheKeyConfiguration(KeyClass.class).setAffinityKeyFieldName("name"))
+                .setKeyConfiguration(new CacheKeyConfiguration(KeyClass.class).setAffinityKeyFieldName(KEY_FIELD))
             );
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_SENSITIVE_DATA_LOGGING, value = "plain")
-    @WithSystemProperty(key = IGNITE_THROTTLE_INLINE_SIZE_CALCULATION, value = "3")
+    @WithSystemProperty(key = IGNITE_THROTTLE_INLINE_SIZE_CALCULATION, value = "2")
     @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = "8")
     public void test() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        IgniteCache<KeyClass, ValClass> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+        IgniteCache<KeyClass, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        //for (int i = 0; i < 1_000_000_000; i++)
-        //for (int i = 0; i < 10; i++)
-        //    cache.put(new KeyClass("k" + i, i), new ValClass("v" + i, i));
+        // Put objects with colliding hashes.
+        cache.put(new KeyClass("k1117323", 1117323), 1);
+        cache.put(new KeyClass("k4059899", 4059899), 1);
 
-        cache.put(new KeyClass("k1117323", 1117323), new ValClass("v61626", 61626));
-        cache.put(new KeyClass("k1117323", 1117323), new ValClass("v61626", 61626));
-        cache.put(new KeyClass("k4059899", 4059899), new ValClass("v3738091", 3738091));
-
-        List<List<?>> list = cache.query(new SqlFieldsQuery("select * from ValClass where val = ?").setArgs("v5")).getAll();
-
-        if (!list.isEmpty())
-            log.warning(list.get(0).toString());
-
-        Object o = cache.query(new SqlFieldsQuery("select count(*) from ValClass")).getAll().get(0);
-
-        log.warning(o.toString());
+        assertTrue(logLsnr.check(10_000));
     }
 
+    /**
+     * Class for primary key objects.
+     */
     private static class KeyClass {
+        /** */
         @QuerySqlField
         private final String name;
 
+        /** */
         @QuerySqlField
         private final Integer int0;
 
+        /** */
         public KeyClass(String name, int int0) {
             this.name = name;
             this.int0 = int0;
         }
     }
-
-    private static class ValClass {
-        @QuerySqlField(index = true)
-        private final String val;
-
-        @QuerySqlField(index = true)
-        private final Integer int1;
-
-        public ValClass(String val, int i) {
-            this.val = val;
-            this.int1 = i;
-        }
-    }
-
 }
