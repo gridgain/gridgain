@@ -102,6 +102,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
     @Parameterized.Parameter(11)
     public static boolean cacheClearOp;
 
+    public static CacheWriteSynchronizationMode cacheWriteSynchronizationMode;
+
     /** */
     static Random rnd = new Random();
 
@@ -133,6 +135,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        cacheWriteSynchronizationMode = rnd.nextBoolean() ? CacheWriteSynchronizationMode.FULL_SYNC : CacheWriteSynchronizationMode.PRIMARY_SYNC;
     }
 
     /** {@inheritDoc} */
@@ -148,7 +152,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         ccfg.setName(name);
         if (cacheGroup != null)
             ccfg.setGroupName(cacheGroup);
-        ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setWriteSynchronizationMode(cacheWriteSynchronizationMode);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, partCount));
         ccfg.setBackups(backupCount);
         ccfg.setAtomicityMode(cacheAtomicityMode);
@@ -189,13 +193,13 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});
 
-        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, true});
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, false});
 
-        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, true});
+        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, false});
 
-        params.add(new Object[] {4, 0, 1000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, true});
+        params.add(new Object[] {4, 0, 1000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, false});
 
-        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});
 
         return params;
     }
@@ -222,6 +226,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             reconciliationTypes.add(DATA_CONSISTENCY);
 
         log.info(">>> Reconciliation types: " + reconciliationTypes);
+        log.info(">>> CacheWriteSynchronizationMode: " + cacheWriteSynchronizationMode);
 
         ig = startGrids(nodesCnt);
 
@@ -281,7 +286,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
         for (int i = 0; i < loadThreadsCnt; i++)
-            caches.forEach(cache -> startAsyncLoad0(reconResult, client, cache, startKey, endKey, cacheClearOp));
+            caches.forEach(cache -> loadFuts.add(startAsyncLoad0(reconResult, client, cache, startKey, endKey, cacheClearOp)));
 
         GridTestUtils.runMultiThreadedAsync(() -> {
             reconResult.set(partitionReconciliation(client, builder));
@@ -296,10 +301,16 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
+        awaitPartitionMapExchange();
+        cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
+
         for (long i = startKey; i < endKey; i++) {
             for (IgniteCache<Object, Object> cache : caches)
                 cache.put(i, i);
         }
+
+        awaitPartitionMapExchange();
+        cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         long allKeysCountForCacheGroup;
         long allKeysCountForCache;
