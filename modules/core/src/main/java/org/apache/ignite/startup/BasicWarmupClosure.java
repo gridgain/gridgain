@@ -16,10 +16,9 @@
 
 package org.apache.ignite.startup;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -36,6 +35,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -65,9 +65,6 @@ public class BasicWarmupClosure implements IgniteInClosure<IgniteConfiguration> 
 
     /** Grid count. */
     private int gridCnt = DFLT_GRID_CNT;
-
-    /** Warmup date format. */
-    private static final SimpleDateFormat WARMUP_DATE_FMT = new SimpleDateFormat("HH:mm:ss");
 
     /** Warmup thread count. */
     private int threadCnt = Runtime.getRuntime().availableProcessors() * 2;
@@ -342,7 +339,7 @@ public class BasicWarmupClosure implements IgniteInClosure<IgniteConfiguration> 
      * @param msg Format message.
      */
     private static void out(String msg) {
-        System.out.println('[' + WARMUP_DATE_FMT.format(new Date(System.currentTimeMillis())) + "][WARMUP][" +
+        System.out.println('[' + IgniteUtils.SHORT_DATE_FMT.format(Instant.now()) + "][WARMUP][" +
             Thread.currentThread().getName() + ']' + ' ' + msg);
     }
 

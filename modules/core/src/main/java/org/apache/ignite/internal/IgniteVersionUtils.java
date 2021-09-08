@@ -16,9 +16,12 @@
 
 package org.apache.ignite.internal;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.TimeZone;
+import java.util.Locale;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -32,7 +35,7 @@ public class IgniteVersionUtils {
     public static final IgniteProductVersion VER;
 
     /** UTC build date formatter. */
-    private static final SimpleDateFormat BUILD_TSTAMP_DATE_FORMATTER;
+    private static final DateTimeFormatter BUILD_TSTAMP_DATE_FORMATTER;
 
     /** Formatted build date. */
     public static final String BUILD_TSTAMP_STR;
@@ -47,7 +50,7 @@ public class IgniteVersionUtils {
     public static final String REV_HASH_STR;
 
     /** Release date. */
-    public static final String RELEASE_DATE_STR;
+    public static final Date RELEASE_DATE;
 
     /** Compound version. */
     public static final String ACK_VER_STR;
@@ -70,9 +73,7 @@ public class IgniteVersionUtils {
         BUILD_TSTAMP = !BUILD_TSTAMP_FROM_PROPERTY.isEmpty() && Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) != 0
             ? Long.parseLong(BUILD_TSTAMP_FROM_PROPERTY) : System.currentTimeMillis() / 1000;
 
-        BUILD_TSTAMP_DATE_FORMATTER = new SimpleDateFormat("yyyyMMdd");
-
-        BUILD_TSTAMP_DATE_FORMATTER.setTimeZone(TimeZone.getTimeZone("UTC"));
+        BUILD_TSTAMP_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("UTC"));
 
         BUILD_TSTAMP_STR = formatBuildTimeStamp(BUILD_TSTAMP * 1000);
 
@@ -80,7 +81,16 @@ public class IgniteVersionUtils {
 
         REV_HASH_STR = IgniteProperties.get("ignite.revision");
 
-        RELEASE_DATE_STR = IgniteProperties.get("ignite.rel.date");
+        String releaseDateStr = IgniteProperties.get("ignite.rel.date");
+
+        DateTimeFormatter releaseDateFormatter = DateTimeFormatter.ofPattern("ddMMyyyy", Locale.US);
+
+        Instant releaseInstant = LocalDate.parse(releaseDateStr, releaseDateFormatter)
+            .atStartOfDay()
+            .atZone(ZoneId.systemDefault())
+            .toInstant();
+
+        RELEASE_DATE = Date.from(releaseInstant);
 
         String rev = REV_HASH_STR.length() > 8 ? REV_HASH_STR.substring(0, 8) : REV_HASH_STR;
 
@@ -91,13 +101,12 @@ public class IgniteVersionUtils {
 
     /**
      * Builds string date representation in "yyyyMMdd" format.
-     * "synchronized" because it uses {@link SimpleDateFormat} which is not threadsafe.
      *
      * @param ts Timestamp.
      * @return Timestamp date in UTC timezone.
      */
-    public static synchronized String formatBuildTimeStamp(long ts) {
-        return BUILD_TSTAMP_DATE_FORMATTER.format(new Date(ts));
+    public static String formatBuildTimeStamp(long ts) {
+        return BUILD_TSTAMP_DATE_FORMATTER.format(Instant.ofEpochMilli(ts));
     }
 
     /**
