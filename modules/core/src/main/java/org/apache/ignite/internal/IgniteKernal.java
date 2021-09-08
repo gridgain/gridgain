@@ -1055,12 +1055,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             startProcessor(new FailureProcessor(ctx));
 
-            PoolProcessor pools = new PoolProcessor(ctx);
-
-            startProcessor(pools);
+            startProcessor(new PoolProcessor(ctx));
 
             // Run background network diagnostics.
-            GridDiagnostic.runBackgroundCheck(igniteInstanceName, pools.getExecutorService(), log);
+            GridDiagnostic.runBackgroundCheck(igniteInstanceName, ctx.pools().getExecutorService(), log);
 
             // Closure processor should be started before all others
             // (except for resource processor), as many components can depend on it.
@@ -1282,51 +1280,14 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             startTimer.finishGlobalStage("Await transition");
 
-            ctx.metric().registerThreadPools(
-                pools.utilityCachePool(),
-                pools.getExecutorService(),
-                pools.getServiceExecutorService(),
-                pools.getSystemExecutorService(),
-                pools.getStripedExecutorService(),
-                pools.getPeerClassLoadingExecutorService(),
-                pools.getManagementExecutorService(),
-                pools.getDataStreamerExecutorService(),
-                pools.getRestExecutorService(),
-                pools.getAffinityExecutorService(),
-                pools.getIndexingExecutorService(),
-                pools.asyncCallbackPool(),
-                pools.getQueryExecutorService(),
-                pools.getSchemaExecutorService(),
-                pools.getRebalanceExecutorService(),
-                pools.customExecutors());
+            ctx.pools().registerMetrics();
 
             registerMetrics();
 
             ctx.cluster().registerMetrics();
 
             // Register MBeans.
-            mBeansMgr.registerMBeansAfterNodeStarted(
-                pools.utilityCachePool(),
-                pools.getExecutorService(),
-                pools.getServiceExecutorService(),
-                pools.getSystemExecutorService(),
-                pools.getStripedExecutorService(),
-                pools.getPeerClassLoadingExecutorService(),
-                pools.getManagementExecutorService(),
-                pools.getDataStreamerExecutorService(),
-                pools.getRestExecutorService(),
-                pools.getAffinityExecutorService(),
-                pools.getIndexingExecutorService(),
-                pools.asyncCallbackPool(),
-                pools.getQueryExecutorService(),
-                pools.getSchemaExecutorService(),
-                pools.getRebalanceExecutorService(),
-                pools.customExecutors(),
-                ctx.workersRegistry());
-
-            ctx.systemView().registerThreadPools(
-                pools.getStripedExecutorService(),
-                pools.getDataStreamerExecutorService());
+            mBeansMgr.registerMBeansAfterNodeStarted();
 
             boolean recon = false;
 
