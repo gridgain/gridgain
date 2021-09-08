@@ -16,13 +16,13 @@
 
 package org.apache.ignite.tests;
 
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
 import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Map;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteTransactions;
