@@ -102,6 +102,7 @@ public class DbgTest extends AbstractIndexingCommonTest {
             "ATTRIBUTE_ID VARCHAR, " +
             "LANGUAGE VARCHAR, " +
             "ATTRIBUTE_VALUE VARCHAR, " +
+
             "ATTRIBUTES_STRING VARCHAR, " +
             "IS_MULTIPLE_VALUE VARCHAR, " +
             "CREATE_TIME TIMESTAMP, " +
@@ -142,22 +143,22 @@ public class DbgTest extends AbstractIndexingCommonTest {
 
                     key.incrementAndGet();
 
-//                    stopGrid(1);
+                    stopGrid(1);
 
-//                    U.sleep(10_000);
-//
-//                    startGrid(1);
+                    U.sleep(10_000);
+
+                    startGrid(1);
                 }
             }
         );
 
-        GridTestUtils.runMultiThreaded(() -> {
+        GridTestUtils.runMultiThreadedAsync(() -> {
             long cnt = 0;
 
             while (true) {
                 try {
                     int keyIns = rnd.nextInt(KEYS);
-                    sql("MERGE INTO TEST VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", row(keyIns));
+                    sql("INSERT INTO TEST VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", row(keyIns));
 
                     if (cnt % 3 == 0) {
                         int keyRm = rnd.nextInt(KEYS);
@@ -177,6 +178,8 @@ public class DbgTest extends AbstractIndexingCommonTest {
                     if (
                         !msg.contains("Ignite instance with provided name doesn't exist")
                             && !msg.contains("Failed to execute query (grid is stopping)")
+                            && !msg.contains("Duplicate key during INSERT")
+                            && !msg.contains("Failed to update some keys because they had been modified concurrently")
                     )
                         log.error("+++ ", e);
                 }
@@ -188,9 +191,7 @@ public class DbgTest extends AbstractIndexingCommonTest {
 
             while (true) {
                 try {
-                    sql("DELETE FROM TEST WHERE ASSET_ID=? ", row(key.get())[0]);
                     sql("INSERT INTO TEST VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", row(key.get()));
-
                 }
                 catch (Exception e) {
                     String msg = e.getMessage();
@@ -198,12 +199,28 @@ public class DbgTest extends AbstractIndexingCommonTest {
                     if (
                         !msg.contains("Ignite instance with provided name doesn't exist")
                             && !msg.contains("Failed to execute query (grid is stopping)")
+                            && !msg.contains("Duplicate key during INSERT")
+                            && !msg.contains("Failed to update some keys because they had been modified concurrently")
+                    )
+                        log.error("+++ ", e);
+                }
+
+                try {
+                    sql("DELETE FROM TEST WHERE ASSET_ID=? ", row(key.get())[0]);
+                }
+                catch (Exception e) {
+                    String msg = e.getMessage();
+
+                    if (
+                        !msg.contains("Ignite instance with provided name doesn't exist")
+                            && !msg.contains("Failed to execute query (grid is stopping)")
+                            && !msg.contains("Duplicate key during INSERT")
+                            && !msg.contains("Failed to update some keys because they had been modified concurrently")
                     )
                         log.error("+++ ", e);
                 }
             }
         }, 10, "sql-upd");
-
     }
 
     /**
@@ -229,7 +246,7 @@ public class DbgTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return grid(1).context().query().querySqlFields(new SqlFieldsQuery(sql)
+        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setArgs(args), false);
     }
 

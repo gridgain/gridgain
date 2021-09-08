@@ -163,15 +163,34 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     public void testCompare4bytes() throws Exception {
         int maxSize = 3 + 8; // 2 4-bytes chars + 3 bytes header.
 
-        assertEquals(0, putAndCompare("\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20", String.class, maxSize));
-        assertEquals(-1, putAndCompare("\ud802\udd20\ud802\udd20", "\ud802\udd21\ud802\udd21", String.class, maxSize));
-        assertEquals(-1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd21\ud802\udd21\ud802\udd21", String.class, maxSize));
-        assertEquals(1, putAndCompare("\ud802\udd21\ud802\udd21\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
-        assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20", String.class, maxSize));
-        assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20", String.class, maxSize));
-        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
-        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd21", String.class, maxSize));
-        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+//        assertEquals(0, putAndCompare("\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20", String.class, maxSize));
+//        assertEquals(-1, putAndCompare("\ud802\udd20\ud802\udd20", "\ud802\udd21\ud802\udd21", String.class, maxSize));
+//        assertEquals(-1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd21\ud802\udd21\ud802\udd21", String.class, maxSize));
+//        assertEquals(1, putAndCompare("\ud802\udd21\ud802\udd21\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+//        assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20", String.class, maxSize));
+//        assertEquals(1, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20", String.class, maxSize));
+//        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+//        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd20", "\ud802\udd20\ud802\udd20\ud802\udd21", String.class, maxSize));
+//        assertEquals(CANT_BE_COMPARE, putAndCompare("\ud802\udd20\ud802\udd20\ud802\udd21", "\ud802\udd20\ud802\udd20\ud802\udd20", String.class, maxSize));
+
+        assertEquals(CANT_BE_COMPARE, putAndCompare("이차 미분 UV-Vis 흡수 분광법을 이용한 형태 연구", "이차 미분 UV-Vis 흡수 분광법을 이용한 형태 연구", String.class, maxSize));
+
+        assertEquals(0, putAndCompare("이차 미분 UV-Vis 흡수 분광법을 이용한 형태 연구", "이차 미분 UV-Vis 흡수 분광법을 이용한 형태 연구", String.class, 200));
+
+
+        for (char c0 = 0; c0 < Character.MAX_VALUE; c0++) {
+            for (char c1 = 0; c1 < Character.MAX_VALUE; c1++) {
+
+                String s0 = c0 + String.valueOf(c1);
+                String s1 = c1 + String.valueOf(c0);
+
+                assertEquals(Integer.signum(s0.compareTo(s1)),
+                    putAndCompare(s0, s1, String.class, 200));
+
+
+
+            }
+        }
     }
 
     /** */
