@@ -26,7 +26,6 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
@@ -46,7 +45,6 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_HOME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.configuration.DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 
 /**
  * Investigation of incident agilent-15446.
@@ -88,7 +86,7 @@ public class Agilent15446Test extends GridCommonAbstractTest {
             .setWorkDirectory(U.getIgniteHome())
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
-                    .setMaxWalArchiveSize(UNLIMITED_WAL_ARCHIVE)
+                    .setMaxWalArchiveSize(5 * U.GB)
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
             );
     }
@@ -96,6 +94,11 @@ public class Agilent15446Test extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override public String getTestIgniteInstanceName() {
         return "Production_Node";
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return super.getTestTimeout() * 1_000;
     }
 
     /**
@@ -188,9 +191,7 @@ public class Agilent15446Test extends GridCommonAbstractTest {
         enableCheckpoints(n, false);
         disableWal(n, false);
 
-        IgniteCacheDatabaseSharedManager dbMgr = n.context().cache().context().database();
-
-        dbMgr.checkpointReadLock();
+        dbMgr0(n).checkpointReadLock();
 
         try {
             H2TreeIndex idx = index(n, ATGC16_CACHE_NAME, PK_IDX_NAME);
@@ -203,7 +204,7 @@ public class Agilent15446Test extends GridCommonAbstractTest {
             }
         }
         finally {
-            dbMgr.checkpointReadUnlock();
+            dbMgr0(n).checkpointReadUnlock();
         }
 
         iterate(

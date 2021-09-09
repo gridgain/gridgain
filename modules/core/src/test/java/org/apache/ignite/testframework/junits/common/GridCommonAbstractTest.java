@@ -2877,4 +2877,25 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         else
             assertNotNull(logPtr);
     }
+
+    /**
+     * Getting database manager.
+     *
+     * @param n Node.
+     * @return Database manager.
+     */
+    protected GridCacheDatabaseSharedManager dbMgr0(IgniteEx n) {
+        return (GridCacheDatabaseSharedManager)n.context().cache().context().database();
+    }
+
+    /**
+     * Getting rebuild index future for the cache.
+     *
+     * @param n Node.
+     * @param cacheId Cache id.
+     * @return Rebuild index future.
+     */
+    @Nullable protected IgniteInternalFuture<?> indexRebuildFuture0(IgniteEx n, int cacheId) {
+        return n.context().query().indexRebuildFuture(cacheId);
+    }
 }
