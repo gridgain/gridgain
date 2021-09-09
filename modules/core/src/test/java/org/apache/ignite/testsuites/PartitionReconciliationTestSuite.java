@@ -28,6 +28,15 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PartitionRe
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFastCheckTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesPersistenceStressTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest1;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest2;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest3;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest4;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest5;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest6;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest7;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest8;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressTest9;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixStressTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFullFixStressTest;
@@ -88,6 +97,15 @@ public class PartitionReconciliationTestSuite {
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationAtomicLongStressTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationSystemFastCheckTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest1.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest2.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest3.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest4.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest5.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest6.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest7.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest8.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressTest9.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesPersistenceStressTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesTest.class, ignoredTests);
 

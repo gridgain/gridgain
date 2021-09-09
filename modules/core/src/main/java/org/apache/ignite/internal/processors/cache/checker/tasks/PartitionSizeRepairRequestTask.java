@@ -209,6 +209,9 @@ public class PartitionSizeRepairRequestTask extends ComputeTaskAdapter<Partition
             part.reserve();
 
             try {
+                log.warning("ewriugtriu before flushReconciliationResult " + repair +
+                    " " + cacheName + " " + partId + " " + ignite.name());
+
                 if (repair)
                     cacheDataStore.flushReconciliationResult(cacheId, nodePartitionSize, true);
                 else

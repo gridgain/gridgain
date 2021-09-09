@@ -216,7 +216,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
 
         int cacheId = cctx.cacheId();
 
-        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, rnd.nextInt(100_000)));
+        cctx.group().topology().localPartitions().forEach(part -> part.dataStore().updateSize(cacheId, 10/*rnd.nextInt(100_000)*/));
     }
 
     /**

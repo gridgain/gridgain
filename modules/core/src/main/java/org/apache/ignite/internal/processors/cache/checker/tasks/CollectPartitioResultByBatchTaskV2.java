@@ -366,8 +366,12 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         if (reconSize && !hasNext &&
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
-                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS)
+                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+                            log.warning("ewriugtriu in Batch tack " +
+                                " " + nodeSize.cacheName());
+
                             nodeSize.inProgress(false);
+                        }
 
                         return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));
                     }
