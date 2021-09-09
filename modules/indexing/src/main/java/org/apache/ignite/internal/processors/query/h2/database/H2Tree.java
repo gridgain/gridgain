@@ -831,7 +831,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             }
 
             String cols = columns.stream()
-                .map(c -> "[column=" + c.get1() + ", type=" + c.get2()+ ", inlineSize=" + c.get3() + "]")
+                .map(c -> "[column=" + c.get1() + ", type=" + c.get2() + ", inlineSize=" + c.get3() + "]")
                 .collect(Collectors.joining(", ", "[", "]"));
 
             String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
