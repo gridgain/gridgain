@@ -117,11 +117,12 @@ class DataEntryWrapper extends DataEntry {
                 str = toStringRecursive(value.getClass(), value);
             else if (co instanceof BinaryObject)
                 str = co.toString();
-            else
+            else if (co != null)
                 str = null;
+            else
+                str = "null";
 
             if (str == null || str.isEmpty()) {
-
                 try {
                     CacheObjectValueContext ctx;
                     try {
@@ -145,8 +146,10 @@ class DataEntryWrapper extends DataEntry {
         else {
             if (value != null)
                 return Integer.toString(value.hashCode());
-            else
+            else if (co != null)
                 return Integer.toString(co.hashCode());
+            else
+                return Integer.toString("null".hashCode());
         }
     }
 

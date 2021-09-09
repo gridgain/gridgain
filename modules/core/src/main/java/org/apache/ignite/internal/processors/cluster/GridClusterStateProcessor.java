@@ -1979,7 +1979,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public boolean evictionsAllowed() {
-        return true;
+        return false;
     }
 
     /**

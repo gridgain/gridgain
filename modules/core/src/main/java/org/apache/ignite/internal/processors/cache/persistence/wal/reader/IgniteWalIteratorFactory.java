@@ -726,10 +726,10 @@ public class IgniteWalIteratorFactory {
 
         /** {@inheritDoc} */
         @Override public void error(String msg, @Nullable Throwable e) {
-            ERR.println(msg);
-
-            if (e != null)
-                e.printStackTrace(ERR);
+//            ERR.println(msg);
+//
+//            if (e != null)
+//                e.printStackTrace(ERR);
         }
 
         /** {@inheritDoc} */

@@ -50,6 +50,12 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.BINARY_METADATA_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.INCLUDE_SENSITIVE;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.PAGE_SIZE;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.SKIP_CRC;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.WAL_ARCHIVE_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.WAL_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.checkpoint;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.pageOwner;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.partitionMetaStateUpdate;
@@ -58,11 +64,42 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.reader
  * Print WAL log data in human-readable form.
  */
 public class IgniteWalConverter {
+    public static void main(String[] args) {
+        args = new String[] {
+            WAL_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work0\\db\\_wal\\Production_Node2",
+            WAL_ARCHIVE_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work0\\db\\_wal\\archive\\Production_Node2",
+            BINARY_METADATA_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work0\\db\\binary_meta\\Production_Node2",
+//            RECORD_TYPES.arg(), "DATA_RECORD",
+//            HAS_TEXT.arg(), "DataPageRemoveRecord [itemId=9",
+//            HAS_TEXT.arg(), "0002ffff00018e3a",
+//            HAS_TEXT.arg(), "LANGUAGE=ja, ATTRIBUTE_ID=Name, ATTRIBUTE_VALUE=ELIBRARY_671069, ASSET_ID=SDS_534770",
+//            PAGES.arg(), "1940651700:" + 0x002ffff00018e3aL,
+            PAGE_SIZE.arg(), "1024",
+            SKIP_CRC.arg(),
+            INCLUDE_SENSITIVE.arg(), "SHOW"
+        };
+
+        main_(args);
+    }
+
+    public static void main1(String[] args) {
+        args = new String[] {
+            WAL_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work\\db\\wal\\Production_Node2",
+            WAL_ARCHIVE_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work\\db\\wal\\archive\\Production_Node2",
+            BINARY_METADATA_DIR.arg(), "C:\\Users\\tkalk\\IdeaProjects\\incubator-ignite\\work\\db\\binary_meta\\Production_Node2",
+            PAGE_SIZE.arg(), "4096",
+            SKIP_CRC.arg(),
+            INCLUDE_SENSITIVE.arg(), "SHOW"
+        };
+
+        main_(args);
+    }
+
     /**
      * @param args Args.
      * @throws Exception If failed.
      */
-    public static void main(String[] args) {
+    public static void main_(String[] args) {
         final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
         if (parameters != null)
@@ -126,33 +163,37 @@ public class IgniteWalConverter {
             String currentWalPath = null;
 
             while (stIt.hasNextX()) {
-                final String currentRecordWalPath = getCurrentWalFilePath(stIt);
+                try {
+                    final String currentRecordWalPath = getCurrentWalFilePath(stIt);
 
-                if (currentWalPath == null || !currentWalPath.equals(currentRecordWalPath)) {
-                    out.println("File: " + currentRecordWalPath);
+                    if (currentWalPath == null || !currentWalPath.equals(currentRecordWalPath)) {
+                        out.println("File: " + currentRecordWalPath);
 
-                    currentWalPath = currentRecordWalPath;
-                }
+                        currentWalPath = currentRecordWalPath;
+                    }
 
-                IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
+                    IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
 
-                final WALPointer pointer = next.get1();
+                    final WALPointer pointer = next.get1();
 
-                final WALRecord record = next.get2();
+                    final WALRecord record = next.get2();
 
-                if (stat != null)
-                    stat.registerRecord(record, pointer, true);
+                    if (stat != null)
+                        stat.registerRecord(record, pointer, true);
 
-                if (printAlways || params.getRecordTypes().contains(record.type())) {
-                    boolean print = true;
+                    if (printAlways || params.getRecordTypes().contains(record.type())) {
+                        boolean print = true;
 
-                    if (record instanceof TimeStampRecord)
-                        print = withinTimeRange((TimeStampRecord) record, params.getFromTime(), params.getToTime());
+                        if (record instanceof TimeStampRecord)
+                            print = withinTimeRange((TimeStampRecord)record, params.getFromTime(), params.getToTime());
 
-                    final String recordStr = toString(record, params.includeSensitive());
+                        final String recordStr = toString(record, params.includeSensitive());
 
-                    if (print && (F.isEmpty(params.hasText()) || recordStr.contains(params.hasText())))
-                        out.println(recordStr);
+                        if (print && (F.isEmpty(params.hasText()) || recordStr.contains(params.hasText())))
+                            out.println(recordStr);
+                    }
+                } catch (Throwable t) {
+                    //no-op
                 }
             }
         }

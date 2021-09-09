@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
  * Inner page for H2 row references.
@@ -164,5 +165,17 @@ public abstract class AbstractH2ExtrasInnerIO extends BPlusInnerIO<H2Row> implem
     /** {@inheritDoc} */
     @Override public int getPayloadSize() {
         return payloadSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+        super.printPage(addr, pageSize, sb);
+
+        sb.nl().a("Items cnt=").a(getCount(addr)).a(" [");
+
+        for (int i = 0; i < getCount(addr); i++)
+            sb.a("(i=" + i).a(" ").appendHex(getLink(addr, i)).a("), ");
+
+        sb.a(']');
     }
 }

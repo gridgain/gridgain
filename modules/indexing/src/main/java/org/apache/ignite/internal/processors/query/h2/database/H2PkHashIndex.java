@@ -98,7 +98,7 @@ public class H2PkHashIndex extends GridH2IndexBase {
         IndexingQueryCacheFilter filter = null;
         MvccSnapshot mvccSnapshot = null;
 
-        QueryContext qctx = H2Utils.context(ses);
+        QueryContext qctx = ses == null ? null : H2Utils.context(ses);
 
         int seg = 0;
 
