@@ -139,7 +139,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             fut.get();
 
         awaitPartitionMapExchange();
-        doSleep(20000);
+        doSleep(40000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         for (long i = startKey; i < endKey; i++) {
