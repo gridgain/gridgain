@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.gridgain.internal.h2.message.DbException;
@@ -831,7 +832,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             }
 
             String cols = columns.stream()
-                .map(c -> "[column=" + c.get1() + ", type=" + c.get2() + ", inlineSize=" + c.get3() + "]")
+                .map(c -> new SB("[column=").a(c.get1()).a(", type=").a(c.get2()).a(", inlineSize=").a(c.get3()).a("]").toString())
                 .collect(Collectors.joining(", ", "[", "]"));
 
             String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
