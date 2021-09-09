@@ -367,8 +367,8 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
-                            log.warning("ewriugtriu before flushReconciliationResult " + partBatch.repair() +
-                                " " + nodeSize.cacheName());
+//                            log.warning("ewriugtriu before flushReconciliationResult " + partBatch.repair() +
+//                                " " + nodeSize.cacheName());
 
                             if (partBatch.repair())
                                 cacheDataStore.flushReconciliationResult(cacheId, nodeSize, true);
