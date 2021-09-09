@@ -45,9 +45,11 @@ namespace ignite
                  * Constructor.
                  *
                  * @param typeName Type name.
+                 * @param affFieldName Affinity fiend name.
                  * @param typeId Type ID.
                  */
-                IGNITE_IMPORT_EXPORT BinaryTypeSnapshot(std::string typeName, int32_t typeId);
+                IGNITE_IMPORT_EXPORT BinaryTypeSnapshot(const std::string& typeName, const std::string& affFieldName,
+                    int32_t typeId);
 
                 /**
                  * Copy constructor.
@@ -75,6 +77,16 @@ namespace ignite
                 const std::string& GetTypeName() const
                 {
                     return typeName;
+                }
+
+                /**
+                 * Get affinity field name.
+                 *
+                 * @return Affinity field name.
+                 */
+                const std::string& GetAffinityFieldName() const
+                {
+                    return affFieldName;
                 }
 
                 /**
@@ -139,6 +151,9 @@ namespace ignite
             private:
                 /** Type name. */
                 std::string typeName;
+
+                /** Affinity field name. */
+                std::string affFieldName;
 
                 /** Type ID. */
                 int32_t typeId;
