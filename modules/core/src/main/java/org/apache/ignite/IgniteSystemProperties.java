@@ -874,6 +874,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_FORCIBLE_NODE_KILL = "IGNITE_ENABLE_FORCIBLE_NODE_KILL";
 
     /**
+     * If the property is set, client nodes should have explicitly rights to access to system cache.
+     * <p>
+     * Default value is fasle.
+     *
+     */
+    public static final String IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED = "IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED";
+
+    /**
      * Tasks stealing will be started if tasks queue size per data-streamer thread exceeds this threshold.
      * <p>
      * Default value is {@code 4}.

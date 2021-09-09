@@ -145,6 +145,10 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Empty cache version array. */
     private static final GridCacheVersion[] EMPTY_VERSION = new GridCacheVersion[0];
 
+    /** The flag indicates the security enabled for system caches. */
+    private boolean securityForSysCacheEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED);
+
     /** Kernal context. */
     private GridKernalContext ctx;
 
@@ -813,7 +817,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @throws SecurityException If security check failed.
      */
     public void checkSecurity(SecurityPermission op) throws SecurityException {
-        if (CU.isSystemCache(name()))
+        if (CU.isSystemCache(name()) && (!securityForSysCacheEnabled || !ctx.clientNode()))
             return;
 
         ctx.security().authorize(name(), op);
