@@ -73,27 +73,6 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
     private volatile IgniteBiInClosure<ClusterNode, Message> c;
 
     /**
-     * When the filed is true an message will be unwrapped before it will be passed to a predicate.
-     */
-    private final boolean unwrapOriginMessage;
-
-    /**
-     * Default constructor.
-     * Messages are unwrapped before them are passed to a predicate by default.
-     */
-    public TestRecordingCommunicationSpi() {
-        this(true);
-    }
-
-    /**
-     * @param unwrapOriginMessage True when a message will be unwrapped before provide to a predicate,
-     * false the message will be provided as an Io message.
-     */
-    public TestRecordingCommunicationSpi(boolean unwrapOriginMessage) {
-        this.unwrapOriginMessage = unwrapOriginMessage;
-    }
-
-    /**
      * @param node Node.
      * @return Test SPI.
      */
@@ -120,14 +99,14 @@ public class TestRecordingCommunicationSpi extends TcpCommunicationSpi {
 
             synchronized (this) {
                 boolean record = (recordClasses != null && recordClasses.contains(msg0.getClass())) ||
-                    (recordP != null && recordP.apply(node, unwrapOriginMessage ? msg0 : ioMsg));
+                    (recordP != null && recordP.apply(node, msg0));
 
                 if (record)
                     recordedMsgs.add(msg0);
 
                 boolean block = false;
 
-                if (blockP != null && blockP.apply(node, unwrapOriginMessage ? msg0 : ioMsg))
+                if (blockP != null && blockP.apply(node, msg0))
                     block = true;
                 else {
                     Set<String> blockNodes = blockCls.get(msg0.getClass());
