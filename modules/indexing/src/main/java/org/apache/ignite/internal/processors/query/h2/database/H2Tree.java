@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -49,12 +51,14 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.StringInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -597,22 +601,36 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
                 int lastIdxUsed = 0;
 
+                int inlinedCmpRes = 0;
+                boolean resTrusted = true;
+
                 for (int i = 0; i < inlineIdxs.size(); i++) {
                     InlineIndexColumn inlineIdx = inlineIdxs.get(i);
                     Value v2 = row.getValue(inlineIdx.columnIndex());
 
-                    if (v2 == null)
+                    if (v2 == null) {
+                        if (!resTrusted)
+                            break;
+
                         return 0;
+                    }
 
-                    int c = inlineIdx.compare(pageAddr, off + fieldOff, inlineSize() - fieldOff, v2, comp);
+                    inlinedCmpRes = inlineIdx.compare(pageAddr, off + fieldOff, inlineSize() - fieldOff, v2, comp);
 
-                    if (c == CANT_BE_COMPARE)
+                    if (inlinedCmpRes == CANT_BE_COMPARE)
                         break;
+
+                    if (inlineIdx instanceof StringInlineIndexColumn)
+                        resTrusted = false;
 
                     lastIdxUsed++;
 
-                    if (c != 0)
-                        return fixSort(c, inlineCols[i].sortType);
+                    if (inlinedCmpRes != 0) {
+                        if (!resTrusted)
+                            break;
+
+                        return fixSort(inlinedCmpRes, inlineCols[i].sortType);
+                    }
 
                     fieldOff += inlineIdx.fullSize(pageAddr, off + fieldOff);
 
@@ -620,30 +638,59 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                         break;
                 }
 
-                if (lastIdxUsed == cols.length)
+                if (lastIdxUsed == cols.length && resTrusted)
                     return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
 
                 inlineSizeRecomendation(row);
 
                 SearchRow rowData = getRow(io, pageAddr, idx);
 
-                for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
-                    IndexColumn col = cols[i];
-                    int idx0 = col.column.getColumnId();
+                int dataRowCmpRes = 0;
 
-                    Value v2 = row.getValue(idx0);
+                if (!resTrusted)
+                    lastIdxUsed = 0;
 
-                    if (v2 == null) {
-                        // Can't compare further.
-                        return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                try {
+                    for (int i = lastIdxUsed, len = cols.length; i < len; i++) {
+                        IndexColumn col = cols[i];
+                        int idx0 = col.column.getColumnId();
+
+                        Value v2 = row.getValue(idx0);
+
+                        if (v2 == null) {
+                            // Can't compare further.
+                            return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
+                        }
+
+                        Value v1 = rowData.getValue(idx0);
+
+                        dataRowCmpRes = compareValues(v1, v2);
+
+                        if (dataRowCmpRes != 0)
+                            return fixSort(dataRowCmpRes, col.sortType);
                     }
-
-                    Value v1 = rowData.getValue(idx0);
-
-                    int c = compareValues(v1, v2);
-
-                    if (c != 0)
-                        return fixSort(c, col.sortType);
+                }
+                finally {
+                    if (!resTrusted && Integer.signum(inlinedCmpRes) != Integer.signum(dataRowCmpRes)) {
+                        log.warning(
+                            "Inconsistency in comparison detected:\n" +
+                            "tblName=" + tblName + ",\n" +
+                            "idxName=" + idxName + ",\n" +
+                            "idxCols=" + Arrays.stream(inlineCols).map(ic -> ic.columnName)
+                                .collect(Collectors.joining(",")) + ",\n" +
+                            "idxInlinedTypes=" + inlineIdxs.stream().map(InlineIndexColumn::type)
+                                .map(String::valueOf).collect(Collectors.joining(",")) + ",\n" +
+                            "cmpResultByInline=" + inlinedCmpRes + ",\n" +
+                            "cmpResultByDataRow=" + dataRowCmpRes + ",\n" +
+                            "searchRow=" + row + ",\n" +
+                            "searchRowKeyHex=0x" + IgniteUtils.byteArray2HexString(table.rowKeyBytes(row)) + ",\n" +
+                            "searchRowValueHex=0x" + IgniteUtils.byteArray2HexString(table.rowValueBytes(row)) + ",\n" +
+                            "dataRow=" + rowData + ",\n" +
+                            "dataRowKeyHex=0x" + IgniteUtils.byteArray2HexString(table.rowKeyBytes(rowData)) + ",\n" +
+                            "dataRowValueHex=0x" + IgniteUtils.byteArray2HexString(table.rowValueBytes(rowData)) + ",\n" +
+                            "inlinedRow=0x" + IgniteUtils.byteArray2HexString(PageUtils.getBytes(pageAddr, off, inlineSize))
+                        );
+                    }
                 }
 
                 return mvccCompare((H2RowLinkIO)io, pageAddr, idx, row);
