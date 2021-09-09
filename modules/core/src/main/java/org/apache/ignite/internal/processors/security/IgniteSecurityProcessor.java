@@ -76,7 +76,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
 
     private boolean checkSenderNodeSubject = IgniteSystemProperties
-        .getBoolean(IgniteSystemProperties.IGNITE_CHECK_SENDER_NODE_SUBJECT, true);
+        .getBoolean(IgniteSystemProperties.IGNITE_CHECK_SENDER_NODE_SUBJECT);
 
     /** Grid kernal context. */
     private final GridKernalContext ctx;
