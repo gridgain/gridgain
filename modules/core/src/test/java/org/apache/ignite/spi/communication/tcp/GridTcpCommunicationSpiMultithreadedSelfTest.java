@@ -59,6 +59,7 @@ import org.apache.ignite.testframework.GridSpiTestContext;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
+import org.apache.ignite.testframework.junits.IgniteMock;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.junit.Test;
@@ -433,7 +434,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
     /**
      * @return Spi.
      */
-    private TcpCommunicationSpi newCommunicationSpi() {
+    private CommunicationSpi<Message> newCommunicationSpi() {
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
         if (!useShmem)
@@ -468,7 +469,7 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
         timeoutProcessor.onKernalStart(true);
 
         for (int i = 0; i < getSpiCount(); i++) {
-            TcpCommunicationSpi spi = newCommunicationSpi();
+            CommunicationSpi<Message> spi = newCommunicationSpi();
 
             GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
@@ -496,6 +497,10 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
 
             rsrcs.inject(spi);
 
+            IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
+
+            ignite.setCommunicationSpi(spi);
+
             MessageListener lsnr = new MessageListener(rsrcs.getNodeId());
 
             spi.setListener(lsnr);
@@ -510,7 +515,6 @@ public class GridTcpCommunicationSpiMultithreadedSelfTest extends GridSpiAbstrac
 
             node.setAttributes(spi.getNodeAttributes());
             node.setAttribute(ATTR_MACS, F.concat(U.allLocalMACs(), ", "));
-            node.setPhysicalAddress(spi.getLocalAddress());
 
             spis.put(rsrcs.getNodeId(), spi);
 

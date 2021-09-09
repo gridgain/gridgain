@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
@@ -40,12 +41,14 @@ import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationListener;
+import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
@@ -59,6 +62,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
+import static org.apache.ignite.internal.util.IgniteUtils.spiAttribute;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
@@ -503,7 +508,12 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             return;
         }
         else {
-            if (checkCoomHandshakeSender && !rmtNode.addresses().contains(ses.remoteAddress().getAddress().getHostAddress())) {
+            CommunicationSpi commSpi = igniteExSupplier.get().configuration().getCommunicationSpi();
+
+            Collection<String> rmtAddrs = rmtNode.attribute(spiAttribute(commSpi, ATTR_ADDRS));
+
+            if (checkCoomHandshakeSender &&
+                F.isEmpty(rmtAddrs) && !rmtAddrs.contains(ses.remoteAddress().getAddress().getHostAddress())) {
                 U.warn(log, "Closing incoming connection, unexpected remote address [nodeId=" + sndId + ", ses=" + ses + ']');
 
                 ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());

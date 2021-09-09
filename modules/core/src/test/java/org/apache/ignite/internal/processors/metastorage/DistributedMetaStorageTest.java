@@ -77,8 +77,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setLocalHost("127.0.0.1");
-
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()

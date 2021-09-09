@@ -16,13 +16,12 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import java.net.InetAddress;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -162,7 +161,6 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
 
         GridTestNode sendingNode = new GridTestNode();
         sendingNode.order(0);
-        sendingNode.setPhysicalAddress("127.0.0.1");
         GridSpiTestContext sendingCtx = initSpiContext();
 
         TcpCommunicationSpi sendingSpi = initializeSpi(sendingCtx, sendingNode, listeningLogger, false);
@@ -235,7 +233,8 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
 
         IgniteConfiguration cfg = new IgniteConfiguration()
             .setGridLogger(log)
-            .setClientMode(clientMode);
+            .setClientMode(clientMode)
+            .setCommunicationSpi(spi);
 
         IgniteTestResources rsrcs = new IgniteTestResources(cfg);
 

@@ -388,7 +388,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
     /**
      * @return SPI.
      */
-    private TcpCommunicationSpi createSpi() {
+    private CommunicationSpi<Message> createSpi() {
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
 
         spi.setLocalAddress("127.0.0.1");
@@ -420,7 +420,7 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
         timeoutProcessor.onKernalStart(true);
 
         for (int i = 0; i < SPI_CNT; i++) {
-            TcpCommunicationSpi spi = createSpi();
+            CommunicationSpi<Message> spi = createSpi();
 
             IgniteTestResources rsrcs = new IgniteTestResources();
 
@@ -454,9 +454,11 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
 
             GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
-            if (useSsl) {
-                IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
+            IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
 
+            ignite.setCommunicationSpi(spi);
+
+            if (useSsl) {
                 IgniteConfiguration cfg = ignite.configuration()
                     .setSslContextFactory(GridTestUtils.sslFactory());
 
@@ -470,8 +472,6 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
             spi.spiStart(getTestIgniteInstanceName() + (i + 1));
 
             node.setAttributes(spi.getNodeAttributes());
-
-            node.setPhysicalAddress(spi.getLocalAddress());
 
             spis.add(spi);
 
