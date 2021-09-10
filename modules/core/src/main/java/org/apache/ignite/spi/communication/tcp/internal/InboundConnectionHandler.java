@@ -90,7 +90,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * which corresponds to received node id in the message.
      */
     private final boolean checkCoomHandshakeSender =
-        getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, false);
+        getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, true);
 
     /** Message tracker meta for session. */
     private static final int TRACKER_META = GridNioSessionMetaKey.nextUniqueKey();
@@ -513,7 +513,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
             Collection<String> rmtAddrs = rmtNode.attribute(spiAttribute(commSpi, ATTR_ADDRS));
 
             if (checkCoomHandshakeSender &&
-                F.isEmpty(rmtAddrs) && !rmtAddrs.contains(ses.remoteAddress().getAddress().getHostAddress())) {
+                !F.isEmpty(rmtAddrs) && !rmtAddrs.contains(ses.remoteAddress().getAddress().getHostAddress())) {
                 U.warn(log, "Closing incoming connection, unexpected remote address [nodeId=" + sndId + ", ses=" + ses + ']');
 
                 ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());
