@@ -297,8 +297,6 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
             KeyCacheObject lastKeyForSizes = null;
 
-            KeyCacheObject oldBorderKey = null;
-
             part.reserve();
 
             try {
@@ -310,8 +308,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         throw new RuntimeException(e);
                     }
 
-                    if (partReconciliationCtx != null &&
-                        partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
+                    if (partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
                         partReconciliationCtx.lastKey(cacheId) == null) {
                         nodeSize.inProgress(true);
 
@@ -323,8 +320,6 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                     }
 
                     lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
-
-                    oldBorderKey = partReconciliationCtx.lastKey(cacheId);
                 }
 
                 KeyCacheObject keyToStart = null;
@@ -364,7 +359,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         }
 
                         if (reconSize && !hasNext &&
-                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(oldBorderKey)) &&
+                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&
                                 (lowerKey == null || lowerKey.equals(newLowerKey))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
                             log.warning("ewriugtriu in Batch tack " +

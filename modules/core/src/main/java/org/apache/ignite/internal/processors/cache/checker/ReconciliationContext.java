@@ -136,7 +136,7 @@ public class ReconciliationContext {
      * @return {@code true} if size reconciliation finished for all caches in cache group.
      */
     public boolean partSizeIsFinished() {
-        return sizes.isEmpty();
+        return sizeReconciliationState.values().stream().allMatch(state -> state == SizeReconciliationState.FINISHED);
     }
 
     /**
