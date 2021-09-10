@@ -1016,7 +1016,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected String lockRetryErrorMessage(String op) {
-        return super.lockRetryErrorMessage(op) + " Problem with the " + getClass().getSimpleName() + " [grpName=" +
-            grpName + ", cacheName=" + cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
+        return super.lockRetryErrorMessage(op) + " Problem with the index [cacheName=" +
+            cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
     }
 }

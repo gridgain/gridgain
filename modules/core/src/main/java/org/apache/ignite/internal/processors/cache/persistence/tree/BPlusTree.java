@@ -6212,6 +6212,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         return "Maximum number of retries " +
             getLockRetries() + " reached for " + op + " operation " +
             "(the tree may be corrupted). Increase " + IGNITE_BPLUS_TREE_LOCK_RETRIES + " system property " +
-            "if you regularly see this message (current value is " + getLockRetries() + ").";
+            "if you regularly see this message (current value is " + getLockRetries() + "). " +
+            getClass().getSimpleName() + " [grpName=" + grpName + ", treeName=" + name() + ", metaPageId=" +
+            U.hexLong(metaPageId) + "].";
     }
 }
