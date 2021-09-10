@@ -514,7 +514,10 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
             if (checkCoomHandshakeSender &&
                 !F.isEmpty(rmtAddrs) && !rmtAddrs.contains(ses.remoteAddress().getAddress().getHostAddress())) {
-                U.warn(log, "Closing incoming connection, unexpected remote address [nodeId=" + sndId + ", ses=" + ses + ']');
+                String knownAddrs = String.join(",", rmtAddrs);
+
+                U.warn(log, "Closing incoming connection, unexpected remote address " +
+                    "[nodeId=" + sndId + ", addrs=[" + knownAddrs + ']' + ", ses=" + ses + ']');
 
                 ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());
 
