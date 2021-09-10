@@ -671,7 +671,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                     }
                 }
                 finally {
-                    if (!resTrusted && Integer.signum(inlinedCmpRes) != Integer.signum(dataRowCmpRes)) {
+                    if (!resTrusted && inlinedCmpRes != CANT_BE_COMPARE
+                        && Integer.signum(inlinedCmpRes) != Integer.signum(dataRowCmpRes)
+                    ) {
                         log.warning(
                             "Inconsistency in comparison detected:\n" +
                             "tblName=" + tblName + ",\n" +
