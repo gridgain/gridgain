@@ -212,6 +212,8 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
+                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
+
                     Batch workload = new Batch(
                         reconciliationTypes.contains(DATA_CONSISTENCY),
                         reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY),
@@ -448,7 +450,12 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         nextBatchKey,
                         res.sizeMap())
                     );
-                else if (workload.cacheSizeReconciliation()) {
+                else if (reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
+                    collector.partSizesMap().put(workload.cacheName(), new ConcurrentHashMap<>());
+
+                    log.warning("iudferr schedule PartitionSizeRepair " + workload.cacheName() + " " +
+                        workload.partitionId() + " " + res.sizeMap());
+
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
                             workload.cacheName(), workload.partitionId(),
@@ -578,11 +585,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 startTopVer,
                 workload.partSizesMap()
             ),
-            res -> {
-                collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
-
-                collector.partSizesMap().get(workload.cacheName()).put(workload.partitionId(), res.sizeMap());
-            });
+            res -> collector.partSizesMap().get(workload.cacheName()).put(workload.partitionId(), res.sizeMap()));
     }
 
     /**

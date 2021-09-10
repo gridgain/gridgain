@@ -1868,7 +1868,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     long newSize = reconciliationCtx().finishSize(cacheId).get();
 
-                    log.warning("ewriugtriu in flushReconciliationResult " + repair +
+                    log.warning("ertnetrty in flushReconciliationResult sharedGroup " + repair +
                         " " + nodePartitionSize.oldCacheSize() + " " + newSize);
 
                     nodePartitionSize.newCacheSize(newSize);

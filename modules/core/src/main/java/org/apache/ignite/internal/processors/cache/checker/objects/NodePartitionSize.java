@@ -103,4 +103,13 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         oldCacheSize = in.readLong();
         newCacheSize = in.readLong();
     }
+
+    @Override public String toString() {
+        return "NodePartitionSize{" +
+            "cacheName='" + cacheName + '\'' +
+            ", inProgress=" + inProgress +
+            ", oldCacheSize=" + oldCacheSize +
+            ", newCacheSize=" + newCacheSize +
+            '}';
+    }
 }
