@@ -212,10 +212,7 @@ public class PartitionSizeRepairRequestTask extends ComputeTaskAdapter<Partition
                 log.warning("ewriugtriu before flushReconciliationResult " + repair +
                     " " + cacheName + " " + partId + " " + ignite.name());
 
-                if (repair)
-                    cacheDataStore.flushReconciliationResult(cacheId, nodePartitionSize, true);
-                else
-                    cacheDataStore.flushReconciliationResult(cacheId, nodePartitionSize, false);
+                cacheDataStore.flushReconciliationResult(cacheId, nodePartitionSize, repair);
             }
             catch (Exception e) {
                 String errMsg = "Batch [" + repairReq + "] can't processed. Broken cursor.";

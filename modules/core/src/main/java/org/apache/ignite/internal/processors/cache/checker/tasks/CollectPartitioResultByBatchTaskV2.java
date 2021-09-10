@@ -255,27 +255,23 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<PartitionExecutionJobResultByBatch> execute0() {
-            boolean reconConsist = partBatch.dataReconciliation();
-
-            NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
-
-            boolean reconSize = partBatch.cacheSizeReconciliation() &&
-                (nodePartitionSize == null || nodePartitionSize.inProgress());
+            boolean consistencyReconciliation = partBatch.dataReconciliation();
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
 
+            NodePartitionSize nodePartitionSize = partBatch.partSizesMap().get(ignite.localNode().id());
+
+            boolean sizeReconciliation = partBatch.cacheSizeReconciliation() &&
+                (nodePartitionSize == null || nodePartitionSize.inProgress());
+
             int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
-            final int batchSize = partBatch.batchSize();
-
-            final KeyCacheObject lowerKey;
-
-            KeyCacheObject newLowerKey = null;
+            final KeyCacheObject lastKeyForConsistency;
 
             try {
-                lowerKey = unmarshalKey(partBatch.lowerKey(), cctx);
+                lastKeyForConsistency = unmarshalKey(partBatch.lowerKey(), cctx);
             }
             catch (IgniteCheckedException e) {
                 String errMsg = "Batch [" + partBatch + "] can't processed. Broken key.";
@@ -287,9 +283,9 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
 
-            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
-
             assert part != null;
+
+            IgniteCacheOffheapManager.CacheDataStore cacheDataStore = grpCtx.offheap().dataStore(part);
 
             ReconciliationContext partReconciliationCtx = null;
 
@@ -300,38 +296,28 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
             part.reserve();
 
             try {
-                if (reconSize) {
+                if (sizeReconciliation) {
                     try {
                         partReconciliationCtx = cacheDataStore.reconciliationCtx();
                     }
                     catch (IgniteCheckedException e) {
-                        throw new RuntimeException(e);
+                        throw new IgniteException(e);
                     }
 
-                    if (partReconciliationCtx.sizeReconciliationState(cacheId) == null &&
-                        partReconciliationCtx.lastKey(cacheId) == null) {
+                    if (partReconciliationCtx.sizeReconciliationState(cacheId) == null) {
                         nodeSize.inProgress(true);
 
                         partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
-                    }
-                    else {
-                        if (nodePartitionSize != null)
-                            nodeSize = nodePartitionSize;
                     }
 
                     lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
                 }
 
-                KeyCacheObject keyToStart = null;
+                KeyCacheObject newLastKeyForConsistency = null;
 
-                if (reconConsist && lowerKey != null && reconSize && lastKeyForSizes != null)
-                    keyToStart = KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
-                else if (reconConsist && lowerKey != null)
-                    keyToStart = lowerKey;
-                else if (reconSize && lastKeyForSizes != null)
-                    keyToStart = lastKeyForSizes;
+                KeyCacheObject keyToStart = firstKeyForReconciliationCursor(consistencyReconciliation, sizeReconciliation, lastKeyForConsistency, lastKeyForSizes);
 
-                if (reconConsist || reconSize) {
+                if (consistencyReconciliation || sizeReconciliation) {
                     try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {
@@ -340,13 +326,13 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
                         boolean hasNext = cursor.next();
 
-                        for (int i = 0; (i < batchSize && hasNext); i++) {
+                        for (int i = 0; (i < partBatch.batchSize() && hasNext); i++) {
                             CacheDataRow row = cursor.get();
 
-                            if (reconConsist && lowerKey != null && KEY_COMPARATOR.compare(lowerKey, row.key()) >= 0)
+                            if (consistencyReconciliation && lastKeyForConsistency != null && KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) >= 0)
                                 i--;
-                            else if (reconConsist && (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) < 0)) {
-                                newLowerKey = row.key();
+                            else if (consistencyReconciliation && (lastKeyForConsistency == null || KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) < 0)) {
+                                newLastKeyForConsistency = row.key();
 
                                 partEntryHashRecords.add(new VersionedKey(
                                     ignite.localNode().id(),
@@ -358,9 +344,9 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             hasNext = cursor.next();
                         }
 
-                        if (reconSize && !hasNext &&
+                        if (sizeReconciliation && !hasNext &&
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&
-                                (lowerKey == null || lowerKey.equals(newLowerKey))) &&
+                                (lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
                             log.warning("ewriugtriu in Batch tack " +
                                 " " + nodeSize.cacheName());
@@ -384,6 +370,17 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
             finally {
                 part.release();
             }
+        }
+
+        private KeyCacheObject firstKeyForReconciliationCursor(boolean reconConsist, boolean reconSize, KeyCacheObject lowerKey, KeyCacheObject lastKeyForSizes) {
+            if (reconConsist && lowerKey != null && reconSize && lastKeyForSizes != null)
+                return KEY_COMPARATOR.compare(lowerKey, lastKeyForSizes) < 0 ? lowerKey : lastKeyForSizes;
+            else if (reconConsist && lowerKey != null)
+                return lowerKey;
+            else if (reconSize && lastKeyForSizes != null)
+                return lastKeyForSizes;
+            else
+                return null;
         }
     }
 }
