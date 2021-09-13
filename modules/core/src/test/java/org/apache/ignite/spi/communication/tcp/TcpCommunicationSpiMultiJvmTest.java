@@ -36,6 +36,8 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
+
 /**
  * Contains tests for TcpCommunicationSpi that require multi JVM setup.
  */
@@ -108,7 +110,6 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
             commSpi.setLocalAddress(localAddrStr);
 
         if (externalAddr != null) {
-
             commSpi.setAddressResolver(new AddressResolver() {
                 @Override public Collection<InetSocketAddress> getExternalAddresses(
                     InetSocketAddress addr) throws IgniteCheckedException {
@@ -141,6 +142,7 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
      * @throws Exception If any error occurs.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, value = "false")
     public void testIPv6AddressIsSkippedOnNodeNotSupportingIPv6() throws Exception {
         remoteNodePrefersIPv4 = true;
         replacingAttrSpi = true;
@@ -167,6 +169,7 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = "java.net.preferIPv4Stack", value = "true")
+    @WithSystemProperty(key = IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, value = "false")
     public void testIPv6NodeSuccessfullyConnectesToNodeWithIPv4Only() throws Exception {
         remoteNodePrefersIPv4 = false;
         replacingAttrSpi = false;
