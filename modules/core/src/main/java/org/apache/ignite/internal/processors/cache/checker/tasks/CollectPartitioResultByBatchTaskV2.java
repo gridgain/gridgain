@@ -346,7 +346,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             hasNext = cursor.next();
                         }
 
-                        if (sizeReconciliation && !hasNext &&
+                        if (sizeReconciliation && !consistencyReconciliation && !hasNext &&
                             (/*(partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&*/
                                 (lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {

@@ -442,8 +442,8 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean allReconSizeFinished = res.sizeMap().entrySet().stream().allMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.FINISHED);
                 boolean sizeRepaired = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.REPAIRED);
 
-                if (/*workload.dataReconciliation() &&*/ reconConsist ||
-                    /*!workload.dataReconciliation() &&*/ reconSize)
+                if (reconConsist ||
+                    reconSize)
                     schedule(new Batch(
                         reconConsist,
                         reconSize,
@@ -454,7 +454,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         nextBatchKey,
                         res.sizeMap())
                     );
-                if (allReconSizeFinished /*&& !sizeRepaired*/ && reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
+                else if (allReconSizeFinished /*&& !sizeRepaired*/ && reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
                     res.sizeMap().forEach((key, value) -> value.state(NodePartitionSize.SizeReconciliationState.REPAIRED));
 
                     log.warning("iudferr schedule PartitionSizeRepair " + workload.cacheName() + " " +
