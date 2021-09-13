@@ -439,6 +439,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
                 boolean reconConsist = nextBatchKey != null;
                 boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS || entry.getValue().state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+                boolean allReconSizeFinished = res.sizeMap().entrySet().stream().allMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.FINISHED);
                 boolean sizeRepaired = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.REPAIRED);
 
                 if (/*workload.dataReconciliation() &&*/ reconConsist ||
@@ -453,13 +454,13 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         nextBatchKey,
                         res.sizeMap())
                     );
-                if (!reconSize && !sizeRepaired && reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
+                if (allReconSizeFinished /*&& !sizeRepaired*/ && reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
                     res.sizeMap().forEach((key, value) -> value.state(NodePartitionSize.SizeReconciliationState.REPAIRED));
-
-                    collector.partSizesMap().put(workload.cacheName(), new ConcurrentHashMap<>());
 
                     log.warning("iudferr schedule PartitionSizeRepair " + workload.cacheName() + " " +
                         workload.partitionId() + " " + res.sizeMap());
+
+                    collector.partSizesMap().put(workload.cacheName(), new ConcurrentHashMap<>());
 
                     scheduleHighPriority(
                         new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
