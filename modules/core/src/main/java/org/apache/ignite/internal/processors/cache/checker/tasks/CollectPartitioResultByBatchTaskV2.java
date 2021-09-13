@@ -347,15 +347,15 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         }
 
                         if (sizeReconciliation && !hasNext &&
-                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&
+                            (/*(partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&*/
                                 (lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
-                            log.warning("ewriugtriu in Batch tack " +
+                            log.warning("ewriugtriu in Batch task " +
                                 " " + nodeSize.cacheName());
 
-                            if (partBatch.dataReconciliation())
-                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
-                            else
+//                            if (partBatch.dataReconciliation())
+//                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+//                            else
                                 nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
                         }
 

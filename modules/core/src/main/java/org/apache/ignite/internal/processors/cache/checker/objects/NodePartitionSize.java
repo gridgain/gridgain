@@ -118,7 +118,10 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         NEED_TO_FINISHED,
 
         /** */
-        FINISHED
+        FINISHED,
+
+        /** */
+        REPAIRED
     }
 
     @Override public String toString() {
