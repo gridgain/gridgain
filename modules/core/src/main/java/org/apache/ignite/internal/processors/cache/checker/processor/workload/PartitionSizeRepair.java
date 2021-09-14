@@ -98,4 +98,13 @@ public class PartitionSizeRepair extends PipelineWorkload {
     public void repair(boolean repair) {
         this.repair = repair;
     }
+
+    @Override public String toString() {
+        return "PartitionSizeRepair{" +
+            "cacheName='" + cacheName + '\'' +
+            ", partId=" + partId +
+            ", repair=" + repair +
+            ", partSizesMap=" + partSizesMap +
+            '}';
+    }
 }

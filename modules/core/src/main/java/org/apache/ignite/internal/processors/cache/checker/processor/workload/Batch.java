@@ -131,4 +131,15 @@ public class Batch extends PipelineWorkload {
     public Map<UUID, NodePartitionSize> partSizesMap() {
         return partSizesMap;
     }
+
+    @Override public String toString() {
+        return "Batch{" +
+            "dataReconciliation=" + dataReconciliation +
+            ", cacheSizeReconciliation=" + cacheSizeReconciliation +
+            ", cacheName='" + cacheName + '\'' +
+            ", partId=" + partId +
+            ", lowerKey=" + lowerKey +
+            ", partSizesMap=" + partSizesMap +
+            '}';
+    }
 }
