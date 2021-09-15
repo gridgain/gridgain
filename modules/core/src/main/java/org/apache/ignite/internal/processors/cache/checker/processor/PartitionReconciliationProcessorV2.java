@@ -444,8 +444,8 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
                 log.warning("fffffffffff in handle batch workload " + workload);
 
-                if (workload.dataReconciliation() && reconConsist ||
-                    !workload.dataReconciliation() && reconSize) {
+                if (reconConsist ||
+                    reconSize) {
 
                     Batch batch = new Batch(
                         reconConsist,

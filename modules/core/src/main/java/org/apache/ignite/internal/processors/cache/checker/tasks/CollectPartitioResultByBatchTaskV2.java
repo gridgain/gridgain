@@ -352,22 +352,22 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         }
 
                         log.warning("ppppppppppp  part.id() " + part.id() + "sizeReconciliation " + sizeReconciliation + " hasNext " + hasNext +
-                            " partReconciliationCtx.lastKey(cacheId) " + partReconciliationCtx.lastKey(cacheId) +
+                            " partReconciliationCtx.lastKey(cacheId) " + (partReconciliationCtx != null ? partReconciliationCtx.lastKey(cacheId) : null) +
                             " lastKeyForSizes " + lastKeyForSizes +
                             " lastKeyForConsistency " + lastKeyForConsistency +
                             " newLastKeyForConsistency " + newLastKeyForConsistency +
                             " nodeSize " + nodeSize);
 
-                        if (sizeReconciliation && !hasNext &&
-                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes)) &&
-                                (lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))) &&
-                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+                        if (sizeReconciliation && !hasNext /*&&
+                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes))*//* &&*//*
+                                *//*(lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))*//*) &&
+                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS*/) {
                             log.warning("ewriugtriu in Batch tack " +
                                 " " + nodeSize.cacheName() + " part.id() " + part.id());
 
-                            if (partBatch.dataReconciliation())
-                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
-                            else
+//                            if (partBatch.dataReconciliation())
+//                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+//                            else
                                 nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
                         }
 
