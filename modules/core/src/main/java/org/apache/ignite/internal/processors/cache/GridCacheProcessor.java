@@ -2520,7 +2520,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         U.startLifecycleAware(grp.configuredUserObjects());
 
-        grp.start();
+        DynamicCacheDescriptor descriptor = cacheDescriptor(cacheObjCtx.cacheName());
+
+        assert descriptor != null;
+
+        grp.start(descriptor);
 
         CacheGroupContext old = cacheGrps.put(desc.groupId(), grp);
 

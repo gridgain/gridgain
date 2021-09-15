@@ -1095,7 +1095,7 @@ public class CacheGroupContext {
     /**
      * @throws IgniteCheckedException If failed.
      */
-    public void start() throws IgniteCheckedException {
+    public void start(DynamicCacheDescriptor cacheDescriptor) throws IgniteCheckedException {
         GridAffinityAssignmentCache affCache = ctx.affinity().groupAffinity(grpId);
 
         if (affCache != null)
@@ -1119,7 +1119,7 @@ public class CacheGroupContext {
 
         try {
             offheapMgr = ctx.kernalContext().resource().resolve(persistenceEnabled
-                ? new GridCacheOffheapManager()
+                ? new GridCacheOffheapManager(cacheDescriptor)
                 : new IgniteCacheOffheapManagerImpl());
         }
         catch (Exception e) {
