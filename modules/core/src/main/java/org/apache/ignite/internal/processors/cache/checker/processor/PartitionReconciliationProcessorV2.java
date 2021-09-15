@@ -440,9 +440,9 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconConsist = nextBatchKey != null;
                 boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS || entry.getValue().state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
 
-                log.warning("qqqqqq in handle batch reconConsist " + reconConsist + " reconSize " + reconSize);
+//                log.warning("qqqqqq in handle batch reconConsist " + reconConsist + " reconSize " + reconSize);
 
-                log.warning("fffffffffff in handle batch workload " + workload);
+//                log.warning("fffffffffff in handle batch workload " + workload);
 
                 if (reconConsist ||
                     reconSize) {

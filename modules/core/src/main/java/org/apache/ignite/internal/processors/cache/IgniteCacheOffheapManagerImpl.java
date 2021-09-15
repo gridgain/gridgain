@@ -1691,6 +1691,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
+                reconciliationCtx.get().sizeReconciliationCursorState(cacheId, true);
+
                 reconciliationCtx.get().resetSize(cacheId);
 
                 reconciliationCtx.get().resetCacheKeysMap(cacheId);

@@ -50,6 +50,8 @@ public class ReconciliationContext {
      */
     private final Map<Integer, SizeReconciliationState> sizeReconciliationState = new ConcurrentHashMap<>();
 
+    private final Map<Integer, Boolean> sizeReconciliationCursorState = new ConcurrentHashMap<>();
+
     /**
      * The last key in the last page that was readed by reconciliation cursor.
      */
@@ -80,6 +82,22 @@ public class ReconciliationContext {
      */
     public void sizeReconciliationState(int cacheId, SizeReconciliationState sizeReconciliationState) {
         this.sizeReconciliationState.put(cacheId, sizeReconciliationState);
+    }
+
+    /**
+     * @param cacheId Cache ID.
+     * @return State of reconciliation.
+     */
+    public boolean sizeReconciliationCursorState(int cacheId) {
+        return sizeReconciliationCursorState.get(cacheId);
+    }
+
+    /**
+     * @param cacheId Cache ID.
+     * @param sizeReconciliationCursorState State of reconciliation.
+     */
+    public void sizeReconciliationCursorState(int cacheId, Boolean sizeReconciliationCursorState) {
+        this.sizeReconciliationCursorState.put(cacheId, sizeReconciliationCursorState);
     }
 
     /**

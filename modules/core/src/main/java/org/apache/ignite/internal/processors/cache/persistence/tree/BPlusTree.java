@@ -6131,7 +6131,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * Handler of a rows for cache size consistency reconciliation.
          */
         @Override protected void handleRows() {
-            if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
+            if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS &&
+                    reconciliationCtx.sizeReconciliationCursorState(cacheId)) {
                 KeyCacheObject lastKey = null;
                 KeyCacheObject firstKey = null;
 
