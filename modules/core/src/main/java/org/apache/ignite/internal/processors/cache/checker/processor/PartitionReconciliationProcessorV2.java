@@ -457,7 +457,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         nextBatchKey,
                         res.sizeMap());
 
-                    log.warning("wwwwwwww in handle batch batch " + batch);
+//                    log.warning("wwwwwwww in handle batch batch " + batch);
 
                     schedule(batch);
                 }

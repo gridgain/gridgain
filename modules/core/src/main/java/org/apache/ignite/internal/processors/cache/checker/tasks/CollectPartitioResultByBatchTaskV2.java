@@ -257,7 +257,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<PartitionExecutionJobResultByBatch> execute0() {
-            log.warning("ooooooooooo in execute0 first line partBatch " + partBatch);
+//            log.warning("ooooooooooo in execute0 first line partBatch " + partBatch);
 
             boolean consistencyReconciliation = partBatch.dataReconciliation();
 
@@ -351,12 +351,12 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             hasNext = cursor.next();
                         }
 
-                        log.warning("ppppppppppp  part.id() " + part.id() + "sizeReconciliation " + sizeReconciliation + " hasNext " + hasNext +
-                            " partReconciliationCtx.lastKey(cacheId) " + (partReconciliationCtx != null ? partReconciliationCtx.lastKey(cacheId) : null) +
-                            " lastKeyForSizes " + lastKeyForSizes +
-                            " lastKeyForConsistency " + lastKeyForConsistency +
-                            " newLastKeyForConsistency " + newLastKeyForConsistency +
-                            " nodeSize " + nodeSize);
+//                        log.warning("ppppppppppp  part.id() " + part.id() + "sizeReconciliation " + sizeReconciliation + " hasNext " + hasNext +
+//                            " partReconciliationCtx.lastKey(cacheId) " + (partReconciliationCtx != null ? partReconciliationCtx.lastKey(cacheId) : null) +
+//                            " lastKeyForSizes " + lastKeyForSizes +
+//                            " lastKeyForConsistency " + lastKeyForConsistency +
+//                            " newLastKeyForConsistency " + newLastKeyForConsistency +
+//                            " nodeSize " + nodeSize);
 
                         if (sizeReconciliation && !hasNext /*&&
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes))*//* &&*//*
