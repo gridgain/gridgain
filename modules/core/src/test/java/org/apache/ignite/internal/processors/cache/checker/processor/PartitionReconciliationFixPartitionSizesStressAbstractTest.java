@@ -205,16 +205,18 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
 ////        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});
 
 
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 0});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 1});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 2});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 3});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 4});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 5});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 6});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 7});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 8});
-        params.add(new Object[] {4, 0, 5000, ATOMIC, REPLICATED, 0, 10, null, 1, 10, 8, false, 9});
+//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 2, null, 1, 2, 8, false, 0});//бесконечный цикл, не успевает за 2 минуты
+//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 2, null, 1, 20, 8, false, 0});//бесконечный цикл, не успевает за 2 минуты
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 0});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 1});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 2});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 3});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 4});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 5});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 6});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 7});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 8});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, false, 9});
 
         return params;
     }
