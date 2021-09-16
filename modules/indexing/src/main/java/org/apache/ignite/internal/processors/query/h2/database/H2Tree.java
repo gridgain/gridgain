@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,7 +118,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final String idxName;
 
     /** */
-    private final IoStatisticsHolder stats;
+    @Nullable private final IoStatisticsHolder stats;
 
     /** */
     private final Comparator<Value> comp = this::compareValues;
@@ -205,7 +205,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         @Nullable FailureProcessor failureProcessor,
         PageLockTrackerManager pageLockTrackerManager,
         IgniteLogger log,
-        IoStatisticsHolder stats,
+        @Nullable IoStatisticsHolder stats,
         InlineIndexColumnFactory factory,
         int configuredInlineSize,
         PageIoResolver pageIoRslvr
@@ -826,7 +826,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected IoStatisticsHolder statisticsHolder() {
-        return stats;
+        return stats != null ? stats : super.statisticsHolder();
     }
 
     /**
@@ -980,5 +980,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
         return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected String lockRetryErrorMessage(String op) {
+        return super.lockRetryErrorMessage(op) + " Problem with the index [cacheName=" +
+            cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
     }
 }

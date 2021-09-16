@@ -36,13 +36,11 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_PATH;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_NAME_PATTERN;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.WAL_TEMP_NAME_PATTERN;
@@ -52,7 +50,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  * Class for testing cases when WAL archive configuration was changed and the node was able to start.
  */
 @RunWith(Parameterized.class)
-@WithSystemProperty(key = IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE, value = "0.0")
 public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
     /**
      * WAL mode.
@@ -96,6 +93,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
                     .setWalSegments(10)
                     .setWalSegmentSize((int)U.MB)
                     .setMaxWalArchiveSize(10 * U.MB)
+                    .setMinWalArchiveSize(1)
                     .setWalMode(walMode)
                     .setWalFsyncDelayNanos(100)
                     .setDefaultDataRegionConfiguration(
@@ -202,7 +200,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
 
         forceCheckpoint();
 
-        assertTrue(waitForCondition(() -> walMgr(n).lastTruncatedSegment() == 3, getTestTimeout()));
+        assertTrue(waitForCondition(() -> walMgr(n).lastTruncatedSegment() == 4, getTestTimeout()));
 
         // Guaranteed recovery from WAL segments.
         dbMgr(n).enableCheckpoints(false).get(getTestTimeout());
@@ -358,7 +356,7 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
                                               AtomicReference<String> workDirWalSegmentLocation,
                                               AtomicReference<String> tmpWalSegmentLocation) {
             this.delegate = delegate;
-            this.archivePath = archivePath;
+            this.archivePath = new File(archivePath).getPath();
             this.workDirWalSegmentLocation = workDirWalSegmentLocation;
             this.tmpWalSegmentLocation = tmpWalSegmentLocation;
         }
@@ -368,9 +366,8 @@ public class WalArchiveConsistencyTest extends GridCommonAbstractTest {
             if (workDirWalSegmentLocation.get() == null
                 && WAL_NAME_PATTERN.matcher(file.getName()).matches()
                 && !file.getAbsolutePath().contains(archivePath)
-            ) {
+            )
                 workDirWalSegmentLocation.set(file.getParentFile().getAbsolutePath());
-            }
 
             if (tmpWalSegmentLocation.get() == null && WAL_TEMP_NAME_PATTERN.matcher(file.getName()).matches())
                 tmpWalSegmentLocation.set(file.toPath().toAbsolutePath().getParent().toAbsolutePath().toString());

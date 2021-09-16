@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,47 +23,43 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.metric.IoStatisticsHolder;
-import org.apache.ignite.internal.pagemem.PageMemory;
-import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
-import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.failure.FailureProcessor;
-import org.apache.ignite.internal.processors.query.h2.H2RowCache;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
-import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.gridgain.internal.h2.table.IndexColumn;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
+import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory;
 
 /**
  *
  */
 public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractTest {
     /** Latch that blocks test completion. */
-    private CountDownLatch testCompletionBlockingLatch = new CountDownLatch(1);
+    private final CountDownLatch testCompletionBlockingLatch = new CountDownLatch(1);
 
     /** Latch that blocks checkpoint. */
-    private CountDownLatch checkpointBlockingLatch = new CountDownLatch(1);
+    private final CountDownLatch checkpointBlockingLatch = new CountDownLatch(1);
 
     /** We imitate long index destroy in these tests, so this is delay for each page to destroy. */
     private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 300;
@@ -80,8 +76,8 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
     /** */
     private static final String CACHE_GRP_2 = "cache_grp_2";
 
-    /** */
-    private H2TreeIndex.H2TreeFactory regularH2TreeFactory;
+    /** Original {@link DurableBackgroundCleanupIndexTreeTaskV2#idxTreeFactory}. */
+    private H2TreeFactory originalFactory;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -99,10 +95,10 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
             .setCacheConfiguration(
                 new CacheConfiguration(CACHE_1)
                     .setGroupName(CACHE_GRP_1)
-                    .setSqlSchema("PUBLIC"),
+                    .setSqlSchema(DFLT_SCHEMA),
                 new CacheConfiguration(CACHE_2)
                     .setGroupName(CACHE_GRP_2)
-                    .setSqlSchema("PUBLIC")
+                    .setSqlSchema(DFLT_SCHEMA)
             );
     }
 
@@ -112,28 +108,28 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
 
         cleanPersistenceDir();
 
-        regularH2TreeFactory = H2TreeIndex.h2TreeFactory;
-
-        H2TreeIndex.h2TreeFactory = H2TreeTest::new;
+        originalFactory = idxTreeFactory;
+        idxTreeFactory = new H2TreeFactoryEx();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        H2TreeIndex.h2TreeFactory = regularH2TreeFactory;
-
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        idxTreeFactory = originalFactory;
+        originalFactory = null;
 
         super.afterTest();
     }
 
     /** */
     @Test
-    public void test() throws Exception {
+    public void testMultipleCacheDelete() throws Exception {
         IgniteEx ignite = startGrids(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteCache cache1 = ignite.getOrCreateCache(CACHE_1);
         IgniteCache cache2 = ignite.getOrCreateCache(CACHE_2);
@@ -200,128 +196,79 @@ public class MultipleParallelCacheDeleteDeadlockTest extends GridCommonAbstractT
     }
 
     /**
-     * Test H2 tree.
+     * Extension {@link H2TreeFactory} for test.
      */
-    private class H2TreeTest extends H2Tree {
-        /**
-         * Constructor.
-         *
-         * @param cctx Cache context.
-         * @param table Owning table.
-         * @param name Tree name.
-         * @param idxName Name of index.
-         * @param cacheName Cache name.
-         * @param tblName Table name.
-         * @param reuseList Reuse list.
-         * @param grpId Cache group ID.
-         * @param grpName
-         * @param pageMem Page memory.
-         * @param wal Write ahead log manager.
-         * @param globalRmvId
-         * @param metaPageId Meta page ID.
-         * @param initNew Initialize new index.
-         * @param unwrappedCols Unwrapped columns.
-         * @param wrappedCols Wrapped columns.
-         * @param maxCalculatedInlineSize
-         * @param pk {@code true} for primary key.
-         * @param affinityKey {@code true} for affinity key.
-         * @param mvccEnabled Mvcc flag.
-         * @param rowCache Row cache.
-         * @param failureProcessor if the tree is corrupted.
-         * @param pageLockTrackerManager Page lock tracker manager.
-         * @param log Logger.
-         * @param stats Statistics holder.
-         * @throws IgniteCheckedException If failed.
-         */
-        public H2TreeTest(
-            GridCacheContext<?, ?> cctx,
-            GridH2Table table,
-            String name,
+    private class H2TreeFactoryEx extends H2TreeFactory {
+        /** {@inheritDoc} */
+        @Override protected H2Tree create(
+            CacheGroupContext grpCtx,
+            RootPage rootPage,
+            String treeName,
             String idxName,
-            String cacheName,
-            String tblName,
-            ReuseList reuseList,
-            int grpId,
-            String grpName,
-            PageMemory pageMem,
-            IgniteWriteAheadLogManager wal,
-            AtomicLong globalRmvId,
-            long metaPageId,
-            boolean initNew,
-            List<IndexColumn> unwrappedCols,
-            List<IndexColumn> wrappedCols,
-            AtomicInteger maxCalculatedInlineSize,
-            boolean pk,
-            boolean affinityKey,
-            boolean mvccEnabled,
-            @Nullable H2RowCache rowCache,
-            @Nullable FailureProcessor failureProcessor,
-            PageLockTrackerManager pageLockTrackerManager,
-            IgniteLogger log,
-            IoStatisticsHolder stats,
-            InlineIndexColumnFactory factory,
-            int configuredInlineSize,
-            PageIoResolver pageIoRslvr
+            String cacheName
         ) throws IgniteCheckedException {
-            super(
-                cctx,
-                table,
-                name,
+            IgniteCacheOffheapManager offheap = grpCtx.offheap();
+
+            GridKernalContext ctx = grpCtx.shared().kernalContext();
+
+            return new H2Tree(
+                null,
+                null,
+                treeName,
                 idxName,
                 cacheName,
-                tblName,
-                reuseList,
-                grpId,
-                grpName,
-                pageMem,
-                wal,
-                globalRmvId,
-                metaPageId,
-                initNew,
-                unwrappedCols,
-                wrappedCols,
-                maxCalculatedInlineSize,
-                pk,
-                affinityKey,
-                mvccEnabled,
-                rowCache,
-                failureProcessor,
-                pageLockTrackerManager,
-                log,
-                stats,
-                factory,
-                configuredInlineSize,
-                pageIoRslvr
-            );
-        }
+                null,
+                offheap.reuseListForIndex(treeName),
+                grpCtx.groupId(),
+                grpCtx.cacheOrGroupName(),
+                grpCtx.dataRegion().pageMemory(),
+                grpCtx.shared().wal(),
+                offheap.globalRemoveId(),
+                rootPage.pageId().pageId(),
+                false,
+                emptyList(),
+                emptyList(),
+                new AtomicInteger(0),
+                false,
+                false,
+                false,
+                null,
+                ctx.failure(),
+                grpCtx.shared().diagnostic().pageLockTracker(),
+                null,
+                null,
+                null,
+                0,
+                PageIoResolver.DEFAULT_PAGE_IO_RESOLVER
+            ) {
+                /** {@inheritDoc} */
+                @Override protected long destroyDownPages(
+                    LongListReuseBag bag,
+                    long pageId,
+                    int lvl,
+                    IgniteInClosure<H2Row> c,
+                    AtomicLong lockHoldStartTime,
+                    long lockMaxTime,
+                    Deque<GridTuple3<Long, Long, Long>> lockedPages
+                ) throws IgniteCheckedException {
+                    doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
-        /** {@inheritDoc} */
-        @Override protected long destroyDownPages(
-            LongListReuseBag bag,
-            long pageId,
-            int lvl,
-            IgniteInClosure<H2Row> c,
-            AtomicLong lockHoldStartTime,
-            long lockMaxTime,
-            Deque<GridTuple3<Long, Long, Long>> lockedPages
-        ) throws IgniteCheckedException {
-            doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+                    return super.destroyDownPages(bag, pageId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
+                }
 
-            return super.destroyDownPages(bag, pageId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
-        }
+                /** {@inheritDoc} */
+                @Override protected void temporaryReleaseLock() {
+                    grpCtx.shared().database().checkpointReadUnlock();
+                    grpCtx.shared().database().checkpointReadLock();
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override protected void temporaryReleaseLock() {
-            super.temporaryReleaseLock();
+                    checkpointBlockingLatch.countDown();
+                }
 
-            checkpointBlockingLatch.countDown();
-        }
-
-        /** {@inheritDoc} */
-        @Override protected long maxLockHoldTime() {
-            return 10;
+                /** {@inheritDoc} */
+                @Override protected long maxLockHoldTime() {
+                    return 10;
+                }
+            };
         }
     }
 }
