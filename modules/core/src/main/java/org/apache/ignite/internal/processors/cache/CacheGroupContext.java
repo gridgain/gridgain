@@ -1093,6 +1093,7 @@ public class CacheGroupContext {
     }
 
     /**
+     * @param cacheDescriptor Cache descriptor.
      * @throws IgniteCheckedException If failed.
      */
     public void start(DynamicCacheDescriptor cacheDescriptor) throws IgniteCheckedException {
