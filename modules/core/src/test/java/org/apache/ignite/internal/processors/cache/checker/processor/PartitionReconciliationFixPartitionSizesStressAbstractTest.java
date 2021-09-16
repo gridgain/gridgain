@@ -93,10 +93,6 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
     public boolean cacheClearOp;
 
     /** */
-    @Parameterized.Parameter(12)
-    public int n;
-
-    /** */
     public CacheWriteSynchronizationMode rndMode;
 
     /** */
@@ -168,7 +164,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
      *
      */
     @Parameterized.Parameters(name = "nodesCnt = {0}, startKey = {1}, endKey = {2}, cacheAtomicityMode = {3}, cacheMode = {4}, " +
-        "backupCount = {5}, partCount = {6}, cacheGroup = {7}, batchSize = {8}, reconParallelism = {9}, loadThreads = {10}, cacheClear = {11}, n = {12}")
+        "backupCount = {5}, partCount = {6}, cacheGroup = {7}, batchSize = {8}, reconParallelism = {9}, loadThreads = {10}, cacheClear = {11}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 

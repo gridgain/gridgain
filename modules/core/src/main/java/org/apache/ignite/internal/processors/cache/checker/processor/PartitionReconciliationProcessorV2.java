@@ -213,7 +213,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
+//                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
 
                     Batch workload = new Batch(
                         reconciliationTypes.contains(DATA_CONSISTENCY),
@@ -471,7 +471,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         workload.cacheName(), workload.partitionId(),
                         repair, res.sizeMap());
 
-                    log.warning("rrrrrrrr in handle batch task " + task);
+//                    log.warning("rrrrrrrr in handle batch task " + task);
 
                     scheduleHighPriority(task);
                 }

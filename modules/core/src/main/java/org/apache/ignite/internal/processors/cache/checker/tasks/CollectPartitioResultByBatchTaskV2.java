@@ -173,7 +173,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                 partSizesMap.put(nodeId, nodeRes.result().nodePartitionSize());
             }
 
-            log.warning("sssssssssss partitionId " + partBatch.partitionId() + " partSizesMap " + partSizesMap);
+//            log.warning("sssssssssss partitionId " + partBatch.partitionId() + " partSizesMap " + partSizesMap);
 
             return new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(lastKey, totalRes, partSizesMap));
         }
@@ -324,7 +324,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                 KeyCacheObject keyToStart = firstKeyForReconciliationCursor(consistencyReconciliation, sizeReconciliation, lastKeyForConsistency, lastKeyForSizes);
 
                 if (consistencyReconciliation || sizeReconciliation) {
-                    log.warning("iiiiiiiii in execute0 before cursor start consistencyReconciliation " + consistencyReconciliation + " sizeReconciliation " + sizeReconciliation);
+//                    log.warning("iiiiiiiii in execute0 before cursor start consistencyReconciliation " + consistencyReconciliation + " sizeReconciliation " + sizeReconciliation);
                     try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {
@@ -362,8 +362,8 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                             ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes))*//* &&*//*
                                 *//*(lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))*//*) &&
                             partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS*/) {
-                            log.warning("ewriugtriu in Batch tack " +
-                                " " + nodeSize.cacheName() + " part.id() " + part.id());
+//                            log.warning("ewriugtriu in Batch tack " +
+//                                " " + nodeSize.cacheName() + " part.id() " + part.id());
 
 //                            if (partBatch.dataReconciliation())
 //                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);

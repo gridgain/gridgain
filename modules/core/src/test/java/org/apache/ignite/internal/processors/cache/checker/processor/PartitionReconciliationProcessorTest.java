@@ -434,7 +434,7 @@ public class PartitionReconciliationProcessorTest {
                 batchSize,
                 recheckAttempts,
                 recheckDelay,
-                new HashSet<>(Arrays.asList(DATA_CONSISTENCY, CACHE_SIZE_CONSISTENCY)),
+                new HashSet<>(Arrays.asList(DATA_CONSISTENCY)),
                 false,
                 true);
         }
