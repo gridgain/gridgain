@@ -2199,8 +2199,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 desc.groupId(),
                 () -> findCacheGroup(grpName),
                 () -> startCacheGroup(
-                    desc.groupDescriptor(),
-                    desc.cacheType(),
+                    desc,
                     affNode,
                     cacheObjCtx,
                     exchTopVer,
@@ -2209,8 +2208,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             );
         }
 
-        return startCacheGroup(desc.groupDescriptor(),
-            desc.cacheType(),
+        return startCacheGroup(
+            desc,
             affNode,
             cacheObjCtx,
             exchTopVer,
@@ -2448,8 +2447,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @param desc Group descriptor.
-     * @param cacheType Cache type.
+     * @param cacheDescriptor Cache descriptor.
      * @param affNode Affinity node flag.
      * @param cacheObjCtx Cache object context.
      * @param exchTopVer Current topology version.
@@ -2457,14 +2455,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     private CacheGroupContext startCacheGroup(
-        CacheGroupDescriptor desc,
-        CacheType cacheType,
+        DynamicCacheDescriptor cacheDescriptor,
         boolean affNode,
         CacheObjectContext cacheObjCtx,
         AffinityTopologyVersion exchTopVer,
         boolean recoveryMode
     ) throws IgniteCheckedException {
-        desc = enricher().enrich(desc, affNode);
+        CacheType cacheType = cacheDescriptor.cacheType();
+
+        CacheGroupDescriptor desc = enricher().enrich(cacheDescriptor.groupDescriptor(), affNode);
 
         CacheConfiguration cfg = new CacheConfiguration(desc.config());
 
@@ -2520,11 +2519,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         U.startLifecycleAware(grp.configuredUserObjects());
 
-        DynamicCacheDescriptor descriptor = cacheDescriptor(cacheObjCtx.cacheName());
-
-        assert descriptor != null;
-
-        grp.start(descriptor);
+        grp.start(cacheDescriptor);
 
         CacheGroupContext old = cacheGrps.put(desc.groupId(), grp);
 
