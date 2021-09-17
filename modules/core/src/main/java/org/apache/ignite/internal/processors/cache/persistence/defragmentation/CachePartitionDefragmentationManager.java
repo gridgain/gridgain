@@ -371,7 +371,7 @@ public class CachePartitionDefragmentationManager {
 
                     try {
                         // This will initialize partition meta in index partition - meta tree and reuse list.
-                        newGrpCtx.start();
+                        newGrpCtx.start(offheap.cacheDescriptor());
                     }
                     finally {
                         defragmentationCheckpoint.checkpointTimeoutLock().checkpointReadUnlock();
