@@ -73,7 +73,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             getCacheConfig(DEFAULT_CACHE_NAME + 0, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
         ));
 
-        if (rnd.nextBoolean()) {
+        if (cacheCount == 2) {
             caches.add(client.createCache(
                 getCacheConfig(DEFAULT_CACHE_NAME + 1, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
             ));
