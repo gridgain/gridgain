@@ -142,15 +142,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     private final long walAtomicCacheMargin = IgniteSystemProperties.getLong(
         "WAL_MARGIN_FOR_ATOMIC_CACHE_HISTORICAL_REBALANCE", 5);
 
-    /** Cache descriptor. */
-    private final DynamicCacheDescriptor cacheDescriptor;
-
     /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind
      * if there is nothing to clean yet.
      */
     private final long unwindThrottlingTimeout = Long.getLong(
         IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
+
+    /** Cache descriptor. */
+    private final DynamicCacheDescriptor cacheDescriptor;
 
     /** */
     private IndexStorage indexStorage;
