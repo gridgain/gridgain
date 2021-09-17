@@ -136,7 +136,7 @@ public final class GridTestUtils {
     public static final long DFLT_BUSYWAIT_SLEEP_INTERVAL = 200;
 
     /** */
-    public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;
+    public static final long DFLT_TEST_TIMEOUT = 5000 * 60 * 1000;
 
     /** yyyy-MM-dd. */
     public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
