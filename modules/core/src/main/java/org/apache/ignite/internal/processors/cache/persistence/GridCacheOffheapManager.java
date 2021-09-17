@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
@@ -81,6 +82,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.AbstractFreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.CacheFreeList;
+import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.migration.UpgradePendingTreeToPerPartitionTask;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
@@ -147,6 +149,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     private final long unwindThrottlingTimeout = Long.getLong(
         IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
 
+    /** Cache descriptor. */
+    private final DynamicCacheDescriptor cacheDescriptor;
+
     /** */
     private IndexStorage indexStorage;
 
@@ -161,6 +166,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** */
     private DataStorageMetricsImpl persStoreMetrics;
+
+    /**
+     * Constructor.
+     *
+     * @param descriptor Cache descriptor.
+     */
+    public GridCacheOffheapManager(DynamicCacheDescriptor descriptor) {
+        this.cacheDescriptor = descriptor;
+    }
 
     /** {@inheritDoc} */
     @Override protected void initPendingTree(GridCacheContext cctx) throws IgniteCheckedException {
@@ -370,8 +384,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     ) throws IgniteCheckedException {
         RowStore rowStore0 = store.rowStore();
 
-        if (rowStore0 != null && (partitionStatesRestored || grp.isLocal())) {
-            ((CacheFreeList)rowStore0.freeList()).saveMetadata(grp.statisticsHolderData());
+        boolean staticallyConfigured = cacheDescriptor.staticallyConfigured();
+
+        // Metadata should only be saved for an already initialized cache
+        if (rowStore0 != null && (staticallyConfigured || partitionStatesRestored || grp.isLocal())) {
+            ((PagesList) rowStore0.freeList()).saveMetadata(grp.statisticsHolderData());
 
             PartitionMetaStorage<SimpleDataRow> partStore = store.partStorage();
 
@@ -1301,6 +1318,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /** */
     public GridSpinBusyLock busyLock() {
         return busyLock;
+    }
+
+    /**
+     * @return Cache descriptor.
+     */
+    public DynamicCacheDescriptor cacheDescriptor() {
+        return cacheDescriptor;
     }
 
     /**
