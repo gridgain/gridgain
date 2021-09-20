@@ -127,6 +127,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.Boolean.TRUE;
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -1850,6 +1851,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             throws InterruptedException, NodeStoppingException {
 
             boolean isBlocked = false;
+
+//            try {
+//                sleep(2000);
+//            }
+//            catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
 
             try {
                 while (!busyLock.tryBlock(100)) {

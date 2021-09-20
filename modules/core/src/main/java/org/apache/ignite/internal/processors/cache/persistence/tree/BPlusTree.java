@@ -87,6 +87,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
 import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
@@ -3247,15 +3248,36 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         public void reconciliationForRemove(int cacheId, KeyCacheObject key) {
             //Need to decrement real size if reconciliation cursor has moved beyond this key and will can not see the key
             if ((reconciliationCtx.lastKey(cacheId) != null &&
-                    ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0))
+                    ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0)) {
+                try {
+                    sleep(2);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 reconciliationCtx.size(cacheId).decrementAndGet();
+            }
             else {
+                try {
+                    sleep(2);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 reconciliationCtx.computeCacheKeysMap(cacheId, key, (k, v) -> {
                     //Reconciliation cursor didn't see the key and cannot see it further. Just remove key from temp collection.
                     if (k != null && v != null)
                         return null;
                     //Need to decrement real size if reconciliation cursor has moved beyond this key and cursor saw the key
                     else if (v == null && reconciliationCtx.lastKey(cacheId) != null && ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0) {
+                        try {
+                            sleep(2);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         reconciliationCtx.size(cacheId).decrementAndGet();
 
                         return null;
@@ -3292,10 +3314,26 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         oldIsTombstone = true;
                 }
 
-                if (row0.isReady() && row0.tombstone() && oldRow != null && !oldIsTombstone)
+                if (row0.isReady() && row0.tombstone() && oldRow != null && !oldIsTombstone) {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     reconciliationForRemove(row0.cacheId(), row0.key());
-                else if (row0.isReady() && !row0.tombstone() && oldIsTombstone)
+                }
+                else if (row0.isReady() && !row0.tombstone() && oldIsTombstone) {
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     reconciliationForInsert(newRow);
+                }
             }
         }
     }
@@ -6141,6 +6179,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 for (T row : rows) {
                     CacheDataRowAdapter row0 = (CacheDataRowAdapter) row;
 
+                    try {
+                        sleep(2);
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
                     if (row0 != null &&
                             (reconciliationCtx.lastKey(cacheId) == null ||
                                 ReconciliationContext.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
@@ -6157,6 +6202,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     }
                 }
 
+                if (firstKey != null)
+                    reconciliationCtx.firstKey(cacheId, lastKey);
+
                 if (lastKey != null)
                     reconciliationCtx.lastKey(cacheId, lastKey);
 
@@ -6170,9 +6218,23 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         KeyCacheObject finalFirstKey = firstKey;
 
+                        try {
+                            sleep(2);
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
                         reconciliationCtx.computeIfPresentCacheKeysMap(cacheId, entry.getKey(), (k, v) -> {
                             //Key from previous page. Need to increment real size
                             if (k != null && v != null && ReconciliationContext.KEY_COMPARATOR.compare(entry.getKey(), finalFirstKey) < 0) {
+                                try {
+                                    sleep(2);
+                                }
+                                catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
                                 partSize.incrementAndGet();
 
                                 return null;

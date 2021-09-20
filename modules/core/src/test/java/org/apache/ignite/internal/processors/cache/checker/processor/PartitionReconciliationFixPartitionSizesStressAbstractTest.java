@@ -225,14 +225,14 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
 
 
 
-        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 3, 8, false, 1});
-        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 3, 8, false, 2});
-        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 3, 8, false, 1});
-        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 3, 8, false, 2});
-        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 3, 8, false, 1});
-        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 3, 8, false, 2});
-        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 3, 8, false, 1});
-        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 3, 8, false, 2});
+        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 100, 8, false, 1});
+        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 100, 8, false, 2});
+        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 1});
+        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 2});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 100, 8, false, 1});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 100, 8, false, 2});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 1});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 2});
 
         return params;
     }

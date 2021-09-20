@@ -57,6 +57,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.RECONCILIATION;
 import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -335,6 +336,13 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
 
                         for (int i = 0; (i < partBatch.batchSize() && hasNext); i++) {
                             CacheDataRow row = cursor.get();
+
+                            try {
+                                sleep(2);
+                            }
+                            catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
 
                             if (consistencyReconciliation && lastKeyForConsistency != null && KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) >= 0)
                                 i--;

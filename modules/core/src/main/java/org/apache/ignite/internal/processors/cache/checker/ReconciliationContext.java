@@ -58,6 +58,11 @@ public class ReconciliationContext {
     private final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
 
     /**
+     * The first key in the last page that was readed by reconciliation cursor.
+     */
+    private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
+
+    /**
      * Size that eventually will be equals the real size of partition.
      */
     private final Map<Integer, AtomicLong> sizes = new ConcurrentHashMap<>();
@@ -114,6 +119,22 @@ public class ReconciliationContext {
      */
     public void lastKey(int cacheId, KeyCacheObject key) {
         lastKeys.put(cacheId, key);
+    }
+
+    /**
+     * @param cacheId Cache ID.
+     * @return First key.
+     */
+    public KeyCacheObject firstKey(int cacheId) {
+        return firstKeys.get(cacheId);
+    }
+
+    /**
+     * @param cacheId Cache ID.
+     * @param key Key.
+     */
+    public void firstKey(int cacheId, KeyCacheObject key) {
+        firstKeys.put(cacheId, key);
     }
 
     /**
