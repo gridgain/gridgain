@@ -57,7 +57,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
 //        if (rnd.nextBoolean())
-//            reconciliationTypes.add(DATA_CONSISTENCY);
+            reconciliationTypes.add(DATA_CONSISTENCY);
 
         log.info(">>> Reconciliation types: " + reconciliationTypes);
 
@@ -86,6 +86,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             reconCaches.add(caches.get(1));
 
         log.info(">>> Cache count: " + caches.size());
+        log.info(">>> reconCaches count: " + reconCaches.size());
 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
 
@@ -95,6 +96,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         if (cacheCount == 2 && cacheGrp == null) {
             reconCachesNames.add(DEFAULT_CACHE_NAME + 1);
         }
+
+        log.info(">>> reconCachesNames count: " + reconCachesNames.size());
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
