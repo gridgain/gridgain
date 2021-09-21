@@ -37,6 +37,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.ssl.SSLContextParametersWrapper;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -79,6 +80,9 @@ public class SslContextFactory implements Factory<SSLContext> {
     public static final String DFLT_KEY_ALGORITHM = System.getProperty("ssl.KeyManagerFactory.algorithm",
         System.getProperty(IGNITE_KEY_ALGORITHM_PROPERTY, "SunX509"));
 
+    /** Whether SSL needs client authentication by default. */
+    public static final boolean DFLT_NEED_CLIENT_AUTH = true;
+
     /** SSL protocol. */
     private String proto = DFLT_SSL_PROTOCOL;
 
@@ -111,6 +115,9 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /** Enabled protocols. */
     private String[] protocols;
+
+    /** Whether SSL needs client auth. */
+    private boolean needClientAuth = DFLT_NEED_CLIENT_AUTH;
 
     /** Cached instance of an {@link SSLContext}. */
     private final AtomicReference<SSLContext> sslCtx = new AtomicReference<>();
@@ -341,6 +348,29 @@ public class SslContextFactory implements Factory<SSLContext> {
         this.protocols = protocols;
     }
 
+
+    /**
+     * Returns {@code true} if SSL needs client authentication.
+     *
+     * @return {@code true} if SSL needs client authentication.
+     */
+    public boolean getNeedClientAuth() {
+        return needClientAuth;
+    }
+
+    /**
+     * Sets whether SSL needs client authentication. Default is {@link #DFLT_NEED_CLIENT_AUTH}.
+     *
+     * Note that for thin clients and management tools this value is overridden by
+     * {@link org.apache.ignite.configuration.ClientConnectorConfiguration#setSslClientAuth(boolean)}
+     * and {@link org.apache.ignite.configuration.ConnectorConfiguration#setSslClientAuth(boolean)} respectively.
+     *
+     * @param needClientAuth True if SSL needs client authentication.
+     */
+    public void setNeedClientAuth(boolean needClientAuth) {
+        this.needClientAuth = needClientAuth;
+    }
+
     /**
      * Creates SSL context based on factory settings.
      *
@@ -391,19 +421,18 @@ public class SslContextFactory implements Factory<SSLContext> {
         }
 
         try {
-            SSLContext ctx = SSLContext.getInstance(proto);
+            SSLParameters sslParameters = new SSLParameters();
 
-            if (cipherSuites != null || protocols != null) {
-                SSLParameters sslParameters = new SSLParameters();
+            if (cipherSuites != null)
+                sslParameters.setCipherSuites(cipherSuites);
 
-                if (cipherSuites != null)
-                    sslParameters.setCipherSuites(cipherSuites);
+            if (protocols != null)
+                sslParameters.setProtocols(protocols);
 
-                if (protocols != null)
-                    sslParameters.setProtocols(protocols);
+            sslParameters.setNeedClientAuth(needClientAuth);
 
-                ctx = new SSLContextWrapper(ctx, sslParameters);
-            }
+            SSLContext delegateCtx = SSLContext.getInstance(proto);
+            SSLContext ctx = new SSLContextParametersWrapper(delegateCtx, sslParameters);
 
             ctx.init(keyMgrs, trustMgrs, null);
 

@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
+import org.apache.ignite.internal.ssl.SSLContextClientAuthWrapper;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.nio.GridNioAsyncNotifyFilter;
@@ -140,7 +141,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     cliConnCfg.getThreadPoolSize(),
                     cliConnCfg.getThreadPoolSize(),
                     0,
-                    new LinkedBlockingQueue<Runnable>(),
+                    new LinkedBlockingQueue<>(),
                     GridIoPolicy.UNDEFINED,
                     new OomExceptionHandler(ctx));
 
@@ -332,15 +333,11 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 throw new IgniteCheckedException("Failed to create client listener " +
                     "(SSL is enabled but factory is null). Check the ClientConnectorConfiguration");
 
-            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxFactory.create(),
-                true, ByteOrder.nativeOrder(), log);
+            SSLContext sslCtxBase = sslCtxFactory.create();
+            SSLContext sslCtx = new SSLContextClientAuthWrapper(sslCtxBase, cliConnCfg.isSslClientAuth());
+            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log);
 
             sslFilter.directMode(true);
-
-            boolean auth = cliConnCfg.isSslClientAuth();
-
-            sslFilter.wantClientAuth(auth);
-            sslFilter.needClientAuth(auth);
 
             return new GridNioFilter[] {
                 openSesFilter,

@@ -6698,16 +6698,9 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             for (port = spi.locPort; port <= lastPort; port++) {
                 try {
-                    if (spi.isSslEnabled()) {
-                        SSLServerSocket sslSock = (SSLServerSocket)spi.sslSrvSockFactory
-                            .createServerSocket(port, 0, spi.locHost);
-
-                        sslSock.setNeedClientAuth(true);
-
-                        srvrSock = sslSock;
-                    }
-                    else
-                        srvrSock = new ServerSocket(port, 0, spi.locHost);
+                    srvrSock = spi.isSslEnabled()
+                        ? spi.sslSrvSockFactory.createServerSocket(port, 0, spi.locHost)
+                        : new ServerSocket(port, 0, spi.locHost);
 
                     if (log.isInfoEnabled()) {
                         log.info("Successfully bound to TCP port [port=" + port +
