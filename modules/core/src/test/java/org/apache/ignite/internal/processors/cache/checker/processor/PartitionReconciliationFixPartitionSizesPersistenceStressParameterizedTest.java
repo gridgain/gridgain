@@ -26,13 +26,12 @@ import org.junit.runners.Parameterized;
  * Tests partition reconciliation of sizes with persistence caches.
  */
 @RunWith(Parameterized.class)
-public class PartitionReconciliationFixPartitionSizesPersistenceStressTest extends PartitionReconciliationFixPartitionSizesStressTest {
+public class PartitionReconciliationFixPartitionSizesPersistenceStressParameterizedTest extends PartitionReconciliationFixPartitionSizesStressParameterizedTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
 
         DataStorageConfiguration storageConfiguration = new DataStorageConfiguration();
-        storageConfiguration.setPageSize(1024);
 
         cfg.setDataStorageConfiguration(storageConfiguration);
 

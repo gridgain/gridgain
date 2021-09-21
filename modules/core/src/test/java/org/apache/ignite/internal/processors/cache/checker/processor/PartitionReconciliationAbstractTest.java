@@ -61,7 +61,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
     /** */
-    private Random rnd = new Random();
+    protected Random rnd = new Random();
 
     /** */
     public static ReconciliationResult partitionReconciliation(
