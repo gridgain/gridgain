@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Ignore;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
 
@@ -25,4 +26,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALAN
  */
 @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
 public class AtomicPartitionCounterStateConsistencyHistoryRebalanceTest extends AtomicPartitionCounterStateConsistencyTest {
+    /** {@inheritDoc} */
+    @Ignore
+    @Override public void testClearVersion() throws Exception {
+        // Not applicable for historical preloading.
+    }
 }

@@ -66,6 +66,17 @@ public interface IgniteSecurity {
     public OperationSecurityContext withContext(UUID nodeId);
 
     /**
+     * Creates {@link OperationSecurityContext}. All calls of methods {@link #authorize(String, SecurityPermission)} or {@link
+     * #authorize(SecurityPermission)} will be processed into the context of {@link SecurityContext} that is owned by
+     * the node with given senderNodeId and subjectId until holder {@link OperationSecurityContext} will be closed.
+     *
+     * @param senderNodeId Node id that the node which sent a message in a security context.
+     * @param subjectId Id of security context.
+     * @return Security context holder.
+     */
+    public OperationSecurityContext withContext(UUID senderNodeId, UUID subjectId);
+
+    /**
      * @return SecurityContext of holder {@link OperationSecurityContext}.
      */
     public SecurityContext securityContext();
