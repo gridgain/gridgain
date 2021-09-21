@@ -68,6 +68,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         ig.cluster().active(true);
 
         List<IgniteCache<Object, Object>> caches = new ArrayList<>();
+        List<IgniteCache<Object, Object>> reconCaches = new ArrayList<>();
 
         caches.add(client.createCache(
             getCacheConfig(DEFAULT_CACHE_NAME + 0, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
@@ -79,9 +80,21 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             ));
         }
 
+        reconCaches.add(caches.get(0));
+
+        if (cacheCount == 2 && cacheGrp == null)
+            reconCaches.add(caches.get(1));
+
         log.info(">>> Cache count: " + caches.size());
 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
+
+        Set<String> reconCachesNames = new HashSet<>();
+        reconCachesNames.add(DEFAULT_CACHE_NAME + 0);
+
+        if (cacheCount == 2 && cacheGrp == null) {
+            reconCachesNames.add(DEFAULT_CACHE_NAME + 1);
+        }
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
@@ -101,15 +114,22 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, cacheNames);
+        breakCacheSizes(grids, reconCachesNames);
 
-        for (int i = 0; i < caches.size(); i++)
-            assertFalse(caches.get(i).size() == startSizes.get(i));
+//        for (int i = 0; i < caches.size(); i++)
+        if (cacheCount == 2 && cacheGrp != null) {
+            assertFalse(caches.get(0).size() == startSizes.get(0));
+            assertTrue(caches.get(1).size() == startSizes.get(1));
+        }
+        else {
+            for (int i = 0; i < caches.size(); i++)
+                assertFalse(caches.get(i).size() == startSizes.get(i));
+        }
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(reconParallelism);
-        builder.caches(cacheNames);
+        builder.caches(reconCachesNames);
         builder.batchSize(reconBatchSize);
         builder.reconTypes(new HashSet(reconciliationTypes));
 
