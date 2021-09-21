@@ -337,12 +337,12 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                         for (int i = 0; (i < partBatch.batchSize() && hasNext); i++) {
                             CacheDataRow row = cursor.get();
 
-                            try {
-                                sleep(2);
-                            }
-                            catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
+//                            try {
+//                                sleep(2);
+//                            }
+//                            catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
 
                             if (consistencyReconciliation && lastKeyForConsistency != null && KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) >= 0)
                                 i--;

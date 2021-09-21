@@ -56,8 +56,8 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
-        if (rnd.nextBoolean())
-            reconciliationTypes.add(DATA_CONSISTENCY);
+//        if (rnd.nextBoolean())
+//            reconciliationTypes.add(DATA_CONSISTENCY);
 
         log.info(">>> Reconciliation types: " + reconciliationTypes);
 
