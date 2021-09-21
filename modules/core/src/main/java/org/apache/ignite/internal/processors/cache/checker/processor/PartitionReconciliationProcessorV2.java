@@ -52,7 +52,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Ba
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.PartitionSizeRepair;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
-import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitioResultByBatchTaskV2;
+import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionResultByBatchTaskV2;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.PartitionSizeRepairRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
@@ -213,7 +213,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 int cacheId = cachex.context().cacheId();
 
                 for (int partId : partitions) {
-                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
+//                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
 
                     Batch workload = new Batch(
                         reconciliationTypes.contains(DATA_CONSISTENCY),
@@ -417,7 +417,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
      */
     private void handle(Batch workload) throws InterruptedException {
         compute(
-            CollectPartitioResultByBatchTaskV2.class,
+            CollectPartitionResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(
                 workload.dataReconciliation(),
                 workload.cacheSizeReconciliation(),

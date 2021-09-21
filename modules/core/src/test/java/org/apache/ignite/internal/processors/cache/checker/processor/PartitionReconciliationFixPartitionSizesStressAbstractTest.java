@@ -129,7 +129,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        rndMode = /*rnd.nextBoolean() ? */FULL_SYNC/* : PRIMARY_SYNC*/;
+        rndMode = rnd.nextBoolean() ? FULL_SYNC : PRIMARY_SYNC;
 
         stopAllGrids();
 
@@ -172,41 +172,37 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-//        params.add(new Object[] {1, 0, 1000, ATOMIC, PARTITIONED, 0, 1, null, 100, 1, 8, false});
+        params.add(new Object[] {1, 0, 1000, ATOMIC, PARTITIONED, 0, 5, null, 100, 1, 8, false, 1});
 
-//        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, "testCacheGroup1", 100, 1, 8, false});
+        params.add(new Object[] {5, 0, 4000, ATOMIC, PARTITIONED, 0, 10, "testCacheGroup1", 100, 1, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 32, null, 100, 1, 8, false});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 32, null, 100, 1, 8, false, 3});
 
-//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 100, 1, 8, false});
+        params.add(new Object[] {4, 0, 15000, ATOMIC, REPLICATED, 0, 12, null, 100, 1, 8, false, 2});
 
-//        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 10, 3, 8, false});
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, "testCacheGroup1", 10, 3, 8, false, 3});
 
-//        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 1, 12, null, 10, 3, 8, false});
+        params.add(new Object[] {5, 0, 5000, ATOMIC, PARTITIONED, 2, 12, null, 10, 4, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, /*null*/"testCacheGroup1", 10, 3, 8, false});
+        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 5, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 17, null, 10, 3, 8, false});
+        params.add(new Object[] {4, 0, 12000, ATOMIC, REPLICATED, 0, 17, "testCacheGroup1", 10, 6, 8, false, 2});
 
-//        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, false});
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 18, null, 1, 1, 8, false, 2});
 
-//        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, false});
+        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 10, null, 2, 20, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, false});
+        params.add(new Object[] {4, 0, 6000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 30, 8, false, 3});
 
-//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});
+        params.add(new Object[] {4, 0, 20000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 40, 8, false, 1});
 
-//        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 1, null, 1, 10, 8, false});//
+        params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 9, "testCacheGroup1", 1, 10, 8, false, 1});
 
-//        params.add(new Object[] {3, 0, 3000, ATOMIC, PARTITIONED, 0, 10, null, 1, 10, 8, false});//
+        params.add(new Object[] {5, 0, 7000, ATOMIC, PARTITIONED, 3, 10, null, 9, 10, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 1000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, false});
+        params.add(new Object[] {4, 0, 1000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 10, 8, false, 2});
 
-//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 10, 8, false});//
-
-
-
-//        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, null, 1, 10, 8, true});
+        params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 100, 10, 8, false, 2});
 
 
 

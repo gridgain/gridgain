@@ -56,7 +56,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
-//        if (rnd.nextBoolean())
+        if (rnd.nextBoolean())
             reconciliationTypes.add(DATA_CONSISTENCY);
 
         log.info(">>> Reconciliation types: " + reconciliationTypes);
@@ -70,32 +70,27 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         List<IgniteCache<Object, Object>> caches = new ArrayList<>();
         List<IgniteCache<Object, Object>> reconCaches = new ArrayList<>();
 
-        caches.add(client.createCache(
-            getCacheConfig(DEFAULT_CACHE_NAME + 0, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
-        ));
-
-        if (cacheCount == 2) {
+        for (int i = 0; i < cacheCount; i++) {
             caches.add(client.createCache(
-                getCacheConfig(DEFAULT_CACHE_NAME + 1, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
+                getCacheConfig(DEFAULT_CACHE_NAME + i, cacheAtomicityMode, cacheMode, backupCnt, partCnt, cacheGrp)
             ));
         }
-
-        reconCaches.add(caches.get(0));
-
-        if (cacheCount == 2 && cacheGrp == null)
-            reconCaches.add(caches.get(1));
-
-        log.info(">>> Cache count: " + caches.size());
-        log.info(">>> reconCaches count: " + reconCaches.size());
 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
 
         Set<String> reconCachesNames = new HashSet<>();
         reconCachesNames.add(DEFAULT_CACHE_NAME + 0);
 
-        if (cacheCount == 2 && cacheGrp == null) {
-            reconCachesNames.add(DEFAULT_CACHE_NAME + 1);
+        for (int i = 0; i < cacheCount; i++) {
+            reconCaches.add(caches.get(i));
+            reconCachesNames.add(caches.get(i).getName());
+
+            if (cacheCount > 1 && cacheGrp != null)
+                break;
         }
+
+        log.info(">>> Cache count: " + caches.size());
+        log.info(">>> reconCaches count: " + reconCaches.size());
 
         log.info(">>> reconCachesNames count: " + reconCachesNames.size());
 
@@ -119,10 +114,12 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
 
         breakCacheSizes(grids, reconCachesNames);
 
-//        for (int i = 0; i < caches.size(); i++)
-        if (cacheCount == 2 && cacheGrp != null) {
+        if (cacheCount > 1 && cacheGrp != null) {
             assertFalse(caches.get(0).size() == startSizes.get(0));
-            assertTrue(caches.get(1).size() == startSizes.get(1));
+
+            for (int i = 1; i < cacheCount; i++) {
+                assertTrue(caches.get(i).size() == startSizes.get(i));
+            }
         }
         else {
             for (int i = 0; i < caches.size(); i++)
@@ -162,7 +159,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
             fut.get();
 
         awaitPartitionMapExchange();
-        doSleep(10000);
+        doSleep(15000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         for (long i = startKey; i < endKey; i++) {
@@ -171,7 +168,7 @@ public class PartitionReconciliationFixPartitionSizesStressTest extends Partitio
         }
 
         awaitPartitionMapExchange();
-        doSleep(5000);
+        doSleep(7000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         long allKeysCountForCacheGroup;

@@ -66,7 +66,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<PartitionBatchRequestV2, ExecutionResult<PartitionExecutionTaskResultByBatch>> {
+public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<PartitionBatchRequestV2, ExecutionResult<PartitionExecutionTaskResultByBatch>> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -174,7 +174,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                 partSizesMap.put(nodeId, nodeRes.result().nodePartitionSize());
             }
 
-            log.warning("sssssssssss partitionId " + partBatch.partitionId() + " partSizesMap " + partSizesMap);
+//            log.warning("sssssssssss partitionId " + partBatch.partitionId() + " partSizesMap " + partSizesMap);
 
             return new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(lastKey, totalRes, partSizesMap));
         }
@@ -325,7 +325,7 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
                 KeyCacheObject keyToStart = firstKeyForReconciliationCursor(consistencyReconciliation, sizeReconciliation, lastKeyForConsistency, lastKeyForSizes);
 
                 if (consistencyReconciliation || sizeReconciliation) {
-                    log.warning("iiiiiiiii in execute0 before cursor start consistencyReconciliation " + consistencyReconciliation + " sizeReconciliation " + sizeReconciliation);
+//                    log.warning("iiiiiiiii in execute0 before cursor start consistencyReconciliation " + consistencyReconciliation + " sizeReconciliation " + sizeReconciliation);
                     try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {

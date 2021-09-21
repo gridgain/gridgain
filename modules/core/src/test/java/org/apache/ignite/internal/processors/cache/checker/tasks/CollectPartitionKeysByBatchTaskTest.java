@@ -88,7 +88,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
 
         CacheObjectContext ctxo = node.context().cache().cache(DEFAULT_CACHE_NAME).context().cacheObjectContext();
 
-        CollectPartitioResultByBatchTaskV2 task = new CollectPartitioResultByBatchTaskV2();
+        CollectPartitionResultByBatchTaskV2 task = new CollectPartitionResultByBatchTaskV2();
         Field igniteField = U.findField(task.getClass(), "ignite");
         igniteField.set(task, node);
         task.map(Collections.EMPTY_LIST, new PartitionBatchRequestV2(
@@ -241,7 +241,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         Set<KeyCacheObject> fetched = new HashSet<>();
 
         PartitionExecutionTaskResultByBatch firstBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitioResultByBatchTaskV2.class,
+            CollectPartitionResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, null, new HashMap<>(), ver)
         ).result();
@@ -251,7 +251,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         KeyCacheObject firstMaxKey = firstBatch.key();
 
         PartitionExecutionTaskResultByBatch secondBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitioResultByBatchTaskV2.class,
+            CollectPartitionResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, firstMaxKey, new HashMap<>(), ver)
         ).result();
@@ -261,7 +261,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
         fetched.addAll(secondBatch.dataMap().keySet());
 
         PartitionExecutionTaskResultByBatch thirdBatch = node.compute(group(node, nodes)).execute(
-            CollectPartitioResultByBatchTaskV2.class,
+            CollectPartitionResultByBatchTaskV2.class,
             new PartitionBatchRequestV2(true, true, ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 DEFAULT_CACHE_NAME, FIRST_PARTITION, batchSize, secondMaxKey, new HashMap<>(), ver)
         ).result();
