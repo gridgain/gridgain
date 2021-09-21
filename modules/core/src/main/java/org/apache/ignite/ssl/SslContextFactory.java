@@ -351,7 +351,6 @@ public class SslContextFactory implements Factory<SSLContext> {
 
     /**
      * Returns {@code true} if SSL needs client authentication.
-     *
      * @return {@code true} if SSL needs client authentication.
      */
     public boolean getNeedClientAuth() {
