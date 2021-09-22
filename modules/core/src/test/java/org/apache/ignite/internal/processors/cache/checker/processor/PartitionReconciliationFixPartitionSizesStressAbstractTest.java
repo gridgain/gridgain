@@ -229,7 +229,8 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
             reconResult.set(partitionReconciliation(client, builder));
         }, 1, "reconciliation");
 
-        GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000);
+        if (!GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000))
+            throw new RuntimeException("Condition was not achieved");
 
         List<String> errors = reconResult.get().errors();
 

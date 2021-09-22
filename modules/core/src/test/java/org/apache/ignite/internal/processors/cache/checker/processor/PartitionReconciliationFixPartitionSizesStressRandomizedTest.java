@@ -148,13 +148,13 @@ public class PartitionReconciliationFixPartitionSizesStressRandomizedTest extend
 
         backupCnt = nodesCnt - 1;
 
-        partCnt = 1 + rnd.nextInt(14);
+        partCnt = 4 + rnd.nextInt(10);
 
         cacheGrp = rnd.nextBoolean() ? null : "cacheGroup1";
 
         reconBatchSize = 1 + rnd.nextInt(200);
 
-        reconParallelism = 1 + rnd.nextInt(200);
+        reconParallelism = 2 + rnd.nextInt(200);
 
         loadThreadsCnt = 8;
 
