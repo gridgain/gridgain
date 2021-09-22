@@ -300,6 +300,9 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
             try {
                 if (sizeReconciliation) {
                     try {
+                        if (nodePartitionSize == null)
+                            cacheDataStore.reconciliationCtxInit();
+
                         partReconciliationCtx = cacheDataStore.reconciliationCtx();
                     }
                     catch (IgniteCheckedException e) {
