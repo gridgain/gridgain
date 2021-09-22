@@ -210,11 +210,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
 
                 int[] partitions = partitions(cache);
 
-                int cacheId = cachex.context().cacheId();
-
                 for (int partId : partitions) {
-//                    log.warning("kfiucfxt initial batch " + cache + " " + partId);
-
                     Batch workload = new Batch(
                         reconciliationTypes.contains(DATA_CONSISTENCY),
                         reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY),

@@ -1705,9 +1705,27 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public void reconciliationCtxInit() {
-            reconciliationCtx.set(new ReconciliationContext());
+            boolean isBlocked = false;
 
-            tree().reconciliationCtx(reconciliationCtx.get());
+            try {
+                while (!busyLock.tryBlock(100)) {
+                    if (nodeIsStopping())
+                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                }
+
+                isBlocked = true;
+
+
+                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
+                    tree().reconciliationCtx(reconciliationCtx.get());
+            }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+            finally {
+                if (isBlocked)
+                    busyLock.unblock();
+            }
         }
 
         /** {@inheritDoc} */
