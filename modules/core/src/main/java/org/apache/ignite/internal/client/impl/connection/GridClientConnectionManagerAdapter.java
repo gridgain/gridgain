@@ -85,7 +85,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
 
     /** Initialization retry interval. */
     private static final int INIT_RETRY_INTERVAL = IgniteSystemProperties.getInteger(
-        "IGNITE_TCP_CLIENT_INIT_RETRY_INTERVAL", 1000);;
+        "IGNITE_TCP_CLIENT_INIT_RETRY_INTERVAL", 1000);
 
     /** Class logger. */
     private final Logger log;

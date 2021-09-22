@@ -50,8 +50,7 @@ public class OneWaySslTcpClientTest extends GridCommonAbstractTest {
     }
 
     /** */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConnectorConfiguration(new ConnectorConfiguration().setSslEnabled(true).setSslClientAuth(sslClientAuth))
             .setSslContextFactory(sslContextFactory);
