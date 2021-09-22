@@ -72,14 +72,14 @@ public abstract class SSLContextSpiWrapper extends SSLContextSpi {
     /** {@inheritDoc} */
     @Override protected SSLEngine engineCreateSSLEngine() {
         final SSLEngine engine = sslContextDelegate.createSSLEngine();
-        configureSSLEngine(sslContextDelegate.createSSLEngine());
+        configureSSLEngine(engine);
         return engine;
     }
 
     /** {@inheritDoc} */
     @Override protected SSLEngine engineCreateSSLEngine(String s, int i) {
         final SSLEngine engine = sslContextDelegate.createSSLEngine(s, i);
-        configureSSLEngine(sslContextDelegate.createSSLEngine());
+        configureSSLEngine(engine);
         return engine;
     }
 
