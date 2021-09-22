@@ -174,8 +174,6 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                 partSizesMap.put(nodeId, nodeRes.result().nodePartitionSize());
             }
 
-//            log.warning("sssssssssss partitionId " + partBatch.partitionId() + " partSizesMap " + partSizesMap);
-
             return new ExecutionResult<>(new PartitionExecutionTaskResultByBatch(lastKey, totalRes, partSizesMap));
         }
         else {
@@ -258,8 +256,6 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
 
         /** {@inheritDoc} */
         @Override protected ExecutionResult<PartitionExecutionJobResultByBatch> execute0() {
-//            log.warning("ooooooooooo in execute0 first line partBatch " + partBatch);
-
             boolean consistencyReconciliation = partBatch.dataReconciliation();
 
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
@@ -270,8 +266,7 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
 
             boolean sizeReconciliation = partBatch.cacheSizeReconciliation() &&
                 (nodePartitionSize == null ||
-                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS ||
-                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+                    nodePartitionSize.state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
             int cacheId = grpCtx.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -320,12 +315,9 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                     lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
                 }
 
-                KeyCacheObject newLastKeyForConsistency = null;
-
                 KeyCacheObject keyToStart = firstKeyForReconciliationCursor(consistencyReconciliation, sizeReconciliation, lastKeyForConsistency, lastKeyForSizes);
 
                 if (consistencyReconciliation || sizeReconciliation) {
-//                    log.warning("iiiiiiiii in execute0 before cursor start consistencyReconciliation " + consistencyReconciliation + " sizeReconciliation " + sizeReconciliation);
                     try (GridCursor<? extends CacheDataRow> cursor = keyToStart == null ?
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), RECONCILIATION) :
                         grpCtx.offheap().dataStore(part).cursor(cctx.cacheId(), keyToStart, null, RECONCILIATION)) {
@@ -337,18 +329,9 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                         for (int i = 0; (i < partBatch.batchSize() && hasNext); i++) {
                             CacheDataRow row = cursor.get();
 
-//                            try {
-//                                sleep(2);
-//                            }
-//                            catch (InterruptedException e) {
-//                                e.printStackTrace();
-//                            }
-
                             if (consistencyReconciliation && lastKeyForConsistency != null && KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) >= 0)
                                 i--;
                             else if (consistencyReconciliation && (lastKeyForConsistency == null || KEY_COMPARATOR.compare(lastKeyForConsistency, row.key()) < 0)) {
-                                newLastKeyForConsistency = row.key();
-
                                 partEntryHashRecords.add(new VersionedKey(
                                     ignite.localNode().id(),
                                     row.key(),
@@ -359,24 +342,8 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                             hasNext = cursor.next();
                         }
 
-//                        log.warning("ppppppppppp  part.id() " + part.id() + "sizeReconciliation " + sizeReconciliation + " hasNext " + hasNext +
-//                            " partReconciliationCtx.lastKey(cacheId) " + (partReconciliationCtx != null ? partReconciliationCtx.lastKey(cacheId) : null) +
-//                            " lastKeyForSizes " + lastKeyForSizes +
-//                            " lastKeyForConsistency " + lastKeyForConsistency +
-//                            " newLastKeyForConsistency " + newLastKeyForConsistency +
-//                            " nodeSize " + nodeSize);
-
-                        if (sizeReconciliation && !hasNext /*&&
-                            ((partReconciliationCtx.lastKey(cacheId) == null || partReconciliationCtx.lastKey(cacheId).equals(lastKeyForSizes))*//* &&*//*
-                                *//*(lastKeyForConsistency == null || lastKeyForConsistency.equals(newLastKeyForConsistency))*//*) &&
-                            partReconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS*/) {
-                            log.warning("ewriugtriu in Batch tack " +
-                                " " + nodeSize.cacheName() + " part.id() " + part.id());
-
-//                            if (partBatch.dataReconciliation())
-//                                nodeSize.state(NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
-//                            else
-                                nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
+                        if (sizeReconciliation && !hasNext) {
+                            nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
 
                             partReconciliationCtx.sizeReconciliationCursorState(cacheId, false);
                         }

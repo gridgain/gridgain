@@ -115,9 +115,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         IN_PROGRESS,
 
         /** */
-        NEED_TO_FINISHED,
-
-        /** */
         FINISHED
     }
 

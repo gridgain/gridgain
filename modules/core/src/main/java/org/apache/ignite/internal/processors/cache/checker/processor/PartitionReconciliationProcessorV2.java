@@ -438,16 +438,10 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 boolean reconConsist = nextBatchKey != null;
-                boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS || entry.getValue().state() == NodePartitionSize.SizeReconciliationState.NEED_TO_FINISHED);
+                boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
-//                log.warning("qqqqqq in handle batch reconConsist " + reconConsist + " reconSize " + reconSize);
-
-//                log.warning("fffffffffff in handle batch workload " + workload);
-
-                if (reconConsist ||
-                    reconSize) {
-
-                    Batch batch = new Batch(
+                if (reconConsist || reconSize) {
+                    schedule(new Batch(
                         reconConsist,
                         reconSize,
                         workload.sessionId(),
@@ -455,29 +449,14 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         workload.cacheName(),
                         workload.partitionId(),
                         nextBatchKey,
-                        res.sizeMap());
-
-//                    log.warning("wwwwwwww in handle batch batch " + batch);
-
-                    schedule(batch);
+                        res.sizeMap()));
                 }
                 else if (reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
-//                    log.warning("iudferr schedule PartitionSizeRepair " + workload.cacheName() + " " +
-//                        workload.partitionId() + " " + res.sizeMap());
-
                     collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
 
-                    PartitionSizeRepair task = new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
+                    scheduleHighPriority(new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
                         workload.cacheName(), workload.partitionId(),
-                        repair, res.sizeMap());
-
-                    log.warning("rrrrrrrr in handle batch task " + task);
-
-                    scheduleHighPriority(task);
-                }
-                else {
-                    log.warning("ddddddddddd in handle batch else reconConsist " + reconConsist + " reconSize " + reconSize +
-                        " res " + res + " workload.partitionId() " + workload.partitionId());
+                        repair, res.sizeMap()));
                 }
 
                 if (!recheckKeys.isEmpty()) {

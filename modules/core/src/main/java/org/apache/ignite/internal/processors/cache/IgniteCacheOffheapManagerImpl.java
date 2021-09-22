@@ -1684,11 +1684,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 isBlocked = true;
 
-                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
-                    log.warning("yyyyyyyyyy in startReconciliation partId " + partId + " cacheId " + cacheId);
-
+                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
                     tree().reconciliationCtx(reconciliationCtx.get());
-                }
 
                 reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
@@ -1711,11 +1708,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public ReconciliationContext reconciliationCtx() {
-            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
-                log.warning("ttttttttttt in reconciliationCtx partId " + partId);
-
+            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
                 tree().reconciliationCtx(reconciliationCtx.get());
-            }
 
             return reconciliationCtx.get();
 
@@ -1730,8 +1724,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (nodeIsStopping())
                         throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
                 }
-
-                log.warning("uuuuuuuuu in clearReconciliationCtx partId " + partId);
 
                 isBlocked = true;
 
@@ -1852,13 +1844,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             boolean isBlocked = false;
 
-//            try {
-//                sleep(2000);
-//            }
-//            catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-
             try {
                 while (!busyLock.tryBlock(100)) {
                     if (nodeIsStopping())
@@ -1886,9 +1871,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     long newSize = reconciliationCtx().finishSize(cacheId).get();
 
-                    log.warning("ertnetrty in flushReconciliationResult sharedGroup " + repair +
-                        " " + nodePartitionSize.oldCacheSize() + " " + newSize);
-
                     nodePartitionSize.newCacheSize(newSize);
 
                     if (repair) {
@@ -1904,9 +1886,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     nodePartitionSize.oldCacheSize(storageSize.get());
 
                     long newSize = reconciliationCtx().finishSize(CU.UNDEFINED_CACHE_ID).get();
-
-                    log.warning("ewriugtriu in flushReconciliationResult " + repair +
-                        " " + nodePartitionSize.oldCacheSize() + " " + newSize);
 
                     nodePartitionSize.newCacheSize(newSize);
 
