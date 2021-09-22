@@ -16,6 +16,20 @@
 
 package org.apache.ignite.ssl;
 
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.ssl.SSLContextParametersWrapper;
+import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
+import javax.cache.configuration.Factory;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,19 +41,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.cache.configuration.Factory;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.internal.ssl.SSLContextParametersWrapper;
-import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * SSL context factory that provides SSL context configuration with specified key and trust stores.
@@ -377,30 +378,31 @@ public class SslContextFactory implements Factory<SSLContext> {
      * @throws SSLException If SSL context could not be created.
      */
     private SSLContext createSslContext() throws SSLException {
-        checkParameters();
-
         final KeyManager[] keyMgrs;
 
-        try {
-            KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(keyAlgorithm);
+        if (keyStoreFilePath != null) {
+            try {
+                KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(keyAlgorithm);
 
-            KeyStore keyStore = loadKeyStore(keyStoreType, keyStoreFilePath, keyStorePwd);
+                KeyStore keyStore = loadKeyStore(keyStoreType, keyStoreFilePath, keyStorePwd);
 
-            keyMgrFactory.init(keyStore, keyStorePwd);
+                keyMgrFactory.init(keyStore, keyStorePwd);
 
-            keyMgrs = keyMgrFactory.getKeyManagers();
-        }
-        catch (NoSuchAlgorithmException e) {
-            throw new SSLException("Unsupported keystore algorithm: " + keyAlgorithm, e);
-        }
-        catch (GeneralSecurityException e) {
-            throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
-                keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
-        }
+                keyMgrs = keyMgrFactory.getKeyManagers();
+            } catch (NoSuchAlgorithmException e) {
+                throw new SSLException("Unsupported keystore algorithm: " + keyAlgorithm, e);
+            } catch (GeneralSecurityException e) {
+                throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
+                    keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
+            }
+        } else
+            keyMgrs = null;
 
-        TrustManager[] trustMgrs = this.trustMgrs;
+        final TrustManager[] trustMgrs;
 
-        if (trustMgrs == null) {
+        if (this.trustMgrs != null)
+            trustMgrs = this.trustMgrs;
+        else if (trustStoreFilePath != null) {
             try {
                 TrustManagerFactory trustMgrFactory = TrustManagerFactory.getInstance(keyAlgorithm);
 
@@ -417,7 +419,8 @@ public class SslContextFactory implements Factory<SSLContext> {
                 throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
                     keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
             }
-        }
+        } else
+            trustMgrs = null;
 
         try {
             SSLParameters sslParameters = new SSLParameters();
@@ -460,40 +463,13 @@ public class SslContextFactory implements Factory<SSLContext> {
         else
             buf.append(", trustStoreFile=").append(trustStoreFilePath);
 
+        buf.append(", protocols=").append(Arrays.toString(protocols));
+        buf.append(", cipherSuites=").append(Arrays.toString(cipherSuites));
+        buf.append(", needClientAuth=").append(needClientAuth);
+
         buf.append(']');
 
         return buf.toString();
-    }
-
-    /**
-     * Checks that all required parameters are set.
-     *
-     * @throws SSLException If any of required parameters is missing.
-     */
-    private void checkParameters() throws SSLException {
-        assert keyStoreType != null;
-        assert proto != null;
-
-        checkNullParameter(keyStoreFilePath, "keyStoreFilePath");
-        checkNullParameter(keyStorePwd, "keyStorePwd");
-
-        if (trustMgrs == null) {
-            if (trustStoreFilePath == null)
-                throw new SSLException("Failed to initialize SSL context (either trustStoreFilePath or " +
-                    "trustManagers must be provided)");
-            else
-                checkNullParameter(trustStorePwd, "trustStorePwd");
-        }
-    }
-
-    /**
-     * @param param Value.
-     * @param name Name.
-     * @throws SSLException If {@code null}.
-     */
-    private void checkNullParameter(Object param, String name) throws SSLException {
-        if (param == null)
-            throw new SSLException("Failed to initialize SSL context (parameter cannot be null): " + name);
     }
 
     /**
