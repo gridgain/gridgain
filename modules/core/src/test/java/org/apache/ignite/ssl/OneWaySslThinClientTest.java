@@ -29,8 +29,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLHandshakeException;
-
 /** Test one-way SSL works with thin clients. */
 @SuppressWarnings("ThrowableNotThrown")
 public class OneWaySslThinClientTest extends GridCommonAbstractTest {
@@ -48,8 +46,7 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
     }
 
     /** */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClientConnectorConfiguration(
                 new ClientConnectorConfiguration().setSslEnabled(true).setSslClientAuth(sslClientAuth))
@@ -103,7 +100,7 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         startGrid(0);
 
         sslContextFactory = GridTestUtils.sslTrustedFactory(null, null);
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
+        GridTestUtils.assertThrowsAnyCause(log, () -> Ignition.startClient(clientConfiguration()),
             IgniteCheckedException.class, "SSL handshake failed");
     }
 
@@ -115,7 +112,7 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         startGrid(0);
 
         sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trusttwo");
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
+        GridTestUtils.assertThrowsAnyCause(log, () -> Ignition.startClient(clientConfiguration()),
             IgniteCheckedException.class, "SSL handshake failed");
     }
 
@@ -128,7 +125,7 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         startGrid(0);
 
         sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trustone");
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
+        GridTestUtils.assertThrowsAnyCause(log, () -> Ignition.startClient(clientConfiguration()),
             IgniteCheckedException.class, "SSL handshake failed");
     }
 

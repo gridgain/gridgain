@@ -41,8 +41,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
     }
 
     /** */
-    @Override
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setSslContextFactory(sslContextFactory)
             // forceClientToServerConnections shouldn't matter in this particular test
