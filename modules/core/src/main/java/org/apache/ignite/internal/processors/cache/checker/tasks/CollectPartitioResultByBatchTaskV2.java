@@ -304,6 +304,12 @@ public class CollectPartitioResultByBatchTaskV2 extends ComputeTaskAdapter<Parti
             try {
                 if (sizeReconciliation) {
                     try {
+                        if (nodePartitionSize == null) {
+                            cacheDataStore.reconciliationCtxInit();
+
+                            log.warning("dafmvfreaa " + nodeSize + " partId " + part.id());
+                        }
+
                         partReconciliationCtx = cacheDataStore.reconciliationCtx();
                     }
                     catch (IgniteCheckedException e) {

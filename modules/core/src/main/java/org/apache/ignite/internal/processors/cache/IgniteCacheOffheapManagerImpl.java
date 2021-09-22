@@ -1683,11 +1683,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 isBlocked = true;
 
-                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
-                    log.warning("yyyyyyyyyy in startReconciliation partId " + partId + " cacheId " + cacheId);
-
-                    tree().reconciliationCtx(reconciliationCtx.get());
-                }
+//                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
+//                    log.warning("yyyyyyyyyy in startReconciliation partId " + partId + " cacheId " + cacheId);
+//
+//                    tree().reconciliationCtx(reconciliationCtx.get());
+//                }
 
                 reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
@@ -1709,12 +1709,37 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         }
 
         /** {@inheritDoc} */
-        @Override public ReconciliationContext reconciliationCtx() {
-            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
-                log.warning("ttttttttttt in reconciliationCtx partId " + partId);
+        @Override public void reconciliationCtxInit() {
+            boolean isBlocked = false;
 
-                tree().reconciliationCtx(reconciliationCtx.get());
+            try {
+                while (!busyLock.tryBlock(100)) {
+                    if (nodeIsStopping())
+                        throw new NodeStoppingException("Partition reconciliation has been cancelled (node is stopping).");
+                }
+
+                isBlocked = true;
+
+
+                if (reconciliationCtx.compareAndSet(null, new ReconciliationContext()))
+                    tree().reconciliationCtx(reconciliationCtx.get());
             }
+            catch (Exception e) {
+                throw new IgniteException(e);
+            }
+            finally {
+                if (isBlocked)
+                    busyLock.unblock();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public ReconciliationContext reconciliationCtx() {
+//            if (reconciliationCtx.compareAndSet(null, new ReconciliationContext())) {
+//                log.warning("ttttttttttt in reconciliationCtx partId " + partId);
+//
+//                tree().reconciliationCtx(reconciliationCtx.get());
+//            }
 
             return reconciliationCtx.get();
 
