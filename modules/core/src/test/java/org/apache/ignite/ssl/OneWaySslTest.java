@@ -27,11 +27,14 @@ import org.junit.Test;
 
 import javax.net.ssl.SSLHandshakeException;
 
+/** Test one-way SSL works with thick clients. */
 @SuppressWarnings("ThrowableNotThrown")
 public class OneWaySslTest extends GridCommonAbstractTest {
 
+    /** */
     private SslContextFactory sslContextFactory;
 
+    /** */
     @After
     public void tearDown() throws Exception {
         stopAllGrids();
@@ -39,6 +42,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
+    /** */
     @Override
     protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -48,6 +52,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
             .setCommunicationSpi(new TcpCommunicationSpi().setForceClientToServerConnections(true));
     }
 
+    /** */
     @Test
     public void testSimpleOneWay() throws Exception {
         sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
@@ -62,6 +67,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
         Assert.assertEquals("b", client.cache("foo").get("a"));
     }
 
+    /** */
     @Test
     public void testClientHasKeyServerDoesntTrust() throws Exception {
         sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
@@ -76,6 +82,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
         Assert.assertEquals("b", client.cache("foo").get("a"));
     }
 
+    /** */
     @Test
     public void testClientTrustsNoOne() throws Exception {
         sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
@@ -86,6 +93,7 @@ public class OneWaySslTest extends GridCommonAbstractTest {
         GridTestUtils.assertThrowsWithCause(() -> startClientGrid(1), SSLHandshakeException.class);
     }
 
+    /** */
     @Test
     public void testClientTrustsAnother() throws Exception {
         sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
