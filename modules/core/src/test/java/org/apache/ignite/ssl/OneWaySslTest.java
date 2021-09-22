@@ -38,8 +38,6 @@ public class OneWaySslTest extends GridCommonAbstractTest {
     @After
     public void tearDown() throws Exception {
         stopAllGrids();
-
-        cleanPersistenceDir();
     }
 
     /** */

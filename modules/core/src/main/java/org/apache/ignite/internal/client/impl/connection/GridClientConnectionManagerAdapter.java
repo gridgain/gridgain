@@ -37,6 +37,7 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.client.GridClientClosedException;
 import org.apache.ignite.internal.client.GridClientConfiguration;
@@ -79,10 +80,12 @@ import static org.apache.ignite.internal.client.impl.connection.GridClientConnec
  */
 public abstract class GridClientConnectionManagerAdapter implements GridClientConnectionManager {
     /** Count of reconnect retries before init considered failed. */
-    private static final int INIT_RETRY_CNT = 3;
+    private static final int INIT_RETRY_CNT = IgniteSystemProperties.getInteger(
+        "IGNITE_TCP_CLIENT_INIT_RETRY_CNT", 3);
 
     /** Initialization retry interval. */
-    private static final int INIT_RETRY_INTERVAL = 1000;
+    private static final int INIT_RETRY_INTERVAL = IgniteSystemProperties.getInteger(
+        "IGNITE_TCP_CLIENT_INIT_RETRY_INTERVAL", 1000);;
 
     /** Class logger. */
     private final Logger log;

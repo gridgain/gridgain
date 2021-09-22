@@ -2111,6 +2111,29 @@ public final class GridTestUtils {
         return factory;
     }
 
+    /**
+     * Creates test-purposed SSL context factory from specified key store and trust store.
+     *
+     * @param keyStore Key store name.
+     * @param trustStore Trust store name.
+     * @return SSL context factory used in test.
+     */
+    public static GridSslBasicContextFactory gridSslTrustedFactory(String keyStore, String trustStore) {
+        GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
+
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
+
+        return factory;
+    }
+
     public static String keyStorePassword() {
         return GridTestProperties.getProperty("ssl.keystore.password");
     }

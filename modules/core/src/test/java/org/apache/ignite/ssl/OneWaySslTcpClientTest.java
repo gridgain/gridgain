@@ -16,24 +16,37 @@
 
 package org.apache.ignite.ssl;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.client.GridClientConfiguration;
+import org.apache.ignite.internal.client.GridClientFactory;
+import org.apache.ignite.internal.client.balancer.GridClientRoundRobinBalancer;
+import org.apache.ignite.internal.client.impl.GridClientImpl;
+import org.apache.ignite.internal.client.ssl.GridSslBasicContextFactory;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.net.ssl.SSLHandshakeException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.UUID;
 
 /** Test one-way SSL works with thin clients. */
 @SuppressWarnings("ThrowableNotThrown")
-public class OneWaySslThinClientTest extends GridCommonAbstractTest {
+@WithSystemProperty(key = "IGNITE_TCP_CLIENT_INIT_RETRY_CNT", value = "1")
+@WithSystemProperty(key = "IGNITE_TCP_CLIENT_INIT_RETRY_INTERVAL", value = "50")
+public class OneWaySslTcpClientTest extends GridCommonAbstractTest {
 
     /** */
     private SslContextFactory sslContextFactory;
@@ -51,33 +64,8 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
     @Override
     protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setClientConnectorConfiguration(
-                new ClientConnectorConfiguration().setSslEnabled(true).setSslClientAuth(sslClientAuth))
+            .setConnectorConfiguration(new ConnectorConfiguration().setSslEnabled(true).setSslClientAuth(sslClientAuth))
             .setSslContextFactory(sslContextFactory);
-    }
-
-    /** */
-    private ClientConfiguration clientConfiguration() {
-        ClientConfiguration clientCfg = new ClientConfiguration().setAddresses("127.0.0.1:10800");
-        clientCfg.setSslContextFactory(sslContextFactory);
-        clientCfg.setSslMode(SslMode.REQUIRED);
-
-        return clientCfg;
-    }
-
-    /** */
-    @Test
-    public void testSimpleOneWay() throws Exception {
-        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
-        sslClientAuth = false;
-        startGrid(0);
-
-        sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trustone");
-        IgniteClient client = Ignition.startClient(clientConfiguration());
-
-        client.createCache("foo").put("a", "b");
-
-        Assert.assertEquals("b", client.cache("foo").get("a"));
     }
 
     /** */
@@ -87,24 +75,25 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         sslClientAuth = false;
         startGrid(0);
 
-        sslContextFactory = GridTestUtils.sslTrustedFactory("node02", "trustone");
-        IgniteClient client = Ignition.startClient(clientConfiguration());
+        try (GridClientImpl client = createClient("node02", "trustone")) {
+            UUID nodeId = grid(0).cluster().localNode().id();
 
-        client.createCache("foo").put("a", "b");
-
-        Assert.assertEquals("b", client.cache("foo").get("a"));
+            assertNotNull(client.topology().node(nodeId));
+        }
     }
 
     /** */
     @Test
-    public void testClientTrustsNoOne() throws Exception {
-        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
+    public void testServerTrustsAnother() throws Exception {
+        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", "trustthree");
         sslClientAuth = false;
         startGrid(0);
 
-        sslContextFactory = GridTestUtils.sslTrustedFactory(null, null);
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
-            IgniteCheckedException.class, "SSL handshake failed");
+        try (GridClientImpl client = createClient("node02", "trustone")) {
+            UUID nodeId = grid(0).cluster().localNode().id();
+
+            assertNotNull(client.topology().node(nodeId));
+        }
     }
 
     /** */
@@ -114,22 +103,26 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         sslClientAuth = false;
         startGrid(0);
 
-        sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trusttwo");
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
-            IgniteCheckedException.class, "SSL handshake failed");
+        try (GridClientImpl client = createClient("node02", "trusttwo")) {
+            GridTestUtils.assertThrowsAnyCause(log,
+                client::connection,
+                IgniteCheckedException.class, "SSL handshake failed");
+        }
     }
 
     /** */
     @Test
     public void testClientAuthOverridesSslFactoryAuthTrue() throws Exception {
-        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
+        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", "trustone");
         sslContextFactory.setNeedClientAuth(false);
         sslClientAuth = true;
         startGrid(0);
 
-        sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trustone");
-        GridTestUtils.assertThrowsAnyCause(log, () ->  Ignition.startClient(clientConfiguration()),
-            IgniteCheckedException.class, "SSL handshake failed");
+        try (GridClientImpl client = createClient("node02", "trustone")) {
+            GridTestUtils.assertThrowsAnyCause(log,
+                client::connection,
+                IgniteCheckedException.class, "SSL handshake failed");
+        }
     }
 
     /** */
@@ -140,11 +133,18 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         sslClientAuth = false;
         startGrid(0);
 
-        sslContextFactory = GridTestUtils.sslTrustedFactory(null, "trustone");
-        IgniteClient client = Ignition.startClient(clientConfiguration());
+        try (GridClientImpl client = createClient("node02", "trustone")) {
+            UUID nodeId = grid(0).cluster().localNode().id();
 
-        client.createCache("foo").put("a", "b");
+            assertNotNull(client.topology().node(nodeId));
+        }
+    }
 
-        Assert.assertEquals("b", client.cache("foo").get("a"));
+    private GridClientImpl createClient(String keyStore, String trustStore) throws Exception {
+        GridClientConfiguration cfg = new GridClientConfiguration()
+            .setSslContextFactory(GridTestUtils.gridSslTrustedFactory(keyStore, trustStore))
+            .setServers(Collections.singleton("127.0.0.1:11211"));
+
+        return (GridClientImpl) GridClientFactory.start(cfg);
     }
 }
