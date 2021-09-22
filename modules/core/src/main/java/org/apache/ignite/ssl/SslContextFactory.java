@@ -349,7 +349,6 @@ public class SslContextFactory implements Factory<SSLContext> {
         this.protocols = protocols;
     }
 
-
     /**
      * Returns {@code true} if SSL needs client authentication.
      * @return {@code true} if SSL needs client authentication.
