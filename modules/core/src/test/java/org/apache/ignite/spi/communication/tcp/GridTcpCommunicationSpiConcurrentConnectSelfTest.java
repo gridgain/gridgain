@@ -454,9 +454,11 @@ public class GridTcpCommunicationSpiConcurrentConnectSelfTest<T extends Communic
 
             GridTestUtils.setFieldValue(spi, IgniteSpiAdapter.class, "igniteInstanceName", "grid-" + i);
 
-            if (useSsl) {
-                IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
+            IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
 
+            ignite.setCommunicationSpi(spi);
+
+            if (useSsl) {
                 IgniteConfiguration cfg = ignite.configuration()
                     .setSslContextFactory(GridTestUtils.sslFactory());
 

@@ -68,7 +68,8 @@ ignite_thin_client_tests_SOURCES = \
         src/sql_fields_query_test.cpp \
         src/auth_test.cpp \
         src/tx_test.cpp \
-        src/ssl_test.cpp
+        src/ssl_test.cpp \
+        src/interop_test.cpp
 
 run-check: check
 	./ignite-thin-client-tests -p

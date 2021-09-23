@@ -17,9 +17,9 @@
 package org.apache.ignite.loadtests.job;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,6 +29,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.G;
@@ -140,7 +141,7 @@ public class GridJobExecutionLoadTestClientSemaphore implements Callable<Object>
                             GridLoadTestUtils.appendLineToFile(
                                 outputFileName,
                                 "%s,%d",
-                                GridLoadTestUtils.DATE_TIME_FORMAT.format(new Date()),
+                                IgniteUtils.LONG_DATE_FMT.format(Instant.now()),
                                 avgTxPerSec.get()
                             );
                         }
