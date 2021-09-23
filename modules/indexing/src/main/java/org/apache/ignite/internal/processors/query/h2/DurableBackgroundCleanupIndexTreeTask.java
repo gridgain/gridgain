@@ -59,6 +59,8 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 
 /**
  * Tasks that cleans up index tree.
+ *
+ * @deprecated Use {@link DurableBackgroundCleanupIndexTreeTaskV2}.
  */
 public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundTask {
     /** */
@@ -328,6 +330,19 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
 
             U.awaitForWorkersStop(singleton(w), true, log);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public DurableBackgroundTask<?> convertAfterRestoreIfNeeded() {
+        return new DurableBackgroundCleanupIndexTreeTaskV2(
+            cacheGrpName,
+            cacheName,
+            idxName,
+            treeName,
+            UUID.randomUUID().toString(),
+            rootPages.size(),
+            null
+        );
     }
 
     /** {@inheritDoc} */

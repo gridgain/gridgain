@@ -42,6 +42,7 @@ import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationConnectOnIn
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationHandshakeWaitSslTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationHandshakeWaitTest;
 import org.apache.ignite.spi.communication.tcp.IgniteTcpCommunicationRecoveryAckClosureSelfTest;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationHandshakeCheckTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationHandshakeTimeoutTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiDropNodesTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiFaultyClientSslTest;
@@ -115,6 +116,7 @@ import org.junit.runners.Suite;
     GridSandboxedClientWithoutNetworkTest.class,
 
     TcpCommunicationHandshakeTimeoutTest.class,
+    TcpCommunicationHandshakeCheckTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }

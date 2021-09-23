@@ -80,7 +80,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
  * when Node<sub>3</sub> becomes free, it steals Job<sub>13</sub> and Job<sub>23</sub>
  * from Node<sub>1</sub> and Node<sub>2</sub> respectively.
  * <p>
- * <center><img src="http://http://ignite.apache.org/images/job_stealing_white.gif"></center>
+ * <center><img src="https://www.gridgain.com/images/job_stealing_white.gif"></center>
  * <p>
  * <i>
  * Note that this SPI must always be used in conjunction with
@@ -178,7 +178,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
  * &lt;/property&gt;
  * </pre>
  * <p>
- * <img src="http://ignite.apache.org/images/spring-small.png">
+ * <img src="https://www.gridgain.com/images/spring-small.png">
  * <br>
  * For information about Spring framework visit <a href="http://www.springframework.org/">www.springframework.org</a>
  */

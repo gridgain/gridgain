@@ -69,7 +69,7 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
-    @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException, StorageException {
+    @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException {
         return null;
     }
 
@@ -191,5 +191,10 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     /** {@inheritDoc} */
     @Override public WALPointer lastWritePointer() {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void startAutoReleaseSegments() {
+        // No-op.
     }
 }
