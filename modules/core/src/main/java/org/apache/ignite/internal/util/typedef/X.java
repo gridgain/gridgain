@@ -543,6 +543,14 @@ public final class X {
         return res;
     }
 
+    /**
+     * Traverses `tree` of {@link Throwable} to find first cause/suppressed which meets test condition of predicate.
+     * Function is aware of possible circular references through tracking of tested objects.
+     *
+     * @param t Throwable - `root of the tree`.
+     * @param pred Predicate.
+     * @return First throwable meets test condition or {@code null} if none has matched.
+     */
     @Nullable private static Throwable traverseThrowableWithPredicate(
         Throwable t,
         Predicate<Throwable> pred
@@ -552,6 +560,15 @@ public final class X {
         return traverseThrowableWithPredicate(t, pred, dejaVu);
     }
 
+    /**
+     * Traverses `tree` of {@link Throwable} to find first cause/suppressed which meets test condition of predicate.
+     * Function is aware of possible circular references through tracking of tested objects.
+     *
+     * @param t Throwable - `root of the tree`.
+     * @param pred Predicate.
+     * @param dejaVu Set of throwable for tracking already tested objects.
+     * @return First throwable meets test condition or {@code null} if none has matched.
+     */
     @Nullable private static Throwable traverseThrowableWithPredicate(
         Throwable t,
         Predicate<Throwable> pred,
