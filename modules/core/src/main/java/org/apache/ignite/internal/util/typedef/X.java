@@ -28,8 +28,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -464,37 +469,22 @@ public final class X {
      * @return {@code True} if one of the causing exception is an instance of passed in classes,
      *      {@code false} otherwise.
      */
-    @SafeVarargs
-    public static boolean hasCause(@Nullable Throwable t, @Nullable String msg, @Nullable Class<?>... cls) {
+    public static boolean hasCause(
+        @Nullable Throwable t,
+        @Nullable String msg,
+        @Nullable Class<?>... cls
+    ) {
         if (t == null || F.isEmpty(cls))
             return false;
 
-        assert cls != null;
+        Predicate<Throwable> pred = thr -> Arrays.stream(cls)
+                .anyMatch(c -> c != null && c.isAssignableFrom(thr.getClass())
+                        && (msg == null || (thr.getMessage() != null && thr.getMessage().contains(msg))
+                    ));
 
-        for (Throwable th = t; th != null; th = th.getCause()) {
-            for (Class<?> c : cls) {
-                if (c.isAssignableFrom(th.getClass())) {
-                    if (msg != null) {
-                        if (th.getMessage() != null && th.getMessage().contains(msg))
-                            return true;
-                        else
-                            continue;
-                    }
+        Throwable found = traverseThrowableWithPredicate(t, pred);
 
-                    return true;
-                }
-            }
-
-            for (Throwable n : th.getSuppressed()) {
-                if (hasCause(n, msg, cls))
-                    return true;
-            }
-
-            if (th.getCause() == th)
-                break;
-        }
-
-        return false;
+        return found != null;
     }
 
     /**
@@ -547,19 +537,48 @@ public final class X {
         if (t == null || cls == null)
             return null;
 
-        for (Throwable th = t; th != null; th = th.getCause()) {
-            if (cls.isAssignableFrom(th.getClass()))
-                return (T)th;
+        @SuppressWarnings("unchecked")
+        T res = (T)traverseThrowableWithPredicate(t, thr -> cls.isAssignableFrom(thr.getClass()));
 
-            for (Throwable n : th.getSuppressed()) {
-                T found = cause(n, cls);
+        return res;
+    }
 
-                if (found != null)
-                    return found;
-            }
+    @Nullable private static Throwable traverseThrowableWithPredicate(
+        Throwable t,
+        Predicate<Throwable> pred
+    ) {
+        Set<Throwable> dejaVu = Collections.newSetFromMap(new IdentityHashMap<>());
 
-            if (th.getCause() == th)
-                break;
+        return traverseThrowableWithPredicate(t, pred, dejaVu);
+    }
+
+    @Nullable private static Throwable traverseThrowableWithPredicate(
+        Throwable t,
+        Predicate<Throwable> pred,
+        Set<Throwable> dejaVu
+    ) {
+        if (pred.test(t))
+            return t;
+
+        if (dejaVu.contains(t))
+            return null;
+
+        dejaVu.add(t);
+
+        Throwable cause = t.getCause();
+
+        if (cause != null) {
+            Throwable found = traverseThrowableWithPredicate(cause, pred, dejaVu);
+
+            if (found != null)
+                return found;
+        }
+
+        for (Throwable suppressed : t.getSuppressed()) {
+            Throwable found = traverseThrowableWithPredicate(suppressed, pred, dejaVu);
+
+            if (found != null)
+                return found;
         }
 
         return null;
