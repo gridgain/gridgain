@@ -59,7 +59,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         skippedEntries = new HashMap<>();
 
     /** Result of cache size consistency reconciliation. */
-    public Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
+    protected Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
 
     /**
      * Default constructor for externalization.
@@ -173,11 +173,9 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
 
         String brokenSizes = getBrokenSizesAsString();
 
-        if (brokenSizes != null) {
-            printer.accept("\nPARTITIONS WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
+        printer.accept("\nPARTITIONS WITH BROKEN SIZE: " + partSizeConflictsCnt() + "\n\n");
 
-            printer.accept(brokenSizes);
-        }
+        printer.accept(brokenSizes);
     }
 
     /**
@@ -338,17 +336,17 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
             String cacheName = cacheSizes.getKey();
             Map<String, Map<String, String>> partsSizes = cacheSizes.getValue();
 
-            res.append("Cache: " + cacheName + "\n");
+            res.append(cacheName + "\n");
 
             partsSizes.entrySet().forEach(partSizes -> {
                 String partId = partSizes.getKey();
                 Map<String, String> nodesSizes = partSizes.getValue();
 
-                res.append("\tpartition: " + partId + "\n");
+                res.append("\t" + partId + "\n");
 
                 nodesSizes.entrySet().stream()
                     .forEach(entry -> {
-                        res.append("\t\tnode: " + entry.getKey() + "\n");
+                        res.append("\t\t" + entry.getKey() + "\n");
                         res.append("\t\t\t" + entry.getValue() + "\n");
                     });
             });

@@ -19,7 +19,10 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Partition reconciliation result that contains only info about amount of inconsistent keys, skipped caches etc,
@@ -55,12 +58,15 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      * @param partSizeConflictsCnt Partitions with broken size count.
+     * @param partSizesMap Map of partition sizes.
      */
-    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt, int partSizeConflictsCnt) {
+    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt,
+        int partSizeConflictsCnt, Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap) {
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;
         this.skippedEntriesCnt = skippedEntriesCnt;
         this.partSizeConflictsCnt = partSizeConflictsCnt;
+        this.partSizesMap = partSizesMap;
     }
 
     /** {@inheritDoc} */
@@ -77,6 +83,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         out.writeInt(skippedEntriesCnt);
 
         out.writeInt(partSizeConflictsCnt);
+
+        U.writeMap(out, partSizesMap);
     }
 
     /** {@inheritDoc} */
@@ -88,8 +96,11 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
 
         skippedEntriesCnt = in.readInt();
 
-        if (protoVer >= V2)
+        if (protoVer >= V2) {
             partSizeConflictsCnt = in.readInt();
+
+            partSizesMap = U.readMap(in);
+        }
     }
 
     /**
@@ -118,6 +129,13 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      */
     @Override public int partSizeConflictsCnt() {
         return partSizeConflictsCnt;
+    }
+
+    /**
+     * @return Result of cache size consistency reconciliation.
+     */
+     public Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap() {
+        return partSizesMap;
     }
 
     /** @inheritDoc */

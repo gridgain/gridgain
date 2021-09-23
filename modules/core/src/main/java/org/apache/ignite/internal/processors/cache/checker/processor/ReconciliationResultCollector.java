@@ -419,7 +419,8 @@ public interface ReconciliationResultCollector {
                         totalKeysCnt.get(),
                         0, // skipped caches count which is not tracked/used.
                         skippedEntries.size(),
-                        partSizeConflicts());
+                        partSizeConflicts(),
+                        partSizesMap);
                 }
             }
         }
@@ -444,6 +445,14 @@ public interface ReconciliationResultCollector {
 
                             Files.delete(Paths.get(e.getValue()));
                         }
+
+                        ReconciliationAffectedEntries res = result();
+
+                        String brokenSizes = res.getBrokenSizesAsString();
+
+                        out.println("\nPARTITIONS WITH BROKEN SIZE: " + res.partSizeConflictsCnt() + "\n\n");
+
+                        out.println(brokenSizes);
 
                         out.flush();
 
