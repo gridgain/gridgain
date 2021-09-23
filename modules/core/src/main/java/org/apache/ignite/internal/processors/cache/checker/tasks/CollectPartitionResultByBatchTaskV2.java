@@ -57,9 +57,7 @@ import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager.RECONCILIATION;
-import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**

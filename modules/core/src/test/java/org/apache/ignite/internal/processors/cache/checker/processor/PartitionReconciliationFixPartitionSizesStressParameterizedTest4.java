@@ -1,4 +1,0 @@
-package org.apache.ignite.internal.processors.cache.checker.processor;
-
-public class PartitionReconciliationFixPartitionSizesStressParameterizedTest4 extends PartitionReconciliationFixPartitionSizesStressParameterizedTest {
-}

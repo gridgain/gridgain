@@ -16,26 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest;
-import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixPartitionSizesStressAbstractTest;
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
-import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
@@ -45,6 +32,7 @@ import static org.apache.ignite.internal.processors.cache.verify.ReconciliationT
  * Tests partition reconciliation of sizes with various cache configurations and sql.
  */
 public class PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest extends PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest {
+    /** */
     @Test
     public void sqlTest() throws Exception {
         CacheWriteSynchronizationMode syncMode = rnd.nextBoolean() ? FULL_SYNC : PRIMARY_SYNC;

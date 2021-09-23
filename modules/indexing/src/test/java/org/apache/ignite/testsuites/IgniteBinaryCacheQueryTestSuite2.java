@@ -28,13 +28,6 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheQueryEvictsMultiTh
 import org.apache.ignite.internal.processors.cache.IgniteCacheQueryMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlQueryMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest1;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest2;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest3;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest4;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest5;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest6;
-import org.apache.ignite.internal.processors.cache.PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest7;
 import org.apache.ignite.internal.processors.cache.QueryJoinWithDifferentNodeFiltersTest;
 import org.apache.ignite.internal.processors.cache.SqlCacheStartStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedTxMultiNodeSelfTest;
@@ -134,161 +127,155 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-//    CreateIndexOnInvalidDataTypeTest.class,
-//
-//    BasicSqlTest.class,
-//
-//    IgniteCacheLocalQueryDefaultTimeoutSelfTest.class,
-//    DefaultQueryTimeoutTestSuite.class,
-//
-//    UseOneTimeZoneForClusterTest.class,
-//
-//    DisabledSqlFunctionsTest.class,
-//
-//    StatementCacheTest.class,
-//    ChooseIndexTest.class,
-//    LazyOnDmlTest.class,
-//
-//    SqlInsertMergeImplicitColumnsTest.class,
-//    SqlMergeTest.class,
-//    SqlMergeOnClientNodeTest.class,
-//
-//    SqlCacheStartStopTest.class,
-//
-//    SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest.class,
-//    SqlIndexConsistencyAfterInterruptTxCacheOperationTest.class,
-//    SqlTwoCachesInGroupWithSameEntryTest.class,
-//
-//    IgnitePdsCorruptedIndexTest.class,
-//
-//    // Dynamic index create/drop tests.
-//    DynamicIndexPartitionedAtomicConcurrentSelfTest.class,
-//    DynamicIndexPartitionedTransactionalConcurrentSelfTest.class,
-//    DynamicIndexReplicatedAtomicConcurrentSelfTest.class,
-//    DynamicIndexReplicatedTransactionalConcurrentSelfTest.class,
-//
-//    DynamicColumnsConcurrentAtomicPartitionedSelfTest.class,
-//    DynamicColumnsConcurrentTransactionalPartitionedSelfTest.class,
-//    DynamicColumnsConcurrentAtomicReplicatedSelfTest.class,
-//    DynamicColumnsConcurrentTransactionalReplicatedSelfTest.class,
-//
-//    DynamicEnableIndexingBasicSelfTest.class,
-//    DynamicEnableIndexingConcurrentSelfTest.class,
-//
-//    // Distributed joins.
-//    IgniteCacheQueryNodeRestartDistributedJoinSelfTest.class,
-//    IgniteCacheQueryStopOnCancelOrTimeoutDistributedJoinSelfTest.class,
-//
-//    // Other tests.
-//    IgniteCacheQueryMultiThreadedSelfTest.class,
-//
-//    IgniteCacheQueryEvictsMultiThreadedSelfTest.class,
-//
-//    ScanQueryOffheapExpiryPolicySelfTest.class,
-//    ScanIteratorTimeoutTest.class,
-//
-//    IgniteCacheCrossCacheJoinRandomTest.class,
-//    IgniteCacheClientQueryReplicatedNodeRestartSelfTest.class,
-//    IgniteCacheQueryNodeFailTest.class,
-//    IgniteCacheQueryNodeRestartSelfTest.class,
-//    IgniteSqlQueryWithBaselineTest.class,
-//    IgniteChangingBaselineCacheQueryNodeRestartSelfTest.class,
-//    IgniteStableBaselineCacheQueryNodeRestartsSelfTest.class,
-//    IgniteCacheQueryNodeRestartSelfTest2.class,
-//    IgniteCacheQueryNodeRestartTxSelfTest.class,
-//    IgniteCacheSqlQueryMultiThreadedSelfTest.class,
-//    IgniteCachePartitionedQueryMultiThreadedSelfTest.class,
-//    CacheScanPartitionQueryFallbackSelfTest.class,
-//    IgniteCacheDistributedQueryDefaultTimeoutSelfTest.class,
-//    IgniteCacheDistributedQueryStopOnCancelOrTimeoutSelfTest.class,
-//    IgniteCacheObjectKeyIndexingSelfTest.class,
-//
-//    IgniteCacheGroupsCompareQueryTest.class,
-//    IgniteCacheGroupsSqlSegmentedIndexSelfTest.class,
-//    IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest.class,
-//    IgniteCacheGroupsSqlDistributedJoinSelfTest.class,
-//
-//    QueryJoinWithDifferentNodeFiltersTest.class,
-//
-//    CacheQueryMemoryLeakTest.class,
-//
-//    CreateTableWithDateKeySelfTest.class,
-//
-//    CacheQueryEntityWithDateTimeApiFieldsTest.class,
-//
-//    DmlStatementsProcessorTest.class,
-//
-//    NonCollocatedRetryMessageSelfTest.class,
-//    RetryCauseMessageSelfTest.class,
-//    DisappearedCacheCauseRetryMessageSelfTest.class,
-//    DisappearedCacheWasNotFoundMessageSelfTest.class,
-//
-//    TableViewSubquerySelfTest.class,
-//
-//    SqlLocalQueryConnectionAndStatementTest.class,
-//
-//    NoneOrSinglePartitionsQueryOptimizationsTest.class,
-//
-//    IgniteSqlCreateTableTemplateTest.class,
-//
-//    LocalQueryLazyTest.class,
-//
-//    LongRunningQueryTest.class,
-//    LongRunningQueryThrottlingTest.class,
-//
-//    SqlStatisticsUserQueriesFastTest.class,
-//    SqlStatisticsUserQueriesLongTest.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest1.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest2.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest3.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest4.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest5.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest6.class,
-    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest7.class,
+    CreateIndexOnInvalidDataTypeTest.class,
 
-//    // Memory quota tests.
-//    SqlStatisticsMemoryQuotaTest.class,
-//    LocalQueryMemoryTrackerSelfTest.class,
-//    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
-//    QueryMemoryTrackerSelfTest.class,
-//    QueryMemoryManagerSelfTest.class,
-//    MemoryQuotaDynamicConfigurationTest.class,
-//    MemoryQuotaStaticConfigurationTest.class,
-//    MemoryQuotaStaticAndDynamicConfigurationTest.class,
-//    QueryMemoryManagerConfigurationSelfTest.class,
-//    ClientQueryQuotaTest.class,
-//    MemoryTrackerOnReducerTest.class,
-//
-//    // Offloading tests.
-//    DiskSpillingBasicTest.class,
-//    DiskSpillingGlobalQuotaTest.class,
-//    DiskSpillingQueriesTest.class,
-//    DiskSpillingMultipleNodesTest.class,
-//    DiskSpillingPersistenceTest.class,
-//    DiskSpillingQueryParallelismTest.class,
-//    DiskSpillingMultipleIndexesTest.class,
-//    DiskSpillingWithBaselineTest.class,
-//    DiskSpillingIoErrorTest.class,
-//    DiskSpillingDmlTest.class,
-//    SqlStatisticOffloadingTest.class,
-//    DiskSpillingLoggingTest.class,
-//    DiskSpillingMemoryTrackerTest.class,
-//
-//    GridQueryMemoryMetricProviderSelfTest.class,
-//
-//    SqlPartOfComplexPkLookupTest.class,
-//
-//    SqlQueriesTopologyMappingTest.class,
-//
-//    SqlDataTypesCoverageTests.class,
-//
-//    DmlBatchSizeDeadlockTest.class,
-//
-//    GridCachePartitionedTxMultiNodeSelfTest.class,
-//    GridCacheReplicatedTxMultiNodeBasicTest.class,
-//
-//    IgniteCacheQueryReservationOnUnstableTopologyTest.class
+    BasicSqlTest.class,
+
+    IgniteCacheLocalQueryDefaultTimeoutSelfTest.class,
+    DefaultQueryTimeoutTestSuite.class,
+
+    UseOneTimeZoneForClusterTest.class,
+
+    DisabledSqlFunctionsTest.class,
+
+    StatementCacheTest.class,
+    ChooseIndexTest.class,
+    LazyOnDmlTest.class,
+
+    SqlInsertMergeImplicitColumnsTest.class,
+    SqlMergeTest.class,
+    SqlMergeOnClientNodeTest.class,
+
+    SqlCacheStartStopTest.class,
+
+    SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest.class,
+    SqlIndexConsistencyAfterInterruptTxCacheOperationTest.class,
+    SqlTwoCachesInGroupWithSameEntryTest.class,
+
+    IgnitePdsCorruptedIndexTest.class,
+
+    // Dynamic index create/drop tests.
+    DynamicIndexPartitionedAtomicConcurrentSelfTest.class,
+    DynamicIndexPartitionedTransactionalConcurrentSelfTest.class,
+    DynamicIndexReplicatedAtomicConcurrentSelfTest.class,
+    DynamicIndexReplicatedTransactionalConcurrentSelfTest.class,
+
+    DynamicColumnsConcurrentAtomicPartitionedSelfTest.class,
+    DynamicColumnsConcurrentTransactionalPartitionedSelfTest.class,
+    DynamicColumnsConcurrentAtomicReplicatedSelfTest.class,
+    DynamicColumnsConcurrentTransactionalReplicatedSelfTest.class,
+
+    DynamicEnableIndexingBasicSelfTest.class,
+    DynamicEnableIndexingConcurrentSelfTest.class,
+
+    // Distributed joins.
+    IgniteCacheQueryNodeRestartDistributedJoinSelfTest.class,
+    IgniteCacheQueryStopOnCancelOrTimeoutDistributedJoinSelfTest.class,
+
+    // Other tests.
+    IgniteCacheQueryMultiThreadedSelfTest.class,
+
+    IgniteCacheQueryEvictsMultiThreadedSelfTest.class,
+
+    ScanQueryOffheapExpiryPolicySelfTest.class,
+    ScanIteratorTimeoutTest.class,
+
+    IgniteCacheCrossCacheJoinRandomTest.class,
+    IgniteCacheClientQueryReplicatedNodeRestartSelfTest.class,
+    IgniteCacheQueryNodeFailTest.class,
+    IgniteCacheQueryNodeRestartSelfTest.class,
+    IgniteSqlQueryWithBaselineTest.class,
+    IgniteChangingBaselineCacheQueryNodeRestartSelfTest.class,
+    IgniteStableBaselineCacheQueryNodeRestartsSelfTest.class,
+    IgniteCacheQueryNodeRestartSelfTest2.class,
+    IgniteCacheQueryNodeRestartTxSelfTest.class,
+    IgniteCacheSqlQueryMultiThreadedSelfTest.class,
+    IgniteCachePartitionedQueryMultiThreadedSelfTest.class,
+    CacheScanPartitionQueryFallbackSelfTest.class,
+    IgniteCacheDistributedQueryDefaultTimeoutSelfTest.class,
+    IgniteCacheDistributedQueryStopOnCancelOrTimeoutSelfTest.class,
+    IgniteCacheObjectKeyIndexingSelfTest.class,
+
+    IgniteCacheGroupsCompareQueryTest.class,
+    IgniteCacheGroupsSqlSegmentedIndexSelfTest.class,
+    IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest.class,
+    IgniteCacheGroupsSqlDistributedJoinSelfTest.class,
+
+    QueryJoinWithDifferentNodeFiltersTest.class,
+
+    CacheQueryMemoryLeakTest.class,
+
+    CreateTableWithDateKeySelfTest.class,
+
+    CacheQueryEntityWithDateTimeApiFieldsTest.class,
+
+    DmlStatementsProcessorTest.class,
+
+    NonCollocatedRetryMessageSelfTest.class,
+    RetryCauseMessageSelfTest.class,
+    DisappearedCacheCauseRetryMessageSelfTest.class,
+    DisappearedCacheWasNotFoundMessageSelfTest.class,
+
+    TableViewSubquerySelfTest.class,
+
+    SqlLocalQueryConnectionAndStatementTest.class,
+
+    NoneOrSinglePartitionsQueryOptimizationsTest.class,
+
+    IgniteSqlCreateTableTemplateTest.class,
+
+    LocalQueryLazyTest.class,
+
+    LongRunningQueryTest.class,
+    LongRunningQueryThrottlingTest.class,
+
+    SqlStatisticsUserQueriesFastTest.class,
+    SqlStatisticsUserQueriesLongTest.class,
+
+    PartitionReconciliationFixPartitionSizesStressSqlParameterizedTest.class,
+
+    // Memory quota tests.
+    SqlStatisticsMemoryQuotaTest.class,
+    LocalQueryMemoryTrackerSelfTest.class,
+    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
+    QueryMemoryTrackerSelfTest.class,
+    QueryMemoryManagerSelfTest.class,
+    MemoryQuotaDynamicConfigurationTest.class,
+    MemoryQuotaStaticConfigurationTest.class,
+    MemoryQuotaStaticAndDynamicConfigurationTest.class,
+    QueryMemoryManagerConfigurationSelfTest.class,
+    ClientQueryQuotaTest.class,
+    MemoryTrackerOnReducerTest.class,
+
+    // Offloading tests.
+    DiskSpillingBasicTest.class,
+    DiskSpillingGlobalQuotaTest.class,
+    DiskSpillingQueriesTest.class,
+    DiskSpillingMultipleNodesTest.class,
+    DiskSpillingPersistenceTest.class,
+    DiskSpillingQueryParallelismTest.class,
+    DiskSpillingMultipleIndexesTest.class,
+    DiskSpillingWithBaselineTest.class,
+    DiskSpillingIoErrorTest.class,
+    DiskSpillingDmlTest.class,
+    SqlStatisticOffloadingTest.class,
+    DiskSpillingLoggingTest.class,
+    DiskSpillingMemoryTrackerTest.class,
+
+    GridQueryMemoryMetricProviderSelfTest.class,
+
+    SqlPartOfComplexPkLookupTest.class,
+
+    SqlQueriesTopologyMappingTest.class,
+
+    SqlDataTypesCoverageTests.class,
+
+    DmlBatchSizeDeadlockTest.class,
+
+    GridCachePartitionedTxMultiNodeSelfTest.class,
+    GridCacheReplicatedTxMultiNodeBasicTest.class,
+
+    IgniteCacheQueryReservationOnUnstableTopologyTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }

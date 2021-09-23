@@ -104,8 +104,6 @@ public class NodePartitionSize extends IgniteDataTransferObject {
         newCacheSize = in.readLong();
     }
 
-
-
     /** */
     public enum SizeReconciliationState {
         /** */

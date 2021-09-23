@@ -125,15 +125,15 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractParameterized
 
         params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 5, 8, false, 2});
 
-        params.add(new Object[] {4, 0, 20000, ATOMIC, REPLICATED, 0, 17, "testCacheGroup1", 10, 6, 8, false, 2});
+        params.add(new Object[] {4, 0, 12000, ATOMIC, REPLICATED, 0, 17, "testCacheGroup1", 10, 6, 8, false, 2});
 
         params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 18, null, 1, 1, 8, false, 2});
 
         params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 10, null, 2, 20, 8, false, 2});
 
-        params.add(new Object[] {4, 0, 6000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 30, 8, false, 3});
+        params.add(new Object[] {4, 0, 4000, TRANSACTIONAL, PARTITIONED, 2, 12, null, 1, 30, 8, false, 3});
 
-        params.add(new Object[] {4, 0, 12000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 40, 8, false, 1});
+        params.add(new Object[] {4, 0, 8000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 1, 40, 8, false, 1});
 
         params.add(new Object[] {1, 0, 3000, ATOMIC, PARTITIONED, 0, 9, "testCacheGroup1", 1, 10, 8, false, 1});
 

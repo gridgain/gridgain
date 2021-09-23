@@ -30,7 +30,7 @@ import static org.apache.ignite.internal.processors.cache.verify.ReconciliationT
 /**
  * Tests partition reconciliation of sizes with various cache configurations.
  */
-public class PartitionReconciliationFixPartitionSizesStressParameterizedTest extends PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest{
+public class PartitionReconciliationFixPartitionSizesStressParameterizedTest extends PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest {
     /** */
     @Test
     public void test() throws Exception {
