@@ -17,26 +17,9 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
-import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -44,10 +27,6 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
-import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 
 /**
  * Tests partition reconciliation of sizes with various cache configurations.
@@ -164,15 +143,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractParameterized
 
         params.add(new Object[] {4, 0, 10000, ATOMIC, REPLICATED, 0, 12, "testCacheGroup1", 100, 10, 8, false, 2});
 
-
-//        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 100, 8, false, 1});
-//        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, null, 10, 100, 8, false, 2});
-//        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 1});
-//        params.add(new Object[] {4, 0, 3000, ATOMIC, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 2});
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 100, 8, false, 1});
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, null, 10, 100, 8, false, 2});
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 1});
-//        params.add(new Object[] {4, 0, 3000, TRANSACTIONAL, PARTITIONED, 2, 14, "testCacheGroup1", 10, 100, 8, false, 2});
+        params.add(new Object[] {1, 0, 10000, ATOMIC, PARTITIONED, 0, 1, null, 100, 1, 1, true, 1});
 
         return params;
     }

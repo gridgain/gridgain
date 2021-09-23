@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -40,23 +39,14 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.verify.ReconciliationType;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
-import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
-import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.CACHE_SIZE_CONSISTENCY;
-import static org.apache.ignite.internal.processors.cache.verify.ReconciliationType.DATA_CONSISTENCY;
 
 /**
  * Tests partition reconciliation of sizes with various cache configurations.
  */
 public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends PartitionReconciliationAbstractTest {
+    /** */
     protected int pageSize;
 
     /** {@inheritDoc} */
@@ -164,7 +154,6 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
 
         Set<String> reconCachesNames = new HashSet<>();
-        reconCachesNames.add(DEFAULT_CACHE_NAME + 0);
 
         for (int i = 0; i < cacheCount; i++) {
             reconCaches.add(caches.get(i));
@@ -279,6 +268,7 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
             }
         }
     }
+
     /**
      * <ul>
      * <li>Start nodes.</li>

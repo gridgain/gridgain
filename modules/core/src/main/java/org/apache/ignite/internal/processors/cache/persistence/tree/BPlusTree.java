@@ -87,7 +87,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Thread.sleep;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
 import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
@@ -455,15 +454,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             byte[] newRowBytes = io.store(pageAddr, idx, newRow, null, needWal);
 
-            CacheDataRowAdapter newRow0 = null;
-
-            if (newRow instanceof CacheDataRowAdapter)
-                newRow0 = (CacheDataRowAdapter) newRow;
-
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-            if (reconciliationCtx != null && newRow0 != null && reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS)
+            if (reconciliationCtx != null &&
+                newRow instanceof CacheDataRowAdapter &&
+                reconciliationCtx.sizeReconciliationState(((CacheDataRowAdapter) newRow).cacheId()) == IN_PROGRESS)
                 p.reconciliationForReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
@@ -6157,9 +6153,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         lastKey = row0.key();
                     }
                 }
-
-                if (firstKey != null)
-                    reconciliationCtx.firstKey(cacheId, firstKey);
 
                 if (lastKey != null)
                     reconciliationCtx.lastKey(cacheId, lastKey);

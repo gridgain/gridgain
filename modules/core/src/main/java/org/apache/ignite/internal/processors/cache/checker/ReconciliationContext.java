@@ -50,17 +50,13 @@ public class ReconciliationContext {
      */
     private final Map<Integer, SizeReconciliationState> sizeReconciliationState = new ConcurrentHashMap<>();
 
+    /** {code true} if need to apply reconciliation logic in cursor */
     private final Map<Integer, Boolean> sizeReconciliationCursorState = new ConcurrentHashMap<>();
 
     /**
      * The last key in the last page that was readed by reconciliation cursor.
      */
     private final Map<Integer, KeyCacheObject> lastKeys = new ConcurrentHashMap<>();
-
-    /**
-     * The first key in the last page that was readed by reconciliation cursor.
-     */
-    private final Map<Integer, KeyCacheObject> firstKeys = new ConcurrentHashMap<>();
 
     /**
      * Size that eventually will be equals the real size of partition.
@@ -123,22 +119,6 @@ public class ReconciliationContext {
 
     /**
      * @param cacheId Cache ID.
-     * @return First key.
-     */
-    public KeyCacheObject firstKey(int cacheId) {
-        return firstKeys.get(cacheId);
-    }
-
-    /**
-     * @param cacheId Cache ID.
-     * @param key Key.
-     */
-    public void firstKey(int cacheId, KeyCacheObject key) {
-        firstKeys.put(cacheId, key);
-    }
-
-    /**
-     * @param cacheId Cache ID.
      * @return Cache size.
      */
     public AtomicLong size(int cacheId) {
@@ -173,7 +153,6 @@ public class ReconciliationContext {
      */
     public boolean partSizeIsFinished() {
         return sizeReconciliationState.values().stream().allMatch(state -> state == SizeReconciliationState.FINISHED);
-//        return sizes.isEmpty();
     }
 
     /**

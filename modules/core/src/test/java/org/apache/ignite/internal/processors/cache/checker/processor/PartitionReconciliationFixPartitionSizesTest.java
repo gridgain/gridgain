@@ -529,6 +529,8 @@ public class PartitionReconciliationFixPartitionSizesTest extends PartitionRecon
 
         ig.cluster().state(ClusterState.ACTIVE);
 
+        awaitPartitionMapExchange();
+
         cache = grid(1).cache("cache0");
 
         long allKeysCountForCacheGroup = 0;
