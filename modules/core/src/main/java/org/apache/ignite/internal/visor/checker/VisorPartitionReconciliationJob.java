@@ -92,25 +92,25 @@ public class VisorPartitionReconciliationJob<ResultT> extends VisorJob<VisorPart
                         .exchange();
 
                     exchMgr.registerExchangeAwareComponent(new PartitionsExchangeAware() {
-                        /** {@inheritDoc} */
-                        @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
-                            DiscoveryEvent evt = fut.firstEvent();
+                            /** {@inheritDoc} */
+                            @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+                                DiscoveryEvent evt = fut.firstEvent();
 
-                            if (evt.type() == EVT_DISCOVERY_CUSTOM_EVT) {
-                                DiscoveryCustomEvent customEvt = (DiscoveryCustomEvent)evt;
+                                if (evt.type() == EVT_DISCOVERY_CUSTOM_EVT) {
+                                    DiscoveryCustomEvent customEvt = (DiscoveryCustomEvent)evt;
 
-                                if (customEvt.customMessage() instanceof FinalizeCountersDiscoveryMessage) {
-                                    FinalizeCountersDiscoveryMessage discoMsg = (FinalizeCountersDiscoveryMessage)customEvt.customMessage();
+                                    if (customEvt.customMessage() instanceof FinalizeCountersDiscoveryMessage) {
+                                        FinalizeCountersDiscoveryMessage discoMsg = (FinalizeCountersDiscoveryMessage)customEvt.customMessage();
 
-                                    if (discoMsg.id().equals(msg.id())) {
-                                        exchMgr.unregisterExchangeAwareComponent(this);
+                                        if (discoMsg.id().equals(msg.id())) {
+                                            exchMgr.unregisterExchangeAwareComponent(this);
 
-                                        partCntFut.onDone();
+                                            partCntFut.onDone();
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
                     );
 
                     partCntFut.listen(fut -> {

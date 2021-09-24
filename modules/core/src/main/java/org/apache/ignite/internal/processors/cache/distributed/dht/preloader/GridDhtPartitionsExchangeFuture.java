@@ -975,7 +975,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 else if (msg instanceof WalStateAbstractMessage)
                     exchange = onCustomMessageNoAffinityChange();
                 else if (msg instanceof FinalizeCountersDiscoveryMessage)
-                    exchange = onFinilizeCountersRequest();
+                    exchange = onFinalizeCountersRequest();
                 else {
                     assert affChangeMsg != null : this;
 
@@ -1488,7 +1488,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /**
      * @return Exchange type.
      */
-    private ExchangeType onFinilizeCountersRequest() {
+    private ExchangeType onFinalizeCountersRequest() {
         return cctx.kernalContext().clientNode() ? ExchangeType.CLIENT : ExchangeType.ALL;
     }
 
