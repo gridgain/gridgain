@@ -477,10 +477,14 @@ public final class X {
         if (t == null || F.isEmpty(cls))
             return false;
 
-        Predicate<Throwable> pred = thr -> Arrays.stream(cls)
-                .anyMatch(c -> c != null && c.isAssignableFrom(thr.getClass())
-                        && (msg == null || (thr.getMessage() != null && thr.getMessage().contains(msg))
-                    ));
+        Predicate<Throwable> pred = thr -> {
+            for (Class<?> c : cls) {
+                if (c != null && c.isAssignableFrom(thr.getClass())
+                    && (msg == null || (thr.getMessage() != null && thr.getMessage().contains(msg))))
+                    return true;
+            }
+            return false;
+        };
 
         Throwable found = traverseThrowableWithPredicate(t, pred);
 

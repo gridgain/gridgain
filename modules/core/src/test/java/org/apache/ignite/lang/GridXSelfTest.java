@@ -86,7 +86,7 @@ public class GridXSelfTest extends GridCommonAbstractTest {
 
         npe.initCause(exc);
 
-        X.hasCause(exc, NullPointerException.class);
+        X.cause(exc, NullPointerException.class);
         X.hasCause(exc, NullPointerException.class);
     }
 
