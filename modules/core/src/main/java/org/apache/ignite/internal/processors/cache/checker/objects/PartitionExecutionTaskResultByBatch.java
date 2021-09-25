@@ -31,13 +31,13 @@ public class PartitionExecutionTaskResultByBatch extends IgniteDataTransferObjec
     private static final long serialVersionUID = 0L;
 
     /** */
-    private KeyCacheObject key;
+    private volatile KeyCacheObject key;
 
     /** */
-    private Map<KeyCacheObject, Map<UUID, GridCacheVersion>> dataMap;
+    private volatile Map<KeyCacheObject, Map<UUID, GridCacheVersion>> dataMap;
 
     /** */
-    private Map<UUID, NodePartitionSize> sizeMap;
+    private volatile Map<UUID, NodePartitionSize> sizeMap;
 
     /** */
     public PartitionExecutionTaskResultByBatch() {

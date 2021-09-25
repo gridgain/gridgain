@@ -127,7 +127,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
     private final WorkloadTracker workloadTracker = new WorkloadTracker();
 
     /** Results collector. */
-    final ReconciliationResultCollector collector;
+    private final ReconciliationResultCollector collector;
 
     /**
      * Creates a new instance of Partition reconciliation processor.
@@ -219,7 +219,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         cache,
                         partId,
                         null,
-                        new HashMap<>()
+                        new ConcurrentHashMap<>()
                     );
 
                     workloadTracker.addTrackingChain(workload);

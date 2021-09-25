@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -219,7 +220,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                 .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
                 .collect(toList());
 
-            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), new HashMap<>(), errs), log::info);
+            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new ConcurrentHashMap<>(), new HashMap<>(), errs), log::info);
 
             throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
         }

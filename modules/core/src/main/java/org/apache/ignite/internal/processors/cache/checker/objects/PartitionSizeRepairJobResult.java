@@ -27,7 +27,7 @@ public class PartitionSizeRepairJobResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private NodePartitionSize nodePartitionSize;
+    private volatile NodePartitionSize nodePartitionSize;
 
     /**
      * Default constructor.

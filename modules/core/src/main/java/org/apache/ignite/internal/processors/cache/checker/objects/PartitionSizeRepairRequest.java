@@ -28,19 +28,19 @@ public class PartitionSizeRepairRequest extends CachePartitionRequest {
     private static final long serialVersionUID = 0L;
 
     /** Cache name. */
-    private String cacheName;
+    private final String cacheName;
 
     /** Partition id. */
-    private int partId;
+    private final int partId;
 
     /** */
-    private boolean repair;
+    private volatile boolean repair;
 
     /** Start topology version. */
-    private AffinityTopologyVersion startTopVer;
+    private final AffinityTopologyVersion startTopVer;
 
     /** */
-    private Map<UUID, NodePartitionSize> partSizesMap;
+    private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param sesId Session id.

@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -37,7 +36,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     private ReconciliationAffectedEntries res;
 
     /** Result of cache size consistency reconciliation. */
-    private Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
+    private Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     /** Folders with local results. */
     private Map<UUID, String> nodeIdToFolder;

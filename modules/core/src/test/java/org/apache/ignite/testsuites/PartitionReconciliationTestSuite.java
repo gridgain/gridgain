@@ -111,9 +111,9 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest4.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest5.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest6.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest7.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest8.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest9.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest7.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest8.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressParameterizedTest9.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest1.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest2.class, ignoredTests);
@@ -122,8 +122,8 @@ public class PartitionReconciliationTestSuite {
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest5.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest6.class, ignoredTests);
 //        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesStressRandomizedTest7.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesPersistenceStressParameterizedTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesPersistenceStressParameterizedTest.class, ignoredTests);
+//        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFixPartitionSizesTest.class, ignoredTests);
 
         return suite;
     }
