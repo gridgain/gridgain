@@ -347,7 +347,9 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                         }
 
                         if (sizeReconciliation && !hasNext) {
-                            log.warning("eroperpevea " + nodeSize + " partId " + part.id());
+                            log.warning("eroperpevea " + nodeSize +
+                                " partId " + part.id() +
+                                " real size " + partReconciliationCtx.size(cacheId));
 
                             nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
 

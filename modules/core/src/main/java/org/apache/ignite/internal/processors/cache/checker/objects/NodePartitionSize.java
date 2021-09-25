@@ -27,16 +27,16 @@ public class NodePartitionSize extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** Cache name. */
-    private String cacheName;
+    private volatile String cacheName;
 
     /** Size reconciliation state. */
-    private SizeReconciliationState state;
+    private volatile SizeReconciliationState state;
 
     /** Broken cache size from partition meta. */
-    private long oldCacheSize;
+    private volatile long oldCacheSize;
 
     /** Real cache size. */
-    private long newCacheSize;
+    private volatile long newCacheSize;
 
     /** */
     public NodePartitionSize() {
