@@ -450,9 +450,17 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 else if (reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
                     collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
 
-                    scheduleHighPriority(new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
+                    PartitionSizeRepair task = new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
                         workload.cacheName(), workload.partitionId(),
-                        repair, res.sizeMap()));
+                        repair, res.sizeMap());
+
+                    log.warning("rrrrrrrr in handle batch task " + task);
+
+                    scheduleHighPriority(task);
+                }
+                else {
+                    log.warning("ddddddddddd in handle batch else reconConsist " + reconConsist + " reconSize " + reconSize +
+                        " res " + res + " workload.partitionId() " + workload.partitionId());
                 }
 
                 if (!recheckKeys.isEmpty()) {
