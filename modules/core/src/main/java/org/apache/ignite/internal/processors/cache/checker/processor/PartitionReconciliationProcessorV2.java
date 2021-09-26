@@ -436,6 +436,9 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                 boolean reconConsist = nextBatchKey != null;
                 boolean reconSize = res.sizeMap().entrySet().stream().anyMatch(entry -> entry.getValue().state() == NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
+                if (!reconSize)
+                    log.warning("yrjdsiygfea res.sizeMap() in handle(Batch workload)" + res.sizeMap());
+
                 if (reconConsist || reconSize) {
                     schedule(new Batch(
                         reconConsist,
@@ -448,6 +451,7 @@ public class PartitionReconciliationProcessorV2 extends AbstractPipelineProcesso
                         res.sizeMap()));
                 }
                 else if (reconciliationTypes.contains(CACHE_SIZE_CONSISTENCY)) {
+                    log.warning("woieamfoier res.sizeMap() before send PartitionSizeRepair" + res.sizeMap());
                     collector.partSizesMap().putIfAbsent(workload.cacheName(), new ConcurrentHashMap<>());
 
                     PartitionSizeRepair task = new PartitionSizeRepair(workload.sessionId(), workload.workloadChainId(),
