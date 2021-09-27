@@ -32,7 +32,7 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
  * Tests partition reconciliation of sizes with various cache configurations.
  */
 @RunWith(Parameterized.class)
-public class PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest extends PartitionReconciliationFixPartitionSizesStressAbstractTest {
+public abstract class PartitionReconciliationFixPartitionSizesStressAbstractParameterizedTest extends PartitionReconciliationFixPartitionSizesStressAbstractTest {
     /** */
     @Parameterized.Parameter(0)
     public int nodesCnt;

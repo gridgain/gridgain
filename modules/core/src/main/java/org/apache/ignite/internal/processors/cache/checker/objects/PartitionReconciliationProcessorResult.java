@@ -30,10 +30,10 @@ public class PartitionReconciliationProcessorResult extends IgniteDataTransferOb
     private static final long serialVersionUID = 0L;
 
     /** */
-    private ReconciliationAffectedEntries reconciliationAffectedEntries;
+    private volatile ReconciliationAffectedEntries reconciliationAffectedEntries;
 
     /** */
-    private Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
+    private volatile Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     /** */
     public PartitionReconciliationProcessorResult() {

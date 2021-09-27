@@ -37,7 +37,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     private ReconciliationAffectedEntries res;
 
     /** Result of cache size consistency reconciliation. */
-    private Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap();
+    private Map<String/*cache name*/, Map<Integer/*partition id*/, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     /** Folders with local results. */
     private Map<UUID, String> nodeIdToFolder;

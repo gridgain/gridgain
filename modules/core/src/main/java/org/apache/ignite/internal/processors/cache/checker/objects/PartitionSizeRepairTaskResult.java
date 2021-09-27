@@ -30,7 +30,7 @@ public class PartitionSizeRepairTaskResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private Map<UUID, NodePartitionSize> sizeMap = new ConcurrentHashMap<>();
+    private volatile Map<UUID, NodePartitionSize> sizeMap = new ConcurrentHashMap<>();
 
     /**
      * Default constructor.

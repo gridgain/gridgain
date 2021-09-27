@@ -30,16 +30,16 @@ public class PartitionReconciliationJobResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private String filePath;
+    private volatile String filePath;
 
     /** */
-    private ReconciliationAffectedEntries reconciliationAffectedEntries;
+    private volatile ReconciliationAffectedEntries reconciliationAffectedEntries;
 
     /** */
-    private Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
+    private volatile Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap;
 
     /** */
-    private String errorMsg;
+    private volatile String errorMsg;
 
     /** */
     public PartitionReconciliationJobResult() {

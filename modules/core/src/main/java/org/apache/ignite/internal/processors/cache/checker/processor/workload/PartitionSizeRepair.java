@@ -36,10 +36,10 @@ public class PartitionSizeRepair extends PipelineWorkload {
      * If {@code true} need to check and repair.
      * If {@code false} need to check only.
      */
-    private boolean repair;
+    private volatile boolean repair;
 
     /** Map of partition sizes for reconciliation of cache sizes. */
-    private Map<UUID, NodePartitionSize> partSizesMap;
+    private final Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param sesId Session id.

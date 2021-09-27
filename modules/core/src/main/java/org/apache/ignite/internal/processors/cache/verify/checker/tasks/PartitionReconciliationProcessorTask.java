@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -158,7 +159,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         List<String> errors = new ArrayList<>();
 
-        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new HashMap<>();
+        Map<String, Map<Integer, Map<UUID, NodePartitionSize>>> partSizesMap = new ConcurrentHashMap<>();
 
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
@@ -176,7 +177,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 res.merge(data.reconciliationAffectedEntries());
 
                 data.partSizesMap().entrySet().forEach(e -> {
-                    partSizesMap.putIfAbsent(e.getKey(), new HashMap<>());
+                    partSizesMap.putIfAbsent(e.getKey(), new ConcurrentHashMap<>());
                     e.getValue().entrySet().forEach(e0 -> partSizesMap.get(e.getKey()).put(e0.getKey(), e0.getValue()));
                 });
 
@@ -368,7 +369,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new ExecutionResult<>(new PartitionReconciliationJobResult(null, new ReconciliationAffectedEntriesExtended(), new HashMap(), "The cache '" + cacheRegexp + "' doesn't exist."), "The cache '" + cacheRegexp + "' doesn't exist.");
+                        return new ExecutionResult<>(new PartitionReconciliationJobResult(null, new ReconciliationAffectedEntriesExtended(), new ConcurrentHashMap<>(), "The cache '" + cacheRegexp + "' doesn't exist."), "The cache '" + cacheRegexp + "' doesn't exist.");
 
                     caches.addAll(acceptedCaches);
                 }

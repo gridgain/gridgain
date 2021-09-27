@@ -28,10 +28,10 @@ public class PartitionExecutionJobResultByBatch extends IgniteDataTransferObject
     private static final long serialVersionUID = 0L;
 
     /** */
-    private List<VersionedKey> versionedKeys;
+    private volatile List<VersionedKey> versionedKeys;
 
     /** */
-    private NodePartitionSize nodePartitionSize;
+    private volatile NodePartitionSize nodePartitionSize;
 
     /** */
     public PartitionExecutionJobResultByBatch() {

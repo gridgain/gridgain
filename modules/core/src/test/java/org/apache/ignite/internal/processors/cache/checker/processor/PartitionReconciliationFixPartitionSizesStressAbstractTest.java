@@ -45,7 +45,7 @@ import static org.apache.ignite.cache.CacheMode.REPLICATED;
 /**
  * Tests partition reconciliation of sizes with various cache configurations.
  */
-public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends PartitionReconciliationAbstractTest {
+public abstract class PartitionReconciliationFixPartitionSizesStressAbstractTest extends PartitionReconciliationAbstractTest {
     /** */
     protected int pageSize;
 

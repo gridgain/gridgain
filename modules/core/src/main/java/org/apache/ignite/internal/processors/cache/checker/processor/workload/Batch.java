@@ -28,10 +28,10 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
  */
 public class Batch extends PipelineWorkload {
     /** If reconciliation of consistency is needed. */
-    private boolean dataReconciliation;
+    private volatile boolean dataReconciliation;
 
     /** If reconciliation of cache sizes is needed. */
-    private boolean cacheSizeReconciliation;
+    private volatile boolean cacheSizeReconciliation;
 
     /** Cache name. */
     private final String cacheName;
@@ -43,7 +43,7 @@ public class Batch extends PipelineWorkload {
     private final KeyCacheObject lowerKey;
 
     /** Map of partition sizes for reconciliation of cache sizes. */
-    private Map<UUID, NodePartitionSize> partSizesMap;
+    private volatile Map<UUID, NodePartitionSize> partSizesMap;
 
     /**
      * @param sesId Session id.
