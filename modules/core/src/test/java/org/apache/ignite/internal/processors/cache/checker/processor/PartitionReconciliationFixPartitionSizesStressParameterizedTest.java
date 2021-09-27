@@ -40,8 +40,8 @@ public class PartitionReconciliationFixPartitionSizesStressParameterizedTest ext
 
         reconciliationTypes.add(CACHE_SIZE_CONSISTENCY);
 
-//        if (rnd.nextBoolean())
-//            reconciliationTypes.add(DATA_CONSISTENCY);
+        if (rnd.nextBoolean())
+            reconciliationTypes.add(DATA_CONSISTENCY);
 
         switch (rnd.nextInt(3)) {
             case 0:
