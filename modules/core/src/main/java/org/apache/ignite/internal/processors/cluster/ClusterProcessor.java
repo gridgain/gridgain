@@ -16,18 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import javax.management.JMException;
-import javax.management.ObjectName;
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -37,14 +25,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.internal.ClusterMetricsSnapshot;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.GridKernalGatewayImpl;
-import org.apache.ignite.internal.IgniteDiagnosticInfo;
-import org.apache.ignite.internal.IgniteDiagnosticMessage;
-import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.*;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
@@ -82,15 +63,17 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_ID;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_TAG_UPDATED;
-import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
-import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import javax.management.JMException;
+import javax.management.ObjectName;
+import java.io.Serializable;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.events.EventType.*;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
@@ -102,6 +85,11 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
  *
  */
 public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
+    /**
+     * Ignite cluster ID system property. If is not set, random UUID will be used.
+     */
+    private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
+
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
