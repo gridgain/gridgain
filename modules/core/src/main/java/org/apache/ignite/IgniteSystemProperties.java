@@ -16,6 +16,14 @@
 
 package org.apache.ignite;
 
+import java.io.Serializable;
+import java.lang.management.RuntimeMXBean;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -38,11 +46,6 @@ import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
-
-import javax.net.ssl.HostnameVerifier;
-import java.io.Serializable;
-import java.lang.management.RuntimeMXBean;
-import java.util.*;
 
 /**
  * Contains constants for all system properties and environmental variables in Ignite.
