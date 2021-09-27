@@ -27,6 +27,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -543,6 +544,13 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @see #isWalEnabled(String)
      */
     public boolean enableWal(String cacheName) throws IgniteException;
+
+    /**
+     * Force checkpointing on whole cluster
+     *
+     * @throws IgniteException
+     */
+    public void checkpoint() throws IgniteException;
 
     /**
      * Checks if write-ahead logging is enabled for specified cache.

@@ -52,4 +52,7 @@ public interface IgniteClusterMXBean {
         "New tag value to be set."
     )
     public void tag(String newTag) throws JMException;
+
+    @MXBeanDescription("Start checkpoint on cluster nodes.")
+    public void checkpoint();
 }

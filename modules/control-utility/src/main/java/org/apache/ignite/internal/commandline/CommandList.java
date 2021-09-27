@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
+import org.apache.ignite.internal.commandline.checkpointing.CheckpointCommand;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.encryption.EncryptionCommands;
@@ -86,7 +87,10 @@ public enum CommandList {
     PERSISTENCE("--persistence", new PersistenceCommand()),
 
     /** Command to manage PDS defragmentation. */
-    DEFRAGMENTATION("--defragmentation", new DefragmentationCommand());
+    DEFRAGMENTATION("--defragmentation", new DefragmentationCommand()),
+
+    /** Start checkpoint on a cluster */
+    CHECKPOINT("--checkpoint", new CheckpointCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
