@@ -467,11 +467,7 @@ public final class X {
      * @return {@code True} if one of the causing exception is an instance of passed in classes,
      *      {@code false} otherwise.
      */
-    public static boolean hasCause(
-        @Nullable Throwable t,
-        @Nullable String msg,
-        @Nullable Class<?>... types
-    ) {
+    public static boolean hasCause(@Nullable Throwable t, @Nullable String msg, @Nullable Class<?>... types) {
         if (t == null || F.isEmpty(types))
             return false;
 
@@ -545,10 +541,7 @@ public final class X {
      * @param types Candidate types.
      * @return First throwable meets test condition or {@code null} if none has matched.
      */
-    @Nullable private static Throwable searchForCause(
-        Throwable t,
-        @Nullable String msg,
-        Class<?>... types) {
+    @Nullable private static Throwable searchForCause(Throwable t, @Nullable String msg, Class<?>... types) {
         Set<Throwable> dejaVu = Collections.newSetFromMap(new IdentityHashMap<>());
 
         return searchForCause(t, dejaVu, msg, types);
@@ -604,11 +597,7 @@ public final class X {
      * @param candidateTypes Types to check.
      * @return {@code True} if such type in found, else {@code False}.
      */
-    private static boolean isThrowableValid(
-        Throwable thr,
-        @Nullable String msg,
-        Class<?>... candidateTypes
-    ) {
+    private static boolean isThrowableValid(Throwable thr, @Nullable String msg, Class<?>... candidateTypes) {
         for (Class<?> c : candidateTypes) {
             if (c != null && c.isAssignableFrom(thr.getClass())
                 && (msg == null || (thr.getMessage() != null && thr.getMessage().contains(msg))))
