@@ -253,8 +253,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         client.cluster().state(ClusterState.ACTIVE);
 
         assertFalse(obsolescenceLsnr.check(TIMEOUT));
-
-
     }
 
     /**

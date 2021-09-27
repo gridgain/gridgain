@@ -136,7 +136,6 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
             mgmtPool = null;
         }
 
-
         IgniteStatisticsStore store;
         if (!serverNode)
             store = new IgniteStatisticsDummyStoreImpl(ctx::log);
@@ -147,7 +146,7 @@ public class IgniteStatisticsManagerImpl implements IgniteStatisticsManager {
 
         statsRepos = new IgniteStatisticsRepository(store, ctx.systemView(), helper, ctx::log);
 
-        gatherer = serverNode? new StatisticsGatherer(
+        gatherer = serverNode ? new StatisticsGatherer(
             statsRepos,
             gatherPool,
             ctx::log
