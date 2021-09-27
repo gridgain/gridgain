@@ -137,7 +137,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         skippedEntries = U.readMap(in);
 
         if (protoVer >= V2)
-            partSizesMap = U.readMap(in);
+            partSizesMap = new ConcurrentHashMap<>(U.readMap(in));
     }
 
     /**

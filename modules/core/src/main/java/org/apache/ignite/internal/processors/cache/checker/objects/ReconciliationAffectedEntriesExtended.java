@@ -21,6 +21,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -99,7 +100,7 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
         if (protoVer >= V2) {
             partSizeConflictsCnt = in.readInt();
 
-            partSizesMap = U.readMap(in);
+            partSizesMap = new ConcurrentHashMap<>(U.readMap(in));
         }
     }
 

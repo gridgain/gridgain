@@ -21,6 +21,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -67,6 +68,6 @@ public class PartitionReconciliationProcessorResult extends IgniteDataTransferOb
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
         reconciliationAffectedEntries = (ReconciliationAffectedEntries)in.readObject();
-        partSizesMap = U.readMap(in);
+        partSizesMap = new ConcurrentHashMap<>(U.readMap(in));
     }
 }

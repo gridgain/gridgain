@@ -22,6 +22,7 @@ import java.io.ObjectOutput;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -106,7 +107,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
         errors = U.readList(in);
 
         if (protoVer >= V2)
-            partSizesMap = U.readMap(in);
+            partSizesMap = new ConcurrentHashMap<>(U.readMap(in));
     }
 
     /**
