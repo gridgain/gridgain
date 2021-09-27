@@ -16,6 +16,9 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
+import java.net.InetAddress;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
@@ -40,12 +43,15 @@ import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.nio.GridShmemCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationListener;
+import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.AttributeNames;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
@@ -56,7 +62,13 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
+import static org.apache.ignite.internal.util.IgniteUtils.spiAttribute;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_EXT_ADDRS;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONN_IDX_META;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.CONSISTENT_ID_META;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
@@ -76,6 +88,13 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * before it starts being visible for server)
      */
     private static final IgniteProductVersion VERSION_SINCE_CLIENT_COULD_WAIT_TO_CONNECT = IgniteProductVersion.fromString("2.1.4");
+
+    /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message. In other words, the remote address of sender is equal to the already known address
+     * which corresponds to received node id in the message.
+     */
+    private final boolean checkCommHandshakeSender = getBoolean(IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER);
 
     /** Message tracker meta for session. */
     private static final int TRACKER_META = GridNioSessionMetaKey.nextUniqueKey();
@@ -491,6 +510,41 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 ses.send(new RecoveryLastReceivedMessage(NEED_WAIT)).listen(fut -> ses.close());
 
             return;
+        }
+        else {
+            if (checkCommHandshakeSender) {
+                CommunicationSpi commSpi = igniteExSupplier.get().configuration().getCommunicationSpi();
+
+                IgniteClosure<String, Collection<String>> notNullAttrs = (attr) -> {
+                    Collection<String> r = rmtNode.attribute(spiAttribute(commSpi, attr));
+                    if (F.isEmpty(r))
+                        return Collections.emptyList();
+
+                    return r;
+                };
+
+                Collection<String> rmtAddrs = notNullAttrs.apply(ATTR_ADDRS);
+                Collection<String> rmtExtAddrs = notNullAttrs.apply(ATTR_EXT_ADDRS);
+                Collection<String> rmtHosts = notNullAttrs.apply(ATTR_HOST_NAMES);
+
+                InetAddress rmtInetAddr = ses.remoteAddress().getAddress();
+
+                if (!rmtAddrs.contains(rmtInetAddr.getHostAddress()) && !rmtHosts.contains(rmtInetAddr.getHostName()) &&
+                    !rmtExtAddrs.contains(rmtInetAddr.getHostAddress())) {
+
+                    String knownAddrs = String.join(",", rmtAddrs);
+                    String knownExtAddrs = String.join(",", rmtExtAddrs);
+                    String knownHosts = String.join(",", rmtHosts);
+
+                    U.warn(log, "Closing incoming connection, unexpected remote address " +
+                        "[nodeId=" + sndId + ", addrs=[" + knownAddrs + ']' + ", extAddrs=[" + knownExtAddrs + ']' +
+                        ", hosts=[" + knownHosts + ']' + ", ses=" + ses + ']');
+
+                    ses.send(new RecoveryLastReceivedMessage(UNKNOWN_NODE)).listen(fut -> ses.close());
+
+                    return;
+                }
+            }
         }
 
         ses.addMeta(CONSISTENT_ID_META, rmtNode.consistentId());

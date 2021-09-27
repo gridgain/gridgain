@@ -456,6 +456,11 @@ public class IgniteApplicationMasterSelfTest {
         }
 
         /** {@inheritDoc} */
+        @Override public void requestContainerResourceChange(Container container, Resource resource) {
+            // No-op.
+        }
+
+        /** {@inheritDoc} */
         @Override public void releaseAssignedContainer(ContainerId containerId) {
             releasedConts.add(containerId);
         }
@@ -509,6 +514,11 @@ public class IgniteApplicationMasterSelfTest {
             startedContainer.add(containerLaunchContext);
 
             return null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void increaseContainerResource(Container container) throws YarnException, IOException {
+            // No-op.
         }
 
         /** {@inheritDoc} */

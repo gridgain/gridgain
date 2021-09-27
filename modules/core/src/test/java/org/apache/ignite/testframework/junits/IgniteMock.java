@@ -65,6 +65,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.processors.cacheobject.NoOpBinary;
 import org.apache.ignite.internal.processors.tracing.configuration.NoopTracingConfigurationManager;
+import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -105,6 +106,9 @@ public class IgniteMock implements Ignite {
 
     /** */
     private BinaryContext ctx;
+
+    /** Communication SPI */
+    private CommunicationSpi commSpi;
 
     /**
      * Mock values
@@ -149,6 +153,7 @@ public class IgniteMock implements Ignite {
         cfg.setMBeanServer(jmx);
         cfg.setIgniteHome(home);
         cfg.setLocalHost(locHost);
+        cfg.setCommunicationSpi(commSpi);
 
         try {
             cfg.setWorkDirectory(U.defaultWorkDirectory());
@@ -509,5 +514,9 @@ public class IgniteMock implements Ignite {
      */
     public void setStaticCfg(IgniteConfiguration staticCfg) {
         this.staticCfg = staticCfg;
+    }
+
+    public void setCommunicationSpi(CommunicationSpi commSpi) {
+        this.commSpi = commSpi;
     }
 }

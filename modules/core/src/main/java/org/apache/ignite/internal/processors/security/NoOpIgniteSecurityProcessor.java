@@ -97,6 +97,11 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
 
     /** {@inheritDoc} */
     @Override public OperationSecurityContext withContext(UUID nodeId) {
+        return withContext(nodeId, nodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override public OperationSecurityContext withContext(UUID senderNodeId, UUID subjectId) {
         return opSecCtx;
     }
 

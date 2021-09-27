@@ -32,6 +32,8 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -1934,6 +1936,15 @@ public final class GridTestUtils {
     }
 
     /**
+     * Clear file without deletion.
+     *
+     * @param path to file.
+     */
+    public static void clearFile(Path path) throws IOException {
+        Files.newOutputStream(path).close();
+    }
+
+    /**
      * Reads resource into byte array.
      *
      * @param classLoader Classloader.
@@ -2084,13 +2095,41 @@ public final class GridTestUtils {
      * @param trustStore Trust store name.
      * @return SSL context factory used in test.
      */
-    public static Factory<SSLContext> sslTrustedFactory(String keyStore, String trustStore) {
+    public static SslContextFactory sslTrustedFactory(String keyStore, String trustStore) {
         SslContextFactory factory = new SslContextFactory();
 
-        factory.setKeyStoreFilePath(keyStorePath(keyStore));
-        factory.setKeyStorePassword(keyStorePassword().toCharArray());
-        factory.setTrustStoreFilePath(keyStorePath(trustStore));
-        factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
+
+        return factory;
+    }
+
+    /**
+     * Creates test-purposed SSL context factory from specified key store and trust store.
+     *
+     * @param keyStore Key store name.
+     * @param trustStore Trust store name.
+     * @return SSL context factory used in test.
+     */
+    public static GridSslBasicContextFactory gridSslTrustedFactory(String keyStore, String trustStore) {
+        GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
+
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
 
         return factory;
     }

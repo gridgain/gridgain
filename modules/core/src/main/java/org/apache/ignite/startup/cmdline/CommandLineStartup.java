@@ -25,10 +25,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import javax.swing.ImageIcon;
 import org.apache.ignite.IgniteState;
@@ -47,7 +44,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PROG_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RESTART_CODE;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
 import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
-import static org.apache.ignite.internal.IgniteVersionUtils.RELEASE_DATE_STR;
+import static org.apache.ignite.internal.IgniteVersionUtils.RELEASE_DATE;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 
 /**
@@ -64,9 +61,6 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 public final class CommandLineStartup {
     /** Quite log flag. */
     private static final boolean QUITE;
-
-    /** Build date. */
-    private static Date releaseDate;
 
     /**
      * Static initializer.
@@ -95,8 +89,6 @@ public final class CommandLineStartup {
 
         // Mac OS specific customizations: app icon and about dialog.
         try {
-            releaseDate = new SimpleDateFormat("ddMMyyyy", Locale.US).parse(RELEASE_DATE_STR);
-
             Class<?> appCls = Class.forName("com.apple.eawt.Application");
 
             Object osxApp = appCls.getDeclaredMethod("getApplication").invoke(null);
@@ -122,7 +114,7 @@ public final class CommandLineStartup {
                 new InvocationHandler() {
                     @Override public Object invoke(Object proxy, Method mtd, Object[] args) throws Throwable {
                         AboutDialog.centerShow("Ignite Node", bannerUrl.toExternalForm(), VER_STR,
-                            releaseDate, COPYRIGHT);
+                            RELEASE_DATE, COPYRIGHT);
 
                         return null;
                     }

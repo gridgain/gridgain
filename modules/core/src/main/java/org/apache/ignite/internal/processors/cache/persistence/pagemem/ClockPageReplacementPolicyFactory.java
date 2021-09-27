@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.ssl;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
+package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 /**
- * Wrapper for {@link SSLContext} that extend source context with custom SSL parameters.
+ * {@link ClockPageReplacementPolicy} factory.
  */
-public class SSLContextWrapper extends SSLContext {
-    /**
-     * @param delegate Wrapped SSL context.
-     * @param sslParameters Extended SSL parameters.
-     */
-    public SSLContextWrapper(SSLContext delegate, SSLParameters sslParameters) {
-        super(new DelegatingSSLContextSpi(delegate, sslParameters),
-            delegate.getProvider(),
-            delegate.getProtocol());
+public class ClockPageReplacementPolicyFactory implements PageReplacementPolicyFactory {
+    /** {@inheritDoc} */
+    @Override public long requiredMemory(int pagesCnt) {
+        return ClockPageReplacementFlags.requiredMemory(pagesCnt);
+    }
+
+    /** {@inheritDoc} */
+    @Override public PageReplacementPolicy create(PageMemoryImpl.Segment seg, long ptr, int pagesCnt) {
+        return new ClockPageReplacementPolicy(seg, ptr, pagesCnt);
     }
 }
