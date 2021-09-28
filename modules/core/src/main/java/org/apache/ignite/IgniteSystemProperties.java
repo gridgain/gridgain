@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -1758,6 +1759,34 @@ public final class IgniteSystemProperties {
             res = Double.parseDouble(s);
         }
         catch (NumberFormatException ignore) {
+            res = dflt;
+        }
+
+        return res;
+    }
+
+    /**
+     * Gets either system property or environment variable with given name.
+     * The result is transformed to {@link UUID} using {@link UUID#fromString} method.
+     *
+     * @param name Name of the system property or environment variable.
+     * @param dflt Default value.
+     * @return UUID value of the system property or environment variable.
+     *         Returns default value in case neither system property
+     *         nor environment variable with given name is found.
+     */
+    public static UUID getUUID(String name, UUID dflt) {
+        String s = getString(name);
+
+        if (s == null)
+            return dflt;
+
+        UUID res;
+
+        try {
+            res = UUID.fromString(s);
+        }
+        catch (IllegalArgumentException ignore) {
             res = dflt;
         }
 
