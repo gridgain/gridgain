@@ -37,13 +37,13 @@ public class TcpDiscoveryStatistics {
     private final AtomicLong crdSinceTs = new AtomicLong();
 
     /** Joined nodes count. */
-    private final IntMetricImpl joinedNodesCnt;
+    private IntMetricImpl joinedNodesCnt;
 
     /** Failed nodes count. */
-    private final IntMetricImpl failedNodesCnt;
+    private IntMetricImpl failedNodesCnt;
 
     /** Left nodes count. */
-    private final IntMetricImpl leftNodesCnt;
+    private IntMetricImpl leftNodesCnt;
 
     /** Received messages. */
     @GridToStringInclude
@@ -67,31 +67,23 @@ public class TcpDiscoveryStatistics {
     private long maxMsgProcTime;
 
     /** Pending messages registered count. */
-    private final IntMetricImpl pendingMsgsRegistered;
-
-    /** */
-    public TcpDiscoveryStatistics() {
-        joinedNodesCnt = new IntMetricImpl("JoinedNodes", "Joined nodes count");
-
-        failedNodesCnt = new IntMetricImpl("FailedNodes", "Failed nodes count");
-
-        leftNodesCnt = new IntMetricImpl("LeftNodes", "Left nodes count");
-
-        pendingMsgsRegistered = new IntMetricImpl("PendingMessagesRegistered", "Pending messages registered count");
-    }
+    private IntMetricImpl pendingMsgsRegistered;
 
     /**
      * @param discoReg Discovery metric registry.
      */
     public void registerMetrics(MetricRegistry discoReg) {
+        joinedNodesCnt = discoReg.intMetric("JoinedNodes", "Joined nodes count");
+
+        failedNodesCnt = discoReg.intMetric("FailedNodes", "Failed nodes count");
+
+        leftNodesCnt = discoReg.intMetric("LeftNodes", "Left nodes count");
+
+        pendingMsgsRegistered = discoReg.intMetric("PendingMessagesRegistered", "Pending messages registered count");
+
         discoReg.register("TotalProcessedMessages", this::totalProcessedMessages, "Total processed messages count");
 
         discoReg.register("TotalReceivedMessages", this::totalReceivedMessages, "Total received messages count");
-
-        discoReg.register(joinedNodesCnt);
-        discoReg.register(failedNodesCnt);
-        discoReg.register(leftNodesCnt);
-        discoReg.register(pendingMsgsRegistered);
     }
 
     /**
