@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -77,7 +78,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
-    private final GridCacheContext cctx;
+    private final GridCacheContext<?, ?> cctx;
 
     /** Owning table. */
     private final GridH2Table table;
@@ -117,7 +118,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final String idxName;
 
     /** */
-    private final IoStatisticsHolder stats;
+    @Nullable private final IoStatisticsHolder stats;
 
     /** */
     private final Comparator<Value> comp = this::compareValues;
@@ -171,6 +172,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param mvccEnabled Mvcc flag.
      * @param rowCache Row cache.
      * @param failureProcessor if the tree is corrupted.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @param log Logger.
      * @param stats Statistics holder.
      * @param factory Inline helper factory.
@@ -179,7 +181,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @throws IgniteCheckedException If failed.
      */
     public H2Tree(
-        GridCacheContext cctx,
+        @Nullable GridCacheContext<?, ?> cctx,
         GridH2Table table,
         String name,
         String idxName,
@@ -201,8 +203,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         boolean mvccEnabled,
         @Nullable H2RowCache rowCache,
         @Nullable FailureProcessor failureProcessor,
+        PageLockTrackerManager pageLockTrackerManager,
         IgniteLogger log,
-        IoStatisticsHolder stats,
+        @Nullable IoStatisticsHolder stats,
         InlineIndexColumnFactory factory,
         int configuredInlineSize,
         PageIoResolver pageIoRslvr
@@ -218,7 +221,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             reuseList,
             PageIdAllocator.FLAG_IDX,
             failureProcessor,
-            null,
+            pageLockTrackerManager,
             pageIoRslvr
         );
 
@@ -823,7 +826,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected IoStatisticsHolder statisticsHolder() {
-        return stats;
+        return stats != null ? stats : super.statisticsHolder();
     }
 
     /**
@@ -977,5 +980,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
         return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected String lockRetryErrorMessage(String op) {
+        return super.lockRetryErrorMessage(op) + " Problem with the index [cacheName=" +
+            cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
     }
 }

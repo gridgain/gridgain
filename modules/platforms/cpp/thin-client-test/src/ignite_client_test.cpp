@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 
 #include <boost/test/unit_test.hpp>
+#include <boost/bind.hpp>
 
 #include <ignite/ignition.h>
 
@@ -42,6 +43,20 @@ public:
     }
 
     /**
+     * Wait for connections.
+     * @param logger Logger.
+     * @param expect Expected connections number.
+     * @param timeout Timeout.
+     * @return True if condition was met, false if timeout has been reached.
+     */
+    bool WaitForConnections(VectorLogger* logger, size_t expected, int32_t timeout = 5000)
+    {
+        return ignite_test::WaitForCondition(
+                boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, this, logger, expected),
+                timeout);
+    }
+
+    /**
      * Check that if client started with given configuration and connection limit then the actual number of active
      * connections is equal to the expected value.
      *
@@ -55,7 +70,20 @@ public:
         cfg.SetConnectionsLimit(limit);
         IgniteClient client = IgniteClient::Start(cfg);
 
+        BOOST_CHECK(WaitForConnections(logger, expect));
         BOOST_CHECK_EQUAL(GetActiveConnections(logger), expect);
+    }
+
+    /**
+     * Check number of active connections.
+     *
+     * @param logger Logger.
+     * @param expect connections to expect.
+     * @return @c true on success.
+     */
+    bool CheckActiveConnections(VectorLogger* logger, size_t expect)
+    {
+        return GetActiveConnections(logger) == expect;
     }
 
     /**

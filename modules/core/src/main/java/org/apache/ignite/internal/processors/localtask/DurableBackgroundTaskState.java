@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.localtask.DurableBackgroundTaskState.State.INIT;
 
@@ -32,7 +31,7 @@ import static org.apache.ignite.internal.processors.localtask.DurableBackgroundT
  *
  * If the task needs to be restarted, it must have status INIT.
  */
-public class DurableBackgroundTaskState {
+public class DurableBackgroundTaskState<R> {
     /**
      * Enumeration of the current state of the task.
      */
@@ -55,16 +54,19 @@ public class DurableBackgroundTaskState {
         AtomicReferenceFieldUpdater.newUpdater(DurableBackgroundTaskState.class, State.class, "state");
 
     /** Durable background task. */
-    private final DurableBackgroundTask task;
+    private final DurableBackgroundTask<R> task;
 
     /** Outside task future. */
-    @Nullable private final GridFutureAdapter<Void> outFut;
+    private final GridFutureAdapter<R> outFut;
 
     /** Task has been saved to the MetaStorage. */
     private final boolean saved;
 
     /** Current state of the task. */
     private volatile State state = INIT;
+
+    /** Converted from another task. */
+    private final boolean converted;
 
     /**
      * Constructor.
@@ -74,13 +76,15 @@ public class DurableBackgroundTaskState {
      * @param saved  Task has been saved to the MetaStorage.
      */
     public DurableBackgroundTaskState(
-        DurableBackgroundTask task,
-        @Nullable GridFutureAdapter<Void> outFut,
-        boolean saved
+        DurableBackgroundTask<R> task,
+        GridFutureAdapter<R> outFut,
+        boolean saved,
+        boolean converted
     ) {
         this.task = task;
         this.outFut = outFut;
         this.saved = saved;
+        this.converted = converted;
     }
 
     /**
@@ -88,7 +92,7 @@ public class DurableBackgroundTaskState {
      *
      * @return Durable background task.
      */
-    public DurableBackgroundTask task() {
+    public DurableBackgroundTask<R> task() {
         return task;
     }
 
@@ -97,7 +101,7 @@ public class DurableBackgroundTaskState {
      *
      * @return Outside task future.
      */
-    @Nullable public GridFutureAdapter<Void> outFuture() {
+    public GridFutureAdapter<R> outFuture() {
         return outFut;
     }
 
@@ -137,6 +141,15 @@ public class DurableBackgroundTaskState {
      */
     public boolean state(State exp, State newState) {
         return STATE_UPDATER.compareAndSet(this, exp, newState);
+    }
+
+    /**
+     * Check if the task has been converted from another.
+     *
+     * @return {@code True} if it was converted from another task.
+     */
+    public boolean converted() {
+        return converted;
     }
 
     /** {@inheritDoc} */

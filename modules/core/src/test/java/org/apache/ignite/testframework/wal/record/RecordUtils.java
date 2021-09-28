@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ExchangeRecord;
+import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
@@ -84,6 +85,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionImpl;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.tree.DataInnerIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.transactions.TransactionState;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_EXISTING_PAGE_SPLIT;
@@ -115,6 +117,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.EXCHANGE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.HEADER_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INDEX_ROOT_PAGE_RENAME_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.INIT_NEW_PAGE_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MEMORY_RECOVERY;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.METASTORE_DATA_RECORD;
@@ -222,6 +225,7 @@ public class RecordUtils {
             put(MVCC_TX_RECORD, RecordUtils::buildMvccTxRecord);
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
             put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
+            put(INDEX_ROOT_PAGE_RENAME_RECORD, RecordUtils::buildIndexRenameRootPageRecord);
             put(PARTITION_CLEARING_STARTED, RecordUtils::buildPartitionClearingStartedRecord);
         }};
 
@@ -576,11 +580,6 @@ public class RecordUtils {
         return new OutOfOrderDataRecord(Collections.emptyList());
     }
 
-    /** **/
-    public static PartitionClearingStarted buildPartitionClearingStartedRecord() {
-        return new PartitionClearingStarted(12, 345, 123456789);
-    }
-
     /**
      * Return {@code true} if include to write-ahead log.
      *
@@ -589,5 +588,24 @@ public class RecordUtils {
      */
     public static boolean isIncludeIntoLog(WALRecord walRecord) {
         return !UnsupportedWalRecord.class.isInstance(walRecord) && !SwitchSegmentRecord.class.isInstance(walRecord);
+    }
+
+    /**
+     * Build a fake {@link IndexRenameRootPageRecord}.
+     *
+     * @return New instance.
+     */
+    public static IndexRenameRootPageRecord buildIndexRenameRootPageRecord() {
+        return new IndexRenameRootPageRecord(
+            CU.cacheId("test-cache"),
+            "oldTreeName",
+            "newTreeName",
+            666
+        );
+    }
+
+    /** **/
+    public static PartitionClearingStarted buildPartitionClearingStartedRecord() {
+        return new PartitionClearingStarted(12, 345, 123456789);
     }
 }

@@ -536,7 +536,7 @@ public class GridAffinityAssignmentCache {
         float deltaBackup = Math.abs(1 - (float)locBackupCnt / (expCnt * backups)) * 100;
 
         if ((deltaPrimary > partDistribution || deltaBackup > partDistribution) && log.isInfoEnabled()) {
-            log.info(String.format("Local node affinity assignment distribution is not ideal " +
+            log.info(String.format("Local node affinity assignment distribution is not even " +
                     "[cache=%s, expectedPrimary=%.2f, actualPrimary=%d, " +
                     "expectedBackups=%.2f, actualBackups=%d, warningThreshold=%.2f%%]",
                 cacheOrGrpName, expCnt, locPrimaryCnt,
