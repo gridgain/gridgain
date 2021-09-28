@@ -86,6 +86,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.RECLEARING;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
@@ -346,6 +347,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public long createTime() {
         return createTime;
+    }
+
+    /** */
+    public void clearVer(long clearVer) {
+         this.clearVer = clearVer;
     }
 
     /**
@@ -985,7 +991,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         try {
             if (reason == PartitionsEvictManager.EvictReason.CLEARING &&
                     grp.walEnabled() && grp.config().getAtomicityMode() == ATOMIC)
-                ctx.wal().log(new PartitionClearingStarted(id, grp.groupId()));
+                ctx.wal().log(new PartitionClearingStarted(id, grp.groupId(), order));
 
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);
 
@@ -1005,7 +1011,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // Partition state can be switched from RENTING to MOVING and vice versa during clearing.
                     long order0 = row.version().order();
 
-                    if (state() == MOVING && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
+                    if ((state() == MOVING || reason == RECLEARING) && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
@@ -1071,7 +1077,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
 
             // Attempt to destroy.
-            ((GridDhtPreloader)grp.preloader()).tryFinishEviction(this);
+            if (reason != RECLEARING)
+                ((GridDhtPreloader)grp.preloader()).tryFinishEviction(this);
         }
         catch (NodeStoppingException e) {
             if (log.isDebugEnabled())

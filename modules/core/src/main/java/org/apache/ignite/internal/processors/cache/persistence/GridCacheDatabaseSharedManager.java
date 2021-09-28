@@ -105,6 +105,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
@@ -142,6 +143,7 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -315,10 +317,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Checkpoint frequency deviation. */
     private SimpleDistributedProperty<Integer> cpFreqDeviation;
 
+    /** */
+    private GridKernalContext ctx;
+
     /**
      * @param ctx Kernal context.
      */
     public GridCacheDatabaseSharedManager(GridKernalContext ctx) {
+        this.ctx = ctx;
+
         IgniteConfiguration cfg = ctx.config();
 
         persistenceCfg = cfg.getDataStorageConfiguration();
@@ -2522,7 +2529,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
-        List<GroupPartitionId> partsNeedToRebalance = new ArrayList<>();
+        Map<GroupPartitionId, Long> partitionRecoveryClearing = new HashMap<>();
 
         try {
             while (it.hasNextX()) {
@@ -2663,9 +2670,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     case PARTITION_CLEARING_STARTED:
                         PartitionClearingStarted rec0 = (PartitionClearingStarted) rec;
 
-                        GroupPartitionId grpPartpId = new GroupPartitionId(rec0.grpId(), rec0.partId());
-
-                        partsNeedToRebalance.add(grpPartpId);
+                        partitionRecoveryClearing.put(new GroupPartitionId(rec0.grpId(), rec0.partId()), rec0.clearVer());
 
                         break;
 
@@ -2681,9 +2686,22 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
 
-        partsNeedToRebalance.forEach(groupPartitionId -> {
-            restoreLogicalState.partitionRecoveryStates.put(groupPartitionId, 0);
-        });
+            partitionRecoveryClearing.forEach((key, value) -> {
+                        CacheGroupContext grp = ctx.cache().cacheGroup(key.getGroupId());
+                        GridDhtLocalPartition part = grp.topology().localPartition(key.getPartitionId());
+
+                        part.clearVer(value);
+
+                        IgniteInternalFuture<?> fut = grp.shared().evict()
+                                .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING);
+
+                        try {
+                            fut.get();
+                        } catch (IgniteCheckedException e) {
+                            throw new IgniteException(e);
+                        }
+                    }
+            );
 
         awaitApplyComplete(exec, applyError);
 

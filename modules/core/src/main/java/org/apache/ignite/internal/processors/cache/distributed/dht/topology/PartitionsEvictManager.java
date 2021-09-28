@@ -109,6 +109,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         grpEvictionCtx.stop(new CacheStoppedException(grp.cacheOrGroupName()));
     }
 
+    /** */
+    public IgniteInternalFuture<?> evictPartitionAsync(
+            CacheGroupContext grp,
+            GridDhtLocalPartition part,
+            GridFutureAdapter<?> finishFut
+    ) {
+        return evictPartitionAsync(grp, part, finishFut, null);
+    }
     /**
      * Adds partition to eviction queue and starts eviction process if permit
      * available.
@@ -120,7 +128,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     public IgniteInternalFuture<?> evictPartitionAsync(
         CacheGroupContext grp,
         GridDhtLocalPartition part,
-        GridFutureAdapter<?> finishFut
+        GridFutureAdapter<?> finishFut,
+        EvictReason reason
     ) {
         assert nonNull(grp);
         assert nonNull(part);
@@ -137,7 +146,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             GroupEvictionContext grpEvictionCtx = evictionGroupsMap.computeIfAbsent(
                 grpId, k -> new GroupEvictionContext(grp));
 
-            EvictReason reason = part.state() == RENTING ? EvictReason.EVICTION : EvictReason.CLEARING;
+            if (reason == null)
+                reason = part.state() == RENTING ? EvictReason.EVICTION : EvictReason.CLEARING;
 
             if (log.isDebugEnabled())
                 log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
@@ -452,7 +462,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * Partition evicted after changing to
          * {@link GridDhtPartitionState#MOVING MOVING} state.
          */
-        CLEARING;
+        CLEARING,
+
+        /** */
+        RECLEARING;
 
         /** {@inheritDoc} */
         @Override public String toString() {

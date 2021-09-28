@@ -197,6 +197,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         }
 
+        if (log().isInfoEnabled())
+            log().info("primaryPartKeys: " + primaryPartKeys);
+
         for (int i = 0; i < 2; i++) {
             if (i == 0)
                 cache.put(primaryPartKeys.get(0), 1234567);

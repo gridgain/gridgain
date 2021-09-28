@@ -578,7 +578,7 @@ public class RecordUtils {
 
     /** **/
     public static PartitionClearingStarted buildPartitionClearingStartedRecord() {
-        return new PartitionClearingStarted(12, 345);
+        return new PartitionClearingStarted(12, 345, 123456789);
     }
 
     /**

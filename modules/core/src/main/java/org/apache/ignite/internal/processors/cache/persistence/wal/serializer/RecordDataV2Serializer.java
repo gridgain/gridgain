@@ -127,7 +127,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 return 4/*entry count*/ + 8/*timestamp*/ + dataSize((DataRecord)rec);
 
             case PARTITION_CLEARING_STARTED:
-                return 4 + 4;
+                return 4 + 4 + 8;
 
             default:
                 return super.plainSize(rec);

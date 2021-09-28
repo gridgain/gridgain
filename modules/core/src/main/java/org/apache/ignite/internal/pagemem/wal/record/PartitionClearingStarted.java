@@ -28,6 +28,9 @@ public class PartitionClearingStarted extends WALRecord {
     /** */
     private int grpId;
 
+    /** */
+    private long clearVer;
+
     /**
      * @return Partition ID.
      */
@@ -56,15 +59,30 @@ public class PartitionClearingStarted extends WALRecord {
         this.grpId = grpId;
     }
 
+    /**
+     * @return Clear version.
+     */
+    public long clearVer() {
+        return clearVer;
+    }
+
+    /**
+     * @param clearVer Clear version.
+     */
+    public void clearVer(long clearVer) {
+        this.clearVer = clearVer;
+    }
+
     /** {@inheritDoc} */
     @Override public RecordType type() {
         return RecordType.PARTITION_CLEARING_STARTED;
     }
 
     /** */
-    public PartitionClearingStarted(int partId, int grpId) {
+    public PartitionClearingStarted(int partId, int grpId, long clearVer) {
         this.partId = partId;
         this.grpId = grpId;
+        this.clearVer = clearVer;
     }
 
     /** {@inheritDoc} */

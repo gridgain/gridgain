@@ -538,7 +538,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return txRecordSerializer.size((TxRecord)record);
 
             case PARTITION_CLEARING_STARTED:
-                return 4 + 4;
+                return 4 + 4 + 8;
 
             default:
                 throw new UnsupportedOperationException("Type: " + record.type());
@@ -1186,8 +1186,9 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case PARTITION_CLEARING_STARTED:
                 int partId0 = in.readInt();
                 int grpId = in.readInt();
+                long clearVer = in.readLong();
 
-                res = new PartitionClearingStarted(partId0, grpId);
+                res = new PartitionClearingStarted(partId0, grpId, clearVer);
 
                 break;
 
@@ -1784,6 +1785,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 buf.putInt(partitionClearingStarted.partId());
 
                 buf.putInt(partitionClearingStarted.grpId());
+
+                buf.putLong(partitionClearingStarted.clearVer());
 
                 break;
 
