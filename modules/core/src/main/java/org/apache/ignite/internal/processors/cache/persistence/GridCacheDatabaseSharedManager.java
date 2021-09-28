@@ -2727,23 +2727,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 cctx.kernalContext().query().skipFieldLookup(false);
         }
 
-            partitionRecoveryClearing.forEach((key, value) -> {
-                        CacheGroupContext grp = ctx.cache().cacheGroup(key.getGroupId());
-                        GridDhtLocalPartition part = grp.topology().localPartition(key.getPartitionId());
-
-                        part.clearVer(value);
-
-                        IgniteInternalFuture<?> fut = grp.shared().evict()
-                                .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING);
-
-                        try {
-                            fut.get();
-                        } catch (IgniteCheckedException e) {
-                            throw new IgniteException(e);
-                        }
-                    }
-            );
-
         awaitApplyComplete(exec, applyError);
 
         if (log.isInfoEnabled())
@@ -2752,6 +2735,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.afterLogicalUpdatesApplied(this, restoreLogicalState);
+
+        partitionRecoveryClearing.forEach((key, value) -> {
+                    CacheGroupContext grp = ctx.cache().cacheGroup(key.getGroupId());
+
+                    GridDhtLocalPartition part = grp.topology().localPartition(key.getPartitionId());
+
+                    part.clearVer(value);
+
+                    try {
+                        grp.shared().evict()
+                                .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING)
+                                .get();
+                    } catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+                }
+        );
 
         return restoreLogicalState;
     }
