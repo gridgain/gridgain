@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.IgniteCache;
@@ -14,7 +30,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *
+ * The test starts an implicit transaction during the cache is stopping.
+ * The transaction has to be completed, and the cache is stopped.
  */
 public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
@@ -47,14 +64,14 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
     public void test() throws Exception {
         startGrid(0);
 
-        IgniteEx client1 = startClientGrid("client1");
+        IgniteEx client = startClientGrid("client");
 
-        IgniteCache<Object, Object> cache = client1.cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < 100; i++)
             cache.put(i, i);
 
-        TestRecordingCommunicationSpi commSpiClient1 = TestRecordingCommunicationSpi.spi(client1);
+        TestRecordingCommunicationSpi commSpiClient1 = TestRecordingCommunicationSpi.spi(client);
 
         commSpiClient1.blockMessages(GridNearTxPrepareRequest.class, getTestIgniteInstanceName(0));
 
@@ -63,7 +80,7 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
         IgniteInternalFuture runTxFut = GridTestUtils.runAsync(() -> cache.put(100, 100));
 
         IgniteInternalFuture destroyCacheFut = GridTestUtils.runAsync(() ->
-            client1.destroyCache(DEFAULT_CACHE_NAME));
+            client.destroyCache(DEFAULT_CACHE_NAME));
 
         commSpiClient1.waitForBlocked();
 
@@ -71,15 +88,10 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
 
         commSpiClient1.stopBlock();
 
-        destroyCacheFut.get();
+        assertTrue(GridTestUtils.waitForCondition(destroyCacheFut::isDone, 10_000));
 
-        try {
-            runTxFut.get();
-        }
-        catch (Exception e) {
-            log.error("Exception during implicitly transaction.", e);
-        }
+        assertTrue(GridTestUtils.waitForCondition(runTxFut::isDone, 10_000));
 
-        awaitPartitionMapExchange();
+        assertNull(client.cache(DEFAULT_CACHE_NAME));
     }
 }
