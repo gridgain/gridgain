@@ -36,7 +36,7 @@ import org.junit.Test;
  * Transaction rolls back during the prepare phase, before a prepare request was sent to dht nodes.
  * It should lead to the full transaction rollback.
  */
-public class TxRollbackDusringPrepareingTest extends GridCommonAbstractTest {
+public class TxRollbackDuringPreparingTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
