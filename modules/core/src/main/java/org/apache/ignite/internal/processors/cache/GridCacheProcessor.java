@@ -2793,13 +2793,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                                 gctx.affinity().cancelFutures(new CacheStoppedException(msg));
                             }
 
-                            for (ExchangeActions.CacheActionData action: cachesToStopByGrp.getValue()) {
-                                stopGateway(action.request());
+                        for (ExchangeActions.CacheActionData action : cachesToStopByGrp.getValue()) {
+                            context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
 
-                                context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
+                            stopGateway(action.request());
 
-                                // TTL manager has to be unregistered before the checkpointReadLock is acquired.
-                                GridCacheAdapter<?, ?> cache = caches.get(action.request().cacheName());
+                            String cacheName = action.request().cacheName();
+
+                            // TTL manager has to be unregistered before the checkpointReadLock is acquired.
+                            GridCacheAdapter<?, ?> cache = caches.get(cacheName);
 
                                 if (cache != null)
                                     cache.context().ttl().unregister();
