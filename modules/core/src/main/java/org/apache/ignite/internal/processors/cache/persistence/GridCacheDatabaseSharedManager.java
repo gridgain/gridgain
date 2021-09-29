@@ -2647,10 +2647,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         if (ctx != null && !ctx.isLocal()) {
                             try {
                                 // Ensure the partition store exists.
-                                ctx.topology().forceCreatePartition(rbRec.partitionId());
+                                GridDhtLocalPartition part = ctx.topology().forceCreatePartition(rbRec.partitionId());
 
-                                ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                    rbRec.range());
+                                ctx.offheap().dataStore(part).updateInitialCounter(rbRec.start(), rbRec.range());
                             }
                             catch (IgniteCheckedException e) {
                                 throw new IgniteException(e);
@@ -2835,10 +2834,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         CacheGroupContext ctx = cctx.cache().cacheGroup(rbRec.groupId());
 
                         if (ctx != null && !ctx.isLocal()) {
-                            ctx.topology().forceCreatePartition(rbRec.partitionId());
+                            GridDhtLocalPartition locPart = ctx.topology().forceCreatePartition(rbRec.partitionId());
 
-                            ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                rbRec.range());
+                            ctx.offheap().dataStore(locPart).updateInitialCounter(rbRec.start(), rbRec.range());
                         }
 
                         break;

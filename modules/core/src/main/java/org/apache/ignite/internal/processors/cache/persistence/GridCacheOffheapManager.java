@@ -338,7 +338,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (execSvc == null) {
             reuseList.saveMetadata(grp.statisticsHolderData());
 
-            for (CacheDataStore store : partDataStores.values())
+            for (CacheDataStore store : cacheDataStores())
                 saveStoreMetadata(store, ctx, false, needSnapshot);
         }
         else {
@@ -351,7 +351,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
             });
 
-            for (CacheDataStore store : partDataStores.values())
+            for (CacheDataStore store : cacheDataStores())
                 execSvc.execute(() -> {
                     try {
                         saveStoreMetadata(store, ctx, false, needSnapshot);
@@ -1081,12 +1081,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      * Invalidates page memory for given partition. Destroys partition store.
      * <b>NOTE:</b> This method can be invoked only within checkpoint lock or checkpointer thread.
      *
-     * @param grpId Group ID.
      * @param partId Partition ID.
      *
      * @throws IgniteCheckedException If destroy has failed.
      */
-    public void destroyPartitionStore(int grpId, int partId) throws IgniteCheckedException {
+    public void destroyPartitionStore(int partId) throws IgniteCheckedException {
         PageMemoryEx pageMemory = (PageMemoryEx)grp.dataRegion().pageMemory();
 
         if (grp.config().isEncryptionEnabled())
@@ -1097,33 +1096,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (grp.walEnabled())
             ctx.wal().log(new PartitionDestroyRecord(grp.groupId(), partId));
 
-        ctx.pageStore().onPartitionDestroyed(grpId, partId, tag);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionCounterUpdated(int part, long cntr) {
-        CacheDataStore store = partDataStores.get(part);
-
-        assert store != null;
-
-        long oldCnt = store.updateCounter();
-
-        if (oldCnt < cntr)
-            store.updateCounter(cntr);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionInitialCounterUpdated(int part, long start, long delta) {
-        CacheDataStore store = partDataStores.get(part);
-
-        assert store != null;
-
-        store.updateInitialCounter(start, delta);
-    }
-
-    /** {@inheritDoc} */
-    @Override public long lastUpdatedPartitionCounter(int part) {
-        return partDataStores.get(part).updateCounter();
+        ctx.pageStore().truncate(grp.groupId(), partId, tag);
     }
 
     /** {@inheritDoc} */
@@ -1446,14 +1419,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public void preloadPartition(int part) throws IgniteCheckedException {
+    @Override public void preloadPartition(int partId) throws IgniteCheckedException {
         if (grp.isLocal()) {
-            dataStore(part).preload();
+            dataStore(null).preload();
 
             return;
         }
 
-        GridDhtLocalPartition locPart = grp.topology().localPartition(part, AffinityTopologyVersion.NONE, false, false);
+        GridDhtLocalPartition locPart = grp.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
 
         assert locPart != null && locPart.reservations() > 0;
 
@@ -1468,7 +1441,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     long freeSpace() {
         long freeSpace = 0;
 
-        for (CacheDataStore store : partDataStores.values()) {
+        for (CacheDataStore store : cacheDataStores()) {
             assert store instanceof GridCacheDataStore;
 
             AbstractFreeList freeList = ((GridCacheDataStore)store).getCacheStoreFreeList();
@@ -1490,7 +1463,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     long emptyDataPages() {
         long emptyDataPages = 0;
 
-        for (CacheDataStore store : partDataStores.values()) {
+        for (CacheDataStore store : cacheDataStores()) {
             assert store instanceof GridCacheDataStore;
 
             AbstractFreeList freeList = ((GridCacheDataStore)store).getCacheStoreFreeList();
@@ -3227,6 +3200,21 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             if (delegate != null)
                 delegate.markDestroyed();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean destroyed() {
+            try {
+                CacheDataStore delegate = init0(true);
+
+                if (delegate != null)
+                    return delegate.destroyed();
+
+                return false;
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
         }
 
         /** {@inheritDoc} */

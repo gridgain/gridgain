@@ -109,31 +109,6 @@ public interface IgniteCacheOffheapManager {
     ) throws IgniteCheckedException;
 
     /**
-     * Partition counter update callback. May be overridden by plugin-provided subclasses.
-     *
-     * @param part Partition.
-     * @param cntr Partition counter.
-     */
-    public void onPartitionCounterUpdated(int part, long cntr);
-
-    /**
-     * Initial counter will be updated on state restore only
-     *
-     * @param part Partition
-     * @param start Start.
-     * @param delta Delta.
-     */
-    public void onPartitionInitialCounterUpdated(int part, long start, long delta);
-
-    /**
-     * Partition counter provider. May be overridden by plugin-provided subclasses.
-     *
-     * @param part Partition ID.
-     * @return Last updated counter.
-     */
-    public long lastUpdatedPartitionCounter(int part);
-
-    /**
      * @param entry Cache entry.
      * @return Cached row, if available, null otherwise.
      * @throws IgniteCheckedException If failed.
@@ -164,7 +139,7 @@ public interface IgniteCacheOffheapManager {
      * @param part Partition.
      * @return Data store.
      */
-    public CacheDataStore dataStore(GridDhtLocalPartition part);
+    public CacheDataStore dataStore(@Nullable GridDhtLocalPartition part);
 
     /**
      * @param store Data store.
@@ -639,12 +614,6 @@ public interface IgniteCacheOffheapManager {
      * @return Number of entries.
      */
     public long cacheEntriesCount(int cacheId);
-
-    /**
-     * @param part Partition.
-     * @return Number of entries.
-     */
-    public long totalPartitionEntriesCount(int part);
 
     /**
      * @return Total tombstones count for all partitions.
@@ -1150,6 +1119,11 @@ public interface IgniteCacheOffheapManager {
          * Mark store as destroyed.
          */
         public void markDestroyed() throws IgniteCheckedException;
+
+        /**
+         * @return {@code true} If marked as destroyed.
+         */
+        public boolean destroyed();
 
         /**
          * Clears all the records associated with logical cache with given ID.
