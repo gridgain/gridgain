@@ -40,6 +40,7 @@ import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.thread.IgniteThread;
@@ -427,15 +428,25 @@ public class BinaryObjectBuilderImpl implements BinaryObjectBuilder {
         else if (!nullFieldVal) {
             String newFldTypeName = BinaryUtils.fieldTypeName(newFldTypeId);
 
-            if (!F.eq(newFldTypeName, oldFldTypeName) &&
-                !oldFldTypeName.equals(BinaryUtils.fieldTypeName(GridBinaryMarshaller.OBJ))) {
-                throw new BinaryObjectException(
-                    "Wrong value has been set [" +
+            if (!F.eq(newFldTypeName, oldFldTypeName)) {
+                if (!oldFldTypeName.equals(BinaryUtils.fieldTypeName(GridBinaryMarshaller.OBJ))) {
+                    throw new BinaryObjectException(
+                        "Wrong value has been set [" +
+                            "typeName=" + (typeName == null ? meta.typeName() : typeName) +
+                            ", fieldName=" + name +
+                            ", fieldType=" + oldFldTypeName +
+                            ", assignedValueType=" + newFldTypeName + ']'
+                    );
+                }
+                else {
+                    LT.warn(ctx.log(),
+                        "Not object value has been set to object field [" +
                         "typeName=" + (typeName == null ? meta.typeName() : typeName) +
                         ", fieldName=" + name +
-                        ", fieldType=" + oldFldTypeName +
-                        ", assignedValueType=" + newFldTypeName + ']'
-                );
+                        ", assignedValueType=" + newFldTypeName + ']',
+                        new Exception("Diagnostic stacktrace")
+                    );
+                }
             }
         }
 
