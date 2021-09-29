@@ -49,8 +49,7 @@ public class NodeCheckpointingResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         nodeId = (UUID)in.readObject();
         durationMillis = in.readLong();
         error = (Exception)in.readObject();

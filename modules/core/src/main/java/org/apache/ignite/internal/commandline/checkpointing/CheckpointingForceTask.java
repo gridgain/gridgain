@@ -47,8 +47,8 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         return new CheckpointingForceJob(debug);
     }
 
-    @Nullable @Override
-    protected CheckpointingForceResult reduce0(List<ComputeJobResult> results) throws IgniteException {
+    @Nullable
+    @Override protected CheckpointingForceResult reduce0(List<ComputeJobResult> results) throws IgniteException {
         CheckpointingForceResult res = new CheckpointingForceResult();
 
         for (ComputeJobResult result : results) {
@@ -72,6 +72,7 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         private GridFutureAdapter fut;
 
         private NodeCheckpointingResult res;
+
         long startTime;
 
         /**
