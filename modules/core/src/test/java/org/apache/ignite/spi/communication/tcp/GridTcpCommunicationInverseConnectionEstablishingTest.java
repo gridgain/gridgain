@@ -61,6 +61,7 @@ import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.hamcrest.CoreMatchers.is;
@@ -69,8 +70,8 @@ import static org.hamcrest.CoreMatchers.nullValue;
 /**
  * Tests for communication over discovery feature (inverse communication request).
  */
+@WithSystemProperty(key = IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER, value = "false")
 public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridCommonAbstractTest {
-
     /** */
     private static final String UNREACHABLE_IP = "172.31.30.132";
 

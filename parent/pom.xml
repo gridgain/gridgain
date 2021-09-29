@@ -29,6 +29,7 @@
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
         <version>16</version>
+        <relativePath/>
     </parent>
 
     <properties>
@@ -79,7 +80,7 @@
         <hamcrest.version>2.2</hamcrest.version>
         <httpclient.version>4.5.13</httpclient.version>
         <httpcore.version>4.4.3</httpcore.version>
-        <jackson.version>2.11.0</jackson.version>
+        <jackson.version>2.11.4</jackson.version>
         <jackson1.version>1.9.13</jackson1.version>
         <jaxb.api.version>2.1</jaxb.api.version>
         <jaxb.impl.version>2.1.14</jaxb.impl.version>
@@ -117,7 +118,7 @@
         <osgi.core.version>5.0.0</osgi.core.version>
         <osgi.enterprise.version>5.0.0</osgi.enterprise.version>
         <paho.version>1.0.2</paho.version>
-        <postgres.connector.version>42.2.5.jre7</postgres.connector.version>
+        <postgres.connector.version>42.2.23</postgres.connector.version>
         <rocketmq.version>4.4.0</rocketmq.version>
         <scala210.jline.version>2.10.7</scala210.jline.version>
         <scala210.library.version>2.10.7</scala210.library.version>

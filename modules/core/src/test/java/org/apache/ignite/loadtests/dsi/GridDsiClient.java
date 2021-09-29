@@ -17,9 +17,9 @@
 package org.apache.ignite.loadtests.dsi;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -35,6 +35,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.internal.util.GridAtomicLong;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -370,7 +371,7 @@ public class GridDsiClient implements Callable {
                                 GridLoadTestUtils.appendLineToFile(
                                     outputFileName,
                                     "%s,%d,%d,%d",
-                                    GridLoadTestUtils.DATE_TIME_FORMAT.format(new Date()),
+                                    IgniteUtils.LONG_DATE_FMT.format(Instant.now()),
                                     txPerSecond,
                                     avgLatency,
                                     maxSubmitTime);
@@ -388,7 +389,7 @@ public class GridDsiClient implements Callable {
                                     GridLoadTestUtils.appendLineToFile(
                                         srvOutputFileName,
                                         "%s,%d,%d,%d",
-                                        GridLoadTestUtils.DATE_TIME_FORMAT.format(new Date()),
+                                        IgniteUtils.LONG_DATE_FMT.format(Instant.now()),
                                         sst.get1(),
                                         sst.get2(),
                                         sst.get3());

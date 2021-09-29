@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -874,6 +875,22 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_FORCIBLE_NODE_KILL = "IGNITE_ENABLE_FORCIBLE_NODE_KILL";
 
     /**
+     * If the property is set, coincidence of client identifier and subject is required when security is enabled.
+     * <p>
+     * Default value is fasle.
+     *
+     */
+    public static final String IGNITE_CHECK_SENDER_NODE_SUBJECT = "IGNITE_CHECK_SENDER_NODE_SUBJECT";
+
+    /**
+     * If the property is set, client nodes should have explicitly rights to access to system cache.
+     * <p>
+     * Default value is fasle.
+     *
+     */
+    public static final String IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED = "IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED";
+
+    /**
      * Tasks stealing will be started if tasks queue size per data-streamer thread exceeds this threshold.
      * <p>
      * Default value is {@code 4}.
@@ -1523,6 +1540,13 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
 
     /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message. The default value is {@code false}.
+     */
+    public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
+        "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
@@ -1735,6 +1759,34 @@ public final class IgniteSystemProperties {
             res = Double.parseDouble(s);
         }
         catch (NumberFormatException ignore) {
+            res = dflt;
+        }
+
+        return res;
+    }
+
+    /**
+     * Gets either system property or environment variable with given name.
+     * The result is transformed to {@link UUID} using {@link UUID#fromString} method.
+     *
+     * @param name Name of the system property or environment variable.
+     * @param dflt Default value.
+     * @return UUID value of the system property or environment variable.
+     *         Returns default value in case neither system property
+     *         nor environment variable with given name is found.
+     */
+    public static UUID getUUID(String name, UUID dflt) {
+        String s = getString(name);
+
+        if (s == null)
+            return dflt;
+
+        UUID res;
+
+        try {
+            res = UUID.fromString(s);
+        }
+        catch (IllegalArgumentException ignore) {
             res = dflt;
         }
 

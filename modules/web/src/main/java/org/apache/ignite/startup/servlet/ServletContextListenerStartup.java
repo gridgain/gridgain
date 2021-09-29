@@ -54,11 +54,8 @@ import org.apache.ignite.lang.IgniteBiTuple;
  * <p>
  * Servlet context listener based startup may be used in any web container like Tomcat, Jetty and etc.
  * Depending on the way this startup is deployed the Ignite instance can be accessed
- * by either all web applications or by only one. See web container class loading architecture:
- * <ul>
- * <li><a target=_blank href="http://tomcat.apache.org/tomcat-7.0-doc/class-loader-howto.html">http://tomcat.apache.org/tomcat-7.0-doc/class-loader-howto.html</a></li>
- * <li><a target=_blank href="http://docs.codehaus.org/display/JETTY/Classloading">http://docs.codehaus.org/display/JETTY/Classloading</a></li>
- * </ul>
+ * by either all web applications or by only one.
+ * Please consult class loading architecture documentation of your web container.
  * <p>
  * <h2 class="header">Tomcat</h2>
  * There are two ways to start Ignite on Tomcat.

@@ -16,19 +16,21 @@
 
 package org.apache.ignite.tests.pojos;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Simple POJO to store information about product order
  */
 public class ProductOrder {
     /** */
-    private static final DateFormat FORMAT = new SimpleDateFormat("MM/dd/yyyy/S");
+    private static final DateTimeFormatter FORMAT =
+        DateTimeFormatter.ofPattern("MM/dd/yyyy/S").withZone(ZoneId.systemDefault());
 
     /** */
-    private static final DateFormat FULL_FORMAT = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss:S");
+    private static final DateTimeFormatter FULL_FORMAT =
+        DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss:S").withZone(ZoneId.systemDefault());
 
     /** */
     private long id;
@@ -37,7 +39,7 @@ public class ProductOrder {
     private long productId;
 
     /** */
-    private Date date;
+    private Instant date;
 
     /** */
     private int amount;
@@ -50,12 +52,12 @@ public class ProductOrder {
     }
 
     /** */
-    public ProductOrder(long id, Product product, Date date, int amount) {
+    public ProductOrder(long id, Product product, Instant date, int amount) {
         this(id, product.getId(), product.getPrice(), date, amount);
     }
 
     /** */
-    public ProductOrder(long id, long productId, float productPrice, Date date, int amount) {
+    public ProductOrder(long id, long productId, float productPrice, Instant date, int amount) {
         this.id = id;
         this.productId = productId;
         this.date = date;
@@ -103,12 +105,12 @@ public class ProductOrder {
     }
 
     /** */
-    public void setDate(Date date) {
+    public void setDate(Instant date) {
         this.date = date;
     }
 
     /** */
-    public Date getDate() {
+    public Instant getDate() {
         return date;
     }
 
