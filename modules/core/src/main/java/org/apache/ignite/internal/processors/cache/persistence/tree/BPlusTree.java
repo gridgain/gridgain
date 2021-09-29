@@ -22,11 +22,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -457,10 +457,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
 
-            if (reconciliationCtx != null &&
-                newRow instanceof CacheDataRowAdapter &&
-                reconciliationCtx.sizeReconciliationState(((CacheDataRowAdapter) newRow).cacheId()) == IN_PROGRESS)
-                p.reconciliationForReplace(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
+            p.reconciliation(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
         }
@@ -493,13 +490,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Do insert.
             L moveUpRow = p.insert(pageId, page, pageAddr, io, idx, lvl);
 
-            CacheDataRowAdapter row0 = null;
-
-            if (p.row instanceof CacheDataRowAdapter)
-                row0 = (CacheDataRowAdapter) p.row;
-
-            if (reconciliationCtx != null && row0 != null && reconciliationCtx.sizeReconciliationState(row0.cacheId()) == IN_PROGRESS)
-                p.reconciliationForInsert(p.row);
+            p.reconciliation(null, p.row);
 
             // Check if split happened.
             if (moveUpRow != null) {
@@ -3222,21 +3213,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         /** Size reconciliation logic for insert new entry to the cache. */
-        public void reconciliationForInsert(L newRow) {
-            if (newRow instanceof CacheDataRowAdapter) {
-                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
+        public void reconciliationForInsert(int cacheId, KeyCacheObject key) {
+            AtomicLong reconSize = reconciliationCtx.size(cacheId);
 
-                AtomicLong reconSize = reconciliationCtx.size(row0.cacheId());
-
-                if (row0.isReady() && !row0.tombstone()) {
-                    //need to increment the real size if the reconciliation cursor has moved beyond this key and does not see the key
-                    if (reconciliationCtx.lastKey(row0.cacheId()) != null && ReconciliationContext.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(row0.cacheId())) <= 0)
-                        reconSize.incrementAndGet();
-                    //put key in temp collection if reconciliation cursor didn't see the key and can see it further
-                    else
-                        reconciliationCtx.putCacheKeyMap(row0.cacheId(), row0.key());
-                }
-            }
+            //need to increment the real size if the reconciliation cursor has moved beyond this key and does not see the key
+            if (reconciliationCtx.lastKey(cacheId) != null && ReconciliationContext.KEY_COMPARATOR.compare(key, reconciliationCtx.lastKey(cacheId)) <= 0)
+                reconSize.incrementAndGet();
+            //put key in temp collection if reconciliation cursor didn't see the key and can see it further
+            else
+                reconciliationCtx.putCacheKeyMap(cacheId, key);
         }
 
         /** Size reconciliation logic for remove entry from the cache. */
@@ -3263,35 +3248,32 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
         }
 
-        /** Size reconciliation logic for remove entry from the cache. */
-        public void reconRemoveFromLeaf(L row) {
-            if (row instanceof SearchRow) {
-                SearchRow row0 = (SearchRow)row;
-
-                reconciliationForRemove(row0.cacheId(), row0.key());
-            }
-        }
-
         /** */
-        public void reconciliationForReplace(L oldRow, L newRow) {
-            if (newRow instanceof CacheDataRowAdapter) {
-                CacheDataRowAdapter row0 = (CacheDataRowAdapter) newRow;
+        public void reconciliation(L oldRow, L newRow) {
+            if (reconciliationCtx != null) {
+                if (newRow instanceof CacheDataRowAdapter) {
+                    CacheDataRowAdapter newRow0 = (CacheDataRowAdapter)newRow;
 
-                CacheDataRowAdapter oldRow0;
+                    if (reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS) {
+                        CacheDataRowAdapter oldRow0 = null;
 
-                boolean oldIsTombstone = false;
+                        if (oldRow instanceof CacheDataRowAdapter)
+                            oldRow0 = (CacheDataRowAdapter)oldRow;
 
-                if (oldRow instanceof CacheDataRowAdapter) {
-                    oldRow0 = (CacheDataRowAdapter) oldRow;
-
-                    if (oldRow0.tombstone())
-                        oldIsTombstone = true;
+                        if ((newRow0.isReady() && newRow0.tombstone()) &&
+                            (oldRow0 != null && !oldRow0.tombstone()))
+                            reconciliationForRemove(newRow0.cacheId(), newRow0.key());
+                        else if (newRow0.isReady() && !newRow0.tombstone() &&
+                            (oldRow0 == null || oldRow0.tombstone()))
+                            reconciliationForInsert(newRow0.cacheId(), newRow0.key());
+                    }
                 }
+                else if (newRow == null && oldRow instanceof SearchRow) {
+                    SearchRow oldRow0 = (SearchRow)oldRow;
 
-                if (row0.isReady() && row0.tombstone() && oldRow != null && !oldIsTombstone)
-                    reconciliationForRemove(row0.cacheId(), row0.key());
-                else if (row0.isReady() && !row0.tombstone() && oldIsTombstone)
-                    reconciliationForInsert(newRow);
+                    if (reconciliationCtx.sizeReconciliationState(oldRow0.cacheId()) == IN_PROGRESS)
+                        reconciliationForRemove(oldRow0.cacheId(), oldRow0.key());
+                }
             }
         }
     }
@@ -4850,21 +4832,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             doRemove(pageId, page, pageAddr, walPlc, io, cnt, idx);
 
-            if (rmvd instanceof CacheDataRowAdapter) {
-                CacheDataRowAdapter row0 = (CacheDataRowAdapter)rmvd;
-
-                CacheDataRowAdapter oldRow0;
-
-                boolean oldIsTombstone = false;
-
-                oldRow0 = (CacheDataRowAdapter)rmvd;
-
-                if (oldRow0.tombstone())
-                    oldIsTombstone = true;
-
-                if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(row0.cacheId()) == IN_PROGRESS && rmvd != null && !oldIsTombstone)
-                    reconRemoveFromLeaf(row);
-            }
+            reconciliation(row, null);
 
             assert isRemoved();
         }
@@ -6132,7 +6100,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 KeyCacheObject lastKey = null;
                 KeyCacheObject firstKey = null;
 
-                Map<KeyCacheObject, Boolean> newTempMap = new ConcurrentHashMap<>();
+                Map<KeyCacheObject, Boolean> newTempMap = new HashMap<>();
 
                 for (T row : rows) {
                     CacheDataRowAdapter row0 = (CacheDataRowAdapter) row;
