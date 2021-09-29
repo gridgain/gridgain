@@ -29,6 +29,7 @@ import org.apache.ignite.internal.UnregisteredBinaryTypeException;
 import org.apache.ignite.internal.UnregisteredClassException;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -502,6 +503,15 @@ public abstract class BinaryFieldAccessor {
             }
             catch (IllegalAccessException e) {
                 throw new BinaryObjectException("Failed to get value for field: " + field, e);
+            }
+
+            if (mode != mode(val)) {
+                LT.warn(
+                    writer.context().log(),
+                    "Not expected mode [type=" + field.getDeclaringClass() + ", field=" + field.getName()
+                        + ", expected_mode=" + mode + ", dynamic_mode=" + mode(val) + ']',
+                    new Exception("Diagnostic stacktrace")
+                );
             }
 
             switch (mode(val)) {

@@ -36,6 +36,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.gridgain.internal.h2.util.StringUtils;
 import org.junit.Test;
 
 /**
@@ -86,6 +87,21 @@ public class BinaryObjectTypeCompatibilityTest extends GridCommonAbstractTest {
         validate(bldr, "objField", new Timestamp(System.currentTimeMillis()));
         validate(bldr, "objField", new Time(System.currentTimeMillis()));
         validate(bldr, "objField", UUID.randomUUID());
+    }
+
+    /** */
+    @Test
+    public void dbgAssignToObjectFieldWarning() throws Exception {
+        Ignite ignite = startGrid();
+
+        BinaryObjectBuilder bob = ignite.binary().builder(TestValue.class.getName());
+        bob.setField("fieldInt", 1);
+        bob.setField("fieldObj", new Object());
+        bob.build();
+
+        ignite.getOrCreateCache(DEFAULT_CACHE_NAME).put(0, new TestValue());
+
+        BinaryObjectImpl bo = (BinaryObjectImpl)ignite.getOrCreateCache(DEFAULT_CACHE_NAME).withKeepBinary().get(0);
     }
 
     /**
@@ -160,5 +176,11 @@ public class BinaryObjectTypeCompatibilityTest extends GridCommonAbstractTest {
     private enum Enum {
         /** */
         DEFAULT
+    }
+
+    /** */
+    public static class TestValue {
+        private int fieldInt = 5;
+        Object fieldObj = "test";
     }
 }
