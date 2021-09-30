@@ -1320,7 +1320,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         try {
             GridTestUtils.waitForCondition(new PA() {
                 @Override public boolean apply() {
-                    for (int i = startFrom; i < startFrom + 100_000; i++) {
+                    for (int i = startFrom; i < Integer.MAX_VALUE; i++) {
                         Integer key = i;
 
                         boolean ok;
