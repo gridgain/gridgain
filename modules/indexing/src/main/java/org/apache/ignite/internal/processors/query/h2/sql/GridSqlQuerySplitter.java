@@ -124,6 +124,12 @@ public class GridSqlQuerySplitter {
     /** Whether partition extraction is possible. */
     private final boolean canExtractPartitions;
 
+    /** Distributed joins flag. */
+    private final boolean distributedJoins;
+
+    /** Ignite logger. */
+    private final IgniteLogger log;
+
     /** */
     private final IdentityHashMap<GridSqlAst, GridSqlAlias> uniqueFromAliases = new IdentityHashMap<>();
 
@@ -143,11 +149,14 @@ public class GridSqlQuerySplitter {
         boolean collocatedGrpBy,
         boolean distributedJoins,
         boolean locSplit,
-        PartitionExtractor extractor
+        PartitionExtractor extractor,
+        IgniteLogger log
     ) {
         this.paramsCnt = paramsCnt;
         this.collocatedGrpBy = collocatedGrpBy;
         this.extractor = extractor;
+        this.distributedJoins = distributedJoins;
+        this.log = log;
 
         // Partitions *CANNOT* be extracted if:
         // 1) Distributed joins are enabled (https://issues.apache.org/jira/browse/IGNITE-10971)
@@ -262,7 +271,8 @@ public class GridSqlQuerySplitter {
             collocatedGrpBy,
             distributedJoins,
             locSplit,
-            idx.partitionExtractor()
+            idx.partitionExtractor(),
+            log
         );
 
         // Normalization will generate unique aliases for all the table filters in FROM.
@@ -1256,11 +1266,14 @@ public class GridSqlQuerySplitter {
 
         setupParameters(map, mapQry, paramsCnt);
 
+        SqlAstTraverser traverser = new SqlAstTraverser(mapQry, distributedJoins, log);
+        traverser.traverse();
+
         map.columns(collectColumns(mapExps));
         map.sortColumns(mapQry.sort());
-        map.partitioned(SplitterUtils.hasPartitionedTables(mapQry));
-        map.hasSubQueries(SplitterUtils.hasSubQueries(mapQry));
-        map.hasOuterJoinReplicatedPartitioned(SplitterUtils.hasOuterJoinReplicatedPartitioned(mapQry.from()));
+        map.partitioned(traverser.hasPartitionedTables());
+        map.hasSubQueries(traverser.hasSubQueries());
+        map.hasOuterJoinReplicatedPartitioned(traverser.hasOuterJoinReplicatedPartitioned());
 
         if (map.isPartitioned() && canExtractPartitions)
             map.derivedPartitions(extractor.extract(mapQry));
