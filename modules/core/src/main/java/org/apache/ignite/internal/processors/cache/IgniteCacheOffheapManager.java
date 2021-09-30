@@ -1287,10 +1287,5 @@ public interface IgniteCacheOffheapManager {
          * @return Clear cache sizes reconciliation context.
          */
         public void clearReconciliationCtx();
-
-        /**
-         * @return Node is stopping flag.
-         */
-        public boolean nodeIsStopping();
     }
 }

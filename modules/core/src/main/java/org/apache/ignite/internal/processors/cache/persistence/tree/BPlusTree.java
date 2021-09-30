@@ -414,10 +414,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Need to read link here because `p.finish()` will clear row.
             L newRow = p.row;
 
-            T oldRow = null;
-
-            boolean oldRowReaded = false;
-
             // Detach the old row if we are on a leaf page.
             if (lvl == 0) {
                 assert p.oldRow == null; // The old row must be set only once.
@@ -439,13 +435,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 // Get old row in leaf page to reduce contention at upper level.
                 p.oldRow = p.needOld ? getRow(io, pageAddr, idx) : (T)Boolean.TRUE;
 
-                if (reconciliationCtx != null) {
-                    if (p.needOld)
-                        oldRow = p.oldRow;
-                    else
-                        oldRow = getRow(io, pageAddr, idx);
-                    oldRowReaded = true;
-                }
+                if (reconciliationCtx != null)
+                    p.reconciliation(p.needOld ? p.oldRow : getRow(io, pageAddr, idx), newRow);
 
                 p.finish();
             }
@@ -456,8 +447,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             if (needWal)
                 wal.log(new ReplaceRecord<>(grpId, pageId, io, newRowBytes, idx));
-
-            p.reconciliation(oldRowReaded ? oldRow : getRow(io, pageAddr, idx), newRow);
 
             return FOUND;
         }
@@ -1077,16 +1066,18 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param upper Upper bound.
      * @param c Filter closure.
      * @param x Implementation specific argument, {@code null} always means that we need to return full detached data row.
+     * @param cursorType Cursor type implementation.
+     * @param cacheId Cache ID.
      * @return Cursor.
      * @throws IgniteCheckedException If failed.
      */
     private GridCursor<T> findLowerUnbounded(L upper, TreeRowClosure<L, T> c, Object x, CursorType cursorType, Integer cacheId) throws IgniteCheckedException {
         ForwardCursor cursor;
 
-        if (cursorType != CursorType.RECONCILIATION)
-            cursor = new ForwardCursor(null, upper, c, x);
-        else
+        if (cursorType == CursorType.RECONCILIATION)
             cursor = new ReconciliationCursor(null, upper, c, x, cacheId);
+        else
+            cursor = new ForwardCursor(null, upper, c, x);
 
         long firstPageId;
 
@@ -6108,7 +6099,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     if (row0 != null &&
                             (reconciliationCtx.lastKey(cacheId) == null ||
                                 ReconciliationContext.KEY_COMPARATOR.compare(row0.key(), reconciliationCtx.lastKey(cacheId)) > 0)) {
-
                         if (row0.tombstone())
                             continue;
 

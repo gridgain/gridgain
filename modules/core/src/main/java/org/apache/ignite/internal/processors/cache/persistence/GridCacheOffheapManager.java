@@ -2679,14 +2679,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 delegate.clearReconciliationCtx();
         }
 
-        /** {@inheritDoc} */
-        @Override public boolean nodeIsStopping() {
-            if (delegate != null)
-                return nodeIsStopping.get();
-            else
-                return true;
-        }
-
         /**
          * Checks that links to counter data page and partition meta store are both present or both absent in partition.
          *

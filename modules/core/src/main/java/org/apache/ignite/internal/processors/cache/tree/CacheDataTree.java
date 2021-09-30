@@ -179,10 +179,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
 
         lastFindWithDataPageScan = FALSE;
 
-        if (cursorType != CursorType.RECONCILIATION)
-            return super.find(lower, upper, c, x, null, null);
-        else
-            return super.find(lower, upper, c, x, CursorType.RECONCILIATION, cacheId);
+        return super.find(lower, upper, c, x, cursorType, cacheId);
     }
 
     /**
