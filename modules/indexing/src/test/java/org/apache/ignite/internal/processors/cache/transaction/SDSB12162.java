@@ -41,7 +41,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
-import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 public class SDSB12162 extends GridCommonAbstractTest {
@@ -124,16 +124,16 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
         AtomicBoolean stop = new AtomicBoolean(false);
 
-        List<Integer> integers = primaryKeys(n2.cache(DEFAULT_CACHE_NAME), 1_000);
+        List<Integer> n2PrimaryKeys = primaryKeys(n2.cache(DEFAULT_CACHE_NAME), 1_000);
 
         IgniteInternalFuture<Object> loadFut = runAsync(() -> {
             int i = 0;
 
             while (!stop.get()) {
-                try (Transaction tx = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
+                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                     cache.query(new SqlFieldsQuery("SELECT * FROM \"" + DEFAULT_CACHE_NAME + "\".String")).getAll();
 
-                    Integer val = integers.get(i++ % integers.size());
+                    Integer val = n2PrimaryKeys.get(i++ % n2PrimaryKeys.size());
 
                     cache.getAndPutIfAbsent(val, Integer.toHexString(val));
 
