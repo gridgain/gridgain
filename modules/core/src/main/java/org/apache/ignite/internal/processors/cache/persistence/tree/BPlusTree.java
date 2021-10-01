@@ -89,6 +89,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_LOCK_RETRIES;
 import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.IN_PROGRESS;
+import static org.apache.ignite.internal.processors.cache.checker.ReconciliationContext.SizeReconciliationState.WAIT_TO_FINISH;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.DONE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.FALSE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.Bool.READY;
@@ -3245,7 +3246,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 if (newRow instanceof CacheDataRowAdapter) {
                     CacheDataRowAdapter newRow0 = (CacheDataRowAdapter)newRow;
 
-                    if (reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS) {
+                    if (reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == IN_PROGRESS ||
+                        reconciliationCtx.sizeReconciliationState(newRow0.cacheId()) == WAIT_TO_FINISH) {
                         CacheDataRowAdapter oldRow0 = null;
 
                         if (oldRow instanceof CacheDataRowAdapter)
@@ -3262,7 +3264,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 else if (newRow == null && oldRow instanceof SearchRow) {
                     SearchRow oldRow0 = (SearchRow)oldRow;
 
-                    if (reconciliationCtx.sizeReconciliationState(oldRow0.cacheId()) == IN_PROGRESS)
+                    if (reconciliationCtx.sizeReconciliationState(oldRow0.cacheId()) == IN_PROGRESS ||
+                        reconciliationCtx.sizeReconciliationState(oldRow0.cacheId()) == WAIT_TO_FINISH)
                         reconciliationForRemove(oldRow0.cacheId(), oldRow0.key());
                 }
             }
@@ -6086,8 +6089,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * Handler of a rows for cache size consistency reconciliation.
          */
         @Override protected void handleRows() {
-            if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS &&
-                    reconciliationCtx.sizeReconciliationCursorState(cacheId)) {
+            if (reconciliationCtx != null && reconciliationCtx.sizeReconciliationState(cacheId) == IN_PROGRESS) {
                 KeyCacheObject lastKey = null;
                 KeyCacheObject firstKey = null;
 

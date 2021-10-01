@@ -42,6 +42,9 @@ public class ReconciliationContext {
         IN_PROGRESS,
 
         /** */
+        WAIT_TO_FINISH,
+
+        /** */
         FINISHED
     }
 
@@ -49,9 +52,6 @@ public class ReconciliationContext {
      * Reconciliation state.
      */
     private final Map<Integer, SizeReconciliationState> sizeReconciliationState = new ConcurrentHashMap<>();
-
-    /** {code true} if need to apply reconciliation logic in cursor */
-    private final Map<Integer, Boolean> sizeReconciliationCursorState = new ConcurrentHashMap<>();
 
     /**
      * The last key in the last page that was readed by reconciliation cursor.
@@ -83,22 +83,6 @@ public class ReconciliationContext {
      */
     public void sizeReconciliationState(int cacheId, SizeReconciliationState sizeReconciliationState) {
         this.sizeReconciliationState.put(cacheId, sizeReconciliationState);
-    }
-
-    /**
-     * @param cacheId Cache ID.
-     * @return State of reconciliation.
-     */
-    public boolean sizeReconciliationCursorState(int cacheId) {
-        return sizeReconciliationCursorState.get(cacheId);
-    }
-
-    /**
-     * @param cacheId Cache ID.
-     * @param sizeReconciliationCursorState State of reconciliation.
-     */
-    public void sizeReconciliationCursorState(int cacheId, Boolean sizeReconciliationCursorState) {
-        this.sizeReconciliationCursorState.put(cacheId, sizeReconciliationCursorState);
     }
 
     /**

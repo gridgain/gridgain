@@ -350,7 +350,7 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                         if (sizeReconciliation && !hasNext) {
                             nodeSize.state(NodePartitionSize.SizeReconciliationState.FINISHED);
 
-                            partReconciliationCtx.sizeReconciliationCursorState(cacheId, false);
+                            partReconciliationCtx.sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.WAIT_TO_FINISH);
                         }
 
                         return new ExecutionResult<>(new PartitionExecutionJobResultByBatch(partEntryHashRecords, nodeSize));
