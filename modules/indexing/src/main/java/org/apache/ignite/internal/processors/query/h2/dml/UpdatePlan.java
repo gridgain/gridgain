@@ -252,7 +252,10 @@ public final class UpdatePlan {
 
             Class<?> expCls = prop.type();
 
-            newColVals.put(colName, DmlUtils.convert(row.get(i), rowDesc, expCls, colTypes[i], colNames[i]));
+            Object colVal = DmlUtils.convert(row.get(i), rowDesc, expCls, colTypes[i], colNames[i]);
+
+            if (!prop.key() || colVal != null)
+                newColVals.put(colName, colVal);
         }
 
         desc.setDefaults(key, val);
