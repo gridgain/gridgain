@@ -61,7 +61,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
     /** Registered InetSocketAddresses. */
     @GridToStringInclude
-    private Collection<InetSocketAddress> registeredAddrs = new LinkedHashSet<>();
+    private Collection<InetSocketAddress> registeredAddrs = new ArrayList<>();
 
     /**
      * Initialize from system property.
@@ -260,7 +260,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
     /** {@inheritDoc} */
     @Override public synchronized Collection<InetSocketAddress> getRegisteredAddresses() {
-        Collection<InetSocketAddress> resolvedAddrs = new LinkedHashSet<>();
+        Collection<InetSocketAddress> resolvedAddrs = new ArrayList<>();
 
         for (String ipStr : addrs)
             resolvedAddrs.addAll(address(ipStr));

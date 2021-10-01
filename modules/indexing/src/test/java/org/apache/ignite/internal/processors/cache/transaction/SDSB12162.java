@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transaction;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
@@ -27,6 +28,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -44,6 +48,7 @@ public class SDSB12162 extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
+            .setConsistentId(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setMaxSize(200L * 1024 * 1024)
@@ -66,6 +71,11 @@ public class SDSB12162 extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTestIgniteInstanceName() {
+        return super.getTestIgniteInstanceName() + '_';
     }
 
     /**
@@ -96,7 +106,17 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
         n0.cluster().state(ACTIVE);
 
-        IgniteEx client = startClientGrid(3);
+        IgniteEx client = startGrid(getTestIgniteInstanceName(3), cfg -> {
+            TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
+
+            // Set only n2 and the client will connect only to it.
+            for (IgniteEx n : Arrays.asList(n0, n1, n2))
+                ipFinder.registerAddresses(((TcpDiscoveryNode)n.localNode()).socketAddresses());
+
+            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(ipFinder);
+
+            return cfg.setClientMode(true);
+        });
 
         IgniteCache<Integer, String> cache = client.createCache(cacheConfig(DEFAULT_CACHE_NAME));
 
@@ -104,7 +124,7 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
         AtomicBoolean stop = new AtomicBoolean(false);
 
-        List<Integer> integers = primaryKeys(n2.cache(DEFAULT_CACHE_NAME), 32_000);
+        List<Integer> integers = primaryKeys(n2.cache(DEFAULT_CACHE_NAME), 1_000);
 
         IgniteInternalFuture<Object> loadFut = runAsync(() -> {
             int i = 0;
@@ -117,18 +137,13 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
                     cache.getAndPutIfAbsent(val, Integer.toHexString(val));
 
-                    U.sleep(100);
-
                     tx.commit();
 
-                    log.warning("!!!! Iteration: " + i);
-
-                    i++;
+                    if ((i % 100) == 0)
+                        log.warning("!!!! Iteration: " + i);
                 }
                 catch (Throwable t) {
                     log.error("!!!! ERROR", t);
-
-                    U.sleep(500);
                 }
             }
 
@@ -147,7 +162,7 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
         U.sleep(5_000);
 
-        n2 = startGrid(2);
+        IgniteEx n2_new = startGrid(2);
 
         U.sleep(5_000);
 
@@ -155,7 +170,7 @@ public class SDSB12162 extends GridCommonAbstractTest {
 
         loadFut.get(getTestTimeout());
 
-        n2.cluster().state(INACTIVE);
+        n2_new.cluster().state(INACTIVE);
     }
 
     private CacheConfiguration<Integer, String> cacheConfig(String cacheName) {
