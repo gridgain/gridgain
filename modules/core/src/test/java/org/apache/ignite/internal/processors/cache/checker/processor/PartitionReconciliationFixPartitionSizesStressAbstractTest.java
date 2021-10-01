@@ -221,6 +221,8 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
         if (!GridTestUtils.waitForCondition(() -> reconResult.get() != null, 120_000))
             throw new RuntimeException("Condition was not achieved");
 
+        log().warning(">>> reconciliation finished");
+
         List<String> errors = reconResult.get().errors();
 
         assertTrue(errors.isEmpty());
@@ -237,12 +239,16 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
                 cache.put(i, i);
         }
 
+        log().warning(">>> loading after reconciliation finished");
+
         awaitPartitionMapExchange();
         doSleep(5000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         long allKeysCountForCacheGroup;
         long allKeysCountForCache;
+
+        log().warning(">>> before assertions for caches");
 
         for (String cacheName : cacheNames) {
             allKeysCountForCacheGroup = 0;
@@ -266,7 +272,12 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
                 assertEquals((long)endKey * (1 + backupCnt) * (cacheGrp == null ? 1 : caches.size()), allKeysCountForCacheGroup);
                 assertEquals((long)endKey * (1 + backupCnt), allKeysCountForCache);
             }
+
+            log().warning(">>> after assertions for cache: " + cacheNames);
         }
+
+        for (int i = 0; i < nodesCnt; i++)
+            log().warning(">>> end of test: node " + i + ", state " + grid(i).cluster().state());
     }
 
     /**
