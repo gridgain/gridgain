@@ -16,12 +16,9 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import org.junit.Ignore;
-
 /**
  * Tests for lazy query execution.
  */
-@Ignore
 public class IgniteQueryTableLockAndConnectionPoolLazyModeOnTest
     extends AbstractQueryTableLockAndConnectionPoolSelfTest {
     /** {@inheritDoc} */
