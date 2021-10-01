@@ -1681,6 +1681,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 isBlocked = true;
 
+                reconciliationCtxInit();
+
                 reconciliationCtx.get().sizeReconciliationState(cacheId, ReconciliationContext.SizeReconciliationState.IN_PROGRESS);
 
                 reconciliationCtx.get().resetSize(cacheId);

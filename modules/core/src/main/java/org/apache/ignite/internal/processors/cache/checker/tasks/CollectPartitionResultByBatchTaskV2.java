@@ -300,7 +300,9 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                 if (sizeReconciliation) {
                     try {
                         if (nodePartitionSize == null) {
-                            cacheDataStore.reconciliationCtxInit();
+                            partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
+//                            cacheDataStore.reconciliationCtxInit();
+                            nodeSize.state(NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
                             log.warning("dafmvfreaa " + nodeSize + " partId " + part.id());
                         }
@@ -311,11 +313,11 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
                         throw new IgniteException(e);
                     }
 
-                    if (partReconciliationCtx.sizeReconciliationState(cacheId) == null) {
-                        nodeSize.state(NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
+//                    if (partReconciliationCtx.sizeReconciliationState(cacheId) == null) {
+//                        nodeSize.state(NodePartitionSize.SizeReconciliationState.IN_PROGRESS);
 
-                        partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
-                    }
+//                        partReconciliationCtx = cacheDataStore.startReconciliation(cacheId);
+//                    }
 
                     lastKeyForSizes = partReconciliationCtx.lastKey(cacheId);
                 }
