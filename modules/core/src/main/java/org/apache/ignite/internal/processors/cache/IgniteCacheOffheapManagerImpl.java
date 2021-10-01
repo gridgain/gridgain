@@ -1914,6 +1914,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     tree().reconciliationCtx(null);
                 }
+
+                log.warning("efrergsvr flushReconciliationResult partId " + partId() + " nodePartitionSize " + nodePartitionSize);
             }
             finally {
                 if (isBlocked)

@@ -181,38 +181,38 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, reconCachesNames);
+        breakCacheSizes(grids, cacheNames);
 
-        if (cacheCount > 1 && cacheGrp != null) {
-            assertFalse(caches.get(0).size() == startSizes.get(0));
-
-            for (int i = 1; i < cacheCount; i++) {
-                assertTrue(caches.get(i).size() == startSizes.get(i));
-            }
-        }
-        else {
-            for (int i = 0; i < caches.size(); i++)
+//        if (cacheCount > 1 && cacheGrp != null) {
+//            assertFalse(caches.get(0).size() == startSizes.get(0));
+//
+//            for (int i = 1; i < cacheCount; i++) {
+//                assertTrue(caches.get(i).size() == startSizes.get(i));
+//            }
+//        }
+//        else {
+            for (int i = 0; i < cacheCount; i++)
                 assertFalse(caches.get(i).size() == startSizes.get(i));
-        }
+//        }
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(reconParallelism);
-        builder.caches(reconCachesNames);
+        builder.caches(cacheNames);
         builder.batchSize(reconBatchSize);
         builder.reconTypes(new HashSet(reconciliationTypes));
 
         AtomicReference<ReconciliationResult> reconResult = new AtomicReference<>();
 
-//        List<IgniteInternalFuture> loadFuts = new ArrayList<>();
+        List<IgniteInternalFuture> loadFuts = new ArrayList<>();
 
-//        for (int i = 0; i < loadThreadsCnt; i++) {
-//            caches.forEach(cache -> {
-//                IgniteInternalFuture loadFut = startAsyncLoad(reconResult, client, cache, startKey, endKey, cacheClearOp);
-//
-//                loadFuts.add(loadFut);
-//            });
-//        }
+        for (int i = 0; i < loadThreadsCnt; i++) {
+            caches.forEach(cache -> {
+                IgniteInternalFuture loadFut = startAsyncLoad(reconResult, client, cache, startKey, endKey, cacheClearOp);
+
+                loadFuts.add(loadFut);
+            });
+        }
 
         GridTestUtils.runMultiThreadedAsync(() -> {
             reconResult.set(partitionReconciliation(client, builder));
@@ -227,11 +227,11 @@ public class PartitionReconciliationFixPartitionSizesStressAbstractTest extends 
 
         assertTrue(errors.isEmpty());
 
-//        for (IgniteInternalFuture fut : loadFuts)
-//            fut.get();
+        for (IgniteInternalFuture fut : loadFuts)
+            fut.get();
 
         awaitPartitionMapExchange();
-        doSleep(5000);
+        doSleep(15000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         for (long i = startKey; i < endKey; i++) {
