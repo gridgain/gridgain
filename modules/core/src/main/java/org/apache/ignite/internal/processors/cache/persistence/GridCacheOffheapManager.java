@@ -2641,7 +2641,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public ReconciliationContext startReconciliation(int cacheId) {
+        @Override public ReconciliationContext startReconciliation(int cacheId) throws IgniteCheckedException {
+            CacheDataStore delegate = init0(false);
+
             if (delegate != null)
                 return delegate.startReconciliation(cacheId);
             else

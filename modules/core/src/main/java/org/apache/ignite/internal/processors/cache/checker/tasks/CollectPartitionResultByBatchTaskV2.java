@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -135,7 +134,7 @@ public class CollectPartitionResultByBatchTaskV2 extends ComputeTaskAdapter<Part
 
         if (sizeReconciliationSupport) {
 
-            Map<UUID, NodePartitionSize> partSizesMap = new ConcurrentHashMap<>();
+            Map<UUID, NodePartitionSize> partSizesMap = new HashMap<>();
 
             for (int i = 0; i < results.size(); i++) {
                 UUID nodeId = results.get(i).getNode().id();
