@@ -1274,11 +1274,6 @@ public interface IgniteCacheOffheapManager {
         public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair) throws InterruptedException, NodeStoppingException;
 
         /**
-         * @return Cache sizes reconciliation context initialization.
-         */
-        public void reconciliationCtxInit() throws IgniteCheckedException;
-
-        /**
          * @return Cache sizes reconciliation context.
          */
         public ReconciliationContext reconciliationCtx() throws IgniteCheckedException;
