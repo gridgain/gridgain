@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -23,7 +25,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -46,11 +49,6 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
@@ -62,7 +60,7 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
      */
     @Test
     public void test() throws Exception {
-        startGrid(0);
+        IgniteEx ignite0 = startGrid(0);
 
         IgniteEx client = startClientGrid("client");
 
@@ -71,22 +69,29 @@ public class StartImplicitlyTxOnStopCacheTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++)
             cache.put(i, i);
 
-        TestRecordingCommunicationSpi commSpiClient1 = TestRecordingCommunicationSpi.spi(client);
+        TestRecordingCommunicationSpi commSpiClient = TestRecordingCommunicationSpi.spi(client);
 
-        commSpiClient1.blockMessages(GridNearTxPrepareRequest.class, getTestIgniteInstanceName(0));
+        commSpiClient.blockMessages(GridNearTxPrepareRequest.class, getTestIgniteInstanceName(0));
 
-        commSpiClient1.record((node, msg) -> msg instanceof GridDhtPartitionsSingleMessage);
+        CyclicBarrier exchnageStartedBarrier = new CyclicBarrier(2, commSpiClient::stopBlock);
+
+        ignite0.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+            @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
+                try {
+                    exchnageStartedBarrier.await();
+                }
+                catch (InterruptedException | BrokenBarrierException e) {
+                    log.error("Exchange delay was interrupted.", e);
+                }
+            }
+        });
 
         IgniteInternalFuture runTxFut = GridTestUtils.runAsync(() -> cache.put(100, 100));
 
         IgniteInternalFuture destroyCacheFut = GridTestUtils.runAsync(() ->
             client.destroyCache(DEFAULT_CACHE_NAME));
 
-        commSpiClient1.waitForBlocked();
-
-        commSpiClient1.waitForRecorded();
-
-        commSpiClient1.stopBlock();
+        exchnageStartedBarrier.await();
 
         assertTrue(GridTestUtils.waitForCondition(destroyCacheFut::isDone, 10_000));
 
