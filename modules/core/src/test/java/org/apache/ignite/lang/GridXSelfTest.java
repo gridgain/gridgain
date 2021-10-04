@@ -68,8 +68,13 @@ public class GridXSelfTest extends GridCommonAbstractTest {
 
         ioExc.addSuppressed(exc);
 
-        X.cause(exc, NullPointerException.class);
-        X.hasCause(exc, NullPointerException.class);
+        assertEquals(npe, X.cause(exc, NullPointerException.class));
+
+        assertTrue(X.hasCause(exc, NullPointerException.class));
+
+        assertNull(X.cause(exc, ArithmeticException.class));
+
+        assertFalse(X.hasCause(exc, ArithmeticException.class));
     }
 
     /**
@@ -86,8 +91,15 @@ public class GridXSelfTest extends GridCommonAbstractTest {
 
         npe.initCause(exc);
 
-        X.cause(exc, NullPointerException.class);
-        X.hasCause(exc, NullPointerException.class);
+        assertEquals(npe, X.cause(exc, NullPointerException.class));
+
+        assertTrue(X.hasCause(exc, NullPointerException.class));
+
+        assertNull(X.cause(exc, ArithmeticException.class));
+
+        assertFalse(X.hasCause(exc, ArithmeticException.class));
+
+        npe.printStackTrace();
     }
 
     /**

@@ -471,7 +471,9 @@ public final class X {
         if (t == null || F.isEmpty(types))
             return false;
 
-        Throwable found = searchForCause(t, msg, types);
+        Set<Throwable> dejaVu = Collections.newSetFromMap(new IdentityHashMap<>());
+
+        Throwable found = searchForCause(t, dejaVu, msg, types);
 
         return found != null;
     }
@@ -526,32 +528,19 @@ public final class X {
         if (t == null || cls == null)
             return null;
 
-        @SuppressWarnings("unchecked")
-        T res = (T)searchForCause(t, null, cls);
-
-        return res;
-    }
-
-    /**
-     * Traverses `tree` of {@link Throwable} to find first cause/suppressed which meets test condition of predicate.
-     * Function is aware of possible circular references through tracking of tested objects.
-     *
-     * @param t Throwable - `root of the tree`.
-     * @param msg Possible throwable message.
-     * @param types Candidate types.
-     * @return First throwable meets test condition or {@code null} if none has matched.
-     */
-    @Nullable private static Throwable searchForCause(Throwable t, @Nullable String msg, Class<?>... types) {
         Set<Throwable> dejaVu = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        return searchForCause(t, dejaVu, msg, types);
+        @SuppressWarnings("unchecked")
+        T res = (T)searchForCause(t, dejaVu, null, cls);
+
+        return res;
     }
 
     /**
      * Traverses `tree` of {@link Throwable} to find first cause/suppressed is assignable from any of given types.
      * Function is aware of possible circular references through tracking of tested objects.
      *
-     * @param t Throwable - `root of the tree`.
+     * @param t Throwable.
      * @param dejaVu Set of throwable for tracking already tested objects.
      * @param types Candidate types.
      * @return First throwable meets test condition or {@code null} if none has matched.
@@ -565,10 +554,8 @@ public final class X {
         if (isThrowableValid(t, msg, types))
             return t;
 
-        if (dejaVu.contains(t))
+        if (!dejaVu.add(t))
             return null;
-
-        dejaVu.add(t);
 
         Throwable cause = t.getCause();
 
@@ -590,12 +577,13 @@ public final class X {
     }
 
     /**
-     * Checks whether given throwable is assignable from any of candidate types and contains given non-null message.
+     * Checks whether given throwable is assignable from any of candidate throwable type
+     *     and contains given non-null message.
      *
-     * @param thr Object.
+     * @param thr Throwable.
      * @param msg Possible throwable message.
-     * @param candidateTypes Types to check.
-     * @return {@code True} if such type in found, else {@code False}.
+     * @param candidateTypes Possible types of throwable.
+     * @return {@code true} if such type in found, else {@code false}.
      */
     private static boolean isThrowableValid(Throwable thr, @Nullable String msg, Class<?>... candidateTypes) {
         for (Class<?> c : candidateTypes) {
