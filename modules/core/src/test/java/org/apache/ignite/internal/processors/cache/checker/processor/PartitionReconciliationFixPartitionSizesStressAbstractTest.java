@@ -143,7 +143,6 @@ public abstract class PartitionReconciliationFixPartitionSizesStressAbstractTest
         ig.cluster().active(true);
 
         List<IgniteCache<Object, Object>> caches = new ArrayList<>();
-        List<IgniteCache<Object, Object>> reconCaches = new ArrayList<>();
 
         for (int i = 0; i < cacheCount; i++) {
             caches.add(client.createCache(
@@ -152,16 +151,6 @@ public abstract class PartitionReconciliationFixPartitionSizesStressAbstractTest
         }
 
         Set<String> cacheNames = caches.stream().map(IgniteCache::getName).collect(Collectors.toSet());
-
-        Set<String> reconCachesNames = new HashSet<>();
-
-        for (int i = 0; i < cacheCount; i++) {
-            reconCaches.add(caches.get(i));
-            reconCachesNames.add(caches.get(i).getName());
-
-            if (cacheCount > 1 && cacheGrp != null)
-                break;
-        }
 
         for (long i = startKey; i < endKey; i++) {
             i += 1;
@@ -181,24 +170,15 @@ public abstract class PartitionReconciliationFixPartitionSizesStressAbstractTest
         for (int i = 0; i < nodesCnt; i++)
             grids.add(grid(i));
 
-        breakCacheSizes(grids, reconCachesNames);
+        breakCacheSizes(grids, cacheNames);
 
-        if (cacheCount > 1 && cacheGrp != null) {
-            assertFalse(caches.get(0).size() == startSizes.get(0));
-
-            for (int i = 1; i < cacheCount; i++) {
-                assertTrue(caches.get(i).size() == startSizes.get(i));
-            }
-        }
-        else {
-            for (int i = 0; i < caches.size(); i++)
-                assertFalse(caches.get(i).size() == startSizes.get(i));
-        }
+        for (int i = 0; i < cacheCount; i++)
+            assertFalse(caches.get(i).size() == startSizes.get(i));
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.repair(true);
         builder.parallelism(reconParallelism);
-        builder.caches(reconCachesNames);
+        builder.caches(cacheNames);
         builder.batchSize(reconBatchSize);
         builder.reconTypes(new HashSet(reconciliationTypes));
 
@@ -223,13 +203,13 @@ public abstract class PartitionReconciliationFixPartitionSizesStressAbstractTest
 
         List<String> errors = reconResult.get().errors();
 
-        assertTrue(errors.isEmpty());
+        assertTrue(errors.toString(), errors.isEmpty());
 
         for (IgniteInternalFuture fut : loadFuts)
             fut.get();
 
         awaitPartitionMapExchange();
-        doSleep(10000);
+        doSleep(15000);
         cacheNames.forEach(cacheName -> assertPartitionsSame(idleVerify(grid(0), cacheName)));
 
         for (long i = startKey; i < endKey; i++) {

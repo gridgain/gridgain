@@ -2641,7 +2641,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /** {@inheritDoc} */
-        @Override public ReconciliationContext startReconciliation(int cacheId) {
+        @Override public ReconciliationContext startReconciliation(int cacheId) throws IgniteCheckedException {
+            CacheDataStore delegate = init0(false);
+
             if (delegate != null)
                 return delegate.startReconciliation(cacheId);
             else
@@ -2653,14 +2655,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             throws NodeStoppingException, InterruptedException {
             if (delegate != null)
                 delegate.flushReconciliationResult(cacheId, nodePartitionSize, repair);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void reconciliationCtxInit() throws IgniteCheckedException {
-            CacheDataStore delegate = init0(false);
-
-            if (delegate != null)
-                delegate.reconciliationCtxInit();
         }
 
         /** {@inheritDoc} */

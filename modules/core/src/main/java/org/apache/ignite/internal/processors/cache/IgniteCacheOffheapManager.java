@@ -1268,15 +1268,10 @@ public interface IgniteCacheOffheapManager {
          * @param cacheId Cache ID.
          * @return Cache data tree object.
          */
-        public ReconciliationContext startReconciliation(int cacheId);
+        public ReconciliationContext startReconciliation(int cacheId) throws IgniteCheckedException;
 
         /** Applying of a cache size consistency reconciliation result. */
         public void flushReconciliationResult(int cacheId, NodePartitionSize nodePartSize, boolean repair) throws InterruptedException, NodeStoppingException;
-
-        /**
-         * @return Cache sizes reconciliation context initialization.
-         */
-        public void reconciliationCtxInit() throws IgniteCheckedException;
 
         /**
          * @return Cache sizes reconciliation context.
