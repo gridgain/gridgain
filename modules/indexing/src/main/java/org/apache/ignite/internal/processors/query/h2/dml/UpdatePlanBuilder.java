@@ -219,18 +219,24 @@ public final class UpdatePlanBuilder {
 
         GridCacheContext<?, ?> cctx = desc.context();
 
-        String[] colNames = new String[cols.length];
+        List<String> colNamesArr = new ArrayList<>();
 
-        int[] colTypes = new int[cols.length];
+        List<Integer> colTypesArr = new ArrayList<>();
+
+        GridQueryTypeDescriptor type = desc.type();
+
+        Set<String> rowKeys = new HashSet<>(type.primaryKeyFields());
 
         for (int i = 0; i < cols.length; i++) {
             GridSqlColumn col = cols[i];
 
             String colName = col.columnName();
 
-            colNames[i] = colName;
+            colNamesArr.add(colName);
 
-            colTypes[i] = col.resultType().type();
+            colTypesArr.add(col.resultType().type());
+
+            rowKeys.remove(colName);
 
             int colId = col.column().getColumnId();
 
@@ -254,6 +260,21 @@ public final class UpdatePlanBuilder {
                 hasKeyProps = true;
             else
                 hasValProps = true;
+        }
+
+        for (String key : rowKeys) {
+            Column col = tbl.dataTable().getColumn(key);
+
+            colNamesArr.add(col.getName());
+            colTypesArr.add(col.getType().getValueType());
+        }
+
+        String[] colNames = new String[colNamesArr.size()];
+        int[] colTypes = new int[colTypesArr.size()];
+
+        for (int i = 0; i < colNamesArr.size(); i++) {
+            colNames[i] = colNamesArr.get(i);
+            colTypes[i] = colTypesArr.get(i);
         }
 
         verifyDmlColumns(tbl.dataTable(), F.viewReadOnly(Arrays.asList(cols), TO_H2_COL));

@@ -252,10 +252,7 @@ public final class UpdatePlan {
 
             Class<?> expCls = prop.type();
 
-            Object colVal = DmlUtils.convert(row.get(i), rowDesc, expCls, colTypes[i], colNames[i]);
-
-            if (!prop.key() || colVal != null)
-                newColVals.put(colName, colVal);
+            newColVals.put(colName, DmlUtils.convert(row.get(i), rowDesc, expCls, colTypes[i], colNames[i]));
         }
 
         desc.setDefaults(key, val);
@@ -472,7 +469,7 @@ public final class UpdatePlan {
             List<Object> resRow = new ArrayList<>();
 
             for (int j = 0; j < colNames.length; j++) {
-                Object colVal = row.get(j).get(args);
+                Object colVal = row.size() > j ? row.get(j).get(args) : null;
 
                 if (j == keyColIdx || j == valColIdx) {
                     Class<?> colCls = j == keyColIdx ? desc.type().keyClass() : desc.type().valueClass();

@@ -90,6 +90,11 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
             TransactionDuplicateKeyException.class,
             "Duplicate key during INSERT");
 
+        assertThrows(log,
+            () -> sql("insert into test (id2, id1, val) values (null, null, 1);"),
+            TransactionDuplicateKeyException.class,
+            "Duplicate key during INSERT");
+
         assertEquals(sql("SELECT * FROM test").getAll().size(), 1);
     }
 
