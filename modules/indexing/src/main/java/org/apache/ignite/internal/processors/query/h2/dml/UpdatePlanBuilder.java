@@ -262,11 +262,13 @@ public final class UpdatePlanBuilder {
                 hasValProps = true;
         }
 
-        for (String key : rowKeys) {
-            Column col = tbl.dataTable().getColumn(key);
+        if (hasKeyProps) {
+            for (String key : rowKeys) {
+                Column col = tbl.dataTable().getColumn(key);
 
-            colNamesArr.add(col.getName());
-            colTypesArr.add(col.getType().getValueType());
+                colNamesArr.add(col.getName());
+                colTypesArr.add(col.getType().getValueType());
+            }
         }
 
         String[] colNames = new String[colNamesArr.size()];
