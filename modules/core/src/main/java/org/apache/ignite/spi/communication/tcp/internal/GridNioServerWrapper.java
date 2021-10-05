@@ -855,9 +855,6 @@ public class GridNioServerWrapper {
 
                     sslFilter.directMode(true);
 
-                    sslFilter.wantClientAuth(true);
-                    sslFilter.needClientAuth(true);
-
                     filters.add(sslFilter);
                 }
 

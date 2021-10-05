@@ -293,7 +293,7 @@ public class IgniteStatisticsRepository {
      * @param partId Partition id.
      */
     public void refreshObsolescence(StatisticsKey key, int partId) {
-        statObs.compute(key, (k,v) -> {
+        statObs.compute(key, (k, v) -> {
             if (v == null)
                 v = new IntHashMap<>();
 
