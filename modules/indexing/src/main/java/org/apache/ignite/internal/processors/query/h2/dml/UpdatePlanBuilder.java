@@ -219,9 +219,9 @@ public final class UpdatePlanBuilder {
 
         GridCacheContext<?, ?> cctx = desc.context();
 
-        List<String> colNamesArr = new ArrayList<>();
+        String[] colNames = new String[cols.length];
 
-        List<Integer> colTypesArr = new ArrayList<>();
+        int[] colTypes = new int[cols.length];
 
         GridQueryTypeDescriptor type = desc.type();
 
@@ -232,9 +232,9 @@ public final class UpdatePlanBuilder {
 
             String colName = col.columnName();
 
-            colNamesArr.add(colName);
+            colNames[i] = colName;
 
-            colTypesArr.add(col.resultType().type());
+            colTypes[i] = col.resultType().type();
 
             rowKeys.remove(colName);
 
@@ -262,21 +262,26 @@ public final class UpdatePlanBuilder {
                 hasValProps = true;
         }
 
-        if (hasKeyProps) {
+        if (hasKeyProps && !rowKeys.isEmpty()) {
+            String[] extendedColNames = new String[rowKeys.size() + colNames.length];
+            int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
+
+            System.arraycopy(colNames, 0, extendedColNames, 0, colNames.length);
+            System.arraycopy(colTypes, 0, extendedColTypes, 0, colTypes.length);
+
+            int currId = colNames.length;
+
             for (String key : rowKeys) {
                 Column col = tbl.dataTable().getColumn(key);
 
-                colNamesArr.add(col.getName());
-                colTypesArr.add(col.getType().getValueType());
+                extendedColNames[currId] = col.getName();
+                extendedColTypes[currId] = col.getType().getValueType();
+
+                currId++;
             }
-        }
 
-        String[] colNames = new String[colNamesArr.size()];
-        int[] colTypes = new int[colTypesArr.size()];
-
-        for (int i = 0; i < colNamesArr.size(); i++) {
-            colNames[i] = colNamesArr.get(i);
-            colTypes[i] = colTypesArr.get(i);
+            colNames = extendedColNames;
+            colTypes = extendedColTypes;
         }
 
         verifyDmlColumns(tbl.dataTable(), F.viewReadOnly(Arrays.asList(cols), TO_H2_COL));
