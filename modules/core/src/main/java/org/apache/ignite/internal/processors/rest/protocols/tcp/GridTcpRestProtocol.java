@@ -39,6 +39,7 @@ import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.protocols.GridRestProtocolAdapter;
+import org.apache.ignite.internal.ssl.SSLContextClientAuthWrapper;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioParser;
@@ -209,16 +210,11 @@ public class GridTcpRestProtocol extends GridRestProtocolAdapter {
             GridNioFilter[] filters;
 
             if (sslCtx != null) {
-                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx,
-                    cfg.isDirectBuffer(), ByteOrder.nativeOrder(), log);
+                SSLContext sslCtxWithClientAuth = new SSLContextClientAuthWrapper(sslCtx, cfg.isSslClientAuth());
+
+                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxWithClientAuth, false, ByteOrder.nativeOrder(), log);
 
                 sslFilter.directMode(false);
-
-                boolean auth = cfg.isSslClientAuth();
-
-                sslFilter.wantClientAuth(auth);
-
-                sslFilter.needClientAuth(auth);
 
                 filters = new GridNioFilter[] {
                     codec,

@@ -35,6 +35,7 @@ import org.apache.ignite.internal.client.router.GridTcpRouterConfiguration;
 import org.apache.ignite.internal.client.router.GridTcpRouterMBean;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
+import org.apache.ignite.internal.ssl.SSLContextClientAuthWrapper;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioParser;
@@ -127,8 +128,7 @@ public class GridTcpRouterImpl implements GridTcpRouter, GridTcpRouterMBean, Lif
         }
 
         for (int port = cfg.getPort(), last = port + cfg.getPortRange(); port <= last; port++) {
-            if (startTcpServer(hostAddr, port, lsnr, parser, cfg.isNoDelay(), sslCtx, cfg.isSslClientAuth(),
-                cfg.isSslClientAuth())) {
+            if (startTcpServer(hostAddr, port, lsnr, parser, cfg.isNoDelay(), sslCtx, cfg.isSslClientAuth())) {
                 if (log.isInfoEnabled())
                     log.info("TCP router successfully started for endpoint: " + hostAddr.getHostAddress() + ":" + port);
 
@@ -221,13 +221,12 @@ public class GridTcpRouterImpl implements GridTcpRouter, GridTcpRouterMBean, Lif
      * @param parser Server message parser.
      * @param tcpNoDelay Flag indicating whether TCP_NODELAY flag should be set for accepted connections.
      * @param sslCtx SSL context in case if SSL is enabled.
-     * @param wantClientAuth Whether client will be requested for authentication.
      * @param needClientAuth Whether client is required to be authenticated.
      * @return {@code True} if server successfully started, {@code false} if port is used and
      *      server was unable to start.
      */
     private boolean startTcpServer(InetAddress hostAddr, int port, GridNioServerListener<GridClientMessage> lsnr,
-        GridNioParser parser, boolean tcpNoDelay, @Nullable SSLContext sslCtx, boolean wantClientAuth,
+        GridNioParser parser, boolean tcpNoDelay, @Nullable SSLContext sslCtx,
         boolean needClientAuth) {
         try {
             GridNioFilter codec = new GridNioCodecFilter(parser, log, false);
@@ -239,11 +238,9 @@ public class GridTcpRouterImpl implements GridTcpRouter, GridTcpRouterMBean, Lif
             GridNioFilter[] filters;
 
             if (sslCtx != null) {
-                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, false, ByteOrder.nativeOrder(), log);
+                SSLContext sslCtxWithClientAuth = new SSLContextClientAuthWrapper(sslCtx, needClientAuth);
 
-                sslFilter.wantClientAuth(wantClientAuth);
-
-                sslFilter.needClientAuth(needClientAuth);
+                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxWithClientAuth, false, ByteOrder.nativeOrder(), log);
 
                 filters = new GridNioFilter[] { codec, sslFilter };
             }
