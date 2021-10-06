@@ -80,6 +80,7 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.GPR;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
@@ -328,6 +329,17 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         dsMap.remove(key, obj);
     }
 
+    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) throws IgniteCheckedException {
+        super.onDisconnected(reconnectFut);
+        ctx.localNodeId();
+
+        for (GridCacheRemovable ds : dsMap.values()) {
+            if (ds instanceof GridCacheLockEx)
+                ((GridCacheLockEx)ds).onDisconnected(ctx.localNodeId(), reconnectFut);
+        }
+
+    }
+
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) throws IgniteCheckedException {
         for (Map.Entry<GridCacheInternalKey, GridCacheRemovable> e : dsMap.entrySet()) {
@@ -344,6 +356,11 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
 
         for (GridCacheContext cctx : ctx.cache().context().cacheContexts())
             cctx.dataStructures().onReconnected(clusterRestarted);
+
+        for (GridCacheRemovable ds : dsMap.values()) {
+            if (ds instanceof GridCacheLockEx)
+                ((GridCacheLockEx)ds).onReconnected(ctx.localNodeId());
+        }
 
         return null;
     }

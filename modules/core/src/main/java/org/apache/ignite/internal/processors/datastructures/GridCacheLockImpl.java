@@ -52,6 +52,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -125,7 +126,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
         private volatile long currentOwnerThreadId;
 
         /** UUID of this node. */
-        private final UUID thisNode;
+        private volatile UUID thisNode;
 
         /** FailoverSafe flag. */
         private final boolean failoverSafe;
@@ -135,6 +136,10 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
         /** Threads that are waiting on this lock. */
         private Set<Long> waitingThreads;
+
+        void thisNode(UUID id) {
+            thisNode = id;
+        }
 
         /**
          * @param state State.
@@ -1133,6 +1138,15 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
         finally {
             updateLock.unlock();
         }
+    }
+
+    @Override public void onDisconnected(UUID nodeId, IgniteFuture<?> fut) {
+//        System.out.println("aaa onDisconnected " + nodeId);
+    }
+
+    @Override public void onReconnected(UUID nodeId) {
+//        System.out.println("aaa onReconnected " + nodeId);
+        sync.thisNode(nodeId);
     }
 
     /** {@inheritDoc} */
