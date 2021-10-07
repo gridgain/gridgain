@@ -47,6 +47,7 @@ public class IgniteClientReconnectLockTest extends IgniteClientReconnectAbstract
 
         IgniteLock lock = client.reentrantLock("lock", true, false, true);
 
+        //need to initialize lock instance before client reconnect
         lock.lock();
         lock.unlock();
 

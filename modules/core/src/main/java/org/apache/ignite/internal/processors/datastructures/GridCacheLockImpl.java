@@ -52,7 +52,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -136,10 +135,6 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
         /** Threads that are waiting on this lock. */
         private Set<Long> waitingThreads;
-
-        void thisNode(UUID id) {
-            thisNode = id;
-        }
 
         /**
          * @param state State.
@@ -321,6 +316,13 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
          */
         protected void setCurrentOwnerThread(long newOwnerThreadId) {
             currentOwnerThreadId = newOwnerThreadId;
+        }
+
+        /**
+         * @param nodeId Node ID.
+         */
+        protected void setThisNode(UUID nodeId) {
+            thisNode = nodeId;
         }
 
         /**
@@ -1142,7 +1144,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public void onReconnected(UUID nodeId) {
-        sync.thisNode(nodeId);
+        sync.setThisNode(nodeId);
     }
 
     /** {@inheritDoc} */

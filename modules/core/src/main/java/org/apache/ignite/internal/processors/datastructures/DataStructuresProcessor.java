@@ -330,6 +330,8 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) throws IgniteCheckedException {
+        UUID nodeId = ctx.localNodeId();
+
         for (Map.Entry<GridCacheInternalKey, GridCacheRemovable> e : dsMap.entrySet()) {
             GridCacheRemovable obj = e.getValue();
 
@@ -340,17 +342,13 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
             }
             else
                 obj.needCheckNotRemoved();
+
+            if (obj instanceof GridCacheLockEx)
+                ((GridCacheLockEx)obj).onReconnected(nodeId);
         }
 
         for (GridCacheContext cctx : ctx.cache().context().cacheContexts())
             cctx.dataStructures().onReconnected(clusterRestarted);
-
-        UUID nodeId = ctx.localNodeId();
-
-        for (GridCacheRemovable ds : dsMap.values()) {
-            if (ds instanceof GridCacheLockEx)
-                ((GridCacheLockEx)ds).onReconnected(nodeId);
-        }
 
         return null;
     }
