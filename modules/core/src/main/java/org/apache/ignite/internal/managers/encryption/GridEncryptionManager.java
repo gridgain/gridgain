@@ -52,6 +52,8 @@ import org.apache.ignite.internal.pagemem.wal.record.MasterKeyChangeRecordV2;
 import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
@@ -138,7 +140,7 @@ import static org.apache.ignite.internal.util.distributed.DistributedProcess.Dis
  * @see #performMKChangeProc
  */
 public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> implements EncryptionCacheKeyProvider,
-    MetastorageLifecycleListener, IgniteChangeGlobalStateSupport, IgniteEncryption {
+    MetastorageLifecycleListener, IgniteChangeGlobalStateSupport, IgniteEncryption, PartitionsExchangeAware {
     /**
      * Cache encryption introduced in this Ignite version.
      */
@@ -330,8 +332,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /** {@inheritDoc} */
-    @Override protected void onKernalStart0() throws IgniteCheckedException {
-        // No-op.
+    @Override protected void onKernalStart0() {
+        ctx.cache().context().exchange().registerExchangeAwareComponent(this);
     }
 
     /** {@inheritDoc} */
@@ -819,6 +821,20 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     }
 
     /**
+     * @return Re-encryption rate limit in megabytes per second ({@code 0} - unlimited).
+     */
+    public double getReencryptionRate() {
+        return pageScanner.getRate();
+    }
+
+    /**
+     * @param rate Re-encryption rate limit in megabytes per second ({@code 0} - unlimited).
+     */
+    public void setReencryptionRate(double rate) {
+        pageScanner.setRate(rate);
+    }
+
+    /**
      * Removes encryption key(s).
      *
      * @param grpId Cache group ID.
@@ -908,7 +924,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      */
     public void onWalSegmentRemoved(long segmentIdx) {
         if (grpKeys.isReleaseWalKeysRequired(segmentIdx))
-            ctx.getSystemExecutorService().submit(() -> releaseWalKeys(segmentIdx));
+            ctx.pools().getSystemExecutorService().submit(() -> releaseWalKeys(segmentIdx));
     }
 
     /**
@@ -1071,8 +1087,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         }
 
         reencryptGroupsForced.clear();
-
-        startReencryption(reencryptGroups.keySet());
     }
 
     /** {@inheritDoc} */
@@ -1093,6 +1107,18 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     @Override public void onDeActivate(GridKernalContext kctx) {
         synchronized (metaStorageMux) {
             writeToMetaStoreEnabled = false;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+        if (!fut.isFailed() && (fut.activateCluster() || fut.localJoinExchange())) {
+            try {
+                startReencryption(reencryptGroups.keySet());
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Unable to start reencryption", e);
+            }
         }
     }
 
@@ -1125,6 +1151,14 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             return 0;
 
         return states[Math.min(partId, states.length - 1)];
+    }
+
+    /**
+     * @param grpId Cache group ID.
+     * @return The number of bytes left for re-ecryption.
+     */
+    public long getBytesLeftForReencryption(int grpId) {
+        return pageScanner.remainingPagesCount(grpId) * ctx.config().getDataStorageConfiguration().getPageSize();
     }
 
     /**
@@ -1169,6 +1203,32 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         fut.nodeId(rndNode.id());
 
         ctx.io().sendToGridTopic(rndNode.id(), TOPIC_GEN_ENC_KEY, req, SYSTEM_POOL);
+    }
+
+    /**
+     * Suspend re-encryption of the cache group.
+     *
+     * @param grpId Cache group ID.
+     */
+    public boolean suspendReencryption(int grpId) throws IgniteCheckedException {
+        return reencryptionFuture(grpId).cancel();
+    }
+
+    /**
+     * Forces re-encryption of the cache group.
+     *
+     * @param grpId Cache group ID.
+     */
+    public boolean resumeReencryption(int grpId) throws IgniteCheckedException {
+        if (!reencryptionFuture(grpId).isDone())
+            return false;
+
+        if (!reencryptionInProgress(grpId))
+            throw new IgniteCheckedException("Re-encryption completed or not required [grpId=" + grpId + "]");
+
+        startReencryption(Collections.singleton(grpId));
+
+        return true;
     }
 
     /**

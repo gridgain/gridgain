@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.task.GatherPartitionStatistics;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -120,12 +121,14 @@ public class StatisticsGatherer {
      * Collect statistic per partition for specified object.
      *
      * @param tbl Table to gather statistics by.
+     * @param cfg Statistics configuration.
      * @param colCfgs Column to gathering configuration.
      * @param parts Partitions to gather.
      * @return Operation context.
      */
     public LocalStatisticsGatheringContext gatherLocalObjectsStatisticsAsync(
         GridH2Table tbl,
+        StatisticsObjectConfiguration cfg,
         Map<String, StatisticsColumnConfiguration> colCfgs,
         Set<Integer> parts
     ) {
@@ -160,7 +163,7 @@ public class StatisticsGatherer {
                 log
             );
 
-            submitTask(tbl, key, newCtx, task);
+            submitTask(tbl, cfg, key, newCtx, task);
         }
 
         return newCtx;
@@ -169,6 +172,7 @@ public class StatisticsGatherer {
     /** */
     private void submitTask(
         final GridH2Table tbl,
+        final StatisticsObjectConfiguration cfg,
         final StatisticsKey key,
         final LocalStatisticsGatheringContext ctx,
         final GatherPartitionStatistics task
@@ -176,7 +180,7 @@ public class StatisticsGatherer {
         CompletableFuture<ObjectPartitionStatisticsImpl> f = CompletableFuture.supplyAsync(task::call, gatherPool);
 
         f.thenAccept((partStat) -> {
-            completePartitionStatistic(tbl, key, ctx, task.partition(), partStat);
+            completePartitionStatistic(tbl, cfg, key, ctx, task.partition(), partStat);
         });
 
         f.exceptionally((ex) -> {
@@ -200,6 +204,7 @@ public class StatisticsGatherer {
      * Complete gathering of partition statistics: save to repository and try to complete whole task.
      *
      * @param tbl Table to gather statistics by.
+     * @param cfg Statistics configuration.
      * @param key Key to gather statistics by.
      * @param ctx Task context.
      * @param part Partition id.
@@ -207,6 +212,7 @@ public class StatisticsGatherer {
      */
     private void completePartitionStatistic(
         GridH2Table tbl,
+        StatisticsObjectConfiguration cfg,
         StatisticsKey key,
         LocalStatisticsGatheringContext ctx,
         int part,
@@ -220,6 +226,9 @@ public class StatisticsGatherer {
                     new StatisticsKey(tbl.getSchema().getName(), tbl.getName()),
                     partStat
                 );
+
+                if (cfg.columns().size() == partStat.columnsStatistics().size())
+                    statRepo.refreshObsolescence(key, part);
 
                 if (log.isDebugEnabled())
                     log.debug("Local partitioned statistic saved [stat=" + partStat + ']');
@@ -261,11 +270,18 @@ public class StatisticsGatherer {
         if (log.isTraceEnabled())
             log.trace(String.format("Statistics gathering stopping %d task...", gatheringInProgress.size()));
 
-        gatheringInProgress.values().forEach(ctx -> ctx.futureGather().cancel(true));
-
-        gatheringInProgress.clear();
+        cancelAllTasks();
 
         if (log.isDebugEnabled())
             log.debug("Statistics gathering stopped.");
+    }
+
+    /**
+     * Cancel all currently running statistics gathering tasks.
+     */
+    public void cancelAllTasks() {
+        gatheringInProgress.values().forEach(ctx -> ctx.futureGather().cancel(true));
+
+        gatheringInProgress.clear();
     }
 }

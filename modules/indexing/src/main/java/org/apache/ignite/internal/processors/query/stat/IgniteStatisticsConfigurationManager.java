@@ -27,13 +27,16 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnConfigurationViewWalker;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -42,29 +45,38 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Exc
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
+import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnConfiguration;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
+import org.apache.ignite.internal.processors.query.stat.view.StatisticsColumnConfigurationView;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
-import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Holds statistic configuration objects at the distributed metastore
  * and match local statistics with target statistic configuration.
  */
-public class IgniteStatisticsConfigurationManager {
+public class IgniteStatisticsConfigurationManager implements IgniteChangeGlobalStateSupport {
     /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
+
+    /** */
+    private static final String STAT_CFG_VIEW_NAME = "statistics.configuration";
+
+    /** */
+    private static final String STAT_CFG_VIEW_DESCRIPTION = "Statistics configuration";
 
     /** Schema manager. */
     private final SchemaManager schemaMgr;
@@ -87,8 +99,14 @@ public class IgniteStatisticsConfigurationManager {
     /** Started flag (used to skip updates of the distributed metastorage on start). */
     private volatile boolean started;
 
+    /** Active flag (used to skip commands in inactive cluster.) */
+    private volatile boolean active;
+
     /** Monitor to synchronize changes repository: aggregate after collects and drop statistics. */
     private final Object mux = new Object();
+
+    /** */
+    private final GridClusterStateProcessor cluster;
 
     /** */
     private final GridInternalSubscriptionProcessor subscriptionProcessor;
@@ -96,34 +114,38 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private final GridCachePartitionExchangeManager exchange;
 
+    /** Is server node flag. */
+    private final boolean isServerNode;
+
     /** */
     private final DistributedMetastorageLifecycleListener distrMetaStoreLsnr = new DistributedMetastorageLifecycleListener() {
         @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
             distrMetaStorage = (DistributedMetaStorage)metastorage;
 
-            distrMetaStorage.listen(
-                (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
-                (k, oldV, newV) -> {
-                    // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
-                    // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
-                    // called on exchange done.
-                    if (!started)
-                        return;
+            if (isServerNode) {
+                distrMetaStorage.listen(
+                    (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
+                    (k, oldV, newV) -> {
+                        // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
+                        // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
+                        // called on exchange done.
+                        if (!started)
+                            return;
 
-                    mgmtPool.submit(() -> {
-                        try {
-                            onChangeStatisticConfiguration(
-                                (StatisticsObjectConfiguration)oldV,
-                                (StatisticsObjectConfiguration)newV
-                            );
-                        }
-                        catch (Throwable e) {
-                            log.warning("Unexpected exception on change statistic configuration [old="
-                                + oldV + ", new=" + newV + ']', e);
-                        }
-                    });
-                }
-            );
+                        mgmtPool.submit(() -> {
+                            try {
+                                onChangeStatisticConfiguration(
+                                    (StatisticsObjectConfiguration) oldV,
+                                    (StatisticsObjectConfiguration) newV
+                                );
+                            } catch (Throwable e) {
+                                log.warning("Unexpected exception on change statistic configuration [old="
+                                    + oldV + ", new=" + newV + ']', e);
+                            }
+                        });
+                    }
+                );
+            }
         }
     };
 
@@ -133,9 +155,10 @@ public class IgniteStatisticsConfigurationManager {
             started = true;
 
             // Skip join/left client nodes.
-            if (fut.exchangeType() != ExchangeType.ALL)
+            if (fut.exchangeType() != ExchangeType.ALL || cluster.clusterState().lastState() != ClusterState.ACTIVE)
                 return;
 
+            active = true;
             DiscoveryEvent evt = fut.firstEvent();
 
             // Skip create/destroy caches.
@@ -200,23 +223,102 @@ public class IgniteStatisticsConfigurationManager {
         }
     };
 
-    /** */
+    /**
+     * Constructor.
+     *
+     * @param schemaMgr Schema manager.
+     * @param subscriptionProcessor Grid internal subsctiption processor.
+     * @param sysViewMgr Grid system view manager.
+     * @param cluster Grid cluster state processor.
+     * @param exchange Grid cache partition exchange manager.
+     * @param repo Ignite statistics repository.
+     * @param gatherer Statistics gatherer (or {@code null} for client nodes).
+     * @param mgmtPool Statistics management thread pool (or {@code null} for client nodes).
+     * @param logSupplier Ignite logger supplier.
+     * @param isServerNode server node flag.
+     */
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
         GridInternalSubscriptionProcessor subscriptionProcessor,
+        GridSystemViewManager sysViewMgr,
+        GridClusterStateProcessor cluster,
         GridCachePartitionExchangeManager exchange,
         IgniteStatisticsRepository repo,
         StatisticsGatherer gatherer,
         IgniteThreadPoolExecutor mgmtPool,
-        Function<Class<?>, IgniteLogger> logSupplier
+        Function<Class<?>, IgniteLogger> logSupplier,
+        boolean isServerNode
     ) {
         this.schemaMgr = schemaMgr;
         log = logSupplier.apply(IgniteStatisticsConfigurationManager.class);
         this.repo = repo;
         this.mgmtPool = mgmtPool;
         this.gatherer = gatherer;
+        this.cluster = cluster;
         this.subscriptionProcessor = subscriptionProcessor;
         this.exchange = exchange;
+        this.isServerNode = isServerNode;
+
+        this.subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
+
+        sysViewMgr.registerFiltrableView(STAT_CFG_VIEW_NAME, STAT_CFG_VIEW_DESCRIPTION,
+            new StatisticsColumnConfigurationViewWalker(), this::columnConfigurationViewSupplier, Function.identity());
+    }
+
+    /**
+     * Statistics column configuration view filterable supplier.
+     *
+     * @param filter Filter.
+     * @return Iterable with selected statistics column configuration views.
+     */
+    private Iterable<StatisticsColumnConfigurationView> columnConfigurationViewSupplier(Map<String, Object> filter) {
+        String schema = (String)filter.get(StatisticsColumnConfigurationViewWalker.SCHEMA_FILTER);
+        String name = (String)filter.get(StatisticsColumnConfigurationViewWalker.NAME_FILTER);
+
+        Collection<StatisticsObjectConfiguration> configs;
+        try {
+            if (!F.isEmpty(schema) && !F.isEmpty(name)) {
+                StatisticsKey key = new StatisticsKey(schema, name);
+                StatisticsObjectConfiguration keyCfg = config(key);
+
+                if (keyCfg == null)
+                    return Collections.emptyList();
+
+                configs = Collections.singletonList(keyCfg);
+            }
+            else
+                configs = getAllConfig();
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Error while getting statistics configuration: " + e.getMessage(), e);
+
+            configs = Collections.emptyList();
+        }
+
+        List<StatisticsColumnConfigurationView> res = new ArrayList<>();
+
+        for (StatisticsObjectConfiguration cfg : configs) {
+            for (StatisticsColumnConfiguration colCfg : cfg.columnsAll().values()) {
+                if (!colCfg.tombstone())
+                    res.add(new StatisticsColumnConfigurationView(cfg, colCfg));
+            }
+        }
+
+        return res;
+    }
+
+    /**
+     * Get statistics configurations for all objects.
+     *
+     * @return Collection of all statistics configuration.
+     * @throws IgniteCheckedException In case of error.
+     */
+    public Collection<StatisticsObjectConfiguration> getAllConfig() throws IgniteCheckedException {
+        List<StatisticsObjectConfiguration> res = new ArrayList<>();
+
+        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> res.add((StatisticsObjectConfiguration) v));
+
+        return res;
     }
 
     /**
@@ -226,15 +328,18 @@ public class IgniteStatisticsConfigurationManager {
         if (log.isTraceEnabled())
             log.trace("Statistics configuration manager starting...");
 
-        subscriptionProcessor.registerDistributedMetastorageListener(distrMetaStoreLsnr);
+        if (isServerNode) {
+            exchange.registerExchangeAwareComponent(exchAwareLsnr);
 
-        exchange.registerExchangeAwareComponent(exchAwareLsnr);
-
-        schemaMgr.registerDropColumnsListener(dropColsLsnr);
-        schemaMgr.registerDropTableListener(dropTblLsnr);
+            schemaMgr.registerDropColumnsListener(dropColsLsnr);
+            schemaMgr.registerDropTableListener(dropTblLsnr);
+        }
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager started.");
+
+        if (distrMetaStorage != null && isServerNode)
+            scanAndCheckLocalStatistics(exchange.readyAffinityVersion());
     }
 
     /**
@@ -244,12 +349,12 @@ public class IgniteStatisticsConfigurationManager {
         if (log.isTraceEnabled())
             log.trace("Statistics configuration manager stopping...");
 
-        subscriptionProcessor.unregisterDistributedMetastorageListener(distrMetaStoreLsnr);
+        if (isServerNode) {
+            exchange.unregisterExchangeAwareComponent(exchAwareLsnr);
 
-        exchange.unregisterExchangeAwareComponent(exchAwareLsnr);
-
-        schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
-        schemaMgr.unregisterDropTableListener(dropTblLsnr);
+            schemaMgr.unregisterDropColumnsListener(dropColsLsnr);
+            schemaMgr.unregisterDropTableListener(dropTblLsnr);
+        }
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager stopped.");
@@ -258,9 +363,25 @@ public class IgniteStatisticsConfigurationManager {
     /** */
     private void scanAndCheckLocalStatistics(AffinityTopologyVersion topVer) {
         mgmtPool.submit(() -> {
+            Map<StatisticsObjectConfiguration, Set<Integer>> res = new HashMap<>();
+
             try {
-                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) ->
-                    checkLocalStatistics((StatisticsObjectConfiguration)v, topVer));
+                if (!active) {
+                    if (log.isDebugEnabled())
+                        log.debug("Ignore statistics collection due to inactive cluster state.");
+
+                    return;
+                }
+
+                distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
+                    StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
+
+                    Set<Integer> parts = checkLocalStatistics(cfg, topVer);
+
+                    res.put(cfg, parts);
+                });
+
+                repo.checkObsolescenceInfo(res);
             }
             catch (IgniteCheckedException e) {
                 log.warning("Unexpected exception on check local statistic on start", e);
@@ -274,35 +395,37 @@ public class IgniteStatisticsConfigurationManager {
      *
      * @param targets DB objects to statistics update.
      */
-    public void updateStatistics(List<StatisticsTarget> targets) {
+    public void updateStatistics(StatisticsObjectConfiguration... targets) {
         if (log.isDebugEnabled())
             log.debug("Update statistics [targets=" + targets + ']');
 
-        for (StatisticsTarget target : targets) {
-            GridH2Table tbl = schemaMgr.dataTable(target.schema(), target.obj());
+        for (StatisticsObjectConfiguration target : targets) {
+
+            GridH2Table tbl = schemaMgr.dataTable(target.key().schema(), target.key().obj());
 
             validate(target, tbl);
 
-            Column[] cols = IgniteStatisticsHelper.filterColumns(
-                tbl.getColumns(),
-                target.columns() != null ? Arrays.asList(target.columns()) : Collections.emptyList());
+            List<StatisticsColumnConfiguration> colCfgs;
+            if (F.isEmpty(target.columns()))
+                colCfgs = Arrays.stream(tbl.getColumns())
+                    .filter(c -> c.getColumnId() >= QueryUtils.DEFAULT_COLUMNS_COUNT)
+                    .map(c -> new StatisticsColumnConfiguration(c.getName(), null))
+                    .collect(Collectors.toList());
+            else
+                colCfgs = new ArrayList<>(target.columns().values());
 
-            List<StatisticsColumnConfiguration> colCfgs = Arrays.stream(cols)
-                .map(c -> new StatisticsColumnConfiguration(c.getName()))
-                .collect(Collectors.toList());
-
-            StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(target.key(), colCfgs);
+            StatisticsObjectConfiguration newCfg = new StatisticsObjectConfiguration(target.key(), colCfgs,
+                target.maxPartitionObsolescencePercent());
 
             try {
                 while (true) {
-                    String key = key2String(target.key());
+                    String key = key2String(newCfg.key());
 
                     StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
+                    StatisticsObjectConfiguration resultCfg = (oldCfg == null) ? newCfg :
+                        StatisticsObjectConfiguration.merge(oldCfg, newCfg);
 
-                    if (oldCfg != null)
-                        newCfg = StatisticsObjectConfiguration.merge(oldCfg, newCfg);
-
-                    if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
+                    if (distrMetaStorage.compareAndSet(key, oldCfg, resultCfg))
                         break;
                 }
             }
@@ -396,10 +519,15 @@ public class IgniteStatisticsConfigurationManager {
 
                     validateDropRefresh(target, oldCfg);
 
-                    StatisticsObjectConfiguration newCfg = oldCfg.refresh(
-                        target.columns() != null ?
-                            Arrays.stream(target.columns()).collect(Collectors.toSet()) :
-                            Collections.emptySet());
+                    Set<String> cols;
+                    if (F.isEmpty(target.columns())) {
+                        cols = oldCfg.columns().values().stream().map(StatisticsColumnConfiguration::name)
+                            .collect(Collectors.toSet());
+                    }
+                    else
+                        cols = Arrays.stream(target.columns()).collect(Collectors.toSet());
+
+                    StatisticsObjectConfiguration newCfg = oldCfg.refresh(cols);
 
                     if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
                         break;
@@ -408,32 +536,6 @@ public class IgniteStatisticsConfigurationManager {
             catch (IgniteCheckedException ex) {
                 throw new IgniteSQLException(
                     "Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
-            }
-        }
-    }
-
-    /**
-     * Validate target against existing table.
-     *
-     * @param target Statistics target to validate.
-     * @param tbl Table.
-     */
-    private void validate(StatisticsTarget target, GridH2Table tbl) {
-        if (tbl == null) {
-            throw new IgniteSQLException(
-                "Table doesn't exist [schema=" + target.schema() + ", table=" + target.obj() + ']',
-                IgniteQueryErrorCode.TABLE_NOT_FOUND);
-        }
-
-        if (!F.isEmpty(target.columns())) {
-            for (String col : target.columns()) {
-                if (!tbl.doesColumnExist(col)) {
-                    throw new IgniteSQLException(
-                        "Column doesn't exist [schema=" + target.schema() +
-                            ", table=" + target.obj() +
-                            ", column=" + col + ']',
-                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
-                }
             }
         }
     }
@@ -477,20 +579,21 @@ public class IgniteStatisticsConfigurationManager {
      * The method is called on change affinity assignment (end of PME).
      * @param cfg expected statistic configuration.
      * @param topVer topology version.
+     * @return Set of local primary partitions.
      */
-    private void checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
+    private Set<Integer> checkLocalStatistics(StatisticsObjectConfiguration cfg, final AffinityTopologyVersion topVer) {
         try {
             GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
             if (tbl == null) {
                 // Drop tables handle by onDropTable
-                return;
+                return Collections.emptySet();
             }
 
             GridCacheContext cctx = tbl.cacheContext();
 
             if (cctx == null)
-                return;
+                return Collections.emptySet();
 
             AffinityTopologyVersion topVer0 = cctx.affinity().affinityReadyFuture(topVer).get();
 
@@ -501,7 +604,7 @@ public class IgniteStatisticsConfigurationManager {
                 // Remove oll data
                 dropColumnsOnLocalStatistics(cfg, cfg.columns().keySet());
 
-                return;
+                return Collections.emptySet();
             }
 
             final Set<Integer> partsOwn = new HashSet<>(
@@ -573,9 +676,13 @@ public class IgniteStatisticsConfigurationManager {
                 // Only refresh aggregated local statistics.
                 gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), parts));
             }
+
+            return parts;
         }
         catch (Throwable ex) {
             log.error("Unexpected error on check local statistics", ex);
+
+            return Collections.emptySet();
         }
     }
 
@@ -591,6 +698,12 @@ public class IgniteStatisticsConfigurationManager {
         StatisticsObjectConfiguration oldCfg,
         StatisticsObjectConfiguration newCfg
     ) {
+        if (!active) {
+            if (log.isDebugEnabled())
+                log.debug("Ignore statistics collection due to inactive cluster state.");
+            return;
+        }
+
         synchronized (mux) {
             if (log.isDebugEnabled())
                 log.debug("Statistic configuration changed [old=" + oldCfg + ", new=" + newCfg + ']');
@@ -602,6 +715,10 @@ public class IgniteStatisticsConfigurationManager {
 
             if (!F.isEmpty(diff.updateCols())) {
                 GridH2Table tbl = schemaMgr.dataTable(newCfg.key().schema(), newCfg.key().obj());
+
+                // Drop table handles by dropTblLsnr.
+                if (tbl == null)
+                    return;
 
                 GridCacheContext cctx = tbl.cacheContext();
 
@@ -633,7 +750,7 @@ public class IgniteStatisticsConfigurationManager {
      * @param colsToCollect If specified - collect statistics only for this columns,
      *                      otherwise - collect to all columns from object configuration.
      */
-    private void gatherLocalStatistics(
+    public void gatherLocalStatistics(
         StatisticsObjectConfiguration cfg,
         GridH2Table tbl,
         Set<Integer> partsToAggregate,
@@ -643,7 +760,7 @@ public class IgniteStatisticsConfigurationManager {
         if (F.isEmpty(colsToCollect))
             colsToCollect = cfg.columns();
 
-        gatherer.gatherLocalObjectsStatisticsAsync(tbl, colsToCollect, partsToCollect);
+        gatherer.gatherLocalObjectsStatisticsAsync(tbl, cfg, colsToCollect, partsToCollect);
 
         gatherer.aggregateStatisticsAsync(cfg.key(), () -> aggregateLocalGathering(cfg.key(), partsToAggregate));
     }
@@ -700,6 +817,32 @@ public class IgniteStatisticsConfigurationManager {
     }
 
     /**
+     * Validate specified configuration: check that specified table exist and contains all specified columns.
+     *
+     * @param cfg Statistics object configuration to check.
+     * @param tbl Corresponding GridH2Table (if exists).
+     */
+    private void validate(StatisticsObjectConfiguration cfg, GridH2Table tbl) {
+        if (tbl == null) {
+            throw new IgniteSQLException(
+                "Table doesn't exist [schema=" + cfg.key().schema() + ", table=" + cfg.key().obj() + ']',
+                IgniteQueryErrorCode.TABLE_NOT_FOUND);
+        }
+
+        if (!F.isEmpty(cfg.columns())) {
+            for (String col : cfg.columns().keySet()) {
+                if (!tbl.doesColumnExist(col)) {
+                    throw new IgniteSQLException(
+                        "Column doesn't exist [schema=" + cfg.key().schema() +
+                            ", table=" + cfg.key().obj() +
+                            ", column=" + col + ']',
+                        IgniteQueryErrorCode.COLUMN_NOT_FOUND);
+                }
+            }
+        }
+    }
+
+    /**
      * Generate metastorage key by specified statistics key.
      *
      * @param key Statistics key.
@@ -711,5 +854,18 @@ public class IgniteStatisticsConfigurationManager {
         sb.append(key.schema()).append('.').append(key.obj());
 
         return sb.toString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onActivate(GridKernalContext kctx) throws IgniteCheckedException {
+        active = true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDeActivate(GridKernalContext kctx) {
+        active = false;
+
+        if (gatherer != null)
+            gatherer.cancelAllTasks();
     }
 }

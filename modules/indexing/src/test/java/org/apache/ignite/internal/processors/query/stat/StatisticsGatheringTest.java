@@ -15,11 +15,17 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.Collections;
 import java.util.Objects;
 
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
  * Test cluster wide gathering.
@@ -28,6 +34,25 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
     /** {@inheritDoc} */
     @Override public int nodes() {
         return 3;
+    }
+
+    /**
+     * Try to collect statistics on inactive cluster. Check that error will be thrown.
+     *
+     * @throws IgniteInterruptedCheckedException In case of error.
+     */
+    @Test
+    public void testInactiveClusterGathering() throws IgniteInterruptedCheckedException {
+        IgniteStatisticsManagerImpl statMgr0 = statisticsMgr(0);
+        StatisticsTarget t101 = createStatisticTarget(101);
+
+        sql("select * from SMALL101");
+        statMgr0.statisticConfiguration().dropStatistics(Collections.singletonList(t101), false);
+
+        grid(0).cluster().state(ClusterState.INACTIVE);
+
+        GridTestUtils.assertThrows(null, () -> collectStatistics(t101), IgniteException.class,
+            "Unable to perform collect statistics due to cluster state [state=INACTIVE]");
     }
 
     /**
@@ -59,7 +84,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
 
         GridTestUtils.assertThrows(
             log,
-            () -> grid(0).context().query().getIndexing().statsManager().collectStatistics(t100, t101, tWrong),
+            () -> statisticsMgr(0).collectStatistics(buildDefaultConfigurations(t100, t101, tWrong)),
             IgniteSQLException.class,
             "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
         );
@@ -81,7 +106,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
      */
     private boolean checkStat(ObjectStatisticsImpl stat) {
         assertTrue(stat.columnStatistics("A").total() > 0);
-        assertTrue(stat.columnStatistics("B").cardinality() > 0);
+        assertTrue(stat.columnStatistics("B").distinct() > 0);
         ColumnStatistics statC = stat.columnStatistics("C");
         assertTrue(statC.min() != null);
         assertTrue(statC.max() != null);

@@ -61,7 +61,6 @@ namespace ignite_test
         cfg.jvmOpts.push_back("-XX:+HeapDumpOnOutOfMemoryError");
         cfg.jvmOpts.push_back("-Duser.timezone=GMT");
         cfg.jvmOpts.push_back("-DIGNITE_QUIET=false");
-        cfg.jvmOpts.push_back("-DIGNITE_CONSOLE_APPENDER=false");
         cfg.jvmOpts.push_back("-DIGNITE_UPDATE_NOTIFIER=false");
         cfg.jvmOpts.push_back("-DIGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP=false");
         cfg.jvmOpts.push_back("-Duser.language=en");
@@ -110,6 +109,19 @@ namespace ignite_test
         InitConfig(cfg, cfgFile);
 
         return Ignition::Start(cfg, name);
+    }
+
+    ignite::Ignite StartPlatformNode(const char* cfg, const char* name)
+    {
+        std::string config(cfg);
+
+#ifdef IGNITE_TESTS_32
+        // Cutting off the ".xml" part.
+        config.resize(config.size() - 4);
+        config += "-32.xml";
+#endif //IGNITE_TESTS_32
+
+        return StartNode(config.c_str(), name);
     }
 
     std::string AppendPath(const std::string& base, const std::string& toAdd)

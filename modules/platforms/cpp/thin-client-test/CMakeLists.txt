@@ -30,8 +30,10 @@ include_directories(include)
 set(SOURCES src/teamcity/teamcity_boost.cpp
         src/teamcity/teamcity_messages.cpp
         src/cache_client_test.cpp
+        src/compute_client_test.cpp
         src/test_utils.cpp
         src/ignite_client_test.cpp
+        src/interop_test.cpp
         src/sql_fields_query_test.cpp
         src/auth_test.cpp
         src/tx_test.cpp
@@ -50,7 +52,7 @@ endif()
 
 set(TEST_TARGET IgniteThinClientTest)
 
-add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all)
+add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all --run_test=IgniteClientTestSuite)
 
 set_tests_properties(${TEST_TARGET} PROPERTIES ENVIRONMENT
         IGNITE_NATIVE_TEST_CPP_THIN_CONFIG_PATH=${PROJECT_SOURCE_DIR}/config)

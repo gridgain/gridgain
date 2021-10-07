@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import javax.net.ssl.HostnameVerifier;
 import org.apache.ignite.cache.CacheEntryProcessor;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -31,6 +32,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -742,9 +744,8 @@ public final class IgniteSystemProperties {
      * When set to {@code true} fields are written by BinaryMarshaller in sorted order. Otherwise
      * the natural order is used.
      * <p>
-     * @deprecated Should be removed in Apache Ignite 2.0.
+     * NOTICE: Should be the default in Apache Ignite 3.0
      */
-    @Deprecated
     public static final String IGNITE_BINARY_SORT_OBJECT_FIELDS = "IGNITE_BINARY_SORT_OBJECT_FIELDS";
 
     /**
@@ -817,7 +818,9 @@ public final class IgniteSystemProperties {
 
     /**
      * WAL rebalance threshold.
+     * @deprecated use Distributed MetaStorage property {@link GridCacheDatabaseSharedManager#HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY}.
      */
+    @Deprecated
     public static final String IGNITE_PDS_WAL_REBALANCE_THRESHOLD = "IGNITE_PDS_WAL_REBALANCE_THRESHOLD";
 
     /**
@@ -872,6 +875,22 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_FORCIBLE_NODE_KILL = "IGNITE_ENABLE_FORCIBLE_NODE_KILL";
 
     /**
+     * If the property is set, coincidence of client identifier and subject is required when security is enabled.
+     * <p>
+     * Default value is fasle.
+     *
+     */
+    public static final String IGNITE_CHECK_SENDER_NODE_SUBJECT = "IGNITE_CHECK_SENDER_NODE_SUBJECT";
+
+    /**
+     * If the property is set, client nodes should have explicitly rights to access to system cache.
+     * <p>
+     * Default value is fasle.
+     *
+     */
+    public static final String IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED = "IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED";
+
+    /**
      * Tasks stealing will be started if tasks queue size per data-streamer thread exceeds this threshold.
      * <p>
      * Default value is {@code 4}.
@@ -883,14 +902,6 @@ public final class IgniteSystemProperties {
      * If this property is set, then Ignite will use Async File IO factory by default.
      */
     public static final String IGNITE_USE_ASYNC_FILE_IO_FACTORY = "IGNITE_USE_ASYNC_FILE_IO_FACTORY";
-
-    /**
-     * If the property is set {@link org.apache.ignite.internal.pagemem.wal.record.TxRecord} records
-     * will be logged to WAL.
-     *
-     * Default value is {@code false}.
-     */
-    public static final String IGNITE_WAL_LOG_TX_RECORDS = "IGNITE_WAL_LOG_TX_RECORDS";
 
     /** Max amount of remembered errors for {@link GridLogThrottle}. */
     public static final String IGNITE_LOG_THROTTLE_CAPACITY = "IGNITE_LOG_THROTTLE_CAPACITY";
@@ -1001,10 +1012,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
-     * Property for setup percentage of WAL archive size to calculate threshold since which removing of old archive should be started.
-     * Default value is 0.5
+     * Property for setup percentage of WAL archive size to calculate
+     * threshold since which removing of old archive should be started.
+     * Default value is 0.5.
+     *
+     * @deprecated Use {@link DataStorageConfiguration#setMinWalArchiveSize}.
      */
-    public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
+    public static final String IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE =
+        "IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE";
 
     /**
      * Threshold time (in millis) to print warning to log if waiting for next wal segment took longer than the threshold.
@@ -1020,11 +1035,11 @@ public final class IgniteSystemProperties {
 
     /**
      * Whenever read load balancing is enabled, that means 'get' requests will be distributed between primary and backup
-     * nodes if it is possible and {@link CacheConfiguration#readFromBackup} is {@code true}.
+     * nodes if it is possible and {@link CacheConfiguration#isReadFromBackup()} is {@code true}.
      *
      * Default is {@code true}.
      *
-     * @see CacheConfiguration#readFromBackup
+     * @see CacheConfiguration#isReadFromBackup()
      */
     public static final String IGNITE_READ_LOAD_BALANCING = "IGNITE_READ_LOAD_BALANCING";
 
@@ -1100,7 +1115,10 @@ public final class IgniteSystemProperties {
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind if there is nothing to clean yet.
      *
      * Default is 500 ms.
+     *
+     * @deprecated No longer used.
      */
+    @Deprecated
     public static final String IGNITE_UNWIND_THROTTLING_TIMEOUT = "IGNITE_UNWIND_THROTTLING_TIMEOUT";
 
     /**
@@ -1510,6 +1528,25 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
+     * Use TreeMap instead of HashMap to hold distinct values.
+     * Default value is {@code false}. HashMap is used by default.
+     */
+    public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
+
+    /**
+     * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
+     * The default value is 1000.
+     */
+    public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
+
+    /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message. The default value is {@code false}.
+     */
+    public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
+        "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
@@ -1722,6 +1759,34 @@ public final class IgniteSystemProperties {
             res = Double.parseDouble(s);
         }
         catch (NumberFormatException ignore) {
+            res = dflt;
+        }
+
+        return res;
+    }
+
+    /**
+     * Gets either system property or environment variable with given name.
+     * The result is transformed to {@link UUID} using {@link UUID#fromString} method.
+     *
+     * @param name Name of the system property or environment variable.
+     * @param dflt Default value.
+     * @return UUID value of the system property or environment variable.
+     *         Returns default value in case neither system property
+     *         nor environment variable with given name is found.
+     */
+    public static UUID getUUID(String name, UUID dflt) {
+        String s = getString(name);
+
+        if (s == null)
+            return dflt;
+
+        UUID res;
+
+        try {
+            res = UUID.fromString(s);
+        }
+        catch (IllegalArgumentException ignore) {
             res = dflt;
         }
 

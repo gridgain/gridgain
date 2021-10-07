@@ -26,8 +26,6 @@ import java.io.PrintStream;
  * Interop .Net bootstrap.
  */
 public class PlatformDotNetBootstrap extends PlatformAbstractBootstrap {
-    private boolean useLogger;
-
     /** {@inheritDoc} */
     @Override protected PlatformAbstractConfigurationClosure closure(long envPtr) {
         return new PlatformDotNetConfigurationClosure(envPtr, useLogger);
@@ -35,7 +33,7 @@ public class PlatformDotNetBootstrap extends PlatformAbstractBootstrap {
 
     /** {@inheritDoc} */
     @Override protected void processInput(PlatformInputStream input) {
-        useLogger = input.readBoolean();
+        super.processInput(input);
 
         if (input.readBoolean()) {
             // Initialize console propagation.

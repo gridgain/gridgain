@@ -1980,7 +1980,7 @@ public class TcpDiscoverySelfTest extends GridCommonAbstractTest {
 
             ignite1.configuration().getDiscoverySpi().failNode(coordId, null);
 
-            assertTrue(failedLatch.await(2000, MILLISECONDS));
+            assertTrue(failedLatch.await(10_000, MILLISECONDS));
 
             assertTrue(coordSegmented.get());
 

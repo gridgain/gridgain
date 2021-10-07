@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataStorageMetrics;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -38,11 +43,19 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentRouter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.PAX;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mxbean.DataStorageMetricsMXBean;
 import org.apache.ignite.spi.metric.HistogramMetric;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -53,6 +66,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl.DATASTORAGE_METRIC_PREFIX;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -312,32 +326,226 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         ex.cluster().state(ClusterState.ACTIVE);
 
         try {
-            IgniteCache<Object, Object> cache = ex.cache("cache");
-            GridCacheDatabaseSharedManager dbMgr =
-                    (GridCacheDatabaseSharedManager)ex.context().cache().context().database();
-            DataStorageMetrics dsm;
             long prevLastStart = 0;
 
-            for (int i = 0; i < 10; i++) {
-                ex.context().cache().context().database().waitForCheckpoint("test");
-                cache.put(i, "VALUE_" + i);
+            for (int i = 0; i < 5; i++) {
+                IgniteCache<Object, Object> cache = ex.cache("cache");
 
-                dsm = dbMgr.persistentStoreMetrics();
+                for (int j = 0; j < 10_000; j++)
+                    cache.put(j, "VALUE_" + i + "_" + j);
+
+                ex.context().cache().context().database().waitForCheckpoint("test");
+
+                try {
+                    Thread.sleep(100);
+                }
+                catch (InterruptedException e) { /* no op */ }
+
+                GridCacheDatabaseSharedManager dbMgr =
+                        (GridCacheDatabaseSharedManager)ex.context().cache().context().database();
+                DataStorageMetrics dsm = dbMgr.persistentStoreMetrics();
+
                 long lastStart = dsm.getLastCheckpointStarted();
 
                 assertTrue(lastStart > 0);
                 assertTrue(lastStart - prevLastStart > 0);
-
-                try {
-                    Thread.sleep(10);
-                }
-                catch (InterruptedException e) { }
 
                 prevLastStart = lastStart;
             }
         }
         finally {
             stopAllGrids();
+        }
+    }
+
+    /**
+     * Checking that the metrics of the total logged bytes are working correctly.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWalWrittenBytes() throws Exception {
+        IgniteEx n = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB))
+        );
+
+        n.cluster().state(ACTIVE);
+
+        populateCache(n);
+
+        disableWal(n, true);
+
+        assertEquals(-1, walMgr(n).lastArchivedSegment());
+
+        long exp = ((FileWALPointer)walMgr(n).lastWritePointer()).fileOffset() - HEADER_RECORD_SIZE;
+
+        assertEquals(exp, dbMgr(n).persistentStoreMetrics().getWalWrittenBytes());
+        assertEquals(exp, dsMetricsMXBean(n).getWalWrittenBytes());
+        assertEquals(exp, ((LongAdderMetric)dsMetricRegistry(n).findMetric("WalWrittenBytes")).value());
+    }
+
+    /**
+     * Check whether WAL is reporting correct usage when archiving was not needed.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWalTotalSizeWithoutArchivingPerfomed() throws Exception {
+        IgniteEx n = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB))
+        );
+
+        n.cluster().state(ACTIVE);
+
+        populateCache(n);
+
+        disableWal(n, true);
+
+        checkWalArchiveAndTotalSize(n, true);
+    }
+
+    /**
+     * Check whether WAL is reporting correct usage when archiving is performed.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWalTotalSizeWithArchive() throws Exception {
+        IgniteEx n = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration().setWalSegmentSize((int)(2 * U.MB))
+        );
+
+        n.cluster().state(ACTIVE);
+
+        while (walMgr(n).lastArchivedSegment() < 3)
+            n.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        disableWal(n, true);
+
+        checkWalArchiveAndTotalSize(n, true);
+    }
+
+    /**
+     * Check whether Wal is reporting correct usage when WAL Archive is turned off.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWalTotalSizeWithArchiveTurnedOff() throws Exception {
+        IgniteEx n = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration()
+            .setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath()).setWalSegmentSize((int)(2 * U.MB))
+        );
+
+        n.cluster().state(ACTIVE);
+
+        populateCache(n);
+
+        disableWal(n, true);
+
+        checkWalArchiveAndTotalSize(n, false);
+    }
+
+    /**
+     * Checking that the metrics of the total size compressed segment are working correctly.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWalCompressedBytes() throws Exception {
+        IgniteEx n0 = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg ->
+            cfg.getDataStorageConfiguration().setWalCompactionEnabled(true).setWalSegmentSize((int)(2 * U.MB))
+        );
+
+        n0.cluster().state(ACTIVE);
+        awaitPartitionMapExchange();
+
+        while (walMgr(n0).lastArchivedSegment() < 3)
+            n0.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+
+        waitForCondition(
+            () -> walMgr(n0).lastArchivedSegment() == walMgr(n0).lastCompactedSegment(),
+            getTestTimeout()
+        );
+
+        assertCorrectWalCompressedBytesMetrics(n0);
+
+        stopAllGrids();
+
+        IgniteEx n1 = startGrid(
+            0,
+            (Consumer<IgniteConfiguration>)cfg -> cfg.getDataStorageConfiguration().setWalCompactionEnabled(true)
+        );
+
+        n1.cluster().state(ACTIVE);
+        awaitPartitionMapExchange();
+
+        assertCorrectWalCompressedBytesMetrics(n1);
+    }
+
+    /**
+     * Populates a cache w/32 KB of data.
+     *
+     * @param igniteEx Node.
+     */
+    private void populateCache(IgniteEx igniteEx) {
+        for (int i = 0; i < 10; i++)
+            igniteEx.cache("cache").put(ThreadLocalRandom.current().nextLong(), new byte[(int)(32 * U.KB)]);
+    }
+
+    /**
+     * Check the state of wal archive, and whether the total size of
+     * wal (and possibly wal archive) match what is expected.
+     *
+     * @param igniteEx Node.
+     * @param hasWalArchive Whether wal archiving is enabled.
+     * @throws Exception If failed.
+     */
+    private void checkWalArchiveAndTotalSize(IgniteEx igniteEx, boolean hasWalArchive) throws Exception {
+        FileWriteAheadLogManager walMgr = walMgr(igniteEx);
+
+        SegmentRouter router = walMgr.getSegmentRouter();
+
+        assertEquals(router.hasArchive(), hasWalArchive);
+
+        //Wait to avoid race condition where new segments(and corresponding .tmp files) are created after totalSize has been calculated.
+        if (router.hasArchive()) {
+            int expWalWorkSegements = igniteEx.configuration().getDataStorageConfiguration().getWalSegments();
+
+            assertTrue(waitForCondition(() -> walFiles(router.getWalWorkDir()).length == expWalWorkSegements, 3000l));
+
+            assertTrue(waitForCondition(() -> walMgr.lastArchivedSegment() == walMgr.currentSegment() - 1, 3000l));
+        }
+
+        long totalSize = walMgr.totalSize(walFiles(router.getWalWorkDir()));
+
+        if (router.hasArchive())
+            totalSize += walMgr.totalSize(walFiles(router.getWalArchiveDir()));
+
+        assertEquals(totalSize, dbMgr(igniteEx).persistentStoreMetrics().getWalTotalSize());
+        assertEquals(totalSize, dsMetricsMXBean(igniteEx).getWalTotalSize());
+        assertEquals(totalSize, ((LongGauge)dsMetricRegistry(igniteEx).findMetric("WalTotalSize")).value());
+    }
+
+    /**
+     * List of all relevant wal files descriptors in a given directory.
+     *
+     * @param filesDir Directory where the wal files are located.
+     * @return List of relevant file descriptors
+     * @throws IgniteException If failed.
+     */
+    private FileDescriptor[] walFiles(final File filesDir) throws IgniteException {
+        try {
+            return FileWriteAheadLogManager.loadFileDescriptors(filesDir);
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
         }
     }
 
@@ -387,5 +595,39 @@ public class IgniteDataStorageMetricsSelfTest extends GridCommonAbstractTest {
         @Override public int hashCode() {
             return Objects.hash(fName, lName);
         }
+    }
+
+    /**
+     * Getting DATASTORAGE_METRIC_PREFIX metric registry.
+     *
+     * @param n Node.
+     * @return Group of metrics.
+     */
+    private MetricRegistry dsMetricRegistry(IgniteEx n) {
+        return n.context().metric().registry(DATASTORAGE_METRIC_PREFIX);
+    }
+
+    /**
+     * Getting data storage MXBean.
+     *
+     * @param n Node.
+     * @return MXBean.
+     */
+    private DataStorageMetricsMXBean dsMetricsMXBean(IgniteEx n) {
+        return getMxBean(n.name(), "Persistent Store", "DataStorageMetrics", DataStorageMetricsMXBean.class);
+    }
+
+    /**
+     * Check that the metric of the total size compressed segment is working correctly.
+     *
+     * @param n Node.
+     */
+    private void assertCorrectWalCompressedBytesMetrics(IgniteEx n) {
+        long exp = Arrays.stream(walMgr(n).walArchiveFiles()).filter(FileDescriptor::isCompressed)
+            .mapToLong(fd -> fd.file().length()).sum();
+
+        assertEquals(exp, dbMgr(n).persistentStoreMetrics().getWalCompressedBytes());
+        assertEquals(exp, dsMetricsMXBean(n).getWalCompressedBytes());
+        assertEquals(exp, ((LongAdderMetric)dsMetricRegistry(n).findMetric("WalCompressedBytes")).value());
     }
 }

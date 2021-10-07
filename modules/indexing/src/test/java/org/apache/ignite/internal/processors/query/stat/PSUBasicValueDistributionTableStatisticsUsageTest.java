@@ -59,7 +59,6 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
 
         sql("CREATE TABLE digital_distribution (ID INT PRIMARY KEY, col_a int, col_b int, col_c int, col_d int) " +
             "WITH \"TEMPLATE=" + cacheMode + "\"");
-        sql("ANALYZE PUBLIC.digital_distribution;");
 
         sql("CREATE INDEX digital_distribution_col_a ON digital_distribution(col_a)");
         sql("CREATE INDEX digital_distribution_col_b ON digital_distribution(col_b)");
@@ -91,7 +90,7 @@ public class PSUBasicValueDistributionTableStatisticsUsageTest extends Statistic
 
         sql("CREATE INDEX empty_distribution_no_stat_col_a ON empty_distribution_no_stat(col_a)");
 
-        updateStatistics("digital_distribution", "empty_distribution");
+        collectStatistics("digital_distribution", "empty_distribution");
     }
 
     /**

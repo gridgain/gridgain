@@ -2513,6 +2513,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         if (part.state() != MOVING)
             part.moving();
+        else
+            part.updateClearVersion();
 
         assert part.state() == MOVING : part;
 

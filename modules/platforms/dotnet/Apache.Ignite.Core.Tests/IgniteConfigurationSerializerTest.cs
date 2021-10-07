@@ -385,6 +385,8 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(2, ec.Count);
             Assert.AreEqual(new[] {"exec1", "exec2"}, ec.Select(e => e.Name));
             Assert.AreEqual(new[] {1, 2}, ec.Select(e => e.Size));
+
+            Assert.AreEqual(AsyncContinuationExecutor.UnsafeSynchronous, cfg.AsyncContinuationExecutor);
         }
 
         /// <summary>
@@ -1080,7 +1082,8 @@ namespace Apache.Ignite.Core.Tests
                         Name = "exec-1",
                         Size = 11
                     }
-                }
+                },
+                AsyncContinuationExecutor = AsyncContinuationExecutor.ThreadPool
             };
         }
 

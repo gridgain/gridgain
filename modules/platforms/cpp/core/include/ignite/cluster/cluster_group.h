@@ -28,6 +28,11 @@
 
 namespace ignite
 {
+    namespace impl
+    {
+        class IgniteImpl;
+    }
+
     namespace cluster
     {
         /**
@@ -39,6 +44,7 @@ namespace ignite
         class IGNITE_IMPORT_EXPORT ClusterGroup
         {
             friend class impl::cluster::ClusterGroupImpl;
+            friend class impl::IgniteImpl;
         public:
             /**
              * Constructor.

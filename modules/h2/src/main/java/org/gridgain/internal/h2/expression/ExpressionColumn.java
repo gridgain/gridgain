@@ -8,6 +8,7 @@ package org.gridgain.internal.h2.expression;
 import org.gridgain.internal.h2.command.dml.Select;
 import org.gridgain.internal.h2.command.dml.SelectGroups;
 import org.gridgain.internal.h2.command.dml.SelectListColumnResolver;
+import org.gridgain.internal.h2.expression.analysis.DataAnalysisOperation;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.Parser;
@@ -182,6 +183,11 @@ public class ExpressionColumn extends Expression {
         if (select == null) {
             throw DbException.get(ErrorCode.MUST_GROUP_BY_COLUMN_1, getSQL(false));
         }
+
+        if (stage == DataAnalysisOperation.STAGE_RESET) {
+            return;
+        }
+
         SelectGroups groupData = select.getGroupDataIfCurrent(false);
         if (groupData == null) {
             // this is a different level (the enclosing query)

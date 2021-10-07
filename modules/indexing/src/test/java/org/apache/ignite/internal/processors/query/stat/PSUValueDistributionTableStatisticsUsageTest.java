@@ -86,7 +86,8 @@ public class PSUValueDistributionTableStatisticsUsageTest extends StatisticsAbst
             sql(sql);
         }
         sql("INSERT INTO sized(id, small, big) VALUES(" + BIG_SIZE + ", null, null)");
-        updateStatistics("sized");
+
+        collectStatistics("sized");
     }
 
     /**

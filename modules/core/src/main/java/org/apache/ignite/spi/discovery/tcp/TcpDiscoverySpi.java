@@ -225,7 +225,7 @@ import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
  * &lt;/bean&gt;
  * </pre>
  * <p>
- * <img src="http://ignite.apache.org/images/spring-small.png">
+ * <img src="https://www.gridgain.com/images/spring-small.png">
  * <br>
  * For information about Spring framework visit <a href="http://www.springframework.org/">www.springframework.org</a>
  * @see DiscoverySpi
@@ -1916,9 +1916,15 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * @throws org.apache.ignite.spi.IgniteSpiException If an error occurs.
      */
     protected Collection<InetSocketAddress> resolvedAddresses() throws IgniteSpiException {
-        List<InetSocketAddress> res = new ArrayList<>();
+        // Time when resolution process started.
+        long resolutionStartNanos = System.nanoTime();
 
+        List<InetSocketAddress> res = new ArrayList<>();
         Collection<InetSocketAddress> addrs;
+
+        long timeout = isClientMode() && impl.getSpiState().equalsIgnoreCase("connected")
+                ? netTimeout
+                : joinTimeout;
 
         // Get consistent addresses collection.
         while (true) {
@@ -1928,12 +1934,22 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
                 break;
             }
             catch (IgniteSpiException e) {
-                LT.error(log, e, "Failed to get registered addresses from IP finder on start " +
-                    "(retrying every " + getReconnectDelay() + "ms; change 'reconnectDelay' to configure " +
-                    "the frequency of retries).");
+                LT.error(log, e, "Failed to get registered addresses from IP finder " +
+                        "(retrying every " + getReconnectDelay() + "ms;" +
+                        " change 'reconnectDelay' to configure the frequency of retries) " +
+                        "[maxTimeout=" + timeout + "]", true);
             }
 
             try {
+                if (timeout > 0 && U.millisSinceNanos(resolutionStartNanos) > timeout) {
+                    LT.warn(log, "Unable to get registered addresses from IP finder, timeout is reached " +
+                            "(consider increasing 'joinTimeout' for join process or 'netTimeout' for reconnection) " +
+                            "[joinTimeout=" + joinTimeout + ", netTimeout=" + netTimeout + "]");
+
+                    addrs = res;
+                    break;
+                }
+
                 U.sleep(getReconnectDelay());
             }
             catch (IgniteInterruptedCheckedException e) {
@@ -1946,7 +1962,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             try {
                 InetSocketAddress resolved = addr.isUnresolved() ?
-                    new InetSocketAddress(InetAddress.getByName(addr.getHostName()), addr.getPort()) : addr;
+                        new InetSocketAddress(InetAddress.getByName(addr.getHostName()), addr.getPort()) : addr;
 
                 if (locNodeAddrs == null || !locNodeAddrs.contains(resolved))
                     res.add(resolved);

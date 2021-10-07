@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.ClusterStateOnStartPropertyTe
 import org.apache.ignite.internal.processors.cache.IgniteClusterActivateDeactivateTestWithPersistence;
 import org.apache.ignite.internal.processors.cache.IgnitePdsDataRegionMetricsTxTest;
 import org.apache.ignite.internal.processors.cache.RestorePartitionStateTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManagerSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheConfigurationFileConsistencyCheckTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheObjectBinaryProcessorOnDiscoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDestroyCacheTest;
@@ -55,10 +56,13 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPages
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTestPersistence;
 import org.apache.ignite.internal.processors.cache.persistence.wal.CpTriggeredWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ExplicitWalDeltaConsistencyTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManagerSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SegmentedRingByteBufferTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.SysPropWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.WalArchiveConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.WalCorruptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.WalEnableDisableWithRestartsTest;
+import org.apache.ignite.internal.processors.cache.persistence.wal.WalEnableDisableWithNodeShutdownTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAwareTest;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationPersistentTest;
 import org.apache.ignite.internal.processors.database.IgniteDbDynamicCacheSelfTest;
@@ -67,6 +71,7 @@ import org.apache.ignite.internal.processors.database.IgniteDbPutGetWithCacheSto
 import org.apache.ignite.internal.processors.database.IgniteDbSingleNodePutGetTest;
 import org.apache.ignite.internal.processors.database.IgniteDbSingleNodeTinyPutGetTest;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessorTest;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessorSelfTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStoragePersistentTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
@@ -128,13 +133,20 @@ public class IgnitePdsTestSuite {
         // Binary meta tests.
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCacheObjectBinaryProcessorOnDiscoveryTest.class, ignoredTests);
 
+        GridTestUtils.addTestIfNeeded(suite, WalEnableDisableWithNodeShutdownTest.class, ignoredTests);
+
         GridTestUtils.addTestIfNeeded(suite, SegmentAwareTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, WalCorruptionTest.class, ignoredTests);
 
+        GridTestUtils.addTestIfNeeded(suite, WalEnableDisableWithRestartsTest.class, ignoredTests);
+
         GridTestUtils.addTestIfNeeded(suite, WalArchiveConsistencyTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, RestorePartitionStateTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, FileWriteAheadLogManagerSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteCacheDatabaseSharedManagerSelfTest.class, ignoredTests);
 
         return suite;
     }
@@ -205,5 +217,7 @@ public class IgnitePdsTestSuite {
         GridTestUtils.addTestIfNeeded(suite, ActiveOnStartPropertyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AutoActivationPropertyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ClusterStateOnStartPropertyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, DurableBackgroundTasksProcessorSelfTest.class, ignoredTests);
     }
 }

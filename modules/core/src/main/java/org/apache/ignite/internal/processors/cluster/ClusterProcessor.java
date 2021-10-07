@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import javax.management.JMException;
-import javax.management.ObjectName;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -28,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.management.JMException;
+import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -101,6 +101,11 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
  *
  */
 public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
+    /**
+     * Ignite cluster ID system property. If is not set, random UUID will be used.
+     */
+    private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
+
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
@@ -449,7 +454,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         }
 
         if (!ctx.discovery().localNode().isClient()) {
-            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+            cluster.setId(locClusterId != null ? locClusterId :
+                IgniteSystemProperties.getUUID(IGNITE_CLUSTER_ID, UUID.randomUUID()));
 
             cluster.setTag(locClusterTag != null ? locClusterTag :
                 ClusterTagGenerator.generateTag());
@@ -986,6 +992,13 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @return Cluster name.
      * */
     public String clusterName() {
+        try {
+            ctx.cache().awaitStarted();
+        }
+        catch (IgniteCheckedException e) {
+            throw U.convertException(e);
+        }
+
         return IgniteSystemProperties.getString(
             IGNITE_CLUSTER_NAME,
             ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
@@ -1235,7 +1248,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.getSystemExecutorService().execute(this);
+            ctx.pools().getSystemExecutorService().execute(this);
         }
     }
 }

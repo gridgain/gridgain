@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -129,7 +130,7 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAL_LOG_TX_RECORDS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
@@ -1563,8 +1564,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRecoveryOnTransactionalAndPartitionedCache() throws Exception {
-        IgniteEx ignite = (IgniteEx)startGrids(3);
-        ignite.cluster().active(true);
+        IgniteEx ignite = startGrids(3);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         final String cacheName = "transactional";
 
@@ -1616,8 +1617,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
         stopAllGrids();
 
-        ignite = (IgniteEx)startGrids(3);
-        ignite.cluster().active(true);
+        ignite = startGrids(3);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         cache = ignite.cache(cacheName);
 
@@ -1634,10 +1635,9 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * @throws Exception If any fail.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_WAL_LOG_TX_RECORDS, value = "true")
     public void testTxRecordsConsistency() throws Exception {
-        IgniteEx ignite = (IgniteEx)startGrids(3);
-        ignite.cluster().active(true);
+        IgniteEx ignite = startGrids(3);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         final String cacheName = "transactional";
 
@@ -1680,12 +1680,10 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                 cache.put(key, value);
             }
 
-            if (random.nextBoolean()) {
+            if (random.nextBoolean())
                 tx.commit();
-            }
-            else {
+            else
                 tx.rollback();
-            }
 
             if (t % 50 == 0)
                 log.info("Finished transaction " + t);
@@ -1802,7 +1800,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * Tests a scenario when a coordinator has failed after recovery during activation.
      */
     @Test
-    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
+    @WithSystemProperty(key = IGNITE_DISABLE_WAL_DURING_REBALANCING, value = "false")
     public void testRecoveryAfterRestart_Activate() throws Exception {
         IgniteEx crd = startGrid(1);
         crd.cluster().active(true);

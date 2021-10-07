@@ -47,18 +47,6 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
     /** Logger to use. */
     private IgniteLogger log;
 
-    /** Set to true if engine should request client authentication. */
-    private boolean wantClientAuth;
-
-    /** Set to true if engine should require client authentication. */
-    private boolean needClientAuth;
-
-    /** Array of enabled cipher suites, optional. */
-    private String[] enabledCipherSuites;
-
-    /** Array of enabled protocols. */
-    private String[] enabledProtos;
-
     /** SSL context to use. */
     private SSLContext sslCtx;
 
@@ -102,42 +90,6 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         return directMode;
     }
 
-    /**
-     * Sets flag indicating whether client authentication will be requested during handshake.
-     *
-     * @param wantClientAuth {@code True} if client authentication should be requested.
-     */
-    public void wantClientAuth(boolean wantClientAuth) {
-        this.wantClientAuth = wantClientAuth;
-    }
-
-    /**
-     * Sets flag indicating whether client authentication will be required.
-     *
-     * @param needClientAuth {@code True} if client authentication is required.
-     */
-    public void needClientAuth(boolean needClientAuth) {
-        this.needClientAuth = needClientAuth;
-    }
-
-    /**
-     * Sets a set of cipher suites that will be enabled for this filter.
-     *
-     * @param enabledCipherSuites Enabled cipher suites.
-     */
-    public void enabledCipherSuites(String... enabledCipherSuites) {
-        this.enabledCipherSuites = enabledCipherSuites;
-    }
-
-    /**
-     * Sets enabled secure protocols for this filter.
-     *
-     * @param enabledProtos Enabled protocols.
-     */
-    public void enabledProtocols(String... enabledProtos) {
-        this.enabledProtos = enabledProtos;
-    }
-
     /** {@inheritDoc} */
     @Override public void onSessionOpened(GridNioSession ses) throws IgniteCheckedException {
         if (log.isDebugEnabled())
@@ -159,18 +111,6 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             boolean clientMode = !ses.accepted();
 
             engine.setUseClientMode(clientMode);
-
-            if (!clientMode) {
-                engine.setWantClientAuth(wantClientAuth);
-
-                engine.setNeedClientAuth(needClientAuth);
-            }
-
-            if (enabledCipherSuites != null)
-                engine.setEnabledCipherSuites(enabledCipherSuites);
-
-            if (enabledProtos != null)
-                engine.setEnabledProtocols(enabledProtos);
 
             sslMeta = new GridSslMeta();
 

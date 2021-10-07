@@ -26,6 +26,7 @@
 #include <ignite/impl/interop/interop_memory.h>
 #include <ignite/impl/binary/binary_type_manager.h>
 #include <ignite/impl/handle_registry.h>
+#include <ignite/impl/logger.h>
 
 namespace ignite
 {
@@ -71,8 +72,9 @@ namespace ignite
              * Constructor.
              *
              * @param cfg Node configuration.
+             * @param logger Logger.
              */
-            IgniteEnvironment(const IgniteConfiguration& cfg);
+            IgniteEnvironment(const IgniteConfiguration& cfg, Logger* logger);
 
             /**
              * Destructor.
@@ -137,15 +139,30 @@ namespace ignite
             int64_t OnContinuousQueryFilterApply(common::concurrent::SharedPointer<interop::InteropMemory>& mem);
 
             /**
-             * Callback on future result recieved.
+             * Callback on future result received.
+             *
+             * @param handle Task handle.
+             * @param value Value.
+             */
+            int64_t OnFuturePrimitiveResult(int64_t handle, int64_t value);
+
+            /**
+             * Callback on future result received.
              *
              * @param handle Task handle.
              * @param mem Memory with data.
              */
-            int64_t OnFutureResult(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory> &mem);
+            int64_t OnFutureObjectResult(int64_t handle, common::concurrent::SharedPointer<interop::InteropMemory> &mem);
 
             /**
-             * Callback on future error recieved.
+             * Callback on future null result received.
+             *
+             * @param handle Task handle.
+             */
+            int64_t OnFutureNullResult(int64_t handle);
+
+            /**
+             * Callback on future error received.
              *
              * @param handle Task handle.
              * @param mem Memory with data.
@@ -334,6 +351,24 @@ namespace ignite
             ignite::Ignite* GetIgnite();
 
             /**
+             * Log message.
+             * @param level Log level.
+             * @param message Message.
+             * @param category Category.
+             * @param errorInfo Error information.
+             */
+            void Log(LogLevel::Type level, const std::string& message, const std::string& category,
+                 const std::string& errorInfo);
+
+            /**
+             * Is log level enabled.
+             *
+             * @param level Log level.
+             * @return @c true if log level is supported.
+             */
+            bool IsLogLevelEnabled(LogLevel::Type level);
+
+            /**
              * InLongOutLong callback.
              * Allow access to private nodes member.
              *
@@ -379,6 +414,9 @@ namespace ignite
 
             /** Ignite node. */
             ignite::Ignite* ignite;
+
+            /** Logger. */
+            Logger* logger;
 
             IGNITE_NO_COPY_ASSIGNMENT(IgniteEnvironment);
         };

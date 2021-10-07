@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -263,6 +263,8 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
 
+        forceCheckpoint();
+
         // Restart first time.
         stopGrid(0);
 
@@ -307,8 +309,8 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
         private boolean rebuiltIndexes;
 
         /** {@inheritDoc} */
-        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
-            IgniteInternalFuture<?> future = super.rebuildIndexesFromHash(cctx);
+        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {
+            IgniteInternalFuture<?> future = super.rebuildIndexesFromHash(cctx, force);
             rebuiltIndexes = future != null;
             return future;
         }

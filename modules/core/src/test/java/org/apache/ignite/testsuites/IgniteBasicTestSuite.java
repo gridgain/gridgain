@@ -71,12 +71,15 @@ import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheClassNam
 import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheClientRequestsMappingOnMissTest;
 import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheConcurrentReadWriteTest;
 import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheFSRestoreTest;
+import org.apache.ignite.internal.processors.cache.IgniteMarshallerCacheSeparateDirectoryTest;
 import org.apache.ignite.internal.processors.cache.RebalanceWithDifferentThreadPoolSizeTest;
 import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictPartitionInLogTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionEvictionOrderTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.ClockPageReplacementFlagsTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagePoolTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.SegmentedLruPageListTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
@@ -228,6 +231,8 @@ import org.junit.runners.Suite;
 
     // Basic DB data structures.
     PagePoolTest.class,
+    SegmentedLruPageListTest.class,
+    ClockPageReplacementFlagsTest.class,
     BPlusTreeSelfTest.class,
     BPlusTreeFakeReuseSelfTest.class,
     BPlusTreeReuseSelfTest.class,
@@ -243,6 +248,7 @@ import org.junit.runners.Suite;
     IgniteMarshallerCacheFSRestoreTest.class,
     IgniteMarshallerCacheClassNameConflictTest.class,
     IgniteMarshallerCacheClientRequestsMappingOnMissTest.class,
+    IgniteMarshallerCacheSeparateDirectoryTest.class,
 
     IgniteDiagnosticMessagesTest.class,
     IgniteDiagnosticMessagesMultipleConnectionsTest.class,

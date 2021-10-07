@@ -348,9 +348,10 @@ public class CacheGroupContext {
      * @throws IgniteCheckedException If failed.
      */
     void onCacheStarted(GridCacheContext cctx) throws IgniteCheckedException {
-        addCacheContext(cctx);
-
+        // Initialize the cache before publishing the context.
         offheapMgr.onCacheStarted(cctx);
+
+        addCacheContext(cctx);
     }
 
     /**
@@ -894,6 +895,8 @@ public class CacheGroupContext {
         initializeIO();
 
         ctx.affinity().onCacheGroupCreated(this);
+
+        ctx.evict().onCacheGroupStarted(this);
     }
 
     /**
@@ -1090,9 +1093,10 @@ public class CacheGroupContext {
     }
 
     /**
+     * @param cacheDescriptor Cache descriptor.
      * @throws IgniteCheckedException If failed.
      */
-    public void start() throws IgniteCheckedException {
+    public void start(DynamicCacheDescriptor cacheDescriptor) throws IgniteCheckedException {
         GridAffinityAssignmentCache affCache = ctx.affinity().groupAffinity(grpId);
 
         if (affCache != null)
@@ -1116,7 +1120,7 @@ public class CacheGroupContext {
 
         try {
             offheapMgr = ctx.kernalContext().resource().resolve(persistenceEnabled
-                ? new GridCacheOffheapManager()
+                ? new GridCacheOffheapManager(cacheDescriptor)
                 : new IgniteCacheOffheapManagerImpl());
         }
         catch (Exception e) {

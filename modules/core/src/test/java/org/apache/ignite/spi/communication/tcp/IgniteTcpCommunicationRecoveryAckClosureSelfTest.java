@@ -53,6 +53,7 @@ import org.apache.ignite.testframework.GridSpiTestContext;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
+import org.apache.ignite.testframework.junits.IgniteMock;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
@@ -468,6 +469,10 @@ public class IgniteTcpCommunicationRecoveryAckClosureSelfTest<T extends Communic
             spiRsrcs.add(rsrcs);
 
             rsrcs.inject(spi);
+
+            IgniteMock ignite = GridTestUtils.getFieldValue(spi, IgniteSpiAdapter.class, "ignite");
+
+            ignite.setCommunicationSpi(spi);
 
             spi.setListener(new TestListener());
 

@@ -203,7 +203,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionInde
  * &lt;/bean&gt;
  * </pre>
  * <p>
- * <img src="http://ignite.apache.org/images/spring-small.png">
+ * <img src="https://www.gridgain.com/images/spring-small.png">
  * <br>
  * For information about Spring framework visit <a href="http://www.springframework.org/">www.springframework.org</a>
  * @see CommunicationSpi
@@ -621,7 +621,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 .append(", reserveCnt=").append(desc.reserveCount())
                 .append(", connected=").append(desc.connected())
                 .append(", reserved=").append(desc.reserved())
-                .append(", handshakeIdx=").append(desc.handshakeIndex())
                 .append(", descIdHash=").append(System.identityHashCode(desc))
                 .append(']').append(U.nl());
         }
@@ -738,7 +737,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             commWorker,
             ignite.configuration(),
             this.srvLsnr,
-            getName(),
+            ignite.configuration().getIgniteInstanceName(),
             getWorkersRegistry(ignite),
             ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
             this::createTcpClient,
@@ -1283,8 +1282,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     @TestOnly
     @Deprecated
     public void simulateNodeFailure() {
-        if (nioSrvWrapper.nio() != null)
-            nioSrvWrapper.nio().stop();
+        nioSrvWrapper.stop();
 
         if (commWorker != null)
             U.interrupt(commWorker.runner());

@@ -597,7 +597,7 @@ namespace ignite
 
                 // ODBC version.
 #ifdef SQL_DRIVER_ODBC_VER
-                strParams[SQL_DRIVER_ODBC_VER] = "03.00";
+                strParams[SQL_DRIVER_ODBC_VER] = "03.50";
 #endif // SQL_DRIVER_ODBC_VER
 
 #ifdef SQL_DRIVER_VER

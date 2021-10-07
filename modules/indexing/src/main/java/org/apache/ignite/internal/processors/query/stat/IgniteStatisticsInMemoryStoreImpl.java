@@ -15,16 +15,17 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.util.collection.IntHashMap;
-import org.apache.ignite.internal.util.collection.IntMap;
-
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Sql statistics storage in metastore.
@@ -32,8 +33,11 @@ import java.util.function.Function;
  * Store only partition level statistics.
  */
 public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore {
-    /** Table -> Partition -> Partition Statistics map, populated only on server nodes without persistence enabled. */
+    /** Key -> Partition -> Partition Statistics map, populated only on server nodes without persistence enabled. */
     private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsImpl>> partsStats = new ConcurrentHashMap<>();
+
+    /** Key -> Partition -> ObsolescenceInfo map, populated only on server nodes without persistence enabled.  */
+    private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsStats = new ConcurrentHashMap<>();
 
     /** Logger. */
     private final IgniteLogger log;
@@ -50,6 +54,23 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     /** {@inheritDoc} */
     @Override public void clearAllStatistics() {
         partsStats.clear();
+        obsStats.clear();
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(
+        String schema
+    ) {
+        Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> res = new HashMap<>(partsStats.size());
+
+        for (StatisticsKey key : partsStats.keySet()) {
+            partsStats.computeIfPresent(key, (k, v) -> {
+                res.put(k, v.values());
+                return v;
+            });
+        }
+
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -65,7 +86,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             // Need to make a copy under the lock.
-            res[0] = Arrays.asList(v.values());
+            res[0] = new ArrayList<>(v.values());
 
             return v;
         });
@@ -89,6 +110,52 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
             return v;
         });
+    }
+
+    /** {@inheritDoc} */
+    @Override public void saveObsolescenceInfo(
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence
+    ) {
+        for (Map.Entry<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> objObs : obsolescence.entrySet()) {
+            obsStats.compute(objObs.getKey(), (k, v) -> {
+                if (v == null)
+                    v = new IntHashMap<>();
+                IntMap<ObjectPartitionStatisticsObsolescence> vFinal = v;
+
+                objObs.getValue().forEach((k1,v1) -> vFinal.put(k1, v1));
+
+                return v;
+            });
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds) {
+        if (F.isEmpty(partIds))
+            obsStats.remove(key);
+        else {
+            obsStats.computeIfPresent(key, (k, v) -> {
+                for (Integer partId : partIds)
+                    v.remove(partId);
+
+                return v.isEmpty() ? null : v;
+            });
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> loadAllObsolescence() {
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> res = new HashMap<>();
+
+        obsStats.forEach((k, v) -> {
+            IntHashMap newV = new IntHashMap(v.size());
+
+            v.forEach((k1, v1) -> newV.put(k1, v1));
+
+            res.put(k, newV);
+        });
+
+        return res;
     }
 
     /** {@inheritDoc} */

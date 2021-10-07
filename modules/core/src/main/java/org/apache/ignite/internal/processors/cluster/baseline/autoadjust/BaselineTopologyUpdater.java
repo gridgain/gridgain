@@ -75,7 +75,7 @@ public class BaselineTopologyUpdater {
         this.baselineAutoAdjustScheduler = new BaselineAutoAdjustScheduler(ctx.timeout(), new BaselineAutoAdjustExecutor(
             ctx.log(BaselineAutoAdjustExecutor.class),
             cluster,
-            ctx.getSystemExecutorService(),
+            ctx.pools().getSystemExecutorService(),
             this::isTopologyWatcherEnabled
         ), ctx.log(BaselineAutoAdjustScheduler.class));
         this.discoveryMgr = ctx.discovery();
@@ -114,11 +114,11 @@ public class BaselineTopologyUpdater {
 
                         long timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
 
-                        log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
-
-                        baselineAutoAdjustScheduler.schedule(baselineData, timeout);
+                        // In case of merging exchanges the baseline data can be already expired
+                        // and so it should be rejected by scheduler.
+                        if (baselineAutoAdjustScheduler.schedule(baselineData, timeout))
+                            log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
                     });
-
             }
         }
     }

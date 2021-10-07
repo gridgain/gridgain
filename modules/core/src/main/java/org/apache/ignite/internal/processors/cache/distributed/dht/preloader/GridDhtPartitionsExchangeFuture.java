@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -313,16 +313,16 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
     /** */
     @GridToStringExclude
-    private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
+    private final IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
     /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
-    private Set<UUID> exclusionsFromHistoricalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<UUID> exclusionsFromHistoricalRebalance = ConcurrentHashMap.newKeySet();
 
     /**
      * Set of nodes that cannot be used for full rebalancing due missed partitions.
      * Mapping pair of groupId and nodeId to set of partitions.
      */
-    private Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
+    private final Map<T2<Integer, UUID>, Set<Integer>> exclusionsFromFullRebalance = new ConcurrentHashMap<>();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
     private volatile Map<Integer/** Group. */, Map<Integer/** Partition */, Long/** Counter. */>> partHistReserved;
@@ -572,8 +572,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     public List<UUID> partitionHistorySupplier(int grpId, int partId, long cntrSince) {
         List<UUID> histSuppliers = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
 
-        return histSuppliers.stream().filter((supplier) -> !exclusionsFromHistoricalRebalance.contains(supplier))
-            .collect(Collectors.toList());
+        histSuppliers.removeIf(exclusionsFromHistoricalRebalance::contains);
+
+        return histSuppliers;
     }
 
     /**
@@ -594,8 +595,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param p Partition id.
      */
     public void markNodeAsInapplicableForFullRebalance(UUID nodeId, int grpId, int p) {
-        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(new T2<>(grpId, nodeId), t2 ->
-            Collections.newSetFromMap(new ConcurrentHashMap<>())
+        Set<Integer> parts = exclusionsFromFullRebalance.computeIfAbsent(
+            new T2<>(grpId, nodeId), t2 -> ConcurrentHashMap.newKeySet()
         );
 
         parts.add(p);
@@ -1764,7 +1765,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 // Independently called on all nodes.
                 doInParallel(
                     U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.kernalContext().pools().getSystemExecutorService(),
                     cctx.affinity().cacheGroups().values(),
                     desc -> {
                         if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -2415,8 +2416,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 ", wasRebalanced=" + wasRebalanced() + ']');
         }
 
-        assert res != null || err != null;
-
         if (res != null) {
             span.addTag(SpanTags.tag(SpanTags.RESULT, SpanTags.TOPOLOGY_VERSION, SpanTags.MAJOR),
                 () -> String.valueOf(res.topologyVersion()));
@@ -2429,6 +2428,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             span.addTag(SpanTags.ERROR, errf::toString);
         }
+
+        boolean cleanIdxRebuildFutures = true;
 
         try {
             waitUntilNewCachesAreRegistered();
@@ -2520,15 +2521,18 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (localReserved != null) {
                 boolean success = cctx.database().reserveHistoryForPreloading(localReserved);
 
-                // TODO: how to handle?
-                if (!success)
-                    err = new IgniteCheckedException("Could not reserve history");
+                if (!success) {
+                    log.warning("Could not reserve history for historical rebalance " +
+                        "(possible it happened because WAL space is exhausted).");
+                }
             }
 
             cctx.database().releaseHistoryForExchange();
 
             if (err == null) {
                 cctx.database().rebuildIndexesIfNeeded(this);
+
+                cleanIdxRebuildFutures = false;
 
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
@@ -2548,6 +2552,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         final Throwable err0 = err;
+
+        if (err0 != null && cleanIdxRebuildFutures)
+            cctx.kernalContext().query().removeIndexRebuildFuturesOnExchange(this, null);
 
         // Should execute this listener first, before any external listeners.
         // Listeners use stack as data structure.
@@ -3651,7 +3658,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // Reserve at least 2 threads for system operations.
             doInParallelUninterruptibly(
                 U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 cctx.affinity().cacheGroups().values(),
                 desc -> {
                     if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -3682,7 +3689,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             doInParallelUninterruptibly(
                 U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 cctx.affinity().caches().values(),
                 desc -> {
                     if (desc.cacheConfiguration().getCacheMode() == CacheMode.LOCAL)
@@ -3876,7 +3883,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 doInParallel(
                     parallelismLvl,
-                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.kernalContext().pools().getSystemExecutorService(),
                     cctx.affinity().cacheGroups().values(),
                     desc -> {
                         if (desc.config().getCacheMode() == CacheMode.LOCAL)
@@ -3905,7 +3912,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             doInParallel(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 msgs.values(),
                 msg -> {
                     processSingleMessageOnCrdFinish(msg, joinedNodeAff);
@@ -4200,7 +4207,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private void validatePartitionsState() {
         try {
             U.doInParallel(
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroupDescriptors(),
                 grpDesc -> {
                     CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpDesc.groupId());
@@ -4256,7 +4263,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         try {
             U.doInParallel(
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroupDescriptors(),
                 grpDesc -> {
                     CacheGroupContext grpCtx = cctx.cache().cacheGroup(grpDesc.groupId());
@@ -4358,7 +4365,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             U.<CacheGroupContext, Void>doInParallelUninterruptibly(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 nonLocalCacheGroups(),
                 grp -> {
                     Set<Integer> parts;
@@ -4822,7 +4829,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             doInParallel(
                 parallelismLvl,
-                cctx.kernalContext().getSystemExecutorService(),
+                cctx.kernalContext().pools().getSystemExecutorService(),
                 msg.partitions().keySet(), grpId -> {
                     CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
 
@@ -4901,7 +4908,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             @Override public void run() {
                 // The rollbackExchange() method has to wait for checkpoint.
                 // That operation is time consumed, and therefore it should be executed outside the discovery thread.
-                cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+                cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
                     @Override public void run() {
                         if (isDone() || !enterBusy())
                             return;
@@ -5207,7 +5214,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             if (allReceived) {
                                 boolean wasMerged0 = wasMerged;
 
-                                cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+                                cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
                                     @Override public void run() {
                                         awaitSingleMapUpdates();
 
@@ -5281,7 +5288,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     try {
                         U.doInParallel(
                             parallelismLvl,
-                            cctx.kernalContext().getSystemExecutorService(),
+                            cctx.kernalContext().pools().getSystemExecutorService(),
                             msgs.entrySet(),
                             entry -> {
                                 this.msgs.put(entry.getKey().id(), entry.getValue());
@@ -5704,7 +5711,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         final ClusterNode newCrd = crd;
 
-        cctx.kernalContext().getSystemExecutorService().submit(new Runnable() {
+        cctx.kernalContext().pools().getSystemExecutorService().submit(new Runnable() {
             @Override public void run() {
                 sendPartitions(newCrd);
             }

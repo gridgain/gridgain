@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -252,7 +252,10 @@ public abstract class WALRecord {
         INDEX_META_PAGE_DELTA_RECORD(68, PHYSICAL),
 
         /** Partition meta page delta record includes tombstones count. */
-        PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL);
+        PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL),
+
+        /** Record for renaming the index root pages. */
+        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;
@@ -342,7 +345,8 @@ public abstract class WALRecord {
         PHYSICAL,
         /**
          * Logical records are needed to replay logical updates since last checkpoint.
-         * {@see GridCacheDatabaseSharedManager#applyLogicalUpdates(CheckpointStatus, org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate, boolean)}
+         * {@link GridCacheDatabaseSharedManager#applyLogicalUpdates(CheckpointStatus, org.apache.ignite.lang.IgnitePredicate,
+         * org.apache.ignite.lang.IgniteBiPredicate, boolean)}
          */
         LOGICAL,
         /**

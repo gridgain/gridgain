@@ -46,8 +46,8 @@ public class GridLogThrottle {
     /** Throttle capacity. */
     private static final int throttleCap = IgniteSystemProperties.getInteger(IGNITE_LOG_THROTTLE_CAPACITY, 128);
 
-    /** Errors. */
-    private static volatile ConcurrentMap<IgniteBiTuple<Class<? extends Throwable>, String>, Long> errors =
+    /** Log messages. */
+    private static volatile ConcurrentMap<IgniteBiTuple<Class<? extends Throwable>, String>, Long> msgs =
         new ConcurrentLinkedHashMap<>(throttleCap, 0.75f, DFLT_CONCUR_LVL, throttleCap);
 
     /**
@@ -87,7 +87,21 @@ public class GridLogThrottle {
     public static void error(@Nullable IgniteLogger log, @Nullable Throwable e, String msg) {
         assert !F.isEmpty(msg);
 
-        log(log, e, msg, LogLevel.ERROR, false, false);
+        log(log, e, msg, msg, LogLevel.ERROR, false, false);
+    }
+
+    /**
+     * Logs error if needed.
+     *
+     * @param log Logger.
+     * @param e Error (optional).
+     * @param throttleKey Messages with the same key will be throttled.
+     * @param msg Message.
+     */
+    public static void error(@Nullable IgniteLogger log, @Nullable Throwable e, String throttleKey, String msg) {
+        assert !F.isEmpty(msg);
+
+        log(log, e, throttleKey, msg, LogLevel.ERROR, false, false);
     }
 
     /**
@@ -101,7 +115,7 @@ public class GridLogThrottle {
     public static void error(@Nullable IgniteLogger log, @Nullable Throwable e, String msg, boolean byMsg) {
         assert !F.isEmpty(msg);
 
-        log(log, e, msg, LogLevel.ERROR, false, byMsg);
+        log(log, e, msg, msg, LogLevel.ERROR, false, byMsg);
     }
 
     /**
@@ -113,7 +127,20 @@ public class GridLogThrottle {
     public static void warn(@Nullable IgniteLogger log, String msg) {
         assert !F.isEmpty(msg);
 
-        log(log, null, msg, LogLevel.WARN, false, false);
+        log(log, null, msg, msg, LogLevel.WARN, false, false);
+    }
+
+    /**
+     * Logs warning if needed.
+     *
+     * @param log Logger.
+     * @param throttleKey Messages with the same key will be throttled.
+     * @param msg Message.
+     */
+    public static void warn(@Nullable IgniteLogger log, String throttleKey, String msg) {
+        assert !F.isEmpty(msg);
+
+        log(log, null, throttleKey, msg, LogLevel.WARN, false, false);
     }
 
     /**
@@ -128,7 +155,7 @@ public class GridLogThrottle {
     public static void warn(@Nullable IgniteLogger log, @Nullable Throwable e, String msg, boolean quite, boolean byMsg) {
         assert !F.isEmpty(msg);
 
-        log(log, e, msg, LogLevel.WARN, quite, byMsg);
+        log(log, e, msg, msg, LogLevel.WARN, quite, byMsg);
     }
 
     /**
@@ -141,7 +168,20 @@ public class GridLogThrottle {
     public static void warn(@Nullable IgniteLogger log, String msg, boolean quiet) {
         assert !F.isEmpty(msg);
 
-        log(log, null, msg, LogLevel.WARN, quiet, false);
+        log(log, null, msg, msg, LogLevel.WARN, quiet, false);
+    }
+
+    /**
+     * Logs warning if needed.
+     *
+     * @param log Logger.
+     * @param msg Message.
+     * @param e Error..
+     */
+    public static void warn(@Nullable IgniteLogger log, String msg, Throwable e) {
+        assert !F.isEmpty(msg);
+
+        log(log, e, msg, msg, LogLevel.WARN, false, false);
     }
 
     /**
@@ -154,7 +194,7 @@ public class GridLogThrottle {
     public static void info(@Nullable IgniteLogger log, String msg, boolean quiet) {
         assert !F.isEmpty(msg);
 
-        log(log, null, msg, LogLevel.INFO, quiet, false);
+        log(log, null, msg, msg, LogLevel.INFO, quiet, false);
     }
 
     /**
@@ -170,10 +210,23 @@ public class GridLogThrottle {
     }
 
     /**
+     * Logs info if needed.
+     *
+     * @param log Logger.
+     * @param throttleKey Messages with the same key will be throttled.
+     * @param msg Message.
+     */
+    public static void info(@Nullable IgniteLogger log, String throttleKey, String msg) {
+        assert !F.isEmpty(msg);
+
+        log(log, null, throttleKey, msg, LogLevel.INFO, false, false);
+    }
+
+    /**
      * Clears all stored data. This will make throttle to behave like a new one.
      */
     public static void clear() {
-        errors = new ConcurrentLinkedHashMap<>(throttleCap, 0.75f, DFLT_CONCUR_LVL, throttleCap);
+        msgs = new ConcurrentLinkedHashMap<>(throttleCap, 0.75f, DFLT_CONCUR_LVL, throttleCap);
     }
 
     /**
@@ -188,6 +241,7 @@ public class GridLogThrottle {
     @SuppressWarnings({"RedundantTypeArguments"})
     private static void log(@Nullable IgniteLogger log,
         @Nullable Throwable e,
+        String throttleKey,
         String longMsg,
         LogLevel level,
         boolean quiet,
@@ -195,17 +249,17 @@ public class GridLogThrottle {
     ) {
         assert !F.isEmpty(longMsg);
 
-        IgniteBiTuple<Class<? extends Throwable>, String> tup =
+        IgniteBiTuple<Class<? extends Throwable>, String> msgKey =
             e != null && !byMsg ? F.<Class<? extends Throwable>, String>t(e.getClass(), e.getMessage()) :
-                F.<Class<? extends Throwable>, String>t(null, longMsg);
+                F.<Class<? extends Throwable>, String>t(null, throttleKey);
 
         while (true) {
-            Long loggedTs = errors.get(tup);
+            Long loggedTs = msgs.get(msgKey);
 
             long curTs = U.currentTimeMillis();
 
             if (loggedTs == null || loggedTs < curTs - throttleTimeout) {
-                if (replace(tup, loggedTs, curTs)) {
+                if (replace(msgKey, loggedTs, curTs)) {
                     level.doLog(log, longMsg, e, quiet);
 
                     break;
@@ -228,12 +282,12 @@ public class GridLogThrottle {
         assert newStamp != null;
 
         if (oldStamp == null) {
-            Long old = errors.putIfAbsent(t, newStamp);
+            Long old = msgs.putIfAbsent(t, newStamp);
 
             return old == null;
         }
 
-        return errors.replace(t, oldStamp, newStamp);
+        return msgs.replace(t, oldStamp, newStamp);
     }
 
     /** Ensure singleton. */

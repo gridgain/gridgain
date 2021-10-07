@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -251,7 +251,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     private DistributePropertyListener<Object> makeEventListener(int evtType) {
         //noinspection CodeBlock2Expr
         return (name, oldVal, newVal) -> {
-            ctx.getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, () -> {
+            ctx.pools().getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, () -> {
                 if (ctx.event().isRecordable(evtType)) {
                     ctx.event().record(new BaselineConfigurationChangedEvent(
                         ctx.discovery().localNode(),
@@ -632,7 +632,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
+            ctx.durableBackgroundTask().onStateChangeFinish(msg);
 
             if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state()))
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
@@ -784,7 +784,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 nodeIds
             );
 
-            ctx.durableBackgroundTasksProcessor().onStateChange(msg);
+            ctx.durableBackgroundTask().onStateChangeStarted(msg);
 
             if (msg.forceChangeBaselineTopology())
                 globalState.setTransitionResult(msg.requestId(), msg.state());
@@ -804,7 +804,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             if (state.state() != newState.state()) {
                 if (ctx.event().isRecordable(EventType.EVT_CLUSTER_STATE_CHANGE_STARTED)) {
-                    ctx.getStripedExecutorService().execute(
+                    ctx.pools().getStripedExecutorService().execute(
                         CLUSTER_ACTIVATION_EVT_STRIPE_ID,
                         () -> ctx.event().record(new ClusterStateChangeStartedEvent(
                             state.state(),
@@ -1876,7 +1876,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 fut.initFut.listen(new CI1<IgniteInternalFuture<?>>() {
                     @Override public void apply(IgniteInternalFuture<?> f) {
                         // initFut is completed from discovery thread, process response from other thread.
-                        ctx.getSystemExecutorService().execute(new Runnable() {
+                        ctx.pools().getSystemExecutorService().execute(new Runnable() {
                             @Override public void run() {
                                 fut.onResponse(nodeId, msg);
                             }

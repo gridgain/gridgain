@@ -49,7 +49,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
  */
 public class AffinityDistributionLoggingTest extends GridCommonAbstractTest {
     /** Pattern to test. */
-    private static final String LOG_MESSAGE_PREFIX = "Local node affinity assignment distribution is not ideal ";
+    private static final String LOG_MESSAGE_PREFIX = "Local node affinity assignment distribution is not even ";
 
     /** Partitions number. */
     private int parts = 0;

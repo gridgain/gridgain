@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
 {
     using System;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.cache.metric;
 
 import java.sql.Connection;
@@ -398,7 +397,10 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "STRIPED_THREADPOOL_QUEUE",
             "DATASTREAM_THREADPOOL_QUEUE",
             "DATA_REGION_PAGE_LISTS",
-            "CACHE_GROUP_PAGE_LISTS"
+            "CACHE_GROUP_PAGE_LISTS",
+            "STATISTICS_CONFIGURATION",
+            "STATISTICS_LOCAL_DATA",
+            "STATISTICS_PARTITION_DATA"
         ));
 
         Set<String> actViews = new HashSet<>();
@@ -768,7 +770,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testStripedExecutor() throws Exception {
-        checkStripeExecutorView(ignite0.context().getStripedExecutorService(),
+        checkStripeExecutorView(ignite0.context().pools().getStripedExecutorService(),
             "STRIPED_THREADPOOL_QUEUE",
             "sys");
     }
@@ -776,7 +778,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testStreamerExecutor() throws Exception {
-        checkStripeExecutorView(ignite0.context().getDataStreamerExecutorService(),
+        checkStripeExecutorView(ignite0.context().pools().getDataStreamerExecutorService(),
             "DATASTREAM_THREADPOOL_QUEUE",
             "data-streamer");
     }
