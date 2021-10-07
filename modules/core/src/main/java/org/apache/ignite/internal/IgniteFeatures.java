@@ -241,7 +241,7 @@ public enum IgniteFeatures {
     REMOTE_AUTH(61),
 
     /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
-    SNAPSHOT_COMPRESSION_MODERN_OPTION(63);
+    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63);
 
     /**
      * Unique feature identifier.
