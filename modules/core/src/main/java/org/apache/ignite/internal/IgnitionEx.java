@@ -1980,6 +1980,9 @@ public class IgnitionEx {
             if (myCfg.getUserAttributes() == null)
                 myCfg.setUserAttributes(Collections.<String, Object>emptyMap());
 
+            if (myCfg.getAffinityAttributes() == null)
+                myCfg.setAffinityAttributes(Collections.emptyMap());
+
             if (myCfg.getMBeanServer() == null && !U.IGNITE_MBEANS_DISABLED)
                 myCfg.setMBeanServer(ManagementFactory.getPlatformMBeanServer());
 

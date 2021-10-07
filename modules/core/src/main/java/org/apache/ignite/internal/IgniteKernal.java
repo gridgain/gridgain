@@ -251,6 +251,7 @@ import static org.apache.ignite.internal.GridKernalState.STOPPED;
 import static org.apache.ignite.internal.GridKernalState.STOPPING;
 import static org.apache.ignite.internal.IgniteComponentType.COMPRESSION;
 import static org.apache.ignite.internal.IgniteComponentType.SCHEDULE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.AFFINITY_ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
@@ -1863,6 +1864,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                         "property and will take precedence: " + e.getKey());
 
                 ctx.addNodeAttribute(e.getKey(), e.getValue());
+            }
+        }
+
+        if (cfg.getAffinityAttributes() != null) {
+            for (Map.Entry<String, String> entry : cfg.getAffinityAttributes().entrySet()) {
+                ctx.addNodeAttribute(AFFINITY_ATTR_PREFIX + '.' + entry.getKey(), entry.getValue());
             }
         }
 

@@ -177,7 +177,7 @@ public interface IGridClusterStateProcessor extends GridProcessor {
      * @param consId Node consistent ID.
      * @param newAttrs Attributes map to be added.
      */
-    void addAttrsToCurrBlt(Object consId, Map<String, Object> newAttrs) throws IgniteCheckedException;
+    void addAffinityAttrsToCurrBlt(Object consId, Map<String, String> newAttrs) throws IgniteCheckedException;
 
     /**
      * @return {@code True} if partition evictions are allowed in current state.

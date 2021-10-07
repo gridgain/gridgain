@@ -122,10 +122,12 @@ import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATION;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.IgniteNodeAttributes.AFFINITY_ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
+import static org.apache.ignite.internal.util.IgniteUtils.filterAffinityAttributes;
 
 /**
  *
@@ -1475,12 +1477,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         Map<String, Object> clusterAttrs = clusterBlt.attributes(node.consistentId());
 
         if (globalState.state() != INACTIVE && clusterAttrs != null) {
-            Map<String, Object> nodeAttrs = node.attributes();
+            Map<String, String> nodeAffAttrs = node.affinityAttributes();
+            Map<String, String> clusterAffAttrs = filterAffinityAttributes(clusterAttrs);
+
 
             Map<String, Object> attrsMissingOnNode = new HashMap<>();
 
-            for (Map.Entry<String, Object> clusterAttr : clusterAttrs.entrySet()) {
-                final Object nodeAttrVal = nodeAttrs.get(clusterAttr.getKey());
+            for (Map.Entry<String, String> clusterAttr : clusterAffAttrs.entrySet()) {
+                final Object nodeAttrVal = nodeAffAttrs.get(clusterAttr.getKey());
                 final Object clusterAttrVal = clusterAttr.getValue();
 
                 if (nodeAttrVal == null && clusterAttrVal != null)
@@ -1490,7 +1494,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (!attrsMissingOnNode.isEmpty()) {
                 SB sb = new SB();
 
-                sb.a("Some attributes in cluster baseline topology are missing on joining node. ")
+                sb.a("Some affinity attributes in cluster baseline topology are missing on joining node. ")
                     .a("To join this node you should add missing attributes to node configurations or ")
                     .a("deactivate cluster, add the node and activate the cluster again.")
                     .a("In this case options listed below will be removed from cluster baseline topology for joining node.")
@@ -1498,7 +1502,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     .a("Missing options:\n");
 
                 for (Map.Entry<String, Object> missingAttr : attrsMissingOnNode.entrySet()) {
-                    sb.a("Attr name: ").a(missingAttr.getKey()).a(" Attr val: ").a(missingAttr.getValue());
+                    sb.a("Attr name: ").a(missingAttr.getKey().substring((AFFINITY_ATTR_PREFIX + '.').length()))
+                        .a(" Attr val: ").a(missingAttr.getValue());
                 }
 
                 String msg = sb.toString();
@@ -1709,11 +1714,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /** {@inheritDoc} */
-    @Override public void addAttrsToCurrBlt(Object consId, Map<String, Object> newAttrs) throws IgniteCheckedException {
+    @Override public void addAffinityAttrsToCurrBlt(Object consId, Map<String, String> newAttrs) throws IgniteCheckedException {
         BaselineTopology blt = globalState.baselineTopology();
 
         if (blt != null && metastorage != null) {
-            if (blt.addAttributesIfNeeded(consId, newAttrs))
+            if (blt.addAffinityAttributesIfNeeded(consId, newAttrs))
                 writeBaselineTopology(blt, null);
         }
     }

@@ -19,6 +19,9 @@ package org.apache.ignite.cluster;
 import java.util.Map;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
+import static org.apache.ignite.internal.IgniteNodeAttributes.AFFINITY_ATTR_PREFIX;
+import static org.apache.ignite.internal.util.IgniteUtils.filterAffinityAttributes;
+
 /**
  * Interface representing a single node from baseline topology.
  */
@@ -68,8 +71,22 @@ public interface BaselineNode {
      */
     public Map<String, Object> attributes();
 
-    //TODO: document
-    public String affinityAttribute(String name);
+    /**
+     * Gets affinity attribute by name.
+     *
+     * @param name of the attribute.
+     * @return Affinity attribute.
+     */
+    public default String affinityAttribute(String name) {
+        return (String)attributes().get(AFFINITY_ATTR_PREFIX + '.' + name);
+    }
 
-    public Map<String, String> affinityAttributes();
+    /**
+     * Gets all affinity attributes.
+     *
+     * @return All affinity attributes.
+     */
+    public default Map<String, String> affinityAttributes() {
+        return filterAffinityAttributes(attributes());
+    }
 }

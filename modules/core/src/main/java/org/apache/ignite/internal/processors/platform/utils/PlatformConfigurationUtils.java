@@ -54,7 +54,26 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
 import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.cache.eviction.lru.LruEvictionPolicy;
-import org.apache.ignite.configuration.*;
+import org.apache.ignite.configuration.AtomicConfiguration;
+import org.apache.ignite.configuration.BinaryConfiguration;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.CheckpointWriteOrder;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.DataPageEvictionMode;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.DiskPageCompression;
+import org.apache.ignite.configuration.ExecutorConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.MemoryConfiguration;
+import org.apache.ignite.configuration.MemoryPolicyConfiguration;
+import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.configuration.PersistentStoreConfiguration;
+import org.apache.ignite.configuration.PlatformCacheConfiguration;
+import org.apache.ignite.configuration.SqlConnectorConfiguration;
+import org.apache.ignite.configuration.ThinClientConfiguration;
+import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
@@ -844,6 +863,17 @@ public class PlatformConfigurationUtils {
             cfg.setUserAttributes(attrs);
         }
 
+        int affinityAttrsCnt = in.readInt();
+
+        if (affinityAttrsCnt > 0) {
+            Map<String, String> affinityAttrs = new HashMap<>(affinityAttrsCnt);
+
+            for (int i = 0; i < affinityAttrsCnt; i++)
+                affinityAttrs.put(in.readString(), in.readString());
+
+            cfg.setAffinityAttributes(affinityAttrs);
+        }
+
         if (in.readBoolean()) {
             AtomicConfiguration atomic = new AtomicConfiguration();
 
@@ -1453,6 +1483,19 @@ public class PlatformConfigurationUtils {
             for (Map.Entry<String, ?> e : attrs.entrySet()) {
                 w.writeString(e.getKey());
                 w.writeObject(e.getValue());
+            }
+        }
+        else
+            w.writeInt(0);
+
+        Map<String, String> affinityAttrs = cfg.getAffinityAttributes();
+
+        if (affinityAttrs != null) {
+            w.writeInt(affinityAttrs.size());
+
+            for (Map.Entry<String, String> e : affinityAttrs.entrySet()) {
+                w.writeString(e.getKey());
+                w.writeString(e.getValue());
             }
         }
         else

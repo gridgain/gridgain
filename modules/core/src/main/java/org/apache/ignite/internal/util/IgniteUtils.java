@@ -300,6 +300,7 @@ import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.events.EventType.EVTS_ALL;
 import static org.apache.ignite.events.EventType.EVTS_ALL_MINUS_METRIC_UPDATE;
 import static org.apache.ignite.events.EventType.EVT_NODE_METRICS_UPDATED;
+import static org.apache.ignite.internal.IgniteNodeAttributes.AFFINITY_ATTR_PREFIX;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CACHE;
@@ -12558,4 +12559,22 @@ public abstract class IgniteUtils {
         return safeAbs(hash % size);
     }
 
+    /**
+     * Filters affinity attributes from the map of all defined attibutes.
+     *
+     * @param attrs All attributes.
+     * @return Map containing only affinity attributes.
+     */
+    public static Map<String, String> filterAffinityAttributes(Map<String, Object> attrs) {
+        Map<String, String> res = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry: attrs.entrySet()) {
+            if (!entry.getKey().startsWith(AFFINITY_ATTR_PREFIX))
+                continue;
+
+            res.put(entry.getKey(), (String)entry.getValue());
+        }
+
+        return Collections.unmodifiableMap(res);
+    }
 }

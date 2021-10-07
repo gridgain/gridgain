@@ -67,7 +67,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
                     .setMaxSize(256L * 1024 * 1024)
                     .setPersistenceEnabled(true)));
 
-        Map<String, Object> userAttrs = new HashMap<>();
+        Map<String, String> userAttrs = new HashMap<>();
 
         if (addBasicAttrs)
             userAttrs.put(BASIC_USER_ATTR_NAME, BASIC_USER_ATTR_VAL);
@@ -75,7 +75,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
         if (addExtraAttr)
             userAttrs.put(EXTRA_USER_ATTR_NAME, EXTRA_USER_ATTR_VAL);
 
-        cfg.setUserAttributes(userAttrs);
+        cfg.setAffinityAttributes(userAttrs);
 
         return cfg;
     }
@@ -128,7 +128,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
 
             assertNotNull(bsNode);
 
-            String userAttr = bsNode.attribute(EXTRA_USER_ATTR_NAME);
+            String userAttr = bsNode.affinityAttribute(EXTRA_USER_ATTR_NAME);
 
             assertEquals(EXTRA_USER_ATTR_VAL, userAttr);
         }
@@ -158,7 +158,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
 
             String msg = rootCause.getMessage();
 
-            String expMsg = "Some attributes in cluster baseline topology are missing on joining node. " +
+            String expMsg = "Some affinity attributes in cluster baseline topology are missing on joining node. " +
                 "To join this node you should add missing attributes to node configurations or deactivate cluster, " +
                 "add the node and activate the cluster again.In this case options listed below will be removed from " +
                 "cluster baseline topology for joining node.\n" +
