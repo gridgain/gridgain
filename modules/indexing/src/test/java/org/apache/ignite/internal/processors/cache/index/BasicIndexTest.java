@@ -55,6 +55,7 @@ import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
@@ -1029,6 +1030,52 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             new UserObject(new Pojo(2)),
             new UserObject(new Pojo(-3)),
             null);
+    }
+
+    /**
+     * Tests that it's forbidden to create index with duplicated columns from SQL.
+     */
+    @Test
+    public void testFailToCreateSqlIndexWithDuplicatedColumn() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 1, "ID", "NAME");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME, NAME)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME ASC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME ASC, NAME DESC)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME ASC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME DESC, ID, NAME)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME DESC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(ID, id)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: ID");
     }
 
     /**
