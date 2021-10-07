@@ -2736,22 +2736,24 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.afterLogicalUpdatesApplied(this, restoreLogicalState);
 
+        List<IgniteInternalFuture<?>> clearFuts = new ArrayList<>();
+
         partitionRecoveryClearing.forEach((key, value) -> {
                     CacheGroupContext grp = ctx.cache().cacheGroup(key.getGroupId());
 
                     GridDhtLocalPartition part = grp.topology().localPartition(key.getPartitionId());
 
-                    part.clearVer(value);
+                    part.reclearVer(value);
 
-                    try {
-                        grp.shared().evict()
-                                .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING)
-                                .get();
-                    } catch (IgniteCheckedException e) {
-                        throw new IgniteException(e);
-                    }
+                    clearFuts.add(grp.shared().evict()
+                            .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING)
+                    );
                 }
         );
+
+        for (IgniteInternalFuture<?> fut : clearFuts) {
+            fut.get();
+        }
 
         return restoreLogicalState;
     }

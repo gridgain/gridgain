@@ -170,6 +170,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** */
     private volatile long clearVer;
 
+    /** */
+    private volatile long reclearVer;
+
     /**
      * @param ctx Context.
      * @param grp Cache group.
@@ -350,8 +353,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /** */
-    public void clearVer(long clearVer) {
-         this.clearVer = clearVer;
+    public void reclearVer(long reclearVer) {
+         this.reclearVer = reclearVer;
     }
 
     /**
@@ -976,7 +979,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     protected long clearAll(EvictionContext evictionCtx, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
-        long order = clearVer;
+        long order;
+
+        if (reason == RECLEARING)
+            order = reclearVer;
+        else
+            order = clearVer;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
 
