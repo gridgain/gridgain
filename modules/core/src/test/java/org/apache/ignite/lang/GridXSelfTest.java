@@ -98,8 +98,6 @@ public class GridXSelfTest extends GridCommonAbstractTest {
         assertNull(X.cause(exc, ArithmeticException.class));
 
         assertFalse(X.hasCause(exc, ArithmeticException.class));
-
-        npe.printStackTrace();
     }
 
     /**
