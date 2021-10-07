@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.datastructures;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteLock;
-import org.apache.ignite.lang.IgniteFuture;
 
 /**
  * Grid cache reentrant lock ({@code 'Ex'} stands for external).
@@ -50,7 +49,8 @@ public interface GridCacheLockEx extends IgniteLock, GridCacheRemovable {
      */
     public void onStop();
 
-    public void onDisconnected(UUID nodeId, IgniteFuture<?> fut);
+    /**
+     * Callback to notify local reentrant lock instance on node reconnected.
+     */
     public void onReconnected(UUID nodeId);
-
 }

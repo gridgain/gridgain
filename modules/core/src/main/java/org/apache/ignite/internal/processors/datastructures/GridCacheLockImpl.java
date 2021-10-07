@@ -1140,12 +1140,8 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
         }
     }
 
-    @Override public void onDisconnected(UUID nodeId, IgniteFuture<?> fut) {
-//        System.out.println("aaa onDisconnected " + nodeId);
-    }
-
+    /** {@inheritDoc} */
     @Override public void onReconnected(UUID nodeId) {
-//        System.out.println("aaa onReconnected " + nodeId);
         sync.thisNode(nodeId);
     }
 

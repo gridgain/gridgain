@@ -71,8 +71,8 @@ public class Test1 extends GridCommonAbstractTest {
                 System.out.println("T2 sleep exception " + e.getClass());
             }
 
-            lock.lock();
-            System.out.println("T2 acquire lock");
+            boolean locked = lock.tryLock();
+            System.out.println("T2 acquire lock " + locked);
 
             try {
                 Thread.sleep(1000);
@@ -82,7 +82,10 @@ public class Test1 extends GridCommonAbstractTest {
             }
 
             try {
-                lock.unlock();
+                if (locked) {
+                    lock.unlock();
+                    System.out.println("T2 lock success");
+                }
 
                 System.out.println("T2 unlock");
             }
