@@ -20,50 +20,83 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteLock;
+import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
- * The test check that lock properly work after client reconnected.
+ * The test check that lock properly work after client node reconnected.
  */
 public class IgniteClientReconnectLockTest extends IgniteClientReconnectAbstractTest {
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override protected int serverCount() {
-        return 1;
+        return 2;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override protected int clientCount() {
         return 1;
     }
 
     /**
+     * Check that lock can be acquired concurrently only one time after client node reconnected.
+     *
      * @throws Exception If failed.
      */
     @Test
     public void testLockAfterClientReconnected() throws Exception {
-        IgniteEx srv = grid(0);
-        IgniteEx client = grid(1);
+        IgniteEx client = grid(serverCount());
 
-        IgniteLock lock = client.reentrantLock("lock", true, false, true);
+        IgniteLock lock = client.reentrantLock("testLockAfterClientReconnected", true, true, true);
 
         //need to initialize lock instance before client reconnect
         lock.lock();
         lock.unlock();
 
-        reconnectClientNode(client, srv, () -> {
-            boolean wasThrown = false;
+        reconnectClientNode(client,
+            clientRouter(client),
+            () -> GridTestUtils.assertThrows(null, () -> lock.lock(), IgniteClientDisconnectedException.class, null)
+        );
 
-            try {
-                lock.lock();
-            }
-            catch (IgniteClientDisconnectedException e) {
-                wasThrown = true;
-            }
+        checkLockWorking(lock);
+    }
 
-            assertTrue("IgniteClientDisconnectedException was not thrown", wasThrown);
-        });
+    /**
+     * Check that lock can be acquired concurrently only one time after server node restart and client node reconnected
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLockAfterServerRestartAndClientReconnected() throws Exception {
+        IgniteEx client = grid(2);
 
+        IgniteLock lock = client.reentrantLock("testLockAfterServerRestartAndClientReconnected", true, true, true);
+
+        //need to initialize lock instance before client reconnect
+        lock.lock();
+        lock.unlock();
+
+        String clientConnected = clientRouter(client).name();
+
+        stopGrid(clientConnected);
+        startGrid(clientConnected);
+
+        String clientConnect = clientRouter(client).name();
+
+        assertTrue(!clientConnected.equals(clientConnect) && clientConnect != null);
+
+        checkLockWorking(lock);
+    }
+
+    /**
+     * @param lock Lock.
+     * @throws Exception If failed.
+     */
+    private void checkLockWorking(IgniteLock lock) throws Exception {
         CountDownLatch lockLatch = new CountDownLatch(1);
 
         AtomicReference<Boolean> tryLockRes = new AtomicReference<>();
@@ -107,5 +140,38 @@ public class IgniteClientReconnectLockTest extends IgniteClientReconnectAbstract
 
         fut1.get();
         fut2.get();
+    }
+
+    /**
+     * Check that lock cannot be acquired after cluster restart.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLockAfterClusterRestartAndClientReconnected() throws Exception {
+        IgniteEx client = grid(serverCount());
+
+        IgniteLock lock = client.reentrantLock("testLockAfterClusterRestartAndClientReconnected", true, true, true);
+
+        //need to initialize lock instance before client reconnect
+        lock.lock();
+        lock.unlock();
+
+        stopGrid(0);
+        stopGrid(1);
+        startGrid(0);
+        startGrid(1);
+
+        GridTestUtils.assertThrowsWithCause(() -> {
+                try {
+                    lock.lock();
+                }
+                catch (IgniteClientDisconnectedException e) {
+                    e.reconnectFuture().get();
+
+                    lock.lock();
+                }
+            },
+            CacheStoppedException.class);
     }
 }
