@@ -1480,7 +1480,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             Map<String, String> nodeAffAttrs = node.affinityAttributes();
             Map<String, String> clusterAffAttrs = filterAffinityAttributes(clusterAttrs);
 
-
             Map<String, Object> attrsMissingOnNode = new HashMap<>();
 
             for (Map.Entry<String, String> clusterAttr : clusterAffAttrs.entrySet()) {
