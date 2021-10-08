@@ -109,7 +109,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         grpEvictionCtx.stop(new CacheStoppedException(grp.cacheOrGroupName()));
     }
 
-    /** */
+    /**
+     * @param grp Group context.
+     * @param part Partition to evict.
+     * @param finishFut Clearing finish future.
+     */
     public IgniteInternalFuture<?> evictPartitionAsync(
             CacheGroupContext grp,
             GridDhtLocalPartition part,
@@ -117,6 +121,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     ) {
         return evictPartitionAsync(grp, part, finishFut, null);
     }
+
     /**
      * Adds partition to eviction queue and starts eviction process if permit
      * available.
@@ -124,6 +129,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param grp Group context.
      * @param part Partition to evict.
      * @param finishFut Clearing finish future.
+     * @param reason Reason for clearing.
      */
     public IgniteInternalFuture<?> evictPartitionAsync(
         CacheGroupContext grp,
@@ -464,7 +470,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          */
         CLEARING,
 
-        /** */
+        /**
+         * Repeat partition clearing if the node was stopped without previous clearing checkpointed.
+         */
         RECLEARING;
 
         /** {@inheritDoc} */
