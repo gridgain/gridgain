@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.Collections;
@@ -21,7 +22,6 @@ import java.util.Objects;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsH
 public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
     /** {@inheritDoc} */
     @Override public int nodes() {
-        return 3;
+        return 1;
     }
 
     /**
@@ -85,7 +85,7 @@ public class StatisticsGatheringTest extends StatisticsRestartAbstractTest {
         GridTestUtils.assertThrows(
             log,
             () -> statisticsMgr(0).collectStatistics(buildDefaultConfigurations(t100, t101, tWrong)),
-            IgniteSQLException.class,
+            IgniteException.class,
             "Table doesn't exist [schema=PUBLIC, table=SMALL101wrong]"
         );
 

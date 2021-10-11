@@ -13,16 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cluster.ClusterState;
-import org.junit.Test;
+package org.apache.ignite.internal.processors.query.stat;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 
 /**
  * Tests for statistics related views.
@@ -208,6 +212,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     public void testEnforceStatisticValues() throws Exception {
         long size = SMALL_SIZE;
 
+        Logger.getLogger(StatisticsProcessor.class).setLevel(Level.TRACE);
         ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         assertNotNull(smallStat);
@@ -215,17 +220,23 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
 
         sql("DROP STATISTICS SMALL");
 
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            list -> list.isEmpty());
+
         sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
         sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
         sql("ANALYZE SMALL (C)");
 
-        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL' and COLUMN = 'C'", null,
             list -> !list.isEmpty());
 
-        smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            ObjectStatisticsImpl stat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
-        assertNotNull(smallStat);
-        assertEquals(8, smallStat.rowCount());
+            return stat != null && stat.rowCount() == 8;
+        }, TIMEOUT));
+
+        smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
 
         Timestamp tsA = new Timestamp(smallStat.columnStatistics("A").createdAt());
         Timestamp tsB = new Timestamp(smallStat.columnStatistics("B").createdAt());

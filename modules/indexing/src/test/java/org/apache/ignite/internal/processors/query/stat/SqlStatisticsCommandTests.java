@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.function.Predicate;
@@ -96,7 +97,6 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void testRefreshStatistics() throws IgniteCheckedException {
-        // TODO after GG-32420 test schema
         testStatistics(SCHEMA, "TEST", true);
         testStatistics(SCHEMA, "TEST2", true);
 
@@ -155,7 +155,6 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      */
     @Test
     public void testDropStatistics() throws IgniteInterruptedCheckedException {
-        // TODO after GG-32420 test schema
         sql("ANALYZE PUBLIC.TEST, test2");
 
         testStatistics(SCHEMA, "TEST", false);
@@ -254,9 +253,11 @@ public class SqlStatisticsCommandTests extends StatisticsAbstractTest {
      *
      * @param schema Schema name.
      * @param obj Object name.
+     * @param isNull If {@code true} - test that statistics is null, if {@code false} - test that they are not null.
      */
     private void testStatistics(String schema, String obj, boolean isNull) throws IgniteInterruptedCheckedException {
-        assertTrue(GridTestUtils.waitForCondition(() -> {
+        assertTrue("Unable to wait statistics by " + schema + "." + obj + " if null=" + isNull,
+            GridTestUtils.waitForCondition(() -> {
             for (Ignite node : G.allGrids()) {
                 IgniteH2Indexing indexing = (IgniteH2Indexing)((IgniteEx) node).context().query().getIndexing();
 
