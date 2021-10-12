@@ -459,11 +459,13 @@ public class TrackingPageIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("TrackingPage [\n\tlastSnapshotTag=").a(getLastSnapshotTag(addr))
             .a(",\n\tleftHalf={")
             .a("\n\t\tsize=").a(GridUnsafe.getShort(addr + SIZE_FIELD_OFFSET))
             .a("\n\t\tdata={");
+
+        int pageSize = pageLayout.pageSize();
 
         for (int i = 0; i < (countOfPageToTrack(pageSize) >> 3); i += 2)
             sb.appendHex(GridUnsafe.getShort(addr + BITMAP_OFFSET + i));

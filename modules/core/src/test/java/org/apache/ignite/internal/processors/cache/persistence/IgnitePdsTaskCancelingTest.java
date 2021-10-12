@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -200,6 +201,7 @@ public class IgnitePdsTaskCancelingTest extends GridCommonAbstractTest {
         FilePageStore pageStore = new FilePageStore(PageMemory.FLAG_DATA, file::toPath, factory, dbCfg, val -> {});
 
         int pageSize = dbCfg.getPageSize();
+        PageLayout pageLayout = new PageLayout(pageSize);
 
         PageIO pageIO = PageIO.getPageIO(PageIO.T_DATA, 1);
 
@@ -215,7 +217,7 @@ public class IgnitePdsTaskCancelingTest extends GridCommonAbstractTest {
 
                 long pageAdr = ptr + i * pageSize;
 
-                pageIO.initNewPage(pageAdr, pageId, pageSize, null);
+                pageIO.initNewPage(pageAdr, pageId, pageLayout, null);
 
                 ByteBuffer buf = GridUnsafe.wrapPointer(pageAdr, pageSize);
 

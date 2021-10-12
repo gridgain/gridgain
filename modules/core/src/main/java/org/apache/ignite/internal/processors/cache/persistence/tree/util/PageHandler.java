@@ -449,7 +449,7 @@ public abstract class PageHandler<X, R> {
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(grpId);
 
-        init.initNewPage(pageAddr, pageId, pageMem.realPageSize(grpId), metrics);
+        init.initNewPage(pageAddr, pageId, pageMem.pageLayout(grpId), metrics);
 
         // Here we should never write full page, because it is known to be new.
         if (isWalDeltaRecordNeeded(pageMem, grpId, pageId, page, wal, FALSE))

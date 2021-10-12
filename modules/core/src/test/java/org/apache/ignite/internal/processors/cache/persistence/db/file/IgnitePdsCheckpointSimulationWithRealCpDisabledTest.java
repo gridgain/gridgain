@@ -75,6 +75,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
@@ -241,13 +242,15 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                     long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
                     try {
-                        DataPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(),
-                            mem.realPageSize(fullId.groupId()), null);
+                        PageLayout pageLayout = mem.pageLayout(fullId.groupId());
 
-                        for (int i = PageIO.COMMON_HEADER_END + DataPageIO.ITEMS_OFF; i < mem.pageSize(); i++)
+                        DataPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(),
+                            pageLayout, null);
+
+                        for (int i = PageIO.COMMON_HEADER_END + pageLayout.itemsOffset(); i < mem.pageSize(); i++)
                             PageUtils.putByte(pageAddr, i, (byte)0xAB);
 
-                        PageIO.printPage(pageAddr, mem.realPageSize(fullId.groupId()));
+                        PageIO.printPage(pageAddr, pageLayout);
                     }
                     finally {
                         mem.writeUnlock(fullId.groupId(), fullId.pageId(), page, null, true);
@@ -581,7 +584,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                     long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
                     try {
-                        pageIO.initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()), null);
+                        pageIO.initNewPage(pageAddr, fullId.pageId(), mem.pageLayout(fullId.groupId()), null);
 
                         assertTrue(mem.isDirty(fullId.groupId(), fullId.pageId(), page));
                     }
@@ -670,7 +673,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
             try {
-                DummyPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()), null);
+                DummyPageIO.VERSIONS.latest().initNewPage(pageAddr, fullId.pageId(), mem.pageLayout(fullId.groupId()), null);
 
                 ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
@@ -1095,7 +1098,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
             final long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
             try {
-                pageIO.initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()), null);
+                pageIO.initNewPage(pageAddr, fullId.pageId(), mem.pageLayout(fullId.groupId()), null);
             }
             finally {
                 mem.writeUnlock(fullId.groupId(), fullId.pageId(), page, null, true);

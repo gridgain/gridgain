@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIOGG;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -38,6 +39,8 @@ import static org.junit.Assert.assertTrue;
 public class GGPageIoTest {
     /** Page size. */
     public static final int PAGE_SIZE = 1024;
+
+    public static final PageLayout PAGE_LAYOUT = new PageLayout(PAGE_SIZE);
 
     /** */
     @Test
@@ -143,19 +146,19 @@ public class GGPageIoTest {
         try {
             long addr = GridUnsafe.bufferAddress(bb);
 
-            fromIO.initNewPage(addr, pageId, PAGE_SIZE, null);
+            fromIO.initNewPage(addr, pageId, PAGE_LAYOUT, null);
 
             setFields(addr);
 
             System.out.println("The page before upgrade:");
-            System.out.println(PageIO.printPage(addr, PAGE_SIZE));
+            System.out.println(PageIO.printPage(addr, PAGE_LAYOUT));
 
             assertEquals(fromIO.getVersion(), PageIO.getVersion(addr));
 
             ((PagePartitionMetaIOGG)toIO).upgradePage(addr);
 
             System.out.println("The page after upgrade:");
-            System.out.println(PageIO.printPage(addr, PAGE_SIZE));
+            System.out.println(PageIO.printPage(addr, PAGE_LAYOUT));
 
             validate("Failed upgrading from " + from + " to " + to, addr, expVals);
 
@@ -234,7 +237,7 @@ public class GGPageIoTest {
         }
 
         /** {@inheritDoc} */
-        @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
+        @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) {
             // No-op.
         }
     }

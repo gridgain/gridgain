@@ -106,7 +106,7 @@ public class PagesListInitNewPageRecord extends InitNewPageRecord {
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
 
-        io.initNewPage(pageAddr, pageId(), pageMem.realPageSize(groupId()), metrics);
+        io.initNewPage(pageAddr, pageId(), pageMem.pageLayout(groupId()), metrics);
         io.setPreviousId(pageAddr, prevPageId);
 
         if (addDataPageId != 0L) {

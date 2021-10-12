@@ -171,7 +171,7 @@ public abstract class PagesList extends DataStructure {
             decrementBucketSize(oldBucket);
 
             // Recalculate bucket because page free space can be changed concurrently.
-            int freeSpace = ((AbstractDataPageIO)iox).getFreeSpace(pageAddr);
+            int freeSpace = ((AbstractDataPageIO<?>)iox).getFreeSpace(pageAddr, pageLayout());
 
             int newBucket = getBucketIndex(freeSpace);
 
@@ -459,7 +459,7 @@ public abstract class PagesList extends DataStructure {
 
                                 curIo = PagesListMetaIO.VERSIONS.latest();
 
-                                curIo.initNewPage(curAddr, curId, pageSize(), metrics);
+                                curIo.initNewPage(curAddr, curId, pageLayout(), metrics);
                             }
                             else {
                                 releaseAndClose(curId, curPage, curAddr);
@@ -582,7 +582,7 @@ public abstract class PagesList extends DataStructure {
     private void setupNextPage(PagesListNodeIO io, long prevId, long prev, long nextId, long next) {
         assert io.getNextId(prev) == 0L;
 
-        io.initNewPage(next, nextId, pageSize(), metrics);
+        io.initNewPage(next, nextId, pageLayout(), metrics);
         io.setPreviousId(next, prevId);
 
         io.setNextId(prev, nextId);
@@ -1025,7 +1025,7 @@ public abstract class PagesList extends DataStructure {
         // Attempt to add page failed: the node page is full.
         if (isReuseBucket(bucket)) {
             // If we are on the reuse bucket, we can not allocate new page, because it may cause deadlock.
-            assert dataIO.isEmpty(dataAddr); // We can put only empty data pages to reuse bucket.
+            assert dataIO.isEmpty(pageLayout(), dataAddr); // We can put only empty data pages to reuse bucket.
 
             // Change page type to index and add it as next node page to this list.
             long newDataId = PageIdUtils.changeType(dataId, FLAG_IDX);
@@ -1541,7 +1541,7 @@ public abstract class PagesList extends DataStructure {
         boolean needWalDeltaRecord = needWalDeltaRecord(reusedPageId, reusedPage, null);
 
         if (initIo != null) {
-            initIo.initNewPage(reusedPageAddr, newPageId, pageSize(), metrics);
+            initIo.initNewPage(reusedPageAddr, newPageId, pageLayout(), metrics);
 
             if (needWalDeltaRecord) {
                 assert PageIdUtils.partId(reusedPageId) == PageIdUtils.partId(newPageId) :

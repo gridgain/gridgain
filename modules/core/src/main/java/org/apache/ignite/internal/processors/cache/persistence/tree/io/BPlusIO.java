@@ -75,8 +75,8 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setCount(pageAddr, 0);
         setForward(pageAddr, 0);
@@ -278,7 +278,7 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
      * @param fwdPageAddr Forward page address.
      * @param mid Bisection index.
      * @param cnt Initial elements count in the page being split.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @throws IgniteCheckedException If failed.
      */
     public void splitForwardPage(
@@ -287,10 +287,10 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
         long fwdPageAddr,
         int mid,
         int cnt,
-        int pageSize,
+        PageLayout pageLayout,
         PageMetrics metrics
     ) throws IgniteCheckedException {
-        initNewPage(fwdPageAddr, fwdId, pageSize, metrics);
+        initNewPage(fwdPageAddr, fwdId, pageLayout, metrics);
 
         cnt -= mid;
 
@@ -406,7 +406,7 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("BPlusIO [\n\tcanGetRow=").a(canGetRow)
             .a(",\n\tleaf=").a(leaf)
             .a(",\n\titemSize=").a(itemSize)
@@ -426,8 +426,8 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
-        copyPage(page, out, pageSize);
+    @Override public void compactPage(ByteBuffer page, ByteBuffer out, PageLayout pageLayout) {
+        copyPage(page, out, pageLayout.pageSize());
 
         long pageAddr = GridUnsafe.bufferAddress(out);
 
@@ -436,7 +436,9 @@ public abstract class BPlusIO<L> extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void restorePage(ByteBuffer compactPage, int pageSize) {
+    @Override public void restorePage(ByteBuffer compactPage, PageLayout pageLayout) {
+        int pageSize = pageLayout.pageSize();
+
         assert compactPage.isDirect();
         assert compactPage.position() == 0;
         assert compactPage.limit() <= pageSize;

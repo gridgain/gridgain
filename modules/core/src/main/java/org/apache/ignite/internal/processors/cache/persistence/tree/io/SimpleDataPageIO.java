@@ -97,6 +97,7 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
 
     /** {@inheritDoc} */
     @Override protected void writeRowData(
+        PageLayout pageLayout,
         long pageAddr,
         int dataOff,
         int payloadSize,
@@ -105,17 +106,24 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     ) throws IgniteCheckedException {
         long addr = pageAddr + dataOff;
 
-        if (newRow)
-            PageUtils.putShort(addr, 0, (short)payloadSize);
+        int offset = 0;
 
-        PageUtils.putInt(addr, 2, row.value().length);
-        PageUtils.putBytes(addr, 6, row.value());
+        if (newRow)
+            pageLayout.putPayloadSize(addr, offset, payloadSize);
+
+        offset += pageLayout.payloadLenSize();
+
+        PageUtils.putInt(addr, offset, row.value().length);
+
+        offset += Integer.BYTES;
+
+        PageUtils.putBytes(addr, offset, row.value());
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("SimpleDataPageIO [\n");
-        printPageLayout(addr, pageSize, sb);
+        printPageLayout(addr, pageLayout, sb);
         sb.a("\n]");
     }
 }

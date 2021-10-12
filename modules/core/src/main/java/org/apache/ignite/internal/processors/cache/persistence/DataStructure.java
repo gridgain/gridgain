@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
@@ -476,6 +477,13 @@ public abstract class DataStructure {
      */
     protected int pageSize() {
         return pageMem.realPageSize(grpId);
+    }
+
+    /**
+     * @return Page layout helper.
+     */
+    protected PageLayout pageLayout() {
+        return pageMem.pageLayout(grpId);
     }
 
     /**

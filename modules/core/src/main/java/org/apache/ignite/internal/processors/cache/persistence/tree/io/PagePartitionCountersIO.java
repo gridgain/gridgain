@@ -82,8 +82,8 @@ public class PagePartitionCountersIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setCount(pageAddr, 0);
         setNextCountersPageId(pageAddr, 0);
@@ -207,7 +207,7 @@ public class PagePartitionCountersIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("PagePartitionCounters [\n\tcount=").a(getCount(addr))
             .a(",\n\tlastFlag=").a(getLastFlag(addr))
             .a(",\n\tnextCountersPageId=").appendHex(getNextCountersPageId(addr))

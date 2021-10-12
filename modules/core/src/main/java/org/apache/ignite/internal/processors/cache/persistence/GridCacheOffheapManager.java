@@ -948,7 +948,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (init) {
                         partCntrIo = PagePartitionCountersIO.VERSIONS.latest();
 
-                        partCntrIo.initNewPage(curAddr, curId, pageMem.realPageSize(grpId), metrics);
+                        partCntrIo.initNewPage(curAddr, curId, pageMem.pageLayout(grpId), metrics);
                     }
                     else
                         partCntrIo = PageIO.getPageIO(curAddr);
@@ -1212,7 +1212,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 if (PageIO.getType(pageAddr) != PageIO.T_META) {
                     PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(grpId);
 
-                    io.initNewPage(pageAddr, metaId, pageMem.realPageSize(grpId), metrics);
+                    io.initNewPage(pageAddr, metaId, pageMem.pageLayout(grpId), metrics);
 
                     metastoreRoot = pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX);
                     reuseListRoot = pageMem.allocatePage(grpId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX);
@@ -2512,7 +2512,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     if (PageIO.getType(pageAddr) != PageIO.T_PART_META) {
                         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(grpId);
 
-                        io.initNewPage(pageAddr, partMetaId, pageMem.realPageSize(grpId), metrics);
+                        io.initNewPage(pageAddr, partMetaId, pageMem.pageLayout(grpId), metrics);
 
                         treeRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);
                         reuseListRoot = pageMem.allocatePage(grpId, partId, PageMemory.FLAG_AUX);

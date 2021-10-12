@@ -63,6 +63,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -124,6 +125,8 @@ public class PageMemoryTracker implements IgnitePlugin {
 
     /** Page size. */
     private volatile int pageSize;
+
+    private volatile PageLayout pageLayout;
 
     /** Page memory mock. */
     private volatile PageMemory pageMemoryMock;
@@ -228,6 +231,8 @@ public class PageMemoryTracker implements IgnitePlugin {
             return;
 
         pageSize = ctx.igniteConfiguration().getDataStorageConfiguration().getPageSize();
+
+        pageLayout = new PageLayout(pageSize);
 
         pageMemoryMock = mockPageMemory();
 
@@ -701,8 +706,8 @@ public class PageMemoryTracker implements IgnitePlugin {
             tmpBuf1.clear();
             tmpBuf2.clear();
 
-            ((CompactablePageIO)pageIo).compactPage(locBuf, tmpBuf1, pageSize);
-            ((CompactablePageIO)pageIo).compactPage(rmtBuf, tmpBuf2, pageSize);
+            ((CompactablePageIO)pageIo).compactPage(locBuf, tmpBuf1, pageLayout);
+            ((CompactablePageIO)pageIo).compactPage(rmtBuf, tmpBuf2, pageLayout);
 
             locBuf = tmpBuf1;
             rmtBuf = tmpBuf2;

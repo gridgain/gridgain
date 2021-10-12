@@ -102,7 +102,7 @@ public class PartitionMetaStorageImpl<T extends Storable> extends AbstractFreeLi
                     AbstractDataPageIO io = PageIO.getPageIO(pageAddr);
 
                     //MetaStorage never encrypted so realPageSize == pageSize.
-                    DataPagePayload data = io.readPayload(pageAddr, itemId(nextLink), pageMem.pageSize());
+                    DataPagePayload data = io.readPayload(pageAddr, itemId(nextLink), pageMem.pageLayout());
 
                     nextLink = data.nextLink();
 

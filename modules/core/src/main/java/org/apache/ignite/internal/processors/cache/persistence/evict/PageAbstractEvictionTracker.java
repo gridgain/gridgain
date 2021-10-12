@@ -26,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -97,7 +98,9 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
                 if (!checkTouch(realPageId))
                     return false; // Can't evict: another thread concurrently invoked forgetPage()
 
-                rowsToEvict = io.forAllItems(pageAddr, new DataPageIO.CC<CacheDataRowAdapter>() {
+                PageLayout pageLayout = pageMem.pageLayout();
+
+                rowsToEvict = io.forAllItems(pageAddr, pageLayout, new DataPageIO.CC<CacheDataRowAdapter>() {
                     @Override public CacheDataRowAdapter apply(long link) throws IgniteCheckedException {
                         CacheDataRowAdapter row = new CacheDataRowAdapter(link);
 

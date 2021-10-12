@@ -146,7 +146,7 @@ public class MarkerPageIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("MarkerPage [markerType=" + markerType(addr) +
             ", walRecordSerializerVersion=" + walRecordSerializerVersion(addr) + "]");
     }

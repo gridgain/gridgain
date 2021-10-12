@@ -58,8 +58,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     );
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setSize(pageAddr, 0);
         setUpdateCounter(pageAddr, 0);
@@ -319,8 +319,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long pageAddr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
-        super.printPage(pageAddr, pageSize, sb);
+    @Override protected void printPage(long pageAddr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
+        super.printPage(pageAddr, pageLayout, sb);
 
         sb.a(",\nPagePartitionMeta[\n");
 

@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetri
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
 
@@ -58,8 +59,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setEmpty(pageAddr);
 
@@ -236,8 +237,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
-        copyPage(page, out, pageSize);
+    @Override public void compactPage(ByteBuffer page, ByteBuffer out, PageLayout pageLayout) {
+        copyPage(page, out, pageLayout.pageSize());
 
         long pageAddr = GridUnsafe.bufferAddress(out);
 
@@ -246,7 +247,9 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void restorePage(ByteBuffer compactPage, int pageSize) {
+    @Override public void restorePage(ByteBuffer compactPage, PageLayout pageLayout) {
+        int pageSize = pageLayout.pageSize();
+
         assert compactPage.isDirect();
         assert compactPage.position() == 0;
         assert compactPage.limit() <= pageSize;
@@ -255,7 +258,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("PagesListNode [\n\tpreviousPageId=").appendHex(getPreviousId(addr))
             .a(",\n\tnextPageId=").appendHex(getNextId(addr))
             .a(",\n\tcount=").a(getCount(addr))

@@ -68,7 +68,7 @@ import org.jetbrains.annotations.Nullable;
  *    static methods (like {@code {@link #getPageId(long)}}) intentionally:
  *    this base format can not be changed between versions.
  *
- * 2. IO must correctly override {@link #initNewPage(long, long, int)} method and call super.
+ * 2. IO must correctly override {@link #initNewPage(long, long, PageLayout, PageMetrics)} method and call super.
  *    We have logic that relies on this behavior.
  *
  * 3. Page IO type ID constant must be declared in this class to have a list of all the
@@ -626,12 +626,13 @@ public abstract class PageIO {
     /**
      * @param pageAddr Page address.
      * @param pageId Page ID.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param metrics Page metrics for tracking page allocation. Can be {@code null} if no tracking is required.
      *
      * @see EncryptionSpi#encryptedSize(int)
      */
-    public void initNewPage(long pageAddr, long pageId, int pageSize, @Nullable PageMetrics metrics) {
+    // TODO: should here be realPageSize or pageSize
+    public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, @Nullable PageMetrics metrics) {
         setType(pageAddr, getType());
         setVersion(pageAddr, getVersion());
         setPageId(pageAddr, pageId);
@@ -697,7 +698,6 @@ public abstract class PageIO {
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     public static <Q extends PageIO> Q getPageIO(int type, int ver) throws IgniteCheckedException {
         switch (type) {
             case T_DATA:
@@ -761,7 +761,6 @@ public abstract class PageIO {
      * @return IO for either inner or leaf B+Tree page.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     public static <Q extends BPlusIO<?>> Q getBPlusIO(int type, int ver) throws IgniteCheckedException {
         assert type > 0 && type <= 65535 : type;
 
@@ -936,10 +935,10 @@ public abstract class PageIO {
 
     /**
      * @param addr Address.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param sb Sb.
      */
-    protected abstract void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException;
+    protected abstract void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException;
 
     /**
      * @param page Page.
@@ -958,7 +957,7 @@ public abstract class PageIO {
     /**
      * @param addr Address.
      */
-    public static String printPage(long addr, int pageSize) {
+    public static String printPage(long addr, PageLayout pageLayout) {
         GridStringBuilder sb = new GridStringBuilder("Header [\n\ttype=");
 
         try {
@@ -976,7 +975,7 @@ public abstract class PageIO {
                     .a("\n]");
             }
             else
-                io.printPage(addr, pageSize, sb);
+                io.printPage(addr, pageLayout, sb);
         }
         catch (IgniteCheckedException e) {
             sb.a("Failed to print page: ").a(e.getMessage());

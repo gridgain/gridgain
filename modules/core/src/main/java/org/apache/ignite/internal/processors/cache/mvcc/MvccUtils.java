@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -592,8 +593,6 @@ public class MvccUtils {
         PageMemory pageMem = cctx.dataRegion().pageMemory();
         int grpId = cctx.groupId();
 
-        int pageSize = pageMem.realPageSize(grpId);
-
         long pageId = pageId(link);
         int itemId = itemId(link);
         long page = pageMem.acquirePage(grpId, pageId);
@@ -604,7 +603,7 @@ public class MvccUtils {
             try {
                 DataPageIO dataIo = DataPageIO.VERSIONS.forPage(pageAddr);
 
-                return invoke(cctx, dataIo, pageAddr, itemId, pageSize, clo, snapshot);
+                return invoke(cctx, dataIo, pageAddr, itemId, pageMem.pageLayout(grpId), clo, snapshot);
             }
             finally {
                 pageMem.readUnlock(grpId, pageId, page);
@@ -620,15 +619,15 @@ public class MvccUtils {
      * @param dataIo Data page IO.
      * @param pageAddr Page address.
      * @param itemId Item Id.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param clo Closure.
      * @param snapshot Mvcc snapshot.
      * @return Result.
      * @throws IgniteCheckedException If failed.
      */
-    private static <R> R invoke(GridCacheContext cctx, DataPageIO dataIo, long pageAddr, int itemId, int pageSize,
+    private static <R> R invoke(GridCacheContext cctx, DataPageIO dataIo, long pageAddr, int itemId, PageLayout pageLayout,
         MvccClosure<R> clo, MvccSnapshot snapshot) throws IgniteCheckedException {
-        int offset = dataIo.getPayloadOffset(pageAddr, itemId, pageSize, MVCC_INFO_SIZE);
+        int offset = dataIo.getPayloadOffset(pageAddr, itemId, pageLayout, MVCC_INFO_SIZE);
 
         long mvccCrd = dataIo.mvccCoordinator(pageAddr, offset);
         long mvccCntr = dataIo.mvccCounter(pageAddr, offset);
@@ -652,13 +651,13 @@ public class MvccUtils {
      * @param dataIo Data page IO.
      * @param pageAddr Page address.
      * @param itemId Item Id.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return {@code true} If the row is visible.
      * @throws IgniteCheckedException If failed.
      */
     public static boolean isVisible(GridCacheContext cctx, MvccSnapshot snapshot, DataPageIO dataIo,
-        long pageAddr, int itemId, int pageSize) throws IgniteCheckedException {
-        return invoke(cctx, dataIo, pageAddr, itemId, pageSize, isVisible, snapshot);
+        long pageAddr, int itemId, PageLayout pageLayout) throws IgniteCheckedException {
+        return invoke(cctx, dataIo, pageAddr, itemId, pageLayout, isVisible, snapshot);
     }
 
     /**

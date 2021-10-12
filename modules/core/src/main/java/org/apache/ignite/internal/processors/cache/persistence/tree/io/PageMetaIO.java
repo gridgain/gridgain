@@ -76,8 +76,8 @@ public class PageMetaIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setTreeRoot(pageAddr, 0);
         setReuseListRoot(pageAddr, 0);
@@ -247,7 +247,7 @@ public class PageMetaIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("PageMeta[\n\ttreeRoot=").a(getTreeRoot(addr))
             .a(",\n\treuseListRoot=").a(getReuseListRoot(addr))
             .a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(addr))

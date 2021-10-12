@@ -38,8 +38,8 @@ public class PagePartitionMetaIOV3 extends PagePartitionMetaIOV2 {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setEncryptedPageIndex(pageAddr, 0);
         setEncryptedPageCount(pageAddr, 0);

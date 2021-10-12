@@ -73,6 +73,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
@@ -166,6 +167,12 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** Encrypted page size. */
     private final int encPageSize;
+
+    /** Page layout. */
+    private final PageLayout pageLayout;
+
+    /** Encrypted page layout. */
+    private final PageLayout encryptedPageLayout;
 
     /** Shared context. */
     private final GridCacheSharedContext<?, ?> ctx;
@@ -350,6 +357,10 @@ public class PageMemoryImpl implements PageMemoryEx {
             default:
                 throw new IgniteException("Unexpected page replacement mode: " + pageReplacementMode);
         }
+
+        pageLayout = new PageLayout(pageSize());
+
+        encryptedPageLayout = new PageLayout(encPageSize);
     }
 
     /** {@inheritDoc} */
@@ -601,7 +612,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 if (PageIO.getType(pageAddr) == 0) {
                     PageMetrics metrics = dataRegionMetrics.cacheGrpPageMetrics(grpId);
 
-                    trackingIO.initNewPage(pageAddr, pageId, realPageSize(grpId), metrics);
+                    trackingIO.initNewPage(pageAddr, pageId, pageLayout(grpId), metrics);
 
                     if (!ctx.wal().disabled(fullId.groupId())) {
                         if (!ctx.wal().isAlwaysWriteFullPages())
@@ -1040,6 +1051,11 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
+    @Override public PageLayout pageLayout() {
+        return new PageLayout(sysPageSize - PAGE_OVERHEAD);
+    }
+
+    /** {@inheritDoc} */
     @Override public int systemPageSize() {
         return sysPageSize;
     }
@@ -1050,6 +1066,14 @@ public class PageMemoryImpl implements PageMemoryEx {
             return pageSize();
 
         return encPageSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public PageLayout pageLayout(int grpId) {
+        if (encryptionDisabled || encMgr.getActiveKey(grpId) == null)
+            return pageLayout;
+
+        return encryptedPageLayout;
     }
 
     /** {@inheritDoc} */
@@ -2226,6 +2250,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (ctx.kernalContext().query() == null || !ctx.kernalContext().query().moduleEnabled())
                 return;
 
+            int grpId = fullPageId.groupId();
+
             long pageAddr = PageMemoryImpl.this.readLock(absPtr, fullPageId.pageId(), true, false);
 
             try {
@@ -2233,14 +2259,14 @@ public class PageMemoryImpl implements PageMemoryEx {
                     return;
 
                 GridQueryRowCacheCleaner cleaner = ctx.kernalContext().query()
-                    .getIndexing().rowCacheCleaner(fullPageId.groupId());
+                    .getIndexing().rowCacheCleaner(grpId);
 
                 if (cleaner == null)
                     return;
 
                 DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
 
-                io.forAllItems(pageAddr, new DataPageIO.CC<Void>() {
+                io.forAllItems(pageAddr, pageLayout(grpId), new DataPageIO.CC<Void>() {
                     @Override public Void apply(long link) {
                         cleaner.remove(link);
 

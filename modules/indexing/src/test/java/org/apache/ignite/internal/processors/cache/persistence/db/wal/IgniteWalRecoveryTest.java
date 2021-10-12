@@ -97,6 +97,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
@@ -1529,8 +1530,10 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
                             int realPageSize = data.length;
 
-                            pageIO.compactPage(GridUnsafe.wrapPointer(bufPtr, realPageSize), buf, realPageSize);
-                            pageIO.compactPage(ByteBuffer.wrap(data), bufWal, realPageSize);
+                            PageLayout pageLayout = new PageLayout(realPageSize);
+
+                            pageIO.compactPage(GridUnsafe.wrapPointer(bufPtr, realPageSize), buf, pageLayout);
+                            pageIO.compactPage(ByteBuffer.wrap(data), bufWal, pageLayout);
 
                             bufPtr = GridUnsafe.bufferAddress(buf);
                             data = new byte[bufWal.limit()];

@@ -545,7 +545,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(METASTORAGE_CACHE_ID);
 
                         //MetaStorage never encrypted so realPageSize == pageSize.
-                        io.initNewPage(pageAddr, partMetaId, pageMem.pageSize(), metrics);
+                        io.initNewPage(pageAddr, partMetaId, pageMem.pageLayout(), metrics);
 
                         treeRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, FLAG_AUX);
                         reuseListRoot = pageMem.allocatePage(METASTORAGE_CACHE_ID, partId, FLAG_AUX);

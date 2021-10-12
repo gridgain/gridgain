@@ -49,7 +49,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
  * <p>
  * Direct and indirect items are always placed in the items table in such a way that direct items are stored first,
  * and indirect items are always stored after direct items. A data page explicitly stores both direct and indirect
- * items count (see {@link #getDirectCount(long)} and {@link #getIndirectCount(long)}), so that the item type can be
+ * items count (see {@link PageLayout#getDirectCount(long)} and {@link PageLayout#getIndirectCount(long)}), so that the item type can be
  * easily determined: items with indexes {@code [0, directCnt)} are always direct and items with indexes
  * {@code [directCnt, directCnt + indirectCnt)} are always indirect. Having both direct and indirect items in a
  * page allows page defragmentation without breaking external links. Total number of rows stored in a page is equal
@@ -179,31 +179,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     private static final int FREE_SPACE_OFF = FREE_LIST_PAGE_ID_OFF + 8;
 
     /** */
-    private static final int DIRECT_CNT_OFF = FREE_SPACE_OFF + 2;
-
-    /** */
-    private static final int INDIRECT_CNT_OFF = DIRECT_CNT_OFF + 1;
-
-    /** */
-    private static final int FIRST_ENTRY_OFF = INDIRECT_CNT_OFF + 1;
-
-    /** */
-    public static final int ITEMS_OFF = FIRST_ENTRY_OFF + 2;
-
-    /** */
-    private static final int ITEM_SIZE = 2;
-
-    /** */
-    private static final int PAYLOAD_LEN_SIZE = 2;
-
-    /** */
     private static final int LINK_SIZE = 8;
-
-    /** */
-    private static final int FRAGMENTED_FLAG = 0b10000000_00000000;
-
-    /** */
-    public static final int MIN_DATA_PAGE_OVERHEAD = ITEMS_OFF + ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
 
     /**
      * @param type Page type.
@@ -214,22 +190,25 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
-        setEmptyPage(pageAddr, pageSize);
+        setEmptyPage(pageAddr, pageLayout);
         setFreeListPageId(pageAddr, 0L);
     }
 
     /**
      * @param pageAddr Page address.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      */
-    private void setEmptyPage(long pageAddr, int pageSize) {
-        setDirectCount(pageAddr, 0);
-        setIndirectCount(pageAddr, 0);
-        setFirstEntryOffset(pageAddr, pageSize, pageSize);
-        setRealFreeSpace(pageAddr, pageSize - ITEMS_OFF, pageSize);
+    private void setEmptyPage(long pageAddr, PageLayout pageLayout) {
+        pageLayout.setDirectCount(pageAddr, 0);
+        pageLayout.setIndirectCount(pageAddr, 0);
+
+        int pageSize = pageLayout.pageSize();
+
+        pageLayout.setFirstEntryOffset(pageAddr, pageSize);
+        setRealFreeSpace(pageAddr, pageSize - pageLayout.itemsOffset(), pageLayout);
     }
 
     /**
@@ -250,150 +229,45 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
     /**
      * @param pageAddr Page address.
-     * @param dataOff Data offset.
-     * @param show What elements of data page entry to show in the result.
-     * @return Data page entry size.
-     */
-    private int getPageEntrySize(long pageAddr, int dataOff, int show) {
-        int payloadLen = PageUtils.getShort(pageAddr, dataOff) & 0xFFFF;
-
-        if ((payloadLen & FRAGMENTED_FLAG) != 0)
-            payloadLen &= ~FRAGMENTED_FLAG; // We are fragmented and have a link.
-        else
-            show &= ~SHOW_LINK; // We are not fragmented, never have a link.
-
-        return getPageEntrySize(payloadLen, show);
-    }
-
-    /**
-     * @param payloadLen Length of the payload, may be a full data row or a row fragment length.
-     * @param show What elements of data page entry to show in the result.
-     * @return Data page entry size.
-     */
-    private int getPageEntrySize(int payloadLen, int show) {
-        assert payloadLen > 0 : payloadLen;
-
-        int res = payloadLen;
-
-        if ((show & SHOW_LINK) != 0)
-            res += LINK_SIZE;
-
-        if ((show & SHOW_ITEM) != 0)
-            res += ITEM_SIZE;
-
-        if ((show & SHOW_PAYLOAD_LEN) != 0)
-            res += PAYLOAD_LEN_SIZE;
-
-        return res;
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param dataOff Entry data offset.
-     * @param pageSize Page size.
-     */
-    private void setFirstEntryOffset(long pageAddr, int dataOff, int pageSize) {
-        assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff <= pageSize : dataOff;
-
-        PageUtils.putShort(pageAddr, FIRST_ENTRY_OFF, (short)dataOff);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @return Entry data offset.
-     */
-    private int getFirstEntryOffset(long pageAddr) {
-        return PageUtils.getShort(pageAddr, FIRST_ENTRY_OFF) & 0xFFFF;
-    }
-
-    /**
-     * @param pageAddr Page address.
      * @param freeSpace Free space.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      */
-    private void setRealFreeSpace(long pageAddr, int freeSpace, int pageSize) {
-        assert freeSpace == actualFreeSpace(pageAddr, pageSize) : freeSpace + " != " + actualFreeSpace(pageAddr, pageSize);
+    private void setRealFreeSpace(long pageAddr, int freeSpace, PageLayout pageLayout) {
+        assert freeSpace == actualFreeSpace(pageAddr, pageLayout) : freeSpace + " != " + actualFreeSpace(pageAddr, pageLayout);
 
-        PageUtils.putShort(pageAddr, FREE_SPACE_OFF, (short)freeSpace);
+        pageLayout.setRealFreeSpace(pageAddr, freeSpace);
     }
 
     /**
-     * Free space refers to a "max row size (without any data page specific overhead) which is guaranteed to fit into
-     * this data page".
-     *
-     * @param pageAddr Page address.
-     * @return Free space.
-     */
-    public int getFreeSpace(long pageAddr) {
-        if (getFreeItemSlots(pageAddr) == 0)
-            return 0;
-
-        int freeSpace = getRealFreeSpace(pageAddr);
-
-        // We reserve size here because of getFreeSpace() method semantics (see method javadoc).
-        // It means that we must be able to accommodate a row of size which is equal to getFreeSpace(),
-        // plus we will have data page overhead: header of the page as well as item, payload length and
-        // possibly a link to the next row fragment.
-        freeSpace -= ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
-
-        return freeSpace < 0 ? 0 : freeSpace;
-    }
-
-    /**
+     * @param pageLayout Page layout.
      * @param pageAddr Page address.
      * @return {@code true} If there is no useful data in this page.
      */
-    public boolean isEmpty(long pageAddr) {
-        return getDirectCount(pageAddr) == 0;
+    public boolean isEmpty(PageLayout pageLayout, long pageAddr) {
+        return pageLayout.getDirectCount(pageAddr) == 0;
     }
 
     /**
-     * Equivalent for {@link #actualFreeSpace(long, int)} but reads saved value.
-     *
-     * @param pageAddr Page address.
-     * @return Free space.
-     */
-    public int getRealFreeSpace(long pageAddr) {
-        return PageUtils.getShort(pageAddr, FREE_SPACE_OFF);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param cnt Direct count.
-     */
-    private void setDirectCount(long pageAddr, int cnt) {
-        assert checkCount(cnt) : cnt;
-
-        PageUtils.putByte(pageAddr, DIRECT_CNT_OFF, (byte)cnt);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @return Direct count.
-     */
-    private int getDirectCount(long pageAddr) {
-        return PageUtils.getByte(pageAddr, DIRECT_CNT_OFF) & 0xFF;
-    }
-
-    /**
+     * @param pageLayout Page layout.
      * @param pageAddr Page address.
      * @return Rows number in the given data page.
      */
-    public int getRowsCount(long pageAddr) {
-        return getDirectCount(pageAddr);
+    public int getRowsCount(PageLayout pageLayout, long pageAddr) {
+        return pageLayout.getDirectCount(pageAddr);
     }
 
     /**
      * @param pageAddr Page address.
+     * @param pageLayout Page layout.
      * @param c Closure.
      * @param <T> Closure return type.
      * @return Collection of closure results for all items in page.
      * @throws IgniteCheckedException In case of error in closure body.
      */
-    public <T> List<T> forAllItems(long pageAddr, CC<T> c) throws IgniteCheckedException {
+    public <T> List<T> forAllItems(long pageAddr, PageLayout pageLayout, CC<T> c) throws IgniteCheckedException {
         long pageId = getPageId(pageAddr);
 
-        int cnt = getDirectCount(pageAddr);
+        int cnt = pageLayout.getDirectCount(pageAddr);
 
         List<T> res = new ArrayList<>(cnt);
 
@@ -408,61 +282,20 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
     /**
      * @param pageAddr Page address.
-     * @param cnt Indirect count.
-     */
-    private void setIndirectCount(long pageAddr, int cnt) {
-        assert checkCount(cnt) : cnt;
-
-        PageUtils.putByte(pageAddr, INDIRECT_CNT_OFF, (byte)cnt);
-    }
-
-    /**
-     * @param idx Index.
-     * @return {@code true} If the index is valid.
-     */
-    protected boolean checkIndex(int idx) {
-        return idx >= 0 && idx < 0xFF;
-    }
-
-    /**
-     * @param cnt Counter value.
-     * @return {@code true} If the counter fits 1 byte.
-     */
-    private boolean checkCount(int cnt) {
-        return cnt >= 0 && cnt <= 0xFF;
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @return Indirect count.
-     */
-    private int getIndirectCount(long pageAddr) {
-        return PageUtils.getByte(pageAddr, INDIRECT_CNT_OFF) & 0xFF;
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @return Number of free entry slots.
-     */
-    private int getFreeItemSlots(long pageAddr) {
-        return 0xFF - getDirectCount(pageAddr);
-    }
-
-    /**
-     * @param pageAddr Page address.
      * @param itemId Fixed item ID (the index used for referencing an entry from the outside).
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
+     * @param pageLayout Page layout.
      * @return Found index of indirect item.
      */
-    private int findIndirectItemIndex(long pageAddr, int itemId, int directCnt, int indirectCnt) {
+    private int findIndirectItemIndex(long pageAddr, int itemId, int directCnt, int indirectCnt, PageLayout pageLayout) {
         int low = directCnt;
         int high = directCnt + indirectCnt - 1;
 
         while (low <= high) {
             int mid = (low + high) >>> 1;
 
-            int cmp = Integer.compare(itemId(getItem(pageAddr, mid)), itemId);
+            int cmp = Integer.compare(pageLayout.itemId(pageLayout.getItem(pageAddr, mid)), itemId);
 
             if (cmp < 0)
                 low = mid + 1;
@@ -477,26 +310,26 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
     /**
      * @param pageAddr Page address.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return String representation.
      */
-    private String printPageLayout(long pageAddr, int pageSize) {
+    private String printPageLayout(long pageAddr, PageLayout pageLayout) {
         SB b = new SB();
 
-        printPageLayout(pageAddr, pageSize, b);
+        printPageLayout(pageAddr, pageLayout, b);
 
         return b.toString();
     }
 
     /**
      * @param pageAddr Page address.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param b B.
      */
-    protected void printPageLayout(long pageAddr, int pageSize, GridStringBuilder b) {
-        int directCnt = getDirectCount(pageAddr);
-        int indirectCnt = getIndirectCount(pageAddr);
-        int free = getRealFreeSpace(pageAddr);
+    protected void printPageLayout(long pageAddr, PageLayout pageLayout, GridStringBuilder b) {
+        int directCnt = pageLayout.getDirectCount(pageAddr);
+        int indirectCnt = pageLayout.getIndirectCount(pageAddr);
+        int free = pageLayout.getRealFreeSpace(pageAddr);
 
         boolean valid = directCnt >= indirectCnt;
 
@@ -508,12 +341,12 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             if (i != 0)
                 b.a(", ");
 
-            short item = getItem(pageAddr, i);
+            int item = pageLayout.getItem(pageAddr, i);
 
-            if (item < ITEMS_OFF || item >= pageSize)
+            if (item < pageLayout.itemsOffset() || item >= pageLayout.pageSize())
                 valid = false;
 
-            entriesSize += getPageEntrySize(pageAddr, item, SHOW_PAYLOAD_LEN | SHOW_LINK);
+            entriesSize += pageLayout.getPageEntrySize(pageAddr, item, SHOW_PAYLOAD_LEN | SHOW_LINK);
 
             b.a(item);
         }
@@ -526,20 +359,20 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             if (i != directCnt)
                 b.a(", ");
 
-            short item = getItem(pageAddr, i);
+            int item = pageLayout.getItem(pageAddr, i);
 
-            int itemId = itemId(item);
-            int directIdx = directItemIndex(item);
+            int itemId = pageLayout.itemId(item);
+            int directIdx = pageLayout.directItemIndex(item);
 
             if (!set.add(directIdx) || !set.add(itemId))
                 valid = false;
 
-            assert indirectItem(itemId, directIdx) == item;
+            assert pageLayout.indirectItem(itemId, directIdx) == item;
 
             if (itemId < directCnt || directIdx < 0 || directIdx >= directCnt)
                 valid = false;
 
-            if (i > directCnt && itemId(getItem(pageAddr, i - 1)) >= itemId)
+            if (i > directCnt && pageLayout.itemId(pageLayout.getItem(pageAddr, i - 1)) >= itemId)
                 valid = false;
 
             b.a(itemId).a('^').a(directIdx);
@@ -547,7 +380,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
         b.a("][free=").a(free);
 
-        int actualFree = pageSize - ITEMS_OFF - (entriesSize + (directCnt + indirectCnt) * ITEM_SIZE);
+        int actualFree = pageLayout.pageSize() - pageLayout.itemsOffset()
+            - (entriesSize + (directCnt + indirectCnt) * pageLayout.itemSize());
 
         if (free != actualFree) {
             b.a(", actualFree=").a(actualFree);
@@ -563,54 +397,34 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /**
      * @param pageAddr Page address.
      * @param itemId Fixed item ID (the index used for referencing an entry from the outside).
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Data entry offset in bytes.
      */
-    protected int getDataOffset(long pageAddr, int itemId, int pageSize) {
-        assert checkIndex(itemId) : itemId;
+    protected int getDataOffset(long pageAddr, int itemId, PageLayout pageLayout) {
+        assert pageLayout.checkIndex(itemId) : itemId;
 
-        int directCnt = getDirectCount(pageAddr);
+        int directCnt = pageLayout.getDirectCount(pageAddr);
 
-        assert directCnt > 0 : "itemId=" + itemId + ", directCnt=" + directCnt + ", page=" + printPageLayout(pageAddr, pageSize);
+        assert directCnt > 0 : "itemId=" + itemId + ", directCnt=" + directCnt + ", page=" + printPageLayout(pageAddr, pageLayout);
 
         if (itemId >= directCnt) { // Need to do indirect lookup.
-            int indirectCnt = getIndirectCount(pageAddr);
+            int indirectCnt = pageLayout.getIndirectCount(pageAddr);
 
             // Must have indirect items here.
             assert indirectCnt > 0 : "itemId=" + itemId + ", directCnt=" + directCnt + ", indirectCnt=" + indirectCnt +
-                ", page=" + printPageLayout(pageAddr, pageSize);
+                ", page=" + printPageLayout(pageAddr, pageLayout);
 
-            int indirectItemIdx = findIndirectItemIndex(pageAddr, itemId, directCnt, indirectCnt);
+            int indirectItemIdx = findIndirectItemIndex(pageAddr, itemId, directCnt, indirectCnt, pageLayout);
 
             assert indirectItemIdx >= directCnt : indirectItemIdx + " " + directCnt;
             assert indirectItemIdx < directCnt + indirectCnt : indirectItemIdx + " " + directCnt + " " + indirectCnt;
 
-            itemId = directItemIndex(getItem(pageAddr, indirectItemIdx));
+            itemId = pageLayout.directItemIndex(pageLayout.getItem(pageAddr, indirectItemIdx));
 
             assert itemId >= 0 && itemId < directCnt : itemId + " " + directCnt + " " + indirectCnt; // Direct item.
         }
 
-        return directItemToOffset(getItem(pageAddr, itemId));
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param dataOff Points to the entry start.
-     * @return Link to the next entry fragment or 0 if no fragments left or if entry is not fragmented.
-     */
-    private long getNextFragmentLink(long pageAddr, int dataOff) {
-        assert isFragmented(pageAddr, dataOff);
-
-        return PageUtils.getLong(pageAddr, dataOff + PAYLOAD_LEN_SIZE);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param dataOff Data offset.
-     * @return {@code true} If the data row is fragmented across multiple pages.
-     */
-    protected boolean isFragmented(long pageAddr, int dataOff) {
-        return (PageUtils.getShort(pageAddr, dataOff) & FRAGMENTED_FLAG) != 0;
+        return pageLayout.directItemToOffset(pageLayout.getItem(pageAddr, itemId));
     }
 
     /**
@@ -618,110 +432,38 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      *
      * @param pageAddr Page address.
      * @param itemId Item to position on.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return {@link DataPagePayload} object.
      */
-    public DataPagePayload readPayload(final long pageAddr, final int itemId, final int pageSize) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+    public DataPagePayload readPayload(final long pageAddr, final int itemId, final PageLayout pageLayout) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        boolean fragmented = isFragmented(pageAddr, dataOff);
-        long nextLink = fragmented ? getNextFragmentLink(pageAddr, dataOff) : 0;
-        int payloadSize = getPageEntrySize(pageAddr, dataOff, 0);
+        boolean fragmented = pageLayout.isFragmented(pageAddr, dataOff);
+        long nextLink = fragmented ? pageLayout.getNextFragmentLink(pageAddr, dataOff) : 0;
+        int payloadSize = pageLayout.getPageEntrySize(pageAddr, dataOff, 0);
 
-        return new DataPagePayload(dataOff + PAYLOAD_LEN_SIZE + (fragmented ? LINK_SIZE : 0),
+        return new DataPagePayload(
+            dataOff + pageLayout.payloadLenSize() + (fragmented ? LINK_SIZE : 0),
             payloadSize,
-            nextLink);
+            nextLink
+        );
     }
 
     /**
      * @param pageAddr Page address.
      * @param itemId Item to position on.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param reqLen Required payload length.
      * @return Offset to start of actual fragment data.
      */
-    public int getPayloadOffset(final long pageAddr, final int itemId, final int pageSize, int reqLen) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+    public int getPayloadOffset(final long pageAddr, final int itemId, final PageLayout pageLayout, int reqLen) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        int payloadSize = getPageEntrySize(pageAddr, dataOff, 0);
+        int payloadSize = pageLayout.getPageEntrySize(pageAddr, dataOff, 0);
 
         assert payloadSize >= reqLen : payloadSize;
 
-        return dataOff + PAYLOAD_LEN_SIZE + (isFragmented(pageAddr, dataOff) ? LINK_SIZE : 0);
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param idx Item index.
-     * @return Item.
-     */
-    private short getItem(long pageAddr, int idx) {
-        return PageUtils.getShort(pageAddr, itemOffset(idx));
-    }
-
-    /**
-     * @param pageAddr Page address.
-     * @param idx Item index.
-     * @param item Item.
-     */
-    private void setItem(long pageAddr, int idx, short item) {
-        PageUtils.putShort(pageAddr, itemOffset(idx), item);
-    }
-
-    /**
-     * @param idx Index of the item.
-     * @return Offset in buffer.
-     */
-    private int itemOffset(int idx) {
-        assert checkIndex(idx) : idx;
-
-        return ITEMS_OFF + idx * ITEM_SIZE;
-    }
-
-    /**
-     * @param directItem Direct item.
-     * @return Offset of an entry payload inside of the page.
-     */
-    private int directItemToOffset(short directItem) {
-        return directItem & 0xFFFF;
-    }
-
-    /**
-     * @param dataOff Data offset.
-     * @return Direct item.
-     */
-    private short directItemFromOffset(int dataOff) {
-        assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff < Short.MAX_VALUE : dataOff;
-
-        return (short)dataOff;
-    }
-
-    /**
-     * @param indirectItem Indirect item.
-     * @return Index of corresponding direct item.
-     */
-    private int directItemIndex(short indirectItem) {
-        return indirectItem & 0xFF;
-    }
-
-    /**
-     * @param indirectItem Indirect item.
-     * @return Fixed item ID (the index used for referencing an entry from the outside).
-     */
-    private int itemId(short indirectItem) {
-        return (indirectItem & 0xFFFF) >>> 8;
-    }
-
-    /**
-     * @param itemId Fixed item ID (the index used for referencing an entry from the outside).
-     * @param directItemIdx Index of corresponding direct item.
-     * @return Indirect item.
-     */
-    private short indirectItem(int itemId, int directItemIdx) {
-        assert checkIndex(itemId) : itemId;
-        assert checkIndex(directItemIdx) : directItemIdx;
-
-        return (short)((itemId << 8) | directItemIdx);
+        return dataOff + pageLayout.payloadLenSize() + (pageLayout.isFragmented(pageAddr, dataOff) ? LINK_SIZE : 0);
     }
 
     /**
@@ -733,24 +475,34 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param indirectCnt Indirect items count.
      * @return {@code true} If the last direct item already had corresponding indirect item.
      */
-    private boolean moveLastItem(long pageAddr, int freeDirectIdx, int directCnt, int indirectCnt) {
-        int lastIndirectId = findIndirectIndexForLastDirect(pageAddr, directCnt, indirectCnt);
+    private boolean moveLastItem(
+        long pageAddr,
+        int freeDirectIdx,
+        int directCnt,
+        int indirectCnt,
+        PageLayout pageLayout
+    ) {
+        int lastIndirectId = findIndirectIndexForLastDirect(pageAddr, directCnt, indirectCnt, pageLayout);
 
         int lastItemId = directCnt - 1;
 
         assert lastItemId != freeDirectIdx;
 
-        short indirectItem = indirectItem(lastItemId, freeDirectIdx);
+        int indirectItem = pageLayout.indirectItem(lastItemId, freeDirectIdx);
 
-        assert itemId(indirectItem) == lastItemId && directItemIndex(indirectItem) == freeDirectIdx;
+        assert pageLayout.itemId(indirectItem) == lastItemId && pageLayout.directItemIndex(indirectItem) == freeDirectIdx;
 
-        setItem(pageAddr, freeDirectIdx, getItem(pageAddr, lastItemId));
-        setItem(pageAddr, lastItemId, indirectItem);
+        pageLayout.setItem(pageAddr, freeDirectIdx, pageLayout.getItem(pageAddr, lastItemId));
+        pageLayout.setItem(pageAddr, lastItemId, indirectItem);
 
-        assert getItem(pageAddr, lastItemId) == indirectItem;
+        assert pageLayout.getItem(pageAddr, lastItemId) == indirectItem;
 
         if (lastIndirectId != -1) { // Fix pointer to direct item.
-            setItem(pageAddr, lastIndirectId, indirectItem(itemId(getItem(pageAddr, lastIndirectId)), freeDirectIdx));
+            pageLayout.setItem(
+                pageAddr,
+                lastIndirectId,
+                pageLayout.indirectItem(pageLayout.itemId(pageLayout.getItem(pageAddr, lastIndirectId)), freeDirectIdx)
+            );
 
             return true;
         }
@@ -762,15 +514,21 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param pageAddr Page address.
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
+     * @param pageLayout Page layout.
      * @return Index of indirect item for the last direct item.
      */
-    private int findIndirectIndexForLastDirect(long pageAddr, int directCnt, int indirectCnt) {
+    private int findIndirectIndexForLastDirect(
+        long pageAddr,
+        int directCnt,
+        int indirectCnt,
+        PageLayout pageLayout
+    ) {
         int lastDirectId = directCnt - 1;
 
         for (int i = directCnt, end = directCnt + indirectCnt; i < end; i++) {
-            short item = getItem(pageAddr, i);
+            int item = pageLayout.getItem(pageAddr, i);
 
-            if (directItemIndex(item) == lastDirectId)
+            if (pageLayout.directItemIndex(item) == lastDirectId)
                 return i;
         }
 
@@ -780,7 +538,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param payload Row data.
      * @param row Row.
      * @param rowSize Row size.
@@ -790,22 +548,23 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     public boolean updateRow(
         final long pageAddr,
         int itemId,
-        int pageSize,
+        PageLayout pageLayout,
         @Nullable byte[] payload,
         @Nullable T row,
-        final int rowSize) throws IgniteCheckedException {
-        assert checkIndex(itemId) : itemId;
+        final int rowSize
+    ) throws IgniteCheckedException {
+        assert pageLayout.checkIndex(itemId) : itemId;
         assert row != null ^ payload != null;
 
-        final int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+        final int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        if (isFragmented(pageAddr, dataOff))
+        if (pageLayout.isFragmented(pageAddr, dataOff))
             return false;
 
         if (row != null)
-            writeRowData(pageAddr, dataOff, rowSize, row, false);
+            writeRowData(pageLayout, pageAddr, dataOff, rowSize, row, false);
         else
-            writeRowData(pageAddr, dataOff, payload);
+            pageLayout.writeRowData(pageAddr, dataOff, payload);
 
         return true;
     }
@@ -813,19 +572,24 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /**
      * @param pageAddr Page address.
      * @param itemId Fixed item ID (the index used for referencing an entry from the outside).
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Next link for fragmented entries or {@code 0} if none.
      * @throws IgniteCheckedException If failed.
      */
-    public long removeRow(long pageAddr, int itemId, int pageSize) throws IgniteCheckedException {
-        assert checkIndex(itemId) : itemId;
+    public long removeRow(
+        long pageAddr,
+        int itemId,
+        PageLayout pageLayout
+    ) throws IgniteCheckedException {
+        assert pageLayout.checkIndex(itemId) : itemId;
 
-        final int dataOff = getDataOffset(pageAddr, itemId, pageSize);
-        final long nextLink = isFragmented(pageAddr, dataOff) ? getNextFragmentLink(pageAddr, dataOff) : 0;
+        final int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
+        final long nextLink = pageLayout.isFragmented(pageAddr, dataOff)
+            ? pageLayout.getNextFragmentLink(pageAddr, dataOff) : 0;
 
         // Record original counts to calculate delta in free space in the end of remove.
-        final int directCnt = getDirectCount(pageAddr);
-        final int indirectCnt = getIndirectCount(pageAddr);
+        final int directCnt = pageLayout.getDirectCount(pageAddr);
+        final int indirectCnt = pageLayout.getIndirectCount(pageAddr);
 
         int curIndirectCnt = indirectCnt;
 
@@ -834,24 +598,24 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         // Remove the last item on the page.
         if (directCnt == 1) {
             assert (indirectCnt == 0 && itemId == 0) ||
-                (indirectCnt == 1 && itemId == itemId(getItem(pageAddr, 1))) : itemId;
+                (indirectCnt == 1 && itemId == pageLayout.itemId(pageLayout.getItem(pageAddr, 1))) : itemId;
 
-            setEmptyPage(pageAddr, pageSize);
+            setEmptyPage(pageAddr, pageLayout);
         }
         else {
             // Get the entry size before the actual remove.
-            int rmvEntrySize = getPageEntrySize(pageAddr, dataOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
+            int rmvEntrySize = pageLayout.getPageEntrySize(pageAddr, dataOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
 
             int indirectId = 0;
 
             if (itemId >= directCnt) { // Need to remove indirect item.
                 assert indirectCnt > 0;
 
-                indirectId = findIndirectItemIndex(pageAddr, itemId, directCnt, indirectCnt);
+                indirectId = findIndirectItemIndex(pageAddr, itemId, directCnt, indirectCnt, pageLayout);
 
                 assert indirectId >= directCnt;
 
-                itemId = directItemIndex(getItem(pageAddr, indirectId));
+                itemId = pageLayout.directItemIndex(pageLayout.getItem(pageAddr, indirectId));
 
                 assert itemId < directCnt;
             }
@@ -859,33 +623,35 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             boolean dropLast = true;
 
             if (itemId + 1 < directCnt) // It is not the last direct item.
-                dropLast = moveLastItem(pageAddr, itemId, directCnt, indirectCnt);
+                dropLast = moveLastItem(pageAddr, itemId, directCnt, indirectCnt, pageLayout);
 
             if (indirectId == 0) { // For the last direct item with no indirect item.
                 if (dropLast)
-                    moveItems(pageAddr, directCnt, indirectCnt, -1, pageSize);
+                    moveItems(pageAddr, directCnt, indirectCnt, -1, pageLayout);
                 else
                     curIndirectCnt++;
             }
             else {
                 if (dropLast)
-                    moveItems(pageAddr, directCnt, indirectId - directCnt, -1, pageSize);
+                    moveItems(pageAddr, directCnt, indirectId - directCnt, -1, pageLayout);
 
-                moveItems(pageAddr, indirectId + 1, directCnt + indirectCnt - indirectId - 1, dropLast ? -2 : -1, pageSize);
+                moveItems(pageAddr, indirectId + 1, directCnt + indirectCnt - indirectId - 1, dropLast ? -2 : -1, pageLayout);
 
                 if (dropLast)
                     curIndirectCnt--;
             }
 
-            setIndirectCount(pageAddr, curIndirectCnt);
-            setDirectCount(pageAddr, directCnt - 1);
+            pageLayout.setIndirectCount(pageAddr, curIndirectCnt);
+            pageLayout.setDirectCount(pageAddr, directCnt - 1);
 
-            assert getIndirectCount(pageAddr) <= getDirectCount(pageAddr);
+            assert pageLayout.getIndirectCount(pageAddr) <= pageLayout.getDirectCount(pageAddr);
 
             // Increase free space.
-            setRealFreeSpace(pageAddr,
-                getRealFreeSpace(pageAddr) + rmvEntrySize + ITEM_SIZE * (directCnt - getDirectCount(pageAddr) + indirectCnt - getIndirectCount(pageAddr)),
-                pageSize);
+            int realFreeSpace = pageLayout.getRealFreeSpace(pageAddr);
+
+            int items = directCnt - pageLayout.getDirectCount(pageAddr) + indirectCnt - pageLayout.getIndirectCount(pageAddr);
+
+            setRealFreeSpace(pageAddr, realFreeSpace + rmvEntrySize + pageLayout.itemSize() * items, pageLayout);
         }
 
         return nextLink;
@@ -896,24 +662,24 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param idx Index.
      * @param cnt Count.
      * @param step Step.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      */
-    private void moveItems(long pageAddr, int idx, int cnt, int step, int pageSize) {
+    private void moveItems(long pageAddr, int idx, int cnt, int step, PageLayout pageLayout) {
         assert cnt >= 0 : cnt;
 
-        if (cnt != 0)
-            moveBytes(pageAddr, itemOffset(idx), cnt * ITEM_SIZE, step * ITEM_SIZE, pageSize);
+        if (cnt != 0) {
+            moveBytes(
+                pageAddr,
+                pageLayout.itemOffset(idx),
+                cnt * pageLayout.itemSize(),
+                step * pageLayout.itemSize(),
+                pageLayout.pageSize()
+            );
+        }
     }
 
-    /**
-     * @param newEntryFullSize New entry full size (with item, length and link).
-     * @param firstEntryOff First entry data offset.
-     * @param directCnt Direct items count.
-     * @param indirectCnt Indirect items count.
-     * @return {@code true} If there is enough space for the entry.
-     */
-    private boolean isEnoughSpace(int newEntryFullSize, int firstEntryOff, int directCnt, int indirectCnt) {
-        return ITEMS_OFF + ITEM_SIZE * (directCnt + indirectCnt) <= firstEntryOff - newEntryFullSize;
+    public int getFreeSpace(long pageAddr, PageLayout pageLayout) {
+        return pageLayout.getFreeSpace(pageAddr);
     }
 
     /**
@@ -922,7 +688,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param pageAddr Page address.
      * @param row Data row.
      * @param rowSize Row size.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @throws IgniteCheckedException If failed.
      */
     public void addRow(
@@ -930,20 +696,20 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         final long pageAddr,
         T row,
         final int rowSize,
-        final int pageSize
+        final PageLayout pageLayout
     ) throws IgniteCheckedException {
-        assert rowSize <= getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
+        assert rowSize <= pageLayout.getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
 
-        int fullEntrySize = getPageEntrySize(rowSize, SHOW_PAYLOAD_LEN | SHOW_ITEM);
+        int fullEntrySize = pageLayout.getPageEntrySize(rowSize, SHOW_PAYLOAD_LEN | SHOW_ITEM);
 
-        int directCnt = getDirectCount(pageAddr);
-        int indirectCnt = getIndirectCount(pageAddr);
+        int directCnt = pageLayout.getDirectCount(pageAddr);
+        int indirectCnt = pageLayout.getIndirectCount(pageAddr);
 
-        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageSize);
+        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageLayout);
 
-        writeRowData(pageAddr, dataOff, rowSize, row, true);
+        writeRowData(pageLayout, pageAddr, dataOff, rowSize, row, true);
 
-        int itemId = addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageSize);
+        int itemId = addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageLayout);
 
         setLinkByPageId(row, pageId, itemId);
     }
@@ -953,27 +719,27 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      *
      * @param pageAddr Page address.
      * @param payload Payload.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Item ID.
      * @throws IgniteCheckedException If failed.
      */
     public int addRow(
         long pageAddr,
         byte[] payload,
-        int pageSize
+        PageLayout pageLayout
     ) throws IgniteCheckedException {
-        assert payload.length <= getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
+        assert payload.length <= pageLayout.getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
 
-        int fullEntrySize = getPageEntrySize(payload.length, SHOW_PAYLOAD_LEN | SHOW_ITEM);
+        int fullEntrySize = pageLayout.getPageEntrySize(payload.length, SHOW_PAYLOAD_LEN | SHOW_ITEM);
 
-        int directCnt = getDirectCount(pageAddr);
-        int indirectCnt = getIndirectCount(pageAddr);
+        int directCnt = pageLayout.getDirectCount(pageAddr);
+        int indirectCnt = pageLayout.getIndirectCount(pageAddr);
 
-        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageSize);
+        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageLayout);
 
-        writeRowData(pageAddr, dataOff, payload);
+        pageLayout.writeRowData(pageAddr, dataOff, payload);
 
-        return addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageSize);
+        return addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageLayout);
     }
 
     /**
@@ -982,7 +748,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
      * @param dataOff First entry offset.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return First entry offset after compaction.
      */
     private int compactIfNeed(
@@ -991,12 +757,12 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         final int directCnt,
         final int indirectCnt,
         int dataOff,
-        int pageSize
+        PageLayout pageLayout
     ) {
-        if (!isEnoughSpace(entryFullSize, dataOff, directCnt, indirectCnt)) {
-            dataOff = compactDataEntries(pageAddr, directCnt, pageSize);
+        if (!pageLayout.isEnoughSpace(entryFullSize, dataOff, directCnt, indirectCnt)) {
+            dataOff = compactDataEntries(pageAddr, directCnt, pageLayout);
 
-            assert isEnoughSpace(entryFullSize, dataOff, directCnt, indirectCnt);
+            assert pageLayout.isEnoughSpace(entryFullSize, dataOff, directCnt, indirectCnt);
         }
 
         return dataOff;
@@ -1010,26 +776,29 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
      * @param dataOff Data offset.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Item ID.
      */
-    private int addItem(final long pageAddr,
+    private int addItem(
+        final long pageAddr,
         final int fullEntrySize,
         final int directCnt,
         final int indirectCnt,
         final int dataOff,
-        final int pageSize) {
-        setFirstEntryOffset(pageAddr, dataOff, pageSize);
+        final PageLayout pageLayout
+    ) {
+        pageLayout.setFirstEntryOffset(pageAddr, dataOff);
 
-        int itemId = insertItem(pageAddr, dataOff, directCnt, indirectCnt, pageSize);
+        int itemId = insertItem(pageAddr, dataOff, directCnt, indirectCnt, pageLayout);
 
-        assert checkIndex(itemId) : itemId;
-        assert getIndirectCount(pageAddr) <= getDirectCount(pageAddr);
+        assert pageLayout.checkIndex(itemId) : itemId;
+        assert pageLayout.getIndirectCount(pageAddr) <= pageLayout.getDirectCount(pageAddr);
 
         // Update free space. If number of indirect items changed, then we were able to reuse an item slot.
-        setRealFreeSpace(pageAddr,
-            getRealFreeSpace(pageAddr) - fullEntrySize + (getIndirectCount(pageAddr) != indirectCnt ? ITEM_SIZE : 0),
-            pageSize);
+        int space = pageLayout.getRealFreeSpace(pageAddr) - fullEntrySize
+            + (pageLayout.getIndirectCount(pageAddr) != indirectCnt ? pageLayout.itemSize() : 0);
+
+        setRealFreeSpace(pageAddr, space, pageLayout);
 
         return itemId;
     }
@@ -1039,17 +808,23 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param fullEntrySize Full entry size.
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Offset in the buffer where the entry must be written.
      */
-    private int getDataOffsetForWrite(long pageAddr, int fullEntrySize, int directCnt, int indirectCnt, int pageSize) {
-        int dataOff = getFirstEntryOffset(pageAddr);
+    private int getDataOffsetForWrite(
+        long pageAddr,
+        int fullEntrySize,
+        int directCnt,
+        int indirectCnt,
+        PageLayout pageLayout
+    ) {
+        int dataOff = pageLayout.getFirstEntryOffset(pageAddr);
 
         // Compact if we do not have enough space for entry.
-        dataOff = compactIfNeed(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageSize);
+        dataOff = compactIfNeed(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageLayout);
 
         // We will write data right before the first entry.
-        dataOff -= fullEntrySize - ITEM_SIZE;
+        dataOff -= fullEntrySize - pageLayout.itemSize();
 
         return dataOff;
     }
@@ -1063,7 +838,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param row Data row.
      * @param written Number of bytes of row size that was already written.
      * @param rowSize Row size.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Written payload size.
      * @throws IgniteCheckedException If failed.
      */
@@ -1074,9 +849,9 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         T row,
         int written,
         int rowSize,
-        int pageSize
+        PageLayout pageLayout
     ) throws IgniteCheckedException {
-        return addRowFragment(pageMem, pageId, pageAddr, written, rowSize, row.link(), row, null, pageSize);
+        return addRowFragment(pageMem, pageId, pageAddr, written, rowSize, row.link(), row, null, pageLayout);
     }
 
     /**
@@ -1086,7 +861,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param pageAddr Page address.
      * @param payload Payload bytes.
      * @param lastLink Link to the previous written fragment (link to the tail).
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @throws IgniteCheckedException If failed.
      */
     public void addRowFragment(
@@ -1094,9 +869,9 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         long pageAddr,
         byte[] payload,
         long lastLink,
-        int pageSize
+        PageLayout pageLayout
     ) throws IgniteCheckedException {
-        addRowFragment(null, pageId, pageAddr, 0, 0, lastLink, null, payload, pageSize);
+        addRowFragment(null, pageId, pageAddr, 0, 0, lastLink, null, payload, pageLayout);
     }
 
     /**
@@ -1110,7 +885,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param lastLink Link to the previous written fragment (link to the tail).
      * @param row Row.
      * @param payload Payload bytes.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Written payload size.
      * @throws IgniteCheckedException If failed.
      */
@@ -1123,15 +898,15 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         long lastLink,
         T row,
         byte[] payload,
-        int pageSize
+        PageLayout pageLayout
     ) throws IgniteCheckedException {
         assert payload == null ^ row == null;
 
-        int directCnt = getDirectCount(pageAddr);
-        int indirectCnt = getIndirectCount(pageAddr);
+        int directCnt = pageLayout.getDirectCount(pageAddr);
+        int indirectCnt = pageLayout.getIndirectCount(pageAddr);
 
-        int payloadSize = payload != null ? payload.length :
-            Math.min(rowSize - written, getFreeSpace(pageAddr));
+        int payloadSize = payload != null ?
+            payload.length : Math.min(rowSize - written, pageLayout.getFreeSpace(pageAddr));
 
         if (row != null) {
             int remain = rowSize - written - payloadSize;
@@ -1143,32 +918,20 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
                 payloadSize -= hdrSize - remain;
         }
 
-        int fullEntrySize = getPageEntrySize(payloadSize, SHOW_PAYLOAD_LEN | SHOW_LINK | SHOW_ITEM);
-        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageSize);
+        int fullEntrySize = pageLayout.getPageEntrySize(payloadSize, SHOW_PAYLOAD_LEN | SHOW_LINK | SHOW_ITEM);
+        int dataOff = getDataOffsetForWrite(pageAddr, fullEntrySize, directCnt, indirectCnt, pageLayout);
 
         if (payload == null) {
-            ByteBuffer buf = pageMem.pageBuffer(pageAddr);
-
-            buf.position(dataOff);
-
-            short p = (short)(payloadSize | FRAGMENTED_FLAG);
-
-            buf.putShort(p);
-            buf.putLong(lastLink);
+            ByteBuffer buf = pageLayout.createFragment(pageMem, pageAddr, dataOff, payloadSize, lastLink);
 
             int rowOff = rowSize - written - payloadSize;
 
             writeFragmentData(row, buf, rowOff, payloadSize);
         }
-        else {
-            PageUtils.putShort(pageAddr, dataOff, (short)(payloadSize | FRAGMENTED_FLAG));
+        else
+            pageLayout.putFragment(pageAddr, dataOff, payloadSize, payload, lastLink);
 
-            PageUtils.putLong(pageAddr, dataOff + 2, lastLink);
-
-            PageUtils.putBytes(pageAddr, dataOff + 10, payload);
-        }
-
-        int itemId = addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageSize);
+        int itemId = addItem(pageAddr, fullEntrySize, directCnt, indirectCnt, dataOff, pageLayout);
 
         if (row != null)
             setLinkByPageId(row, pageId, itemId);
@@ -1206,80 +969,84 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param dataOff Data offset.
      * @param directCnt Direct items count.
      * @param indirectCnt Indirect items count.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Item ID (insertion index).
      */
-    private int insertItem(long pageAddr, int dataOff, int directCnt, int indirectCnt, int pageSize) {
+    private int insertItem(long pageAddr, int dataOff, int directCnt, int indirectCnt, PageLayout pageLayout) {
         if (indirectCnt > 0) {
             // If the first indirect item is on correct place to become the last direct item, do the transition
             // and insert the new item into the free slot which was referenced by this first indirect item.
-            short item = getItem(pageAddr, directCnt);
+            int item = pageLayout.getItem(pageAddr, directCnt);
 
-            if (itemId(item) == directCnt) {
-                int directItemIdx = directItemIndex(item);
+            if (pageLayout.itemId(item) == directCnt) {
+                int directItemIdx = pageLayout.directItemIndex(item);
 
-                setItem(pageAddr, directCnt, getItem(pageAddr, directItemIdx));
-                setItem(pageAddr, directItemIdx, directItemFromOffset(dataOff));
+                pageLayout.setItem(pageAddr, directCnt, pageLayout.getItem(pageAddr, directItemIdx));
+                pageLayout.setItem(pageAddr, directItemIdx, pageLayout.directItemFromOffset(dataOff));
 
-                setDirectCount(pageAddr, directCnt + 1);
-                setIndirectCount(pageAddr, indirectCnt - 1);
+                pageLayout.setDirectCount(pageAddr, directCnt + 1);
+                pageLayout.setIndirectCount(pageAddr, indirectCnt - 1);
 
                 return directItemIdx;
             }
         }
 
         // Move all the indirect items forward to make a free slot and insert new item at the end of direct items.
-        moveItems(pageAddr, directCnt, indirectCnt, +1, pageSize);
+        moveItems(pageAddr, directCnt, indirectCnt, +1, pageLayout);
 
-        setItem(pageAddr, directCnt, directItemFromOffset(dataOff));
+        pageLayout.setItem(pageAddr, directCnt, pageLayout.directItemFromOffset(dataOff));
 
-        setDirectCount(pageAddr, directCnt + 1);
-        assert getDirectCount(pageAddr) == directCnt + 1;
+        pageLayout.setDirectCount(pageAddr, directCnt + 1);
+        assert pageLayout.getDirectCount(pageAddr) == directCnt + 1;
 
         return directCnt; // Previous directCnt will be our itemId.
     }
 
     /** {@inheritDoc} */
-    @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
+    @Override public void compactPage(ByteBuffer page, ByteBuffer out, PageLayout pageLayout) {
         // TODO May we compactDataEntries in-place and then copy compacted data to out?
-        copyPage(page, out, pageSize);
+        copyPage(page, out, pageLayout.pageSize());
 
         long pageAddr = bufferAddress(out);
 
-        int freeSpace = getRealFreeSpace(pageAddr);
+        int freeSpace = pageLayout.getRealFreeSpace(pageAddr);
 
         if (freeSpace == 0)
             return; // No garbage: nothing to compact here.
 
-        int directCnt = getDirectCount(pageAddr);
+        int directCnt = pageLayout.getDirectCount(pageAddr);
+
+        int pageSize = pageLayout.pageSize();
 
         if (directCnt != 0) {
-            int firstOff = getFirstEntryOffset(pageAddr);
+            int firstOff = pageLayout.getFirstEntryOffset(pageAddr);
 
-            if (firstOff - freeSpace != getHeaderSizeWithItems(pageAddr, directCnt)) {
-                firstOff = compactDataEntries(pageAddr, directCnt, pageSize);
-                setFirstEntryOffset(pageAddr, firstOff, pageSize);
+            if (firstOff - freeSpace != getHeaderSizeWithItems(pageAddr, directCnt, pageLayout)) {
+                firstOff = compactDataEntries(pageAddr, directCnt, pageLayout);
+                pageLayout.setFirstEntryOffset(pageAddr, firstOff);
             }
 
             // Move all the data entries from page end to the page header to close the gap.
-            moveBytes(pageAddr, firstOff, pageSize - firstOff, -freeSpace, pageSize);
+            moveBytes(pageAddr, firstOff, pageSize - firstOff, -freeSpace, pageLayout.pageSize());
         }
 
         out.limit(pageSize - freeSpace); // Here we have only meaningful data of this page.
     }
 
     /** {@inheritDoc} */
-    @Override public void restorePage(ByteBuffer page, int pageSize) {
+    @Override public void restorePage(ByteBuffer page, PageLayout pageLayout) {
+        int pageSize = pageLayout.pageSize();
+
         assert page.isDirect();
         assert page.position() == 0;
         assert page.limit() <= pageSize;
 
         long pageAddr = bufferAddress(page);
 
-        int freeSpace = getRealFreeSpace(pageAddr);
+        int freeSpace = pageLayout.getRealFreeSpace(pageAddr);
 
         if (freeSpace != 0) {
-            int firstOff = getFirstEntryOffset(pageAddr);
+            int firstOff = pageLayout.getFirstEntryOffset(pageAddr);
             int cnt = pageSize - firstOff;
 
             if (cnt != 0) {
@@ -1298,28 +1065,31 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /**
      * @param pageAddr Page address.
      * @param directCnt Direct items count.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return New first entry offset.
      */
-    private int compactDataEntries(long pageAddr, int directCnt, int pageSize) {
-        assert checkCount(directCnt) : directCnt;
+    private int compactDataEntries(long pageAddr, int directCnt, PageLayout pageLayout) {
+        assert pageLayout.checkCount(directCnt) : directCnt;
 
-        int[] offs = new int[directCnt];
+        long[] offs = new long[directCnt];
+
+        int offsetSize = pageLayout.offsetSize();
 
         for (int i = 0; i < directCnt; i++) {
-            int off = directItemToOffset(getItem(pageAddr, i));
+            long off = pageLayout.directItemToOffset(pageLayout.getItem(pageAddr, i));
 
-            offs[i] = (off << 8) | i; // This way we'll be able to sort by offset using Arrays.sort(...).
+            // This way we'll be able to sort by offset using Arrays.sort(...).
+            offs[i] = (off << offsetSize) | i;
         }
 
         Arrays.sort(offs);
 
         // Move right all of the entries if possible to make the page as compact as possible to its tail.
-        int prevOff = pageSize;
+        int prevOff = pageLayout.pageSize();
 
         final int start = directCnt - 1;
-        int curOff = offs[start] >>> 8;
-        int curEntrySize = getPageEntrySize(pageAddr, curOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
+        int curOff = (int) (offs[start] >>> offsetSize);
+        int curEntrySize = pageLayout.getPageEntrySize(pageAddr, curOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
 
         for (int i = start; i >= 0; i--) {
             assert curOff < prevOff : curOff;
@@ -1332,13 +1102,13 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
             if (delta != 0) { // Move right.
                 assert delta > 0 : delta;
 
-                int itemId = offs[i] & 0xFF;
+                int itemId = (int) (offs[i] & pageLayout.offsetMask());
 
-                setItem(pageAddr, itemId, directItemFromOffset(curOff + delta));
+                pageLayout.setItem(pageAddr, itemId, pageLayout.directItemFromOffset(curOff + delta));
 
                 for (int j = i - 1; j >= 0; j--) {
-                    int offNext = offs[j] >>> 8;
-                    int nextSize = getPageEntrySize(pageAddr, offNext, SHOW_PAYLOAD_LEN | SHOW_LINK);
+                    int offNext = (int) (offs[j] >>> offsetSize);
+                    int nextSize = pageLayout.getPageEntrySize(pageAddr, offNext, SHOW_PAYLOAD_LEN | SHOW_LINK);
 
                     if (offNext + nextSize == off) {
                         i--;
@@ -1346,8 +1116,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
                         off = offNext;
                         entrySize += nextSize;
 
-                        itemId = offs[j] & 0xFF;
-                        setItem(pageAddr, itemId, directItemFromOffset(offNext + delta));
+                        itemId = (int) (offs[j] & pageLayout.offsetMask());
+                        pageLayout.setItem(pageAddr, itemId, pageLayout.directItemFromOffset(offNext + delta));
                     }
                     else {
                         curOff = offNext;
@@ -1357,13 +1127,13 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
                     }
                 }
 
-                moveBytes(pageAddr, off, entrySize, delta, pageSize);
+                moveBytes(pageAddr, off, entrySize, delta, pageLayout.pageSize());
 
                 off += delta;
             }
             else if (i > 0) {
-                curOff = offs[i - 1] >>> 8;
-                curEntrySize = getPageEntrySize(pageAddr, curOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
+                curOff = (int) (offs[i - 1] >>> offsetSize);
+                curEntrySize = pageLayout.getPageEntrySize(pageAddr, curOff, SHOW_PAYLOAD_LEN | SHOW_LINK);
             }
 
             prevOff = off;
@@ -1376,32 +1146,37 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * Full-scan free space calculation procedure.
      *
      * @param pageAddr Page to scan.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @return Actual free space in the buffer.
      */
-    private int actualFreeSpace(long pageAddr, int pageSize) {
-        int directCnt = getDirectCount(pageAddr);
+    private int actualFreeSpace(long pageAddr, PageLayout pageLayout) {
+        int directCnt = pageLayout.getDirectCount(pageAddr);
 
         int entriesSize = 0;
 
         for (int i = 0; i < directCnt; i++) {
-            int off = directItemToOffset(getItem(pageAddr, i));
+            int off = pageLayout.directItemToOffset(pageLayout.getItem(pageAddr, i));
 
-            int entrySize = getPageEntrySize(pageAddr, off, SHOW_PAYLOAD_LEN | SHOW_LINK);
+            int entrySize = pageLayout.getPageEntrySize(pageAddr, off, SHOW_PAYLOAD_LEN | SHOW_LINK);
 
             entriesSize += entrySize;
         }
 
-        return pageSize - entriesSize - getHeaderSizeWithItems(pageAddr, directCnt);
+        return pageLayout.pageSize() - entriesSize - getHeaderSizeWithItems(pageAddr, directCnt, pageLayout);
     }
 
     /**
      * @param pageAddr Page address.
      * @param directCnt Direct items count.
+     * @param pageLayout Page layout.
      * @return Size of the page header including all items.
      */
-    private int getHeaderSizeWithItems(long pageAddr, int directCnt) {
-        return ITEMS_OFF + (directCnt + getIndirectCount(pageAddr)) * ITEM_SIZE;
+    private int getHeaderSizeWithItems(
+        long pageAddr,
+        int directCnt,
+        PageLayout pageLayout
+    ) {
+        return pageLayout.itemsOffset() + (directCnt + pageLayout.getIndirectCount(pageAddr)) * pageLayout.itemSize();
     }
 
     /**
@@ -1422,6 +1197,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     }
 
     /**
+     * @param pageLayout Page layout.
      * @param pageAddr Page address.
      * @param dataOff Data offset.
      * @param payloadSize Payload size.
@@ -1430,28 +1206,13 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @throws IgniteCheckedException If failed.
      */
     protected abstract void writeRowData(
+        PageLayout pageLayout,
         long pageAddr,
         int dataOff,
         int payloadSize,
         T row,
         boolean newRow
     ) throws IgniteCheckedException;
-
-    /**
-     * @param pageAddr Page address.
-     * @param dataOff Data offset.
-     * @param payload Payload
-     */
-    protected void writeRowData(
-        long pageAddr,
-        int dataOff,
-        byte[] payload
-    ) {
-        PageUtils.putShort(pageAddr, dataOff, (short)payload.length);
-        dataOff += 2;
-
-        PageUtils.putBytes(pageAddr, dataOff, payload);
-    }
 
     /**
      * Defines closure interface for applying computations to data page items.

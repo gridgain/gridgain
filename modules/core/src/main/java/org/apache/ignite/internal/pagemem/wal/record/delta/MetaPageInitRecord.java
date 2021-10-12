@@ -98,7 +98,7 @@ public class MetaPageInitRecord extends InitNewPageRecord {
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
 
-        io.initNewPage(pageAddr, newPageId, pageMem.realPageSize(groupId()), metrics);
+        io.initNewPage(pageAddr, newPageId, pageMem.pageLayout(groupId()), metrics);
 
         io.setTreeRoot(pageAddr, treeRoot);
         io.setReuseListRoot(pageAddr, reuseListRoot);

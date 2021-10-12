@@ -57,16 +57,16 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void writeRowData(long pageAddr, int dataOff, int payloadSize, CacheDataRow row,
-        boolean newRow) throws IgniteCheckedException {
+    @Override protected void writeRowData(PageLayout pageLayout, long pageAddr, int dataOff, int payloadSize,
+        CacheDataRow row, boolean newRow) throws IgniteCheckedException {
         long addr = pageAddr + dataOff;
 
         int cacheIdSize = row.cacheId() != 0 ? 4 : 0;
         int mvccInfoSize = row.mvccCoordinatorVersion() > 0 ? MVCC_INFO_SIZE : 0;
 
         if (newRow) {
-            PageUtils.putShort(addr, 0, (short)payloadSize);
-            addr += 2;
+            pageLayout.putPayloadSize(addr, 0, payloadSize);
+            addr += pageLayout.payloadLenSize();
 
             if (mvccInfoSize > 0) {
                 assert MvccUtils.mvccVersionIsValid(row.mvccCoordinatorVersion(), row.mvccCounter(), row.mvccOperationCounter());
@@ -101,7 +101,7 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
             addr += row.key().putValue(addr);
         }
         else
-            addr += (2 + mvccInfoSize + cacheIdSize + row.key().valueBytesLength(null));
+            addr += (pageLayout.payloadLenSize() + mvccInfoSize + cacheIdSize + row.key().valueBytesLength(null));
 
         addr += row.value().putValue(addr);
 
@@ -259,15 +259,15 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param mvccCrd Mvcc coordinator.
      * @param mvccCntr Mvcc counter.
      * @param mvccOpCntr Operation counter.
      */
-    public void updateNewVersion(long pageAddr, int itemId, int pageSize, long mvccCrd, long mvccCntr, int mvccOpCntr) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+    public void updateNewVersion(long pageAddr, int itemId, PageLayout pageLayout, long mvccCrd, long mvccCntr, int mvccOpCntr) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        long addr = pageAddr + dataOff + (isFragmented(pageAddr, dataOff) ? 10 : 2);
+        long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
         updateNewVersion(addr, mvccCrd, mvccCntr, mvccOpCntr);
     }
@@ -275,13 +275,13 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param txState Tx state hint.
      */
-    public void updateTxState(long pageAddr, int itemId, int pageSize, byte txState) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+    public void updateTxState(long pageAddr, int itemId, PageLayout pageLayout, byte txState) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        long addr = pageAddr + dataOff + (isFragmented(pageAddr, dataOff) ? 10 : 2);
+        long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
         int opCntr = rawMvccOperationCounter(addr, 0);
 
@@ -291,13 +291,13 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageSize Page size.
+     * @param pageLayout Page layout.
      * @param txState Tx state hint.
      */
-    public void updateNewTxState(long pageAddr, int itemId, int pageSize, byte txState) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
+    public void updateNewTxState(long pageAddr, int itemId, PageLayout pageLayout, byte txState) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
 
-        long addr = pageAddr + dataOff + (isFragmented(pageAddr, dataOff) ? 10 : 2);
+        long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
         int opCntr = rawNewMvccOperationCounter(addr, 0);
 
@@ -545,9 +545,9 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("DataPageIO [\n");
-        printPageLayout(addr, pageSize, sb);
+        printPageLayout(addr, pageLayout, sb);
         sb.a("\n]");
     }
 

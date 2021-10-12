@@ -84,15 +84,15 @@ public class PageMetaIOV2 extends PageMetaIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageSize, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
 
         setEncryptedPageCount(pageAddr, 0);
         setEncryptedPageIndex(pageAddr, 0);
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) {
+    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) {
         sb.a("PageMeta[\n\ttreeRoot=").a(getTreeRoot(addr))
             .a(",\n\treuseListRoot=").a(getReuseListRoot(addr))
             .a(",\n\tlastSuccessfulFullSnapshotId=").a(getLastSuccessfulFullSnapshotId(addr))

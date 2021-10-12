@@ -93,7 +93,7 @@ public class InitNewPageRecord extends PageDeltaRecord {
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
 
-        io.initNewPage(pageAddr, newPageId, pageMem.realPageSize(groupId()), metrics);
+        io.initNewPage(pageAddr, newPageId, pageMem.pageLayout(groupId()), metrics);
     }
 
     /** {@inheritDoc} */

@@ -21,6 +21,7 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 
@@ -142,7 +143,7 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware 
 
         try {
             return "PageSnapshot [fullPageId = " + fullPageId() + ", page = [\n"
-                + PageIO.printPage(addr, realPageSize)
+                + PageIO.printPage(addr, new PageLayout(realPageSize))
                 + "],\nsuper = ["
                 + super.toString() + "]]";
         }
