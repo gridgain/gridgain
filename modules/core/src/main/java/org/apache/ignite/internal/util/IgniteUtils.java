@@ -12574,7 +12574,7 @@ public abstract class IgniteUtils {
                 return srvrSock.accept();
             }
             catch (SocketTimeoutException e) {
-                if (srvrSock.getSoTimeout() != 0)
+                if (srvrSock.getSoTimeout() > 0)
                     throw e;
             }
         }
