@@ -468,6 +468,22 @@ namespace Apache.Ignite.Core
                 }
             }
 
+            // Affinity attributes
+            var affwAttrs = AffinityAttributes;
+
+            if (affwAttrs == null)
+                writer.WriteInt(0);
+            else
+            {
+                writer.WriteInt(affwAttrs.Count);
+
+                foreach (var pair in affwAttrs)
+                {
+                    writer.WriteString(pair.Key);
+                    writer.WriteString(pair.Value);
+                }
+            }
+
             // Atomic
             if (AtomicConfiguration != null)
             {
@@ -806,6 +822,10 @@ namespace Apache.Ignite.Core
             // User attributes
             UserAttributes = Enumerable.Range(0, r.ReadInt())
                 .ToDictionary(x => r.ReadString(), x => r.ReadObject<object>());
+
+            // Affinity attributes
+            AffinityAttributes = Enumerable.Range(0, r.ReadInt())
+                .ToDictionary(x => r.ReadString(), x => r.ReadString());
 
             // Atomic
             if (r.ReadBoolean())
@@ -1321,6 +1341,12 @@ namespace Apache.Ignite.Core
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public IDictionary<string, object> UserAttributes { get; set; }
+
+        /// <summary>
+        /// Gets or sets the affinity attributes for this node.
+        /// </summary>
+        [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
+        public IDictionary<string, string> AffinityAttributes { get; set; }
 
         /// <summary>
         /// Gets or sets the atomic data structures configuration.

@@ -268,6 +268,33 @@ public class BaselineTopology implements Serializable {
     }
 
     /**
+     * Adds attributes from {@code newAttrs} which are not present in current nodeMap for given {@code consId}.
+     *
+     * @param consId Node consistent ID.
+     * @param newAttrs Attributes map to be added.
+     * @return {@code True} if one or more attributes were added.
+     */
+    public boolean addAffinityAttributesIfNeeded(Object consId, Map<String, String> newAttrs) {
+        boolean attrsAdded = false;
+
+        Map<String, Object> curAttrs = nodeMap.get(consId);
+
+        if (curAttrs == null)
+            return false;
+
+        for (Map.Entry<String, String> newEntry : newAttrs.entrySet()) {
+            if (curAttrs.containsKey(newEntry.getKey()))
+                continue;
+
+            curAttrs.put(newEntry.getKey(), newEntry.getValue());
+
+            attrsAdded = true;
+        }
+
+        return attrsAdded;
+    }
+
+    /**
      *
      */
     public List<BaselineNode> currentBaseline() {
@@ -412,8 +439,12 @@ public class BaselineTopology implements Serializable {
 
         Map<Object, Map<String, Object>> nodeMap = new HashMap<>();
 
-        for (BaselineNode node : nodes)
-            nodeMap.put(node.consistentId(), node.attributes());
+        for (BaselineNode node : nodes) {
+            // making attributes map for baseline mutable
+            Map<String, Object> attrs = new HashMap<>(node.attributes());
+
+            nodeMap.put(node.consistentId(), attrs);
+        }
 
         return new BaselineTopology(nodeMap, id);
     }

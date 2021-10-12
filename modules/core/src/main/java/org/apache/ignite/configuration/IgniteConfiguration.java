@@ -35,6 +35,7 @@ import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -47,7 +48,6 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.FailureHandler;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -305,6 +305,9 @@ public class IgniteConfiguration {
 
     /** User attributes. */
     private Map<String, ?> userAttrs;
+
+    /** Affinity attributes. */
+    private Map<String, String> affinityAttrs;
 
     /** Logger. */
     private IgniteLogger log;
@@ -664,6 +667,7 @@ public class IgniteConfiguration {
          */
         activeOnStart = cfg.activeOnStart;
         addrRslvr = cfg.getAddressResolver();
+        affinityAttrs = cfg.getAffinityAttributes();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
@@ -912,6 +916,31 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setUserAttributes(Map<String, ?> userAttrs) {
         this.userAttrs = userAttrs;
+
+        return this;
+    }
+
+    /**
+     * Gets all defined affinity attributes. Affinity attributes are propagated to
+     * all nodes when current node enters the topology. They should be used in custom
+     * affinity backup filters instead of {@code userAttrs}.
+     *
+     * @return Map of affinity attributes.
+     */
+    public Map<String, String> getAffinityAttributes() {
+        return affinityAttrs;
+    }
+
+    /**
+     * Sets affinity attributes. Affinity attributes are propagated to
+     * all nodes when current node enters the topology. They should be used in custom
+     * affinity backup filters instead of {@code userAttrs}.
+     *
+     * @param affinityAttrs affinity attributes.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setAffinityAttributes(Map<String, String> affinityAttrs) {
+        this.affinityAttrs = affinityAttrs;
 
         return this;
     }
