@@ -16,6 +16,6 @@
 
 /**
  * <!-- Package description. -->
- * Package includes classes requires for support of SpEL expressions.
+ * Contains utils functionality for indices in kNN algorithms.
  */
-package org.apache.ignite.springdata20.repository.query.spel;
+package org.apache.ignite.ml.knn.utils.indices;
