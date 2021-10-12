@@ -5470,7 +5470,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 try {
                     TcpDiscoveryNode joiningNode = ring.node(msg.nodeId());
 
-                    gridKernalContext().state().addAffinityAttrsToCurrBlt(joiningNode.consistentId(), joiningNode.affinityAttributes());
+                    if (joiningNode != null && gridKernalContext() != null)
+                        gridKernalContext().state().addAffinityAttrsToCurrBlt(joiningNode.consistentId(), joiningNode.affinityAttributes());
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Failed to add extra attributes from joining node " + locNode);
