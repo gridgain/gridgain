@@ -18,6 +18,7 @@ package org.apache.ignite.util;
 
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -103,6 +104,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      * Tests that missing rows in CacheDataTree are detected.
      */
     @Test
+    @Ignore
     public void testBrokenCacheDataTreeShouldFailValidation() {
         breakCacheDataTreeOnCrd();
 
@@ -128,6 +130,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      * of cache group name and id.
      */
     @Test
+    @Ignore
     public void testBrokenCacheDataTreeShouldFailValidationWithCacheGroupInfo() {
         breakCacheDataTreeOnCrd();
 
@@ -160,6 +163,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      * Test to validate only specified cache, not all cache group.
      */
     @Test
+    @Ignore
     public void testValidateSingleCacheShouldNotTriggerCacheGroupValidation() throws Exception {
         createAndFillCache(crd, DEFAULT_CACHE_NAME, GROUP_NAME);
 
