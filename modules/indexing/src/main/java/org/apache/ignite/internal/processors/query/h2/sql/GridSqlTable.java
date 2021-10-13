@@ -24,6 +24,8 @@ import org.gridgain.internal.h2.command.Parser;
 import org.gridgain.internal.h2.table.Table;
 import org.jetbrains.annotations.Nullable;
 
+import javax.cache.CacheException;
+
 /**
  * Table with optional schema.
  */
@@ -63,8 +65,8 @@ public class GridSqlTable extends GridSqlElement {
     private GridSqlTable(@Nullable String schema, String tblName, @Nullable Table tbl) {
         super(Collections.<GridSqlAst>emptyList());
 
-        assert schema != null : "schema";
-        assert tblName != null : "tblName";
+        if (schema == null || tblName == null)
+            throw new CacheException("Table not found.");
 
         this.schema = schema;
         this.tblName = tblName;
