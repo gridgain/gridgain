@@ -335,7 +335,7 @@ public class BPlusMetaIO extends PageIO {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("BPlusMeta [\n\tlevelsCnt=").a(getLevelsCount(addr))
             .a(",\n\trootLvl=").a(getRootLevel(addr))
             .a(",\n\tinlineSize=").a(getInlineSize(addr))

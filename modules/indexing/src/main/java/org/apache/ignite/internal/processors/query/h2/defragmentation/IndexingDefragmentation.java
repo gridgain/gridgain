@@ -175,8 +175,8 @@ public class IndexingDefragmentation {
 
                 H2Tree firstTree = oldH2Idx.treeForRead(0);
 
-                PageIoResolver pageIoRslvr = pageAddr -> {
-                    PageIO io = PageIoResolver.DEFAULT_PAGE_IO_RESOLVER.resolve(pageAddr);
+                PageIoResolver pageIoRslvr = (pageAddr, bigDataPages) -> {
+                    PageIO io = PageIoResolver.DEFAULT_PAGE_IO_RESOLVER.resolve(pageAddr, bigDataPages);
 
                     if (io instanceof BPlusMetaIO)
                         return io;

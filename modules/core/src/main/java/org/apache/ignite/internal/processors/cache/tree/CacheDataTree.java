@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataInnerIO;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccCacheIdAwareDataLeafIO;
@@ -189,7 +188,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
         GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)shared.database();
         PageStore pageStore = db.getPageStore(grpId, partId);
         boolean mvccEnabled = grp.mvccEnabled();
-        PageLayout pageLayout = pageLayout();
+        int pageSize = pageSize();
 
         long startPageId = ((PageMemoryEx)pageMem).partitionMetaPageId(grp.groupId(), partId);
 
@@ -251,9 +250,9 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                             if (PageIO.getType(pageAddr) != T_DATA)
                                 continue; // Not a data page.
 
-                            DataPageIO io = PageIO.getPageIO(T_DATA, PageIO.getVersion(pageAddr));
+                            DataPageIO io = PageIO.getPageIO(T_DATA, PageIO.getVersion(pageAddr), pageMem.bigPages());
 
-                            int rowsCnt = io.getRowsCount(pageLayout, pageAddr);
+                            int rowsCnt = io.getRowsCount(pageAddr);
 
                             if (rowsCnt == 0)
                                 continue; // Empty page.
@@ -266,7 +265,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                             int r = 0;
 
                             for (int i = 0; i < rowsCnt; i++) {
-                                if (c == null || c.applyMvcc(io, pageAddr, i, pageLayout)) {
+                                if (c == null || c.applyMvcc(io, pageAddr, i, pageSize)) {
                                     DataRow row = mvccEnabled ? new MvccDataRow() : new DataRow();
 
                                     row.initFromDataPage(
@@ -452,12 +451,11 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             assert pageAddr != 0L : link;
 
             try {
-                DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                 DataPagePayload data = io.readPayload(pageAddr,
                     itemId(link),
-                    pageLayout()
-                );
+                    pageSize());
 
                 if (data.nextLink() == 0) {
                     long addr = pageAddr + data.offset();

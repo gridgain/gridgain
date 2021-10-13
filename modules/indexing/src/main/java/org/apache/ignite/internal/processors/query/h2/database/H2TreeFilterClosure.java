@@ -24,7 +24,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccDataPageClosure;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
@@ -118,10 +117,9 @@ public class H2TreeFilterClosure implements H2Tree.TreeRowClosure<H2Row, H2Row>,
     }
 
     /** {@inheritDoc} */
-    @Override public boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, PageLayout pageLayout)
-        throws IgniteCheckedException {
+    @Override public boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, int pageSize) throws IgniteCheckedException {
         try {
-            return isVisible(cctx, mvccSnapshot, io, dataPageAddr, itemId, pageLayout);
+            return isVisible(cctx, mvccSnapshot, io, dataPageAddr, itemId, pageSize);
         }
         catch (IgniteTxUnexpectedStateCheckedException e) {
             // TODO this catch must not be needed if we switch Vacuum to data page scan

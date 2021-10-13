@@ -20,18 +20,14 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO.LINK_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.COMMON_HEADER_END;
 
 public class PageLayout {
-
-    private final int pageSize;
-
     private final PageLayoutHelper helper;
 
-    public PageLayout(int size) {
-        pageSize = size;
-//        helper = new BigPageLayout(size);
-        helper = new SmallPageLayout(size);
+    public PageLayout(boolean bigPages) {
+        helper = bigPages ? BigPageLayout.create() : SmallPageLayout.create();
     }
 
     /**
@@ -122,8 +118,8 @@ public class PageLayout {
         return helper.getFirstEntryOffset(pageAddr);
     }
 
-    public void setFirstEntryOffset(long pageAddr, int dataOff) {
-        helper.setFirstEntryOffset(pageAddr, dataOff);
+    public void setFirstEntryOffset(long pageAddr, int dataOff, int pageSize) {
+        helper.setFirstEntryOffset(pageAddr, dataOff, pageSize);
     }
 
     public void setRealFreeSpace(long pageAddr, int freeSpace) {
@@ -160,10 +156,6 @@ public class PageLayout {
      */
     public int getPageEntrySize(int payloadLen, int show) {
         return helper.getPageEntrySize(payloadLen, show);
-    }
-
-    public int pageSize() {
-        return pageSize;
     }
 
     public int itemId(int indirectItem) {
@@ -261,179 +253,107 @@ public class PageLayout {
         helper.putPayloadSize(addr, offset, payloadSize);
     }
 
-    private interface PageLayoutHelper {
-        /**
-         * @param pageAddr Page address.
-         * @param idx Item index.
-         * @return Item.
-         */
-        int getItem(long pageAddr, int idx);
-
-        int itemOffset(int idx);
-
-        boolean checkIndex(int idx);
-
-        /** @see PageLayout#getDirectCount(long) */
-        int getDirectCount(long pageAddr);
-
-        /** @see PageLayout#getIndirectCount(long) */
-        int getIndirectCount(long pageAddr);
-
-        /** @see PageLayout#getFreeSpace(long) */
-        int getFreeSpace(long pageAddr);
-
-        int getFirstEntryOffset(long pageAddr);
-
-        int getRealFreeSpace(long pageAddr);
-
-        void setRealFreeSpace(long pageAddr, int freeSpace);
-
-        int directItemIndex(int indirectItem);
-
-        int directItemToOffset(int directItem);
-
-        int directItemFromOffset(int dataOff);
-
-        void writeRowData(long pageAddr, int dataOff, byte[] payload);
-
-        public int offsetSize();
-
-        public int offsetMask();
-
-        public int itemSize();
-
-        public int itemsOffset();
-
-        public int payloadLenSize();
-
-        public boolean isEnoughSpace(int newEntryFullSize, int firstEntryOff, int directCnt, int indirectCnt);
-
-        ByteBuffer createFragment(PageMemory pageMem, long pageAddr, int dataOff, int payloadSize, long lastLink);
-
-        void putFragment(long pageAddr, int dataOff, int payloadSize, byte[] payload, long lastLink);
-
-        void setItem(long pageAddr, int idx, int item);
-
-        int indirectItem(int itemId, int directItemIdx);
-
-        long getNextFragmentLink(long pageAddr, int dataOff);
-
-        boolean isFragmented(long pageAddr, int dataOff);
-
-        /**
-         * @param pageAddr Page address.
-         * @param cnt Direct count.
-         */
-        public void setDirectCount(long pageAddr, int cnt);
-
-        /**
-         * @param pageAddr Page address.
-         * @param cnt Indirect count.
-         */
-        public void setIndirectCount(long pageAddr, int cnt);
-
-        void setFirstEntryOffset(long pageAddr, int dataOff);
-
-        int itemId(int indirectItem);
-
-        int getPageEntrySize(long pageAddr, int dataOff, int show);
-
-        int getPageEntrySize(int payloadLen, int show);
-
-        boolean checkCount(int cnt);
-
-        int minDataPageOverhead();
-
-        void putPayloadSize(long addr, int offset, int payloadSize);
-    }
-
-    private static class BigPageLayout implements PageLayoutHelper {
+    private abstract static class PageLayoutHelper {
         /** */
-        private static final int SHOW_ITEM = 0b0001;
+        protected static final int SHOW_ITEM = 0b0001;
 
         /** */
-        private static final int SHOW_PAYLOAD_LEN = 0b0010;
+        protected static final int SHOW_PAYLOAD_LEN = 0b0010;
 
         /** */
-        private static final int SHOW_LINK = 0b0100;
+        protected static final int SHOW_LINK = 0b0100;
 
         /** */
-        private static final int FREE_LIST_PAGE_ID_OFF = COMMON_HEADER_END;
+        protected static final int FREE_LIST_PAGE_ID_OFF = COMMON_HEADER_END;
 
         /** */
-        private static final int FREE_SPACE_OFF = FREE_LIST_PAGE_ID_OFF + 8;
+        protected static final int FREE_SPACE_OFF = FREE_LIST_PAGE_ID_OFF + 8;
+
+        protected final int directCntSize;
+
+        protected final int maxIndex;
 
         /** */
-        private static final int DIRECT_CNT_OFF = FREE_SPACE_OFF + 4;
+        protected final int directCntOff;
 
         /** */
-        private static final int INDIRECT_CNT_OFF = DIRECT_CNT_OFF + 2;
+        protected final int indirectCntOff;
 
         /** */
-        private static final int FIRST_ENTRY_OFF = INDIRECT_CNT_OFF + 2;
+        protected final int firstEntryOff;
 
         /** */
-        public static final int ITEMS_OFF = FIRST_ENTRY_OFF + 4;
+        protected final int itemsOff;
 
         /** */
-        private static final int ITEM_SIZE = 4;
+        protected final int itemSize;
 
         /** */
-        protected static final int PAYLOAD_LEN_SIZE = 4;
+        protected final int payloadLenSize;
 
         /** */
-        private static final int LINK_SIZE = 8;
+        protected final int fragmentedFlag;
 
         /** */
-        private static final int FRAGMENTED_FLAG = 0b10000000_00000000_00000000_00000000;
+        protected final int minDataPageOverhead;
 
-        /** */
-        public static final int MIN_DATA_PAGE_OVERHEAD = ITEMS_OFF + ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
-
-        private final int pageSize;
-
-        private BigPageLayout(int size) {
-            pageSize = size;
+        protected PageLayoutHelper(
+            int freeSpaceSize,
+            int directCntSize,
+            int indirectCntSize,
+            int firstEntrySize,
+            int itemSize,
+            int payloadLenSize,
+            int fragmentedFlag
+        ) {
+            this.directCntSize = directCntSize;
+            this.maxIndex = ~(-1 << directCntSize * Byte.SIZE);
+            this.directCntOff = PageLayoutHelper.FREE_SPACE_OFF + freeSpaceSize;
+            this.indirectCntOff = directCntOff + directCntSize;
+            this.firstEntryOff = indirectCntOff + indirectCntSize;
+            this.itemsOff = firstEntryOff + firstEntrySize;
+            this.itemSize = itemSize;
+            this.payloadLenSize = payloadLenSize;
+            this.fragmentedFlag = fragmentedFlag;
+            this.minDataPageOverhead = itemsOff + itemSize + payloadLenSize + LINK_SIZE;
         }
 
-        /** {@inheritDoc} */
-        @Override public int getItem(long pageAddr, int idx) {
-            return PageUtils.getInt(pageAddr, itemOffset(idx));
-        }
+        /** @see PageLayout#getItem(long, int) */
+        abstract int getItem(long pageAddr, int idx);
 
         /**
          * @param idx Index of the item.
          * @return Offset in buffer.
          */
-        @Override public int itemOffset(int idx) {
+        public int itemOffset(int idx) {
             assert checkIndex(idx) : idx;
 
-            return ITEMS_OFF + idx * ITEM_SIZE;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int getDirectCount(long pageAddr) {
-            return PageUtils.getShort(pageAddr, DIRECT_CNT_OFF) & 0xFFFF;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int getIndirectCount(long pageAddr) {
-            return PageUtils.getShort(pageAddr, INDIRECT_CNT_OFF) & 0xFFFF;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int getRealFreeSpace(long pageAddr) {
-            return PageUtils.getInt(pageAddr, FREE_SPACE_OFF);
+            return itemsOff + idx * itemSize;
         }
 
         /**
-         * Free space refers to a "max row size (without any data page specific overhead) which is guaranteed to fit into
-         * this data page".
-         *
-         * @param pageAddr Page address.
-         * @return Free space.
+         * @param idx Index.
+         * @return {@code true} If the index is valid.
          */
-        @Override public int getFreeSpace(long pageAddr) {
+        public boolean checkIndex(int idx) {
+            return idx >= 0 && idx < maxIndex;
+        }
+
+        /**
+         * @param cnt Counter value.
+         * @return {@code true} If the counter fits 1 byte.
+         */
+        public boolean checkCount(int cnt) {
+            return cnt >= 0 && cnt <= maxIndex;
+        }
+
+        /** @see PageLayout#getDirectCount(long) */
+        abstract int getDirectCount(long pageAddr);
+
+        /** @see PageLayout#getIndirectCount(long) */
+        public abstract int getIndirectCount(long pageAddr);
+
+        public int getFreeSpace(long pageAddr) {
             if (getFreeItemSlots(pageAddr) == 0)
                 return 0;
 
@@ -443,9 +363,178 @@ public class PageLayout {
             // It means that we must be able to accommodate a row of size which is equal to getFreeSpace(),
             // plus we will have data page overhead: header of the page as well as item, payload length and
             // possibly a link to the next row fragment.
-            freeSpace -= ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
+            freeSpace -= itemSize + payloadLenSize + LINK_SIZE;
 
             return freeSpace < 0 ? 0 : freeSpace;
+        }
+
+        private int getFreeItemSlots(long pageAddr) {
+            return maxIndex - getDirectCount(pageAddr);
+        }
+
+        /** @see PageLayout#getFirstEntryOffset(long) */
+        public abstract int getFirstEntryOffset(long pageAddr);
+
+        /** @see PageLayout#getRealFreeSpace(long) */
+        public abstract int getRealFreeSpace(long pageAddr);
+
+        /** @see PageLayout#setRealFreeSpace(long, int) */
+        public abstract void setRealFreeSpace(long pageAddr, int freeSpace);
+
+        /** @see PageLayout#directItemIndex(int) */
+        public abstract int directItemIndex(int indirectItem);
+
+        /** @see PageLayout#directItemToOffset(int) */
+        public abstract int directItemToOffset(int directItem);
+
+        /** @see PageLayout#directItemFromOffset(int) */
+        public abstract int directItemFromOffset(int dataOff);
+
+        /** @see PageLayout#writeRowData(long, int, byte[]) */
+        public abstract void writeRowData(long pageAddr, int dataOff, byte[] payload);
+
+        /** @see PageLayout#offsetSize() */
+        public int offsetSize() {
+            return directCntSize * 8;
+        }
+
+        /** @see PageLayout#offsetMask() */
+        public int offsetMask() {
+            return maxIndex;
+        }
+
+        /** @see PageLayout#itemSize() */
+        public int itemSize() {
+            return itemSize;
+        }
+
+        /** @see PageLayout#itemsOffset() */
+        public int itemsOffset() {
+            return itemsOff;
+        }
+
+        /** @see PageLayout#payloadLenSize() */
+        public int payloadLenSize() {
+            return payloadLenSize;
+        }
+
+        public boolean isEnoughSpace(int newEntryFullSize, int firstEntryOff, int directCnt, int indirectCnt) {
+            return itemsOff + itemSize * (directCnt + indirectCnt) <= firstEntryOff - newEntryFullSize;
+        }
+
+        public abstract ByteBuffer createFragment(PageMemory pageMem, long pageAddr, int dataOff, int payloadSize, long lastLink);
+
+        public abstract void putFragment(long pageAddr, int dataOff, int payloadSize, byte[] payload, long lastLink);
+
+        public abstract void setItem(long pageAddr, int idx, int item);
+
+        public abstract int indirectItem(int itemId, int directItemIdx);
+
+        public abstract long getNextFragmentLink(long pageAddr, int dataOff);
+
+        public abstract boolean isFragmented(long pageAddr, int dataOff);
+
+        /**
+         * @param pageAddr Page address.
+         * @param cnt Direct count.
+         */
+        public abstract void setDirectCount(long pageAddr, int cnt);
+
+        /**
+         * @param pageAddr Page address.
+         * @param cnt Indirect count.
+         */
+        public abstract void setIndirectCount(long pageAddr, int cnt);
+
+        public abstract void setFirstEntryOffset(long pageAddr, int dataOff, long pageSize);
+
+        public abstract int itemId(int indirectItem);
+
+        public abstract int getPageEntrySize(long pageAddr, int dataOff, int show);
+
+        public int getPageEntrySize(int payloadLen, int show) {
+            assert payloadLen > 0 : payloadLen;
+
+            int res = payloadLen;
+
+            if ((show & SHOW_LINK) != 0)
+                res += LINK_SIZE;
+
+            if ((show & SHOW_ITEM) != 0)
+                res += itemSize;
+
+            if ((show & SHOW_PAYLOAD_LEN) != 0)
+                res += payloadLenSize;
+
+            return res;
+        }
+
+        public int minDataPageOverhead() {
+            return minDataPageOverhead;
+        }
+
+        public abstract void putPayloadSize(long addr, int offset, int payloadSize);
+    }
+
+    private static class BigPageLayout extends PageLayoutHelper {
+
+        private BigPageLayout(
+            int freeSpaceSize,
+            int directCntSize,
+            int indirectCntSize,
+            int firstEntrySize,
+            int itemSize,
+            int payloadLenSize,
+            int fragmentedFlag
+        ) {
+            super(
+                freeSpaceSize,
+                directCntSize,
+                indirectCntSize,
+                firstEntrySize,
+                itemSize,
+                payloadLenSize,
+                fragmentedFlag
+            );
+        }
+
+        public static BigPageLayout create() {
+            final int itemSize = 4;
+
+            final int payloadLenSize = 4;
+
+            final int fragmentedFlag = 0b10000000_00000000_00000000_00000000;
+
+            return new BigPageLayout(
+                4,
+                2,
+                2,
+                4,
+                itemSize,
+                payloadLenSize,
+                fragmentedFlag
+            );
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getItem(long pageAddr, int idx) {
+            return PageUtils.getInt(pageAddr, itemOffset(idx));
+        }
+
+
+        /** {@inheritDoc} */
+        @Override public int getDirectCount(long pageAddr) {
+            return PageUtils.getShort(pageAddr, directCntOff) & maxIndex;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getIndirectCount(long pageAddr) {
+            return PageUtils.getShort(pageAddr, indirectCntOff) & maxIndex;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int getRealFreeSpace(long pageAddr) {
+            return PageUtils.getInt(pageAddr, FREE_SPACE_OFF);
         }
 
         @Override public void setRealFreeSpace(long pageAddr, int freeSpace) {
@@ -461,40 +550,16 @@ public class PageLayout {
         }
 
         @Override public int directItemFromOffset(int dataOff) {
-            assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff < Integer.MAX_VALUE : dataOff;
+            assert dataOff >= itemsOff + itemSize && dataOff < Integer.MAX_VALUE : dataOff;
 
             return dataOff;
         }
 
         @Override public void writeRowData(long pageAddr, int dataOff, byte[] payload) {
             PageUtils.putInt(pageAddr, dataOff, payload.length);
-            dataOff += PAYLOAD_LEN_SIZE;
+            dataOff += payloadLenSize;
 
             PageUtils.putBytes(pageAddr, dataOff, payload);
-        }
-
-        @Override public int offsetSize() {
-            return 16;
-        }
-
-        @Override public int offsetMask() {
-            return ~(-1 << offsetSize());
-        }
-
-        @Override public int itemSize() {
-            return ITEM_SIZE;
-        }
-
-        @Override public int itemsOffset() {
-            return ITEMS_OFF;
-        }
-
-        @Override public int payloadLenSize() {
-            return PAYLOAD_LEN_SIZE;
-        }
-
-        @Override public boolean isEnoughSpace(int newEntryFullSize, int firstEntryOff, int directCnt, int indirectCnt) {
-            return ITEMS_OFF + ITEM_SIZE * (directCnt + indirectCnt) <= firstEntryOff - newEntryFullSize;
         }
 
         @Override public ByteBuffer createFragment(PageMemory pageMem, long pageAddr, int dataOff, int payloadSize, long lastLink) {
@@ -502,7 +567,7 @@ public class PageLayout {
 
             buf.position(dataOff);
 
-            int p = (int)(payloadSize | FRAGMENTED_FLAG);
+            int p = payloadSize | fragmentedFlag;
 
             buf.putInt(p);
             buf.putLong(lastLink);
@@ -511,7 +576,7 @@ public class PageLayout {
         }
 
         @Override public void putFragment(long pageAddr, int dataOff, int payloadSize, byte[] payload, long lastLink) {
-            PageUtils.putInt(pageAddr, dataOff, (int)(payloadSize | FRAGMENTED_FLAG));
+            PageUtils.putInt(pageAddr, dataOff, payloadSize | fragmentedFlag);
 
             PageUtils.putLong(pageAddr, dataOff + 4, lastLink);
 
@@ -532,29 +597,29 @@ public class PageLayout {
         @Override public long getNextFragmentLink(long pageAddr, int dataOff) {
             assert isFragmented(pageAddr, dataOff);
 
-            return PageUtils.getLong(pageAddr, dataOff + PAYLOAD_LEN_SIZE);
+            return PageUtils.getLong(pageAddr, dataOff + payloadLenSize);
         }
 
         @Override public boolean isFragmented(long pageAddr, int dataOff) {
-            return (PageUtils.getInt(pageAddr, dataOff) & FRAGMENTED_FLAG) != 0;
+            return (PageUtils.getInt(pageAddr, dataOff) & fragmentedFlag) != 0;
         }
 
         @Override public void setDirectCount(long pageAddr, int cnt) {
             assert checkCount(cnt) : cnt;
 
-            PageUtils.putShort(pageAddr, DIRECT_CNT_OFF, (short) cnt);
+            PageUtils.putShort(pageAddr, directCntOff, (short) cnt);
         }
 
         @Override public void setIndirectCount(long pageAddr, int cnt) {
             assert checkCount(cnt) : cnt;
 
-            PageUtils.putShort(pageAddr, INDIRECT_CNT_OFF, (short) cnt);
+            PageUtils.putShort(pageAddr, indirectCntOff, (short) cnt);
         }
 
-        @Override public void setFirstEntryOffset(long pageAddr, int dataOff) {
-            assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff <= pageSize : dataOff;
+        @Override public void setFirstEntryOffset(long pageAddr, int dataOff, long pageSize) {
+            assert dataOff >= itemsOff + itemSize && dataOff <= pageSize : dataOff;
 
-            PageUtils.putInt(pageAddr, FIRST_ENTRY_OFF, dataOff);
+            PageUtils.putInt(pageAddr, firstEntryOff, dataOff);
         }
 
         @Override public int itemId(int indirectItem) {
@@ -564,61 +629,16 @@ public class PageLayout {
         @Override public int getPageEntrySize(long pageAddr, int dataOff, int show) {
             int payloadLen = PageUtils.getInt(pageAddr, dataOff);
 
-            if ((payloadLen & FRAGMENTED_FLAG) != 0)
-                payloadLen &= ~FRAGMENTED_FLAG; // We are fragmented and have a link.
+            if ((payloadLen & fragmentedFlag) != 0)
+                payloadLen &= ~fragmentedFlag; // We are fragmented and have a link.
             else
                 show &= ~SHOW_LINK; // We are not fragmented, never have a link.
 
             return getPageEntrySize(payloadLen, show);
         }
 
-        @Override public int getPageEntrySize(int payloadLen, int show) {
-            assert payloadLen > 0 : payloadLen;
-
-            int res = payloadLen;
-
-            if ((show & SHOW_LINK) != 0)
-                res += LINK_SIZE;
-
-            if ((show & SHOW_ITEM) != 0)
-                res += ITEM_SIZE;
-
-            if ((show & SHOW_PAYLOAD_LEN) != 0)
-                res += PAYLOAD_LEN_SIZE;
-
-            return res;
-        }
-
-        /**
-         * @param pageAddr Page address.
-         * @return Number of free entry slots.
-         */
-        private int getFreeItemSlots(long pageAddr) {
-            return 0xFFFF - getDirectCount(pageAddr);
-        }
-
         @Override public int getFirstEntryOffset(long pageAddr) {
-            return PageUtils.getInt(pageAddr, FIRST_ENTRY_OFF);
-        }
-
-        /**
-         * @param idx Index.
-         * @return {@code true} If the index is valid.
-         */
-        @Override public boolean checkIndex(int idx) {
-            return idx >= 0 && idx < 0xFFFF;
-        }
-
-        /**
-         * @param cnt Counter value.
-         * @return {@code true} If the counter fits 1 byte.
-         */
-        @Override public boolean checkCount(int cnt) {
-            return cnt >= 0 && cnt <= 0xFFFF;
-        }
-
-        @Override public int minDataPageOverhead() {
-            return MIN_DATA_PAGE_OVERHEAD;
+            return PageUtils.getInt(pageAddr, firstEntryOff);
         }
 
         @Override public void putPayloadSize(long addr, int offset, int payloadSize) {
@@ -626,122 +646,71 @@ public class PageLayout {
         }
     }
 
-    private static class SmallPageLayout implements PageLayoutHelper {
+    private static class SmallPageLayout extends PageLayoutHelper {
 
-        /** */
-        private static final int SHOW_ITEM = 0b0001;
-
-        /** */
-        private static final int SHOW_PAYLOAD_LEN = 0b0010;
-
-        /** */
-        private static final int SHOW_LINK = 0b0100;
-
-        /** */
-        private static final int FREE_LIST_PAGE_ID_OFF = COMMON_HEADER_END;
-
-        /** */
-        private static final int FREE_SPACE_OFF = FREE_LIST_PAGE_ID_OFF + 8;
-
-        /** */
-        private static final int DIRECT_CNT_OFF = FREE_SPACE_OFF + 2;
-
-        /** */
-        private static final int INDIRECT_CNT_OFF = DIRECT_CNT_OFF + 1;
-
-        /** */
-        private static final int FIRST_ENTRY_OFF = INDIRECT_CNT_OFF + 1;
-
-        /** */
-        public static final int ITEMS_OFF = FIRST_ENTRY_OFF + 2;
-
-        /** */
-        private static final int ITEM_SIZE = 2;
-
-        /** */
-        private static final int PAYLOAD_LEN_SIZE = 2;
-
-        /** */
-        private static final int LINK_SIZE = 8;
-
-        /** */
-        private static final int FRAGMENTED_FLAG = 0b10000000_00000000;
-
-        private final int pageSize;
-
-        private SmallPageLayout(int size) {
-            pageSize = size;
+        private SmallPageLayout(
+            int freeSpaceSize,
+            int directCntSize,
+            int indirectCntSize,
+            int firstEntrySize,
+            int itemSize,
+            int payloadLenSize,
+            int fragmentedFlag
+        ) {
+            super(
+                freeSpaceSize,
+                directCntSize,
+                indirectCntSize,
+                firstEntrySize,
+                itemSize,
+                payloadLenSize,
+                fragmentedFlag
+            );
         }
 
-        /** */
-        public static final int MIN_DATA_PAGE_OVERHEAD = ITEMS_OFF + ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
+        public static SmallPageLayout create() {
+            final int itemSize = 2;
+
+            final int payloadLenSize = 2;
+
+            final int fragmentedFlag = 0b10000000_00000000;
+
+            return new SmallPageLayout(
+                2,
+                1,
+                1,
+                2,
+                itemSize,
+                payloadLenSize,
+                fragmentedFlag
+            );
+        }
 
         /** {@inheritDoc} */
         @Override public int getItem(long pageAddr, int idx) {
             return PageUtils.getShort(pageAddr, itemOffset(idx));
         }
 
-        @Override public int itemOffset(int idx) {
-            assert checkIndex(idx) : idx;
-
-            return ITEMS_OFF + idx * ITEM_SIZE;
-        }
-
-        /**
-         * @param idx Index.
-         * @return {@code true} If the index is valid.
-         */
-        @Override public boolean checkIndex(int idx) {
-            return idx >= 0 && idx < 0xFF;
-        }
-
-        /**
-         * @param cnt Counter value.
-         * @return {@code true} If the counter fits 1 byte.
-         */
-        @Override public boolean checkCount(int cnt) {
-            return cnt >= 0 && cnt <= 0xFF;
-        }
-
         @Override public int getDirectCount(long pageAddr) {
-            return PageUtils.getByte(pageAddr, DIRECT_CNT_OFF) & 0xFF;
+            return PageUtils.getByte(pageAddr, directCntOff) & maxIndex;
         }
 
         @Override public int getIndirectCount(long pageAddr) {
-            return PageUtils.getByte(pageAddr, INDIRECT_CNT_OFF) & 0xFF;
+            return PageUtils.getByte(pageAddr, indirectCntOff) & maxIndex;
         }
 
         @Override public int getRealFreeSpace(long pageAddr) {
             return PageUtils.getShort(pageAddr, FREE_SPACE_OFF);
         }
 
-        @Override public int getFreeSpace(long pageAddr) {
-            if (getFreeItemSlots(pageAddr) == 0)
-                return 0;
-
-            int freeSpace = getRealFreeSpace(pageAddr);
-
-            // We reserve size here because of getFreeSpace() method semantics (see method javadoc).
-            // It means that we must be able to accommodate a row of size which is equal to getFreeSpace(),
-            // plus we will have data page overhead: header of the page as well as item, payload length and
-            // possibly a link to the next row fragment.
-            freeSpace -= ITEM_SIZE + PAYLOAD_LEN_SIZE + LINK_SIZE;
-
-            return freeSpace < 0 ? 0 : freeSpace;
-        }
-
-        private int getFreeItemSlots(long pageAddr) {
-            return 0xFF - getDirectCount(pageAddr);
-        }
-
         @Override public int getFirstEntryOffset(long pageAddr) {
-            return PageUtils.getShort(pageAddr, FIRST_ENTRY_OFF) & 0xFFFF;
+            return PageUtils.getShort(pageAddr, firstEntryOff) & 0xFFFF;
         }
 
-        @Override public void setFirstEntryOffset(long pageAddr, int dataOff) {
-            assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff <= pageSize : dataOff;
+        @Override public void setFirstEntryOffset(long pageAddr, int dataOff, long pageSize) {
+            assert dataOff >= itemsOff + itemSize && dataOff <= pageSize : dataOff;
 
-            PageUtils.putShort(pageAddr, FIRST_ENTRY_OFF, (short)dataOff);
+            PageUtils.putShort(pageAddr, firstEntryOff, (short)dataOff);
         }
 
         @Override public int itemId(int indirectItem) {
@@ -749,31 +718,14 @@ public class PageLayout {
         }
 
         @Override public int getPageEntrySize(long pageAddr, int dataOff, int show) {
-            int payloadLen = PageUtils.getShort(pageAddr, dataOff);
+            int payloadLen = PageUtils.getShort(pageAddr, dataOff) & 0xFFFF;
 
-            if ((payloadLen & FRAGMENTED_FLAG) != 0)
-                payloadLen &= ~FRAGMENTED_FLAG; // We are fragmented and have a link.
+            if ((payloadLen & fragmentedFlag) != 0)
+                payloadLen &= ~fragmentedFlag; // We are fragmented and have a link.
             else
                 show &= ~SHOW_LINK; // We are not fragmented, never have a link.
 
             return getPageEntrySize(payloadLen, show);
-        }
-
-        @Override public int getPageEntrySize(int payloadLen, int show) {
-            assert payloadLen > 0 : payloadLen;
-
-            int res = payloadLen;
-
-            if ((show & SHOW_LINK) != 0)
-                res += LINK_SIZE;
-
-            if ((show & SHOW_ITEM) != 0)
-                res += ITEM_SIZE;
-
-            if ((show & SHOW_PAYLOAD_LEN) != 0)
-                res += PAYLOAD_LEN_SIZE;
-
-            return res;
         }
 
         @Override public void setRealFreeSpace(long pageAddr, int freeSpace) {
@@ -789,40 +741,16 @@ public class PageLayout {
         }
 
         @Override public int directItemFromOffset(int dataOff) {
-            assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff < Integer.MAX_VALUE : dataOff;
+            assert dataOff >= itemsOff + itemSize && dataOff < Short.MAX_VALUE : dataOff;
 
-            return dataOff;
+            return (short)dataOff;
         }
 
         @Override public void writeRowData(long pageAddr, int dataOff, byte[] payload) {
             PageUtils.putShort(pageAddr, dataOff, (short)payload.length);
-            dataOff += PAYLOAD_LEN_SIZE;
+            dataOff += payloadLenSize;
 
             PageUtils.putBytes(pageAddr, dataOff, payload);
-        }
-
-        @Override public int offsetSize() {
-            return 8;
-        }
-
-        @Override public int offsetMask() {
-            return ~(-1 << offsetSize());
-        }
-
-        @Override public int itemSize() {
-            return ITEM_SIZE;
-        }
-
-        @Override public int itemsOffset() {
-            return ITEMS_OFF;
-        }
-
-        @Override public int payloadLenSize() {
-            return PAYLOAD_LEN_SIZE;
-        }
-
-        @Override public boolean isEnoughSpace(int newEntryFullSize, int firstEntryOff, int directCnt, int indirectCnt) {
-            return ITEMS_OFF + ITEM_SIZE * (directCnt + indirectCnt) <= firstEntryOff - newEntryFullSize;
         }
 
         @Override public ByteBuffer createFragment(PageMemory pageMem, long pageAddr, int dataOff, int payloadSize, long lastLink) {
@@ -830,7 +758,7 @@ public class PageLayout {
 
             buf.position(dataOff);
 
-            short p = (short)(payloadSize | FRAGMENTED_FLAG);
+            short p = (short)(payloadSize | fragmentedFlag);
 
             buf.putShort(p);
             buf.putLong(lastLink);
@@ -839,7 +767,7 @@ public class PageLayout {
         }
 
         @Override public void putFragment(long pageAddr, int dataOff, int payloadSize, byte[] payload, long lastLink) {
-            PageUtils.putShort(pageAddr, dataOff, (short)(payloadSize | FRAGMENTED_FLAG));
+            PageUtils.putShort(pageAddr, dataOff, (short)(payloadSize | fragmentedFlag));
 
             PageUtils.putLong(pageAddr, dataOff + 2, lastLink);
 
@@ -860,31 +788,27 @@ public class PageLayout {
         @Override public long getNextFragmentLink(long pageAddr, int dataOff) {
             assert isFragmented(pageAddr, dataOff);
 
-            return PageUtils.getLong(pageAddr, dataOff + PAYLOAD_LEN_SIZE);
+            return PageUtils.getLong(pageAddr, dataOff + payloadLenSize);
         }
 
         @Override public boolean isFragmented(long pageAddr, int dataOff) {
-            return (PageUtils.getShort(pageAddr, dataOff) & FRAGMENTED_FLAG) != 0;
+            return (PageUtils.getShort(pageAddr, dataOff) & fragmentedFlag) != 0;
         }
 
         @Override public void setDirectCount(long pageAddr, int cnt) {
             assert checkCount(cnt) : cnt;
 
-            PageUtils.putByte(pageAddr, DIRECT_CNT_OFF, (byte) cnt);
+            PageUtils.putByte(pageAddr, directCntOff, (byte)cnt);
         }
 
         @Override public void setIndirectCount(long pageAddr, int cnt) {
             assert checkCount(cnt) : cnt;
 
-            PageUtils.putByte(pageAddr, INDIRECT_CNT_OFF, (byte) cnt);
-        }
-
-        @Override public int minDataPageOverhead() {
-            return MIN_DATA_PAGE_OVERHEAD;
+            PageUtils.putByte(pageAddr, indirectCntOff, (byte)cnt);
         }
 
         @Override public void putPayloadSize(long addr, int offset, int payloadSize) {
-            PageUtils.putShort(addr, 0, (short) payloadSize);
+            PageUtils.putShort(addr, 0, (short)payloadSize);
         }
     }
 }

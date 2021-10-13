@@ -2748,7 +2748,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         }
 
         // Update forward page.
-        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageLayout(), metrics);
+        io.splitForwardPage(pageAddr, fwdId, fwdBuf, mid, cnt, pageSize(), metrics);
 
         // Update existing page.
         io.splitExistingPage(pageAddr, mid, fwdId);
@@ -3803,17 +3803,15 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             try {
                                 boolean needWal = needWalDeltaRecord(newRootId, newRootPage, newRootPageWalPlc);
 
-                                byte[] moveUpRowBytes = inner(io).initNewRoot(
-                                    newRootAddr,
+                                byte[] moveUpRowBytes = inner(io).initNewRoot(newRootAddr,
                                     newRootId,
                                     pageId,
                                     moveUpRow,
                                     null,
                                     fwdId,
-                                    pageLayout(),
+                                    pageSize(),
                                     needWal,
-                                    metrics
-                                );
+                                    metrics);
 
                                 if (needWal)
                                     wal.log(new NewRootInitRecord<>(grpId, newRootId, newRootId,

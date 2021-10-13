@@ -55,9 +55,9 @@ public class DataPageInsertRecord extends PageDeltaRecord {
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
         assert payload != null;
 
-        AbstractDataPageIO io = PageIO.getPageIO(pageAddr);
+        AbstractDataPageIO<?> io = PageIO.getPageIO(pageAddr, pageMem.bigPages());
 
-        io.addRow(pageAddr, payload, pageMem.pageLayout(groupId()));
+        io.addRow(pageAddr, payload, pageMem.realPageSize(groupId()));
     }
 
     /** {@inheritDoc} */

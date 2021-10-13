@@ -63,7 +63,6 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaS
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -125,8 +124,6 @@ public class PageMemoryTracker implements IgnitePlugin {
 
     /** Page size. */
     private volatile int pageSize;
-
-    private volatile PageLayout pageLayout;
 
     /** Page memory mock. */
     private volatile PageMemory pageMemoryMock;
@@ -232,8 +229,6 @@ public class PageMemoryTracker implements IgnitePlugin {
 
         pageSize = ctx.igniteConfiguration().getDataStorageConfiguration().getPageSize();
 
-        pageLayout = new PageLayout(pageSize);
-
         pageMemoryMock = mockPageMemory();
 
         GridCacheSharedContext sharedCtx = gridCtx.cache().context();
@@ -296,6 +291,7 @@ public class PageMemoryTracker implements IgnitePlugin {
         PageMemory mock = mock(PageMemory.class);
 
         when(mock.pageSize()).thenReturn(pageSize);
+        when(mock.bigPages()).thenReturn(false);
 
         when(mock.realPageSize(Mockito.anyInt())).then(invocation -> {
             int grpId = (Integer)invocation.getArguments()[0];
@@ -685,7 +681,7 @@ public class PageMemoryTracker implements IgnitePlugin {
         ByteBuffer locBuf = GridUnsafe.wrapPointer(expPageAddr, pageSize);
         ByteBuffer rmtBuf = GridUnsafe.wrapPointer(actualPageAddr, pageSize);
 
-        PageIO pageIo = PageIO.getPageIO(actualPageAddr);
+        PageIO pageIo = PageIO.getPageIO(actualPageAddr, pageMemoryMock.bigPages());
 
         if (pageIo.getType() == T_DATA_REF_MVCC_LEAF || pageIo.getType() == T_CACHE_ID_DATA_REF_MVCC_LEAF) {
             assert cacheProc.cacheGroup(fullPageId.groupId()).mvccEnabled();
@@ -706,8 +702,8 @@ public class PageMemoryTracker implements IgnitePlugin {
             tmpBuf1.clear();
             tmpBuf2.clear();
 
-            ((CompactablePageIO)pageIo).compactPage(locBuf, tmpBuf1, pageLayout);
-            ((CompactablePageIO)pageIo).compactPage(rmtBuf, tmpBuf2, pageLayout);
+            ((CompactablePageIO)pageIo).compactPage(locBuf, tmpBuf1, pageSize);
+            ((CompactablePageIO)pageIo).compactPage(rmtBuf, tmpBuf2, pageSize);
 
             locBuf = tmpBuf1;
             rmtBuf = tmpBuf2;

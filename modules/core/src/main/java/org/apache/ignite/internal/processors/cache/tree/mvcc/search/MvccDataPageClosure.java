@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.tree.mvcc.search;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 
 /**
  * Data page MVCC filter.
@@ -28,9 +27,9 @@ public interface MvccDataPageClosure {
      * @param io Data page IO.
      * @param dataPageAddr Data page address.
      * @param itemId Item Id.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @return {@code true} If the row is visible.
      * @throws IgniteCheckedException If failed.
      */
-    boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, PageLayout pageLayout) throws IgniteCheckedException;
+    boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, int pageSize) throws IgniteCheckedException;
 }

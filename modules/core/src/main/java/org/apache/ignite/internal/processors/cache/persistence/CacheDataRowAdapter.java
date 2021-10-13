@@ -254,7 +254,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
                     assert pageAddr != 0L : nextLink;
 
                     try {
-                        DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                        DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                         int itemId = itemId(nextLink);
 
@@ -322,7 +322,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         boolean readCacheId,
         boolean skipVer
     ) throws IgniteCheckedException {
-        DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.pageLayout(grpId));
+        DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.realPageSize(grpId));
 
         long nextLink = data.nextLink();
 
@@ -493,9 +493,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
         if (coctx == null)
             coctx = sharedCtx.cacheContext(cacheId).cacheObjectContext();
 
-        int oldLen = 0;
         int len = PageUtils.getInt(addr, off);
-        oldLen = len;
         off += 4;
 
         if (rowData != RowData.NO_KEY && rowData != RowData.NO_KEY_WITH_HINTS) {
@@ -514,11 +512,6 @@ public class CacheDataRowAdapter implements CacheDataRow {
             off += len + 1;
 
         len = PageUtils.getInt(addr, off);
-
-        if (len == -65536) {
-            System.out.println("");
-        }
-
         off += 4;
 
         byte type = PageUtils.getByte(addr, off);
@@ -766,11 +759,11 @@ public class CacheDataRowAdapter implements CacheDataRow {
                 long pageAddr = pageMem.readLock(grpId, nextLinkPageId, page);
 
                 try {
-                    DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                    DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                     int itemId = itemId(nextLink);
 
-                    DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.pageLayout(grpId));
+                    DataPagePayload data = io.readPayload(pageAddr, itemId, pageMem.realPageSize(grpId));
 
                     nextLink = data.nextLink();
                     nextLinkPageId = pageId(nextLink);

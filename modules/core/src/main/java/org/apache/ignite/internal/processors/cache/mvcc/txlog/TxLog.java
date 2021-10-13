@@ -128,7 +128,7 @@ public class TxLog implements CheckpointListener {
 
                             PageMetrics metrics = txLogDataRegion.metrics().pageMetrics();
 
-                            io.initNewPage(pageAddr, metaId, pageMemory.pageLayout(), metrics);
+                            io.initNewPage(pageAddr, metaId, pageMemory.pageSize(), metrics);
 
                             treeRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX);
                             reuseListRoot = pageMemory.allocatePage(TX_LOG_CACHE_ID, INDEX_PARTITION, FLAG_IDX);
@@ -154,7 +154,7 @@ public class TxLog implements CheckpointListener {
                             isNew = true;
                         }
                         else {
-                            PageMetaIO io = PageIO.getPageIO(pageAddr);
+                            PageMetaIO io = PageIO.getPageIO(pageAddr, pageMemory.bigPages());
 
                             treeRoot = io.getTreeRoot(pageAddr);
                             reuseListRoot = io.getReuseListRoot(pageAddr);

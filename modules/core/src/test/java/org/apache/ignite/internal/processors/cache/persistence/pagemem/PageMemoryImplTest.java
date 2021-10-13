@@ -51,7 +51,6 @@ import org.apache.ignite.internal.processors.cache.persistence.PageStoreWriter;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgressImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -88,9 +87,6 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
     /** Page size. */
     private static final int PAGE_SIZE = 1024;
-
-    /** Page layout. */
-    private static final PageLayout PAGE_LAYOUT = new PageLayout(1024);
 
     /** Max memory size. */
     private static final int MAX_SIZE = 128;
@@ -436,7 +432,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
             long ptr = mem.writeLock(grpId, pageId, page);
 
             try {
-                DummyPageIO.VERSIONS.latest().initNewPage(ptr, pageId, PAGE_LAYOUT, null);
+                DummyPageIO.VERSIONS.latest().initNewPage(ptr, pageId, PAGE_SIZE, null);
 
                 for (int i = PageIO.COMMON_HEADER_END; i < mem.pageSize(); i++)
                     PageUtils.putByte(ptr, i, val);

@@ -42,8 +42,8 @@ public class PagePartitionMetaIOV2 extends PagePartitionMetaIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setPendingTreeRoot(pageAddr, 0L);
         setPartitionMetaStoreReuseListRoot(pageAddr, 0L);

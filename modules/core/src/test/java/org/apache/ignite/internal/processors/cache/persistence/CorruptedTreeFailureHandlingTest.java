@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccess
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.DataLeafIO;
@@ -143,7 +142,6 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
             cache.put(i, i);
 
         int pageSize = srv.configuration().getDataStorageConfiguration().getPageSize();
-        PageLayout pageLayout = new PageLayout(pageSize);
 
         int grpId = srv.context().cache().cacheGroups().stream().filter(
             context -> context.cacheOrGroupName().equals(DEFAULT_CACHE_NAME)
@@ -160,7 +158,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         OpenOption[] options = {StandardOpenOption.READ, StandardOpenOption.WRITE};
         try (RandomAccessFileIO fileIO = new RandomAccessFileIO(fileRef.get(), options)) {
-            DataPageIO dataPageIO = DataPageIO.VERSIONS.latest();
+            DataPageIO dataPageIO = DataPageIO.versions(false).latest();
 
             long pageOff = pageSize + PageIdUtils.pageIndex(pageId) * pageSize;
 
@@ -171,7 +169,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
             long pageAddr = GridUnsafe.bufferAddress(pageBuf);
 
             // Remove existing item from index page.
-            dataPageIO.removeRow(pageAddr, itemId, pageLayout);
+            dataPageIO.removeRow(pageAddr, itemId, pageSize);
 
             // Recalculate CRC.
             PageIO.setCrc(pageAddr, 0);

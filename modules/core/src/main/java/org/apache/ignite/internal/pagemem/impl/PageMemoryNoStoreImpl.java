@@ -38,7 +38,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.OffheapReadWriteLock;
@@ -122,8 +121,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** Page size. */
     private final int sysPageSize;
 
-    /** Page layout. */
-    private final PageLayout pageLayout;
+    /** Big pages. */
+    private final boolean bigPages;
 
     /** */
     private final IgniteLogger log;
@@ -230,7 +229,7 @@ public class PageMemoryNoStoreImpl implements PageMemory {
 
         rwLock = new OffheapReadWriteLock(lockConcLvl);
 
-        pageLayout = new PageLayout(pageSize());
+        bigPages = false;
     }
 
     /** {@inheritDoc} */
@@ -380,11 +379,6 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
-    @Override public PageLayout pageLayout() {
-        return new PageLayout(sysPageSize - PAGE_OVERHEAD);
-    }
-
-    /** {@inheritDoc} */
     @Override public int systemPageSize() {
         return sysPageSize;
     }
@@ -395,8 +389,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     }
 
     /** {@inheritDoc} */
-    @Override public PageLayout pageLayout(int grpId) {
-        return pageLayout;
+    @Override public boolean bigPages() {
+        return bigPages;
     }
 
     /**

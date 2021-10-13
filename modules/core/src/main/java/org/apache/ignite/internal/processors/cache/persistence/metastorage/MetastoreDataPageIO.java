@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.metastorage;
 
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.SimpleDataPageIO;
 
 /**
@@ -24,14 +25,24 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.SimpleDat
  */
 public class MetastoreDataPageIO extends SimpleDataPageIO {
     /** */
-    public static final IOVersions<MetastoreDataPageIO> VERSIONS = new IOVersions<>(
-        new MetastoreDataPageIO(1)
+    public static final IOVersions<MetastoreDataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
+        new MetastoreDataPageIO(1, new PageLayout(false))
     );
+
+    /** */
+    public static final IOVersions<MetastoreDataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
+        new MetastoreDataPageIO(1, new PageLayout(true))
+    );
+
+    public static IOVersions<MetastoreDataPageIO> metastorageIOVersions(boolean bigPages) {
+        return bigPages ? BIG_LAYOUT_VERSIONS : SMALL_LAYOUT_VERSIONS;
+    }
 
     /**
      * @param ver Version.
+     * @param pageLayout Page layout.
      */
-    public MetastoreDataPageIO(int ver) {
-        super(T_DATA_METASTORAGE, ver);
+    public MetastoreDataPageIO(int ver, PageLayout pageLayout) {
+        super(T_DATA_METASTORAGE, ver, pageLayout);
     }
 }

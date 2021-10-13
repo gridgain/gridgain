@@ -51,7 +51,7 @@ public class DataPageSetFreeListPageRecord extends PageDeltaRecord {
 
     /** {@inheritDoc} */
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
-        AbstractDataPageIO io = PageIO.getPageIO(pageAddr);
+        AbstractDataPageIO<?> io = PageIO.getPageIO(pageAddr, pageMem.bigPages());
 
         io.setFreeListPageId(pageAddr, freeListPage);
     }

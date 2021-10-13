@@ -68,9 +68,9 @@ public class DataPageUpdateRecord extends PageDeltaRecord {
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
         assert payload != null;
 
-        AbstractDataPageIO io = PageIO.getPageIO(pageAddr);
+        AbstractDataPageIO<?> io = PageIO.getPageIO(pageAddr, pageMem.bigPages());
 
-        io.updateRow(pageAddr, itemId, pageMem.pageLayout(groupId()), payload, null, 0);
+        io.updateRow(pageAddr, itemId, pageMem.realPageSize(groupId()), payload, null, 0);
     }
 
     /** {@inheritDoc} */

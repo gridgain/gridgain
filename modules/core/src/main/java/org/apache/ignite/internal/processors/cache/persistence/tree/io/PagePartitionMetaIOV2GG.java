@@ -40,8 +40,8 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV1GG {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, PageMetrics metrics) {
-        super.initNewPage(pageAddr, pageId, pageLayout, metrics);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setTombstonesCount(pageAddr, 0L);
     }

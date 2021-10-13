@@ -36,14 +36,12 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.FullPageId;
-import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.processors.cache.persistence.DummyPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -168,9 +166,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, byte[]> cache = ig.cache(CACHE_NAME);
 
-        PageMemory pageMemory = ig.cachex(CACHE_NAME).context().dataRegion().pageMemory();
-        final int pageSize = pageMemory.pageSize();
-        final PageLayout pageLayout = pageMemory.pageLayout();
+        final int pageSize = ig.cachex(CACHE_NAME).context().dataRegion().pageMemory().pageSize();
 
         for (int i = 0; i < ENTRIES; i++) { // At least 20MB of raw data in total.
             final byte[] val = new byte[20000];
@@ -180,7 +176,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             cache.put(i, val);
         }
 
-        byte[] dummyPage = dummyPage(pageLayout);
+        byte[] dummyPage = dummyPage(pageSize);
 
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
@@ -491,11 +487,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
                 ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
         }
 
-        PageMemory pageMemory = ig.cachex(CACHE_NAME).context().dataRegion().pageMemory();
-        PageLayout pageLayout = pageMemory.pageLayout();
-        final int pageSize = pageMemory.pageSize();
+        final int pageSize = ig.cachex(CACHE_NAME).context().dataRegion().pageMemory().pageSize();
 
-        byte[] dummyPage = dummyPage(pageLayout);
+        byte[] dummyPage = dummyPage(pageSize);
 
         // Spam WAL to move all data records to compressible WAL zone.
         for (int i = 0; i < WAL_SEGMENT_SIZE / pageSize * 2; i++) {
@@ -575,14 +569,12 @@ public class WalCompactionTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      */
-    private static byte[] dummyPage(PageLayout pageLayout) {
-        int pageSize = pageLayout.pageSize();
-
+    private static byte[] dummyPage(int pageSize) {
         ByteBuffer pageBuf = ByteBuffer.allocateDirect(pageSize);
 
-        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), -1, pageLayout, null);
+        DummyPageIO.VERSIONS.latest().initNewPage(GridUnsafe.bufferAddress(pageBuf), -1, pageSize, null);
 
         byte[] pageData = new byte[pageSize];
 

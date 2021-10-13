@@ -94,11 +94,11 @@ public class MetaPageInitRecord extends InitNewPageRecord {
 
     /** {@inheritDoc} */
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
-        PageMetaIO io = PageMetaIO.getPageIO(ioType, ioVer);
+        PageMetaIO io = PageMetaIO.getPageIO(ioType, ioVer, null);
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
 
-        io.initNewPage(pageAddr, newPageId, pageMem.pageLayout(groupId()), metrics);
+        io.initNewPage(pageAddr, newPageId, pageMem.realPageSize(groupId()), metrics);
 
         io.setTreeRoot(pageAddr, treeRoot);
         io.setReuseListRoot(pageAddr, reuseListRoot);

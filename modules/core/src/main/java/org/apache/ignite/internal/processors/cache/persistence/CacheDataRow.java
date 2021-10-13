@@ -69,7 +69,7 @@ public interface CacheDataRow extends MvccUpdateVersionAware, CacheSearchRow, St
     public boolean tombstone();
 
     /** {@inheritDoc} */
-    @Override public default IOVersions<? extends AbstractDataPageIO> ioVersions() {
-        return DataPageIO.VERSIONS;
+    @Override public default IOVersions<? extends AbstractDataPageIO> ioVersions(boolean bigDataPages) {
+        return DataPageIO.versions(bigDataPages);
     }
 }

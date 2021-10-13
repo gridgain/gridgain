@@ -27,24 +27,35 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  */
 public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     /** */
-    public static final IOVersions<SimpleDataPageIO> VERSIONS = new IOVersions<>(
-        new SimpleDataPageIO(1)
+    private static final IOVersions<SimpleDataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
+        new SimpleDataPageIO(1, new PageLayout(false))
     );
+
+    /** */
+    private static final IOVersions<SimpleDataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
+        new SimpleDataPageIO(1, new PageLayout(true))
+    );
+
+    public static IOVersions<SimpleDataPageIO> versions(boolean bigPages) {
+        return bigPages ? BIG_LAYOUT_VERSIONS : SMALL_LAYOUT_VERSIONS;
+    }
 
     /**
      * @param ver Page format version.
+     * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int ver) {
-        super(T_DATA_PART, ver);
+    public SimpleDataPageIO(int ver, PageLayout pageLayout) {
+        super(T_DATA_PART, ver, pageLayout);
     }
 
     /**
      * Constructor is intended for extending types.
      * @param type IO type.
      * @param ver Page format version.
+     * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int type, int ver) {
-        super(type, ver);
+    public SimpleDataPageIO(int type, int ver, PageLayout pageLayout) {
+        super(type, ver, pageLayout);
     }
 
     /** {@inheritDoc} */
@@ -121,9 +132,9 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("SimpleDataPageIO [\n");
-        printPageLayout(addr, pageLayout, sb);
+        printPageLayout(addr, pageSize, sb);
         sb.a("\n]");
     }
 }

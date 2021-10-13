@@ -124,7 +124,7 @@ public abstract class PageHandler<X, R> {
             if (pageAddr == 0L)
                 return lockFailed;
             try {
-                PageIO io = pageIoRslvr.resolve(pageAddr);
+                PageIO io = pageIoRslvr.resolve(pageAddr, pageMem.bigPages());
                 return h.run(cacheId, pageId, page, pageAddr, io, null, arg, intArg, statHolder);
             }
             finally {
@@ -169,7 +169,7 @@ public abstract class PageHandler<X, R> {
             if ((pageAddr = readLock(pageMem, cacheId, pageId, page, lsnr)) == 0L)
                 return lockFailed;
 
-            PageIO io = pageIoRslvr.resolve(pageAddr);
+            PageIO io = pageIoRslvr.resolve(pageAddr, pageMem.bigPages());
             return h.run(cacheId, pageId, page, pageAddr, io, null, arg, intArg, statHolder);
         }
         finally {
@@ -293,7 +293,7 @@ public abstract class PageHandler<X, R> {
                     walPlc = FALSE;
                 }
                 else
-                    init = pageIoRslvr.resolve(pageAddr);
+                    init = pageIoRslvr.resolve(pageAddr, pageMem.bigPages());
 
                 R res = h.run(grpId, pageId, page, pageAddr, init, walPlc, arg, intArg, statHolder);
 
@@ -361,7 +361,7 @@ public abstract class PageHandler<X, R> {
                 walPlc = FALSE;
             }
             else
-                init = pageIoRslvr.resolve(pageAddr);
+                init = pageIoRslvr.resolve(pageAddr, pageMem.bigPages());
 
             R res = h.run(grpId, pageId, page, pageAddr, init, walPlc, arg, intArg, statHolder);
 
@@ -449,7 +449,7 @@ public abstract class PageHandler<X, R> {
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(grpId);
 
-        init.initNewPage(pageAddr, pageId, pageMem.pageLayout(grpId), metrics);
+        init.initNewPage(pageAddr, pageId, pageMem.realPageSize(grpId), metrics);
 
         // Here we should never write full page, because it is known to be new.
         if (isWalDeltaRecordNeeded(pageMem, grpId, pageId, page, wal, FALSE))

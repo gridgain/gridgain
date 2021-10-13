@@ -30,7 +30,7 @@ public class MetastorageRowStoreEntry extends SimpleDataRow {
     }
 
     /** {@inheritDoc} */
-    @Override public IOVersions<? extends AbstractDataPageIO<?>> ioVersions() {
-        return MetastoreDataPageIO.VERSIONS;
+    @Override public IOVersions<? extends AbstractDataPageIO<?>> ioVersions(boolean bigDataPages) {
+        return MetastoreDataPageIO.metastorageIOVersions(bigDataPages);
     }
 }

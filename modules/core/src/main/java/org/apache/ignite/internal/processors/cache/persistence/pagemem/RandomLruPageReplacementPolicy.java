@@ -187,7 +187,7 @@ public class RandomLruPageReplacementPolicy extends PageReplacementPolicy {
             int type = PageIO.getType(dataAddr);
             int ver = PageIO.getVersion(dataAddr);
 
-            PageIO io = PageIO.getPageIO(type, ver);
+            PageIO io = PageIO.getPageIO(type, ver, null);
 
             return io instanceof PagePartitionMetaIO
                 || io instanceof PagesListMetaIO

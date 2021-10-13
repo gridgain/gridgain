@@ -45,15 +45,24 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     public static final int MVCC_INFO_SIZE = 40;
     
     /** */
-    public static final IOVersions<DataPageIO> VERSIONS = new IOVersions<>(
-        new DataPageIO(1)
+    private static final IOVersions<DataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
+        new DataPageIO(1, new PageLayout(false))
     );
+
+    private static final IOVersions<DataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
+        new DataPageIO(1, new PageLayout(true))
+    );
+
+    public static IOVersions<DataPageIO> versions(boolean bigPages) {
+        return bigPages ? BIG_LAYOUT_VERSIONS : SMALL_LAYOUT_VERSIONS;
+    }
 
     /**
      * @param ver Page format version.
+     * @param pageLayout Page layout.
      */
-    protected DataPageIO(int ver) {
-        super(T_DATA, ver);
+    protected DataPageIO(int ver, PageLayout pageLayout) {
+        super(T_DATA, ver, pageLayout);
     }
 
     /** {@inheritDoc} */
@@ -259,13 +268,13 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param mvccCrd Mvcc coordinator.
      * @param mvccCntr Mvcc counter.
      * @param mvccOpCntr Operation counter.
      */
-    public void updateNewVersion(long pageAddr, int itemId, PageLayout pageLayout, long mvccCrd, long mvccCntr, int mvccOpCntr) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
+    public void updateNewVersion(long pageAddr, int itemId, int pageSize, long mvccCrd, long mvccCntr, int mvccOpCntr) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
 
         long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
@@ -275,11 +284,11 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param txState Tx state hint.
      */
-    public void updateTxState(long pageAddr, int itemId, PageLayout pageLayout, byte txState) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
+    public void updateTxState(long pageAddr, int itemId, int pageSize, byte txState) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
 
         long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
@@ -291,11 +300,11 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     /**
      * @param pageAddr Page address.
      * @param itemId Item ID.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param txState Tx state hint.
      */
-    public void updateNewTxState(long pageAddr, int itemId, PageLayout pageLayout, byte txState) {
-        int dataOff = getDataOffset(pageAddr, itemId, pageLayout);
+    public void updateNewTxState(long pageAddr, int itemId, int pageSize, byte txState) {
+        int dataOff = getDataOffset(pageAddr, itemId, pageSize);
 
         long addr = pageAddr + dataOff + (pageLayout.isFragmented(pageAddr, dataOff) ? 10 : 2);
 
@@ -545,9 +554,9 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException {
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
         sb.a("DataPageIO [\n");
-        printPageLayout(addr, pageLayout, sb);
+        printPageLayout(addr, pageSize, sb);
         sb.a("\n]");
     }
 

@@ -315,7 +315,7 @@ public class IgnitePdsCorruptedStoreTest extends GridCommonAbstractTest {
                 long pageAddr = pageMem.writeLock(grpId, partMetaId, partMetaPage);
 
                 try {
-                    PagePartitionMetaIO io = PageIO.getPageIO(pageAddr);
+                    PagePartitionMetaIO io = PageIO.getPageIO(pageAddr, null);
 
                     // Corrupt tree root
                     io.setTreeRoot(pageAddr, PageIdUtils.pageId(0, (byte)0, 0));

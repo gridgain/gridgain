@@ -38,9 +38,9 @@ import org.apache.ignite.internal.processors.cache.persistence.Storable;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseBag;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -117,9 +117,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             int rowSize = row.size();
 
-            PageLayout pageLayout = pageLayout();
-
-            boolean updated = io.updateRow(pageAddr, itemId, pageLayout, null, row, rowSize);
+            boolean updated = io.updateRow(pageAddr, itemId, pageSize(), null, row, rowSize);
 
             evictionTracker.touchPage(pageId);
 
@@ -127,7 +125,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 // TODO This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
-                DataPagePayload data = io.readPayload(pageAddr, itemId, pageLayout);
+                DataPagePayload data = io.readPayload(pageAddr, itemId, pageSize());
 
                 assert data.payloadSize() == rowSize;
 
@@ -165,9 +163,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             AbstractDataPageIO<T> io = (AbstractDataPageIO<T>)iox;
 
             int rowSize = row.size();
-            PageLayout pageLayout = pageLayout();
-
-            int oldFreeSpace = io.getFreeSpace(pageAddr, pageLayout);
+            int oldFreeSpace = io.getFreeSpace(pageAddr);
 
             assert oldFreeSpace > 0 : oldFreeSpace;
 
@@ -176,7 +172,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 addRowFragment(pageId, page, pageAddr, io, row, written, rowSize);
 
             // Reread free space after update.
-            int newFreeSpace = io.getFreeSpace(pageAddr, pageLayout);
+            int newFreeSpace = io.getFreeSpace(pageAddr);
 
             if (newFreeSpace > MIN_PAGE_FREE_SPACE) {
                 int bucket = bucket(newFreeSpace, false);
@@ -209,13 +205,13 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             T row,
             int rowSize
         ) throws IgniteCheckedException {
-            io.addRow(pageId, pageAddr, row, rowSize, pageLayout());
+            io.addRow(pageId, pageAddr, row, rowSize, pageSize());
 
             if (needWalDeltaRecord(pageId, page, null)) {
                 // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[rowSize];
 
-                DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageLayout());
+                DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
 
                 assert data.payloadSize() == rowSize;
 
@@ -253,9 +249,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             // Read last link before the fragment write, because it will be updated there.
             long lastLink = row.link();
 
-            PageLayout pageLayout = pageLayout();
-
-            int payloadSize = io.addRowFragment(pageMem, pageId, pageAddr, row, written, rowSize, pageLayout);
+            int payloadSize = io.addRowFragment(pageMem, pageId, pageAddr, row, written, rowSize, pageSize());
 
             assert payloadSize > 0 : payloadSize;
 
@@ -263,7 +257,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 // TODO IGNITE-5829 This record must contain only a reference to a logical WAL record with the actual data.
                 byte[] payload = new byte[payloadSize];
 
-                DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageLayout);
+                DataPagePayload data = io.readPayload(pageAddr, PageIdUtils.itemId(row.link()), pageSize());
 
                 PageUtils.getBytes(pageAddr, data.offset(), payload, 0, payloadSize);
 
@@ -302,18 +296,16 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
             throws IgniteCheckedException {
             AbstractDataPageIO<T> io = (AbstractDataPageIO<T>)iox;
 
-            PageLayout pageLayout = pageLayout();
-
-            int oldFreeSpace = io.getFreeSpace(pageAddr, pageLayout);
+            int oldFreeSpace = io.getFreeSpace(pageAddr);
 
             assert oldFreeSpace >= 0 : oldFreeSpace;
 
-            long nextLink = io.removeRow(pageAddr, itemId, pageLayout);
+            long nextLink = io.removeRow(pageAddr, itemId, pageSize());
 
             if (needWalDeltaRecord(pageId, page, walPlc))
                 wal.log(new DataPageRemoveRecord(cacheId, pageId, itemId));
 
-            int newFreeSpace = io.getFreeSpace(pageAddr, pageLayout);
+            int newFreeSpace = io.getFreeSpace(pageAddr);
 
             if (newFreeSpace > MIN_PAGE_FREE_SPACE) {
                 int newBucket = bucket(newFreeSpace, false);
@@ -331,7 +323,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                     }
                 }
 
-                if (io.isEmpty(pageLayout, pageAddr)) {
+                if (io.isEmpty(pageAddr)) {
                     evictionTracker.forgetPage(pageId);
 
                     if (putIsNeeded)
@@ -378,15 +370,16 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         this.evictionTracker = dataRegion.evictionTracker();
         this.reuseList = reuseList == null ? this : reuseList;
         int pageSize = pageMem.pageSize();
-        PageLayout pageLayout = pageMem.pageLayout();
 
         assert U.isPow2(pageSize) : "Page size must be a power of 2: " + pageSize;
         assert U.isPow2(BUCKETS);
         assert BUCKETS <= pageSize : pageSize;
 
+        DataPageIO dataPageIO = DataPageIO.versions(pageMem.bigPages()).latest();
+
         // TODO this constant is used because currently we cannot reuse data pages as index pages
         // TODO and vice-versa. It should be removed when data storage format is finalized.
-        MIN_SIZE_FOR_DATA_PAGE = pageSize - pageLayout.minDataPageOverhead();
+        MIN_SIZE_FOR_DATA_PAGE = pageSize - dataPageIO.minDataPageOverhead();
 
         int shift = 0;
 
@@ -518,7 +511,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
                 if (remaining < MIN_SIZE_FOR_DATA_PAGE) {
                     for (int b = bucket(remaining, false) + 1; b < BUCKETS - 1; b++) {
-                        pageId = takeEmptyPage(b, row.ioVersions(), statHolder);
+                        pageId = takeEmptyPage(b, row.ioVersions(pageMem.bigPages()), statHolder);
 
                         if (pageId != 0L)
                             break;
@@ -527,12 +520,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
                 if (pageId == 0L) { // Handle reuse bucket.
                     if (reuseList == this)
-                        pageId = takeEmptyPage(REUSE_BUCKET, row.ioVersions(), statHolder);
+                        pageId = takeEmptyPage(REUSE_BUCKET, row.ioVersions(pageMem.bigPages()), statHolder);
                     else {
                         pageId = reuseList.takeRecycledPage();
 
                         if (pageId != 0)
-                            pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
+                            pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions(pageMem.bigPages()).latest());
                     }
                 }
 
@@ -541,10 +534,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 if (pageId == 0L) {
                     pageId = allocateDataPage(row.partition());
 
-                    initIo = row.ioVersions().latest();
+                    initIo = row.ioVersions(pageMem.bigPages()).latest();
                 } else {
                     assert PageIdUtils.flag(pageId) == FLAG_DATA
-                        : "rowVersions=" + row.ioVersions() + ", pageId=" + PageIdUtils.toDetailString(pageId);
+                        : "rowVersions=" + row.ioVersions(pageMem.bigPages()) + ", pageId=" + PageIdUtils.toDetailString(pageId);
 
                     pageId = PageIdUtils.changePartitionId(pageId, row.partition());
                 }
@@ -584,7 +577,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             try {
                 return initReusedPage(reusedPageId, reusedPage, reusedPageAddr,
-                    partId, PageIdAllocator.FLAG_DATA, row.ioVersions().latest());
+                    partId, PageIdAllocator.FLAG_DATA, row.ioVersions(pageMem.bigPages()).latest());
             }
             finally {
                 writeUnlock(reusedPageId, reusedPage, reusedPageAddr, true);

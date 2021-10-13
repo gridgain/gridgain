@@ -24,6 +24,6 @@ public interface PageIoResolver {
     public static final PageIoResolver DEFAULT_PAGE_IO_RESOLVER = PageIO::getPageIO;
 
     /** */
-    PageIO resolve(long pageAddr) throws IgniteCheckedException;
+    PageIO resolve(long pageAddr, boolean bigDataPages) throws IgniteCheckedException;
 }
 

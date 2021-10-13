@@ -74,7 +74,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryManager;
@@ -3615,10 +3614,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             /** {@inheritDoc} */
-            @Override public boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, PageLayout pageLayout)
+            @Override public boolean applyMvcc(DataPageIO io, long dataPageAddr, int itemId, int pageSize)
                 throws IgniteCheckedException {
                 try {
-                    return isVisible(cctx, snapshot, io, dataPageAddr, itemId, pageLayout);
+                    return isVisible(cctx, snapshot, io, dataPageAddr, itemId, pageSize);
                 }
                 catch (IgniteTxUnexpectedStateCheckedException e) {
                     // TODO this catch must not be needed if we switch Vacuum to data page scan
@@ -3768,7 +3767,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             DataPageIO iox = (DataPageIO)io;
 
             int off = iox.getPayloadOffset(pageAddr, itemId,
-                pageMem.pageLayout(grp.groupId()), MVCC_INFO_SIZE);
+                pageMem.realPageSize(grp.groupId()), MVCC_INFO_SIZE);
 
             long newCrd = iox.newMvccCoordinator(pageAddr, off);
             long newCntr = iox.newMvccCounter(pageAddr, off);
@@ -3811,7 +3810,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             IgniteWriteAheadLogManager wal = grp.shared().wal();
 
             int off = iox.getPayloadOffset(pageAddr, itemId,
-                pageMem.pageLayout(grp.groupId()), MVCC_INFO_SIZE);
+                pageMem.realPageSize(grp.groupId()), MVCC_INFO_SIZE);
 
             long crd = iox.mvccCoordinator(pageAddr, off);
             long cntr = iox.mvccCounter(pageAddr, off);
@@ -3876,7 +3875,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             IgniteWriteAheadLogManager wal = grp.shared().wal();
 
             int off = iox.getPayloadOffset(pageAddr, itemId,
-                pageMem.pageLayout(grp.groupId()), MVCC_INFO_SIZE);
+                pageMem.realPageSize(grp.groupId()), MVCC_INFO_SIZE);
 
             long crd = iox.mvccCoordinator(pageAddr, off);
             long cntr = iox.mvccCounter(pageAddr, off);

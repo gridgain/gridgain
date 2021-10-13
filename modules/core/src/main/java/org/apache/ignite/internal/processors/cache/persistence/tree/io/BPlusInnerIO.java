@@ -153,7 +153,7 @@ public abstract class BPlusInnerIO<L> extends BPlusIO<L> {
      * @param row Moved up row.
      * @param rowBytes Bytes.
      * @param rightChildId Right child ID.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param needRowBytes If we need row bytes back.
      * @return Row bytes.
      * @throws IgniteCheckedException If failed.
@@ -165,11 +165,11 @@ public abstract class BPlusInnerIO<L> extends BPlusIO<L> {
         L row,
         byte[] rowBytes,
         long rightChildId,
-        PageLayout pageLayout,
+        int pageSize,
         boolean needRowBytes,
         PageMetrics metrics
     ) throws IgniteCheckedException {
-        initNewPage(newRootPageAddr, newRootId, pageLayout, metrics);
+        initNewPage(newRootPageAddr, newRootId, pageSize, metrics);
 
         setCount(newRootPageAddr, 1);
         setLeft(newRootPageAddr, 0, leftChildId);

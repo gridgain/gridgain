@@ -202,7 +202,7 @@ public class IgnitePdsPageReplacementTest extends GridCommonAbstractTest {
             final long pageAddr = mem.writeLock(fullId.groupId(), fullId.pageId(), page);
 
             try {
-                pageIO.initNewPage(pageAddr, fullId.pageId(), mem.pageLayout(fullId.groupId()), null);
+                pageIO.initNewPage(pageAddr, fullId.pageId(), mem.realPageSize(fullId.groupId()), null);
             }
             finally {
                 mem.writeUnlock(fullId.groupId(), fullId.pageId(), page, null, true);

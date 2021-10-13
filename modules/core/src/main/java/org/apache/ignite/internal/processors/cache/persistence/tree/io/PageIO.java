@@ -68,7 +68,7 @@ import org.jetbrains.annotations.Nullable;
  *    static methods (like {@code {@link #getPageId(long)}}) intentionally:
  *    this base format can not be changed between versions.
  *
- * 2. IO must correctly override {@link #initNewPage(long, long, PageLayout, PageMetrics)} method and call super.
+ * 2. IO must correctly override {@link #initNewPage(long, long, int, PageMetrics)} method and call super.
  *    We have logic that relies on this behavior.
  *
  * 3. Page IO type ID constant must be declared in this class to have a list of all the
@@ -626,13 +626,12 @@ public abstract class PageIO {
     /**
      * @param pageAddr Page address.
      * @param pageId Page ID.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param metrics Page metrics for tracking page allocation. Can be {@code null} if no tracking is required.
      *
      * @see EncryptionSpi#encryptedSize(int)
      */
-    // TODO: should here be realPageSize or pageSize
-    public void initNewPage(long pageAddr, long pageId, PageLayout pageLayout, @Nullable PageMetrics metrics) {
+    public void initNewPage(long pageAddr, long pageId, int pageSize, @Nullable PageMetrics metrics) {
         setType(pageAddr, getType());
         setVersion(pageAddr, getVersion());
         setPageId(pageAddr, pageId);
@@ -676,11 +675,11 @@ public abstract class PageIO {
      * @return IO.
      * @throws IgniteCheckedException If failed.
      */
-    public static <Q extends PageIO> Q getPageIO(long pageAddr) throws IgniteCheckedException {
+    public static <Q extends PageIO> Q getPageIO(long pageAddr, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
         int type = getType(pageAddr);
         int ver = getVersion(pageAddr);
 
-        return getPageIO(type, ver);
+        return getPageIO(type, ver, bigDataPages);
     }
 
     /**
@@ -688,20 +687,21 @@ public abstract class PageIO {
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    public static <Q extends PageIO> Q getPageIO(ByteBuffer page) throws IgniteCheckedException {
-        return getPageIO(getType(page), getVersion(page));
+    public static <Q extends PageIO> Q getPageIO(ByteBuffer page, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
+        return getPageIO(getType(page), getVersion(page), bigDataPages);
     }
 
     /**
      * @param type IO Type.
      * @param ver IO Version.
+     * @param bigDataPages Big layout for data pages.
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    public static <Q extends PageIO> Q getPageIO(int type, int ver) throws IgniteCheckedException {
+    public static <Q extends PageIO> Q getPageIO(int type, int ver, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
         switch (type) {
             case T_DATA:
-                return (Q)DataPageIO.VERSIONS.forVersion(ver);
+                return (Q)DataPageIO.versions(bigDataPages).forVersion(ver);
 
             case T_BPLUS_META:
                 return (Q)BPlusMetaIO.VERSIONS.forVersion(ver);
@@ -725,10 +725,10 @@ public abstract class PageIO {
                 return (Q)TrackingPageIO.VERSIONS.forVersion(ver);
 
             case T_DATA_METASTORAGE:
-                return (Q)MetastoreDataPageIO.VERSIONS.forVersion(ver);
+                return (Q)MetastoreDataPageIO.metastorageIOVersions(bigDataPages).forVersion(ver);
 
             case T_DATA_PART:
-                return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
+                return (Q)SimpleDataPageIO.versions(bigDataPages).forVersion(ver);
 
             case T_MARKER_PAGE:
                 return (Q)MarkerPageIO.VERSIONS.forVersion(ver);
@@ -935,10 +935,10 @@ public abstract class PageIO {
 
     /**
      * @param addr Address.
-     * @param pageLayout Page layout.
+     * @param pageSize Page size.
      * @param sb Sb.
      */
-    protected abstract void printPage(long addr, PageLayout pageLayout, GridStringBuilder sb) throws IgniteCheckedException;
+    protected abstract void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException;
 
     /**
      * @param page Page.
@@ -956,12 +956,14 @@ public abstract class PageIO {
 
     /**
      * @param addr Address.
+     * @param pageSize Page size.
+     * @param bigDataPages Big layout for data pages.
      */
-    public static String printPage(long addr, PageLayout pageLayout) {
+    public static String printPage(long addr, int pageSize, boolean bigDataPages) {
         GridStringBuilder sb = new GridStringBuilder("Header [\n\ttype=");
 
         try {
-            PageIO io = getPageIO(addr);
+            PageIO io = getPageIO(addr, bigDataPages);
 
             sb.a(getType(addr)).a(" (").a(io.getClass().getSimpleName())
                 .a("),\n\tver=").a(getVersion(addr)).a(",\n\tcrc=").a(getCrc(addr))
@@ -975,7 +977,7 @@ public abstract class PageIO {
                     .a("\n]");
             }
             else
-                io.printPage(addr, pageLayout, sb);
+                io.printPage(addr, pageSize, sb);
         }
         catch (IgniteCheckedException e) {
             sb.a("Failed to print page: ").a(e.getMessage());

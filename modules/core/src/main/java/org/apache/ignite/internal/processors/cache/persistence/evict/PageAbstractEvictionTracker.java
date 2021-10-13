@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -91,16 +90,14 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
                 if (PageIO.getType(pageAddr) != PageIO.T_DATA)
                     return false; // Can't evict: page has been recycled into non-data page.
 
-                DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                 long realPageId = PageIO.getPageId(pageAddr);
 
                 if (!checkTouch(realPageId))
                     return false; // Can't evict: another thread concurrently invoked forgetPage()
 
-                PageLayout pageLayout = pageMem.pageLayout();
-
-                rowsToEvict = io.forAllItems(pageAddr, pageLayout, new DataPageIO.CC<CacheDataRowAdapter>() {
+                rowsToEvict = io.forAllItems(pageAddr, new DataPageIO.CC<CacheDataRowAdapter>() {
                     @Override public CacheDataRowAdapter apply(long link) throws IgniteCheckedException {
                         CacheDataRowAdapter row = new CacheDataRowAdapter(link);
 

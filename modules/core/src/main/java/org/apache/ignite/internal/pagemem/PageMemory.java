@@ -19,7 +19,6 @@ package org.apache.ignite.internal.pagemem;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageLayout;
 
 /**
  */
@@ -42,15 +41,13 @@ public interface PageMemory extends PageIdAllocator, PageSupport {
      */
     public int pageSize();
 
-    public PageLayout pageLayout();
-
     /**
      * @param grpId Group id.
      * @return Page size without encryption overhead.
      */
     public int realPageSize(int grpId);
 
-    public PageLayout pageLayout(int grpId);
+    public boolean bigPages();
 
     /**
      * @return Page size with system overhead, in bytes.
