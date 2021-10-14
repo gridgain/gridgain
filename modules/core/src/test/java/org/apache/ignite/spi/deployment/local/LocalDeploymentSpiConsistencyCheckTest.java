@@ -63,19 +63,19 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
     @Parameterized.Parameters(name = "spi1={0}, spi2={1}, isSecondClient={2}, firstWarns={3}, secondFails={4}")
     public static Collection<Object[]> testData() {
         return Arrays.asList(new Object[][]{
-            { new LocalDeploymentSpi(),        new InconsistentDeploymentSpi(), false, false, false },
-            { new LocalDeploymentSpi(),          new ConsistentDeploymentSpi(), false, false,  true },
-            { new LocalDeploymentSpi(), new ConsistentNoClientsDeploymentSpi(), false, false,  true },
-            { new InconsistentDeploymentSpi(),        new LocalDeploymentSpi(), false, false, false },
-            { new ConsistentDeploymentSpi(),          new LocalDeploymentSpi(), false,  true, false },
-            { new ConsistentNoClientsDeploymentSpi(), new LocalDeploymentSpi(), false,  true, false },
+            { new LocalDeploymentSpi(), new InconsistentDeploymentSpi(), false, false, false },
+            { new LocalDeploymentSpi(), new ConsistentDeploymentSpi(), false, false, true },
+            { new LocalDeploymentSpi(), new ConsistentNoClientsDeploymentSpi(), false, false, true },
+            { new InconsistentDeploymentSpi(), new LocalDeploymentSpi(), false, false, false },
+            { new ConsistentDeploymentSpi(), new LocalDeploymentSpi(), false, true, false },
+            { new ConsistentNoClientsDeploymentSpi(), new LocalDeploymentSpi(), false, true, false },
 
-            { new LocalDeploymentSpi(),        new InconsistentDeploymentSpi(),  true, false, false },
-            { new LocalDeploymentSpi(),          new ConsistentDeploymentSpi(),  true, false,  true },
-            { new LocalDeploymentSpi(), new ConsistentNoClientsDeploymentSpi(),  true, false, false },
-            { new InconsistentDeploymentSpi(),        new LocalDeploymentSpi(),  true, false, false },
-            { new ConsistentDeploymentSpi(),          new LocalDeploymentSpi(),  true,  true, false },
-            { new ConsistentNoClientsDeploymentSpi(), new LocalDeploymentSpi(),  true, false, false },
+            { new LocalDeploymentSpi(), new InconsistentDeploymentSpi(), true, false, false },
+            { new LocalDeploymentSpi(), new ConsistentDeploymentSpi(), true, false, true },
+            { new LocalDeploymentSpi(), new ConsistentNoClientsDeploymentSpi(), true, false, false },
+            { new InconsistentDeploymentSpi(), new LocalDeploymentSpi(), true, false, false },
+            { new ConsistentDeploymentSpi(), new LocalDeploymentSpi(), true, true, false },
+            { new ConsistentNoClientsDeploymentSpi(), new LocalDeploymentSpi(), true, false, false },
         });
     }
 
@@ -114,15 +114,18 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
     }
 
     @IgniteSpiMultipleInstancesSupport(true)
-    private static class InconsistentDeploymentSpi extends TestNoopDeploymentSpi { }
+    private static class InconsistentDeploymentSpi extends TestNoopDeploymentSpi {
+    }
 
     @IgniteSpiMultipleInstancesSupport(true)
     @IgniteSpiConsistencyChecked(optional = false, checkClient = false)
-    private static class ConsistentNoClientsDeploymentSpi extends TestNoopDeploymentSpi { }
+    private static class ConsistentNoClientsDeploymentSpi extends TestNoopDeploymentSpi {
+    }
 
     @IgniteSpiMultipleInstancesSupport(true)
     @IgniteSpiConsistencyChecked(optional = false)
-    private static class ConsistentDeploymentSpi extends TestNoopDeploymentSpi { }
+    private static class ConsistentDeploymentSpi extends TestNoopDeploymentSpi {
+    }
 
     private static abstract class TestNoopDeploymentSpi extends IgniteSpiAdapter implements DeploymentSpi {
 
