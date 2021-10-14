@@ -144,4 +144,20 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
 
         Assert.assertEquals("b", client.cache("foo").get("a"));
     }
+
+    /** */
+    @Test
+    public void testClientCanConnectWithoutSslContextFactory() throws Exception {
+        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
+        sslContextFactory.setNeedClientAuth(true);
+        sslClientAuth = false;
+        startGrid(0);
+
+        // The client won't be able to successfully connect because it doesn't trust server's certificate.
+        // The goal of the test is to check that the client can start and attempt to connect
+        // without any SSL settings (other than SslMode). This didn't work before GG-34054 was fixed.
+        sslContextFactory = null;
+        GridTestUtils.assertThrowsAnyCause(log, () -> Ignition.startClient(clientConfiguration()),
+            IgniteCheckedException.class, "SSL handshake failed");
+    }
 }
