@@ -89,14 +89,18 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
      * @throws Exception If fails.
      */
     @Test
-    public void testWrongSqlMemoryPoolSize() throws Exception {
+    public void testWrongSqlMemoryPoolSize() {
         GridTestUtils.assertThrows(log, () -> {
             IgniteConfiguration cfg = getConfiguration("node1");
 
             final long maxMem = Runtime.getRuntime().maxMemory();
 
+            long memCompare = maxMem + 1;
+
+            log.info("maxMem detected: " + maxMem + ", mem will compare with: " + memCompare);
+
             cfg.setSqlConfiguration(new SqlConfiguration()
-                .setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1))
+                .setSqlGlobalMemoryQuota(String.valueOf(memCompare))
             );
 
             startGrid(cfg);
