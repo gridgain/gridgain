@@ -95,6 +95,8 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
 
             final long maxMem = Runtime.getRuntime().maxMemory();
 
+            log.info("maxMem detected: " + maxMem);
+
             cfg.setSqlConfiguration(new SqlConfiguration()
                 .setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1))
             );
