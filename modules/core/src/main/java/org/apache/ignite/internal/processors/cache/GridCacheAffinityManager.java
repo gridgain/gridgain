@@ -147,11 +147,10 @@ public class GridCacheAffinityManager extends GridCacheManagerAdapter {
 
         if (aff0 == null) {
             String name = (cctx == null) ? "" : cctx.name();
-            
+
             throw new IgniteException(FAILED_TO_FIND_CACHE_ERR_MSG + name);
         }
-
-
+        
         return aff0.partitions();
     }
 
