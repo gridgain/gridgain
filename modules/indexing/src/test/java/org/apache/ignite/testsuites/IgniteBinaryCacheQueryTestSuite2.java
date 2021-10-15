@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.database.baseline.IgniteStableBasel
 import org.apache.ignite.internal.processors.query.BasicSqlTest;
 import org.apache.ignite.internal.processors.query.CreateIndexOnInvalidDataTypeTest;
 import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
+import org.apache.ignite.internal.processors.query.IgniteInsertNullableDuplicatesSqlTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryThrottlingTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryTrackerOnReducerTest;
 import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutTestSuite;
@@ -222,6 +223,8 @@ import org.junit.runners.Suite;
 
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,
+
+    IgniteInsertNullableDuplicatesSqlTest.class,
 
     // Memory quota tests.
     SqlStatisticsMemoryQuotaTest.class,
