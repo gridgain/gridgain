@@ -51,6 +51,9 @@ namespace ignite
             /** Version 2.8.0: added column nullability info. */
             static const ProtocolVersion VERSION_2_8_0;
 
+            /** Version 2.8.17: added timezone to handshake. */
+            static const ProtocolVersion VERSION_2_8_17;
+
             typedef std::set<ProtocolVersion> VersionSet;
 
             /**
