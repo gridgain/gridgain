@@ -127,40 +127,33 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
     private static class ConsistentDeploymentSpi extends TestNoopDeploymentSpi {
     }
 
-    private static abstract class TestNoopDeploymentSpi extends IgniteSpiAdapter implements DeploymentSpi {
+    private abstract static class TestNoopDeploymentSpi extends IgniteSpiAdapter implements DeploymentSpi {
 
-        @Override
-        public void spiStart(String igniteInstanceName) throws IgniteSpiException {
+        @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
             // No-op.
         }
 
-        @Override
-        public void spiStop() throws IgniteSpiException {
+        @Override public void spiStop() throws IgniteSpiException {
             // No-op.
         }
 
-        @Override
-        public DeploymentResource findResource(String rsrcName) {
+        @Override public DeploymentResource findResource(String rsrcName) {
             return null;
         }
 
-        @Override
-        public boolean register(ClassLoader ldr, Class<?> rsrc) throws IgniteSpiException {
+        @Override public boolean register(ClassLoader ldr, Class<?> rsrc) throws IgniteSpiException {
             return false;
         }
 
-        @Override
-        public boolean unregister(String rsrcName) {
+        @Override public boolean unregister(String rsrcName) {
             return false;
         }
 
-        @Override
-        public void setListener(DeploymentListener lsnr) {
+        @Override public void setListener(DeploymentListener lsnr) {
             // No-op.
         }
 
-        @Override
-        public String toString() {
+        @Override public String toString() {
             return this.getClass().getSimpleName();
         }
     }
