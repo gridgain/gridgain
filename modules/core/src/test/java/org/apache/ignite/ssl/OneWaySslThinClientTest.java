@@ -29,6 +29,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+
 /** Test one-way SSL works with thin clients. */
 @SuppressWarnings("ThrowableNotThrown")
 public class OneWaySslThinClientTest extends GridCommonAbstractTest {
@@ -147,17 +149,23 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testClientCanConnectWithoutSslContextFactory() throws Exception {
+    public void testDefaultSslContextOnClient() throws Exception {
         sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
         sslContextFactory.setNeedClientAuth(true);
         sslClientAuth = false;
         startGrid(0);
 
-        // The client won't be able to successfully connect because it doesn't trust server's certificate.
-        // The goal of the test is to check that the client can start and attempt to connect
-        // without any SSL settings (other than SslMode). This didn't work before GG-34054 was fixed.
         sslContextFactory = null;
-        GridTestUtils.assertThrowsAnyCause(log, () -> Ignition.startClient(clientConfiguration()),
-            IgniteCheckedException.class, "SSL handshake failed");
+        SSLContext defaultContext = SSLContext.getDefault();
+        try {
+            SSLContext.setDefault(GridTestUtils.sslTrustedFactory(null, "trustone").create());
+            IgniteClient client = Ignition.startClient(clientConfiguration());
+
+            client.createCache("foo").put("a", "b");
+
+            Assert.assertEquals("b", client.cache("foo").get("a"));
+        } finally {
+            SSLContext.setDefault(defaultContext);
+        }
     }
 }
