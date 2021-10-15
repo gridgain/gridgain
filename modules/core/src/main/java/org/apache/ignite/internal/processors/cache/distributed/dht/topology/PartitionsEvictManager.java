@@ -110,32 +110,17 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param grp Group context.
-     * @param part Partition to evict.
-     * @param finishFut Clearing finish future.
-     */
-    public IgniteInternalFuture<?> evictPartitionAsync(
-            CacheGroupContext grp,
-            GridDhtLocalPartition part,
-            GridFutureAdapter<?> finishFut
-    ) {
-        return evictPartitionAsync(grp, part, finishFut, null);
-    }
-
-    /**
      * Adds partition to eviction queue and starts eviction process if permit
      * available.
      *
      * @param grp Group context.
      * @param part Partition to evict.
      * @param finishFut Clearing finish future.
-     * @param reason Reason for clearing.
      */
     public IgniteInternalFuture<?> evictPartitionAsync(
         CacheGroupContext grp,
         GridDhtLocalPartition part,
-        GridFutureAdapter<?> finishFut,
-        EvictReason reason
+        GridFutureAdapter<?> finishFut
     ) {
         assert nonNull(grp);
         assert nonNull(part);
@@ -152,7 +137,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             GroupEvictionContext grpEvictionCtx = evictionGroupsMap.computeIfAbsent(
                 grpId, k -> new GroupEvictionContext(grp));
 
-            if (reason == null)
+            EvictReason reason;
+
+            if (context().kernalContext().recoveryMode())
+                reason = EvictReason.CLEARING_ON_RECOVERY;
+            else
                 reason = part.state() == RENTING ? EvictReason.EVICTION : EvictReason.CLEARING;
 
             if (log.isDebugEnabled())
@@ -418,7 +407,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             }
 
             try {
-                long clearedEntities = part.clearAll(grpEvictionCtx, reason);
+                long clearedEntities = part.clearAll(grpEvictionCtx);
 
                 if (log.isDebugEnabled()) {
                     log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
@@ -457,7 +446,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Reason for eviction of partition.
      */
-    public enum EvictReason {
+    private enum EvictReason {
         /**
          * Partition evicted after changing to
          * {@link GridDhtPartitionState#RENTING RENTING} state.

@@ -86,7 +86,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
@@ -169,9 +168,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** */
     private volatile long clearVer;
-
-    /** */
-    private volatile long reclearVer;
 
     /**
      * @param ctx Context.
@@ -353,8 +349,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /** */
-    public void reclearVer(long reclearVer) {
-         this.reclearVer = reclearVer;
+    public void clearVersion(long clearVer) {
+         this.clearVer = clearVer;
     }
 
     /**
@@ -978,13 +974,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @return Number of rows cleared from page memory.
      * @throws NodeStoppingException If node stopping.
      */
-    protected long clearAll(EvictionContext evictionCtx, PartitionsEvictManager.EvictReason reason) throws NodeStoppingException {
+    protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
         long order;
 
-        if (reason == CLEARING_ON_RECOVERY)
-            order = reclearVer;
-        else
-            order = clearVer;
+        order = clearVer;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
 
@@ -997,8 +990,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
         CacheMapHolder hld = grp.sharedGroup() ? null : singleCacheEntryMap;
 
+        boolean recoveryMode = ctx.kernalContext().recoveryMode();
+
         try {
-            if (reason == PartitionsEvictManager.EvictReason.CLEARING &&
+            if (state() == MOVING &&
                     grp.walEnabled() && grp.config().getAtomicityMode() == ATOMIC)
                 ctx.wal().log(new PartitionClearingStartRecord(id, grp.groupId(), order));
 
@@ -1020,7 +1015,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     // Partition state can be switched from RENTING to MOVING and vice versa during clearing.
                     long order0 = row.version().order();
 
-                    if ((state() == MOVING || reason == CLEARING_ON_RECOVERY) && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
+                    if ((state() == MOVING || recoveryMode) && (order0 == 0 /** Inserted by isolated updater. */ || order0 > order))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
@@ -1086,7 +1081,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
 
             // Attempt to destroy.
-            if (reason != CLEARING_ON_RECOVERY)
+            if (!recoveryMode)
                 ((GridDhtPreloader)grp.preloader()).tryFinishEviction(this);
         }
         catch (NodeStoppingException e) {

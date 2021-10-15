@@ -2554,6 +2554,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
+        List<PartitionClearingStartRecord> clearedPartitions = new ArrayList<>();
+
         List<IgniteInternalFuture<?>> clearFuts = new ArrayList<>();
 
         try {
@@ -2630,7 +2632,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                     cctx.kernalContext().query().markAsRebuildNeeded(cacheCtx);
 
                                 try {
-                                    applyUpdate(cacheCtx, dataEntry, false);
+                                    applyUpdate(cacheCtx, dataEntry, true);
                                 }
                                 catch (IgniteCheckedException e) {
                                     U.error(log, "Failed to apply data entry, dataEntry=" + dataEntry +
@@ -2723,11 +2725,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                         ", partitionId=" + rec0.partitionId() + "]", e);
                             }
 
-                            part.reclearVer(rec0.clearVersion());
+                            part.clearVersion(rec0.clearVersion());
 
                             clearFuts.add(grp.shared().evict()
-                                    .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY)
+                                    .evictPartitionAsync(grp, part, new GridFutureAdapter<>())
                             );
+
+                            clearedPartitions.add(rec0);
                         }
 
 
@@ -2749,6 +2753,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         for (IgniteInternalFuture<?> fut : clearFuts) {
             fut.get();
+        }
+
+        for (PartitionClearingStartRecord clearedPartition : clearedPartitions) {
+            this.ctx.cache().cacheGroup(clearedPartition.groupId())
+                    .topology().localPartition(clearedPartition.partitionId())
+                    .updateClearVersion();
         }
 
         if (log.isInfoEnabled())
