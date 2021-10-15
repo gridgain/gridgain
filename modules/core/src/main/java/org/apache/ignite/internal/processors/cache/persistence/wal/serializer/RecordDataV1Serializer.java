@@ -41,7 +41,7 @@ import org.apache.ignite.internal.pagemem.wal.record.LazyDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
-import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
@@ -541,7 +541,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             case INDEX_ROOT_PAGE_RENAME_RECORD:
                 return ((IndexRenameRootPageRecord) record).dataSize();
 
-            case PARTITION_CLEARING_STARTED:
+            case PARTITION_CLEARING_START_RECORD:
                 return 4 + 4 + 8;
 
             default:
@@ -1192,12 +1192,12 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
-            case PARTITION_CLEARING_STARTED:
+            case PARTITION_CLEARING_START_RECORD:
                 int partId0 = in.readInt();
                 int grpId = in.readInt();
                 long clearVer = in.readLong();
 
-                res = new PartitionClearingStarted(partId0, grpId, clearVer);
+                res = new PartitionClearingStartRecord(partId0, grpId, clearVer);
 
                 break;
 
@@ -1793,14 +1793,14 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
 
                 break;
 
-            case PARTITION_CLEARING_STARTED:
-                PartitionClearingStarted partitionClearingStarted = (PartitionClearingStarted)rec;
+            case PARTITION_CLEARING_START_RECORD:
+                PartitionClearingStartRecord partitionClearingStartRecord = (PartitionClearingStartRecord)rec;
 
-                buf.putInt(partitionClearingStarted.partId());
+                buf.putInt(partitionClearingStartRecord.partitionId());
 
-                buf.putInt(partitionClearingStarted.grpId());
+                buf.putInt(partitionClearingStartRecord.groupId());
 
-                buf.putLong(partitionClearingStarted.clearVer());
+                buf.putLong(partitionClearingStartRecord.clearVersion());
 
                 break;
 

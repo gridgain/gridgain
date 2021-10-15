@@ -471,9 +471,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         CLEARING,
 
         /**
-         * Repeat partition clearing if the node was stopped without previous clearing checkpointed.
+         * Partition clearing on logical WAL recovery.
+         * Used to repeat partition clearing if the node was stopped without previous clearing checkpointed.
          */
-        RECLEARING;
+        CLEARING_ON_RECOVERY;
 
         /** {@inheritDoc} */
         @Override public String toString() {

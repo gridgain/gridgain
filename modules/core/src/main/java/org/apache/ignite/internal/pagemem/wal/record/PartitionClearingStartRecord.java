@@ -21,72 +21,76 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 /**
  * Partition clearing started record.
  */
-public class PartitionClearingStarted extends WALRecord {
-    /** */
+public class PartitionClearingStartRecord extends WALRecord {
+    /** Partition ID. */
     private int partId;
 
-    /** */
+    /** Cache group ID. */
     private int grpId;
 
-    /** */
+    /** Clear version. */
     private long clearVer;
+
+    /**
+     * @param partId Partition ID.
+     * @param grpId Cache group ID.
+     * @param clearVer Clear version.
+     */
+    public PartitionClearingStartRecord(int partId, int grpId, long clearVer) {
+        this.partId = partId;
+        this.grpId = grpId;
+        this.clearVer = clearVer;
+    }
 
     /**
      * @return Partition ID.
      */
-    public int partId() {
+    public int partitionId() {
         return partId;
     }
 
     /**
      * @param partId Partition ID.
      */
-    public void partId(int partId) {
+    public void partitionId(int partId) {
         this.partId = partId;
     }
 
     /**
      * @return Cache group ID.
      */
-    public int grpId() {
+    public int groupId() {
         return grpId;
     }
 
     /**
      * @param grpId Cache group ID.
      */
-    public void grpId(int grpId) {
+    public void groupId(int grpId) {
         this.grpId = grpId;
     }
 
     /**
      * @return Clear version.
      */
-    public long clearVer() {
+    public long clearVersion() {
         return clearVer;
     }
 
     /**
      * @param clearVer Clear version.
      */
-    public void clearVer(long clearVer) {
+    public void clearVersion(long clearVer) {
         this.clearVer = clearVer;
     }
 
     /** {@inheritDoc} */
     @Override public RecordType type() {
-        return RecordType.PARTITION_CLEARING_STARTED;
-    }
-
-    /** */
-    public PartitionClearingStarted(int partId, int grpId, long clearVer) {
-        this.partId = partId;
-        this.grpId = grpId;
-        this.clearVer = clearVer;
+        return RecordType.PARTITION_CLEARING_START_RECORD;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PartitionClearingStarted.class, this, "super", super.toString());
+        return S.toString(PartitionClearingStartRecord.class, this, "super", super.toString());
     }
 }

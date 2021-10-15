@@ -87,7 +87,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
-import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStarted;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
@@ -2554,7 +2554,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
-        Map<GroupPartitionId, Long> partitionRecoveryClearing = new HashMap<>();
+        List<IgniteInternalFuture<?>> clearFuts = new ArrayList<>();
 
         try {
             while (restoreLogicalState.hasNext()) {
@@ -2708,10 +2708,28 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         break;
 
-                    case PARTITION_CLEARING_STARTED:
-                        PartitionClearingStarted rec0 = (PartitionClearingStarted) rec;
+                    case PARTITION_CLEARING_START_RECORD:
+                        PartitionClearingStartRecord rec0 = (PartitionClearingStartRecord) rec;
 
-                        partitionRecoveryClearing.put(new GroupPartitionId(rec0.grpId(), rec0.partId()), rec0.clearVer());
+                        CacheGroupContext grp = this.ctx.cache().cacheGroup(rec0.groupId());
+
+                        if (grp != null) {
+                            GridDhtLocalPartition part;
+
+                            try {
+                                part = grp.topology().forceCreatePartition(rec0.partitionId());
+                            } catch (IgniteCheckedException e) {
+                                throw new IgniteException("Cannot get or create partition [groupId=" + rec0.groupId() +
+                                        ", partitionId=" + rec0.partitionId() + "]", e);
+                            }
+
+                            part.reclearVer(rec0.clearVersion());
+
+                            clearFuts.add(grp.shared().evict()
+                                    .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY)
+                            );
+                        }
+
 
                         break;
 
@@ -2729,31 +2747,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         awaitApplyComplete(exec, applyError);
 
-        if (log.isInfoEnabled())
-            log.info("Finished applying WAL changes [updatesApplied=" + applied +
-                ", time=" + (U.currentTimeMillis() - start) + " ms]");
-
-        for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
-            lsnr.afterLogicalUpdatesApplied(this, restoreLogicalState);
-
-        List<IgniteInternalFuture<?>> clearFuts = new ArrayList<>();
-
-        partitionRecoveryClearing.forEach((key, value) -> {
-                    CacheGroupContext grp = ctx.cache().cacheGroup(key.getGroupId());
-
-                    GridDhtLocalPartition part = grp.topology().localPartition(key.getPartitionId());
-
-                    part.reclearVer(value);
-
-                    clearFuts.add(grp.shared().evict()
-                            .evictPartitionAsync(grp, part, new GridFutureAdapter<>(), PartitionsEvictManager.EvictReason.RECLEARING)
-                    );
-                }
-        );
-
         for (IgniteInternalFuture<?> fut : clearFuts) {
             fut.get();
         }
+
+        if (log.isInfoEnabled())
+            log.info("Finished applying WAL changes [updatesApplied=" + applied +
+                    ", time=" + (U.currentTimeMillis() - start) + " ms]");
+
+        for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
+            lsnr.afterLogicalUpdatesApplied(this, restoreLogicalState);
 
         return restoreLogicalState;
     }
