@@ -587,6 +587,10 @@ public class GridDhtPartitionDemander {
                 for (Map.Entry<Integer, CacheEntryInfoCollection> e : supplyMsg.infos().entrySet()) {
                     int p = e.getKey();
 
+                    if (p == 16241) {
+                        log.info("Got entries for 16241: " +  e.getValue().infos().size());
+                    }
+
                     if (aff.get(p).contains(ctx.localNode())) {
                         GridDhtLocalPartition part;
 
@@ -900,8 +904,9 @@ public class GridDhtPartitionDemander {
                     if (cctx == null || (grp.sharedGroup() && entry.cacheId() != cctx.cacheId())) {
                         cctx = grp.sharedGroup() ? grp.shared().cacheContext(entry.cacheId()) : grp.singleCacheContext();
 
-                        if (cctx == null)
+                        if (cctx == null){
                             continue;
+                        }
                         else if (cctx.isNear())
                             cctx = cctx.dhtCache().context();
                     }
