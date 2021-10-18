@@ -140,7 +140,6 @@ public class GridH2ValueCacheObject extends Value {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override public int compareTypeSafe(Value v, CompareMode mode) {
         Object o1 = getObject();
         Object o2 = v.getObject();
@@ -170,6 +169,9 @@ public class GridH2ValueCacheObject extends Value {
         if (h1 == h2) {
             if (o1.equals(o2))
                 return 0;
+
+            if (o1.getClass().equals(BinaryObjectImpl.class))
+                return BinaryObjectImpl.compare(o1, o2);
 
             return Bits.compareNotNullSigned(getBytesNoCopy(), v.getBytesNoCopy());
         }
