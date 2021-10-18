@@ -33,6 +33,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -61,6 +62,9 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     /** Set SSL context factory to ignite. */
     private static boolean setSslCtxFactoryToIgnite;
 
+    /** Set SSL context factory to ignite. */
+    private static boolean sslClientAuth;
+
     /** Supported ciphers. */
     private static String[] supportedCiphers;
 
@@ -68,6 +72,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     @Override protected void beforeTest() throws Exception {
         setSslCtxFactoryToCli = false;
         setSslCtxFactoryToIgnite = false;
+        sslClientAuth = true;
         supportedCiphers = null;
         sslCtxFactory = null;
     }
@@ -90,7 +95,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
             new ClientConnectorConfiguration()
                 .setSslEnabled(true)
                 .setUseIgniteSslContextFactory(setSslCtxFactoryToIgnite)
-                .setSslClientAuth(true)
+                .setSslClientAuth(sslClientAuth)
                 .setSslContextFactory(setSslCtxFactoryToCli ? sslCtxFactory : null));
 
         cfg.setSslContextFactory(setSslCtxFactoryToIgnite ? sslCtxFactory : null);
@@ -204,6 +209,28 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
             // Restore SSL context.
             SSLContext.setDefault(dfltSslCtx);
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDefaultContextOneWay() throws Exception {
+        setSslCtxFactoryToCli = true;
+        sslCtxFactory = getTestSslContextFactory();
+        sslClientAuth = false;
+
+        startGrids(1);
+        SSLContext defaultContext = SSLContext.getDefault();
+        try {
+            SSLContext.setDefault(getTestSslContextFactoryNoKey().create());
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require")) {
+                checkConnection(conn);
+            }
+        } finally {
+            stopAllGrids();
+            SSLContext.setDefault(defaultContext);
         }
     }
 
@@ -713,6 +740,18 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         factory.setCipherSuites(supportedCiphers);
         factory.setKeyStoreFilePath(SRV_KEY_STORE_PATH);
         factory.setKeyStorePassword("123456".toCharArray());
+        factory.setTrustStoreFilePath(TRUST_KEY_STORE_PATH);
+        factory.setTrustStorePassword("123456".toCharArray());
+
+        return factory;
+    }
+
+    /**
+     * @return Test SSL context factory.
+     */
+    private static Factory<SSLContext> getTestSslContextFactoryNoKey() {
+        SslContextFactory factory = new SslContextFactory();
+
         factory.setTrustStoreFilePath(TRUST_KEY_STORE_PATH);
         factory.setTrustStorePassword("123456".toCharArray());
 

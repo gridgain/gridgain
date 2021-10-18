@@ -125,7 +125,7 @@ public class ClientSslUtils {
 
         String proto = toString(cfg.getSslProtocol());
 
-        if (Stream.of(keyStore, keyStorePwd, keyStoreType, trustStore, trustStorePwd, trustStoreType)
+        if (Stream.of(keyStore, keyStorePwd, trustStore, trustStorePwd)
                 .allMatch(s -> s == null || s.isEmpty())
         ) {
             try {
