@@ -740,7 +740,12 @@ public abstract class DynamicIndexAbstractBasicSelfTest extends DynamicIndexAbst
         loadInitialData();
         checkIndexCreatedForInlineSize(1);
         loadInitialData();
-        checkIndexCreatedForInlineSize(Integer.MAX_VALUE);
+        //A large value of inlineSize variable will lead to a suboptimal index tree (a tree with tens or hundreds of
+        //nodes onstead of 1-3). With this tree 'Maximum number of retries reached' error is possible when
+        // inserting a large number of elements in parallel.
+        //For long key type a inlineSize of 30 is sufficient.
+
+        checkIndexCreatedForInlineSize(30);
     }
 
     /**

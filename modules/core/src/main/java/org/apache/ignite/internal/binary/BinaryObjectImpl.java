@@ -884,14 +884,14 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /**
-     * Compare two objects for DML operation.
+     * Compare two objects.
      *
      * @param first First.
      * @param second Second.
      * @return Comparison result.
      */
     @SuppressWarnings("unchecked")
-    public static int compareForDml(Object first, Object second) {
+    public static int compare(Object first, Object second) {
         boolean firstBinary = first instanceof BinaryObjectImpl;
         boolean secondBinary = second instanceof BinaryObjectImpl;
 
