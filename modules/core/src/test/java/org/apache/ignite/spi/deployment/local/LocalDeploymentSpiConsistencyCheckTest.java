@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.Consumer;
 
+/** Checks that LocalDeploymentSpi can be mixed with other DeploymentSpi implementations as expected. */
 @RunWith(Parameterized.class)
 public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTest {
 
@@ -59,7 +60,11 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
     @Parameterized.Parameter(4)
     public boolean secondFails;
 
-    /** */
+    /**
+     * Test parameters.
+     * spi1, spi2, isSecondClient - check all combinations.
+     * firstWarns, secondFails - values depend on the first three parameters; analyse and set manually.
+     */
     @Parameterized.Parameters(name = "spi1={0}, spi2={1}, isSecondClient={2}, firstWarns={3}, secondFails={4}")
     public static Collection<Object[]> testData() {
         return Arrays.asList(new Object[][]{
@@ -79,11 +84,22 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
         });
     }
 
+    /** */
     @After
     public void tearDown() {
         stopAllGrids();
     }
 
+    /**
+     * 1. Start one server with Deployment SPI implementation 1.
+     * 2. Start second node, server or client, with Deployment SPI implementation 2.
+     * 3. Check that node 1 prints a warning if and only if its SPI detects an inconsistent configuration.
+     * 4. Check that the joining node fails to join if and only if its SPI detects an inconsistent configuration.
+     * 5. Check that the joining node never prints the inconsistent configuration warning.
+     *
+     * Note: SPI detects an inconsistent configuration when it requires consistency, and the joining node has a
+     * different implementation (taking {@code checkClient} into account).
+     */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
     public void test() throws Exception {
@@ -113,20 +129,24 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
         assertFalse(listener2.check());
     }
 
+    /** Dummy SPI that doesn't check configuration consistency. */
     @IgniteSpiMultipleInstancesSupport(true)
     private static class InconsistentDeploymentSpi extends TestNoopDeploymentSpi {
     }
 
+    /** Dummy SPI that that checks configuration consistency on servers only. */
     @IgniteSpiMultipleInstancesSupport(true)
     @IgniteSpiConsistencyChecked(optional = false, checkClient = false)
     private static class ConsistentNoClientsDeploymentSpi extends TestNoopDeploymentSpi {
     }
 
+    /** Dummy SPI that that checks configuration consistency on servers and clients. */
     @IgniteSpiMultipleInstancesSupport(true)
     @IgniteSpiConsistencyChecked(optional = false)
     private static class ConsistentDeploymentSpi extends TestNoopDeploymentSpi {
     }
 
+    /** Dummy SPI base. {@code toString()} is overridden, the rest is placeholder code. */
     private abstract static class TestNoopDeploymentSpi extends IgniteSpiAdapter implements DeploymentSpi {
 
         @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
@@ -153,6 +173,8 @@ public class LocalDeploymentSpiConsistencyCheckTest extends GridCommonAbstractTe
             // No-op.
         }
 
+
+        /** Returns the class simple name - to be used in test case names. */
         @Override public String toString() {
             return this.getClass().getSimpleName();
         }
