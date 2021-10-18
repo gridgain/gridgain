@@ -29,6 +29,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+
 /** Test one-way SSL works with thin clients. */
 @SuppressWarnings("ThrowableNotThrown")
 public class OneWaySslThinClientTest extends GridCommonAbstractTest {
@@ -143,5 +145,27 @@ public class OneWaySslThinClientTest extends GridCommonAbstractTest {
         client.createCache("foo").put("a", "b");
 
         Assert.assertEquals("b", client.cache("foo").get("a"));
+    }
+
+    /** */
+    @Test
+    public void testDefaultSslContextOnClient() throws Exception {
+        sslContextFactory = GridTestUtils.sslTrustedFactory("node01", null);
+        sslContextFactory.setNeedClientAuth(true);
+        sslClientAuth = false;
+        startGrid(0);
+
+        sslContextFactory = null;
+        SSLContext defaultContext = SSLContext.getDefault();
+        try {
+            SSLContext.setDefault(GridTestUtils.sslTrustedFactory(null, "trustone").create());
+            IgniteClient client = Ignition.startClient(clientConfiguration());
+
+            client.createCache("foo").put("a", "b");
+
+            Assert.assertEquals("b", client.cache("foo").get("a"));
+        } finally {
+            SSLContext.setDefault(defaultContext);
+        }
     }
 }
