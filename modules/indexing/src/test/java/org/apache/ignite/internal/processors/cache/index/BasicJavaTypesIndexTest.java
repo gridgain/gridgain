@@ -229,8 +229,8 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
             .setValueFieldName("val")
             .setFields(fields);
 
-        String idxName = "idxVal";
-        String idxFieldName = "IDXVAL_IDX";
+        String idxName = "IDXVAL_IDX";
+        String idxFieldName = "idxVal";
 
         qe.setKeyFields(Collections.singleton(idxFieldName));
         qe.setIndexes(Collections.singleton(new QueryIndex(idxFieldName, true, idxName)));
