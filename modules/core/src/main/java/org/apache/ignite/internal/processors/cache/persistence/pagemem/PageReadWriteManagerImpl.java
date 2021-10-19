@@ -67,7 +67,11 @@ public class PageReadWriteManagerImpl implements PageReadWriteManager {
         try {
             store.read(pageId, pageBuf, keepCrc);
 
-            ctx.compress().decompressPage(pageBuf, store.getPageSize());
+            GridCacheContext<?, ?> cctx0 = ctx.cache().context().cacheContext(grpId);
+
+            boolean extendedDataPages = cctx0.dataRegion().pageMemory().bigPages();
+
+            ctx.compress().decompressPage(pageBuf, store.getPageSize(), extendedDataPages);
         }
         catch (StorageException e) {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));

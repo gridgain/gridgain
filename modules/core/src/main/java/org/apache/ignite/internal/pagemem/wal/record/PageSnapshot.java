@@ -142,7 +142,7 @@ public class PageSnapshot extends WALRecord implements WalRecordCacheGroupAware 
 
         try {
             return "PageSnapshot [fullPageId = " + fullPageId() + ", page = [\n"
-                + PageIO.printPage(addr, realPageSize, false)
+                + PageIO.printPage(addr, realPageSize)
                 + "],\nsuper = ["
                 + super.toString() + "]]";
         }

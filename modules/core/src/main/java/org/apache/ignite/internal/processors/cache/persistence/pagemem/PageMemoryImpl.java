@@ -354,7 +354,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                 throw new IgniteException("Unexpected page replacement mode: " + pageReplacementMode);
         }
 
-        bigPages = false;
+        bigPages = true;
     }
 
     /** {@inheritDoc} */
@@ -984,7 +984,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                                     assert snapshot.pageDataSize() < realPageSize : snapshot.pageDataSize();
 
-                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize);
+                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize, bigPages);
                                 }
                             }
 

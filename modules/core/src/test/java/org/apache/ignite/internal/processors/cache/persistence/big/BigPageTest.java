@@ -17,7 +17,9 @@
 package org.apache.ignite.internal.processors.cache.persistence.big;
 
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -33,10 +35,10 @@ public class BigPageTest extends GridCommonAbstractTest {
             .setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration()
                     .setPersistenceEnabled(true)
-                    .setMaxSize((long) (3 * 1024 * 1024 * 1024))
+                    .setMaxSize((long) (3.5 * 1024 * 1024 * 1024))
             )
             .setWalMode(WALMode.LOG_ONLY)
-            .setPageSize(256 * 1024);
+            .setPageSize(128 * 1024);
 //            .setPageSize(1024);
 
         return super.getConfiguration(igniteInstanceName).setDataStorageConfiguration(memCfg);
@@ -62,7 +64,10 @@ public class BigPageTest extends GridCommonAbstractTest {
 
         node.cluster().state(ClusterState.ACTIVE);
 
-        IgniteCache<Integer, String> cache = node.getOrCreateCache("some-cache");
+        CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<Integer, String>("some-cache")
+            .setAffinity(new RendezvousAffinityFunction(false, 32));
+
+        IgniteCache<Integer, String> cache = node.getOrCreateCache(cacheCfg);
 
         System.out.println("asd");
 

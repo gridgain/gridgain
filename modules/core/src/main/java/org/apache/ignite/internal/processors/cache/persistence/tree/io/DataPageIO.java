@@ -22,6 +22,9 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.ExtendedDataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.RegularDataPageLayout;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccUpdateResult;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridStringBuilder;
@@ -46,11 +49,11 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
     
     /** */
     private static final IOVersions<DataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
-        new DataPageIO(1, new PageLayout(false))
+        new DataPageIO(1, new RegularDataPageLayout())
     );
 
     private static final IOVersions<DataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
-        new DataPageIO(1, new PageLayout(true))
+        new DataPageIO(1, new ExtendedDataPageLayout())
     );
 
     public static IOVersions<DataPageIO> versions(boolean bigPages) {
@@ -61,12 +64,12 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
      * @param ver Page format version.
      * @param pageLayout Page layout.
      */
-    protected DataPageIO(int ver, PageLayout pageLayout) {
+    protected DataPageIO(int ver, DataPageLayout pageLayout) {
         super(T_DATA, ver, pageLayout);
     }
 
     /** {@inheritDoc} */
-    @Override protected void writeRowData(PageLayout pageLayout, long pageAddr, int dataOff, int payloadSize,
+    @Override protected void writeRowData(long pageAddr, int dataOff, int payloadSize,
         CacheDataRow row, boolean newRow) throws IgniteCheckedException {
         long addr = pageAddr + dataOff;
 

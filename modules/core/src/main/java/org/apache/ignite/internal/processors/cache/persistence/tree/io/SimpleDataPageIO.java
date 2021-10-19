@@ -20,6 +20,9 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.ExtendedDataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.RegularDataPageLayout;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
@@ -28,12 +31,12 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     /** */
     private static final IOVersions<SimpleDataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
-        new SimpleDataPageIO(1, new PageLayout(false))
+        new SimpleDataPageIO(1, new RegularDataPageLayout())
     );
 
     /** */
     private static final IOVersions<SimpleDataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
-        new SimpleDataPageIO(1, new PageLayout(true))
+        new SimpleDataPageIO(1, new ExtendedDataPageLayout())
     );
 
     public static IOVersions<SimpleDataPageIO> versions(boolean bigPages) {
@@ -44,7 +47,7 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
      * @param ver Page format version.
      * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int ver, PageLayout pageLayout) {
+    public SimpleDataPageIO(int ver, DataPageLayout pageLayout) {
         super(T_DATA_PART, ver, pageLayout);
     }
 
@@ -54,7 +57,7 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
      * @param ver Page format version.
      * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int type, int ver, PageLayout pageLayout) {
+    public SimpleDataPageIO(int type, int ver, DataPageLayout pageLayout) {
         super(type, ver, pageLayout);
     }
 
@@ -108,7 +111,6 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
 
     /** {@inheritDoc} */
     @Override protected void writeRowData(
-        PageLayout pageLayout,
         long pageAddr,
         int dataOff,
         int payloadSize,

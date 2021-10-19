@@ -406,7 +406,7 @@ public class DataStorageConfiguration implements Serializable {
     public DataStorageConfiguration setPageSize(int pageSize) {
         if (pageSize != 0) {
             A.ensure(pageSize >= MIN_PAGE_SIZE && pageSize <= MAX_PAGE_SIZE,
-                "Page size must be between 1kB and 16kB.");
+                "Page size must be between 1kB and 256kB.");
             A.ensure(U.isPow2(pageSize), "Page size must be a power of 2.");
         }
 

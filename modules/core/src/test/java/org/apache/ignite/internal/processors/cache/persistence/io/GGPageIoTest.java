@@ -148,14 +148,14 @@ public class GGPageIoTest {
             setFields(addr);
 
             System.out.println("The page before upgrade:");
-            System.out.println(PageIO.printPage(addr, PAGE_SIZE, false));
+            System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
             assertEquals(fromIO.getVersion(), PageIO.getVersion(addr));
 
             ((PagePartitionMetaIOGG)toIO).upgradePage(addr);
 
             System.out.println("The page after upgrade:");
-            System.out.println(PageIO.printPage(addr, PAGE_SIZE, false));
+            System.out.println(PageIO.printPage(addr, PAGE_SIZE));
 
             validate("Failed upgrading from " + from + " to " + to, addr, expVals);
 

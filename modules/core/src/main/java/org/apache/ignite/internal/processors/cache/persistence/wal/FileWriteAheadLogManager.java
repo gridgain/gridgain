@@ -76,7 +76,9 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.pagemem.wal.record.WalRecordCacheGroupAware;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.WalStateManager.WALDisableContext;
@@ -838,8 +840,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             ByteBuffer pageData = pageSnapshot.pageDataBuffer();
 
-            ByteBuffer compressedPage = cctx.kernalContext().compress().compressPage(pageData, pageSize, 1,
-                pageCompression, pageCompressionLevel);
+            int grpId = ((WalRecordCacheGroupAware) rec).groupId();
+
+            GridCacheContext<?, ?> cctx0 = cctx.cache().context().cacheContext(grpId);
+
+            boolean extendedDataPages = cctx0.dataRegion().pageMemory().bigPages();
+
+            ByteBuffer compressedPage = cctx.kernalContext().compress().compressPage(
+                pageData,
+                pageSize,
+                extendedDataPages,
+                1,
+                pageCompression,
+                pageCompressionLevel
+            );
 
             if (compressedPage != pageData) {
                 assert compressedPage.isDirect() : "Is direct buffer: " + compressedPage.isDirect();

@@ -95,6 +95,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
     @Override public ByteBuffer compressPage(
         ByteBuffer page,
         int pageSize,
+        boolean extendedDataPages,
         int blockSize,
         DiskPageCompression compression,
         int compressLevel
@@ -110,7 +111,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
             // correctly we need to set limit to real page size.
             page.limit(pageSize);
 
-            ByteBuffer compactPage = doCompactPage(page, pageSize);
+            ByteBuffer compactPage = doCompactPage(page, pageSize, extendedDataPages);
 
             int compactSize = compactPage.limit();
 
@@ -145,10 +146,15 @@ public class CompressionProcessorImpl extends CompressionProcessor {
     /**
      * @param page Page buffer.
      * @param pageSize Page size.
+     * @param extendedDataPages Extended data pages layout.
      * @return Compacted page buffer.
      */
-    private ByteBuffer doCompactPage(ByteBuffer page, int pageSize) throws IgniteCheckedException {
-        PageIO io = PageIO.getPageIO(page);
+    private ByteBuffer doCompactPage(
+        ByteBuffer page,
+        int pageSize,
+        boolean extendedDataPages
+    ) throws IgniteCheckedException {
+        PageIO io = PageIO.getPageIO(page, extendedDataPages);
 
         ByteBuffer compactPage = compactBuf.get();
 
@@ -315,7 +321,11 @@ public class CompressionProcessorImpl extends CompressionProcessor {
     }
 
     /** {@inheritDoc} */
-    @Override public void decompressPage(ByteBuffer page, int pageSize) throws IgniteCheckedException {
+    @Override public void decompressPage(
+        ByteBuffer page,
+        int pageSize,
+        boolean extendedDataPages
+    ) throws IgniteCheckedException {
         assert page.capacity() >= pageSize : "capacity=" + page.capacity() + ", pageSize=" + pageSize;
 
         byte compressType = PageIO.getCompressionType(page);
@@ -373,7 +383,7 @@ public class CompressionProcessorImpl extends CompressionProcessor {
             assert page.limit() == compactSize;
         }
 
-        PageIO io = PageIO.getPageIO(page);
+        PageIO io = PageIO.getPageIO(page, extendedDataPages);
 
         if (io instanceof CompactablePageIO)
             ((CompactablePageIO)io).restorePage(page, pageSize);

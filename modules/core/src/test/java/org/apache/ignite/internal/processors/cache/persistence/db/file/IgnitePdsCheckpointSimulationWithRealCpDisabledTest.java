@@ -249,7 +249,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                         for (int i = PageIO.COMMON_HEADER_END + latest.itemsOffset(); i < mem.pageSize(); i++)
                             PageUtils.putByte(pageAddr, i, (byte)0xAB);
 
-                        PageIO.printPage(pageAddr, mem.realPageSize(fullId.groupId()), mem.bigPages());
+                        PageIO.printPage(pageAddr, mem.realPageSize(fullId.groupId()));
                     }
                     finally {
                         mem.writeUnlock(fullId.groupId(), fullId.pageId(), page, null, true);
@@ -733,7 +733,7 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                         buf.clear();
                         buf.put(pageData).flip();
 
-                        ctx.compress().decompressPage(buf, realPageSize);
+                        ctx.compress().decompressPage(buf, realPageSize, mem.bigPages());
 
                         pageData = new byte[buf.limit()];
 

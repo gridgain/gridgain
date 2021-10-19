@@ -36,9 +36,13 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
     /** */
     private CompressionProcessor compressProc;
 
+    private boolean extendedDataPages;
+
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         diskPageCompression = DiskPageCompression.DISABLED;
+
+        extendedDataPages = cctx.dataRegion().pageMemory().bigPages();
     }
 
     /**
@@ -56,6 +60,13 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
         if (blockSize <= 0)
             throw new IgniteCheckedException("Failed to detect storage block size on " + U.osString());
 
-        return compressProc.compressPage(page, store.getPageSize(), blockSize, diskPageCompression, diskPageCompressLevel);
+        return compressProc.compressPage(
+            page,
+            store.getPageSize(),
+            extendedDataPages,
+            blockSize,
+            diskPageCompression,
+            diskPageCompressLevel
+        );
     }
 }

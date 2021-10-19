@@ -35,6 +35,7 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridUnsafe;
@@ -242,7 +243,9 @@ public class WalStat {
             int type = PageIO.getType(addr);
             int ver = PageIO.getVersion(addr);
 
-            return PageIO.getPageIO(type, ver).getClass().getSimpleName();
+            boolean extendedDataPages = DataPageLayout.shouldBeExtended(record.realPageSize());
+
+            return PageIO.getPageIO(type, ver, extendedDataPages).getClass().getSimpleName();
         }
         catch (IgniteCheckedException ignored) {
         }

@@ -98,6 +98,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
@@ -1431,6 +1432,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
         int pageSize = sharedCtx.database().pageSize();
 
+        boolean extendedDataPages = DataPageLayout.shouldBeExtended(pageSize);
+
         ByteBuffer buf = ByteBuffer.allocateDirect(pageSize);
 
         buf.order(ByteOrder.nativeOrder());
@@ -1457,7 +1460,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                         buf.put(pageData);
                         buf.flip();
 
-                        sharedCtx.kernalContext().compress().decompressPage(buf, realPageSize);
+                        sharedCtx.kernalContext().compress().decompressPage(buf, realPageSize, extendedDataPages);
 
                         pageData = new byte[realPageSize];
 

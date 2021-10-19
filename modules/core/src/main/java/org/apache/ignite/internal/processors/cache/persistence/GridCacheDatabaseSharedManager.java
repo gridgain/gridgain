@@ -2448,7 +2448,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                     assert pageSnapshotRecord.pageDataSize() <= realPageSize : pageSnapshotRecord.pageDataSize();
 
-                    cctx.kernalContext().compress().decompressPage(pageMem.pageBuffer(pageAddr), realPageSize);
+                    cctx.kernalContext().compress().decompressPage(
+                        pageMem.pageBuffer(pageAddr),
+                        realPageSize,
+                        pageMem.bigPages()
+                    );
                 }
             }
             finally {

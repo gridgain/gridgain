@@ -153,6 +153,7 @@ public class CompressionProcessor extends GridProcessorAdapter {
     /**
      * @param page Page buffer.
      * @param pageSize Page size.
+     * @param extendedDataPages Extended data pages layout.
      * @param storeBlockSize Store block size.
      * @param compression Compression algorithm.
      * @param compressLevel Compression level.
@@ -162,6 +163,7 @@ public class CompressionProcessor extends GridProcessorAdapter {
     public ByteBuffer compressPage(
         ByteBuffer page,
         int pageSize,
+        boolean extendedDataPages,
         int storeBlockSize,
         DiskPageCompression compression,
         int compressLevel
@@ -172,9 +174,10 @@ public class CompressionProcessor extends GridProcessorAdapter {
     /**
      * @param page Possibly compressed page buffer.
      * @param pageSize Page size.
+     * @param extendedDataPages Extended data pages layout.
      * @throws IgniteCheckedException If failed.
      */
-    public void decompressPage(ByteBuffer page, int pageSize) throws IgniteCheckedException {
+    public void decompressPage(ByteBuffer page, int pageSize, boolean extendedDataPages) throws IgniteCheckedException {
         if (PageIO.getCompressionType(page) != UNCOMPRESSED_PAGE)
             fail();
     }
