@@ -99,8 +99,8 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
     public void localPojoReproducerTest() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
-        Class keyCls = TestKeyWithIdx.class;
-        Class idxCls = TestPojo.class;
+        Class<?> keyCls = TestKeyWithIdx.class;
+        Class<?> idxCls = TestPojo.class;
 
         // Create cache
         LinkedHashMap<String, String> fields = new LinkedHashMap<>(2);
@@ -113,12 +113,8 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
             .setValueFieldName("val")
             .setFields(fields);
 
-        String idxName;
-        String idxFieldName;
-
-
-        idxFieldName = "idxVal";
-        idxName = "IDXVAL_IDX";
+        String idxName = "idxVal";
+        String idxFieldName = "IDXVAL_IDX";
 
         qe.setKeyFields(Collections.singleton(idxFieldName));
         qe.setIndexes(Collections.singleton(new QueryIndex(idxFieldName, true, idxName)));
@@ -127,7 +123,6 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
             new CacheConfiguration<Object, Integer>(tblName + "_CACHE")
                 .setKeyConfiguration(new CacheKeyConfiguration((TestKeyWithIdx.class).getName(), "idxVal"))
                 .setQueryEntities(Collections.singletonList(qe)).setSqlSchema("PUBLIC"));
-
 
         int[] a1 = {-903276852, 1418672434, 2025232370, };
         int[] b1 = {-876295916, 765062782, -1925029873, };
