@@ -99,8 +99,8 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
     public void localPojoReproducerTest() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
-        Class keyCls = TestKeyWithIdx.class;
-        Class idxCls = TestPojo.class;
+        Class<?> keyCls = TestKeyWithIdx.class;
+        Class<?> idxCls = TestPojo.class;
 
         // Create cache
         LinkedHashMap<String, String> fields = new LinkedHashMap<>(2);
@@ -113,11 +113,8 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
             .setValueFieldName("val")
             .setFields(fields);
 
-        String idxName;
-        String idxFieldName;
-
-        idxFieldName = "idxVal";
-        idxName = "IDXVAL_IDX";
+        String idxName = "IDXVAL_IDX";
+        String idxFieldName = "idxVal";
 
         qe.setKeyFields(Collections.singleton(idxFieldName));
         qe.setIndexes(Collections.singleton(new QueryIndex(idxFieldName, true, idxName)));
