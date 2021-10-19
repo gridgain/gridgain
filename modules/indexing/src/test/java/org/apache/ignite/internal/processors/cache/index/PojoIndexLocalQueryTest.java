@@ -116,7 +116,6 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
         String idxName;
         String idxFieldName;
 
-
         idxFieldName = "idxVal";
         idxName = "IDXVAL_IDX";
 
@@ -127,7 +126,6 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
             new CacheConfiguration<Object, Integer>(tblName + "_CACHE")
                 .setKeyConfiguration(new CacheKeyConfiguration((TestKeyWithIdx.class).getName(), "idxVal"))
                 .setQueryEntities(Collections.singletonList(qe)).setSqlSchema("PUBLIC"));
-
 
         int[] a1 = {-903276852, 1418672434, 2025232370, };
         int[] b1 = {-876295916, 765062782, -1925029873, };
