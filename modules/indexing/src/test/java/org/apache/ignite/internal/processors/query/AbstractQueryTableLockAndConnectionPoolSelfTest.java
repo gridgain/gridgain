@@ -457,13 +457,11 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                         }
                         else if (X.cause(e, QueryRetryException.class) == null) {
                             log.error("Unexpected exception", e);
-                            e.printStackTrace();
 
                             fail("Unexpected exception. " + e);
                         }
                         else if (!lazy()) {
                             log.error("Unexpected exception", e);
-                            e.printStackTrace();
 
                             fail("Unexpected QueryRetryException.");
                         }
