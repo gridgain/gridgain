@@ -1603,9 +1603,7 @@ public class GridDhtPartitionDemander {
          */
         private void tryCancel() {
             if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED)) {
-                String cacheName = (grp == null) ? "" : grp.cacheOrGroupName();
-
-                U.log(log, "Rebalancing marked as cancelled [grp=" + cacheName +
+                U.log(log, "Rebalancing marked as cancelled [grp=" + grp.cacheOrGroupName() +
                     ", topVer=" + topologyVersion() + ", rebalanceId=" + rebalanceId + ']');
 
                 // Don't call #cancel() for this future from INIT state, as it will trigger #requestPartitions()

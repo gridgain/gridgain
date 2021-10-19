@@ -440,8 +440,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                     catch (Exception e) {
                         String msg = e.getMessage();
 
-                        if (msg == null)
-                            System.err.println("msg == null");
                         if (msg.contains("Failed to find cache")
                             || msg.contains("Failed to perform cache operation (cache is stopped)")
                             || msg.contains("Failed to parse query. Table \"TEST\" not found")
