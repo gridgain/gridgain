@@ -210,7 +210,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
         );
     }
 
-    /** */
+    /** This case was breaking the tree and not allowing you to find the last item. */
     @Test
     public void testJavaPojoIndex2() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
