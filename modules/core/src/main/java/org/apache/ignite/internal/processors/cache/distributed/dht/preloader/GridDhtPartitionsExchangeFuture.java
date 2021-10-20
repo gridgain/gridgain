@@ -1037,6 +1037,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             updateTopologies(crdNode);
 
+            boolean skip = true;
+            if ("qwe".equals(cctx.localNode().consistentId()))
+                fut.get();
+
             timeBag.finishGlobalStage("Determine exchange type");
 
             switch (exchange) {
@@ -1113,6 +1117,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (e instanceof Error)
                 throw (Error)e;
         }
+    }
+
+    public static final GridFutureAdapter<Object> fut = new GridFutureAdapter<>();
+
+    static {
+        fut.onDone();
     }
 
     /**

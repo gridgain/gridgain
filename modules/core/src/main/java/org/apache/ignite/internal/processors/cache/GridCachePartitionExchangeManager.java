@@ -3760,8 +3760,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 if (readyVer.compareTo(readyTopVersion) >= 0)
                     return false;
 
-                if (readyTopVer.compareAndSet(readyVer, readyTopVersion))
+                if (readyTopVer.compareAndSet(readyVer, readyTopVersion)) {
+//                    IgniteLogger log = this.get(0).sharedContext().kernalContext().log(getClass());
+//
+//                    Object id = this.get(0).sharedContext().kernalContext().cluster().get().localNode().consistentId();
+//
+//                    log.warning("!!!!! new top ver " + id + "[" + readyTopVersion + "]");
                     return true;
+                }
             }
         }
 
