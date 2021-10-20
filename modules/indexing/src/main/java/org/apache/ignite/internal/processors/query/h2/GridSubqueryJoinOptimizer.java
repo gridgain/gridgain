@@ -461,7 +461,7 @@ public class GridSubqueryJoinOptimizer {
     }
 
     /**
-     * Searches for firxt node in AST tree according to the given parameters.
+     * Searches for first node in AST tree according to the given parameters.
      *
      * @param tree Parent ast.
      * @param pred Filter predicate.
