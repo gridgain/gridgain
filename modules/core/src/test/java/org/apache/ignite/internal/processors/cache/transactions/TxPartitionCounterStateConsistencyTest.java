@@ -172,6 +172,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * After restart a primary node there is a full rebalance with clearing.
      * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
      * After second restart a primary node need to repeat the partition clearing to clear the key.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void testPartitionConsistencyNotRebalancedRemoveOpWithPrimaryRestart() throws Exception {
@@ -183,13 +185,18 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * After restart a backup node there is a full rebalance with clearing.
      * So the remove operation was not writen to WAL. Also the partition was not chekpointed.
      * After second restart a backup node need to repeat the partition clearing to clear the key.
+     *
+     * @throws Exception If failed.
      */
     @Test
     public void testPartitionConsistencyNotRebalancedRemoveOpWithBackupRestart() throws Exception {
         testPartitionConsistencyNotRebalancedRemoveOpWithNodeRestart(false);
     }
 
-    /** */
+    /**
+     * @param primary Restart primary or backup node.
+     * @throws Exception If failed.
+     */
     public void testPartitionConsistencyNotRebalancedRemoveOpWithNodeRestart(boolean primary) throws Exception {
         backups = 1;
 
@@ -202,9 +209,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         List<Integer> cacheKeys;
 
         if (primary)
-            cacheKeys = primaryKeys(srv.cache(DEFAULT_CACHE_NAME), partitions() * 2);
+            cacheKeys = primaryKeys(srv.cache(DEFAULT_CACHE_NAME), partitions() * 4);
         else
-            cacheKeys = backupKeys(srv.cache(DEFAULT_CACHE_NAME), partitions() * 2, 0);
+            cacheKeys = backupKeys(srv.cache(DEFAULT_CACHE_NAME), partitions() * 4, 0);
 
         List<Integer> partKeys = new ArrayList<>();
 
@@ -217,10 +224,12 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                 partKeys.add(key);
 
-                if (partKeys.size() == 2)
+                if (partKeys.size() == 3)
                     break;
             }
         }
+
+        assertTrue("Failed to find the required number of keys.", partKeys.size() == 3);
 
         if (log().isInfoEnabled())
             log().info("partKeys: " + partKeys);
@@ -233,15 +242,17 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             awaitPartitionMapExchange();
 
-            if (i == 0)
+            if (i == 0) {
                 cache.remove(partKeys.get(0));
+                cache.put(partKeys.get(1), 112233);
+            }
 
             startGrid(srv.name());
 
             awaitPartitionMapExchange(true, true, null);
 
             if (i == 0)
-                cache.put(partKeys.get(1), 7654321);
+                cache.put(partKeys.get(2), 7654321);
         }
 
         assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));

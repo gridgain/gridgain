@@ -348,11 +348,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         return createTime;
     }
 
-    /** */
-    public void clearVersion(long clearVer) {
-         this.clearVer = clearVer;
-    }
-
     /**
      * @return Partition state.
      */
@@ -661,6 +656,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      */
     public void updateClearVersion() {
         clearVer = ctx.versions().localOrder();
+    }
+
+    /**
+     * Used to set a version from {@link PartitionClearingStartRecord} when need to repeat a clearing after node restart.
+     * @param clearVer Clear version.
+     */
+    public void updateClearVersion(long clearVer) {
+        this.clearVer = clearVer;
     }
 
     /**
@@ -975,9 +978,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     protected long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        long order;
-
-        order = clearVer;
+        long order = clearVer;
 
         GridCacheVersion clearVer = ctx.versions().startVersion();
 
@@ -993,8 +994,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         boolean recoveryMode = ctx.kernalContext().recoveryMode();
 
         try {
-            if (state() == MOVING &&
-                    grp.walEnabled() && grp.config().getAtomicityMode() == ATOMIC)
+            // If a partition was not checkpointed after clearing on a rebalance and a node was stopped,
+            // then it's need to repeat clearing on node start. So need to write a partition clearing start record
+            // and repeat clearing on applying updates from WAL if the record was read.
+            // It's need for atomic cache only. Transactional cache start a rebalance due to outdated counter in this case,
+            // because atomic and transactional caches use different partition counters implementation.
+            if (state() == MOVING && !recoveryMode && grp.walEnabled() &&
+                    grp.config().getAtomicityMode() == ATOMIC)
                 ctx.wal().log(new PartitionClearingStartRecord(id, grp.groupId(), order));
 
             GridIterator<CacheDataRow> it0 = grp.offheap().partitionIterator(id);

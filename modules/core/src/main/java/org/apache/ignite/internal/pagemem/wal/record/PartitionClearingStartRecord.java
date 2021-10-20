@@ -20,6 +20,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Partition clearing started record.
+ * Used to repeat clearing if node was stopped without checkpoint after clearing on a rebalance.
  */
 public class PartitionClearingStartRecord extends WALRecord {
     /** Partition ID. */

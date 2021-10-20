@@ -142,7 +142,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             if (log.isDebugEnabled())
                 log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
-                    + ", topVer=" + grp.topology().readyTopologyVersion()
+                    + (cctx.kernalContext().recoveryMode() ? "" : ", topVer=" + grp.topology().readyTopologyVersion())
                     + ", id=" + part.id() + ", state=" + part.state()
                     + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
 
@@ -407,7 +407,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 if (log.isDebugEnabled()) {
                     log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
-                        ", topVer=" + part.group().topology().readyTopologyVersion() +
+                        (cctx.kernalContext().recoveryMode() ? "" : ", topVer=" + part.group().topology().readyTopologyVersion()) +
                         ", id=" + part.id() + ", state=" + part.state() + ", cleared=" + clearedEntities +
                         ", fullSize=" + part.fullSize() + ']');
                 }
@@ -422,7 +422,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 if (cctx.kernalContext().isStopping()) {
                     LT.warn(log, ex, "Partition eviction has been cancelled (local node is stopping) " +
                         "[grp=" + grpEvictionCtx.grp.cacheOrGroupName() +
-                        ", readyVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion() + ']',
+                        (cctx.kernalContext().recoveryMode() ? "" : ", readyVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()) +
+                        ']',
                         false,
                         true);
                 }

@@ -2553,10 +2553,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         final IgniteTxManager txManager = cctx.tm();
 
-        List<PartitionClearingStartRecord> clearedPartitions = new ArrayList<>();
-
-        List<IgniteInternalFuture<?>> clearFuts = new ArrayList<>();
-
         try {
             while (restoreLogicalState.hasNext()) {
                 WALRecord rec = restoreLogicalState.next();
@@ -2631,7 +2627,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                     cctx.kernalContext().query().markAsRebuildNeeded(cacheCtx);
 
                                 try {
-                                    applyUpdate(cacheCtx, dataEntry, true);
+                                    applyUpdate(cacheCtx, dataEntry, false);
                                 }
                                 catch (IgniteCheckedException e) {
                                     U.error(log, "Failed to apply data entry, dataEntry=" + dataEntry +
@@ -2720,17 +2716,29 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             try {
                                 part = grp.topology().forceCreatePartition(rec0.partitionId());
                             } catch (IgniteCheckedException e) {
-                                throw new IgniteException("Cannot get or create partition [groupId=" + rec0.groupId() +
+                                throw new IgniteException("Cannot get or create a partition [groupId=" + rec0.groupId() +
                                         ", partitionId=" + rec0.partitionId() + "]", e);
                             }
 
-                            part.clearVersion(rec0.clearVersion());
+                            stripedApply(() -> {
+                                try {
+                                    part.updateClearVersion(rec0.clearVersion());
 
-                            clearFuts.add(grp.shared().evict()
-                                    .evictPartitionAsync(grp, part, new GridFutureAdapter<>())
-                            );
+                                    IgniteInternalFuture<?> clearFut = grp.
+                                            shared().
+                                            evict().
+                                            evictPartitionAsync(grp, part, new GridFutureAdapter<>());
 
-                            clearedPartitions.add(rec0);
+                                    clearFut.get();
+
+                                    part.updateClearVersion();
+                                }
+                                catch (IgniteCheckedException e) {
+                                    U.error(log, "Failed to apply partition clearing record, " + rec0);
+
+                                    applyError.compareAndSet(null, e);
+                                }
+                            }, rec0.groupId(), rec0.partitionId(), exec, semaphore);
                         }
 
                         break;
@@ -2749,19 +2757,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         awaitApplyComplete(exec, applyError);
 
-        for (IgniteInternalFuture<?> fut : clearFuts) {
-            fut.get();
-        }
-
-        for (PartitionClearingStartRecord clearedPartition : clearedPartitions) {
-            this.ctx.cache().cacheGroup(clearedPartition.groupId())
-                    .topology().localPartition(clearedPartition.partitionId())
-                    .updateClearVersion();
-        }
-
         if (log.isInfoEnabled())
             log.info("Finished applying WAL changes [updatesApplied=" + applied +
-                    ", time=" + (U.currentTimeMillis() - start) + " ms]");
+                ", time=" + (U.currentTimeMillis() - start) + " ms]");
 
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.afterLogicalUpdatesApplied(this, restoreLogicalState);

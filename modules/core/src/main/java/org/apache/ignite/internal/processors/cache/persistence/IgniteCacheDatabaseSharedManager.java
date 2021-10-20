@@ -1481,8 +1481,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                     if (lockEntry) {
                         entryEx.unlockEntry();
 
-                        if (!cctx.kernalContext().recoveryMode())
-                            entryEx.context().evicts().touch(entryEx);
+                        entryEx.context().evicts().touch(entryEx);
                     }
                 }
 
