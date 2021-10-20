@@ -140,6 +140,7 @@ public class GridH2ValueCacheObject extends Value {
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override public int compareTypeSafe(Value v, CompareMode mode) {
         Object o1 = getObject();
         Object o2 = v.getObject();

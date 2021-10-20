@@ -210,13 +210,13 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
         );
     }
 
-    /** */
+    /** This case was breaking the tree and not allowing you to find the last item. */
     @Test
     public void testJavaPojoIndex2() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
-        Class keyCls = TestKeyWithIdx.class;
-        Class idxCls = TestPojo.class;
+        Class<?> keyCls = TestKeyWithIdx.class;
+        Class<?> idxCls = TestPojo.class;
 
         // Create cache
         LinkedHashMap<String, String> fields = new LinkedHashMap<>(2);

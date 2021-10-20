@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,15 +87,16 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    @Ignore("")
-    public void testJavaPojoIndex() {
+    @Ignore("GG-34106")
+    public void testJavaPojoIndexLocal() {
         createPopulateAndVerify(TestPojo.class, null, null);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithAff.class);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithIdx.class);
     }
 
+    /** */
     @Test
-    @Ignore("")
+    @Ignore("GG-34106")
     public void localPojoReproducerTest() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
