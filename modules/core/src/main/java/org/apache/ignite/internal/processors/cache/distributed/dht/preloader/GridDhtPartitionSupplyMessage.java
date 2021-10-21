@@ -448,14 +448,17 @@ public class GridDhtPartitionSupplyMessage extends GridCacheGroupIdMessage imple
      * @return Estimated keys count.
      */
     public long estimatedKeysCount() {
-        return -1;
+        return estimatedKeysCnt;
     }
 
     /**
      * @param cnt Keys count to add.
      */
     public void addEstimatedKeysCount(long cnt) {
-        this.estimatedKeysCnt += cnt;
+        if (estimatedKeysCnt == -1 && cnt != 0)
+            estimatedKeysCnt = 0;
+
+        estimatedKeysCnt += cnt;
     }
 
     /**

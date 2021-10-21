@@ -486,7 +486,10 @@ public class GridDhtPartitionSupplier {
             reply(topicId, demanderNode, demandMsg, supplyMsg, ctxId);
 
             if (log.isInfoEnabled())
-                log.info("Finished supplying rebalancing [" + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
+                log.info("Finished supplying rebalancing [" +
+                    "partitions=" + (demandMsg.partitions().fullSet().size() + demandMsg.partitions().historicalMap().size()) +
+                    ", entries=" + supplyMsg.estimatedKeysCount() +
+                    ", " + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
         }
         catch (Throwable t) {
             if (iter != null && !iter.isClosed()) {
