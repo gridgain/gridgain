@@ -62,6 +62,8 @@ import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -72,6 +74,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.testframework.GridTestUtils.DestroyableCacheHolder;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -648,7 +651,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             assertContains(log, dumpWithZeros, "idle_verify check has finished, found " + parts + " partitions");
             assertContains(log, dumpWithZeros, "Partition: PartitionKeyV2 [grpId=1544803905, grpName=default, partId=0]");
-            assertContains(log, dumpWithZeros, "updateCntr=0, partitionState=OWNING, size=0, partHash=0");
+            assertContains(log, dumpWithZeros, "updateCntr=0, reserveCntr=0, partitionState=OWNING, size=0, partHash=0");
             assertContains(log, dumpWithZeros, "no conflicts have been found");
 
             assertSort(parts, dumpWithZeros);
@@ -878,6 +881,82 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         corruptingAndCheckDefaultCache(ignite, "USER", false);
     }
 
+    @Test
+    public void testIdleVerifyShouldFindCounterConflictsOnPrimary() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        // Because test is broking consistency and may not recover after we are creating new cache to exclude
+        // possible influence on other tests
+        try (
+            DestroyableCacheHolder<String, String> cacheHolder = new DestroyableCacheHolder<>(crd, cfg);
+            IgniteCache<String, String> cache = cacheHolder.get()
+        ) {
+            breakReserveCounterInvariant(cache, true);
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+            assertContains(log, testOut.toString(), "Reserve counter conflicts:");
+        }
+    }
+
+    @Test
+    public void testIdleVerifyShouldNotFindCounterConflictsOnBackup() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        // Because test is broking consistency and may not recover after we are creating new cache to exclude
+        // possible influence on other tests
+        try (
+            DestroyableCacheHolder<String, String> cacheHolder = new DestroyableCacheHolder<>(crd, cfg);
+            IgniteCache<String, String> cache = cacheHolder.get()
+        ) {
+            breakReserveCounterInvariant(cache, false);
+
+            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+            assertNotContains(log, testOut.toString(), "Reserve counter conflicts:");
+        }
+    }
+
+    /**
+     * Breaks reserve counter invariant (HWM >= LWM) on some partition for given cache.
+     *
+     * @param cache Ignite cache.
+     * @param usePrimaryPartition If {@code true} breaks on primary partition, else on backup.
+     */
+    public void breakReserveCounterInvariant(IgniteCache<String, String> cache, boolean usePrimaryPartition) {
+        String key = "foo";
+
+        cache.put(key, "bar");
+
+        int partNum = crd.affinity(cache.getName()).partition(key);
+
+        IgniteEx node = (IgniteEx) (usePrimaryPartition
+            ? primaryNode(key, cache.getName())
+            : backupNode(key, cache.getName()));
+
+        GridDhtLocalPartition part = node
+            .context()
+            .cache()
+            .cache(cache.getName())
+            .context()
+            .topology()
+            .localPartition(partNum);
+
+        PartitionUpdateCounter counter = part.dataStore().partUpdateCounter();
+
+        long curLwm = counter.get();
+
+        counter.update(curLwm, 1);
+    }
+
     /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
@@ -913,7 +992,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             resReport = testOut.toString();
         }
 
-        assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+        assertContains(
+            log,
+            resReport,
+            "found 2 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=1]"
+        );
     }
 
     /**
@@ -974,8 +1057,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             U.log(log, dumpWithConflicts);
 
             // Non-persistent caches do not have counter conflicts
-            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
-                "hashConflicts=2]");
+            assertContains(
+                log,
+                dumpWithConflicts,
+                "found 3 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=2]"
+            );
         }
         else
             fail("Should be found dump with conflicts");
