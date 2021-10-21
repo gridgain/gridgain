@@ -881,6 +881,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         corruptingAndCheckDefaultCache(ignite, "USER", false);
     }
 
+    /**
+     * Checks that breaking LWM/HWM invariant on primary partition is detected by idle_verify utility.
+     */
     @Test
     public void testIdleVerifyShouldFindCounterConflictsOnPrimary() {
         CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
@@ -903,6 +906,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         }
     }
 
+    /**
+     * Checks that breaking LWM/HWM invariant on backup partition is <b>ignored</b> by idle_verify utility.
+     * Ignoring on backup partition is necessary due to on the backup partition hwm is not increased during prepare,
+     *     else utility will give false-positive results.
+     */
     @Test
     public void testIdleVerifyShouldNotFindCounterConflictsOnBackup() {
         CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
@@ -942,8 +950,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             ? primaryNode(key, cache.getName())
             : backupNode(key, cache.getName()));
 
-        GridDhtLocalPartition part = node
-            .context()
+        GridDhtLocalPartition part = node.context()
             .cache()
             .cache(cache.getName())
             .context()
@@ -952,9 +959,16 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         PartitionUpdateCounter counter = part.dataStore().partUpdateCounter();
 
-        long curLwm = counter.get();
+        assert counter != null;
 
-        counter.update(curLwm, 1);
+        if (!usePrimaryPartition)// HWM on backup may lag LWM.
+            counter.finalizeUpdateCounters();
+
+        counter.reserve(-1);
+
+        assert counter.reserved() >= 0 : "HWM should not be negative.";
+
+        assert counter.get() > counter.reserved() : "HWM/LWM invariant should be broken.";
     }
 
     /**
