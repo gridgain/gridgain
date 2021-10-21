@@ -532,8 +532,8 @@ public class GridDhtPartitionDemander {
                 errMsg = "topology changed";
 
             if (errMsg != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Supply message has been ignored (" + errMsg + ") [" +
+                if (log.isInfoEnabled()) {
+                    log.info("Supply message has been ignored (" + errMsg + ") [" +
                         demandRoutineInfo(nodeId, supplyMsg) + ']');
                 }
 
