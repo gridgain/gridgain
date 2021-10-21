@@ -1818,7 +1818,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             for (Map.Entry<String, ?> e : cfg.getUserAttributes().entrySet()) {
                 if (ctx.hasNodeAttribute(e.getKey()))
                     U.warn(log, "User or internal attribute has the same name as environment or system " +
-                        "property and will take precedence: " + e.getKey());
+                        "property and will take precedence: " + e.getKey() + "(" + ctx.nodeAttribute(e.getKey()) + "->" + e.getValue()+")");
 
                 ctx.addNodeAttribute(e.getKey(), e.getValue());
             }
