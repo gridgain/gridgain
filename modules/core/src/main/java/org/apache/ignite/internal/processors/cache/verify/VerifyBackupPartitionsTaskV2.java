@@ -168,39 +168,39 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
 
             List<PartitionHashRecordV2> records = e.getValue();
 
-            for (PartitionHashRecordV2 record : records) {
-                if (record.partitionState() == PartitionState.MOVING) {
+            for (PartitionHashRecordV2 rec : records) {
+                if (rec.partitionState() == PartitionState.MOVING) {
                     movingParts.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
-                        .add(record);
+                        .add(rec);
 
                     continue;
                 }
 
-                if (record.partitionState() == PartitionState.LOST) {
+                if (rec.partitionState() == PartitionState.LOST) {
                     lostParts.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
-                        .add(record);
+                        .add(rec);
 
                     continue;
                 }
 
                 if (partHash == null) {
-                    partHash = record.partitionHash();
+                    partHash = rec.partitionHash();
 
-                    updateCntr = record.updateCounter();
+                    updateCntr = rec.updateCounter();
                 }
                 else {
-                    if (record.updateCounter() != updateCntr)
+                    if (rec.updateCounter() != updateCntr)
                         updateCntrConflicts.putIfAbsent(e.getKey(), records);
 
-                    if (record.partitionHash() != partHash)
+                    if (rec.partitionHash() != partHash)
                         hashConflicts.putIfAbsent(e.getKey(), records);
                 }
 
                 // We can check HWM >= LWM invariant only on primary partitions
                 // because backups update their HWM during PME.
-                if (record.isPrimary() && record.updateCounter() > record.reserveCounter()) {
-                    reserveCntrConflicts.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(record);
-                }
+                // We ignore value -1 from old version nodes.
+                if (rec.isPrimary() && rec.reserveCounter() != -1 && rec.updateCounter() > rec.reserveCounter())
+                    reserveCntrConflicts.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(rec);
             }
         }
 

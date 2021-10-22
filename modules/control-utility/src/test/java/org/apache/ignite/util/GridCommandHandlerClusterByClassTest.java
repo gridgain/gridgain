@@ -924,7 +924,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
 
-        assertNotContains(log, testOut.toString(), "found 0 conflict partitions:");
+        assertContains(
+            log,
+            testOut.toString(),
+            "idle_verify check has finished, no conflicts have been found."
+        );
     }
 
     /**
