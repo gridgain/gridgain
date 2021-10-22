@@ -884,7 +884,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * Checks that breaking LWM/HWM invariant on primary partition is detected by idle_verify utility.
      */
     @Test
-    public void testIdleVerifyShouldFindCounterConflictsOnPrimary() {
+    public void testIdleVerifyShouldFindReserveCounterConflictsOnPrimary() {
         CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
             .setAtomicityMode(TRANSACTIONAL)
             .setBackups(1);
@@ -911,7 +911,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      *     else utility will give false-positive results.
      */
     @Test
-    public void testIdleVerifyShouldNotFindCounterConflictsOnBackup() {
+    public void testIdleVerifyShouldNotFindReserveCounterConflictsOnBackup() {
         CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
             .setAtomicityMode(TRANSACTIONAL)
             .setBackups(1);

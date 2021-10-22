@@ -199,7 +199,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 // We can check HWM >= LWM invariant only on primary partitions
                 // because backups update their HWM during PME.
                 if (record.isPrimary() && record.updateCounter() > record.reserveCounter()) {
-                    reserveCntrConflicts.putIfAbsent(e.getKey(), records);
+                    reserveCntrConflicts.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(record);
                 }
             }
         }
