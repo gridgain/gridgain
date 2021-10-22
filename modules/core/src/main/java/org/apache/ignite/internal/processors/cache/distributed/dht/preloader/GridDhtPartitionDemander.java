@@ -929,10 +929,8 @@ public class GridDhtPartitionDemander {
                     }
 
                     if (!preloadEntry(node, p, entry, topVer, cctx)) {
-                        if (log.isTraceEnabled()) {
-                            log.trace("Got entries for invalid partition during " +
-                                "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
-                        }
+                        log.warning("Got entries for invalid partition during " +
+                            "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
 
                         return;
                     }
