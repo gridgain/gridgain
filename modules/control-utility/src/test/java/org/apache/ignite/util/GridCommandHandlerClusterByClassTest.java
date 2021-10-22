@@ -74,7 +74,6 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.testframework.GridTestUtils.DestroyableCacheHolder;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -886,24 +885,24 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      */
     @Test
     public void testIdleVerifyShouldFindCounterConflictsOnPrimary() {
-        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
             .setAtomicityMode(TRANSACTIONAL)
             .setBackups(1);
 
         injectTestSystemOut();
 
-        // Because test is broking consistency and may not recover after we are creating new cache to exclude
-        // possible influence on other tests
-        try (
-            DestroyableCacheHolder<String, String> cacheHolder = new DestroyableCacheHolder<>(crd, cfg);
-            IgniteCache<String, String> cache = cacheHolder.get()
-        ) {
-            breakReserveCounterInvariant(cache, true);
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
 
-            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+        breakReserveCounterInvariant(cache, true);
 
-            assertContains(log, testOut.toString(), "Reserve counter conflicts:");
-        }
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "found 1 conflict partitions: [updateCounterConflicts=0, reserveCounterConflicts=1, hashConflicts=0]"
+        );
+
     }
 
     /**
@@ -913,24 +912,19 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      */
     @Test
     public void testIdleVerifyShouldNotFindCounterConflictsOnBackup() {
-        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>("cacheForHwmTesting")
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
             .setAtomicityMode(TRANSACTIONAL)
             .setBackups(1);
 
         injectTestSystemOut();
 
-        // Because test is broking consistency and may not recover after we are creating new cache to exclude
-        // possible influence on other tests
-        try (
-            DestroyableCacheHolder<String, String> cacheHolder = new DestroyableCacheHolder<>(crd, cfg);
-            IgniteCache<String, String> cache = cacheHolder.get()
-        ) {
-            breakReserveCounterInvariant(cache, false);
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
 
-            assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+        breakReserveCounterInvariant(cache, false);
 
-            assertNotContains(log, testOut.toString(), "Reserve counter conflicts:");
-        }
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertNotContains(log, testOut.toString(), "found 0 conflict partitions:");
     }
 
     /**

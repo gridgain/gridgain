@@ -17,7 +17,6 @@
 package org.apache.ignite.testframework;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
@@ -83,7 +82,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -2677,54 +2675,5 @@ public final class GridTestUtils {
      */
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
-    }
-
-    /**
-     * Cache holder with "destructor".
-     * Should be used in try-with-resources.
-     *
-     * @param <K> Key type.
-     * @param <V> Value type.
-     */
-    public static class DestroyableCacheHolder<K,V> implements Closeable {
-        /** Ignite instance. */
-        private final Ignite node;
-
-        /** Cache. */
-        private final IgniteCache<K,V> cache;
-
-        /**
-         * Constructor.
-         *
-         * @param node Valid ignite instance
-         * @param cacheCfg New cache cfg.
-         *
-         * @throws RuntimeException If cache creation is failed.
-         */
-        public DestroyableCacheHolder(Ignite node, CacheConfiguration<K,V> cacheCfg) {
-            this.node = node;
-            this.cache = node.createCache(cacheCfg);
-        }
-
-        /**
-         * Constructor.
-         *
-         * @param node Valid ignite instance
-         * @param cacheName New cache name.
-         *
-         * @throws RuntimeException If cache creation is failed.
-         */
-        public DestroyableCacheHolder(Ignite node, String cacheName) {
-            this.node = node;
-            this.cache = node.createCache(new CacheConfiguration<>(cacheName));
-        }
-
-        public IgniteCache<K,V> get() {
-            return cache;
-        }
-
-        @Override public void close() {
-            node.destroyCache(cache.getName());
-        }
     }
 }
