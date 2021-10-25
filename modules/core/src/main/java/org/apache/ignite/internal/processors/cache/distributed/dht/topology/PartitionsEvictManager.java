@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Deque;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,11 +53,14 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import static java.util.Objects.nonNull;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 
@@ -74,21 +76,20 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  * </ul>
  */
 public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
-    /** Default eviction progress show frequency. */
-    private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000;
-
-    /** Eviction progress frequency property name. */
-    private static final String SHOW_EVICTION_PROGRESS_FREQ = "SHOW_EVICTION_PROGRESS_FREQ";
-
     /** Eviction progress frequency in ms. */
-    private final long evictionProgressFreqMs =
-        getLong(SHOW_EVICTION_PROGRESS_FREQ, DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
+    private final long evictionProgressFreqMs = getLong("SHOW_EVICTION_PROGRESS_FREQ", 2 * 60 * 1000);
 
     /** */
-    private static final int MAX_EVICT_QUEUE_SIZE = 10_000;
+    private static final int MAX_EVICT_QUEUE_SIZE = getInteger("MAX_EVICT_QUEUE_SIZE", 10_000);
 
     /** */
-    private static final int PROCESS_EMPTY_EVICT_QUEUE_FREQ = 500;
+    private static final int PROCESS_EMPTY_EVICT_QUEUE_FREQ = getInteger("PROCESS_EMPTY_EVICT_QUEUE_FREQ", 500);
+
+    /** */
+    private static final IgniteUuid FILL_EVICT_QUEUE_TASK_ID_TTL = IgniteUuid.randomUuid();
+
+    /** */
+    private static final IgniteUuid FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE = IgniteUuid.randomUuid();
 
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
@@ -115,12 +116,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
     /** */
     private FastSizeDeque<PendingRow> ttlEvictQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
-
-    /** */
-    private AtomicReference<IgniteInternalFuture<?>> tombstoneFutRef = new AtomicReference<>();
-
-    /** */
-    private AtomicReference<IgniteInternalFuture<?>> ttlFutRef = new AtomicReference<>();
 
     /**
      * Callback on cache group start.
@@ -292,6 +287,9 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().getRebalanceExecutorService();
 
+        if (PROCESS_EMPTY_EVICT_QUEUE_FREQ <= 0)
+            return;
+
         // Start processing tombstones.
         processEvictions(true);
 
@@ -303,63 +301,35 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * Process pending evictions asynchronously.
      * @param tombstone {@code True} to process tombstones.
      *
-     * @return A future.
+     * @return A {@code True} if a eviction task was scheduled.
      */
-    public IgniteInternalFuture<?> processEvictions(boolean tombstone) {
+    private boolean processEvictions(boolean tombstone) {
         GridKernalContext ctx = cctx.kernalContext();
 
-        AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
-        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
-
-        GridFutureAdapter<?> fut = new GridFutureAdapter<>();
-
-        // Only one thread can trigger queue fill. Make sure we always return not null future.
-        do {
-            IgniteInternalFuture<?> cur = ref.get();
-
-            if (cur != null)
-                return cur;
-        }
-        while (!ref.compareAndSet(null, fut));
-
-        IgniteInternalFuture<?> fut0 = ctx.closure().runLocalSafe(new GridPlainRunnable() {
-            @Override public void run() {
-                int res = fillEvictQueue(tombstone, U.currentTimeMillis());
-
-                if (res == 0 && queue.sizex() == 0) {
-                    ref.set(null);
-
-                    // Queue is empty, try later.
-                    ctx.timeout().addTimeoutObject(new GridTimeoutObjectAdapter(PROCESS_EMPTY_EVICT_QUEUE_FREQ) {
-                        @Override public void onTimeout() {
-                            processEvictions(tombstone);
-                        }
-                    });
-                }
-            }
-        });
-
-        fut0.listen(f -> fut.onDone(null, f.error()));
-
-        return fut;
+        return ctx.timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
     }
 
     /**
      * @param tombstone {@code True} for tombstones.
      * @return The queue.
      */
-    public Deque<PendingRow> evictQueue(boolean tombstone) {
+    @TestOnly
+    public FastSizeDeque<PendingRow> evictQueue(boolean tombstone) {
         return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
     }
 
     /**
      * @param tombstone {@code True} to process tombstones.
      * @param upper Upper bound.
+     * @return A number of entries added to a evict queue.
      */
     private int fillEvictQueue(boolean tombstone, long upper) {
         int total = 0;
-
         FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+
+        // Only refill queue if it's empty.
+        if (!queue.isEmptyx())
+            return 0;
 
         try {
             for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
@@ -371,11 +341,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 int size = queue.sizex();
                 int amount = MAX_EVICT_QUEUE_SIZE - size;
+                int cnt = 0;
 
                 try {
                     if (amount > 0) {
                         try {
-                            total += ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
+                            cnt = ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
                                 queue.addLast(key);
 
                                 // Stop on queue overflow.
@@ -390,11 +361,18 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 finally {
                     ctx0.busyLock.readLock().unlock();
                 }
+
+                if (log.isDebugEnabled()) {
+                    log.debug("Filled the queue for the group [grpName=" + ctx0.grp.cacheOrGroupName() +
+                        ", tombstone=" + tombstone + ", total=" + cnt + ']');
+                }
+                
+                total += cnt;
             }
 
             if (log.isDebugEnabled()) {
-                log.debug("After filling the evict queue [res=" + total + ", tombstone=" + tombstone +
-                    ", size=" + queue.sizex() + ']');
+                log.debug("After filling the evict queue [total=" + total + ", tombstone=" + tombstone +
+                    ", qSize=" + queue.sizex() + ']');
             }
         }
         catch (Throwable e) {
@@ -422,6 +400,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         cctx.database().checkpointReadLock();
 
         try {
+            int before = queue.sizex();
+
             while ((row = queue.pollFirst()) != null) {
                 GridCacheContext<Object, Object> ctx = cctx.cache().context().cacheContext(row.cacheId);
 
@@ -459,18 +439,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             if (cleared > 0 && log.isDebugEnabled()) {
                 log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
-                    ", remaining=" + queue.sizex() + ']');
+                    ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
             }
 
-            if (queue.sizex() == 0) {
-                if (cleared > 0) {
-                    AtomicReference<IgniteInternalFuture<?>> ref = tombstone ? tombstoneFutRef : ttlFutRef;
-
-                    // Allow queue fill.
-                    ref.set(null);
-
+            if (queue.isEmptyx()) {
+                if (cleared > 0)
                     processEvictions(tombstone);
-                }
 
                 return false;
             }
@@ -523,6 +497,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      */
     public void cleanupRemovedGroup(int grpId) {
         evictionGroupsMap.remove(grpId);
+    }
+
+    /**
+     * @return The number of executing + waiting in the queue tasks.
+     */
+    @TestOnly
+    public int total() {
+        return evictionGroupsMap.values().stream().mapToInt(ctx -> ctx.totalTasks.get()).sum();
     }
 
     /**
@@ -599,13 +581,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     ", partsEvictInProgress=" + taskInProgress +
                     ", totalParts=" + grp.topology().localPartitions().size() + "]");
         }
-    }
-
-    /**
-     * @return The number of executing + waiting in the queue tasks.
-     */
-    public int total() {
-        return evictionGroupsMap.values().stream().mapToInt(ctx -> ctx.totalTasks.get()).sum();
     }
 
     /**
@@ -880,6 +855,39 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             int result = grpId;
             result = 31 * result + partId;
             return result;
+        }
+    }
+
+    /**
+     * Timer task for evict queue fill.
+     */
+    private final class FillEvictQueueTask extends GridTimeoutObjectAdapter {
+        /** The tombstone flag. */
+        private final boolean tombstone;
+
+        /**
+         * @param tombstone The tombstone flag.
+         */
+        public FillEvictQueueTask(boolean tombstone) {
+            super(tombstone ? FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE : FILL_EVICT_QUEUE_TASK_ID_TTL,
+                PROCESS_EMPTY_EVICT_QUEUE_FREQ);
+            this.tombstone = tombstone;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onTimeout() {
+            cctx.kernalContext().closure().runLocalSafe(new GridPlainRunnable() {
+                @Override public void run() {
+                    FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
+
+                    fillEvictQueue(tombstone, U.currentTimeMillis());
+
+                    if (queue.isEmptyx() && PROCESS_EMPTY_EVICT_QUEUE_FREQ > 0) {
+                        // Queue is empty, try again later.
+                        cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
+                    }
+                }
+            });
         }
     }
 }
