@@ -622,7 +622,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                 propVal = val instanceof CacheObject ? ((CacheObject)val).value(coCtx, true) : val;
             else
                 propVal = prop.value(key, val);
-            
+
             if (propVal == null && prop.notNull()) {
                 throw new IgniteSQLException("Null value is not allowed for column '" + prop.name() + "'",
                     isKey ? NULL_KEY : NULL_VALUE);
@@ -682,7 +682,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                     propType = prop.type();
                 }
 
-                if (propVal == null)
+                if (propVal == null || Object.class.equals(propType))
                     continue;
 
                 if (!(propVal instanceof BinaryObject)) {
