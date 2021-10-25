@@ -1085,6 +1085,53 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
+    @Test
+    public void handleToCollection2() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections obj = new HandleToCollections();
+
+        BinaryObject bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            if (i > 0)
+                assertEquals(i - 1, (int)bo.field("a"));
+
+            bob.setField("a", i);
+
+            bo = bob.build();
+
+            HandleToCollections modified = unmarshal((BinaryObjectImpl)bo, m);
+        }
+    }
+
+    /** */
+    @Test
+    public void handleToCollection3() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections2 obj = new HandleToCollections2();
+
+        BinaryObjectImpl bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            bob.setField("a", i);
+
+            System.out.println("+++ " + Arrays.toString(bo.array()));
+            bo = (BinaryObjectImpl)bob.build();
+            System.out.println("+++ " + Arrays.toString(bo.array()));
+
+            HandleToCollections2 modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+        }
+    }
+
     /**
      *
      */
@@ -3919,6 +3966,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param bo Binary object to deserialize.
+     * @param marsh Marshaller.
+     * @return Result object.
+     */
+    private <T> T unmarshal(BinaryObjectImpl bo, BinaryMarshaller marsh) throws IgniteCheckedException {
+        return marsh.unmarshal(bo.array(), null);
+    }
+
+    /**
      * @param obj Object.
      * @param marsh Marshaller.
      * @return Binary object.
@@ -5883,6 +5939,9 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     /** */
     public static class HandleToCollections {
         /** */
+        int a;
+
+        /** */
         List<Value> lst;
 
         /** */
@@ -5921,6 +5980,30 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
             linkedMap = IntStream.range(0, 1).boxed()
                 .collect(Collectors.toMap(Function.identity(), Value::new, (a, b) -> a, LinkedHashMap::new));
             hndLinkedMap = linkedMap;
+        }
+    }
+
+    /** */
+    public static class HandleToCollections2 {
+        /** */
+        int a;
+
+        /** */
+        List<String> lst;
+
+        /** */
+        List<String> hndLst;
+
+        Value v;
+
+        /** */
+        public HandleToCollections2() {
+            a = 0;
+//            lst = new ArrayList<>(Arrays.asList(new Value(0), new Value(1)));
+            lst = new ArrayList<>(Arrays.asList("a", "b"));
+            hndLst = lst;
+
+            v = new Value(127);
         }
     }
 }
