@@ -22,7 +22,6 @@ import java.nio.file.Path;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1756,11 +1755,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         startGrid();
 
-        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ LONG)");
         sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
         sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
 
-        sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
+        sql("INSERT INTO TEST VALUES (0, 0, ?)", 0L);
 
         GridTestUtils.assertThrows(log, () -> {
             sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
