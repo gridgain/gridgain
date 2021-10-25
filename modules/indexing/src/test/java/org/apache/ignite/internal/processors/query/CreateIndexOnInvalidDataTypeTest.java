@@ -161,7 +161,8 @@ public class CreateIndexOnInvalidDataTypeTest extends AbstractIndexingCommonTest
 
                 return null;
             },
-            CachePartialUpdateCheckedException.class, "Failed to update keys");
+            IgniteSQLException.class,
+            "Type for a column 'VAL_DATE' is not compatible with index definition. Expected 'Date', actual type 'Date'");
 
         // Wait for node stop if it is initiated by FailureHandler
         U.sleep(1000);
@@ -173,7 +174,7 @@ public class CreateIndexOnInvalidDataTypeTest extends AbstractIndexingCommonTest
 
         List<List<?>> res = sql("SELECT VAL_INT FROM TEST WHERE VAL_INT > 0").getAll();
 
-        assertEquals(2, res.size());
+        assertEquals(1, res.size());
     }
 
     /**
