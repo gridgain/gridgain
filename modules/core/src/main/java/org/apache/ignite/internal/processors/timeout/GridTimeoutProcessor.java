@@ -104,9 +104,8 @@ public class GridTimeoutProcessor extends GridProcessorAdapter {
             // Timeout will never happen.
             return false;
 
-        boolean added = timeoutObjs.add(timeoutObj);
-
-        assert added : "Duplicate timeout object found: " + timeoutObj;
+        if (!timeoutObjs.add(timeoutObj))
+            return false;
 
         if (timeoutObjs.firstx() == timeoutObj) {
             synchronized (mux) {
