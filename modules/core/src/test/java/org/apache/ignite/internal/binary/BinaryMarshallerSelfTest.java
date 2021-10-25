@@ -1087,21 +1087,22 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void buildWithCollections() throws Exception {
+    public void rebuildWithHandleToCollection() throws Exception {
         BinaryMarshaller m = binaryMarshaller();
 
         HandleToCollections obj = new HandleToCollections();
 
-        BinaryObject bo = marshal(obj, m);
+        BinaryObjectImpl bo = marshal(obj, m);
 
         for (int i = 0; i < 10; ++i) {
             BinaryObjectBuilder bob = bo.toBuilder();
 
-            bob.setField("a", 0);
+            bob.setField("a", i);
 
-            bo = bob.build();
+            bo = (BinaryObjectImpl)bob.build();
 
-            HandleToCollections modified = unmarshal((BinaryObjectImpl)bo, m);
+            // Check unmarshal is OK.
+            unmarshal(bo, m);
         }
     }
 
@@ -1119,14 +1120,10 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
             bob.setField("a", 1);
 
-            System.out.println("+++ " + Arrays.toString(bo.array()));
             bo = (BinaryObjectImpl)bob.build();
-            System.out.println("+++ " + Arrays.toString(bo.array()));
 
-            byte[] la = Arrays.copyOfRange(bo.array(), 65, bo.array().length);
-            System.out.println("+++ " + Arrays.toString(la));
-
-            TwoCollections modified = unmarshal(bo, m);
+            // Check unmarshal is OK.
+            unmarshal(bo, m);
         }
     }
 
