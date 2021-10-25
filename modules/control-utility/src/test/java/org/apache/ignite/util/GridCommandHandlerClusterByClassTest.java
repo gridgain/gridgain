@@ -964,9 +964,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         counter.reserve(-1);
 
-        assert counter.reserved() >= 0 : "HWM should not be negative.";
+        assertTrue("HWM should not be negative.", counter.reserved() >= 0);
 
-        assert counter.get() > counter.reserved() : "HWM/LWM invariant should be broken.";
+        assertTrue("HWM/LWM invariant should be broken.", counter.get() > counter.reserved());
     }
 
     /**
