@@ -362,7 +362,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     ctx0.busyLock.readLock().unlock();
                 }
 
-                if (log.isDebugEnabled()) {
+                if (log.isDebugEnabled() && cnt > 0) {
                     log.debug("Filled the queue for the group [grpName=" + ctx0.grp.cacheOrGroupName() +
                         ", tombstone=" + tombstone + ", total=" + cnt + ']');
                 }
@@ -370,7 +370,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 total += cnt;
             }
 
-            if (log.isDebugEnabled()) {
+            if (log.isDebugEnabled() && total > 0) {
                 log.debug("After filling the evict queue [total=" + total + ", tombstone=" + tombstone +
                     ", qSize=" + queue.sizex() + ']');
             }
