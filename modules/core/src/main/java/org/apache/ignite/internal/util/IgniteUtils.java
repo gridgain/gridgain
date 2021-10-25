@@ -64,8 +64,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -458,11 +460,14 @@ public abstract class IgniteUtils {
     /** Indicates whether current OS is of RedHat family. */
     private static final boolean redHat;
 
-    /** Indicates whether current OS architecture is Sun Sparc. */
+    /** Indicates whether current CPU architecture is Sun Sparc. */
     private static boolean sparc;
 
-    /** Indicates whether current OS architecture is Intel X86. */
+    /** Indicates whether current CPU architecture is Intel X86. */
     private static boolean x86;
+
+    /** Indicates whether current CPU architecture is AMD64. */
+    private static boolean amd64;
 
     /** Name of the underlying OS. */
     private static String osName;
@@ -727,6 +732,8 @@ public abstract class IgniteUtils {
             x86 = true;
         else if (archStr.contains("sparc"))
             sparc = true;
+        else if (archStr.contains("amd64"))
+            amd64 = true;
 
         String javaRtName = System.getProperty("java.runtime.name");
         String javaRtVer = System.getProperty("java.runtime.version");
@@ -6921,6 +6928,24 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Indicates whether current architecture is Intel x86.
+     *
+     * @return {@code true} if current architecture is Intel x86 - {@code false} otherwise.
+     */
+    public static boolean isX86() {
+        return x86;
+    }
+
+    /**
+     * Indicates whether current architecture is AMD64.
+     *
+     * @return {@code true} if current architecture is AMD64 - {@code false} otherwise.
+     */
+    public static boolean isAmd64() {
+        return amd64;
+    }
+
+    /**
      * Indicates whether current OS is UNIX flavor.
      *
      * @return {@code true} if current OS is UNIX - {@code false} otherwise.
@@ -12557,4 +12582,24 @@ public abstract class IgniteUtils {
         return safeAbs(hash % size);
     }
 
+    /**
+     * Invokes {@link ServerSocket#accept()} method on the passed server socked, working around the
+     * https://bugs.openjdk.java.net/browse/JDK-8247750 in the process.
+     *
+     * @param srvrSock Server socket.
+     * @return New socket.
+     * @throws IOException If an I/O error occurs when waiting for a connection.
+     * @see ServerSocket#accept()
+     */
+    public static Socket acceptServerSocket(ServerSocket srvrSock) throws IOException {
+        while (true) {
+            try {
+                return srvrSock.accept();
+            }
+            catch (SocketTimeoutException e) {
+                if (srvrSock.getSoTimeout() > 0)
+                    throw e;
+            }
+        }
+    }
 }
