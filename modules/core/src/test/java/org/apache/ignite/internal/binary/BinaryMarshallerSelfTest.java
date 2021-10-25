@@ -1087,7 +1087,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void handleToCollection2() throws Exception {
+    public void buildWithCollections() throws Exception {
         BinaryMarshaller m = binaryMarshaller();
 
         HandleToCollections obj = new HandleToCollections();
@@ -1097,10 +1097,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 10; ++i) {
             BinaryObjectBuilder bob = bo.toBuilder();
 
-            if (i > 0)
-                assertEquals(i - 1, (int)bo.field("a"));
-
-            bob.setField("a", i);
+            bob.setField("a", 0);
 
             bo = bob.build();
 
@@ -1110,25 +1107,26 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void handleToCollection3() throws Exception {
+    public void rebuildObjectWithCollections() throws Exception {
         BinaryMarshaller m = binaryMarshaller();
 
-        HandleToCollections2 obj = new HandleToCollections2();
+        TwoCollections obj = new TwoCollections();
 
         BinaryObjectImpl bo = marshal(obj, m);
 
         for (int i = 0; i < 10; ++i) {
             BinaryObjectBuilder bob = bo.toBuilder();
 
-            bob.setField("a", i);
+            bob.setField("a", 1);
 
             System.out.println("+++ " + Arrays.toString(bo.array()));
             bo = (BinaryObjectImpl)bob.build();
             System.out.println("+++ " + Arrays.toString(bo.array()));
 
-            HandleToCollections2 modified = unmarshal(bo, m);
+            byte[] la = Arrays.copyOfRange(bo.array(), 65, bo.array().length);
+            System.out.println("+++ " + Arrays.toString(la));
 
-            assertEquals(i, modified.a);
+            TwoCollections modified = unmarshal(bo, m);
         }
     }
 
@@ -5984,24 +5982,25 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /** */
-    public static class HandleToCollections2 {
+    public static class TwoCollections {
         /** */
         int a;
 
         /** */
-        List<String> lst;
+        List<String> lst0;
 
         /** */
-        List<String> hndLst;
+        List<String> lst1;
 
+        /** */
         Value v;
 
         /** */
-        public HandleToCollections2() {
+        public TwoCollections() {
             a = 0;
-//            lst = new ArrayList<>(Arrays.asList(new Value(0), new Value(1)));
-            lst = new ArrayList<>(Arrays.asList("a", "b"));
-            hndLst = lst;
+
+            lst0 = new ArrayList<>(Arrays.asList("a", "b"));
+            lst1 = new ArrayList<>(Arrays.asList("c", "d"));;
 
             v = new Value(127);
         }
