@@ -2065,6 +2065,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             for (;;) {
                 r.init();
 
+                try {
+                    Thread.sleep(5);
+                }
+                catch (InterruptedException e) {
+                    // Do nothing
+                }
+
                 Result res = removeDown(r, r.rootId, 0L, 0L, r.rootLvl);
 
                 switch (res) {
