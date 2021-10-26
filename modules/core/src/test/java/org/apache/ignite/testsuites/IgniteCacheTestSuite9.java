@@ -51,6 +51,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCacheWrit
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTombstonesFailoverTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.ConcurrentTombstonesCleanupTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstonesManagementTest;
 import org.apache.ignite.internal.processors.cache.transactions.PartitionUpdateCounterTest;
@@ -174,6 +175,7 @@ public class IgniteCacheTestSuite9 {
 
         GridTestUtils.addTestIfNeeded(suite, TombstoneClearingCountersTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TombstonesManagementTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ConcurrentTombstonesCleanupTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, TxRecoveryOnCoordniatorFailTest.class, ignoredTests);
 
