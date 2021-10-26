@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,24 +33,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.binary.BinaryMarshaller;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.gridgain.internal.h2.engine.Mode;
-import org.gridgain.internal.h2.value.CompareMode;
-import org.gridgain.internal.h2.value.ValueJavaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
@@ -58,10 +52,9 @@ import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.A
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
 
 /**
- * Basic tests for different types of indexed data
- * for tables created through Cache API.
+ * Basic tests for pojo types of indexed data for tables created through Cache API in LOCAL query mode.
  */
-public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
+public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
     /** Count of entries that should be preloaded to the cache. */
     private static final int DATSET_SIZE = 1_000;
 
@@ -83,9 +76,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        startGridsMultiThreaded(1, 2);
-
-        startClientGrid(0);
+        startGrid(0);
     }
 
     /** */
@@ -96,79 +87,8 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testJavaBooleanIndex() {
-        createPopulateAndVerify(Boolean.class, Boolean::compareTo, null);
-        createPopulateAndVerify(Boolean.class, Boolean::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Boolean.class, Boolean::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaByteIndex() {
-        createPopulateAndVerify(Byte.class, Byte::compareTo, null);
-        createPopulateAndVerify(Byte.class, Byte::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Byte.class, Byte::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaShortIndex() {
-        createPopulateAndVerify(Short.class, Short::compareTo, null);
-        createPopulateAndVerify(Short.class, Short::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Short.class, Short::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaIntegerIndex() {
-        createPopulateAndVerify(Integer.class, Integer::compareTo, null);
-        createPopulateAndVerify(Integer.class, Integer::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Integer.class, Integer::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaLongIndex() {
-        createPopulateAndVerify(Long.class, Long::compareTo, null);
-        createPopulateAndVerify(Long.class, Long::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Long.class, Long::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaFloatIndex() {
-        createPopulateAndVerify(Float.class, Float::compareTo, null);
-        createPopulateAndVerify(Float.class, Float::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Float.class, Float::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaDoubleIndex() {
-        createPopulateAndVerify(Double.class, Double::compareTo, null);
-        createPopulateAndVerify(Double.class, Double::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(Double.class, Double::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaBigDecimalIndex() {
-        createPopulateAndVerify(BigDecimal.class, BigDecimal::compareTo, null);
-        createPopulateAndVerify(BigDecimal.class, BigDecimal::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(BigDecimal.class, BigDecimal::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaStringIndex() {
-        createPopulateAndVerify(String.class, String::compareTo, null);
-        createPopulateAndVerify(String.class, String::compareTo, TestKeyWithAff.class);
-        createPopulateAndVerify(String.class, String::compareTo, TestKeyWithIdx.class);
-    }
-
-    /** */
-    @Test
-    public void testJavaPojoIndex() {
+    @Ignore("GG-34106")
+    public void testJavaPojoIndexLocal() {
         createPopulateAndVerify(TestPojo.class, null, null);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithAff.class);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithIdx.class);
@@ -176,43 +96,8 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testJavaPojoBinaryDbg() throws IgniteCheckedException {
-        TestPojo pojo1 = new TestPojo(-876295916);
-        TestPojo pojo2 = new TestPojo(765062782);
-        TestPojo pojo3 = new TestPojo(-1925029873);
-
-        IgniteH2Indexing idx = (IgniteH2Indexing)grid(0).context().query().getIndexing();
-
-        // Original binary obj (like on pages)
-        GridH2ValueCacheObject v1 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo1), idx.objectContext());
-        GridH2ValueCacheObject v2 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo2), idx.objectContext());
-        GridH2ValueCacheObject v3 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo3), idx.objectContext());
-
-        // Begin: emulate pass POJO as SQL parameter through network.
-        Object[] param = {pojo3};
-
-        byte buf[] = grid(0).context().config().getMarshaller().marshal(param);
-
-        Object param2[] = ((BinaryMarshaller)grid(0).context().config().getMarshaller()).binaryMarshaller()
-            .unmarshal(buf, this.getClass().getClassLoader());
-
-        ValueJavaObject v3bin = ValueJavaObject.getNoCopy(param2[0], null, null);
-        // end: emulate
-
-        assertEquals(
-            v1.compareTo(v3, Mode.getRegular(), CompareMode.getInstance(null, 0)),
-            v1.compareTo(v3bin, Mode.getRegular(), CompareMode.getInstance(null, 0))
-        );
-
-        assertEquals(
-            v2.compareTo(v3, Mode.getRegular(), CompareMode.getInstance(null, 0)),
-            v2.compareTo(v3bin, Mode.getRegular(), CompareMode.getInstance(null, 0))
-        );
-    }
-
-    /** This case was breaking the tree and not allowing you to find the last item. */
-    @Test
-    public void testJavaPojoIndex2() {
+    @Ignore("GG-34106")
+    public void localPojoReproducerTest() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
         Class<?> keyCls = TestKeyWithIdx.class;
@@ -260,7 +145,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
 
         Integer val = cache.get(idx3);
         List<List<?>> sqlRes = grid(0).context().query().querySqlFields(
-            new SqlFieldsQuery(format).setArgs(pojo3), false
+            new SqlFieldsQuery(format).setArgs(pojo3).setLocal(true), false
         ).getAll();
 
         assertEquals(sqlRes.size(), 1);
@@ -548,7 +433,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
      * @param args Args.
      */
     private List<List<?>> execSql(String qry, Object... args) {
-        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(qry).setArgs(args), false).getAll();
+        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(qry).setArgs(args).setLocal(true), false).getAll();
     }
 
     /**
@@ -564,7 +449,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
         }
 
         /** {@inheritDoc} */
-        @Override public int compareTo(@NotNull BasicJavaTypesIndexTest.TestPojo o) {
+        @Override public int compareTo(@NotNull PojoIndexLocalQueryTest.TestPojo o) {
             if (o == null)
                 return 1;
 
