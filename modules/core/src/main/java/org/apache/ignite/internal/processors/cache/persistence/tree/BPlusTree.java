@@ -6157,7 +6157,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return New CorruptedTreeException instance.
      */
     protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, pageIds);
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, grpId, pageIds);
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 

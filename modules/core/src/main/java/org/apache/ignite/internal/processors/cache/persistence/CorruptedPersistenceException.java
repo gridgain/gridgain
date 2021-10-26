@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import org.apache.ignite.internal.util.typedef.T2;
-
 /**
  * Interface to distinguish exceptions that were caused by broken persistence datastructures invariants.
  */
 public interface CorruptedPersistenceException {
     /**
-     * @return (groupId, pageId) pairs for pages that might be corrupted.
+     * @return Cache group id.
      */
-    public T2<Integer, Long>[] pages();
+    int groupId();
+
+    /**
+     * @return PageId's that can be corrupted.
+     */
+    long[] pageIds();
 }

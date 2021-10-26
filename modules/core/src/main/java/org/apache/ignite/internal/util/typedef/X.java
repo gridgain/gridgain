@@ -524,7 +524,7 @@ public final class X {
      * @param cls Cause class to get cause (if {@code null}, {@code null} is returned).
      * @return First causing exception of passed in class, {@code null} otherwise.
      */
-    @Nullable public static <T extends Throwable> T cause(@Nullable Throwable t, @Nullable Class<T> cls) {
+    @Nullable public static <T extends Throwable> T cause(@Nullable Throwable t, @Nullable Class<?> cls) {
         if (t == null || cls == null)
             return null;
 
