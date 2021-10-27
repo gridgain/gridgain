@@ -31,7 +31,7 @@ import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -177,12 +177,11 @@ public class FailureProcessor extends GridProcessorAdapter {
         if (reserveBuf != null && X.hasCause(failureCtx.error(), OutOfMemoryError.class))
             reserveBuf = null;
 
-        Throwable corruptedPersistenceE = X.cause(failureCtx.error(), CorruptedPersistenceException.class);
+        CorruptedDataStructureException corruptedDataStructureEx =
+            X.cause(failureCtx.error(), CorruptedDataStructureException.class);
 
-        if (corruptedPersistenceE != null) {
-            int grpId = ((CorruptedPersistenceException)corruptedPersistenceE).groupId();
-
-            CacheGroupContext grpCtx = ctx.cache().cacheGroup(grpId);
+        if (corruptedDataStructureEx != null) {
+            CacheGroupContext grpCtx = ctx.cache().cacheGroup(corruptedDataStructureEx.groupId());
 
             if (grpCtx != null && grpCtx.dataRegion() != null) {
                 if (grpCtx.dataRegion().config().isPersistenceEnabled()) {

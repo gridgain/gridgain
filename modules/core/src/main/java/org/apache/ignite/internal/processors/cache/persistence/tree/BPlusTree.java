@@ -52,7 +52,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
-import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -1109,7 +1109,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             return cursor;
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -1148,7 +1148,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         try {
             cursor.iterate();
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -1293,7 +1293,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -1339,7 +1339,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return gLast.find();
             }
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -1383,7 +1383,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             return (R)g.row;
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -1949,7 +1949,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (UnregisteredClassException | UnregisteredBinaryTypeException | AbstractCorruptedPersistenceException e) {
+        catch (UnregisteredClassException | UnregisteredBinaryTypeException | CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -2110,7 +2110,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -2466,7 +2466,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (AbstractCorruptedPersistenceException e) {
+        catch (CorruptedDataStructureException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
@@ -5659,7 +5659,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         readUnlock(pageId, page, pageAddr);
                     }
                 }
-                catch (AbstractCorruptedPersistenceException e) {
+                catch (CorruptedDataStructureException e) {
                     throw e;
                 }
                 catch (RuntimeException | AssertionError e) {

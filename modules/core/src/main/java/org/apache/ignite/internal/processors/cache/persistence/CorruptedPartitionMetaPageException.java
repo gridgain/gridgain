@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Exception to distinguish partition meta page broken invariants.
  */
-public class CorruptedPartitionMetaPageException extends AbstractCorruptedPersistenceException {
+public class CorruptedPartitionMetaPageException extends CorruptedDataStructureException {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 

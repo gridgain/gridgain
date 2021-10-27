@@ -89,7 +89,7 @@ public class PagesPossibleCorruptionDiagnosticTest extends GridCommonAbstractTes
             )
             .setFailureHandler(new FailureHandlerWithCallback(failureCtx ->
                 correctFailure = failureCtx.error() instanceof CorruptedPartitionMetaPageException
-                     && ((AbstractCorruptedPersistenceException)failureCtx.error()).pageIds().length > 0
+                     && ((CorruptedDataStructureException)failureCtx.error()).pageIds().length > 0
             ));
     }
 

@@ -29,8 +29,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
-import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
-import org.apache.ignite.internal.processors.cache.persistence.CorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -96,10 +95,10 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
         if (IGNITE_DUMP_PAGE_LOCK_ON_FAILURE)
             ctx.cache().context().diagnostic().pageLockTracker().dumpLocksToLog();
 
-        CorruptedPersistenceException corruptedPersistenceE =
-            X.cause(failureCtx.error(), AbstractCorruptedPersistenceException.class);
+        CorruptedDataStructureException corruptedDataStructureEx =
+            X.cause(failureCtx.error(), CorruptedDataStructureException.class);
 
-        if (corruptedPersistenceE != null && !F.isEmpty(corruptedPersistenceE.pageIds()) && fileIOFactory != null) {
+        if (corruptedDataStructureEx != null && !F.isEmpty(corruptedDataStructureEx.pageIds()) && fileIOFactory != null) {
             File[] walDirs = walDirs(ctx);
 
             if (F.isEmpty(walDirs)) {
@@ -111,8 +110,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                     File corruptedPagesFile = corruptedPagesFile(
                         diagnosticPath,
                         fileIOFactory,
-                        corruptedPersistenceE.groupId(),
-                        corruptedPersistenceE.pageIds()
+                        corruptedDataStructureEx.groupId(),
+                        corruptedDataStructureEx.pageIds()
                     );
 
                     String walDirsStr = Arrays.stream(walDirs).map(File::getAbsolutePath)
@@ -126,13 +125,13 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
                     args += " --pages " + corruptedPagesFile.getAbsolutePath();
 
-                    log.warning(corruptedPersistenceE.getClass().getSimpleName() + " has occurred. " +
+                    log.warning(corruptedDataStructureEx.getClass().getSimpleName() + " has occurred. " +
                         "To diagnose it, make a backup of the following directories: " + walDirsStr + ". " +
                         "Then, run the following command: bin/wal-reader.sh " + args);
                 }
                 catch (Throwable t) {
-                    String pages = LongStream.of(corruptedPersistenceE.pageIds())
-                        .mapToObj(pageId -> corruptedPersistenceE.groupId() + ":" + pageId)
+                    String pages = LongStream.of(corruptedDataStructureEx.pageIds())
+                        .mapToObj(pageId -> corruptedDataStructureEx.groupId() + ":" + pageId)
                         .collect(joining("\n", "", ""));
 
                     log.error("Failed to dump diagnostic info of partition corruption. Page ids:\n" + pages, t);

@@ -19,9 +19,9 @@ import org.apache.ignite.IgniteCheckedException;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Abstract exception for exceptions related to persistence corruption.
+ * Abstract exception when {@link DataStructure} are corrupted.
  */
-public abstract class AbstractCorruptedPersistenceException extends IgniteCheckedException implements CorruptedPersistenceException {
+public abstract class CorruptedDataStructureException extends IgniteCheckedException {
     /** Cache group id. */
     protected final int grpId;
 
@@ -36,20 +36,24 @@ public abstract class AbstractCorruptedPersistenceException extends IgniteChecke
      * @param grpId Cache group id.
      * @param pageIds PageId's that can be corrupted.
      */
-    protected AbstractCorruptedPersistenceException(String msg, @Nullable Throwable cause, int grpId, long[] pageIds) {
+    protected CorruptedDataStructureException(String msg, @Nullable Throwable cause, int grpId, long[] pageIds) {
         super(msg, cause);
 
         this.grpId = grpId;
         this.pageIds = pageIds;
     }
 
-    /** {@inheritDoc} */
-    @Override public long[] pageIds() {
+    /**
+     * @return Cache group id.
+     */
+    public long[] pageIds() {
         return pageIds;
     }
 
-    /** {@inheritDoc} */
-    @Override public int groupId() {
+    /**
+     * @return PageId's that can be corrupted.
+     */
+    public int groupId() {
         return grpId;
     }
 }

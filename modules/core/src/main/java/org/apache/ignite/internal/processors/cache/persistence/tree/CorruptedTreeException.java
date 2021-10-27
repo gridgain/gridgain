@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.tree;
 
 import java.util.Arrays;
-import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
@@ -25,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Exception to distinguish {@link BPlusTree} tree broken invariants.
  */
-public class CorruptedTreeException extends AbstractCorruptedPersistenceException {
+public class CorruptedTreeException extends CorruptedDataStructureException {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 

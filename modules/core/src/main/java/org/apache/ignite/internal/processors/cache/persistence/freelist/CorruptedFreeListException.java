@@ -16,13 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.freelist;
 
-import org.apache.ignite.internal.processors.cache.persistence.AbstractCorruptedPersistenceException;
+import org.apache.ignite.internal.processors.cache.persistence.CorruptedDataStructureException;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Exception to distinguish {@link AbstractFreeList} broken invariants.
  */
-public class CorruptedFreeListException extends AbstractCorruptedPersistenceException {
+public class CorruptedFreeListException extends CorruptedDataStructureException {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
