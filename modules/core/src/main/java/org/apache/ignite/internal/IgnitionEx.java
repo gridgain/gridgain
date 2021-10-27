@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Constructor;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -102,8 +100,6 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.logger.LoggerNodeIdAware;
-import org.apache.ignite.logger.java.JavaLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
@@ -143,7 +139,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_CONSISTEN
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_RESTART_CODE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
-import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -398,7 +393,7 @@ public class IgnitionEx {
             @Override public void run() {
                 if (state(name) == IgniteState.STARTED) {
                     U.error(null, "Unable to gracefully stop node within timeout " + timeoutMs +
-                            " milliseconds. Killing node...");
+                        " milliseconds. Killing node...");
 
                     // We are not able to kill only one grid so whole JVM will be stopped.
                     Runtime.getRuntime().halt(Ignition.KILL_EXIT_CODE);
@@ -433,22 +428,22 @@ public class IgnitionEx {
      *      If this parameter is {@code null} common cluster policy will be use.
      */
     public static void stopAll(boolean cancel, @Nullable ShutdownPolicy shutdown) {
-        IgniteNamedInstance grid0 = dfltGrid;
+        IgniteNamedInstance dfltGrid0 = dfltGrid;
 
-        if (grid0 != null) {
-            grid0.stop(cancel, shutdown);
+        if (dfltGrid0 != null) {
+            dfltGrid0.stop(cancel, shutdown);
 
             boolean fireEvt;
 
             synchronized (dfltGridMux) {
-                fireEvt = dfltGrid == grid0;
+                fireEvt = dfltGrid == dfltGrid0;
 
                 if (fireEvt)
                     dfltGrid = null;
             }
 
             if (fireEvt)
-                notifyStateChange(grid0.getName(), grid0.state());
+                notifyStateChange(dfltGrid0.getName(), dfltGrid0.state());
         }
 
         // Stop the rest and clear grids map.
@@ -655,7 +650,11 @@ public class IgnitionEx {
      * @throws IgniteCheckedException If grid could not be started. This exception will be thrown
      *      also if named grid has already been started.
      */
-    public static T2<Ignite, Boolean> start(IgniteConfiguration cfg, @Nullable GridSpringResourceContext springCtx, boolean failIfStarted) throws IgniteCheckedException {
+    public static T2<Ignite, Boolean> start(
+        IgniteConfiguration cfg,
+        @Nullable GridSpringResourceContext springCtx,
+        boolean failIfStarted
+    ) throws IgniteCheckedException {
         A.notNull(cfg, "cfg");
 
         T2<IgniteNamedInstance, Boolean> res = start0(new GridStartContext(cfg, null, springCtx), failIfStarted);
@@ -1095,7 +1094,10 @@ public class IgnitionEx {
      *      the flag is {@code false}.
      * @throws IgniteCheckedException If grid could not be started.
      */
-    private static T2<IgniteNamedInstance, Boolean> start0(GridStartContext startCtx, boolean failIfStarted ) throws IgniteCheckedException {
+    private static T2<IgniteNamedInstance, Boolean> start0(
+        GridStartContext startCtx,
+        boolean failIfStarted
+    ) throws IgniteCheckedException {
         assert startCtx != null;
 
         String name = startCtx.config().getIgniteInstanceName();
@@ -1598,13 +1600,6 @@ public class IgnitionEx {
         /** Start latch. */
         private final CountDownLatch startLatch = new CountDownLatch(1);
 
-        /**
-         * This property determine dafult policy for shutdown: true for {@link ShutdownPolicy.GRACEFUL},
-         * false or not set for {@link ShutdownPolicy.IMMEDIATE}
-         */
-        private final boolean waitForBackups =
-            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
-
         /** Raised if node is waiting graceful shutdown. Set to false to end wait. */
         private volatile boolean delayedShutdown = false;
 
@@ -1767,9 +1762,11 @@ public class IgnitionEx {
                             grid.context().failure().process(new FailureContext(failureType, ex));
                     }
                 },
-                getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, cfg.getSystemWorkerBlockedTimeout()),
-                log
-            );
+                IgniteSystemProperties.getLong(IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT,
+                    cfg.getSystemWorkerBlockedTimeout() != null
+                    ? cfg.getSystemWorkerBlockedTimeout()
+                    : cfg.getFailureDetectionTimeout()),
+                log);
 
             // Register Ignite MBean for current grid instance.
             registerFactoryMbean(cfg.getMBeanServer());
@@ -1892,7 +1889,7 @@ public class IgnitionEx {
             if (!F.isEmpty(predefineConsistentId))
                 myCfg.setConsistentId(predefineConsistentId);
 
-            IgniteLogger cfgLog = initLogger(cfg.getGridLogger(), nodeId, workDir);
+            IgniteLogger cfgLog = U.initLogger(cfg.getGridLogger(), null, nodeId, workDir);
 
             assert cfgLog != null;
 
@@ -1980,8 +1977,7 @@ public class IgnitionEx {
             if (myCfg.getUserAttributes() == null)
                 myCfg.setUserAttributes(Collections.<String, Object>emptyMap());
 
-            if (myCfg.getMBeanServer() == null && !U.IGNITE_MBEANS_DISABLED)
-                myCfg.setMBeanServer(ManagementFactory.getPlatformMBeanServer());
+            initializeDefaultMBeanServer(myCfg);
 
             Marshaller marsh = myCfg.getMarshaller();
 
@@ -2152,86 +2148,6 @@ public class IgnitionEx {
         }
 
         /**
-         * @param cfgLog Configured logger.
-         * @param nodeId Local node ID.
-         * @param workDir Work directory.
-         * @return Initialized logger.
-         * @throws IgniteCheckedException If failed.
-         */
-        @SuppressWarnings("ErrorNotRethrown")
-        private IgniteLogger initLogger(@Nullable IgniteLogger cfgLog, UUID nodeId, String workDir)
-            throws IgniteCheckedException {
-            try {
-                Exception log4jInitErr = null;
-
-                if (cfgLog == null) {
-                    Class<?> log4jCls;
-
-                    try {
-                        log4jCls = Class.forName("org.apache.ignite.logger.log4j2.Log4J2Logger");
-                    }
-                    catch (ClassNotFoundException | NoClassDefFoundError ignored) {
-                        log4jCls = null;
-                    }
-
-                    if (log4jCls != null) {
-                        try {
-                            URL url = U.resolveIgniteUrl("config/ignite-log4j2.xml");
-
-                            if (url == null) {
-                                File cfgFile = new File("config/ignite-log4j2.xml");
-
-                                if (!cfgFile.exists())
-                                    cfgFile = new File("../config/ignite-log4j2.xml");
-
-                                if (cfgFile.exists()) {
-                                    try {
-                                        url = cfgFile.toURI().toURL();
-                                    }
-                                    catch (MalformedURLException ignore) {
-                                        // No-op.
-                                    }
-                                } else {
-                                    url = getClass().getClassLoader().getResource("META-INF/ignite-log4j2.xml");
-                                }
-                            }
-
-                            if (url != null) {
-                                Constructor<?> ctor = log4jCls.getConstructor(URL.class);
-
-                                cfgLog = (IgniteLogger)ctor.newInstance(url);
-                            }
-                        }
-                        catch (Exception e) {
-                            log4jInitErr = e;
-                        }
-                    }
-
-                    if (log4jCls == null || log4jInitErr != null)
-                        cfgLog = new JavaLogger();
-                }
-
-                // Special handling for Java logger which requires work directory.
-                if (cfgLog instanceof JavaLogger)
-                    ((JavaLogger)cfgLog).setWorkDirectory(workDir);
-
-                // Set node IDs for all file appenders.
-                if (cfgLog instanceof LoggerNodeIdAware)
-                    ((LoggerNodeIdAware)cfgLog).setNodeId(nodeId);
-
-                if (log4jInitErr != null)
-                    U.warn(cfgLog, "Failed to initialize Log4J2Logger (falling back to standard java logging): "
-                        + log4jInitErr.getCause());
-
-                return cfgLog;
-            }
-            catch (Exception e) {
-
-                throw new IgniteCheckedException("Failed to create logger.", e);
-            }
-        }
-
-        /**
          * Creates utility system cache configuration.
          *
          * @return Utility system cache configuration.
@@ -2281,7 +2197,7 @@ public class IgnitionEx {
          * @return Shutdown policy.
          */
         private ShutdownPolicy determineShutdownPolicy() {
-            if (waitForBackups)
+            if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN))
                 return ShutdownPolicy.GRACEFUL;
 
             return grid.cluster().shutdownPolicy();
@@ -2741,11 +2657,17 @@ public class IgnitionEx {
         }
 
         /**
-         *
          * @return whether the startLatch has been counted down, thereby indicating that the kernal has full started.
          */
-        public boolean hasStartLatchCompleted() { return startLatch.getCount() == 0; }
+        public boolean hasStartLatchCompleted() {
+            return startLatch.getCount() == 0;
+        }
+    }
 
+    /** Initialize default mbean server. */
+    public static void initializeDefaultMBeanServer(IgniteConfiguration myCfg) {
+        if (myCfg.getMBeanServer() == null && !U.IGNITE_MBEANS_DISABLED)
+            myCfg.setMBeanServer(ManagementFactory.getPlatformMBeanServer());
     }
 
     /**
