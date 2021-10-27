@@ -32,11 +32,12 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
-import org.apache.ignite.internal.processors.cache.CachePartialUpdateCheckedException;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /**
  * Checks add field with invalid data type to index.
@@ -156,16 +157,9 @@ public class CreateIndexOnInvalidDataTypeTest extends AbstractIndexingCommonTest
         bob.setField("VAL_INT", 10);
         bob.setField("VAL_DATE", new java.util.Date());
 
-        GridTestUtils.assertThrowsAnyCause(log, () -> {
-                grid().cache("test").put(0, bob.build());
+        assertThrowsWithCause(() -> grid().cache("test").put(0, bob.build()), IgniteSQLException.class);
 
-                return null;
-            },
-            IgniteSQLException.class,
-            "Type for a column 'VAL_DATE' is not compatible with index definition. Expected 'Date', actual type 'Date'");
-
-        // Wait for node stop if it is initiated by FailureHandler
-        U.sleep(1000);
+        assertNull(grid().cache("test").get(0));
 
         sql("DROP INDEX TEST_0_VAL_DATE_IDX");
 
@@ -188,16 +182,14 @@ public class CreateIndexOnInvalidDataTypeTest extends AbstractIndexingCommonTest
             .setArgs(args), false);
     }
 
-    /**
-     *
-     */
+    /** */
     private static class Value {
         /** */
         @QuerySqlField
         int val_int;
 
         /** */
-        java.util.Date val_date;
+        Date val_date;
 
         /**
          * @param val Test value.

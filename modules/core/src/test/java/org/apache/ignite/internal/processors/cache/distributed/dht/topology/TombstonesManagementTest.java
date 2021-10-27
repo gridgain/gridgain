@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -155,9 +156,6 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
         validateCache(ctx0.group(), part0, 2, 0);
         validateCache(ctx1.group(), part0, 2, 0);
 
-        ctx0.shared().evict().processEvictions(true).get();
-        ctx1.shared().evict().processEvictions(true).get();
-
         ctx0.ttl().expire(1); // Should do nothing, limit is not exceeded.
         ctx1.ttl().expire(1); // Should do nothing, limit is not exceeded.
 
@@ -169,8 +167,8 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
         assertEquals(1L, tsLimit0.get());
         assertEquals(1L, tsLimit1.get());
 
-        ctx0.shared().evict().processEvictions(true).get();
-        ctx1.shared().evict().processEvictions(true).get();
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
         ctx0.ttl().expire(1); // Should forcefully remove tombstone because limit is expired.
         ctx1.ttl().expire(1); // Should forcefully remove tombstone because limit is expired.
@@ -230,8 +228,8 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
 
         assertTrue(U.currentTimeMillis() > row0.expireTime);
 
-        ctx0.shared().evict().processEvictions(true).get();
-        ctx1.shared().evict().processEvictions(true).get();
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
         ctx0.ttl().expire(2);
         ctx1.ttl().expire(2);
@@ -288,8 +286,8 @@ public class TombstonesManagementTest extends GridCommonAbstractTest {
 
         tsCleanup0.propagate(false);
 
-        ctx0.shared().evict().processEvictions(true).get();
-        ctx1.shared().evict().processEvictions(true).get();
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
         ctx0.ttl().expire(1);
         ctx1.ttl().expire(1);

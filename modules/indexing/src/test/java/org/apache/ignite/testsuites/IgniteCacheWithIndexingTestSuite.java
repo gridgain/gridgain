@@ -122,7 +122,7 @@ import org.junit.runners.Suite;
 
     IndexPagesMetricsInMemoryTest.class,
 
-    EnumClassImplementingIndexedInterfaceTest.class
-})
+    EnumClassImplementingIndexedInterfaceTest.class,
+    })
 public class IgniteCacheWithIndexingTestSuite {
 }
