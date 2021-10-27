@@ -1102,7 +1102,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
             bo = (BinaryObjectImpl)bob.build();
 
             // Check unmarshal is OK.
-            unmarshal(bo, m);
+            HandleToCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst, modified.lst);
+            assertEquals(obj.hndLst, modified.hndLst);
+            assertEquals(obj.linkedLst, modified.linkedLst);
+            assertEquals(obj.hndLinkedLst, modified.hndLinkedLst);
+            assertEquals(obj.map, modified.map);
+            assertEquals(obj.hndMap, modified.hndMap);
         }
     }
 
@@ -1118,12 +1126,16 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 10; ++i) {
             BinaryObjectBuilder bob = bo.toBuilder();
 
-            bob.setField("a", 1);
+            bob.setField("a", i);
 
             bo = (BinaryObjectImpl)bob.build();
 
             // Check unmarshal is OK.
-            unmarshal(bo, m);
+            TwoCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst0, modified.lst0);
+            assertEquals(obj.lst1, modified.lst1);
         }
     }
 
