@@ -295,6 +295,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     @Test
     public void testWithLocalWalChange() throws Exception {
         backups = 4;
+
         System.setProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, "true");
 
         IgniteEx crd = startGrids(4);
@@ -523,7 +524,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         final GridCachePreloader preloader = demanderNode.cachex(CACHE_NAME).context().group().preloader();
 
         GridTestUtils.waitForCondition(() ->
-                ((GridDhtPartitionDemander.RebalanceFuture) preloader.rebalanceFuture()).topologyVersion().equals(curTopVer),
+                ((GridDhtPartitionDemander.RebalanceFuture)preloader.rebalanceFuture()).topologyVersion().equals(curTopVer),
             getTestTimeout()
         );
 
@@ -557,72 +558,6 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             for (int k = 0; k < entryCnt; k++)
                 assertEquals(new IndexedObject(k), cache1.get(k));
         }
-    }
-
-    /**
-     * Check that historical rebalance doesn't start on the cleared partition when some cluster node restarts.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testRebalanceRestartWithNodeBlinking() throws Exception {
-        backups = 2;
-
-        int entryCnt = PARTS_CNT * 200;
-
-        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(3);
-
-        crd.cluster().state(ACTIVE);
-
-        IgniteCache<Integer, String> cache0 = crd.cache(CACHE_NAME);
-
-        for (int i = 0; i < entryCnt / 2; i++)
-            cache0.put(i, String.valueOf(i));
-
-        forceCheckpoint();
-
-        stopGrid(2);
-
-        for (int i = entryCnt / 2; i < entryCnt; i++)
-            cache0.put(i, String.valueOf(i));
-
-        blockMsgPred = (node, msg) -> {
-            if (msg instanceof GridDhtPartitionDemandMessage) {
-                GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
-
-                return msg0.groupId() == CU.cacheId(CACHE_NAME);
-            }
-
-            return false;
-        };
-
-        startGrid(2);
-
-        TestRecordingCommunicationSpi spi2 = TestRecordingCommunicationSpi.spi(grid(2));
-
-        // Wait until node2 starts historical rebalancning.
-        spi2.waitForBlocked(1);
-
-        // Interruption of rebalancing by left supplier, should remap to new supplier with full rebalancing.
-        stopGrid(0);
-
-        // Wait until the full rebalance begins with g1 as a supplier.
-        spi2.waitForBlocked(2);
-
-        blockMsgPred = null;
-
-        startGrid(0); // Should not force rebalancing remap.
-
-        startGrid(4);
-        resetBaselineTopology(); // Should force rebalancing remap.
-
-        spi2.waitForBlocked(3);
-        spi2.stopBlock();
-
-        awaitPartitionMapExchange();
-
-        // Verify data on demander node.
-        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME));
     }
 
     /**
@@ -774,7 +709,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
                 2,
                 demandMsgsForSupplier.size());
             assertTrue(
-                "The first message should require " + (mixed ? "mixed" : "historical") + " rebalance [msg=" + demandMsgsForSupplier.get(0) + ']',
+                "The first message should require " + (mixed ? "mixed" : "historical") + " rebalance [msg=" +
+                    demandMsgsForSupplier.get(0) + ']',
                 (mixed ? mixedPred.apply(demandMsgsForSupplier.get(0)) : histPred.apply(demandMsgsForSupplier.get(0))));
             assertTrue(
                 "The second message should require full rebalance [msg=" + demandMsgsForSupplier.get(0) + ']',
@@ -845,7 +781,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
                     new GridCacheVersion(0, 1, 1, 0),
                     0,
                     0,
-                    0
+                    0,
+                    DataEntry.EMPTY_FLAGS
                 )));
 
                 File walDir = U.field(walMgr, "walWorkDir");
@@ -1359,6 +1296,72 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
             super.sendMessage(node, msg, ackC);
         }
+    }
+
+    /**
+     * Check that historical rebalance doesn't start on the cleared partition when some cluster node restarts.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalanceRestartWithNodeBlinking() throws Exception {
+        backups = 2;
+
+        int entryCnt = PARTS_CNT * 200;
+
+        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(3);
+
+        crd.cluster().state(ACTIVE);
+
+        IgniteCache<Integer, String> cache0 = crd.cache(CACHE_NAME);
+
+        for (int i = 0; i < entryCnt / 2; i++)
+            cache0.put(i, String.valueOf(i));
+
+        forceCheckpoint();
+
+        stopGrid(2);
+
+        for (int i = entryCnt / 2; i < entryCnt; i++)
+            cache0.put(i, String.valueOf(i));
+
+        blockMsgPred = (node, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
+
+                return msg0.groupId() == CU.cacheId(CACHE_NAME);
+            }
+
+            return false;
+        };
+
+        startGrid(2);
+
+        TestRecordingCommunicationSpi spi2 = TestRecordingCommunicationSpi.spi(grid(2));
+
+        // Wait until node2 starts historical rebalancning.
+        spi2.waitForBlocked(1);
+
+        // Interruption of rebalancing by left supplier, should remap to new supplier with full rebalancing.
+        stopGrid(0);
+
+        // Wait until the full rebalance begins with g1 as a supplier.
+        spi2.waitForBlocked(2);
+
+        blockMsgPred = null;
+
+        startGrid(0); // Should not force rebalancing remap.
+
+        startGrid(4);
+        resetBaselineTopology(); // Should force rebalancing remap.
+
+        spi2.waitForBlocked(3);
+        spi2.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        // Verify data on demander node.
+        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME));
     }
 
     /**

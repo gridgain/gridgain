@@ -599,6 +599,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
                         false,
                         topVer,
                         replicate ? DR_LOAD : DR_NONE,
+                        true,
                         false);
                 }
                 catch (IgniteCheckedException e) {
