@@ -42,14 +42,27 @@ public abstract class VisorServerNodeTask<A, R> extends VisorOneNodeTask<A, R> {
 
         ClusterNode argNode = discoCache.node(argNodeId);
 
-        if (!argNode.isClient() && !argNode.isDaemon())
+        if (!argNode.isClient() && !argNode.isDaemon() && nodeFilter(argNode))
             return argNodeIds;
 
-        ClusterNode srvNode = ignite.cluster().forServers().forRandom().node();
+        ClusterNode srvNode = ignite.cluster()
+            .forServers()
+            .forPredicate(this::nodeFilter)
+            .forRandom().node();
 
         if (srvNode == null)
             return Collections.emptyList();
 
         return Collections.singletonList(srvNode.id());
+    }
+
+    /**
+     * Node filter for tasks that demands nodes with special properties.
+     *
+     * @param node Server node.
+     * @return {@code true} if node suitable for task, else {@code false}.
+     */
+    protected boolean nodeFilter(ClusterNode node) {
+        return true;
     }
 }
