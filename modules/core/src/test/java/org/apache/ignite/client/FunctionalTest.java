@@ -61,6 +61,8 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.thin.ClientServerError;
@@ -75,6 +77,7 @@ import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.spi.systemview.view.TransactionView;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
@@ -82,6 +85,7 @@ import org.junit.rules.Timeout;
 
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.TXS_MON_LIST;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -791,6 +795,47 @@ public class FunctionalTest extends GridCommonAbstractTest {
             }
 
             assertEquals("value1", cache.get(0));
+        }
+    }
+
+    /**
+     * Test that client-connector worker can process further transactional requests (resume transactions) after
+     * external termination of previous transaction.
+     */
+    @Test
+    public void testTxResumeAfterTxTimeout() throws Exception {
+        IgniteConfiguration cfg = Config.getServerConfiguration().setClientConnectorConfiguration(
+            new ClientConnectorConfiguration().setThreadPoolSize(1));
+
+        try (Ignite ignite = Ignition.start(cfg); IgniteClient client = Ignition.startClient(getClientConfiguration())) {
+            String cacheName = "cache";
+
+            IgniteCache<Object, Object> igniteCache = ignite.createCache(new CacheConfiguration<>(cacheName)
+                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL));
+
+            try (ClientTransaction clientTx = client.transactions().txStart()) {
+                runAsync(() -> {
+                    try (Transaction tx = ignite.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
+                        igniteCache.put(0, 0); // Lock key by ignite node.
+
+                        try {
+                            // Start, but don't close the transaction (to keep it in the threadMap after timeout).
+                            client.transactions().txStart(PESSIMISTIC, READ_COMMITTED, 200L);
+
+                            // Wait until transaction interrupted externally by timeout.
+                            client.cache(cacheName).put(0, 0);
+
+                            fail();
+                        }
+                        catch (ClientException ignored) {
+                            // Expected.
+                        }
+                    }
+                }).get();
+
+                // Resume tx in the worker with interrupted transaction.
+                assertFalse(client.cache(cacheName).containsKey(0));
+            }
         }
     }
 
