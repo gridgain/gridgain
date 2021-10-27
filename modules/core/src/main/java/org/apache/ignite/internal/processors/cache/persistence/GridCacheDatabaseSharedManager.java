@@ -2715,7 +2715,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                             try {
                                 part = grp.topology().forceCreatePartition(rec0.partitionId());
-                            } catch (IgniteCheckedException e) {
+                            }
+                            catch (IgniteCheckedException e) {
                                 throw new IgniteException("Cannot get or create a partition [groupId=" + rec0.groupId() +
                                         ", partitionId=" + rec0.partitionId() + "]", e);
                             }
