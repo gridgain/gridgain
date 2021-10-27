@@ -1022,7 +1022,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             notifyMetastorageReadyForReadWrite();
 
-            kernalCtx.state().addAffinityAttrsToCurrBlt(kernalCtx.grid().localNode().consistentId(), kernalCtx.affinityNodeAttributes());
+            final Object consId = kernalCtx.grid().localNode().consistentId();
+
+            kernalCtx.state().addAffinityAttrsToCurrBlt(consId, kernalCtx.affinityNodeAttributes());
 
             U.log(log, "Finish recovery performed in " + (System.currentTimeMillis() - time) + " ms.");
         }

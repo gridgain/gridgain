@@ -83,6 +83,7 @@ import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -579,12 +580,12 @@ public interface GridKernalContext extends Iterable<GridComponent> {
     /**
      * @return Node attributes.
      */
-    public Map<String, Object> nodeAttributes();
+    @Nullable public Map<String, Object> nodeAttributes();
 
     /**
      * @return Affinity node attributes.
      */
-    public Map<String, String> affinityNodeAttributes();
+    @Nullable public Map<String, String> affinityNodeAttributes();
 
     /**
      * Gets Cluster processor.

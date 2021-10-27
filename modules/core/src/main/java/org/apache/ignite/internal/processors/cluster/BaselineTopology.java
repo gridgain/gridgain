@@ -275,12 +275,12 @@ public class BaselineTopology implements Serializable {
      * @return {@code True} if one or more attributes were added.
      */
     public boolean addAffinityAttributesIfNeeded(Object consId, Map<String, String> newAttrs) {
-        boolean attrsAdded = false;
-
         Map<String, Object> curAttrs = nodeMap.get(consId);
 
         if (curAttrs == null)
             return false;
+
+        boolean attrsAdded = false;
 
         for (Map.Entry<String, String> newEntry : newAttrs.entrySet()) {
             if (curAttrs.containsKey(newEntry.getKey()))

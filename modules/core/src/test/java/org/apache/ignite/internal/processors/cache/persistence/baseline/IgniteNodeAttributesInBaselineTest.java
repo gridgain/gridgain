@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.baseline;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -86,7 +87,7 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
-        IgniteEx ignite = startGrids(GRIDS_NUM);
+        Ignite ignite = startGridsMultiThreaded(GRIDS_NUM);
 
         ignite.cluster().state(ACTIVE);
     }
