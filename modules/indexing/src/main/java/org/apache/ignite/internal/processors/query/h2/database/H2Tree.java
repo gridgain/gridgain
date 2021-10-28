@@ -961,7 +961,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return New CorruptedTreeException instance.
      */
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, cacheName, idxName, grpId, pageIds);
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 
