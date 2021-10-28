@@ -262,8 +262,4 @@ public class FailureProcessor extends GridProcessorAdapter {
         return hnd instanceof AbstractFailureHandler &&
             ((AbstractFailureHandler)hnd).getIgnoredFailureTypes().contains(failureCtx.type());
     }
-
-    private void a() {
-
-    }
 }
