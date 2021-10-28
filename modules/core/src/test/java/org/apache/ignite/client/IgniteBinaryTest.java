@@ -352,6 +352,27 @@ public class IgniteBinaryTest {
         }
     }
 
+    /**
+     * Check binary type registration via thin client configuration.
+     */
+    @Test
+    public void testBinaryConfigurationClassNames() {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration())) {
+            ClientConfiguration cfg = new ClientConfiguration()
+                    .setAddresses(Config.SERVER)
+                    .setBinaryConfiguration(
+                            new BinaryConfiguration()
+                                    .setClassNames(Collections.singleton(Person.class.getName())));
+
+            try (IgniteClient client = Ignition.startClient(cfg)) {
+                Collection<BinaryType> types = client.binary().types();
+
+                // TODO: check details, check server types.
+                assertEquals(1, types.size());
+            }
+        }
+    }
+
     /** */
     private void assertBinaryTypesEqual(BinaryType exp, BinaryType actual) {
         assertEquals(exp.typeId(), actual.typeId());
