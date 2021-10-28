@@ -36,8 +36,10 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -57,6 +59,7 @@ import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -1891,6 +1894,46 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             .rowDescriptor().tableDescriptor();
 
         assertNull(GridTestUtils.getFieldValue(tblDesc1, "luceneIdx"));
+    }
+
+    /**
+     * Checks that part of the composite key assembled in BinaryObjectBuilder can pass the validation correctly
+     if you specify Object type when creating the index.
+     */
+    @Test
+    public void testCacheSecondaryCompositeIndex() throws Exception {
+        inlineSize = 70;
+
+        startGrid();
+
+        String cacheName = "TEST";
+
+        grid().createCache(new CacheConfiguration<>()
+                .setName(cacheName)
+                .setSqlSchema(cacheName)
+                .setAffinity(new RendezvousAffinityFunction(false, 4))
+                .setQueryEntities(Collections.singleton(new QueryEntity()
+                        .setTableName(cacheName)
+                        .setKeyType(Integer.class.getName())
+                        .setKeyFieldName("id")
+                        .setValueType("TEST_VAL_SECONDARY_COMPOSITE")
+                        .addQueryField("id", Integer.class.getName(), null)
+                        .addQueryField("val_obj", Object.class.getName(), null)
+                        .setIndexes(Arrays.asList(
+                                        new QueryIndex(Arrays.asList("val_obj"), QueryIndexType.SORTED)
+                                                .setInlineSize(inlineSize)
+                                )
+                        ))));
+
+        BinaryObjectBuilder bob = grid().binary().builder("TEST_VAL_SECONDARY_COMPOSITE");
+        BinaryObjectBuilder bobInner = grid().binary().builder("inner");
+
+        bobInner.setField("inner_k", 0);
+        bobInner.setField("inner_uuid", UUID.randomUUID());
+
+        bob.setField("val_obj", bobInner.build());
+
+        grid().cache(cacheName).put(0, bob.build());
     }
 
     /** */
