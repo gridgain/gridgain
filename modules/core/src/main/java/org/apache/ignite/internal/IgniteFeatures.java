@@ -200,7 +200,13 @@ public enum IgniteFeatures {
      * The feature allows authenticating a node remotely.
      * It is need when the one node which does not have an authentication required to authorize itself or another one.
      */
-    REMOTE_AUTH(61);
+    REMOTE_AUTH(61),
+
+    /**
+     * Snapshot operation can handle {@code --exclude_caches} parameter
+     * and cache groups in {@code --caches} and {@code --excluded_caches} parameters.
+     */
+    SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62);
 
     /**
      * Unique feature identifier.
