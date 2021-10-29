@@ -27,6 +27,7 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -718,19 +719,21 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /**
          * Submits the task for execution.
          *
-         * @return {@code True} if the task was submitted for execution.
+         * @return {@link Future} if the task was submitted for execution.
          */
-        public boolean start() {
+        public Future<?> start() {
             if (!state.compareAndSet(null, Boolean.TRUE))
-                return false;
+                return null;
+
+            Future<?> fut;
 
             try {
-                executor.submit(this);
+                fut = executor.submit(this);
             }
             catch (Exception ignored) {
                 log.error("Failed to submit the task for the execution [task=" + this + ']');
 
-                return false;
+                return null;
             }
 
             synchronized (mux) {
@@ -751,7 +754,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
                     + ", task" + this + ']');
 
-            return true;
+            return fut;
         }
 
         /**
@@ -810,7 +813,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         CLEARING,
 
         /** Partition tombstones must be cleaned. */
-        TOMBSTONE;
+        TOMBSTONE,
+
+        /**
+         * Partition clearing on logical WAL recovery.
+         * Used to repeat partition clearing if the node was stopped without previous clearing checkpointed.
+         */
+        CLEARING_ON_RECOVERY;
     }
 
     /**
@@ -818,11 +827,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param c Update closure.
      */
     private void updateMetrics(CacheGroupContext grp, EvictReason reason, BiConsumer<EvictReason, CacheMetricsImpl> c) {
-        for (GridCacheContext cctx : grp.caches()) {
-            if (cctx.statisticsEnabled()) {
-                final CacheMetricsImpl metrics = cctx.cache().metrics0();
+        if (reason != EvictReason.CLEARING_ON_RECOVERY) {
+            for (GridCacheContext cctx : grp.caches()) {
+                if (cctx.statisticsEnabled()) {
+                    final CacheMetricsImpl metrics = cctx.cache().metrics0();
 
-                c.accept(reason, metrics);
+                    c.accept(reason, metrics);
+                }
             }
         }
     }

@@ -39,6 +39,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -589,6 +590,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
+     * Used to set a version from {@link PartitionClearingStartRecord} when need to repeat a clearing after node restart.
+     * @param clearVer Clear version.
+     */
+    public void updateClearVersion(long clearVer) {
+        this.clearVer = clearVer;
+    }
+
+    /**
      * @return {@code True} if partition state changed.
      */
     public boolean markLost() {
@@ -641,7 +650,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         PartitionsEvictManager.PartitionEvictionTask task =
             ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.EVICTION);
 
-        if (task.start()) {
+        if (task.start() != null) {
             task.finishFuture().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (fut0.error() == null) {
@@ -678,7 +687,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         PartitionsEvictManager.PartitionEvictionTask clearTask =
             ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
 
-        return clearTask.start() ? clearTask.finishFuture() : new GridFinishedFuture<>();
+        return clearTask.start() != null ? clearTask.finishFuture() : new GridFinishedFuture<>();
     }
 
     /**
@@ -910,7 +919,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             clearClo = this::clearSafe;
         }
-        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING) {
+        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING ||
+            task.reason() == PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY) {
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
