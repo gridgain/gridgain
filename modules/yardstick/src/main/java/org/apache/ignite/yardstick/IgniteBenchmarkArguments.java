@@ -130,6 +130,9 @@ public class IgniteBenchmarkArguments {
     @Parameter(names = {"-cs", "--cacheStore"}, description = "Enable or disable cache store readThrough, writeThrough")
     private boolean storeEnabled;
 
+    @Parameter(names = {"--disableWal"}, description = "Disable WAL for cache benchmarks")
+    private boolean disableWal;
+
     /** */
     @Parameter(names = {"-cwd", "--cleanWorkDirectory"}, description = "Clean Work Directory")
     private boolean cleanWorkDirectory = false;
@@ -520,6 +523,10 @@ public class IgniteBenchmarkArguments {
      */
     public int jobs() {
         return jobs;
+    }
+
+    public boolean disableWal() {
+        return disableWal;
     }
 
     /**
