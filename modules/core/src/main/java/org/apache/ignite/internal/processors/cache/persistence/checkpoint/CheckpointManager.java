@@ -136,14 +136,16 @@ public class CheckpointManager {
 
         FileIOFactory ioFactory = persistenceCfg.getFileIOFactory();
 
+        CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
+
         checkpointMarkersStorage = new CheckpointMarkersStorage(
+            igniteInstanceName,
             logger,
             cpHistory,
             ioFactory,
-            pageStoreManager.workDir().getAbsolutePath()
+            pageStoreManager.workDir().getAbsolutePath(),
+            lock
         );
-
-        CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
         checkpointWorkflow = new CheckpointWorkflow(
             logger,
@@ -257,6 +259,13 @@ public class CheckpointManager {
      */
     public File checkpointDirectory() {
         return checkpointMarkersStorage.cpDir;
+    }
+
+    /**
+     * @return Checkpoint storage.
+     */
+    public CheckpointMarkersStorage checkpointMarkerStorage() {
+        return checkpointMarkersStorage;
     }
 
     /**
@@ -388,6 +397,8 @@ public class CheckpointManager {
         checkpointWorkflow.stop();
 
         this.checkpointer = null;
+
+        checkpointMarkersStorage.close();
     }
 
     /**

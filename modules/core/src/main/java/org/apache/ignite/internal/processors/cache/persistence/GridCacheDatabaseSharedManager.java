@@ -114,6 +114,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistoryResult;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointStatus;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
@@ -3301,7 +3302,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
-            CheckpointEntry lastCp = checkpointHistory().lastCheckpointMarkingAsInapplicable(grpId);
+            assert checkpointManager != null;
+
+            CheckpointMarkersStorage storage = checkpointManager.checkpointMarkerStorage();
+
+            CheckpointEntry lastCp = storage.removeFromEarliestCheckpoints(grpId);
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
             if (lastCpTs != 0)

@@ -26,9 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -108,13 +110,30 @@ public class CheckpointHistory {
     /**
      * @param checkpoints Checkpoints.
      */
-    public void initialize(List<CheckpointEntry> checkpoints) {
+    public void initialize(
+        EarliestCheckpointMapSnapshot snapshot,
+        List<CheckpointEntry> checkpoints
+    ) {
         for (CheckpointEntry e : checkpoints)
             histMap.put(e.timestamp(), e);
 
         for (Long timestamp : checkpoints(false)) {
             try {
-                updateEarliestCpMap(entry(timestamp));
+                CheckpointEntry entry = entry(timestamp);
+
+                UUID checkpointId = entry.checkpointId();
+
+                Map<Integer, CheckpointEntry.GroupState> groupStateMap = snapshot.getGroupState(checkpointId);
+
+                // Ignore checkpoint that was present at the time of the snapshot and whose group
+                // states map was not persisted (that means this checkpoint wasn't a part of earliestCp map)
+                if (snapshot.checkpointWasPresent(checkpointId) && groupStateMap == null)
+                    continue;
+
+                if (groupStateMap != null)
+                    entry.fillStore(groupStateMap);
+
+                updateEarliestCpMap(groupStateMap, entry);
             }
             catch (IgniteCheckedException e) {
                 U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
@@ -196,11 +215,16 @@ public class CheckpointHistory {
     /**
      * Update map which stored the earliest checkpoint each partitions for groups.
      *
+     * @param groupStateMapFromSnapshot Group state map from the snapshot.
      * @param entry Checkpoint entry.
      */
-    private void updateEarliestCpMap(CheckpointEntry entry) {
+    private void updateEarliestCpMap(
+        @Nullable Map<Integer, CheckpointEntry.GroupState> groupStateMapFromSnapshot,
+        CheckpointEntry entry
+    ) {
         try {
-            Map<Integer, CheckpointEntry.GroupState> states = entry.groupState(wal);
+            Map<Integer, CheckpointEntry.GroupState> states = groupStateMapFromSnapshot != null ?
+                groupStateMapFromSnapshot : entry.groupState(wal);
 
             Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
 
@@ -233,12 +257,13 @@ public class CheckpointHistory {
     }
 
     /**
-     * Prepare last checkpoint in history that will marked as inapplicable.
+     * Removes last checkpoint in history from the earliest checkpoints map by group id and returns the latest
+     * checkpoint in the history.
      *
      * @param grpId Group id.
-     * @return Checkpoint witch it'd be marked as inapplicable.
+     * @return Latest checkpoint in the history.
      */
-    public CheckpointEntry lastCheckpointMarkingAsInapplicable(Integer grpId) {
+    public CheckpointEntry removeFromEarliestCheckpoints(Integer grpId) {
         synchronized (earliestCp) {
             CheckpointEntry lastCp = lastCheckpoint();
 
@@ -305,7 +330,7 @@ public class CheckpointHistory {
     /**
      * Clears checkpoint history after WAL truncation.
      *
-     * @param highBound Upper bound.
+     * @param ptr Upper bound.
      * @return List of checkpoint entries removed from history.
      */
     public List<CheckpointEntry> onWalTruncated(WALPointer ptr) {
@@ -763,6 +788,35 @@ public class CheckpointHistory {
      */
     public boolean isCheckpointApplicableForGroup(int grpId, CheckpointEntry cp) throws IgniteCheckedException {
         return !checkpointInapplicable.test(cp.timestamp(), grpId) && cp.groupState(wal).containsKey(grpId);
+    }
+
+    /**
+     * Creates a snapshot of {@link #earliestCp} map.
+     * Guarded by checkpoint read lock.
+     *
+     * @return Snapshot of a map.
+     */
+    public EarliestCheckpointMapSnapshot earliestCheckpointsMapSnapshot() {
+        Map<UUID, Map<Integer, CheckpointEntry.GroupState>> data = new HashMap<>();
+
+        synchronized (earliestCp) {
+            Collection<CheckpointEntry> values = earliestCp.values();
+
+            for (CheckpointEntry cp : values) {
+                UUID checkpointId = cp.checkpointId();
+
+                if (data.containsKey(checkpointId))
+                    continue;
+
+                Map<Integer, CheckpointEntry.GroupState> groupStates = cp.groupStates();
+
+                data.put(checkpointId, groupStates);
+            }
+        }
+
+        Set<UUID> ids = histMap.values().stream().map(CheckpointEntry::checkpointId).collect(Collectors.toSet());
+
+        return new EarliestCheckpointMapSnapshot(ids, data);
     }
 
     /**
