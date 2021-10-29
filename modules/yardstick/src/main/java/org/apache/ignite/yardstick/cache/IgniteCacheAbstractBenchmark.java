@@ -110,6 +110,10 @@ public abstract class IgniteCacheAbstractBenchmark<K, V> extends IgniteAbstractB
 
         cache = cache();
 
+        // Disable WAL for cache under test
+        if (args.isWalDisabled())
+            ignite().cluster().disableWal(cache.getName());
+
         CacheConfiguration<?, ?> ccfg = cache.getConfiguration(CacheConfiguration.class);
 
         String grpName = ccfg.getGroupName();
