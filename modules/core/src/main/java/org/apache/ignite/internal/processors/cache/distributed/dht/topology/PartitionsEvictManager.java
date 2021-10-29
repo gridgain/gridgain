@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheMetricsImpl;
 import org.apache.ignite.internal.processors.cache.CacheStoppedException;
@@ -142,7 +143,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             if (log.isDebugEnabled())
                 log.debug("The partition has been scheduled for clearing [grp=" + grp.cacheOrGroupName()
-                    + (cctx.kernalContext().recoveryMode() ? "" : ", topVer=" + grp.topology().readyTopologyVersion())
+                    + ", topVer=" + (cctx.kernalContext().recoveryMode() ? AffinityTopologyVersion.NONE : grp.topology().readyTopologyVersion())
                     + ", id=" + part.id() + ", state=" + part.state()
                     + ", fullSize=" + part.fullSize() + ", reason=" + reason + ']');
 
@@ -407,7 +408,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                 if (log.isDebugEnabled()) {
                     log.debug("The partition has been cleared [grp=" + part.group().cacheOrGroupName() +
-                        (cctx.kernalContext().recoveryMode() ? "" : ", topVer=" + part.group().topology().readyTopologyVersion()) +
+                        ", topVer=" + (cctx.kernalContext().recoveryMode() ? AffinityTopologyVersion.NONE : part.group().topology().readyTopologyVersion()) +
                         ", id=" + part.id() + ", state=" + part.state() + ", cleared=" + clearedEntities +
                         ", fullSize=" + part.fullSize() + ']');
                 }
@@ -422,7 +423,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 if (cctx.kernalContext().isStopping()) {
                     LT.warn(log, ex, "Partition eviction has been cancelled (local node is stopping) " +
                         "[grp=" + grpEvictionCtx.grp.cacheOrGroupName() +
-                        (cctx.kernalContext().recoveryMode() ? "" : ", readyVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()) +
+                        ", readyVer=" + (cctx.kernalContext().recoveryMode() ? AffinityTopologyVersion.NONE : grpEvictionCtx.grp.topology().readyTopologyVersion()) +
                         ']',
                         false,
                         true);
