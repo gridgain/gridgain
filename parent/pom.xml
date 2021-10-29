@@ -298,9 +298,20 @@
     </dependencies>
 
     <repositories>
+        <!-- Official GridGain's Maven repository -->
         <repository>
             <id>GridGain External Repository</id>
-            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+            <url>https://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+        <!-- Legacy JacobORG repository for org.jacorb:jacorb:jar:2.2.3-jonas-patch-20071018 -->
+        <repository>
+            <id>JacobORG Legacy Repository</id>
+            <url>https://repository.ow2.org/nexus/content/repositories/ow2-legacy</url>
+        </repository>
+        <!-- Apache Snapshots repository non-ssl url override (for Maven 3.8+) -->
+        <repository>
+            <id>apache.snapshots</id>
+            <url>https://repository.apache.org/snapshots/</url>
         </repository>
     </repositories>
 
