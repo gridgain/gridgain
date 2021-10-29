@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,10 +38,8 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -1757,11 +1756,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         startGrid();
 
-        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ LONG)");
+        sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
         sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
         sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
 
-        sql("INSERT INTO TEST VALUES (0, 0, ?)", 0L);
+        sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
 
         GridTestUtils.assertThrows(log, () -> {
             sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
@@ -1791,46 +1790,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             sql("insert into test (id1, id2, val) values (?, ?, ?)", 0, i, i);
 
         assertEquals(5, sql("select * from test where id1 = 0 and id2 > 0").getAll().size());
-    }
-
-    /**
-     * Checks that part of the composite key assembled in BinaryObjectBuilder can pass the validation correctly
-     if you specify Object type when creating the index.
-     */
-    @Test
-    public void testCacheSecondaryCompositeIndex() throws Exception {
-        inlineSize = 70;
-
-        startGrid();
-
-        String cacheName = "TEST";
-
-        grid().createCache(new CacheConfiguration<>()
-                .setName(cacheName)
-                .setSqlSchema(cacheName)
-                .setAffinity(new RendezvousAffinityFunction(false, 4))
-                .setQueryEntities(Collections.singleton(new QueryEntity()
-                        .setTableName(cacheName)
-                        .setKeyType(Integer.class.getName())
-                        .setKeyFieldName("id")
-                        .setValueType("TEST_VAL_SECONDARY_COMPOSITE")
-                        .addQueryField("id", Integer.class.getName(), null)
-                        .addQueryField("val_obj", Object.class.getName(), null)
-                        .setIndexes(Arrays.asList(
-                                        new QueryIndex(Arrays.asList("val_obj"), QueryIndexType.SORTED)
-                                                .setInlineSize(inlineSize)
-                                )
-                        ))));
-
-        BinaryObjectBuilder bob = grid().binary().builder("TEST_VAL_SECONDARY_COMPOSITE");
-        BinaryObjectBuilder bobInner = grid().binary().builder("inner");
-
-        bobInner.setField("inner_k", 0);
-        bobInner.setField("inner_uuid", UUID.randomUUID());
-
-        bob.setField("val_obj", bobInner.build());
-
-        grid().cache(cacheName).put(0, bob.build());
     }
 
     /**
