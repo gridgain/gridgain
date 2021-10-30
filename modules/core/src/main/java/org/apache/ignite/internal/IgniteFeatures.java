@@ -203,8 +203,8 @@ public enum IgniteFeatures {
     REMOTE_AUTH(61),
 
     /**
-     * Snapshot operation can handle {@code --exclude_caches} parameter
-     * and cache groups in {@code --caches} and {@code --excluded_caches} parameters.
+     * Snapshot operation can handle {@code -exclude_caches} parameter
+     * and cache groups in {@code -caches} and {@code -excluded_caches} parameters.
      */
     SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62);
 
