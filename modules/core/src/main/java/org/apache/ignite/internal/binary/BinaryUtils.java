@@ -2051,9 +2051,6 @@ public class BinaryUtils {
         BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize) throws BinaryObjectException {
         int hPos = positionForHandle(in);
 
-        if (handles.getHandle(hPos) != null)
-            return (Object[]) handles.getHandle(hPos);
-
         Class compType = doReadClass(in, ctx, ldr, deserialize);
 
         int len = in.readInt();
