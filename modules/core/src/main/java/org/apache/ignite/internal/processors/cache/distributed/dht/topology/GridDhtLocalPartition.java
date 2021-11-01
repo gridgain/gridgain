@@ -650,7 +650,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         PartitionsEvictManager.PartitionEvictionTask task =
             ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.EVICTION);
 
-        if (task.start() != null) {
+        if (task.start()) {
             task.finishFuture().listen(new IgniteInClosure<IgniteInternalFuture<?>>() {
                 @Override public void apply(IgniteInternalFuture<?> fut0) {
                     if (fut0.error() == null) {
@@ -687,7 +687,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         PartitionsEvictManager.PartitionEvictionTask clearTask =
             ctx.evict().scheduleEviction(grp, this, PartitionsEvictManager.EvictReason.CLEARING);
 
-        return clearTask.start() != null ? clearTask.finishFuture() : new GridFinishedFuture<>();
+        return clearTask.start() ? clearTask.finishFuture() : new GridFinishedFuture<>();
     }
 
     /**

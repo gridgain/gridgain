@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -2989,11 +2988,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                                         evict().
                                         scheduleEviction(grp, part, PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY);
 
-                                    task.start().get();
+                                    if (task.start())
+                                        task.finishFuture().get();
 
                                     part.updateClearVersion();
                                 }
-                                catch (InterruptedException | ExecutionException e) {
+                                catch (IgniteCheckedException e) {
                                     U.error(log, "Failed to apply partition clearing record, " + rec0);
 
                                     applyError.compareAndSet(null, e);

@@ -27,7 +27,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -719,21 +718,19 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /**
          * Submits the task for execution.
          *
-         * @return {@link Future} if the task was submitted for execution.
+         * @return {@code True} if the task was submitted for execution.
          */
-        public Future<?> start() {
+        public boolean start() {
             if (!state.compareAndSet(null, Boolean.TRUE))
-                return null;
-
-            Future<?> fut;
+                return false;
 
             try {
-                fut = executor.submit(this);
+                executor.submit(this);
             }
             catch (Exception ignored) {
                 log.error("Failed to submit the task for the execution [task=" + this + ']');
 
-                return null;
+                return false;
             }
 
             synchronized (mux) {
@@ -754,7 +751,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     + ", topVer=" + grpEvictionCtx.grp.topology().readyTopologyVersion()
                     + ", task" + this + ']');
 
-            return fut;
+            return true;
         }
 
         /**
