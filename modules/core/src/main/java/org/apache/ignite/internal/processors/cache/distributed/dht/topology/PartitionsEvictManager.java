@@ -785,7 +785,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         CLEARING,
 
         /** Partition tombstones must be cleaned. */
-        TOMBSTONE;
+        TOMBSTONE,
+
+        /**
+         * Partition clearing on logical WAL recovery.
+         * Used to repeat partition clearing if the node was stopped without previous clearing checkpointed.
+         */
+        CLEARING_ON_RECOVERY;
     }
 
     /**
@@ -793,11 +799,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param c Update closure.
      */
     private void updateMetrics(CacheGroupContext grp, EvictReason reason, BiConsumer<EvictReason, CacheMetricsImpl> c) {
-        for (GridCacheContext cctx : grp.caches()) {
-            if (cctx.statisticsEnabled()) {
-                final CacheMetricsImpl metrics = cctx.cache().metrics0();
+        if (reason != EvictReason.CLEARING_ON_RECOVERY) {
+            for (GridCacheContext cctx : grp.caches()) {
+                if (cctx.statisticsEnabled()) {
+                    final CacheMetricsImpl metrics = cctx.cache().metrics0();
 
-                c.accept(reason, metrics);
+                    c.accept(reason, metrics);
+                }
             }
         }
     }

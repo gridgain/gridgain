@@ -255,7 +255,10 @@ public abstract class WALRecord {
         PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL),
 
         /** Record for renaming the index root pages. */
-        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL);
+        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL),
+
+        /** Partition clearing start. */
+        PARTITION_CLEARING_START_RECORD(73, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;
