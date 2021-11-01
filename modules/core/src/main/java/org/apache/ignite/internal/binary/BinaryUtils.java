@@ -2051,6 +2051,9 @@ public class BinaryUtils {
         BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize) throws BinaryObjectException {
         int hPos = positionForHandle(in);
 
+        if (handles.getHandle(hPos) != null)
+            return (Object[]) handles.getHandle(hPos);
+
         Class compType = doReadClass(in, ctx, ldr, deserialize);
 
         int len = in.readInt();
@@ -2076,6 +2079,9 @@ public class BinaryUtils {
         BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize, BinaryCollectionFactory factory)
         throws BinaryObjectException {
         int hPos = positionForHandle(in);
+
+        if (handles.getHandle(hPos) != null)
+            return (Collection<?>) handles.getHandle(hPos);
 
         int size = in.readInt();
 
@@ -2147,7 +2153,11 @@ public class BinaryUtils {
     public static Map<?, ?> doReadMap(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize, BinaryMapFactory factory)
         throws BinaryObjectException {
+
         int hPos = positionForHandle(in);
+
+        if (handles.getHandle(hPos) != null)
+            return (Map<?, ?>) handles.getHandle(hPos);
 
         int size = in.readInt();
 
