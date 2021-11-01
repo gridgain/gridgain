@@ -235,6 +235,9 @@ public abstract class WALRecord {
         /** Record for renaming the index root pages. */
         INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL),
 
+        /** Partition clearing start. */
+        PARTITION_CLEARING_START_RECORD(73, LOGICAL),
+
         /** Ecnrypted out-of-order update which is used by atomic caches on backup nodes. */
         ENCRYPTED_OUT_OF_ORDER_UPDATE(74, LOGICAL);
 

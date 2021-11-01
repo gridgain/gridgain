@@ -34,6 +34,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MvccDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.OutOfOrderDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SnapshotRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
@@ -595,5 +596,10 @@ public class RecordUtils {
      */
     private static Supplier<WALRecord> buildUpsupportedWalRecord(WALRecord.RecordType type) {
         return () -> new UnsupportedWalRecord(type);
+    }
+
+    /** **/
+    public static PartitionClearingStartRecord buildPartitionClearingStartedRecord() {
+        return new PartitionClearingStartRecord(12, 345, 123456789);
     }
 }

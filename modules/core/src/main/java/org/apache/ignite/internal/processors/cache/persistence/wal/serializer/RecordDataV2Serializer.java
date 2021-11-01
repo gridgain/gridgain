@@ -133,6 +133,9 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
             case OUT_OF_ORDER_UPDATE:
                 return 4/*entry count*/ + 8/*timestamp*/ + dataSize((DataRecord)rec);
 
+            case PARTITION_CLEARING_START_RECORD:
+                return 4 + 4 + 8;
+
             default:
                 return super.plainSize(rec);
         }
