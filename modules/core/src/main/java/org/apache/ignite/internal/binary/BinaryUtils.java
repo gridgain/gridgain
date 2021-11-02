@@ -1891,6 +1891,11 @@ public class BinaryUtils {
             }
 
             case GridBinaryMarshaller.OBJ: {
+                Object obj = handles.getHandle(start);
+
+                if (obj != null)
+                    return obj;
+
                 checkProtocolVersion(in.readByte());
 
                 int len = length(in, start);
