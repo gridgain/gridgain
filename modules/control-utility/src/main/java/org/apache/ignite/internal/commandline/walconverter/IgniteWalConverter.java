@@ -40,7 +40,13 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
- 
+
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.BINARY_METADATA_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.INCLUDE_SENSITIVE;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.MARSHALLER_MAPPING_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.SKIP_CRC;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.WAL_DIR;
+
 /**
  * Print WAL log data in human-readable form.
  */
@@ -49,7 +55,24 @@ public class IgniteWalConverter {
      * @param args Args.
      * @throws Exception If failed.
      */
+    public static void main0(String[] args) {
+        final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
+
+        if (parameters != null)
+            convert(System.out, parameters);
+    }
+
     public static void main(String[] args) {
+        args = new String[] {
+//            WAL_ARCHIVE_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\mts_work\\work20\\work\\db\\wal\\archive\\mdp_node_3",
+            WAL_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\mts_work\\work20\\work\\db\\wal\\mdp_node_3",
+            BINARY_METADATA_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\mts_work\\work20\\work\\db\\binary_meta\\mdp_node_3",
+            BINARY_METADATA_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\mts_work\\work20\\work\\db\\binary_meta\\mdp_node_3",
+            MARSHALLER_MAPPING_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\mts_work\\work20\\work\\db\\marshaller",
+            INCLUDE_SENSITIVE.arg(), ProcessSensitiveData.SHOW.toString(),
+            SKIP_CRC.arg()
+        };
+
         final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
         if (parameters != null)
@@ -68,7 +91,7 @@ public class IgniteWalConverter {
         H2ExtrasLeafIO.register();
 
         System.setProperty(IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE,
-            Boolean.toString(params.includeSensitive() == ProcessSensitiveData.HIDE));
+            Boolean.toString(params.includeSensitive() == ProcessSensitiveData.SHOW));
 
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_SKIP_CRC, Boolean.toString(params.isSkipCrc()));
         RecordV1Serializer.skipCrc = params.isSkipCrc();

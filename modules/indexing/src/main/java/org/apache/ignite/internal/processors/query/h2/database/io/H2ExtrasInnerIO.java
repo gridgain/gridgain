@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.h2.database.io;
 
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.util.GridStringBuilder;
+
 /**
  * Inner page for H2 row references.
  */
@@ -27,6 +30,21 @@ public class H2ExtrasInnerIO extends AbstractH2ExtrasInnerIO implements H2RowLin
      */
     H2ExtrasInnerIO(short type, int ver, int payloadSize) {
         super(type, ver, 8, payloadSize);
+    }
+
+    @Override protected void printPage(long addr, int pageSize, GridStringBuilder sb) throws IgniteCheckedException {
+        super.printPage(addr, pageSize, sb);
+
+        sb.a('[');
+
+        for (int i = 0; i < getCount(addr); i++) {
+            if (i != 0)
+                sb.a(", ");
+
+            sb.appendHex(getLink(addr, i));
+        }
+
+        sb.a(']');
     }
 }
 
