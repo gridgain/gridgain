@@ -17,9 +17,7 @@
 #include <sstream>
 #include <memory>
 
-#include <ignite/common/common.h>
 #include <ignite/common/concurrent.h>
-#include <ignite/jni/exports.h>
 #include <ignite/jni/java.h>
 #include <ignite/jni/utils.h>
 #include <ignite/common/utils.h>
