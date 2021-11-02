@@ -251,13 +251,6 @@ public class GridRestProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Received request from client: " + req);
 
-        if (shouldSkipAuthentication(req)) {
-            if (log.isDebugEnabled())
-                log.debug("Skip authentication and handle the request immediately");
-
-            return handle(req, false);
-        }
-
         boolean authenticationEnabled = ctx.authentication().enabled();
         boolean securityEnabled = ctx.security().enabled();
 
@@ -337,15 +330,6 @@ public class GridRestProcessor extends GridProcessorAdapter {
         }
 
         return handle(req, authenticationEnabled);
-    }
-
-    /**
-     * Checks if authentication should be skipped for a given command.
-     *
-     * @param req REST request.
-     */
-    private boolean shouldSkipAuthentication(GridRestRequest req) {
-        return req.command() == PROBE;
     }
 
     /** Executes particular command from a {@link GridRestRequest} */
@@ -979,6 +963,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case ADD_USER:
             case REMOVE_USER:
             case UPDATE_USER:
+            case PROBE:
                 break;
 
             default:

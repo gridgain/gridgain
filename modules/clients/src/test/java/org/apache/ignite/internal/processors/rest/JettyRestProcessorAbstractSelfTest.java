@@ -224,15 +224,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
      * @return JSON node with actual response.
      */
     protected JsonNode assertResponseSucceeded(String content, boolean bulk) throws IOException {
-        return assertResponseSucceeded(content, bulk, true);
-    }
-
-    /**
-     * @param content Content to check.
-     * @param validateSesTok If true, then a session token from response will be validated.
-     * @return JSON node with actual response.
-     */
-    protected JsonNode assertResponseSucceeded(String content, boolean bulk, boolean validateSesTok) throws IOException {
         assertNotNull(content);
         assertFalse(content.isEmpty());
 
@@ -246,8 +237,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertEquals(STATUS_SUCCESS, node.get("successStatus").asInt());
         assertTrue(node.get("error").isNull());
 
-        if (validateSesTok)
-            assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
+        assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
 
         return node.get("response");
     }
@@ -1411,7 +1401,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     public void testProbeCommand() throws Exception {
         String ret = content(null, GridRestCommand.PROBE);
 
-        assertResponseSucceeded(ret, false, false);
+        assertResponseSucceeded(ret, false);
     }
 
     /**
