@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.GridBoundedLinkedHashMap;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -28,6 +29,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
+
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DISCO_METRICS;
 
 /**
  * Statistics for {@link org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi}.
@@ -71,22 +74,25 @@ public class TcpDiscoveryStatistics {
 
     /** */
     public TcpDiscoveryStatistics() {
-        joinedNodesCnt = new IntMetricImpl("JoinedNodes", "Joined nodes count");
+        joinedNodesCnt = new IntMetricImpl(MetricUtils.metricName(DISCO_METRICS, "JoinedNodes"), "Joined nodes count");
 
-        failedNodesCnt = new IntMetricImpl("FailedNodes", "Failed nodes count");
+        failedNodesCnt = new IntMetricImpl(MetricUtils.metricName(DISCO_METRICS, "FailedNodes"), "Failed nodes count");
 
-        leftNodesCnt = new IntMetricImpl("LeftNodes", "Left nodes count");
+        leftNodesCnt = new IntMetricImpl(MetricUtils.metricName(DISCO_METRICS, "LeftNodes"), "Left nodes count");
 
-        pendingMsgsRegistered = new IntMetricImpl("PendingMessagesRegistered", "Pending messages registered count");
+        pendingMsgsRegistered = new IntMetricImpl(MetricUtils.metricName(DISCO_METRICS,"PendingMessagesRegistered"),
+            "Pending messages registered count");
     }
 
     /**
      * @param discoReg Discovery metric registry.
      */
     public void registerMetrics(MetricRegistry discoReg) {
-        discoReg.register("TotalProcessedMessages", this::totalProcessedMessages, "Total processed messages count");
+        discoReg.register(MetricUtils.metricName(DISCO_METRICS, "TotalProcessedMessages"),
+            this::totalProcessedMessages, "Total processed messages count");
 
-        discoReg.register("TotalReceivedMessages", this::totalReceivedMessages, "Total received messages count");
+        discoReg.register(MetricUtils.metricName(DISCO_METRICS, "TotalReceivedMessages"),
+            this::totalReceivedMessages, "Total received messages count");
 
         discoReg.register(joinedNodesCnt);
         discoReg.register(failedNodesCnt);
