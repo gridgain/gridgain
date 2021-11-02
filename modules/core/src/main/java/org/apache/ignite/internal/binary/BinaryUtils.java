@@ -2082,8 +2082,10 @@ public class BinaryUtils {
         throws BinaryObjectException {
         int hPos = positionForHandle(in);
 
-        if (handles.getHandle(hPos) != null)
-            return (Collection<?>) handles.getHandle(hPos);
+        Object obj = handles.getHandle(hPos);
+
+        if (obj != null)
+            return (Collection<?>) obj;
 
         int size = in.readInt();
 
@@ -2158,8 +2160,10 @@ public class BinaryUtils {
 
         int hPos = positionForHandle(in);
 
-        if (handles.getHandle(hPos) != null)
-            return (Map<?, ?>) handles.getHandle(hPos);
+        Object obj = handles.getHandle(hPos);
+
+        if (obj != null)
+            return (Map<?, ?>) obj;
 
         int size = in.readInt();
 
