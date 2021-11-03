@@ -25,7 +25,7 @@ import org.junit.runners.Suite;
  * Cache query suite with binary marshaller.
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({IgniteBinaryCacheQueryTestSuite.class})
+@Suite.SuiteClasses({IgniteBinaryCacheQueryTestSuite2.class})
 public class IgniteBinarySimpleNameMapperCacheQueryTestSuite {
     /** */
     @BeforeClass
