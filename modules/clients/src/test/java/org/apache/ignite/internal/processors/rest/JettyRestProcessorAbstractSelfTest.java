@@ -1395,6 +1395,16 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     }
 
     /**
+     * Tests that PROBE command is handled successfully.
+     */
+    @Test
+    public void testProbeCommand() throws Exception {
+        String ret = content(null, GridRestCommand.PROBE);
+
+        assertResponseSucceeded(ret, false);
+    }
+
+    /**
      * @param metas Metadata for Ignite caches.
      * @throws Exception If failed.
      */
