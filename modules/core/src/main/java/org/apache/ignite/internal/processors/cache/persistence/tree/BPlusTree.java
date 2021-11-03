@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.tree;
 
+import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
@@ -52,6 +54,9 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.NewRootInitRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.RemoveRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.ReplaceRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
+import org.apache.ignite.internal.processors.cache.persistence.CacheSearchRow;
 import org.apache.ignite.internal.processors.cache.persistence.DataStructure;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
@@ -2061,6 +2066,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         Remove r = new Remove(row, needOld);
 
+        checkEntryLockDbg(row);
+
         try {
             for (;;) {
                 r.init();
@@ -2080,6 +2087,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                             // If not found, then the tree grew beyond our call stack -> retry from the actual root.
                             if (res == RETRY || res == NOT_FOUND) {
+                                checkEntryLockDbg(row);
+
                                 assert r.checkTailLevel(getRootLevel()) : "tail=" + r.tail + ", res=" + res;
 
                                 checkInterrupted();
@@ -2105,6 +2114,33 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         finally {
             r.releaseAll();
             checkDestroyed();
+        }
+    }
+
+    /** */
+    private void checkEntryLockDbg(L row) {
+        if (!getClass().getSimpleName().equals("H2Tree"))
+            return;
+
+        try {
+            Field fldCctx = getClass().getDeclaredField("cctx");
+            fldCctx.setAccessible(true);
+            Field fldLog = getClass().getDeclaredField("log");
+            fldLog.setAccessible(true);
+
+            GridCacheContext cctx = (GridCacheContext)fldCctx.get(this);
+            IgniteLogger log = (IgniteLogger)fldLog.get(this);
+
+            GridCacheEntryEx e = cctx.dht().entryEx(((CacheSearchRow)row).key());
+
+            if (!e.lockedByCurrentThread()) {
+                log.warning("+++ Entry not locked: [row=" + row + ']', new Exception("Diagnostic stacktrace"));
+
+                assert false;
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace(System.err);
         }
     }
 
