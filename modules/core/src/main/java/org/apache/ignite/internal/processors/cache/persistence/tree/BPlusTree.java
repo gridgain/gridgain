@@ -538,7 +538,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 if (needReplaceInner)
                     r.needReplaceInner = TRUE;
 
-                Tail<L> t = r.addTail(leafId, leafPage, leafAddr, io, 0, Tail.EXACT);
+                Tail<L> t = r.addTail("rmvFromLeaf", leafId, leafPage, leafAddr, io, 0, Tail.EXACT);
 
                 t.idx = (short)idx;
 
@@ -572,7 +572,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             // Keep locks on back and leaf pages for subsequent merges.
             if (res == FOUND && r.tail != null)
-                r.addTail(backId, backPage, backAddr, io, lvl, Tail.BACK);
+                r.addTail("lockBackAndRmvFromLeaf", backId, backPage, backAddr, io, lvl, Tail.BACK);
 
             return res;
         }
@@ -596,7 +596,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             Result res = r.doLockTail(lvl);
 
             if (res == FOUND)
-                r.addTail(backId, backPage, backAddr, io, lvl, Tail.BACK);
+                r.addTail("lockBackAndTail", backId, backPage, backAddr, io, lvl, Tail.BACK);
 
             return res;
         }
@@ -612,7 +612,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override protected Result run0(long pageId, long page, long pageAddr, BPlusIO<L> io, Remove r, int lvl)
             throws IgniteCheckedException {
-            r.addTail(pageId, page, pageAddr, io, lvl, Tail.FORWARD);
+            r.addTail("lockTailForward", pageId, page, pageAddr, io, lvl, Tail.FORWARD);
 
             return FOUND;
         }
@@ -642,7 +642,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     return res; // Retry.
             }
 
-            r.addTail(pageId, page, pageAddr, io, lvl, Tail.EXACT);
+            r.addTail("lockTail", pageId, page, pageAddr, io, lvl, Tail.EXACT);
 
             return FOUND;
         }
@@ -2080,7 +2080,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                             // If not found, then the tree grew beyond our call stack -> retry from the actual root.
                             if (res == RETRY || res == NOT_FOUND) {
-                                assert r.checkTailLevel(getRootLevel()) : "tail=" + r.tail + ", res=" + res;
+                                assert r.checkTailLevel(getRootLevel()) : "rootLvl=" + getRootLevel()
+                                    + ", res=" + res
+                                    + ", tail=" + r.tail
+                                    + ", rootPageId=" + r.rootId
+                                    + ", r.rootLvl=" + r.rootLvl
+                                    + ", needReplaceInner=" + r.needReplaceInner
+                                    + ", needMergeEmptyBranch=" + r.needMergeEmptyBranch;
 
                                 checkInterrupted();
 
@@ -4443,6 +4449,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 // At the bottom level we can't have a tail without a sibling, it means we have higher levels.
                 assert tail.sibling != null : tail;
 
+                tail.nfReason = "tail.lvl == 0";
                 return NOT_FOUND; // Lock upper level, we are at the bottom now.
             }
             else {
@@ -4459,8 +4466,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         // Since we setup needReplaceInner in leaf page write lock and do not release it,
                         // we should not be able to miss the inner key. Even if concurrent merge
                         // happened the inner key must still exist.
-                        if (!isInnerKeyInTail())
+                        if (!isInnerKeyInTail()) {
+                            tail.nfReason = "!isInnerKeyInTail()";
+
                             return NOT_FOUND; // Lock the whole branch up to the inner key.
+                        }
 
                         needReplaceInner = READY;
                     }
@@ -4468,8 +4478,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     // Try to merge an empty branch.
                     if (needMergeEmptyBranch == TRUE) {
                         // We can't merge empty branch if tail is a routing page.
-                        if (tail.getCount() == 0)
+                        if (tail.getCount() == 0) {
+                            tail.nfReason = "tail.getCount() == 0";
+
                             return NOT_FOUND; // Lock the whole branch up to the first non-empty.
+                        }
 
                         // Top-down merge for empty branch. The actual row remove will happen here if everything is ok.
                         Tail<L> t = mergeEmptyBranch();
@@ -4509,6 +4522,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         // Release everything lower than tail, we've already merged this path.
                         doReleaseTail(tail.down);
                         tail.down = null;
+
+                        tail.nfReason = "tail.getCount() + tail.sibling.getCount() < tail.io.getMaxCount(tail.buf, pageSize())";
 
                         return NOT_FOUND; // Lock and merge one level more.
                     }
@@ -5053,8 +5068,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @param type Type.
          * @return Added tail.
          */
-        private Tail<L> addTail(long pageId, long page, long pageAddr, BPlusIO<L> io, int lvl, byte type) {
-            final Tail<L> t = new Tail<>(pageId, page, pageAddr, io, type, lvl);
+        private Tail<L> addTail(String src, long pageId, long page, long pageAddr, BPlusIO<L> io, int lvl, byte type) {
+            final Tail<L> t = new Tail<>(src, pageId, page, pageAddr, io, type, lvl);
 
             if (tail == null)
                 tail = t;
@@ -5207,6 +5222,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         static final byte FORWARD = 2;
 
         /** */
+        private final String src;
+
+        /** */
         private final long pageId;
 
         /** */
@@ -5214,6 +5232,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         /** */
         private final long buf;
+
+        /** */
+        private String nfReason;
 
         /** */
         private Boolean walPlc;
@@ -5244,13 +5265,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @param type Type.
          * @param lvl Level.
          */
-        private Tail(long pageId, long page, long buf, BPlusIO<L> io, byte type, int lvl) {
+        private Tail(String src, long pageId, long page, long buf, BPlusIO<L> io, byte type, int lvl) {
             assert type == BACK || type == EXACT || type == FORWARD : type;
             assert lvl >= 0 && lvl <= Byte.MAX_VALUE : lvl;
             assert pageId != 0L;
             assert page != 0L;
             assert buf != 0L;
 
+            this.src = src;
             this.pageId = pageId;
             this.page = page;
             this.buf = buf;
@@ -5269,7 +5291,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override public String toString() {
             return new SB("Tail[").a("pageId=").appendHex(pageId).a(", cnt= ").a(getCount())
-                .a(", lvl=" + lvl).a(", sibling=").a(sibling).a("]").toString();
+                .a(", lvl=").a(lvl)
+                .a(", type=").a(type == BACK ? "BACK" : type == EXACT ? "EXACT" : "FORWARD")
+                .a(", src=").a(src)
+                .a(", nfReason=").a(nfReason)
+                .a(", sibling=").a(sibling)
+                .a(", down=").a(down)
+                .a("]").toString();
         }
 
         /**
