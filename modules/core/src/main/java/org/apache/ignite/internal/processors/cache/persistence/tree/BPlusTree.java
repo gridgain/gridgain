@@ -2128,7 +2128,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             GridCacheContext cctx = (GridCacheContext)fldCctx.get(this);
             IgniteLogger log = (IgniteLogger)fldLog.get(this);
 
-            GridCacheEntryEx e = cctx.dht().entryEx(((CacheSearchRow)row).key());
+            GridCacheEntryEx e = cctx.dht().map().getEntry(cctx.dht().context(), ((CacheSearchRow)row).key());
+
+            if (e == null) {
+                log.warning("+++ Entry is not found [row=" + row + ']', new Exception("Diagnostic stacktrace"));
+
+                assert false;
+            }
 
             if (!e.lockedByCurrentThread()) {
                 log.warning("+++ Entry not locked: [row=" + row + ']', new Exception("Diagnostic stacktrace"));
