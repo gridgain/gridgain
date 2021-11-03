@@ -2063,10 +2063,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      */
     private T doRemove(L row, boolean needOld) throws IgniteCheckedException {
         checkDestroyed();
+        checkEntryLockDbg(row);
 
         Remove r = new Remove(row, needOld);
-
-        checkEntryLockDbg(row);
 
         try {
             for (;;) {
