@@ -62,7 +62,7 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testSplitCastFunctionInSortExpression() {
-        sql("CREATE TABLE Person (ID INTEGER PRIMARY KEY, NAME VARCHAR(100))");
+        sql("CREATE TABLE Person (ID INTEGER PRIMARY KEY, NAME VARCHAR(100)) WITH\"CACHE_NAME=person\"");
         sql("INSERT INTO Person (ID, NAME) VALUES (3, 'Emma'), (2, 'Ann'), (1, 'Ed')");
 
         List<List<?>> res = sql("SELECT NAME, ID FROM Person ORDER BY CAST(ID AS LONG)").getAll();
@@ -71,6 +71,29 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
         assertEquals("Ed", res.get(0).get(0));
         assertEquals("Ann", res.get(1).get(0));
         assertEquals("Emma", res.get(2).get(0));
+
+        grid(0).cache("person").clear();
+
+//        sql("DELETE FROM Person WHERE ID = 1").getAll();
+    }
+
+    @Test
+    public void dbg() {
+        sql("CREATE TABLE Person (ID INTEGER PRIMARY KEY, NAME VARCHAR(100)) WITH\"CACHE_NAME=person\"");
+        sql("INSERT INTO Person (ID, NAME) VALUES (3, 'Emma'), (2, 'Ann'), (1, 'Ed')");
+
+        List<List<?>> res = sql("SELECT NAME, ID FROM Person ORDER BY CAST(ID AS LONG)").getAll();
+
+        assertEquals(3, res.size());
+        assertEquals("Ed", res.get(0).get(0));
+        assertEquals("Ann", res.get(1).get(0));
+        assertEquals("Emma", res.get(2).get(0));
+
+        // Check fail on clear
+        grid(0).cache("person").clear();
+
+        // OK on remove
+        // sql("DELETE FROM Person WHERE ID = 1").getAll();
     }
 
     /**
