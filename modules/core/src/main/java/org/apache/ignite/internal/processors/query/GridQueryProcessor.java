@@ -61,6 +61,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -2389,6 +2390,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);
 
+            if (val instanceof BinaryObjectImpl) {
+                BinaryType metadata = ctx.cacheObjects().metadata(typeId);
+    
+                if (metadata != null)
+                    typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
+            }
+            
             id = new QueryTypeIdKey(cacheName, typeId);
         }
         else {
@@ -3686,7 +3694,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * If the cache is persistent, then we mark that the rebuilding of the
      * indexes is completed and the entry will be deleted from the MetaStorage
      * at the end of the checkpoint. Otherwise, delete the index rebuild entry.
-     *
      *
      * @param cacheName Cache name.
      */

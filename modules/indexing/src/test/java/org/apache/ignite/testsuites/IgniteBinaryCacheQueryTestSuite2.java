@@ -61,6 +61,7 @@ import org.apache.ignite.internal.processors.query.CreateIndexOnInvalidDataTypeT
 import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
 import org.apache.ignite.internal.processors.query.IgniteInsertNullableDuplicatesSqlTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryThrottlingTest;
+import org.apache.ignite.internal.processors.query.WrongQueryEntityFieldTypeTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryTrackerOnReducerTest;
 import org.apache.ignite.internal.processors.query.timeout.DefaultQueryTimeoutTestSuite;
 import org.apache.ignite.internal.processors.query.DmlBatchSizeDeadlockTest;
@@ -125,6 +126,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     CreateIndexOnInvalidDataTypeTest.class,
+    WrongQueryEntityFieldTypeTest.class,
 
     BasicSqlTest.class,
 
