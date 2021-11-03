@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.internal.pagemem.store.PageStore;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -36,13 +37,13 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
     /** */
     private CompressionProcessor compressProc;
 
-    private boolean extendedDataPages;
+//    private boolean extendedDataPages;
 
     /** {@inheritDoc} */
     @Override protected void start0() throws IgniteCheckedException {
         diskPageCompression = DiskPageCompression.DISABLED;
 
-        extendedDataPages = cctx.dataRegion().pageMemory().bigPages();
+//        extendedDataPages = cctx.dataRegion().pageMemory().bigPages();
     }
 
     /**
@@ -60,9 +61,13 @@ public class CacheCompressionManager extends GridCacheManagerAdapter {
         if (blockSize <= 0)
             throw new IgniteCheckedException("Failed to detect storage block size on " + U.osString());
 
+        int pageSize = store.getPageSize();
+
+        boolean extendedDataPages = DataPageLayout.shouldBeExtended(pageSize);
+
         return compressProc.compressPage(
             page,
-            store.getPageSize(),
+            pageSize,
             extendedDataPages,
             blockSize,
             diskPageCompression,

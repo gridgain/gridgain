@@ -62,7 +62,17 @@ public class BigPageTest extends GridCommonAbstractTest {
     public void test() throws Exception {
         IgniteEx node = startGrid("node");
 
+        IgniteConfiguration clientCfg = getConfiguration("test-client");
+        clientCfg.setClientMode(true);
+        clientCfg.setCacheConfiguration(new CacheConfiguration().setName("test"));
+
+        IgniteEx ex = startClientGrid(clientCfg);
+
         node.cluster().state(ClusterState.ACTIVE);
+
+        node.cache("test").put(1, 1);
+
+        assertEquals(1, ex.cache("test").get(1));
 
         CacheConfiguration<Integer, String> cacheCfg = new CacheConfiguration<Integer, String>("some-cache")
             .setAffinity(new RendezvousAffinityFunction(false, 32));
