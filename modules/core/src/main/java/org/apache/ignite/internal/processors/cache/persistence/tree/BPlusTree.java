@@ -2087,8 +2087,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                             // If not found, then the tree grew beyond our call stack -> retry from the actual root.
                             if (res == RETRY || res == NOT_FOUND) {
-                                checkEntryLockDbg(row);
-
                                 assert r.checkTailLevel(getRootLevel()) : "tail=" + r.tail + ", res=" + res;
 
                                 checkInterrupted();
