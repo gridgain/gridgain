@@ -50,13 +50,16 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.ObjectHashInlineIndexColumn;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.gridgain.internal.h2.message.DbException;
@@ -799,16 +802,20 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         int newSize = 0;
 
-        InlineIndexColumn idx;
+        // Tuples of (columnName, type, inlineSize).
+        List<T3<String, Integer, Integer>> columns = new ArrayList<>();
 
-        List<String> colNames = new ArrayList<>();
+        boolean idxIncludesInlinedHash = false;
 
         for (InlineIndexColumn index : inlineIdxs) {
-            idx = index;
+            int inlineSize = index.inlineSizeOf(row.getValue(index.columnIndex()));
 
-            newSize += idx.inlineSizeOf(row.getValue(idx.columnIndex()));
+            newSize += inlineSize;
 
-            colNames.add(index.columnName());
+            columns.add(new T3<>(index.columnName(), index.type(), inlineSize));
+
+            if (index instanceof ObjectHashInlineIndexColumn)
+                idxIncludesInlinedHash = true;
         }
 
         if (newSize > inlineSize()) {
@@ -824,7 +831,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                     break;
             }
 
-            String cols = colNames.stream().collect(Collectors.joining(", ", "(", ")"));
+            String cols = columns.stream()
+                .map(c -> new SB("[column=").a(c.get1()).a(", type=").a(c.get2()).a(", inlineSize=").a(c.get3()).a("]").toString())
+                .collect(Collectors.joining(", ", "[", "]"));
 
             String idxType = pk ? "PRIMARY KEY" : affinityKey ? "AFFINITY KEY (implicit)" : "SECONDARY";
 
@@ -850,7 +859,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 ", idxCols=" + cols +
                 ", idxType=" + idxType +
                 ", curSize=" + inlineSize() +
-                ", recommendedInlineSize=" + newSize + "]";
+                ", recommendedInlineSize=" + newSize +
+                ", idxIncludesInlinedHash=" + idxIncludesInlinedHash +
+                "]";
 
             U.warn(log, warn);
         }

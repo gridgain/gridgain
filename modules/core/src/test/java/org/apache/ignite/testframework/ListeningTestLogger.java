@@ -99,24 +99,30 @@ public class ListeningTestLogger implements IgniteLogger {
      * Registers message listener.
      *
      * @param lsnr Message listener.
+     * @return {@code this} for chaining.
      */
-    public void registerListener(@NotNull LogListener lsnr) {
+    public ListeningTestLogger registerListener(@NotNull LogListener lsnr) {
         lsnr.reset();
 
         lsnrs.add(lsnr);
+
+        return this;
     }
 
     /**
      * Resets and registers all message listeners.
      *
      * @param lsnrs Message listeners.
+     * @return {@code this} for chaining.
      */
-    public void registerAllListeners(@NotNull LogListener... lsnrs) {
+    public ListeningTestLogger registerAllListeners(@NotNull LogListener... lsnrs) {
         for (LogListener lsnr : lsnrs) {
             lsnr.reset();
 
             this.lsnrs.add(lsnr);
         }
+
+        return this;
     }
 
     /**
@@ -126,19 +132,25 @@ public class ListeningTestLogger implements IgniteLogger {
      * from it. Use {@link LogListener} to create message predicates with assertions.
      *
      * @param lsnr Message listener.
+     * @return {@code this} for chaining.
      * @see LogListener
      */
-    public void registerListener(@NotNull Consumer<String> lsnr) {
+    public ListeningTestLogger registerListener(@NotNull Consumer<String> lsnr) {
         lsnrs.add(lsnr);
+
+        return this;
     }
 
     /**
      * Unregisters message listener.
      *
      * @param lsnr Message listener.
+     * @return {@code this} for chaining.
      */
-    public void unregisterListener(@NotNull Consumer<String> lsnr) {
+    public ListeningTestLogger unregisterListener(@NotNull Consumer<String> lsnr) {
         lsnrs.remove(lsnr);
+
+        return this;
     }
 
     /**
