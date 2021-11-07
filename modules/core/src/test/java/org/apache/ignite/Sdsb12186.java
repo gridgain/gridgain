@@ -9,6 +9,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -23,7 +24,7 @@ public class Sdsb12186 extends GridCommonAbstractTest {
         return super.getConfiguration(instanceName)
             .setCacheConfiguration(
                 new CacheConfiguration(DEFAULT_CACHE_NAME)
-                    .setBackups(2)
+                    .setBackups(1)
                     .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
                     .setCacheMode(CacheMode.PARTITIONED)
             ).setCommunicationSpi(
@@ -32,9 +33,9 @@ public class Sdsb12186 extends GridCommonAbstractTest {
                         IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
                         final Message message = ((GridIoMessage)msg).message();
                         System.out.println(String.format("====================== %s", message.getClass().getName()));
-                        if (message != null && GridNearTxPrepareRequest.class.isAssignableFrom(message.getClass())) {
+                        if (message != null && /*GridNearTxPrepareRequest*/GridDhtTxPrepareRequest.class.isAssignableFrom(message.getClass())) {
                             try {
-                                Thread.sleep(10_000);
+                                Thread.sleep(30_000);
                             } catch (InterruptedException ex) {
 
                             }
@@ -60,10 +61,9 @@ public class Sdsb12186 extends GridCommonAbstractTest {
 
         for (Integer pkey : pkeys)
             grid(1).cache(DEFAULT_CACHE_NAME).removeAsync(pkey);
+//        grid(1).cache(DEFAULT_CACHE_NAME).removeAllAsync(pkeys);
 
-        Thread.sleep(300);
-
-        ign.destroyCache(DEFAULT_CACHE_NAME);
+        grid(1).destroyCache(DEFAULT_CACHE_NAME);
 
         awaitPartitionMapExchange();
     }
