@@ -2613,8 +2613,12 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);
 
-            BinaryType metadata = ctx.cacheObjects().metadata(typeId);
-            typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
+            if (val instanceof BinaryObjectImpl) {
+                BinaryType metadata = ctx.cacheObjects().metadata(typeId);
+    
+                if (metadata != null)
+                    typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
+            }
             
             id = new QueryTypeIdKey(cacheName, typeId);
         }
