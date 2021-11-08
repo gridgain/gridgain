@@ -17,12 +17,25 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
@@ -94,6 +107,42 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         // OK on remove
         // sql("DELETE FROM Person WHERE ID = 1").getAll();
+    }
+
+    @Test
+    public void dbg2() throws Exception {
+//        long lock = BPlusTree.lock.writeLock();
+//        long lockObsolete = IgniteCacheOffheapManagerImpl.lock.writeLock();
+
+        IgniteCache cache = grid(0).getOrCreateCache(
+            new CacheConfiguration<>()
+                .setName("test")
+                .setQueryEntities(Collections.singleton(
+                    new QueryEntity(Integer.class, Integer.class))
+                )
+                .setExpiryPolicyFactory(CreatedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, 1000)))
+        );
+
+        awaitPartitionMapExchange();
+
+        cache.put(1, 1);
+
+//        U.sleep(2000);
+//        GridTestUtils.runAsync(() -> {
+//            try {
+//                U.sleep(1000);
+//                IgniteCacheOffheapManagerImpl.lock.unlock(lockObsolete);
+//            }
+//            catch (IgniteInterruptedCheckedException e) {
+//                e.printStackTrace();
+//            }
+//        });
+//
+//        cache.remove(1);
+//
+//
+//        U.sleep(20000);
+
     }
 
     /**
