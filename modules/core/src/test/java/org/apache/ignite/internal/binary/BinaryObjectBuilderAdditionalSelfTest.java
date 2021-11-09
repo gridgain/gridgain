@@ -1967,7 +1967,7 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
         BinaryObjectBuilder bob = anotherObject.toBuilder().build().toBuilder().build().toBuilder();
     
         assertSame(bob.getField("firstMap"), bob.getField("firstMap"));
-        assertSame(bob.getField("firstMap"), bob.getField("firstMap"));
+        assertSame(bob.getField("firstMap"), bob.getField("secondMap"));
     }
 
     /**
