@@ -245,6 +245,14 @@ public class GridDhtPartitionSupplier {
 
         Map<Integer, Long> initUpdateCntrs;
 
+        int sentPartNum = 0;
+
+        int missingPartNum = 0;
+
+        long sentEntriesNum = 0;
+
+        long rejectedByPredNum = 0;
+
         GridDhtPartitionSupplyMessage supplyMsg = new GridDhtPartitionSupplyMessage(
                 demandMsg.rebalanceId(),
                 grp.groupId(),
@@ -355,6 +363,14 @@ public class GridDhtPartitionSupplier {
                 remainingParts = sctx.remainingParts;
 
                 initUpdateCntrs = sctx.initUpdateCntrs;
+
+                sentEntriesNum = sctx.sentEntriesNum;
+
+                rejectedByPredNum = sctx.rejectedEntriesNum;
+
+                sentPartNum = sctx.sentPartitionsNum;
+
+                missingPartNum = sctx.missingPartitionsNum;
             }
 
             final int msgMaxSize = grp.preloader().batchSize();
@@ -377,8 +393,11 @@ public class GridDhtPartitionSupplier {
                             iter,
                             remainingParts,
                             demandMsg.rebalanceId(),
-                            initUpdateCntrs
-                        );
+                            initUpdateCntrs,
+                            sentEntriesNum,
+                            rejectedByPredNum,
+                            sentPartNum,
+                            missingPartNum);
 
                         reply(topicId, demanderNode, demandMsg, supplyMsg, ctxId);
 
@@ -411,6 +430,8 @@ public class GridDhtPartitionSupplier {
 
                     remainingParts.remove(part);
 
+                    missingPartNum++;
+
                     if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_MISSED))
                         grp.addRebalanceMissEvent(part);
 
@@ -429,18 +450,25 @@ public class GridDhtPartitionSupplier {
                 if (info == null)
                     continue;
 
-                if (preloadPred == null || preloadPred.apply(info))
+                if (preloadPred == null || preloadPred.apply(info)) {
                     supplyMsg.addEntry0(part, iter.historical(part), info, grp.shared(), grp.cacheObjectContext());
+
+                    sentEntriesNum++;
+                }
                 else {
                     if (log.isTraceEnabled())
                         log.trace("Rebalance predicate evaluated to false (will not send " +
                             "cache entry): " + info);
+
+                    rejectedByPredNum++;
                 }
 
                 if (iter.isPartitionDone(part)) {
                     supplyMsg.last(part, initUpdateCntrs.get(part));
 
                     remainingParts.remove(part);
+
+                    sentPartNum++;
 
                     if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_SUPPLIED))
                         grp.addRebalanceSupplyEvent(part);
@@ -462,6 +490,8 @@ public class GridDhtPartitionSupplier {
 
                     remainingIter.remove();
 
+                    sentPartNum++;
+
                     if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_SUPPLIED))
                         grp.addRebalanceSupplyEvent(p);
                 }
@@ -469,6 +499,8 @@ public class GridDhtPartitionSupplier {
                     supplyMsg.missed(p);
 
                     remainingIter.remove();
+
+                    missingPartNum++;
 
                     if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_MISSED))
                         grp.addRebalanceMissEvent(p);
@@ -487,11 +519,10 @@ public class GridDhtPartitionSupplier {
 
             if (log.isInfoEnabled())
                 log.info("Finished supplying rebalancing [" +
-                    "partitions=" + supplyMsg.infos().size() +
-                    ", entries=" + supplyMsg.infos().values().stream()
-                        .flatMap(entryCollection -> entryCollection.infos().stream())
-                        .filter(entryInfo -> entryInfo.value() != null)
-                        .count() +
+                    "partitions=" +  sentPartNum +
+                    ", entries=" + sentEntriesNum +
+                    ", missing partitions=" + missingPartNum +
+                    ", entries rejected by preload predicate=" + rejectedByPredNum +
                     ", " + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
         }
         catch (Throwable t) {
@@ -683,18 +714,27 @@ public class GridDhtPartitionSupplier {
      * @param remainingParts Set of partitions that weren't sent yet.
      * @param rebalanceId Rebalance id.
      * @param initUpdateCntrs Collection of update counters that corresponds to the beginning of rebalance.
+     * @param sentEntriesNum Number of entried already sent to the demander.
+     * @param rejectedEntrieNum Number of entries rejected by the {@code preloadPred}.
+     * @param sentPartitionsNum Number of partitions sent to the demander.
+     * @param missingPartitionsNum Number of partitions markes as missed.
      */
     private void saveSupplyContext(
         T3<UUID, Integer, AffinityTopologyVersion> ctxId,
         IgniteRebalanceIterator entryIt,
         Set<Integer> remainingParts,
         long rebalanceId,
-        Map<Integer, Long> initUpdateCntrs
-    ) {
+        Map<Integer, Long> initUpdateCntrs,
+        long sentEntriesNum,
+        long rejectedEntrieNum,
+        int sentPartitionsNum,
+        int missingPartitionsNum)
+    {
         synchronized (scMap) {
             assert scMap.get(ctxId) == null;
 
-            scMap.put(ctxId, new SupplyContext(entryIt, remainingParts, rebalanceId, initUpdateCntrs));
+            scMap.put(ctxId, new SupplyContext(entryIt, remainingParts, rebalanceId, initUpdateCntrs, sentEntriesNum,
+                rejectedEntrieNum, sentPartitionsNum, missingPartitionsNum));
         }
     }
 
@@ -715,24 +755,47 @@ public class GridDhtPartitionSupplier {
         /** Update counters for rebalanced partitions. */
         private final Map<Integer, Long> initUpdateCntrs;
 
+        /** Number of entries that have already been sent. */
+        private final long sentEntriesNum;
+
+        /** Number of entries rejected by the {@code preloadPred}. */
+        private final long rejectedEntriesNum;
+
+        /** Number of partitions thst were sent to demaner. */
+        private final int sentPartitionsNum;
+
+        /** Number of partitions marked missed and so weren' send to demander. */
+        private final int missingPartitionsNum;
+
         /**
          * Constructor.
-         *
          * @param iterator Entries rebalance iterator.
          * @param remainingParts Set of partitions which weren't sent yet.
          * @param rebalanceId Rebalance id.
          * @param initUpdateCntrs Collection of update counters that corresponds to the beginning of rebalance.
+         * @param sentEntriesNum Number of entries sent to the demander.
+         * @param rejectedEntriesNum Number of entries rejected by {@code preloadPred}.
+         * @param sentPartitionsNum Number of partitions sent to the demander.
+         * @param missingPartitionsNum Number of partitions marked as minssed.
          */
         SupplyContext(
             IgniteRebalanceIterator iterator,
             Set<Integer> remainingParts,
             long rebalanceId,
-            Map<Integer, Long> initUpdateCntrs
-        ) {
+            Map<Integer, Long> initUpdateCntrs,
+            long sentEntriesNum,
+            long rejectedEntriesNum,
+            int sentPartitionsNum,
+            int missingPartitionsNum)
+        {
             this.iterator = iterator;
             this.remainingParts = remainingParts;
             this.rebalanceId = rebalanceId;
             this.initUpdateCntrs = initUpdateCntrs;
+            this.sentEntriesNum = sentEntriesNum;
+            this.rejectedEntriesNum = rejectedEntriesNum;
+            this.sentPartitionsNum = sentPartitionsNum;
+            this.missingPartitionsNum = missingPartitionsNum;
         }
 
         /** {@inheritDoc} */

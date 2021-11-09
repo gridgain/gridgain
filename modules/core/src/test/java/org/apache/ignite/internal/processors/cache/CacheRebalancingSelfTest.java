@@ -52,6 +52,9 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
     /** Test logger. */
     ListeningTestLogger logger = null;
 
+    /** Flag showing wheather to use small rebalance batch size. */
+    boolean useSmallRebalanceBatchSize;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -66,12 +69,17 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         if (logger != null)
             cfg.setGridLogger(logger);
 
+        if (useSmallRebalanceBatchSize)
+            cfg.setRebalanceBatchSize(512);
+
         return cfg;
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        useSmallRebalanceBatchSize = false;
 
         super.afterTest();
     }
@@ -126,7 +134,10 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceLog() throws Exception {
-        int entriesNum = 100;
+        // This ensures that rebalace will contain several supply messages.
+        useSmallRebalanceBatchSize = true;
+
+        int entriesNum = 1000;
 
         LogListener finishRebalanceSupplyLogLsnr = LogListener.matches(logStr ->
             logStr.contains("Finished supplying rebalancing [partitions=" + DFLT_PARTITION_COUNT + ", entries=" + entriesNum + ",")
