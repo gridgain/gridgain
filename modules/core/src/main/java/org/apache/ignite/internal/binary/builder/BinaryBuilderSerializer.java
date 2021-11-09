@@ -69,6 +69,9 @@ class BinaryBuilderSerializer {
         }
 
         if (val instanceof BinaryBuilderSerializationAware) {
+            if (writer.tryWriteAsHandle(val))
+                return;
+            
             ((BinaryBuilderSerializationAware)val).writeTo(writer, this);
 
             return;
