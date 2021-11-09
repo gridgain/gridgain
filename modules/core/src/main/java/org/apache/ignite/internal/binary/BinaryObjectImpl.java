@@ -95,6 +95,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     private int part = -1;
 
     /** */
+    @GridDirectTransient
     private BinaryReaderHandles handles;
 
     /**
