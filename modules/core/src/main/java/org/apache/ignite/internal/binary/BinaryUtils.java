@@ -2157,7 +2157,6 @@ public class BinaryUtils {
     public static Map<?, ?> doReadMap(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles, boolean detach, boolean deserialize, BinaryMapFactory factory)
         throws BinaryObjectException {
-
         int hPos = positionForHandle(in);
 
         Object obj = handles.getHandle(hPos);

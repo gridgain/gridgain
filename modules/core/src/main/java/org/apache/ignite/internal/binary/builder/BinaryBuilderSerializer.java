@@ -143,9 +143,7 @@ class BinaryBuilderSerializer {
 
             if (writer.tryWriteAsHandle(c))
                 return;
-
-            writer.out().unsafeEnsure(1 + 4 + 1);
-
+            
             writer.writeByte(GridBinaryMarshaller.COL);
             writer.writeInt(c.size());
 
