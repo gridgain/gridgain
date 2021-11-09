@@ -39,12 +39,10 @@ import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -80,12 +78,6 @@ public class WrongQueryEntityFieldTypeTest extends GridCommonAbstractTest {
     /** */
     @Parameterized.Parameter(5)
     public int gridCnt;
-
-    /** */
-    @BeforeClass
-    public static void init() {
-        GridTestProperties.setProperty(GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER, "false");
-    }
 
     /** */
     @Parameterized.Parameters(name = "cacheMode={0},backups={1},idxFld={3},idxFldType={4},gridCnt={5}")

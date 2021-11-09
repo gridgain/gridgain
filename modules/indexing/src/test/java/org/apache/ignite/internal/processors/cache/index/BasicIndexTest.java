@@ -62,13 +62,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.table.Column;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -116,12 +114,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** Client listening logger. */
     private ListeningTestLogger clientLog;
-
-    /** */
-    @BeforeClass
-    public static void init() {
-        GridTestProperties.setProperty(GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER, "true");
-    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
