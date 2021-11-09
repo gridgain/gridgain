@@ -1892,7 +1892,7 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
 
         BinaryObjectBuilderImpl mutObj = wrap(listHolder);
 
-        assertSame(mutObj.getField("firstCol"), mutObj.getField("secondCol"));
+        assertSame(mutObj.getField("firstCol"), mutObj.getField("firstCol"));
         assertSame(mutObj.getField("firstCol"), mutObj.getField("secondCol"));
 
         GridBinaryTestClasses.CollectionsHolder deserialized = mutObj.build().deserialize();
@@ -1920,6 +1920,13 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
 
         assertEquals(firstObj.get(), deserialized.obj);
         assertSame(secondObj.get(), deserialized.obj);
+    
+        BinaryObject anotherObject = wrap(listHolder).build();
+    
+        BinaryObjectBuilder bob = anotherObject.toBuilder().build().toBuilder().build().toBuilder();
+    
+        assertSame(bob.getField("firstCol"), bob.getField("firstCol"));
+        assertSame(bob.getField("firstCol"), bob.getField("secondCol"));
     }
 
     /**
@@ -1954,6 +1961,13 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
 
         assertEquals(deserialized.firstMap.get(key), deserialized.valObj);
         assertSame(deserialized.secondMap.get(key), deserialized.valObj);
+        
+        BinaryObject anotherObject = wrap(mapsHolder).build();
+    
+        BinaryObjectBuilder bob = anotherObject.toBuilder().build().toBuilder().build().toBuilder();
+    
+        assertSame(bob.getField("firstMap"), bob.getField("firstMap"));
+        assertSame(bob.getField("firstMap"), bob.getField("firstMap"));
     }
 
     /**
