@@ -2389,7 +2389,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);
-
+            //In the case of using a simple name mapper, the typeId may be different, and we
+            // won't be able to find it in the types map.
+            // Therefore, we additionally calculate typeId based on typeName from metadata.
             if (val instanceof BinaryObjectImpl) {
                 BinaryType metadata = ctx.cacheObjects().metadata(typeId);
     
