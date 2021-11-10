@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheClientNodeConcurrentStart;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheClientReconnectTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheManyClientsTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsOnClientTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -27,7 +28,8 @@ import org.junit.runners.Suite;
 @Suite.SuiteClasses({
     IgniteCacheManyClientsTest.class,
     IgniteCacheClientNodeConcurrentStart.class,
-    IgniteCacheClientReconnectTest.class
+    IgniteCacheClientReconnectTest.class,
+    IgnitePdsOnClientTest.class
 })
 public class IgniteClientNodesTestSuite {
 }

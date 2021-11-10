@@ -1302,6 +1302,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             registerMetrics();
 
+            ctx.cluster().registerMetrics();
+
             // Register MBeans.
             mBeansMgr.registerMBeansAfterNodeStarted(
                 pools.utilityCachePool(),

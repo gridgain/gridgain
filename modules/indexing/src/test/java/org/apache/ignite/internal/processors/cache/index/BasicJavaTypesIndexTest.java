@@ -33,13 +33,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.gridgain.internal.h2.engine.Mode;
+import org.gridgain.internal.h2.value.CompareMode;
+import org.gridgain.internal.h2.value.ValueJavaObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
@@ -165,6 +172,101 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
         createPopulateAndVerify(TestPojo.class, null, null);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithAff.class);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithIdx.class);
+    }
+
+    /** */
+    @Test
+    public void testJavaPojoBinaryDbg() throws IgniteCheckedException {
+        TestPojo pojo1 = new TestPojo(-876295916);
+        TestPojo pojo2 = new TestPojo(765062782);
+        TestPojo pojo3 = new TestPojo(-1925029873);
+
+        IgniteH2Indexing idx = (IgniteH2Indexing)grid(0).context().query().getIndexing();
+
+        // Original binary obj (like on pages)
+        GridH2ValueCacheObject v1 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo1), idx.objectContext());
+        GridH2ValueCacheObject v2 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo2), idx.objectContext());
+        GridH2ValueCacheObject v3 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo3), idx.objectContext());
+
+        // Begin: emulate pass POJO as SQL parameter through network.
+        Object[] param = {pojo3};
+
+        byte buf[] = grid(0).context().config().getMarshaller().marshal(param);
+
+        Object param2[] = ((BinaryMarshaller)grid(0).context().config().getMarshaller()).binaryMarshaller()
+            .unmarshal(buf, this.getClass().getClassLoader());
+
+        ValueJavaObject v3bin = ValueJavaObject.getNoCopy(param2[0], null, null);
+        // end: emulate
+
+        assertEquals(
+            v1.compareTo(v3, Mode.getRegular(), CompareMode.getInstance(null, 0)),
+            v1.compareTo(v3bin, Mode.getRegular(), CompareMode.getInstance(null, 0))
+        );
+
+        assertEquals(
+            v2.compareTo(v3, Mode.getRegular(), CompareMode.getInstance(null, 0)),
+            v2.compareTo(v3bin, Mode.getRegular(), CompareMode.getInstance(null, 0))
+        );
+    }
+
+    /** This case was breaking the tree and not allowing you to find the last item. */
+    @Test
+    public void testJavaPojoIndex2() {
+        String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
+
+        Class<?> keyCls = TestKeyWithIdx.class;
+        Class<?> idxCls = TestPojo.class;
+
+        // Create cache
+        LinkedHashMap<String, String> fields = new LinkedHashMap<>(2);
+
+        fields.put("idxVal", idxCls.getName());
+        fields.put("val", Integer.class.getName());
+
+        QueryEntity qe = new QueryEntity(keyCls == null ? idxCls.getName() : keyCls.getName(), Integer.class.getName())
+            .setTableName(tblName)
+            .setValueFieldName("val")
+            .setFields(fields);
+
+        String idxName = "IDXVAL_IDX";
+        String idxFieldName = "idxVal";
+
+        qe.setKeyFields(Collections.singleton(idxFieldName));
+        qe.setIndexes(Collections.singleton(new QueryIndex(idxFieldName, true, idxName)));
+
+        IgniteCache<Object, Integer> cache = grid(0).createCache(
+            new CacheConfiguration<Object, Integer>(tblName + "_CACHE")
+                .setKeyConfiguration(new CacheKeyConfiguration((TestKeyWithIdx.class).getName(), "idxVal"))
+                .setQueryEntities(Collections.singletonList(qe)).setSqlSchema("PUBLIC"));
+
+        int[] a1 = {-903276852, 1418672434, 2025232370, };
+        int[] b1 = {-876295916, 765062782, -1925029873, };
+        int[] c1 = {-726212217, 1099431688, -1820831091, };
+
+        TestPojo pojo1 = new TestPojo(b1[0]);
+        TestPojo pojo2 = new TestPojo(b1[1]);
+        TestPojo pojo3 = new TestPojo(b1[2]);
+
+        TestKeyWithIdx<TestPojo> idx1 = new TestKeyWithIdx<>(a1[0], pojo1);
+        TestKeyWithIdx<TestPojo> idx2 = new TestKeyWithIdx<>(a1[1], pojo2);
+        TestKeyWithIdx<TestPojo> idx3 = new TestKeyWithIdx<>(a1[2], pojo3);
+
+        cache.put(idx3, c1[2]);
+        cache.put(idx1, c1[0]);
+        cache.put(idx2, c1[1]);
+
+        String format = String.format(SELECT_VALUE_TEMPLATE, tblName, idxName, idxFieldName);
+
+        Integer val = cache.get(idx3);
+        List<List<?>> sqlRes = grid(0).context().query().querySqlFields(
+            new SqlFieldsQuery(format).setArgs(pojo3), false
+        ).getAll();
+
+        assertEquals(sqlRes.size(), 1);
+        assertEquals(val, sqlRes.get(0).get(0));
+
+        grid(0).destroyCache(tblName + "_CACHE");
     }
 
     /**

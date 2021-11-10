@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CachePeekMode;
@@ -31,6 +34,7 @@ import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -40,10 +44,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-import java.util.Map;
-import java.util.function.Supplier;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -219,6 +219,21 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Number of keys processed during index rebuilding. */
     private final LongAdderMetric idxRebuildKeyProcessed;
 
+    /** Offheap entries count. */
+    private final LongGauge offHeapEntriesCnt;
+
+    /** Offheap primary entries count. */
+    private final LongGauge offHeapPrimaryEntriesCnt;
+
+    /** Offheap backup entries count. */
+    private final LongGauge offHeapBackupEntriesCnt;
+
+    /** Onheap entries count. */
+    private final LongGauge heapEntriesCnt;
+
+    /** Cache size. */
+    private final LongGauge cacheSize;
+
     /**
      * Creates cache metrics.
      *
@@ -384,6 +399,21 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         idxRebuildKeyProcessed = mreg.longAdderMetric("IndexRebuildKeyProcessed",
             "Number of keys processed during index rebuilding.");
+
+        offHeapEntriesCnt = mreg.register("OffHeapEntriesCount",
+            () -> getEntriesStat().offHeapEntriesCount(), "Offheap entries count.");
+
+        offHeapPrimaryEntriesCnt = mreg.register("OffHeapPrimaryEntriesCount",
+            () -> getEntriesStat().offHeapPrimaryEntriesCount(), "Offheap primary entries count.");
+
+        offHeapBackupEntriesCnt = mreg.register("OffHeapBackupEntriesCount",
+            () -> getEntriesStat().offHeapBackupEntriesCount(), "Offheap backup entries count.");
+
+        heapEntriesCnt = mreg.register("HeapEntriesCount",
+            () -> getEntriesStat().heapEntriesCount(), "Onheap entries count.");
+
+        cacheSize = mreg.register("CacheSize",
+            () -> getEntriesStat().cacheSize(), "Local cache size.");
     }
 
     /**
@@ -454,22 +484,22 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public long getOffHeapEntriesCount() {
-        return getEntriesStat().offHeapEntriesCount();
+        return offHeapEntriesCnt.value();
     }
 
     /** {@inheritDoc} */
     @Override public long getHeapEntriesCount() {
-        return getEntriesStat().heapEntriesCount();
+        return heapEntriesCnt.value();
     }
 
     /** {@inheritDoc} */
     @Override public long getOffHeapPrimaryEntriesCount() {
-        return getEntriesStat().offHeapPrimaryEntriesCount();
+        return offHeapPrimaryEntriesCnt.value();
     }
 
     /** {@inheritDoc} */
     @Override public long getOffHeapBackupEntriesCount() {
-        return getEntriesStat().offHeapBackupEntriesCount();
+        return offHeapBackupEntriesCnt.value();
     }
 
     /** {@inheritDoc} */
@@ -486,7 +516,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public long getCacheSize() {
-        return getEntriesStat().cacheSize();
+        return cacheSize.value();
     }
 
     /** {@inheritDoc} */

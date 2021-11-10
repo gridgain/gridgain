@@ -14,16 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.logger;
 
-import org.apache.ignite.internal.util.typedef.T2;
+import java.util.UUID;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Interface to distinguish exceptions that were caused by broken persistence datastructures invariants.
+ * Interface for Ignite file appenders to attach postfix to log file names.
  */
-public interface CorruptedPersistenceException {
+public interface LoggerNodeIdAndApplicationAware extends LoggerNodeIdAware {
+    /** {@inheritDoc} */
+    @Override public default void setNodeId(UUID nodeId) {
+        setApplicationAndNode(null, nodeId);
+    }
+
     /**
-     * @return (groupId, pageId) pairs for pages that might be corrupted.
+     * Sets application name and node ID.
+     *
+     * @param application Application.
+     * @param nodeId Node ID.
      */
-    public T2<Integer, Long>[] pages();
+    public void setApplicationAndNode(@Nullable String application, UUID nodeId);
 }

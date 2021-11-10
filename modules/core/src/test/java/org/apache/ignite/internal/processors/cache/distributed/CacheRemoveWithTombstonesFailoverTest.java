@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
@@ -178,7 +179,9 @@ public class CacheRemoveWithTombstonesFailoverTest extends GridCommonAbstractTes
         awaitPartitionMapExchange();
 
         // Ensure the evict queue is filled.
-        demander.context().cache().context().evict().processEvictions(true).get();
+        IgniteEx finalDemander = demander;
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !finalDemander.context().cache().context().evict().evictQueue(true).isEmptyx(), 1_000));
 
         final LongMetric tombstoneMetric1 = demander.context().metric().registry(
             MetricUtils.cacheGroupMetricsRegistryName(DEFAULT_CACHE_NAME)).findMetric(TS_METRIC_NAME);
