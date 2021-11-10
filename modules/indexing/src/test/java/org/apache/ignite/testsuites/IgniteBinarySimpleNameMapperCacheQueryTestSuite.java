@@ -26,7 +26,6 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        IgniteBinaryCacheQueryTestSuite.class,
         IgniteBinaryCacheQueryTestSuite2.class
 })
 public class IgniteBinarySimpleNameMapperCacheQueryTestSuite {
