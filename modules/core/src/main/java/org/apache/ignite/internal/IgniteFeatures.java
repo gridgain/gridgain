@@ -229,7 +229,7 @@ public enum IgniteFeatures {
     SNAPSHOT_SFTP_UPLOAD_V2(60),
 
     /**
-     * Snapshot operation can handle {@code --exclude_caches} parameter
+     * Snapshot operation can handle {@code -excluded_caches} parameter
      * and cache groups in {@code --caches} and {@code --excluded_caches} parameters.
      */
     SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62),
@@ -238,7 +238,10 @@ public enum IgniteFeatures {
      * The feature allows authenticating a node remotely.
      * It is need when the one node which does not have an authentication required to authorize itself or another one.
      */
-    REMOTE_AUTH(61);
+    REMOTE_AUTH(61),
+
+    /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
+    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63);
 
     /**
      * Unique feature identifier.

@@ -43,7 +43,7 @@ public class MavenUtils {
     private static String locRepPath = null;
 
     /** */
-    private static final String GG_MVN_REPO = "http://www.gridgainsystems.com/nexus/content/repositories/external";
+    private static final String GG_MVN_REPO = "https://www.gridgainsystems.com/nexus/content/repositories/external";
 
     /** Set this flag to true if running PDS compatibility tests locally. */
     private static boolean useGgRepo;

@@ -34,9 +34,11 @@ import java.util.stream.Collectors;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.value.ValueTime;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.index.BasicSqlTypesIndexTest.IndexType.PK;
@@ -268,6 +270,7 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
     }
 
     /** */
+    @Ignore("GG-34036")
     @Test
     public void testSqlTimeTypeIndex() {
         String idxTypeStr = "TIME";
@@ -283,6 +286,14 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
                 return Long.compare(l1, l2);
             }
         };
+
+        int i = -1143442969;
+
+        //To correctly search for Time type key in the index, we need to be able to compare the long representations
+        // of Time type. At the moment these time representations are not compatible for some values.
+
+        assertEquals(i, new Time(i).getTime());
+        assertEquals(i, ValueTime.get(new Time(i)).getTime().getTime());
 
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1");
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1,AFFINITY_KEY=idxVal");

@@ -14,16 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
-
-import org.apache.ignite.internal.util.typedef.T2;
-
 /**
- * Interface to distinguish exceptions that were caused by broken persistence datastructures invariants.
+ * <!-- Package description. -->
+ * Package includes classes requires for support of SpEL expressions.
  */
-public interface CorruptedPersistenceException {
-    /**
-     * @return (groupId, pageId) pairs for pages that might be corrupted.
-     */
-    public T2<Integer, Long>[] pages();
-}
+package org.apache.ignite.springdata20.repository.query.spel;
