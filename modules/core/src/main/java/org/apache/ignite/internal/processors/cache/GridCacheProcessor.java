@@ -2301,7 +2301,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 ", atomicity=" + cfg.getAtomicityMode() +
                 ", backups=" + cfg.getBackups() +
                 ", mvcc=" + cacheCtx.mvccEnabled() +
-                (expPlcInfo != null ? ", " + expPlcInfo : "") + ']');
+                (expPlcInfo != null ? ", " + expPlcInfo : ", expiryPolicy=null") + ']');
         }
 
         grp.onCacheStarted(cacheCtx);
@@ -2383,7 +2383,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 ", atomicity=" + cfg.getAtomicityMode() +
                 ", backups=" + cfg.getBackups() +
                 ", mvcc=" + cacheCtx.mvccEnabled() +
-                (expPlcInfo != null ? ", " + expPlcInfo : "") + ']');
+                (expPlcInfo != null ? ", " + expPlcInfo : ", expiryPolicy=null") + ']');
         }
 
         return cacheCtx;

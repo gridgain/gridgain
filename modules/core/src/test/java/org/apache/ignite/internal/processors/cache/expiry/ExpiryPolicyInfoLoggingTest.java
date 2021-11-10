@@ -17,8 +17,10 @@
 package org.apache.ignite.internal.processors.cache.expiry;
 
 import java.util.concurrent.TimeUnit;
+import javax.cache.configuration.Factory;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -52,6 +54,12 @@ public class ExpiryPolicyInfoLoggingTest extends GridCommonAbstractTest {
     private static final String STARTED_CACHE_IN_RECOVERY_MODE_MSG = "Started cache in recovery mode [name=%s,";
 
     /** */
+    public static final String EMPTY_EXPRITY_POLICY_MSG = "expiryPolicy=null";
+
+    /** */
+    private Factory<ExpiryPolicy> expPlcFactory;
+
+    /** */
     private boolean persistenceEnabled;
 
     /** */
@@ -63,7 +71,7 @@ public class ExpiryPolicyInfoLoggingTest extends GridCommonAbstractTest {
             .setGridLogger(log)
             .setCacheConfiguration(
                 new CacheConfiguration(CACHE_1_NAME)
-                    .setExpiryPolicyFactory(ModifiedExpiryPolicy.factoryOf(new Duration(TimeUnit.DAYS, 2)))
+                    .setExpiryPolicyFactory(expPlcFactory)
                     .setEagerTtl(true)
             ).setDataStorageConfiguration(
                 new DataStorageConfiguration().setDefaultDataRegionConfiguration(
@@ -82,6 +90,8 @@ public class ExpiryPolicyInfoLoggingTest extends GridCommonAbstractTest {
                 s.contains(String.format(EXPRITY_POLICY_MSG, ModifiedExpiryPolicy.class.getName(), true))
             ).times(1)
             .build();
+
+        expPlcFactory = ModifiedExpiryPolicy.factoryOf(new Duration(TimeUnit.DAYS, 2));
 
         log.registerListener(lsnr);
 
@@ -124,6 +134,46 @@ public class ExpiryPolicyInfoLoggingTest extends GridCommonAbstractTest {
         LogListener lsnr = LogListener
             .matches(s -> s.startsWith(String.format(STARTED_CACHE_IN_RECOVERY_MODE_MSG, CACHE_1_NAME)) &&
                 s.contains(String.format(EXPRITY_POLICY_MSG, ModifiedExpiryPolicy.class.getName(), true))
+            ).times(1)
+            .build();
+
+        log.registerListener(lsnr);
+
+        expPlcFactory = ModifiedExpiryPolicy.factoryOf(new Duration(TimeUnit.DAYS, 2));
+
+        startGrid(0);
+
+        assertTrue(lsnr.check());
+    }
+
+    /**
+     * Checking logging of expiry policy info if it's not configured for statically created cache.
+     */
+    @Test
+    public void checkLoggingExpiryInfoIfItsNotConfiguredForStaticallyCreatedCache() throws Exception {
+        LogListener lsnr = LogListener
+            .matches(s -> s.startsWith(String.format(STARTED_CACHE_MSG, CACHE_1_NAME)) &&
+                s.contains(EMPTY_EXPRITY_POLICY_MSG)
+            ).times(1)
+            .build();
+
+        log.registerListener(lsnr);
+
+        startGrid(0);
+
+        assertTrue(lsnr.check());
+    }
+
+    /**
+     * Checking logging of expiry policy info if it's not configured for statically created cache wich started in recovery mode.
+     */
+    @Test
+    public void checkLoggingExpiryInfoIfItsNotConfiguredForStaticallyCreatedCacheStartedInRecoveryMode() throws Exception {
+        persistenceEnabled = true;
+
+        LogListener lsnr = LogListener
+            .matches(s -> s.startsWith(String.format(STARTED_CACHE_IN_RECOVERY_MODE_MSG, CACHE_1_NAME)) &&
+                s.contains(EMPTY_EXPRITY_POLICY_MSG)
             ).times(1)
             .build();
 
