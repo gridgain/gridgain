@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
@@ -41,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
@@ -125,7 +127,9 @@ public class CheckpointManager {
         LongJVMPauseDetector longJvmPauseDetector,
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
-        Supplier<Integer> cpFreqDeviation
+        Supplier<Integer> cpFreqDeviation,
+        GridTimeoutProcessor timeoutProcessor,
+        Executor checkpointHistorySnapshotExecutor
     ) throws IgniteCheckedException {
         CheckpointHistory cpHistory = new CheckpointHistory(
             persistenceCfg,
@@ -138,13 +142,18 @@ public class CheckpointManager {
 
         CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
+        long checkpointFrequency = persistenceCfg.getCheckpointFrequency();
+
         checkpointMarkersStorage = new CheckpointMarkersStorage(
             igniteInstanceName,
             logger,
             cpHistory,
             ioFactory,
             pageStoreManager.workDir().getAbsolutePath(),
-            lock
+            lock,
+            timeoutProcessor,
+            checkpointHistorySnapshotExecutor,
+            checkpointFrequency
         );
 
         checkpointWorkflow = new CheckpointWorkflow(
@@ -191,7 +200,7 @@ public class CheckpointManager {
             cacheProcessor,
             checkpointWorkflow,
             checkpointPagesWriterFactory,
-            persistenceCfg.getCheckpointFrequency(),
+            checkpointFrequency,
             persistenceCfg.getCheckpointThreads(),
             cpFreqDeviation
         );
@@ -397,8 +406,6 @@ public class CheckpointManager {
         checkpointWorkflow.stop();
 
         this.checkpointer = null;
-
-        checkpointMarkersStorage.close();
     }
 
     /**

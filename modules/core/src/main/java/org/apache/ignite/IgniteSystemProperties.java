@@ -831,11 +831,20 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /**
-     * Earliest checkpoint map changes threshold. After this thresold is reached, a snapshot of the earliest checkpoint
-     * map will be captured.
+     * Earliest checkpoint map snapshot timeout in milliseconds.
+     * If this property has a value different from -1, it will be used instead of
+     * checkpointFrequency * {@link #IGNITE_CHECKPOINT_MAP_SNAPSHOT_FREQUENCY_MULTIPLIER}.
+     * Default is {@code -1}.
+     */
+    public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT";
+
+    /**
+     * Earliest checkpoint map snapshot frequency multiplier. This value multiplied by the checkpoint frequency will be
+     * used to calculate the timeout to capture a checkpoint map snapshot if
+     * {@link #IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT} is {@code -1}.
      * Default is {@code 5}.
      */
-    public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
+    public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_FREQUENCY_MULTIPLIER = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_FREQUENCY_MULTIPLIER";
 
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";

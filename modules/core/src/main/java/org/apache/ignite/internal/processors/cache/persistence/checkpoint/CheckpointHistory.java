@@ -108,6 +108,7 @@ public class CheckpointHistory {
     }
 
     /**
+     * @param snapshot Earliest checkpoint map snapshot.
      * @param checkpoints Checkpoints.
      */
     public void initialize(

@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
 import org.apache.ignite.plugin.PluginContext;
@@ -45,12 +46,14 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
 
 /**
  * Tests checkpoint map snapshot.
  */
 @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
+@WithSystemProperty(key = IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT, value = "200")
 public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
@@ -166,6 +169,9 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             forceCheckpoint(grid);
         }
 
+        // Sleep enough to trigger checkpoint map snapshot capture
+        U.sleep(300);
+
         stopGrid(0, true);
 
         if (removeSnapshot) {
@@ -198,10 +204,13 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         // Get count of WAL replays that are invoked from CheckpointEntry
         int replayCount = wal.replayCount.get();
 
+        stopGrid(1, true);
+        stopGrid(2, true);
+
         // 1 is the count of checkpoint on start of the node (see checkpoint with reason "node started")
         if (removeSnapshot)
             assertEquals(cnt + 1, replayCount);
         else
-            assertEquals(1, replayCount);
+            assertEquals(0, replayCount);
     }
 }
