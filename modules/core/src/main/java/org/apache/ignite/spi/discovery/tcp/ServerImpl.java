@@ -440,14 +440,10 @@ class ServerImpl extends TcpDiscoveryImpl {
             statsPrinter.start();
         }
 
-        spi.stats.onJoinStarted();
-
         joinTopology();
 
         if (locNode.order() == 1)
             U.enhanceThreadName(msgWorkerThread, "crd");
-
-        spi.stats.onJoinFinished();
 
         if (spi.ipFinder.isShared()) {
             ipFinderCleaner = new IpFinderCleaner();
@@ -878,8 +874,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                             break;
                         }
-
-                        spi.stats.onClientSocketInitialized(U.millisSinceNanos(tsNanos));
 
                         IgniteBiTuple<UUID, Boolean> t = F.t(res.creatorNodeId(), res.clientExists());
 
@@ -1506,8 +1500,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     break;
                 }
-
-                spi.stats.onClientSocketInitialized(U.millisSinceNanos(tsNanos));
 
                 // Send message.
                 tsNanos = System.nanoTime();
@@ -3668,8 +3660,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                                     break;
                                 }
 
-                                spi.stats.onClientSocketInitialized(U.millisSinceNanos(tsNanos));
-
                                 UUID nextId = res.creatorNodeId();
 
                                 long nextOrder = res.order();
@@ -5024,8 +5014,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (isLocalNodeCoordinator()) {
                 if (msg.verified()) {
-                    spi.stats.onRingMessageReceived(msg);
-
                     TcpDiscoveryNodeAddFinishedMessage addFinishMsg = new TcpDiscoveryNodeAddFinishedMessage(locNodeId,
                         node.id());
 
@@ -5400,8 +5388,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (locNodeCoord) {
                 if (msg.verified()) {
-                    spi.stats.onRingMessageReceived(msg);
-
                     addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
 
                     return;
@@ -5637,8 +5623,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (locNodeCoord) {
                 if (msg.verified()) {
-                    spi.stats.onRingMessageReceived(msg);
-
                     msg.spanContainer().span()
                         .addLog(() -> "Ring failed")
                         .setStatus(SpanStatus.ABORTED)
@@ -5855,8 +5839,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (locNodeCoord) {
                 if (msg.verified()) {
-                    spi.stats.onRingMessageReceived(msg);
-
                     addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
 
                     return;
@@ -6366,8 +6348,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 else {
                     addMessage(new TcpDiscoveryDiscardMessage(getLocalNodeId(), msg.id(), true));
 
-                    spi.stats.onRingMessageReceived(msg);
-
                     DiscoverySpiCustomMessage msgObj = null;
 
                     try {
@@ -6769,8 +6749,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     reader.start();
 
-                    spi.stats.onServerSocketInitialized(U.millisSinceNanos(tsNanos));
-
                     onIdle();
                 }
             }
@@ -6842,8 +6820,6 @@ class ServerImpl extends TcpDiscoveryImpl {
             this.sock = sock;
 
             setPriority(spi.threadPri);
-
-            spi.stats.onSocketReaderCreated();
         }
 
         /** {@inheritDoc} */
@@ -7728,8 +7704,6 @@ class ServerImpl extends TcpDiscoveryImpl {
             synchronized (mux) {
                 readers.remove(this);
             }
-
-            spi.stats.onSocketReaderRemoved();
         }
 
         /** {@inheritDoc} */

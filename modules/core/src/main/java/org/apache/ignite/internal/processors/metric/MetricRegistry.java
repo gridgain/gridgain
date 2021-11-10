@@ -142,10 +142,11 @@ public class MetricRegistry implements Iterable<Metric> {
     /**
      * Register existing metrics in this group with the specified name.
      *
+     * @param name Name.
      * @param metric Metric.
      */
-    public void register(Metric metric) {
-        addMetric(metric.name(), metric);
+    public void register(String name, Metric metric) {
+        addMetric(name, metric);
     }
 
     /**

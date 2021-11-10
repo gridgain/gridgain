@@ -14,6 +14,7 @@ org.apache.ignite.spi.communication.tcp.internal;
 org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener();
 org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi#ATTR_ENVIRONMENT_TYPE;
 org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi#openSocketChannel();
+org.apache.ignite.spi.discovery.tcp.internal;
 org.apache.ignite.spi.IgniteSpiThread#DFLT_GRP;
 org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 org.apache.ignite.spi.metric.jmx.MetricRegistryMBean;
