@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,17 +48,13 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.jetbrains.annotations.Nullable;
 
 import static java.nio.file.StandardOpenOption.READ;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_FREQUENCY_MULTIPLIER;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_FILE_MATCHER;
 
 /**
@@ -67,15 +64,9 @@ public class CheckpointMarkersStorage {
     /** Checkpoint file name pattern. */
     public static final Pattern CP_FILE_NAME_PATTERN = Pattern.compile("(\\d+)-(.*)-(START|END)\\.bin");
 
-    /** Earliest checkpoint map snapshot timeout. */
-    private static final long EARLIEST_CP_SNAPSHOT_TIMEOUT = IgniteSystemProperties.getLong(
-        IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT,
-        -1
-    );
-
-    /** Earliest checkpoint map snapshot frequency multiplier. */
-    private static final long EARLIEST_CP_SNAPSHOT_FREQUENCY_MULTIPLIER = IgniteSystemProperties.getLong(
-        IGNITE_CHECKPOINT_MAP_SNAPSHOT_FREQUENCY_MULTIPLIER,
+    /** Earliest checkpoint map changes threshold. */
+    private final int earliestCpChangesThreshold = IgniteSystemProperties.getInteger(
+        IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD,
         5
     );
 
@@ -85,14 +76,8 @@ public class CheckpointMarkersStorage {
     /** Earliest checkpoint map snapshot temporary file name. */
     private static final String EARLIEST_CP_SNAPSHOT_TMP_FILE = EARLIEST_CP_SNAPSHOT_FILE + ".tmp";
 
-    /** Checkpoint history snapshot executor. */
-    private final Executor checkpointHistorySnapshotExecutor;
-
-    /** Timeout processor. */
-    private final GridTimeoutProcessor timeoutProcessor;
-
-    /** Checkpoint frequency. */
-    private final long checkpointFrequency;
+    /** Checkpoint map snapshot executor. */
+    private final Executor checkpointMapSnapshotExecutor;
 
     /** Logger. */
     protected IgniteLogger log;
@@ -112,6 +97,9 @@ public class CheckpointMarkersStorage {
     /** Temporary write buffer. */
     private final ByteBuffer tmpWriteBuf;
 
+    /** Counter representing quantity of checkpoints since last checkpoint history snapshot. */
+    private final AtomicInteger checkpointSnapshotCounter = new AtomicInteger(1);
+
     /**
      * @param igniteInstanceName Ignite instance name.
      * @param logger Ignite logger.
@@ -119,9 +107,7 @@ public class CheckpointMarkersStorage {
      * @param factory IO factory.
      * @param absoluteWorkDir Directory path to checkpoint markers folder.
      * @param lock Checkpoint read-write lock.
-     * @param timeoutProcessor Timeout processor.
-     * @param checkpointHistorySnapshotExecutor Checkpoint map snapshot executor.
-     * @param checkpointFrequency Checkpoint frequency.
+     * @param checkpointMapSnapshotExecutor Checkpoint map snapshot executor.
      * @throws IgniteCheckedException if fail.
      */
     CheckpointMarkersStorage(
@@ -131,16 +117,12 @@ public class CheckpointMarkersStorage {
         FileIOFactory factory,
         String absoluteWorkDir,
         CheckpointReadWriteLock lock,
-        GridTimeoutProcessor timeoutProcessor,
-        Executor checkpointHistorySnapshotExecutor,
-        long checkpointFrequency
+        Executor checkpointMapSnapshotExecutor
     ) throws IgniteCheckedException {
         this.log = logger.apply(getClass());
         cpHistory = history;
         ioFactory = factory;
         this.lock = lock;
-        this.timeoutProcessor = timeoutProcessor;
-        this.checkpointFrequency = checkpointFrequency;
 
         cpDir = Paths.get(absoluteWorkDir, "cp").toFile();
 
@@ -152,7 +134,7 @@ public class CheckpointMarkersStorage {
 
         tmpWriteBuf.order(ByteOrder.nativeOrder());
 
-        this.checkpointHistorySnapshotExecutor = checkpointHistorySnapshotExecutor;
+        this.checkpointMapSnapshotExecutor = checkpointMapSnapshotExecutor;
     }
 
     /**
@@ -220,11 +202,6 @@ public class CheckpointMarkersStorage {
             snap = new EarliestCheckpointMapSnapshot();
 
         cpHistory.initialize(snap, retrieveHistory());
-
-        long snapshotFrequency = EARLIEST_CP_SNAPSHOT_TIMEOUT == -1
-            ? (checkpointFrequency * EARLIEST_CP_SNAPSHOT_FREQUENCY_MULTIPLIER) : EARLIEST_CP_SNAPSHOT_TIMEOUT;
-
-        timeoutProcessor.addTimeoutObject(new CheckpointMapSnapshotTimeoutObject(snapshotFrequency));
     }
 
     /**
@@ -238,6 +215,8 @@ public class CheckpointMarkersStorage {
 
         for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
+
+        onEarliestCheckpointMapChanged();
     }
 
     /**
@@ -251,6 +230,8 @@ public class CheckpointMarkersStorage {
 
         for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
+
+        onEarliestCheckpointMapChanged();
     }
 
     /**
@@ -518,6 +499,8 @@ public class CheckpointMarkersStorage {
         if (type == CheckpointEntryType.START)
             cpHistory.addCheckpoint(entry, rec == null ? Collections.emptyMap() : rec.cacheGroupStates());
 
+        onEarliestCheckpointMapChanged();
+
         return entry;
     }
 
@@ -632,147 +615,85 @@ public class CheckpointMarkersStorage {
     public CheckpointEntry removeFromEarliestCheckpoints(Integer grpId) {
         CheckpointEntry entry = cpHistory.removeFromEarliestCheckpoints(grpId);
 
+        onEarliestCheckpointMapChanged();
+
         return entry;
     }
 
-    /** Timeout object that dumps the earliest checkpoint map snapshot on the disk. */
-    private class CheckpointMapSnapshotTimeoutObject implements GridTimeoutObject {
-        /** Timeout object id. */
-        private final IgniteUuid id = IgniteUuid.randomUuid();
+    /**
+     * Handles changes in the earliest checkpoint map in the {@link CheckpointHistory}. Creates a snapshot of that
+     * map if threshold for changes has been reached.
+     */
+    void onEarliestCheckpointMapChanged() {
+        boolean createSnapshot =
+            checkpointSnapshotCounter.getAndUpdate(old -> (old + 1) % earliestCpChangesThreshold) == 0;
 
-        /** ID of the last checkpoint that was captured in the snapshot. */
-        private UUID lastCheckpointInSnapshotId;
+        if (createSnapshot) {
+            Runnable runnable = () -> {
+                EarliestCheckpointMapSnapshot snapshot;
 
-        /** Timeout. */
-        private final long timeout;
-
-        /** End time. */
-        private volatile long endTime;
-
-        /** Constructor. */
-        private CheckpointMapSnapshotTimeoutObject(long timeout) {
-            this.timeout = timeout;
-
-            restart();
-        }
-
-        /**
-         * Restarts timeout object updating endTime so this object can be reused.
-         */
-        private void restart() {
-            // This volatile write piggybacks lastCheckpointInSnapshotId:
-            // endTime is written after lastCheckpointInSnapshotId is changed and is read in timeout processor
-            // before lastCheckpointInSnapshotId is read here
-            endTime = U.currentTimeMillis() + timeout;
-        }
-
-        /** {@inheritDoc} */
-        @Override public IgniteUuid timeoutId() {
-            return id;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long endTime() {
-            return endTime;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void onTimeout() {
-            CheckpointEntry lastCheckpoint = cpHistory.lastCheckpoint();
-
-            UUID lastCpId = lastCheckpoint != null ? lastCheckpoint.checkpointId() : null;
-
-            if (lastCpId != null && !lastCpId.equals(lastCheckpointInSnapshotId)) {
+                lock.readLock();
                 try {
-                    checkpointHistorySnapshotExecutor.execute(() -> {
-                        saveCheckpointMapSnapshot();
-
-                        restart();
-
-                        timeoutProcessor.addTimeoutObject(this);
-                    });
+                    // Create the earliest checkpoint map snapshot
+                    snapshot = cpHistory.earliestCheckpointsMapSnapshot();
                 }
-                catch (RejectedExecutionException e) {
-                    log.warning("Unable to save checkpoint map snapshot since the node is shutting down: " +
-                        e.getMessage());
+                finally {
+                    lock.readUnlock();
                 }
-            }
-            else {
-                restart();
 
-                timeoutProcessor.addTimeoutObject(this);
-            }
-        }
+                File targetFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_FILE);
 
-        /**
-         * Creates a snapshot of the earliest checkpoint map in the {@link CheckpointHistory}.
-         */
-        private void saveCheckpointMapSnapshot() {
-            EarliestCheckpointMapSnapshot snapshot;
-            UUID lastCheckpointId = null;
+                // For fail-safety we should first write the snapshot to a temporary file
+                // and then atomically rename it
+                File tmpFile = new File(EARLIEST_CP_SNAPSHOT_TMP_FILE);
 
-            lock.readLock();
-            try {
-                CheckpointEntry lastCheckpoint = cpHistory.lastCheckpoint();
+                if (tmpFile.exists() && !IgniteUtils.delete(tmpFile)) {
+                    log.error("Failed to delete temporary checkpoint snapshot file: " + tmpFile.getAbsolutePath());
 
-                if (lastCheckpoint != null)
-                    lastCheckpointId = lastCheckpoint.checkpointId();
+                    return;
+                }
 
-                // Create the earliest checkpoint map snapshot
-                snapshot = cpHistory.earliestCheckpointsMapSnapshot();
-            }
-            finally {
-                lock.readUnlock();
-            }
+                final byte[] bytes;
 
-            File targetFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_FILE);
+                try {
+                    bytes = JdkMarshaller.DEFAULT.marshal(snapshot);
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Failed to marshal checkpoint snapshot: " + e.getMessage(), e);
 
-            // For fail-safety we should first write the snapshot to a temporary file
-            // and then atomically rename it
-            File tmpFile = new File(EARLIEST_CP_SNAPSHOT_TMP_FILE);
+                    return;
+                }
 
-            if (tmpFile.exists() && !IgniteUtils.delete(tmpFile)) {
-                log.error("Failed to delete temporary checkpoint snapshot file: " + tmpFile.getAbsolutePath());
+                try {
+                    Files.write(tmpFile.toPath(), bytes);
+                }
+                catch (IOException e) {
+                    log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);
 
-                return;
-            }
+                    return;
+                }
 
-            final byte[] bytes;
-
-            try {
-                bytes = JdkMarshaller.DEFAULT.marshal(snapshot);
-            }
-            catch (IgniteCheckedException e) {
-                log.error("Failed to marshal checkpoint snapshot: " + e.getMessage(), e);
-
-                return;
-            }
+                try {
+                    // Atomically rename temporary file
+                    Files.move(
+                        tmpFile.toPath(),
+                        targetFile.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                    );
+                }
+                catch (IOException e) {
+                    log.error("Failed to rename temporary checkpoint snapshot file: " + targetFile, e);
+                }
+            };
 
             try {
-                Files.write(tmpFile.toPath(), bytes);
+                checkpointMapSnapshotExecutor.execute(runnable);
             }
-            catch (IOException e) {
-                log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);
-
-                return;
+            catch (RejectedExecutionException e) {
+                log.warning("Unable to capture a checkpoint map snapshot since node is shutting down: " +
+                    e.getMessage());
             }
-
-            try {
-                // Atomically rename temporary file
-                Files.move(
-                    tmpFile.toPath(),
-                    targetFile.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING
-                );
-            }
-            catch (IOException e) {
-                log.error("Failed to rename temporary checkpoint snapshot file: " + targetFile, e);
-
-                return;
-            }
-
-            lastCheckpointInSnapshotId = lastCheckpointId;
         }
     }
 }

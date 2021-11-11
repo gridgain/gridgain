@@ -46,14 +46,14 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
 
 /**
  * Tests checkpoint map snapshot.
  */
 @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
-@WithSystemProperty(key = IGNITE_CHECKPOINT_MAP_SNAPSHOT_TIMEOUT, value = "200")
+@WithSystemProperty(key = IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD, value = "1")
 public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {

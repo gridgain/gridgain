@@ -42,7 +42,6 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemor
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
-import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
@@ -107,6 +106,7 @@ public class CheckpointManager {
      * @param failureProcessor Failure processor.
      * @param cacheProcessor Cache processor.
      * @param cpFreqDeviation Distributed checkpoint frequency deviation.
+     * @param checkpointMapSnapshotExecutor Checkpoint map snapshot executor.
      * @throws IgniteCheckedException if fail.
      */
     public CheckpointManager(
@@ -128,8 +128,7 @@ public class CheckpointManager {
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
         Supplier<Integer> cpFreqDeviation,
-        GridTimeoutProcessor timeoutProcessor,
-        Executor checkpointHistorySnapshotExecutor
+        Executor checkpointMapSnapshotExecutor
     ) throws IgniteCheckedException {
         CheckpointHistory cpHistory = new CheckpointHistory(
             persistenceCfg,
@@ -142,8 +141,6 @@ public class CheckpointManager {
 
         CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
-        long checkpointFrequency = persistenceCfg.getCheckpointFrequency();
-
         checkpointMarkersStorage = new CheckpointMarkersStorage(
             igniteInstanceName,
             logger,
@@ -151,9 +148,7 @@ public class CheckpointManager {
             ioFactory,
             pageStoreManager.workDir().getAbsolutePath(),
             lock,
-            timeoutProcessor,
-            checkpointHistorySnapshotExecutor,
-            checkpointFrequency
+            checkpointMapSnapshotExecutor
         );
 
         checkpointWorkflow = new CheckpointWorkflow(
@@ -200,7 +195,7 @@ public class CheckpointManager {
             cacheProcessor,
             checkpointWorkflow,
             checkpointPagesWriterFactory,
-            checkpointFrequency,
+            persistenceCfg.getCheckpointFrequency(),
             persistenceCfg.getCheckpointThreads(),
             cpFreqDeviation
         );

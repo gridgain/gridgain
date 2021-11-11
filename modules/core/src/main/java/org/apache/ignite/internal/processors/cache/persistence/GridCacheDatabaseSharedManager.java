@@ -547,7 +547,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.failure(),
                 kernalCtx.cache(),
                 cpFreqDeviation::get,
-                kernalCtx.timeout(),
                 kernalCtx.pools().getSystemExecutorService()
             );
 
