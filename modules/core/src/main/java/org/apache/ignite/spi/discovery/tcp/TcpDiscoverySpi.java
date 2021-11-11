@@ -1454,6 +1454,8 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
         stats.registerMetrics(discoReg);
 
+        discoReg.register("SslEnabled", this::isSslEnabled, "Whether SSL is enabled.");
+
         discoReg.register("MessageWorkerQueueSize", () -> impl.getMessageWorkerQueueSize(),
             "Message worker queue current size");
 
