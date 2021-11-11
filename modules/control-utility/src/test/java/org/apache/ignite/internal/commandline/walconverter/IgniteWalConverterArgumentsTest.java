@@ -359,7 +359,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             "--binary-metadata-dir", binaryMetadataDir.getAbsolutePath(),
             "--marshaller-mapping-dir", marshallerDir.getAbsolutePath(),
             "--unwrap-binary",
-            "--record-types", "DATA_RECORD,TX_RECORD",
+            "--record-types", "DATA_RECORD_V2,TX_RECORD",
             "--wal-time-from-millis", "1575158400000",
             "--wal-time-to-millis", "1577836740999",
             "--has-text", "search string",
@@ -374,7 +374,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataDir());
         Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingDir());
         Assert.assertTrue(parseArgs.isUnwrapBinary());
-        Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD));
+        Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD_V2));
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.TX_RECORD));
         Assert.assertEquals(1575158400000L, (long)parseArgs.getFromTime());
         Assert.assertEquals(1577836740999L, (long)parseArgs.getToTime());
