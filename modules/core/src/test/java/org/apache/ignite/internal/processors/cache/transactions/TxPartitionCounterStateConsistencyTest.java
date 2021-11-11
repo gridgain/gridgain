@@ -922,8 +922,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
-        configureBaselineAutoAdjust();
-
         crd.cluster().baselineAutoAdjustEnabled(false);
 
         crd.cluster().active(true);

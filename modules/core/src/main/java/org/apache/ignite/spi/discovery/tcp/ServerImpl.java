@@ -16,9 +16,6 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;

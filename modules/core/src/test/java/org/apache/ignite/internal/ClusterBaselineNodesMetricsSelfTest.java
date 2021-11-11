@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal;
 
+import java.lang.management.ManagementFactory;
+import java.util.Collection;
 import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import java.lang.management.ManagementFactory;
-import java.util.Collection;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;

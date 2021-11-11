@@ -214,12 +214,6 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     }
 
     /**
-     */
-    protected void configureBaselineAutoAdjust() {
-        ignite(0).cluster().baselineAutoAdjustEnabled(false);
-    }
-
-    /**
      * Runs a scenario.
      *
      * @param partId Partition id.
@@ -241,7 +235,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
 
         crd.cluster().active(true);
 
-        configureBaselineAutoAdjust();
+        crd.cluster().baselineAutoAdjustEnabled(false);
 
         assertEquals(0, crd.cache(DEFAULT_CACHE_NAME).size());
 

@@ -169,6 +169,7 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testDeployFromEachNodes() throws Exception {
         checkDeployFromEachNodes(false, false);
     }
@@ -243,8 +244,6 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
 
         insideNode.cluster().baselineAutoAdjustEnabled(false);
 
-        insideNode.cluster().baselineAutoAdjustEnabled(false);
-
         if (persistence)
             insideNode.cluster().active(true);
         else {
@@ -271,8 +270,6 @@ public class ServiceDeploymentOutsideBaselineTest extends GridCommonAbstractTest
         persistence = true;
 
         IgniteEx insideNode = startGrid(0);
-
-        insideNode.cluster().baselineAutoAdjustEnabled(false);
 
         insideNode.cluster().baselineAutoAdjustEnabled(false);
 

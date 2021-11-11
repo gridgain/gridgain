@@ -167,8 +167,6 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
-        ignite.cluster().baselineAutoAdjustEnabled(false);
-
         ClusterNode cn0 = grid(0).cluster().localNode();
         ClusterNode cn1 = grid(1).cluster().localNode();
 
