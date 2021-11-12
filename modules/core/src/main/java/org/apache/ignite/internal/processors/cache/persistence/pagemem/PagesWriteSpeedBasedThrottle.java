@@ -151,22 +151,24 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private long computeThrottleParkTime(boolean isPageInCheckpoint, long curNanoTime) {
-        final long throttleParkTimeNs;
         if (isPageInCheckpoint && shouldThrottle())
-            throttleParkTimeNs = computeCPBufferProtectionParkTime();
-        else {
-            final CheckpointProgress progress = cpProgress.apply();
-            final AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+            return computeCPBufferProtectionParkTime();
+        else
+            return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
+    }
 
-            if (writtenPagesCntr != null)
-                throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
-            else {
-                resetStatistics();
+    /***/
+    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, long curNanoTime) {
+        CheckpointProgress progress = cpProgress.apply();
+        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
-                throttleParkTimeNs = 0; // Don't throttle if checkpoint is not running.
-            }
+        if (writtenPagesCntr == null) {
+            resetStatistics();
+
+            return 0; // Don't throttle if checkpoint is not running.
         }
-        return throttleParkTimeNs;
+
+        return computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
     }
 
     /***/
