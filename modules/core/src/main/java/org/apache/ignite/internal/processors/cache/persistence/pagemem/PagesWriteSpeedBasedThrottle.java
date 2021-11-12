@@ -136,26 +136,24 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     @Override public void onMarkDirty(boolean isPageInCheckpoint) {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
-        final boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
-
-        final CheckpointProgress progress = cpProgress.apply();
-        final AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
-
-        if (writtenPagesCntr == null && !shouldThrottleToProtectCPBuffer) {
-            speedForMarkAll = 0;
-            targetDirtyRatio = -1;
-            currDirtyRatio = -1;
-
-            return; // Don't throttle if checkpoint is not running.
-        }
-
         final long curNanoTime = System.nanoTime();
+        final boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
 
         final long throttleParkTimeNs;
         if (shouldThrottleToProtectCPBuffer)
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
-        else
-            throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
+        else {
+            final CheckpointProgress progress = cpProgress.apply();
+            final AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+
+            if (writtenPagesCntr != null)
+                throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
+            else {
+                resetStatistics();
+
+                throttleParkTimeNs = 0; // Don't throttle if checkpoint is not running.
+            }
+        }
 
         if (throttleParkTimeNs > 0) {
             recurrentLogIfNeed();
@@ -164,6 +162,13 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
         speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+    }
+
+    /***/
+    private void resetStatistics() {
+        speedForMarkAll = 0;
+        targetDirtyRatio = -1;
+        currDirtyRatio = -1;
     }
 
     /***/
