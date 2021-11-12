@@ -137,12 +137,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private long computeCPBufferProtectionParkTime() {
-        return cpBufferProtector.computeCPBufferProtectionParkTime();
+        return cpBufferProtector.computeProtectionParkTime();
     }
 
     /***/
     private long computeCleanPagesProtectionParkTime(long curNanoTime) {
-        return cleanPagesProtector.computeCleanPagesProtectionParkTime(curNanoTime);
+        return cleanPagesProtector.computeProtectionParkTime(curNanoTime);
     }
 
     /**

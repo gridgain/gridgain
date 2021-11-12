@@ -138,7 +138,7 @@ class CleanPagesProtectionThrottle {
     }
 
     /***/
-    long computeCleanPagesProtectionParkTime(long curNanoTime) {
+    long computeProtectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
@@ -148,7 +148,7 @@ class CleanPagesProtectionThrottle {
             return PagesWriteSpeedBasedThrottle.NO_THROTTLING_MARKER;
         }
 
-        return computeCleanPagesProtectionParkTime(writtenPagesCntr, curNanoTime);
+        return computeParkTime(writtenPagesCntr, curNanoTime);
     }
 
     /***/
@@ -159,7 +159,7 @@ class CleanPagesProtectionThrottle {
     }
 
     /***/
-    private long computeCleanPagesProtectionParkTime(AtomicInteger writtenPagesCntr, long curNanoTime) {
+    private long computeParkTime(AtomicInteger writtenPagesCntr, long curNanoTime) {
         threadIds.add(Thread.currentThread().getId());
 
         ThrottleMode level = ThrottleMode.NO;
