@@ -137,10 +137,22 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
         final long curNanoTime = System.nanoTime();
-        final boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
 
+        final long throttleParkTimeNs = computeThrottleParkTime(isPageInCheckpoint, curNanoTime);
+
+        if (throttleParkTimeNs > 0) {
+            recurrentLogIfNeed();
+            doPark(throttleParkTimeNs);
+        }
+
+        pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
+        speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+    }
+
+    /***/
+    private long computeThrottleParkTime(boolean isPageInCheckpoint, long curNanoTime) {
         final long throttleParkTimeNs;
-        if (shouldThrottleToProtectCPBuffer)
+        if (isPageInCheckpoint && shouldThrottle())
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
         else {
             final CheckpointProgress progress = cpProgress.apply();
@@ -154,14 +166,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
                 throttleParkTimeNs = 0; // Don't throttle if checkpoint is not running.
             }
         }
-
-        if (throttleParkTimeNs > 0) {
-            recurrentLogIfNeed();
-            doPark(throttleParkTimeNs);
-        }
-
-        pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
-        speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+        return throttleParkTimeNs;
     }
 
     /***/
