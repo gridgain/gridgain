@@ -285,7 +285,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         PagesWriteThrottlePolicy plc = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProgress, stateChecker, log) {
             @Override protected void doPark(long throttleParkTimeNs) {
                 //Force parking to long time.
-                super.doPark(100_000);
+                super.doPark(TimeUnit.SECONDS.toNanos(1));
             }
         };
 
