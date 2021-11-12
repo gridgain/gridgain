@@ -235,6 +235,11 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         cleanPagesProtector.close();
         speedMarkAndAvgParkTime.finishInterval();
+        unparkParkedThreads();
+    }
+
+    /***/
+    private void unparkParkedThreads() {
         parkedThreads.forEach(LockSupport::unpark);
     }
 
@@ -304,7 +309,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (!shouldThrottle()) {
             cpBufferProtector.resetExponentialBackoffCounter();
 
-            parkedThreads.forEach(LockSupport::unpark);
+            unparkParkedThreads();
         }
     }
 
