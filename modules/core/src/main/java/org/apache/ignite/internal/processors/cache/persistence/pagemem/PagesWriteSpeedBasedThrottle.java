@@ -213,7 +213,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @param curCpWriteSpeed average checkpoint write speed, pages/sec.
      * @return time in nanoseconds to part or 0 if throttling is not required.
      */
-    long getParkTime(
+    long getCleanPagesProtectionParkTime(
             double dirtyPagesRatio,
             long fullyCompletedPages,
             int cpTotalPages,
