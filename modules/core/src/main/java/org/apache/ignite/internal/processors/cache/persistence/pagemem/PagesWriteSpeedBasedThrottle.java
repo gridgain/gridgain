@@ -151,8 +151,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         final long curNanoTime = System.nanoTime();
 
-        threadIds.add(Thread.currentThread().getId());
-
         final long throttleParkTimeNs;
         if (shouldThrottleToProtectCPBuffer)
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
@@ -170,6 +168,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, AtomicInteger writtenPagesCntr, long curNanoTime) {
+        threadIds.add(Thread.currentThread().getId());
+
         long throttleParkTimeNs;
         ThrottleMode level = ThrottleMode.NO;
         long throttleCleanPagesProtectionParkTimeNs = 0;
