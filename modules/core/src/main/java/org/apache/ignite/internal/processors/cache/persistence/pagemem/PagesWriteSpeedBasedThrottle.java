@@ -138,8 +138,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         final boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
 
-        CheckpointProgress progress = cpProgress.apply();
-        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+        final CheckpointProgress progress = cpProgress.apply();
+        final AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
         if (writtenPagesCntr == null && !shouldThrottleToProtectCPBuffer) {
             speedForMarkAll = 0;
@@ -149,7 +149,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return; // Don't throttle if checkpoint is not running.
         }
 
-        long curNanoTime = System.nanoTime();
+        final long curNanoTime = System.nanoTime();
 
         threadIds.add(Thread.currentThread().getId());
 
