@@ -443,7 +443,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      */
     private long calcDelayTime(long baseSpeed, int nThreads, int coefficient) {
         if (coefficient <= 0)
-            return 0;
+            throw new IllegalStateException("Coefficient should be positive");
 
         if (baseSpeed <= 0)
             return 0;
