@@ -153,13 +153,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         threadIds.add(Thread.currentThread().getId());
 
-        int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
-        long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
-
-        long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-        speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
-        long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
-
         ThrottleMode level = ThrottleMode.NO; //should apply delay (throttling) for current page modification
 
         if (shouldThrottleToProtectCPBuffer)
@@ -168,6 +161,13 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         long throttleParkTimeNs = 0;
 
         if (level == ThrottleMode.NO) {
+            int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
+            long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
+
+            long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
+            speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
+            long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
+
             int nThreads = threadIds.size();
 
             int cpTotalPages = cpTotalPages();
