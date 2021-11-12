@@ -110,7 +110,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (throttleParkTimeNs == NO_THROTTLING_MARKER)
             return;
         else if (throttleParkTimeNs > 0) {
-            recurrentLogIfNeed();
+            recurrentLogIfNeeded();
             doPark(throttleParkTimeNs);
         }
 
@@ -178,7 +178,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /**
      * Prints warning to log if throttling is occurred and requires markable amount of time.
      */
-    private void recurrentLogIfNeed() {
+    private void recurrentLogIfNeeded() {
         long prevWarningNs = prevWarnTime.get();
         long curNs = System.nanoTime();
 
