@@ -155,11 +155,10 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         final long throttleParkTimeNs;
 
-        if (shouldThrottleToProtectCPBuffer) {
+        if (shouldThrottleToProtectCPBuffer)
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
-        } else {
+        else
             throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
-        }
 
         if (throttleParkTimeNs > 0) {
             recurrentLogIfNeed();
