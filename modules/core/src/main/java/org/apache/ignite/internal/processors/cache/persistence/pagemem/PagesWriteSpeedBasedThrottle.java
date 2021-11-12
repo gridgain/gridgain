@@ -153,14 +153,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         threadIds.add(Thread.currentThread().getId());
 
-        ThrottleMode level = ThrottleMode.NO; //should apply delay (throttling) for current page modification
+        ThrottleMode level = ThrottleMode.NO;
+        long throttleParkTimeNs = 0;
 
         if (shouldThrottleToProtectCPBuffer)
             level = ThrottleMode.EXPONENTIAL;
-
-        long throttleParkTimeNs = 0;
-
-        if (level == ThrottleMode.NO) {
+        else {
             int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
             long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
