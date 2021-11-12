@@ -158,8 +158,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         if (shouldThrottleToProtectCPBuffer) {
             level = ThrottleMode.EXPONENTIAL;
-            int exponent = exponentialBackoffCntr.getAndIncrement();
-            throttleParkTimeNs = (long)(STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
+            throttleParkTimeNs = computeCPBufferProtectionParkTime();
         } else {
             int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
             long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
@@ -220,6 +219,13 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
 
         speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+    }
+
+    private long computeCPBufferProtectionParkTime() {
+        long throttleParkTimeNs;
+        int exponent = exponentialBackoffCntr.getAndIncrement();
+        throttleParkTimeNs = (long)(STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
+        return throttleParkTimeNs;
     }
 
     /**
