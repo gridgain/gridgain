@@ -153,13 +153,13 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         threadIds.add(Thread.currentThread().getId());
 
-        ThrottleMode level = ThrottleMode.NO;
         long throttleParkTimeNs = 0;
 
         if (shouldThrottleToProtectCPBuffer) {
-            level = ThrottleMode.EXPONENTIAL;
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
         } else {
+            ThrottleMode level = ThrottleMode.NO;
+
             int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
             long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
@@ -564,9 +564,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         NO,
 
         /** Limited, time is based on target speed. */
-        LIMITED,
-
-        /** Exponential. */
-        EXPONENTIAL
+        LIMITED
     }
 }
