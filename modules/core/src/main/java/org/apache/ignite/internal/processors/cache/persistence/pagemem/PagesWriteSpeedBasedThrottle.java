@@ -186,9 +186,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, AtomicInteger writtenPagesCntr, long curNanoTime) {
         threadIds.add(Thread.currentThread().getId());
 
-        long throttleParkTimeNs;
         ThrottleMode level = ThrottleMode.NO;
-        long throttleCleanPagesProtectionParkTimeNs = 0;
+        long throttleParkTimeNs = 0;
 
         int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
         long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
@@ -205,7 +204,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
 
             if (throttleByCpSpeed) {
-                throttleCleanPagesProtectionParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
+                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
 
                 level = ThrottleMode.LIMITED;
             }
@@ -222,14 +221,14 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             else {
                 int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
 
-                throttleCleanPagesProtectionParkTimeNs = getParkTime(dirtyPagesRatio,
+                throttleParkTimeNs = getParkTime(dirtyPagesRatio,
                     fullyCompletedPages,
                     Math.max(notEvictedPagesTotal, 0),
                     nThreads,
                     markDirtySpeed,
                     curCpWriteSpeed);
 
-                level = throttleCleanPagesProtectionParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
+                level = throttleParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
             }
         }
 
@@ -237,9 +236,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             exponentialBackoffCntr.set(0);
 
         if (level == ThrottleMode.NO)
-            throttleCleanPagesProtectionParkTimeNs = 0;
+            throttleParkTimeNs = 0;
 
-        throttleParkTimeNs = throttleCleanPagesProtectionParkTimeNs;
         return throttleParkTimeNs;
     }
 
