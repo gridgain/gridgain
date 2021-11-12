@@ -137,7 +137,22 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
         final long curNanoTime = System.nanoTime();
-        final long throttleParkTimeNs = computeThrottleParkTime(isPageInCheckpoint, curNanoTime);
+
+        final long throttleParkTimeNs;
+        if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
+            throttleParkTimeNs = computeCPBufferProtectionParkTime();
+        else {
+            CheckpointProgress progress = cpProgress.apply();
+            AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+
+            if (writtenPagesCntr == null) {
+                resetStatistics();
+
+                return;
+            }
+
+            throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
+        }
 
         if (throttleParkTimeNs > 0) {
             recurrentLogIfNeed();
@@ -149,30 +164,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     }
 
     /***/
-    private long computeThrottleParkTime(boolean isPageInCheckpoint, long curNanoTime) {
-        if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
-            return computeCPBufferProtectionParkTime();
-        else
-            return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
-    }
-
-    /***/
     private boolean shouldThrottleToProtectCPBuffer(boolean isPageInCheckpoint) {
         return isPageInCheckpoint && shouldThrottle();
-    }
-
-    /***/
-    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, long curNanoTime) {
-        CheckpointProgress progress = cpProgress.apply();
-        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
-
-        if (writtenPagesCntr == null) {
-            resetStatistics();
-
-            return 0; // Don't throttle if checkpoint is not running.
-        }
-
-        return computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
     }
 
     /***/
