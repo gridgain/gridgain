@@ -41,6 +41,7 @@ import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -828,6 +829,22 @@ public class CacheMetricsManageTest extends GridCommonAbstractTest {
         finishFut.get();
 
         txLatch.await();
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testCacheSizeOnInactiveCluster() throws Exception {
+        persistence = true;
+
+        IgniteEx grid = startGrid(0);
+
+        assertFalse(grid.cluster().state() == ClusterState.ACTIVE);
+
+        CacheMetricsMXBean mxBean = mxBean(0, CACHE1, CacheLocalMetricsMXBeanImpl.class);
+
+        long size = mxBean.getCacheSize();
+
+        assertEquals(-1, size);
     }
 
     /**

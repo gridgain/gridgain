@@ -242,6 +242,7 @@ import org.apache.ignite.internal.processors.query.SqlQuerySystemViewsSelfTest;
 import org.apache.ignite.internal.processors.query.SqlResultSetMetaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSchemaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
+import org.apache.ignite.internal.processors.query.WrongQueryEntityFieldTypeTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildTest;
 import org.apache.ignite.internal.processors.query.h2.GridSubqueryJoinOptimizerSelfTest;
@@ -592,6 +593,8 @@ import org.junit.runners.Suite;
     IgniteCacheReplicatedAtomicColumnConstraintsTest.class,
     IgniteCacheReplicatedTransactionalColumnConstraintsTest.class,
     IgniteCacheReplicatedTransactionalSnapshotColumnConstraintTest.class,
+
+    WrongQueryEntityFieldTypeTest.class,
 
     // H2 Rows on-heap cache
     H2RowCacheSelfTest.class,

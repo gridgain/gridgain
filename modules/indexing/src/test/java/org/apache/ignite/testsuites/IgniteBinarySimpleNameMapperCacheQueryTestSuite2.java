@@ -14,13 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.platform.plugin.cache;
+package org.apache.ignite.testsuites;
 
-import org.apache.ignite.plugin.AbstractCachePluginProvider;
+import org.apache.ignite.testframework.config.GridTestProperties;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
- * Test cache plugin provider.
+ * Cache query suite part 2 with binary marshaller.
  */
-public class PlatformTestCachePluginProvider extends AbstractCachePluginProvider {
-    // No-op.
+@RunWith(Suite.class)
+@Suite.SuiteClasses({IgniteBinaryCacheQueryTestSuite2.class})
+public class IgniteBinarySimpleNameMapperCacheQueryTestSuite2 {
+    /** */
+    @BeforeClass
+    public static void init() {
+        GridTestProperties.setProperty(GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER, "true");
+    }
 }

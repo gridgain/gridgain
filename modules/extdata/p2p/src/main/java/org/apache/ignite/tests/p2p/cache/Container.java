@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.platform.plugin.cache;
+package org.apache.ignite.tests.p2p.cache;
 
-import org.apache.ignite.plugin.AbstractCachePluginProvider;
+/** */
+public class Container {
+    /** */
+    private Object field;
 
-/**
- * Test cache plugin provider.
- */
-public class PlatformTestCachePluginProvider extends AbstractCachePluginProvider {
-    // No-op.
+    /** */
+    public Container(Object field) {
+        this.field = field;
+    }
 }
