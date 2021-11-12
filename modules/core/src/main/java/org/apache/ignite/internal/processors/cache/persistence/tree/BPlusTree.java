@@ -42,6 +42,7 @@ import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.delta.FixCountRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.FixLeftmostChildRecord;
@@ -4249,6 +4250,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** */
         Bool needReplaceInner = FALSE;
 
+        /**
+         * Usually inner replace will take a value from the closest left leaf. Sometimes it's a wrong strategy, in such
+         * cases the correct value will be stored in this field.
+         * <p/>
+         * See BPlusTreeReplaceRemoveRaceTest#testConcurrentPutRemove() test for the extended explanation.
+         */
+        byte[] innerReplacePayload;
+
         /** */
         Bool needMergeEmptyBranch = FALSE;
 
@@ -4443,6 +4452,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 // These fields will be setup again on remove from leaf.
                 needReplaceInner = FALSE;
+                innerReplacePayload = null;
+
                 needMergeEmptyBranch = FALSE;
 
                 releaseTail();
@@ -4544,6 +4555,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     if (needReplaceInner == READY) {
                         replaceInner(); // Replace inner key with new max key for the left subtree.
 
+                        innerReplacePayload = null;
                         needReplaceInner = DONE;
                     }
 
@@ -4872,12 +4884,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (prntIdx == prntCnt)
                 prntIdx--;
 
+            int rightCnt = right.getCount();
+
             // The only case when the siblings can have different parents is when we are merging
             // top-down an empty branch and we already merged the join point with non-empty branch.
             // This happens because when merging empty page we do not update parent link to a lower
             // empty page in the branch since it will be dropped anyways.
             if (needMergeEmptyBranch == READY)
-                assert left.getCount() == 0 || right.getCount() == 0; // Empty branch check.
+                assert left.getCount() == 0 || rightCnt == 0; // Empty branch check.
             else if (!checkChildren(prnt, left, right, prntIdx))
                 return false;
 
@@ -4894,8 +4908,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             left.walPlc = Boolean.TRUE;
 
             // Remove split key from parent. If we are merging empty branch then remove only on the top iteration.
-            if (needMergeEmptyBranch != READY)
+            if (needMergeEmptyBranch != READY) {
+                if (needReplaceInner == READY && prntIdx == prntCnt - 1 && prnt.lvl == 1 && rightCnt == 0)
+                    innerReplacePayload = PageUtils.getBytes(prnt.buf, prnt.io.offset(prntIdx), prnt.io.getItemSize());
+
                 doRemove(prnt.pageId, prnt.page, prnt.buf, prnt.walPlc, prnt.io, prntCnt, prntIdx);
+            }
 
             // Forward page is now empty and has no links, can free and release it right away.
             freePage(right.pageId, right.page, right.buf, right.walPlc, true);
@@ -4975,19 +4993,24 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             Tail<L> leaf = getTail(inner, 0);
 
-            int leafCnt = leaf.getCount();
+            if (innerReplacePayload != null)
+                inner.io.store(inner.buf, innerIdx, null, innerReplacePayload, false);
+            else {
+                int leafCnt = leaf.getCount();
 
-            assert leafCnt > 0 : leafCnt; // Leaf must be merged at this point already if it was empty.
+                assert leafCnt > 0 : leafCnt; // Leaf must be merged at this point already if it was empty.
 
-            int leafIdx = leafCnt - 1; // Last leaf item.
+                int leafIdx = leafCnt - 1; // Last leaf item.
+
+                // Update inner key with the new biggest key of left subtree.
+                inner.io.store(inner.buf, innerIdx, leaf.io, leaf.buf, leafIdx);
+            }
 
             // We increment remove ID in write lock on inner page, thus it is guaranteed that
             // any successor, who already passed the inner page, will get greater value at leaf
             // than he had read at the beginning of the operation and will retry operation from root.
             long rmvId = globalRmvId.incrementAndGet();
 
-            // Update inner key with the new biggest key of left subtree.
-            inner.io.store(inner.buf, innerIdx, leaf.io, leaf.buf, leafIdx);
             inner.io.setRemoveId(inner.buf, rmvId);
 
             // TODO GG-11640 log a correct inner replace record.
