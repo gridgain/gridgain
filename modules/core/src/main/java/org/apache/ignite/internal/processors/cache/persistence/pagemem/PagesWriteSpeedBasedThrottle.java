@@ -242,10 +242,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     }
 
     private long computeCPBufferProtectionParkTime() {
-        long throttleParkTimeNs;
         int exponent = exponentialBackoffCntr.getAndIncrement();
-        throttleParkTimeNs = (long)(STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
-        return throttleParkTimeNs;
+        return (long) (STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
     }
 
     /**
