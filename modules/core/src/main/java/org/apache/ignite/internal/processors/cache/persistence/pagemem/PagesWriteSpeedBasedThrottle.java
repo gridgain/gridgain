@@ -163,12 +163,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         else {
             if (isPageInCheckpoint)
                 exponentialBackoffCntr.set(0);
-            return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
+            return computeCleanPagesProtectionParkTime(curNanoTime);
         }
     }
 
     /***/
-    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, long curNanoTime) {
+    private long computeCleanPagesProtectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
@@ -178,7 +178,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return NO_THROTTLING_MARKER;
         }
 
-        return computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
+        return computeCleanPagesProtectionParkTime(writtenPagesCntr, curNanoTime);
     }
 
     /***/
@@ -194,7 +194,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     }
 
     /***/
-    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, AtomicInteger writtenPagesCntr, long curNanoTime) {
+    private long computeCleanPagesProtectionParkTime(AtomicInteger writtenPagesCntr, long curNanoTime) {
         threadIds.add(Thread.currentThread().getId());
 
         ThrottleMode level = ThrottleMode.NO;
