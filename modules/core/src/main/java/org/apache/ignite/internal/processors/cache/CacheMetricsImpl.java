@@ -917,7 +917,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /**
      * Set callback for tx key collisions detection.
-     *getEntriesStat
+     *
      * @param coll Key collisions info holder.
      */
     public void keyCollisionsInfo(Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> coll) {
