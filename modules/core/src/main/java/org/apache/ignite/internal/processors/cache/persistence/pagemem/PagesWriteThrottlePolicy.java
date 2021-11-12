@@ -76,7 +76,8 @@ public interface PagesWriteThrottlePolicy {
     void onMarkDirty(boolean isPageInCheckpoint);
 
     /**
-     * Callback to try wakeup throttled threads.
+     * Callback to try wakeup throttled threads. Invoked when the Checkpoint Buffer use drops below a certain
+     * threshold.
      */
     default void tryWakeupThrottledThreads() {
         // No-op.
@@ -93,7 +94,9 @@ public interface PagesWriteThrottlePolicy {
     void onFinishCheckpoint();
 
     /**
-     * @return {@code True} if throttling should be enabled, and {@code False} otherwise.
+     * Whether Checkpoint Buffer is currently in the danger zone.
+     *
+     * @return {@code true} if throttling to protect Checkpoint Buffer should be enabled, and {@code false} otherwise.
      */
     default boolean shouldThrottle() {
         return false;
