@@ -204,6 +204,19 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
         assertEquals(3, all.get(0).get(2));
     }
     
+    @Test
+    public void test4() {
+        sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
+    
+        UpdatePlanBuilder.testProperty = false;
+    
+        sql("insert into test (id1, val) values (1, 1);");
+        
+        UpdatePlanBuilder.testProperty = true;
+    
+        sql("insert into test (id1, val) values (1, 1);");
+    }
+    
     /**
      * @param sql SQL query.
      * @param args Query parameters.

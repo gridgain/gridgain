@@ -469,8 +469,12 @@ public final class UpdatePlan {
             List<Object> resRow = new ArrayList<>();
 
             for (int j = 0; j < colNames.length; j++) {
-                Object colVal = row.size() > j ? row.get(j).get(args) : null;
-
+                Object colVal;
+                if (UpdatePlanBuilder.testProperty)
+                     colVal = row.size() > j ? row.get(j).get(args) : null;
+                else
+                     colVal = row.get(j).get(args);
+    
                 if (j == keyColIdx || j == valColIdx) {
                     Class<?> colCls = j == keyColIdx ? desc.type().keyClass() : desc.type().valueClass();
 
