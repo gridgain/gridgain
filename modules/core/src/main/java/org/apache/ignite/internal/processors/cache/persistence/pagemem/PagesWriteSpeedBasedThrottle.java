@@ -136,7 +136,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     @Override public void onMarkDirty(boolean isPageInCheckpoint) {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
-        boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
+        final boolean shouldThrottleToProtectCPBuffer = isPageInCheckpoint && shouldThrottle();
 
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
@@ -149,19 +149,16 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return; // Don't throttle if checkpoint is not running.
         }
 
-        int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
-
-        long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
-
         long curNanoTime = System.nanoTime();
 
-        speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
+        threadIds.add(Thread.currentThread().getId());
+
+        int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
+        long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
         long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-
+        speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
         long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
-
-        threadIds.add(Thread.currentThread().getId());
 
         ThrottleMode level = ThrottleMode.NO; //should apply delay (throttling) for current page modification
 
