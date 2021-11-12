@@ -205,7 +205,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
             if (throttleByCpSpeed) {
                 throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
-
                 level = ThrottleMode.LIMITED;
             }
         }
@@ -227,7 +226,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
                     nThreads,
                     markDirtySpeed,
                     curCpWriteSpeed);
-
                 level = throttleParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
             }
         }
