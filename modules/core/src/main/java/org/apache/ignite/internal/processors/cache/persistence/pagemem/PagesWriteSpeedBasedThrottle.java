@@ -43,12 +43,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Database manager. */
     private final IgniteOutClosure<CheckpointProgress> cpProgress;
 
-    /** Starting throttle time. Limits write speed to 1000 MB/s. */
-    private static final long STARTING_THROTTLE_NANOS = 4000;
-
-    /** Backoff ratio. Each next park will be this times longer. */
-    private static final double BACKOFF_RATIO = 1.05;
-
     /** Percent of dirty pages which will not cause throttling. */
     private static final double MIN_RATIO_NO_THROTTLE = 0.03;
 
@@ -57,9 +51,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * (like stats collection).
      */
     private static final long NO_THROTTLING_MARKER = Long.MIN_VALUE;
-
-    /** Exponential backoff counter. */
-    private final AtomicInteger exponentialBackoffCntr = new AtomicInteger(0);
 
     /** Counter of written pages from checkpoint. Value is saved here for detecting checkpoint start. */
     private final AtomicInteger lastObservedWritten = new AtomicInteger(0);
@@ -119,6 +110,9 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Warning threshold: minimal level of pressure that causes warning messages to log. */
     static final double WARN_THRESHOLD = 0.2;
 
+    /***/
+    private final CheckpointBufferProtectionThrottle cpBufferProtector = new CheckpointBufferProtectionThrottle();
+
     /**
      * @param pageMemory Page memory.
      * @param cpProgress Database manager.
@@ -161,10 +155,16 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
             return computeCPBufferProtectionParkTime();
         else {
-            if (isPageInCheckpoint)
-                exponentialBackoffCntr.set(0);
+            if (isPageInCheckpoint) {
+                cpBufferProtector.resetExponentialBackoffCounter();
+            }
             return computeCleanPagesProtectionParkTime(curNanoTime);
         }
+    }
+
+    /***/
+    private long computeCPBufferProtectionParkTime() {
+        return cpBufferProtector.computeCPBufferProtectionParkTime();
     }
 
     /***/
@@ -245,11 +245,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             throttleParkTimeNs = 0;
 
         return throttleParkTimeNs;
-    }
-
-    private long computeCPBufferProtectionParkTime() {
-        int exponent = exponentialBackoffCntr.getAndIncrement();
-        return (long) (STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
     }
 
     /**
@@ -490,7 +485,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onFinishCheckpoint() {
-        exponentialBackoffCntr.set(0);
+        cpBufferProtector.resetExponentialBackoffCounter();
 
         speedCpWrite.finishInterval();
         speedMarkAndAvgParkTime.finishInterval();
@@ -567,7 +562,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
         if (!shouldThrottle()) {
-            exponentialBackoffCntr.set(0);
+            cpBufferProtector.resetExponentialBackoffCounter();
 
             parkedThreads.forEach(LockSupport::unpark);
         }
