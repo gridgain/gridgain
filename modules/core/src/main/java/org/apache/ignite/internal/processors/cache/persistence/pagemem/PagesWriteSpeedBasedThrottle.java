@@ -153,7 +153,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         threadIds.add(Thread.currentThread().getId());
 
-        long throttleParkTimeNs = 0;
+        final long throttleParkTimeNs;
 
         if (shouldThrottleToProtectCPBuffer) {
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
