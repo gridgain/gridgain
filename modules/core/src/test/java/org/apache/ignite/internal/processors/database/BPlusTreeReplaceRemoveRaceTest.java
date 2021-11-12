@@ -93,7 +93,7 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
     /**
      * @return Page memory.
      */
-    protected PageMemory createPageMemory() throws Exception {
+    protected PageMemory createPageMemory() {
         DataRegionConfiguration plcCfg = new DataRegionConfiguration()
             .setInitialSize(1024 * MB)
             .setMaxSize(1024 * MB);
@@ -202,8 +202,7 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
 
     /** */
     private static final class TestPairInnerIO extends BPlusInnerIO<Pair> {
-        /**
-         */
+        /** */
         TestPairInnerIO() {
             super(PAIR_INNER_IO, 1, true, 8);
         }
@@ -238,8 +237,7 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
 
     /** */
     private static final class TestPairLeafIO extends BPlusLeafIO<Pair> {
-        /**
-         */
+        /** */
         TestPairLeafIO() {
             super(PAIR_LEAF_IO, 1, 8);
         }
