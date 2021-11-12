@@ -342,9 +342,9 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
      * This is the exact situation that test is trying to check.
      * <p/>
      *
-     * Several iteration a required for this, given that there's no guaranteed way to force a tree to perform page
+     * Several iterations are required for this, given that there's no guaranteed way to force a tree to perform page
      * modifications in the desired order. Typically, less than {@code 10} attempts have been required to get a
-     * corrupted tree. Value {@code 50} is arbitrary and have been chosen to be big enough for test to fail in case of
+     * corrupted tree. Value {@code 50} is arbitrary and has been chosen to be big enough for test to fail in case of
      * regression, but not too big so that test won't run for too long.
      *
      * @throws Exception If failed.
