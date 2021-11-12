@@ -137,7 +137,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
         final long curNanoTime = System.nanoTime();
-
         final long throttleParkTimeNs = computeThrottleParkTime(isPageInCheckpoint, curNanoTime);
 
         if (throttleParkTimeNs > 0) {
