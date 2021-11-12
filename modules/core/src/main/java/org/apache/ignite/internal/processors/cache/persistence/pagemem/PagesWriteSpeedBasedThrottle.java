@@ -357,7 +357,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         this.targetDirtyRatio = targetDirtyRatio; //publish for metrics
 
         boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
-        int slowdown = lowSpaceLeft ? 3 : 1;
+        final int slowdown = lowSpaceLeft ? 3 : 1;
 
         double multiplierForSpeedForMarkAll = lowSpaceLeft
             ? 0.8
@@ -441,8 +441,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @param coefficient how much it is needed to slowdown base speed. 1.0 means delay to get exact base speed.
      * @return sleep time in nanoseconds.
      */
-    private long calcDelayTime(long baseSpeed, int nThreads, double coefficient) {
-        if (coefficient <= 0.0)
+    private long calcDelayTime(long baseSpeed, int nThreads, int coefficient) {
+        if (coefficient <= 0)
             return 0;
 
         if (baseSpeed <= 0)
@@ -450,7 +450,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         long updTimeNsForOnePage = TimeUnit.SECONDS.toNanos(1) * nThreads / (baseSpeed);
 
-        return (long)(coefficient * updTimeNsForOnePage);
+        return coefficient * updTimeNsForOnePage;
     }
 
     /**
