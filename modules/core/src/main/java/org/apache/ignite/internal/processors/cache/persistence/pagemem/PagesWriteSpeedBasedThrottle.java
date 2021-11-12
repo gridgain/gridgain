@@ -46,7 +46,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Checkpoint progress provider. */
     private final IgniteOutClosure<CheckpointProgress> cpProgress;
 
-    /** Threads set. Contains threads which is currently parked because of throttling. */
+    /** Threads set. Contains threads which are currently parked because of throttling. */
     private final GridConcurrentHashSet<Thread> parkedThreads = new GridConcurrentHashSet<>();
 
     /**
