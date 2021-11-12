@@ -96,16 +96,16 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private final IntervalBasedMeasurement speedMarkAndAvgParkTime = new IntervalBasedMeasurement(250, 3);
 
     /** Total pages which is possible to store in page memory. */
-    private long totalPages;
+    private final long totalPages;
 
     /** Checkpoint lock state provider. */
-    private CheckpointLockStateChecker cpLockStateChecker;
+    private final CheckpointLockStateChecker cpLockStateChecker;
 
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Previous warning time, nanos. */
-    private AtomicLong prevWarnTime = new AtomicLong();
+    private final AtomicLong prevWarnTime = new AtomicLong();
 
     /** Warning min delay nanoseconds. */
     private static final long WARN_MIN_DELAY_NS = TimeUnit.SECONDS.toNanos(10);
@@ -128,7 +128,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
         totalPages = pageMemory.totalPages();
-        this.cpLockStateChecker = stateChecker;
+        cpLockStateChecker = stateChecker;
         this.log = log;
     }
 
@@ -201,7 +201,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
                     throttleParkTimeNs = getParkTime(dirtyPagesRatio,
                         fullyCompletedPages,
-                        notEvictedPagesTotal < 0 ? 0 : notEvictedPagesTotal,
+                        Math.max(notEvictedPagesTotal, 0),
                         nThreads,
                         markDirtySpeed,
                         curCpWriteSpeed);
