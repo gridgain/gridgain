@@ -163,12 +163,10 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         if (throttleParkTimeNs > 0) {
             recurrentLogIfNeed();
-
             doPark(throttleParkTimeNs);
         }
 
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
-
         speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
     }
 
