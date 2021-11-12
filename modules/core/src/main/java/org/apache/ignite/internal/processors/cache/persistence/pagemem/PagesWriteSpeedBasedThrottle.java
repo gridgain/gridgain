@@ -158,56 +158,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (shouldThrottleToProtectCPBuffer) {
             throttleParkTimeNs = computeCPBufferProtectionParkTime();
         } else {
-            ThrottleMode level = ThrottleMode.NO;
-
-            int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
-            long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
-
-            long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-            speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
-            long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
-
-            int nThreads = threadIds.size();
-
-            int cpTotalPages = cpTotalPages();
-
-            if (cpTotalPages == 0) {
-                boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
-
-                if (throttleByCpSpeed) {
-                    throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
-
-                    level = ThrottleMode.LIMITED;
-                }
-            }
-            else {
-                double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
-
-                currDirtyRatio = dirtyPagesRatio;
-
-                detectCpPagesWriteStart(cpWrittenPages, dirtyPagesRatio);
-
-                if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
-                    level = ThrottleMode.NO; // too late to throttle, will wait on safe to update instead.
-                else {
-                    int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
-
-                    throttleParkTimeNs = getParkTime(dirtyPagesRatio,
-                        fullyCompletedPages,
-                        Math.max(notEvictedPagesTotal, 0),
-                        nThreads,
-                        markDirtySpeed,
-                        curCpWriteSpeed);
-
-                    level = throttleParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
-                }
-            }
-
-            if (isPageInCheckpoint)
-                exponentialBackoffCntr.set(0);
-
-            if (level == ThrottleMode.NO)
-                throttleParkTimeNs = 0;
+            throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
         }
 
         if (throttleParkTimeNs > 0) {
@@ -219,6 +170,65 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
 
         speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+    }
+
+    /***/
+    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, AtomicInteger writtenPagesCntr, long curNanoTime) {
+        long throttleParkTimeNs;
+        ThrottleMode level = ThrottleMode.NO;
+        long throttleCleanPagesProtectionParkTimeNs = 0;
+
+        int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
+        long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
+
+        long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
+        speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
+        long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
+
+        int nThreads = threadIds.size();
+
+        int cpTotalPages = cpTotalPages();
+
+        if (cpTotalPages == 0) {
+            boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
+
+            if (throttleByCpSpeed) {
+                throttleCleanPagesProtectionParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
+
+                level = ThrottleMode.LIMITED;
+            }
+        }
+        else {
+            double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
+
+            currDirtyRatio = dirtyPagesRatio;
+
+            detectCpPagesWriteStart(cpWrittenPages, dirtyPagesRatio);
+
+            if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
+                level = ThrottleMode.NO; // too late to throttle, will wait on safe to update instead.
+            else {
+                int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
+
+                throttleCleanPagesProtectionParkTimeNs = getParkTime(dirtyPagesRatio,
+                    fullyCompletedPages,
+                    Math.max(notEvictedPagesTotal, 0),
+                    nThreads,
+                    markDirtySpeed,
+                    curCpWriteSpeed);
+
+                level = throttleCleanPagesProtectionParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
+            }
+        }
+
+        if (isPageInCheckpoint)
+            exponentialBackoffCntr.set(0);
+
+        if (level == ThrottleMode.NO)
+            throttleCleanPagesProtectionParkTimeNs = 0;
+
+        throttleParkTimeNs = throttleCleanPagesProtectionParkTimeNs;
+        return throttleParkTimeNs;
     }
 
     private long computeCPBufferProtectionParkTime() {
