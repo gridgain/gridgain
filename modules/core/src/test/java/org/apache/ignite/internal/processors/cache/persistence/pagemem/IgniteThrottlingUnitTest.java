@@ -47,6 +47,7 @@ import static java.lang.Thread.State.TIMED_WAITING;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -482,7 +483,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
     /***/
     @Test
     public void speedBasedThrottleShouldThrottleWhenCheckpointCountersAreNotReadyYetButCheckpointBufferIsInDangerZone() {
-        when(progress.writtenPagesCounter()).thenReturn(null);
+        simulateCheckpointProgressNotYetStarted();
         simulateCheckpointBufferInDangerZoneSituation();
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
                 stateChecker, log);
@@ -490,5 +491,28 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         throttle.onMarkDirty(true);
 
         assertThatThrottlingHappened(throttle);
+    }
+
+    /***/
+    private void simulateCheckpointProgressNotYetStarted() {
+        when(progress.writtenPagesCounter()).thenReturn(null);
+    }
+
+    @Test
+    public void speedBasedThrottleShouldNotLeaveTracesInStatisticsWhenCPBufferIsInSafeZoneAndProgressIsNotYetStarted() {
+        simulateCheckpointProgressNotYetStarted();
+        simulateCheckpointBufferInSafeZoneSituation();
+        PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
+                stateChecker, log);
+
+        throttle.onMarkDirty(true);
+
+        assertThat(throttle.throttleParkTime(), is(0L));
+    }
+
+    /***/
+    private void simulateCheckpointBufferInSafeZoneSituation() {
+        when(pageMemory2g.checkpointBufferPagesSize()).thenReturn(100);
+        when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(0);
     }
 }

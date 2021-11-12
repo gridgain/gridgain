@@ -52,6 +52,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Percent of dirty pages which will not cause throttling. */
     private static final double MIN_RATIO_NO_THROTTLE = 0.03;
 
+    /**
+     * Throttling 'duration' used to signal that no trottling is needed, and no side-effects are allowed
+     * (like stats collection).
+     */
+    private static final long NO_THROTTLING_MARKER = Long.MIN_VALUE;
+
     /** Exponential backoff counter. */
     private final AtomicInteger exponentialBackoffCntr = new AtomicInteger(0);
 
@@ -137,30 +143,39 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
         final long curNanoTime = System.nanoTime();
+        final long throttleParkTimeNs = computeThrottlingParkTime(isPageInCheckpoint, curNanoTime);
 
-        final long throttleParkTimeNs;
-        if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
-            throttleParkTimeNs = computeCPBufferProtectionParkTime();
-        else {
-            CheckpointProgress progress = cpProgress.apply();
-            AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
-
-            if (writtenPagesCntr == null) {
-                resetStatistics();
-
-                return;
-            }
-
-            throttleParkTimeNs = computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
-        }
-
-        if (throttleParkTimeNs > 0) {
+        if (throttleParkTimeNs == NO_THROTTLING_MARKER)
+            return;
+        else if (throttleParkTimeNs > 0) {
             recurrentLogIfNeed();
             doPark(throttleParkTimeNs);
         }
 
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
         speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+    }
+
+    /***/
+    private long computeThrottlingParkTime(boolean isPageInCheckpoint, long curNanoTime) {
+        if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
+            return computeCPBufferProtectionParkTime();
+        else
+            return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
+    }
+
+    /***/
+    private long computeCleanPagesProtectionParkTime(boolean isPageInCheckpoint, long curNanoTime) {
+        CheckpointProgress progress = cpProgress.apply();
+        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+
+        if (writtenPagesCntr == null) {
+            resetStatistics();
+
+            return NO_THROTTLING_MARKER;
+        }
+
+        return computeCleanPagesProtectionParkTime(isPageInCheckpoint, writtenPagesCntr, curNanoTime);
     }
 
     /***/
