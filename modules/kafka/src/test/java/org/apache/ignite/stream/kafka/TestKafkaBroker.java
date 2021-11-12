@@ -26,12 +26,8 @@ import java.util.Properties;
 import java.util.concurrent.TimeoutException;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.zk.KafkaZkClient;
-import org.apache.kafka.common.utils.SystemTime;
 import kafka.utils.TestUtils;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import kafka.zk.KafkaZkClient;
 import org.apache.curator.test.TestingServer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -39,7 +35,7 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
-import scala.Tuple2;
+import org.apache.kafka.common.utils.SystemTime;
 
 /**
  * Kafka Test Broker.
@@ -68,9 +64,6 @@ public class TestKafkaBroker {
 
     /** ZooKeeper. */
     private TestingServer zkServer;
-
-    /** Kafka Zookeeper utils. */
-    private ZkUtils zkUtils;
 
     /**
      * Kafka broker constructor.
@@ -127,9 +120,6 @@ public class TestKafkaBroker {
      * Shuts down test Kafka broker.
      */
     public void shutdown() {
-        if (zkUtils != null)
-            zkUtils.close();
-
         if (kafkaSrv != null)
             kafkaSrv.shutdown();
 
@@ -168,11 +158,6 @@ public class TestKafkaBroker {
      */
     private void setupZooKeeper() throws Exception {
         zkServer = new TestingServer(ZK_PORT, true);
-
-        Tuple2<ZkClient, ZkConnection> zkTuple = ZkUtils.createZkClientAndConnection(zkServer.getConnectString(),
-            ZK_SESSION_TIMEOUT, ZK_CONNECTION_TIMEOUT);
-
-        zkUtils = new ZkUtils(zkTuple._1(), zkTuple._2(), false);
     }
 
     /**
