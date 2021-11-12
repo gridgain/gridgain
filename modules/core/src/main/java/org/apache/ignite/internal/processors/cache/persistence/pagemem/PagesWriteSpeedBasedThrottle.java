@@ -150,10 +150,15 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private long computeThrottleParkTime(boolean isPageInCheckpoint, long curNanoTime) {
-        if (isPageInCheckpoint && shouldThrottle())
+        if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
             return computeCPBufferProtectionParkTime();
         else
             return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
+    }
+
+    /***/
+    private boolean shouldThrottleToProtectCPBuffer(boolean isPageInCheckpoint) {
+        return isPageInCheckpoint && shouldThrottle();
     }
 
     /***/
