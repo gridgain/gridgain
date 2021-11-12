@@ -160,8 +160,11 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private long computeThrottlingParkTime(boolean isPageInCheckpoint, long curNanoTime) {
         if (shouldThrottleToProtectCPBuffer(isPageInCheckpoint))
             return computeCPBufferProtectionParkTime();
-        else
+        else {
+            if (isPageInCheckpoint)
+                exponentialBackoffCntr.set(0);
             return computeCleanPagesProtectionParkTime(isPageInCheckpoint, curNanoTime);
+        }
     }
 
     /***/
@@ -237,9 +240,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
                 level = throttleParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
             }
         }
-
-        if (isPageInCheckpoint)
-            exponentialBackoffCntr.set(0);
 
         if (level == ThrottleMode.NO)
             throttleParkTimeNs = 0;

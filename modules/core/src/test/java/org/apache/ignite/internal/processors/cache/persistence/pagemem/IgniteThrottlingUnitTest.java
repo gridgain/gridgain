@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
 import org.apache.ignite.IgniteLogger;
@@ -58,6 +59,8 @@ import static org.mockito.Mockito.when;
  *
  */
 public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
+    private static final long FIRST_CP_BUFFER_PROTECTION_PARK_TIME_NANOS = 4000;
+
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = Timeout.millis((int)GridTestUtils.DFLT_TEST_TIMEOUT);
@@ -459,7 +462,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
     /***/
     @Test
     public void speedBasedThrottleShouldThrottleWhenCheckpointBufferIsInDangerZone() {
-        when(progress.writtenPagesCounter()).thenReturn(new AtomicInteger(1000));
+        simulateCheckpointProgressIsStarted();
         simulateCheckpointBufferInDangerZoneSituation();
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
                 stateChecker, log);
@@ -498,6 +501,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         when(progress.writtenPagesCounter()).thenReturn(null);
     }
 
+    /***/
     @Test
     public void speedBasedThrottleShouldNotLeaveTracesInStatisticsWhenCPBufferIsInSafeZoneAndProgressIsNotYetStarted() {
         simulateCheckpointProgressNotYetStarted();
@@ -514,5 +518,76 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
     private void simulateCheckpointBufferInSafeZoneSituation() {
         when(pageMemory2g.checkpointBufferPagesSize()).thenReturn(100);
         when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(0);
+    }
+
+    /***/
+    @Test
+    public void speedBasedThrottleShouldResetCPBufferProtectionParkTimeWhenItSeesThatCPBufferIsInSafeZoneAndThePageIsInCheckpoint() {
+        // preparations
+        simulateCheckpointProgressIsStarted();
+        AtomicLong parkTimeNanos = new AtomicLong();
+        PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
+                stateChecker, log) {
+            @Override
+            protected void doPark(long throttleParkTimeNs) {
+                super.doPark(1);
+                parkTimeNanos.set(throttleParkTimeNs);
+            }
+        };
+
+        // test script starts
+
+        // cause a couple of CP Buffer protection parks
+        simulateCheckpointBufferInDangerZoneSituation();
+        throttle.onMarkDirty(true);
+        throttle.onMarkDirty(true);
+        assertThat(parkTimeNanos.get(), is(4200L));
+
+        // cause the counter to be reset
+        simulateCheckpointBufferInSafeZoneSituation();
+        throttle.onMarkDirty(true);
+
+        // check that next CP Buffer protection park starts from the beginning
+        simulateCheckpointBufferInDangerZoneSituation();
+        throttle.onMarkDirty(true);
+        assertThat(parkTimeNanos.get(), is(4000L));
+    }
+
+    /***/
+    private void simulateCheckpointProgressIsStarted() {
+        when(progress.writtenPagesCounter()).thenReturn(new AtomicInteger(1000));
+    }
+
+    /***/
+    @Test
+    public void speedBasedThrottleShouldNotResetCPBufferProtectionParkTimeWhenItSeesThatCPBufferIsInSafeZoneAndThePageIsNotInCheckpoint() {
+        // preparations
+        simulateCheckpointProgressIsStarted();
+        AtomicLong parkTimeNanos = new AtomicLong();
+        PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
+                stateChecker, log) {
+            @Override
+            protected void doPark(long throttleParkTimeNs) {
+                super.doPark(1);
+                parkTimeNanos.set(throttleParkTimeNs);
+            }
+        };
+
+        // test script starts
+
+        // cause a couple of CP Buffer protection parks
+        simulateCheckpointBufferInDangerZoneSituation();
+        throttle.onMarkDirty(true);
+        throttle.onMarkDirty(true);
+        assertThat(parkTimeNanos.get(), is(4200L));
+
+        // this should NOT cause the counter to be reset
+        simulateCheckpointBufferInSafeZoneSituation();
+        throttle.onMarkDirty(false);
+
+        // check that next CP Buffer protection park is the third member of the progression
+        simulateCheckpointBufferInDangerZoneSituation();
+        throttle.onMarkDirty(true);
+        assertThat(parkTimeNanos.get(), is(4410L));
     }
 }
