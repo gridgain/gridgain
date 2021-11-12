@@ -322,7 +322,8 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
                 assertTrue(t.getName(), waitForCondition(() -> t.getState() == TIMED_WAITING, 1000L));
 
             //when: Disable throttling
-            when(cpProgress.apply()).thenReturn(null);
+            simulateCheckpointBufferIsInSafeZone();
+            stopReportingCheckpointProgress(cpProgress);
 
             //and: Finish the checkpoint.
             plc.onFinishCheckpoint();
@@ -337,6 +338,16 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         finally {
             stopLoad.set(true);
         }
+    }
+
+    /***/
+    private void simulateCheckpointBufferIsInSafeZone() {
+        when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(0);
+    }
+
+    /***/
+    private void stopReportingCheckpointProgress(IgniteOutClosure<CheckpointProgress> cpProgress) {
+        when(cpProgress.apply()).thenReturn(null);
     }
 
     /**
