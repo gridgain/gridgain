@@ -83,6 +83,8 @@ public final class UpdatePlanBuilder {
     private static boolean ALLOW_KEY_VAL_UPDATES = IgniteSystemProperties.getBoolean(
         IgniteSystemProperties.IGNITE_SQL_ALLOW_KEY_VAL_UPDATES, false);
 
+    public static boolean testProperty = false;
+    
     /**
      * Constructor.
      */
@@ -262,7 +264,7 @@ public final class UpdatePlanBuilder {
                 hasValProps = true;
         }
 
-        if (hasKeyProps && !rowKeys.isEmpty()) {
+        if (testProperty && hasKeyProps && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 

@@ -20,6 +20,7 @@ import java.util.List;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlanBuilder;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
 
@@ -58,7 +59,7 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
     public void testInsertKeyWithNullKeyParts() {
         sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
         sql("insert into test (id1, id2, val) values (1, null, 1);");
-
+        
         assertThrows(log,
             () -> sql("insert into test (id1, id2, val) values (1, null, 1);"),
             TransactionDuplicateKeyException.class,
@@ -79,7 +80,7 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
     public void testInsertKeyWithNullKeys() {
         sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
         sql("insert into test (id1, id2, val) values (null, null, 1);");
-
+        
         assertThrows(log,
             () -> sql("insert into test (id1, val) values (null, 1);"),
             TransactionDuplicateKeyException.class,
@@ -110,7 +111,99 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
             TransactionDuplicateKeyException.class,
             "Duplicate key during INSERT");
     }
-
+    
+    /**
+     * Checks the impossibility of inserting duplicate keys in case key is not set.
+     */
+    @Test
+    public void test1() {
+        UpdatePlanBuilder.testProperty = false;
+    
+        sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
+        sql("insert into test (val) values (1);");
+        sql("insert into test (id1, val) values (null, 2);");
+        sql("insert into test (id2, val) values (null, 3);");
+        sql("insert into test (id1, id2, val) values (null, null, 4);");
+    
+        UpdatePlanBuilder.testProperty = true;
+        
+        assertThrows(log,
+                () -> sql("insert into test (val) values (1);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+    
+        assertThrows(log,
+                () -> sql("insert into test (id1, val) values (null, 2);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+    
+        assertThrows(log,
+                () -> sql("insert into test (id2, val) values (null, 3);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+    
+        assertThrows(log,
+                () -> sql("insert into test (id1, id2, val) values (null, null, 4);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+    }
+    
+    /**
+     * Checks the impossibility of inserting duplicate keys in case key is not set.
+     */
+    @Test
+    public void test2() {
+        UpdatePlanBuilder.testProperty = false;
+        
+        sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
+        sql("insert into test (val) values (1);");
+    
+        UpdatePlanBuilder.testProperty = true;
+        
+        //we can do it
+        sql("insert into test (id1, id2, val) values (null, null, 2);");
+    
+        List<List<?>> all = sql("select * from test;").getAll();
+        
+        //but here is only one row
+        assertEquals(1, all.size());
+        assertEquals(2, all.get(0).get(2));
+    
+        //and we cant do it again
+        assertThrows(log,
+                () -> sql("insert into test (id1, val) values (null, 2);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+    }
+    
+    @Test
+    public void test3() {
+        UpdatePlanBuilder.testProperty = false;
+        
+        sql("CREATE TABLE test (id1 INT, id2 INT, val INT, CONSTRAINT PK PRIMARY KEY(id1, id2))");
+        sql("insert into test (val) values (1);");
+        
+        UpdatePlanBuilder.testProperty = false;
+        
+        //we can do it
+        sql("insert into test (id1, id2, val) values (null, null, 2);");
+        
+        List<List<?>> all = sql("select * from test;").getAll();
+        
+        //but here is only one row
+        assertEquals(1, all.size());
+        assertEquals(2, all.get(0).get(2));
+        
+        //with old logic we can do it again
+        sql("insert into test (id1, val) values (null, 3);");
+    
+        all = sql("select * from test;").getAll();
+    
+        //we just rewrote it
+        assertEquals(1, all.size());
+        assertEquals(3, all.get(0).get(2));
+    }
+    
     /**
      * @param sql SQL query.
      * @param args Query parameters.
