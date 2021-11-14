@@ -23,6 +23,9 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.lang.IgniteOutClosure;
 
+/**
+ *
+ */
 class CleanPagesProtectionThrottle {
     /**
      * Maximum dirty pages in region.
