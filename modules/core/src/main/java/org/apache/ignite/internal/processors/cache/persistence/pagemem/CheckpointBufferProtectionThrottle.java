@@ -37,11 +37,13 @@ class CheckpointBufferProtectionThrottle {
      */
     private final AtomicInteger exponentialBackoffCntr = new AtomicInteger(0);
 
+    /***/
     long computeProtectionParkTime() {
         int exponent = exponentialBackoffCntr.getAndIncrement();
         return (long) (STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
     }
 
+    /***/
     void resetExponentialBackoffCounter() {
         exponentialBackoffCntr.set(0);
     }

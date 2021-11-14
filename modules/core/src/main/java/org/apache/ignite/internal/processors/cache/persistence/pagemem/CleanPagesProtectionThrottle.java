@@ -97,6 +97,7 @@ class CleanPagesProtectionThrottle {
      */
     private final IntervalBasedMeasurement speedMarkAndAvgParkTime;
 
+    /***/
     CleanPagesProtectionThrottle(PageMemoryImpl pageMemory,
                                  IgniteOutClosure<CheckpointProgress> cpProgress,
                                  IntervalBasedMeasurement speedMarkAndAvgParkTime) {
@@ -395,6 +396,7 @@ class CleanPagesProtectionThrottle {
         lastObservedWritten.set(0);
     }
 
+    /***/
     void close() {
         speedCpWrite.finishInterval();
         threadIds.clear();
