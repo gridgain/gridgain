@@ -528,8 +528,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         AtomicLong parkTimeNanos = new AtomicLong();
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
                 stateChecker, log) {
-            @Override
-            protected void doPark(long throttleParkTimeNs) {
+            @Override protected void doPark(long throttleParkTimeNs) {
                 super.doPark(1);
                 parkTimeNanos.set(throttleParkTimeNs);
             }
@@ -566,8 +565,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         AtomicLong parkTimeNanos = new AtomicLong();
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
                 stateChecker, log) {
-            @Override
-            protected void doPark(long throttleParkTimeNs) {
+            @Override protected void doPark(long throttleParkTimeNs) {
                 super.doPark(1);
                 parkTimeNanos.set(throttleParkTimeNs);
             }
