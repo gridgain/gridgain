@@ -235,8 +235,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetCurrentDirtyRatio);
 
-        long delayByCpWrite = delayIfMarkingFasterThanCPWriteSpeedAllows(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
-                targetSpeedToMarkAll, targetCurrentDirtyRatio);
+        long delayByCpWrite = delayIfMarkingFasterThanCPWriteSpeedAllows(markDirtySpeed, curCpWriteSpeed,
+                dirtyPagesRatio, nThreads, targetSpeedToMarkAll, targetCurrentDirtyRatio);
         long delayByMarkAllWrite = delayIfMarkingFasterThanTargetSpeedAllows(markDirtySpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetCurrentDirtyRatio);
 
