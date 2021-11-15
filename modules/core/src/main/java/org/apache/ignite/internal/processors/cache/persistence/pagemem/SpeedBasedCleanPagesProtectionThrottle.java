@@ -109,7 +109,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
         totalPages = pageMemory.totalPages();
     }
 
-    /***/
+    /**
+     * Computes next duration (in nanos) to throttle a thread.
+     *
+     * @return park time in nanos
+     */
     long protectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
