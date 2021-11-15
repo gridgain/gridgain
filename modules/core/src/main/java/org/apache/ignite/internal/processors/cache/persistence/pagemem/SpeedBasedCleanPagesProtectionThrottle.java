@@ -166,7 +166,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private long computeParkTime(AtomicInteger writtenPagesCntr, long curNanoTime) {
         threadIds.add(Thread.currentThread().getId());
 
-        ThrottleMode level = ThrottleMode.NO;
+        boolean shouldThrottle = false;
         long throttleParkTimeNs = 0;
 
         int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
@@ -185,7 +185,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
             if (throttleByCpSpeed) {
                 throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
-                level = ThrottleMode.LIMITED;
+                shouldThrottle = true;
             }
         }
         else {
@@ -196,7 +196,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
             detectCpPagesWriteStart(cpWrittenPages, dirtyPagesRatio);
 
             if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
-                level = ThrottleMode.NO; // too late to throttle, will wait on safe to update instead.
+                shouldThrottle = false; // too late to throttle, will wait on safe to update instead.
             else {
                 int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
 
@@ -206,11 +206,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
                         nThreads,
                         markDirtySpeed,
                         curCpWriteSpeed);
-                level = throttleParkTimeNs == 0 ? ThrottleMode.NO : ThrottleMode.LIMITED;
+                shouldThrottle = throttleParkTimeNs != 0;
             }
         }
 
-        if (level == ThrottleMode.NO)
+        if (!shouldThrottle)
             throttleParkTimeNs = 0;
 
         return throttleParkTimeNs;
@@ -404,20 +404,5 @@ class SpeedBasedCleanPagesProtectionThrottle {
     void finish() {
         speedCpWrite.finishInterval();
         threadIds.clear();
-    }
-
-    /**
-     * Throttling mode for page.
-     */
-    private enum ThrottleMode {
-        /**
-         * No delay is applied.
-         */
-        NO,
-
-        /**
-         * Limited, time is based on target speed.
-         */
-        LIMITED
     }
 }
