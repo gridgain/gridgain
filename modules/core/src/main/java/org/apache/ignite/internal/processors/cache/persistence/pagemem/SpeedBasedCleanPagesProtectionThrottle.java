@@ -24,7 +24,7 @@ import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.lang.IgniteOutClosure;
 
 /**
- *
+ * Speed-based throttle used to protect clean pages.
  */
 class SpeedBasedCleanPagesProtectionThrottle {
     /**
@@ -142,7 +142,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    long computeProtectionParkTime(long curNanoTime) {
+    long protectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
@@ -389,15 +389,19 @@ class SpeedBasedCleanPagesProtectionThrottle {
         }
     }
 
-    /***/
-    void reset() {
+    /**
+     * Resets the throttle to its initial state (for example, in the beginning of a checkpoint).
+     */
+    void initialize() {
         speedCpWrite.setCounter(0L, System.nanoTime());
         initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
         lastObservedWritten.set(0);
     }
 
-    /***/
-    void close() {
+    /**
+     * Moves the throttle to its finalized state (for example, when a checkpoint ends).
+     */
+    void finish() {
         speedCpWrite.finishInterval();
         threadIds.clear();
     }

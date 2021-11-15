@@ -149,7 +149,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private long computeCleanPagesProtectionParkTime(long curNanoTime) {
-        return cleanPagesProtector.computeProtectionParkTime(curNanoTime);
+        return cleanPagesProtector.protectionParkTime(curNanoTime);
     }
 
     /**
@@ -233,14 +233,14 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onBeginCheckpoint() {
-        cleanPagesProtector.reset();
+        cleanPagesProtector.initialize();
     }
 
     /** {@inheritDoc} */
     @Override public void onFinishCheckpoint() {
         cpBufferProtector.resetBackoff();
 
-        cleanPagesProtector.close();
+        cleanPagesProtector.finish();
         speedMarkAndAvgParkTime.finishInterval();
         unparkParkedThreads();
     }
