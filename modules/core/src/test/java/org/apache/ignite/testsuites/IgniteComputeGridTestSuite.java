@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ import org.apache.ignite.internal.VisorManagementEventSelfTest;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManagerSelfTest;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointTaskSelfTest;
 import org.apache.ignite.internal.managers.communication.GridCommunicationManagerListenersSelfTest;
+import org.apache.ignite.internal.processors.compute.ComputeGridMonitorMonitorTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorConfigurationSelfTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
@@ -175,7 +176,9 @@ import org.junit.runners.Suite;
     IgniteComputeJobOneThreadTest.class,
 
     VisorManagementEventSelfTest.class,
-    VisorCacheRebalanceCollectorTaskSelfTest.class
+    VisorCacheRebalanceCollectorTaskSelfTest.class,
+
+    ComputeGridMonitorMonitorTest.class
 })
 public class IgniteComputeGridTestSuite {
     /** Activate service grid for test it. */

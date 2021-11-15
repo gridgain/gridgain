@@ -16,13 +16,18 @@
 
 package org.apache.ignite.internal.processors.task.monitor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.GridTaskSessionImpl;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusEnum.FAILED;
 import static org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusEnum.FINISHED;
 import static org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusEnum.RUNNING;
@@ -111,8 +116,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         this.originatingNodeId = originatingNodeId;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.jobNodes = jobNodes;
-        this.attributes = attributes;
+        this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : new ArrayList<>(jobNodes);
+        this.attributes = F.isEmpty(attributes) ? emptyMap() : new HashMap<>(attributes);
         this.failReason = failReason;
         this.newTask = newTask;
         this.jobNodesChanged = jobNodesChanged;
@@ -200,7 +205,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getStartTime(),
             sessionImp.getEndTime(),
             sessionImp.jobNodes(),
-            sessionImp.getAttributes(),
+            sessionImp.attributesSafe(),
             null,
             false,
             false,
@@ -224,7 +229,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getStartTime(),
             sessionImp.getEndTime(),
             sessionImp.jobNodes(),
-            sessionImp.getAttributes(),
+            sessionImp.attributesSafe(),
             null,
             true,
             false,

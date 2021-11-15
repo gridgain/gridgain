@@ -43,8 +43,10 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableCollection;
 import static java.util.Collections.unmodifiableList;
+import static java.util.Collections.unmodifiableMap;
 
 /**
  * Task session.
@@ -379,7 +381,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         checkFullSupport();
 
         if (keys.isEmpty())
-            return Collections.emptyMap();
+            return emptyMap();
 
         if (timeout == 0)
             timeout = Long.MAX_VALUE;
@@ -626,7 +628,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         checkFullSupport();
 
         synchronized (mux) {
-            return attrs == null || attrs.isEmpty() ? Collections.emptyMap() : U.sealMap(attrs);
+            return attrs == null || attrs.isEmpty() ? emptyMap() : U.sealMap(attrs);
         }
     }
 
@@ -952,7 +954,16 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
      */
     public List<UUID> jobNodes() {
         synchronized (mux) {
-            return jobNodes == null ? emptyList() : unmodifiableList(jobNodes);
+            return F.isEmpty(jobNodes) ? emptyList() : unmodifiableList(jobNodes);
+        }
+    }
+
+    /**
+     * @return All session attributes, without checks.
+     */
+    public Map<Object, Object> attributesSafe() {
+        synchronized (mux) {
+            return F.isEmpty(attrs) ? emptyMap() : unmodifiableMap(attrs);
         }
     }
 
