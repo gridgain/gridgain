@@ -79,9 +79,7 @@ public interface PagesWriteThrottlePolicy {
      * Callback to try wakeup throttled threads. Invoked when the Checkpoint Buffer use drops below a certain
      * threshold.
      */
-    default void tryWakeupThrottledThreads() {
-        // No-op.
-    }
+    void tryWakeupThrottledThreads();
 
     /**
      * Callback to notify throttling policy checkpoint was started.
@@ -99,7 +97,5 @@ public interface PagesWriteThrottlePolicy {
      * @return {@code true} if measures like throttling to protect Checkpoint Buffer should be applied,
      * and {@code false} otherwise.
      */
-    default boolean isCPBufferInDangerZone() {
-        return false;
-    }
+    boolean isCPBufferInDangerZone();
 }
