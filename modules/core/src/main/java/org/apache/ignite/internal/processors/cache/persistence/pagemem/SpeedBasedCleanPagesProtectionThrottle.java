@@ -229,10 +229,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
             long markDirtySpeed,
             long curCpWriteSpeed) {
 
-        final long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio,
-                donePages,
-                curCpWriteSpeed,
-                cpTotalPages);
+        final long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio, donePages,
+                curCpWriteSpeed, cpTotalPages);
         final double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
 
         updateSpeedAndRatio(speedForMarkAll, targetDirtyRatio);
