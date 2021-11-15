@@ -112,8 +112,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /**
      * Computes next duration (in nanos) to throttle a thread.
+     * Might return #NO_THROTTLING_MARKER as a marker that no throttling should be applied.
      *
-     * @return park time in nanos
+     * @return park time in nanos or #NO_THROTTLING_MARKER if no throttling is needed
      */
     long protectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
