@@ -248,16 +248,16 @@ class SpeedBasedCleanPagesProtectionThrottle {
         boolean throttleBySizeAndMarkSpeed = dirtyPagesRatio > targetDirtyRatio && markingTooFast;
 
         //for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
-        double allowWriteFasterThanCp = (markDirtySpeed > 0 && speedForMarkAll > markDirtySpeed)
+        final double allowWriteFasterThanCp = (markDirtySpeed > 0 && speedForMarkAll > markDirtySpeed)
                 ? (0.1 * speedForMarkAll / markDirtySpeed)
                 : (dirtyPagesRatio > targetDirtyRatio ? 0.0 : 0.1);
 
-        double fasterThanCpWriteSpeed = lowSpaceLeft
+        final double fasterThanCpWriteSpeed = lowSpaceLeft
                 ? 1.0
                 : 1.0 + allowWriteFasterThanCp;
-        boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > (fasterThanCpWriteSpeed * curCpWriteSpeed);
+        final boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > (fasterThanCpWriteSpeed * curCpWriteSpeed);
 
-        long delayByCpWrite;
+        final long delayByCpWrite;
         if (throttleByCpSpeed) {
             long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / (markDirtySpeed);
 
@@ -266,7 +266,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
         else
             delayByCpWrite = 0;
 
-        long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(speedForMarkAll, nThreads, slowdown) : 0;
+        final long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(speedForMarkAll, nThreads, slowdown) : 0;
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
