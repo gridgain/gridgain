@@ -298,11 +298,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
-        final double multiplierForSpeedToMarkAll = lowSpaceLeft ? 0.8 : 1.0;
-        final boolean markingTooFastNow = targetSpeedToMarkAll > 0
+        double multiplierForSpeedToMarkAll = lowSpaceLeft ? 0.8 : 1.0;
+        boolean markingTooFastNow = targetSpeedToMarkAll > 0
                 && markDirtySpeed > multiplierForSpeedToMarkAll * targetSpeedToMarkAll;
-        final boolean markedTooFastSinceCPStart = dirtyPagesRatio > targetCurrentDirtyRatio;
-        final boolean markingTooFast = markedTooFastSinceCPStart && markingTooFastNow;
+        boolean markedTooFastSinceCPStart = dirtyPagesRatio > targetCurrentDirtyRatio;
+        boolean markingTooFast = markedTooFastSinceCPStart && markingTooFastNow;
         return markingTooFast ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
     }
 
