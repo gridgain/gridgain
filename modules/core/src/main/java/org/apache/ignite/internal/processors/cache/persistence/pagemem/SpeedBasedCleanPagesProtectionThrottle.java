@@ -142,10 +142,10 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /***/
     private long computeParkTime(@NotNull AtomicInteger writtenPagesCounter, long curNanoTime) {
         final int cpWrittenPages = writtenPagesCounter.get();
-        final long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
+        final long donePages = (cpWrittenPages + cpSyncedPages()) / 2;
 
         final long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-        speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
+        speedCpWrite.setCounter(donePages, curNanoTime);
         final long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
 
         final int cpTotalPages = cpTotalPages();
@@ -154,7 +154,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
             return parkTimeToThrottleByCPSpeed(markDirtySpeed, curCpWriteSpeed);
         }
         else {
-            return speedBasedParkTime(cpWrittenPages, fullyCompletedPages, markDirtySpeed,
+            return speedBasedParkTime(cpWrittenPages, donePages, markDirtySpeed,
                     curCpWriteSpeed, cpTotalPages);
         }
     }
@@ -171,7 +171,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private long speedBasedParkTime(int cpWrittenPages, long fullyCompletedPages, long markDirtySpeed,
+    private long speedBasedParkTime(int cpWrittenPages, long donePages, long markDirtySpeed,
                                     long curCpWriteSpeed, int cpTotalPages) {
         double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
 
@@ -185,7 +185,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
             int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
 
             return getParkTime(dirtyPagesRatio,
-                    fullyCompletedPages,
+                    donePages,
                     Math.max(notEvictedPagesTotal, 0),
                     threadIdsCount(),
                     markDirtySpeed,
@@ -195,7 +195,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /**
      * @param dirtyPagesRatio     actual percent of dirty pages.
-     * @param fullyCompletedPages written & fsynced pages count.
+     * @param donePages           roughly, written & fsynced pages count.
      * @param cpTotalPages        total checkpoint scope.
      * @param nThreads            number of threads providing data during current checkpoint.
      * @param markDirtySpeed      registered mark dirty speed, pages/sec.
@@ -204,18 +204,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
      */
     long getParkTime(
             double dirtyPagesRatio,
-            long fullyCompletedPages,
+            long donePages,
             int cpTotalPages,
             int nThreads,
             long markDirtySpeed,
             long curCpWriteSpeed) {
 
         long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio,
-                fullyCompletedPages,
+                donePages,
                 curCpWriteSpeed,
                 cpTotalPages);
 
-        double targetDirtyRatio = calcTargetDirtyRatio(fullyCompletedPages, cpTotalPages);
+        double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
 
         this.speedForMarkAll = speedForMarkAll; //publish for metrics
         this.targetDirtyRatio = targetDirtyRatio; //publish for metrics
@@ -255,14 +255,14 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /**
      * @param dirtyPagesRatio     current percent of dirty pages.
-     * @param fullyCompletedPages count of written and sync'ed pages
+     * @param donePages           roughly, count of written and sync'ed pages
      * @param curCpWriteSpeed     pages/second checkpoint write speed. 0 speed means 'no data'.
      * @param cpTotalPages        total pages in checkpoint.
      * @return pages/second to mark to mark all clean pages as dirty till the end of checkpoint. 0 speed means 'no
      * data'.
      */
     private long calcSpeedToMarkAllSpaceTillEndOfCp(double dirtyPagesRatio,
-                                                    long fullyCompletedPages,
+                                                    long donePages,
                                                     long curCpWriteSpeed,
                                                     int cpTotalPages) {
 
@@ -277,18 +277,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         double remainedClear = (MAX_DIRTY_PAGES - dirtyPagesRatio) * totalPages;
 
-        double timeRemainedSeconds = 1.0 * (cpTotalPages - fullyCompletedPages) / curCpWriteSpeed;
+        double timeRemainedSeconds = 1.0 * (cpTotalPages - donePages) / curCpWriteSpeed;
 
         return (long) (remainedClear / timeRemainedSeconds);
     }
 
     /**
-     * @param fullyCompletedPages number of completed.
-     * @param cpTotalPages        Total amount of pages under checkpoint.
+     * @param donePages         number of completed.
+     * @param cpTotalPages      Total amount of pages under checkpoint.
      * @return size-based calculation of target ratio.
      */
-    private double calcTargetDirtyRatio(long fullyCompletedPages, int cpTotalPages) {
-        double cpProgress = ((double) fullyCompletedPages) / cpTotalPages;
+    private double calcTargetDirtyRatio(long donePages, int cpTotalPages) {
+        double cpProgress = ((double) donePages) / cpTotalPages;
 
         // Starting with initialDirtyRatioAtCpBegin to avoid throttle right after checkpoint start
         double constStart = initDirtyRatioAtCpBegin;
