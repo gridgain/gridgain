@@ -45,8 +45,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableCollection;
-import static java.util.Collections.unmodifiableList;
-import static java.util.Collections.unmodifiableMap;
 
 /**
  * Task session.
@@ -952,18 +950,18 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
     /**
      * @return Nodes on which the jobs of the task will be executed.
      */
-    public List<UUID> jobNodes() {
+    public List<UUID> jobNodesSafeCopy() {
         synchronized (mux) {
-            return F.isEmpty(jobNodes) ? emptyList() : unmodifiableList(jobNodes);
+            return F.isEmpty(jobNodes) ? emptyList() : new ArrayList<>(jobNodes);
         }
     }
 
     /**
      * @return All session attributes, without checks.
      */
-    public Map<Object, Object> attributesSafe() {
+    public Map<Object, Object> attributesSafeCopy() {
         synchronized (mux) {
-            return F.isEmpty(attrs) ? emptyMap() : unmodifiableMap(attrs);
+            return F.isEmpty(attrs) ? emptyMap() : new HashMap<>(attrs);
         }
     }
 

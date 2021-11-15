@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.task.monitor;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -116,8 +114,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         this.originatingNodeId = originatingNodeId;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : new ArrayList<>(jobNodes);
-        this.attributes = F.isEmpty(attributes) ? emptyMap() : new HashMap<>(attributes);
+        this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : jobNodes;
+        this.attributes = F.isEmpty(attributes) ? emptyMap() : attributes;
         this.failReason = failReason;
         this.newTask = newTask;
         this.jobNodesChanged = jobNodesChanged;
@@ -204,8 +202,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getTaskNodeId(),
             sessionImp.getStartTime(),
             sessionImp.getEndTime(),
-            sessionImp.jobNodes(),
-            sessionImp.attributesSafe(),
+            sessionImp.jobNodesSafeCopy(),
+            sessionImp.attributesSafeCopy(),
             null,
             false,
             false,
@@ -228,8 +226,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getTaskNodeId(),
             sessionImp.getStartTime(),
             sessionImp.getEndTime(),
-            sessionImp.jobNodes(),
-            sessionImp.attributesSafe(),
+            sessionImp.jobNodesSafeCopy(),
+            sessionImp.attributesSafeCopy(),
             null,
             true,
             false,
@@ -252,7 +250,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             null,
             0L,
             0L,
-            sessionImp.jobNodes(),
+            sessionImp.jobNodesSafeCopy(),
             null,
             null,
             false,
