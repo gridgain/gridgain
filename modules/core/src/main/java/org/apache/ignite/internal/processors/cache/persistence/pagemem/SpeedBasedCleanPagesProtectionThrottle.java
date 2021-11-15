@@ -151,6 +151,10 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final int cpTotalPages = cpTotalPages();
 
         if (cpTotalPages == 0) {
+            // ??? It would be great to ask dspavlov (original author) or Alexey Goncharuk (reviewer) why we need
+            // this branch at all as, from the current code analysis, we can only get here by accident when
+            // CheckpointProgressImpl.clearCounters() is invoked at the end of a checkpoint (by falling through
+            // between two volatile assignments).
             return parkTimeToThrottleByCPSpeed(markDirtySpeed, curCpWriteSpeed);
         }
         else {
