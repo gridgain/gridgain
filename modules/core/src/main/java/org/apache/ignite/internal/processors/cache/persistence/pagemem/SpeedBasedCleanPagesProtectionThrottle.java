@@ -136,13 +136,13 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private long computeParkTime(AtomicInteger writtenPagesCntr, long curNanoTime) {
+    private long computeParkTime(AtomicInteger writtenPagesCounter, long curNanoTime) {
         threadIds.add(Thread.currentThread().getId());
 
         boolean shouldThrottle = false;
         long throttleParkTimeNs = 0;
 
-        int cpWrittenPages = writtenPagesCntr == null ? 0 : writtenPagesCntr.get();
+        int cpWrittenPages = writtenPagesCounter == null ? 0 : writtenPagesCounter.get();
         long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
         long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
