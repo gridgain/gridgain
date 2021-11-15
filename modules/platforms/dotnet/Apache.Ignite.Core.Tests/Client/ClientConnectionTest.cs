@@ -686,6 +686,10 @@ namespace Apache.Ignite.Core.Tests.Client
             {
                 Assert.AreEqual(1, client.GetCluster().GetNodes().Count);
             }
+
+            // Does not connect without client certificate.
+            cfg.SslStreamFactory = new SslStreamFactory { SkipServerCertificateValidation = true };
+            Assert.Throws<IgniteClientException>(() => Ignition.StartClient(cfg));
         }
 
         /// <summary>
