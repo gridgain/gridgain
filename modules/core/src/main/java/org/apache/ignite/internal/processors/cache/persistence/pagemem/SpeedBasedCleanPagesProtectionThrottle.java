@@ -252,13 +252,14 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final boolean throttleByCpSpeed = curCpWriteSpeed > 0
                 && markDirtySpeed > (allowedCpWriteSpeedExcessMultiplier * curCpWriteSpeed);
 
-        if (throttleByCpSpeed) {
-            int slowdown = slowdownIfLowSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
-            long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
-            return calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
-        }
-        else
+        if (!throttleByCpSpeed) {
             return 0;
+        }
+
+        int slowdown = slowdownIfLowSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
+        long nanosecsToMarkOnePage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
+        long nanosecsToWriteOneCPPage = calcDelayTime(curCpWriteSpeed, nThreads, slowdown);
+        return nanosecsToWriteOneCPPage - nanosecsToMarkOnePage;
     }
 
     /***/
