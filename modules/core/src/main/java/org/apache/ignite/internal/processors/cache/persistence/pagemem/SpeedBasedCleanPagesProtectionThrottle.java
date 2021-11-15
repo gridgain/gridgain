@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.lang.IgniteOutClosure;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Speed-based throttle used to protect clean pages from exhaustion.
@@ -138,8 +139,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private long computeParkTime(AtomicInteger writtenPagesCounter, long curNanoTime) {
-        final int cpWrittenPages = writtenPagesCounter == null ? 0 : writtenPagesCounter.get();
+    private long computeParkTime(@NotNull AtomicInteger writtenPagesCounter, long curNanoTime) {
+        final int cpWrittenPages = writtenPagesCounter.get();
         final long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
         final long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
