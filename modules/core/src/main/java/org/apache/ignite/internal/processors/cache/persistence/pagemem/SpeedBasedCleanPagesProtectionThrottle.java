@@ -26,7 +26,7 @@ import org.apache.ignite.lang.IgniteOutClosure;
 /**
  *
  */
-class CleanPagesProtectionThrottle {
+class SpeedBasedCleanPagesProtectionThrottle {
     /**
      * Maximum dirty pages in region.
      */
@@ -98,9 +98,9 @@ class CleanPagesProtectionThrottle {
     private final IntervalBasedMeasurement speedMarkAndAvgParkTime;
 
     /***/
-    CleanPagesProtectionThrottle(PageMemoryImpl pageMemory,
-                                 IgniteOutClosure<CheckpointProgress> cpProgress,
-                                 IntervalBasedMeasurement speedMarkAndAvgParkTime) {
+    SpeedBasedCleanPagesProtectionThrottle(PageMemoryImpl pageMemory,
+                                           IgniteOutClosure<CheckpointProgress> cpProgress,
+                                           IntervalBasedMeasurement speedMarkAndAvgParkTime) {
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
         this.speedMarkAndAvgParkTime = speedMarkAndAvgParkTime;

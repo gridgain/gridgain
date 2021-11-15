@@ -78,7 +78,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private final CheckpointBufferProtectionThrottle cpBufferProtector = new CheckpointBufferProtectionThrottle();
 
     /** Clean pages protection logic. */
-    private final CleanPagesProtectionThrottle cleanPagesProtector;
+    private final SpeedBasedCleanPagesProtectionThrottle cleanPagesProtector;
 
     /**
      * @param pageMemory Page memory.
@@ -97,7 +97,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         cpLockStateChecker = stateChecker;
         this.log = log;
 
-        cleanPagesProtector = new CleanPagesProtectionThrottle(pageMemory, cpProgress, speedMarkAndAvgParkTime);
+        cleanPagesProtector = new SpeedBasedCleanPagesProtectionThrottle(pageMemory, cpProgress, speedMarkAndAvgParkTime);
     }
 
     /** {@inheritDoc} */
