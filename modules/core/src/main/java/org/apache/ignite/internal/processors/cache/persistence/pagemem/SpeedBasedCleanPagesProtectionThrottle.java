@@ -237,7 +237,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(speedForMarkAll, targetDirtyRatio);
 
-        boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
+        final boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
         final int slowdown = lowSpaceLeft ? 3 : 1;
 
         double multiplierForSpeedForMarkAll = lowSpaceLeft
