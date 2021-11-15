@@ -229,15 +229,13 @@ class SpeedBasedCleanPagesProtectionThrottle {
             long markDirtySpeed,
             long curCpWriteSpeed) {
 
-        long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio,
+        final long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio,
                 donePages,
                 curCpWriteSpeed,
                 cpTotalPages);
+        final double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
 
-        double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
-
-        this.speedForMarkAll = speedForMarkAll; //publish for metrics
-        this.targetDirtyRatio = targetDirtyRatio; //publish for metrics
+        updateSpeedAndRatio(speedForMarkAll, targetDirtyRatio);
 
         boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
         final int slowdown = lowSpaceLeft ? 3 : 1;
@@ -270,6 +268,12 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(speedForMarkAll, nThreads, slowdown) : 0;
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
+    }
+
+    /***/
+    private void updateSpeedAndRatio(long speedForMarkAll, double targetDirtyRatio) {
+        this.speedForMarkAll = speedForMarkAll; //publish for metrics
+        this.targetDirtyRatio = targetDirtyRatio; //publish for metrics
     }
 
     /**
