@@ -235,16 +235,16 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
-        long delayByCpWrite = delayByCpWrite(dirtyPagesRatio, nThreads, markDirtySpeed, curCpWriteSpeed,
+        long delayByCpWrite = delayByCpWrite(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetDirtyRatio);
-        long delayByMarkAllWrite = delayByMarkAllWrite(dirtyPagesRatio, nThreads, markDirtySpeed,
+        long delayByMarkAllWrite = delayByMarkAllWrite(markDirtySpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetDirtyRatio);
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
 
     /***/
-    private long delayByCpWrite(double dirtyPagesRatio, int nThreads, long markDirtySpeed, long curCpWriteSpeed,
+    private long delayByCpWrite(long markDirtySpeed, long curCpWriteSpeed, double dirtyPagesRatio, int nThreads,
                                 long targetSpeedToMarkAll, double targetDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
@@ -278,7 +278,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private long delayByMarkAllWrite(double dirtyPagesRatio, int nThreads, long markDirtySpeed,
+    private long delayByMarkAllWrite(long markDirtySpeed, double dirtyPagesRatio, int nThreads,
                                      long targetSpeedToMarkAll, double targetDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
