@@ -189,7 +189,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /***/
     private long speedBasedParkTime(int cpWrittenPages, long donePages, long markDirtySpeed,
                                     long curCpWriteSpeed, int cpTotalPages) {
-        double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
+        final double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
 
         currDirtyRatio = dirtyPagesRatio;
 
