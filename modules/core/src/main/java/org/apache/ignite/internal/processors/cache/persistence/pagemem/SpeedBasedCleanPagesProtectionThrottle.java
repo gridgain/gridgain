@@ -253,7 +253,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
                 && markDirtySpeed > (allowedCpWriteSpeedExcessMultiplier * curCpWriteSpeed);
 
         if (throttleByCpSpeed) {
-            int slowdown = flowdownIfLowSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
+            int slowdown = slowdownIfLowSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
             long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
             return calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
         }
@@ -262,7 +262,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private int flowdownIfLowSpaceLeft(double dirtyPagesRatio, double targetCurrentDirtyRatio) {
+    private int slowdownIfLowSpaceLeft(double dirtyPagesRatio, double targetCurrentDirtyRatio) {
         boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
         return slowdownIfLowSpaceLeft(lowSpaceLeft);
     }
