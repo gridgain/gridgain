@@ -235,14 +235,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
-        final boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
+        final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
         final int slowdown = lowSpaceLeft ? 3 : 1;
-
-        final double multiplierForSpeedForMarkAll = lowSpaceLeft ? 0.8 : 1.0;
-
-        final boolean markingTooFast = targetSpeedToMarkAll > 0
-                && markDirtySpeed > multiplierForSpeedForMarkAll * targetSpeedToMarkAll;
-        final boolean throttleBySizeAndMarkSpeed = dirtyPagesRatio > targetDirtyRatio && markingTooFast;
 
         //for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
         final double allowWriteFasterThanCp = (markDirtySpeed > 0 && targetSpeedToMarkAll > markDirtySpeed)
@@ -263,9 +257,24 @@ class SpeedBasedCleanPagesProtectionThrottle {
         else
             delayByCpWrite = 0;
 
+        final double multiplierForSpeedForMarkAll = lowSpaceLeft ? 0.8 : 1.0;
+        final boolean markingTooFast = targetSpeedToMarkAll > 0
+                && markDirtySpeed > multiplierForSpeedForMarkAll * targetSpeedToMarkAll;
+        final boolean throttleBySizeAndMarkSpeed = dirtyPagesRatio > targetDirtyRatio && markingTooFast;
         final long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
+    }
+
+    /**
+     * Whether too low clean space is left, so more powerful measures are needed (like heavier throttling).
+     *
+     * @param dirtyPagesRatio  current dirty pages ratio
+     * @param targetDirtyRatio target dirty pages ratio
+     * @return {@code true} iff clean space left is too low
+     */
+    private boolean lowCleanSpaceLeft(double dirtyPagesRatio, double targetDirtyRatio) {
+        return dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
     }
 
     /***/
