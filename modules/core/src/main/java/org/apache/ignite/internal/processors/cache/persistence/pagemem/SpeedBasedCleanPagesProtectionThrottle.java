@@ -235,18 +235,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetCurrentDirtyRatio);
 
-        long delayByCpWrite = delayIfMarkingFasterThanCPIsWritten(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
+        long delayByCpWrite = delayIfMarkingFasterThanCPWriteSpeedAllows(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetCurrentDirtyRatio);
-        long delayByMarkAllWrite = delayIfMarkingFasterThanTargetSpeed(markDirtySpeed, dirtyPagesRatio, nThreads,
+        long delayByMarkAllWrite = delayIfMarkingFasterThanTargetSpeedAllows(markDirtySpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetCurrentDirtyRatio);
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
 
     /***/
-    private long delayIfMarkingFasterThanCPIsWritten(long markDirtySpeed, long curCpWriteSpeed, double dirtyPagesRatio,
-                                                     int nThreads,
-                                                     long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
+    private long delayIfMarkingFasterThanCPWriteSpeedAllows(long markDirtySpeed, long curCpWriteSpeed,
+                                                            double dirtyPagesRatio, int nThreads,
+                                                            long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
         final double allowedCpWriteSpeedExcessMultiplier = allowedCpWriteSpeedExcessMultiplier(markDirtySpeed,
                 dirtyPagesRatio, targetSpeedToMarkAll, targetCurrentDirtyRatio);
         final boolean throttleByCpSpeed = curCpWriteSpeed > 0
@@ -260,12 +260,6 @@ class SpeedBasedCleanPagesProtectionThrottle {
         long nanosecsToMarkOnePage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
         long nanosecsToWriteOneCPPage = calcDelayTime(curCpWriteSpeed, nThreads, slowdown);
         return nanosecsToWriteOneCPPage - nanosecsToMarkOnePage;
-    }
-
-    /***/
-    private int slowdownIfLowSpaceLeft(double dirtyPagesRatio, double targetCurrentDirtyRatio) {
-        boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
-        return slowdownIfLowSpaceLeft(lowSpaceLeft);
     }
 
     /***/
@@ -288,13 +282,19 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
+    private int slowdownIfLowSpaceLeft(double dirtyPagesRatio, double targetCurrentDirtyRatio) {
+        boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
+        return slowdownIfLowSpaceLeft(lowSpaceLeft);
+    }
+
+    /***/
     private int slowdownIfLowSpaceLeft(boolean lowSpaceLeft) {
         return lowSpaceLeft ? 3 : 1;
     }
 
     /***/
-    private long delayIfMarkingFasterThanTargetSpeed(long markDirtySpeed, double dirtyPagesRatio, int nThreads,
-                                                     long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
+    private long delayIfMarkingFasterThanTargetSpeedAllows(long markDirtySpeed, double dirtyPagesRatio, int nThreads,
+                                                           long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
