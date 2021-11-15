@@ -689,7 +689,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
             // Does not connect without client certificate.
             cfg.SslStreamFactory = new SslStreamFactory { SkipServerCertificateValidation = true };
-            Assert.Throws<IgniteClientException>(() => Ignition.StartClient(cfg));
+            Assert.Catch<Exception>(() => Ignition.StartClient(cfg));
         }
 
         /// <summary>
