@@ -20,9 +20,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
@@ -31,13 +31,16 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskSession;
+import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusDiff;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -144,6 +147,30 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         checkFailTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
     }
 
+    @Test
+    public void changeAttributesTest() throws Exception {
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
+
+        ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(task, null);
+
+        task.doneOnMapFut.get(getTestTimeout());
+
+        taskFut.getTaskSession().setAttribute("test", "test");
+
+        task.waitOnJobExecFut.onDone();
+
+        taskFut.get(getTestTimeout());
+
+        assertTrue(monitor.statusSnapshots.isEmpty());
+
+        assertEquals(4, monitor.statusDiffs.size());
+
+        checkStartTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkChangeJobNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkChangeAttributesNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkFinishTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+    }
+
     /**
      * Checking the get of snapshots of task statuses.
      *
@@ -151,45 +178,18 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
      */
     @Test
     public void snapshotsTest() throws Exception {
-        GridFutureAdapter<Void> fut0 = new GridFutureAdapter<>();
-        GridFutureAdapter<Void> fut1 = new GridFutureAdapter<>();
-
-        NoopComputeTask task = new NoopComputeTask() {
-            /** {@inheritDoc} */
-            @Override public Map<? extends ComputeJob, ClusterNode> map(
-                List<ClusterNode> subgrid,
-                Void arg
-            ) throws IgniteException {
-                fut0.onDone();
-
-                return subgrid.stream().collect(toMap(n -> new NoopComputeJob() {
-                    /** {@inheritDoc} */
-                    @Override public Object execute() throws IgniteException {
-                        if (n.id().equals(CRD.localNode().id())) {
-                            try {
-                                fut1.get(getTestTimeout());
-                            }
-                            catch (IgniteCheckedException e) {
-                                throw new IgniteException(e);
-                            }
-                        }
-
-                        return super.execute();
-                    }
-                }, identity()));
-            }
-        };
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
 
         ComputeTaskFuture<Void> taskFut = CRD.compute().executeAsync(task, null);
 
-        fut0.get(getTestTimeout());
+        task.doneOnMapFut.get(getTestTimeout());
 
         ComputeGridMonitorImpl monitor1 = new ComputeGridMonitorImpl();
 
         try {
             CRD.context().task().listenStatusUpdates(monitor1);
 
-            fut1.onDone();
+            task.waitOnJobExecFut.onDone();
 
             assertTrue(monitor.statusSnapshots.isEmpty());
 
@@ -294,6 +294,32 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
     }
 
     /** */
+    private void checkChangeAttributesNodes(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
+        assertTrue(diff.hasAttributesChanged());
+
+        assertFalse(diff.newTask());
+        assertFalse(diff.hasJobNodesChanged());
+        assertFalse(diff.taskFinished());
+
+        assertEquals(session.getId(), diff.sessionId());
+
+        assertEquals(
+            new TreeMap<>(session.getAttributes()),
+            new TreeMap<>(diff.attributes())
+        );
+
+        assertNull(diff.status());
+        assertNull(diff.taskName());
+        assertNull(diff.originatingNodeId());
+        assertNull(diff.failReason());
+
+        assertEquals(0L, diff.startTime());
+        assertEquals(0L, diff.endTime());
+
+        assertTrue(diff.jobNodes().isEmpty());
+    }
+
+    /** */
     private void checkStartTask(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
         assertTrue(diff.newTask());
 
@@ -342,6 +368,51 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
             Void arg
         ) throws IgniteException {
             return subgrid.stream().collect(toMap(n -> new NoopComputeJob(), identity()));
+        }
+
+        /** {@inheritDoc} */
+        @Override public Void reduce(List<ComputeJobResult> results) throws IgniteException {
+            return null;
+        }
+    }
+
+    /** */
+    @ComputeTaskSessionFullSupport
+    private static class ComputeFullWithWaitTask extends ComputeTaskAdapter<Void, Void> {
+        /** */
+        final GridFutureAdapter<Void> doneOnMapFut = new GridFutureAdapter<>();
+
+        /** */
+        final GridFutureAdapter<Void> waitOnJobExecFut = new GridFutureAdapter<>();
+
+        /** */
+        final long timeout;
+
+        /** */
+        public ComputeFullWithWaitTask(long timeout) {
+            this.timeout = timeout;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Map<? extends ComputeJob, ClusterNode> map(
+            List<ClusterNode> subgrid,
+            Void arg
+        ) throws IgniteException {
+            doneOnMapFut.onDone();
+
+            return subgrid.stream().collect(toMap(n -> new NoopComputeJob() {
+                /** {@inheritDoc} */
+                @Override public Object execute() throws IgniteException {
+                    try {
+                        U.sleep(500);
+                    }
+                    catch (IgniteInterruptedCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+
+                    return super.execute();
+                }
+            }, identity()));
         }
 
         /** {@inheritDoc} */

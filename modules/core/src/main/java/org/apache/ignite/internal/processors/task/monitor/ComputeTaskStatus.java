@@ -279,8 +279,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             null,
             false,
             false,
-            false,
-            true
+            true,
+            false
         );
     }
 
