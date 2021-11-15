@@ -89,7 +89,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /**
      * Average checkpoint write speed. Only the current value is used. Pages/second.
      */
-    private final IntervalBasedMeasurement cpWriteSpeed = new IntervalBasedMeasurement();
+    private final InstantProgressSpeedCalculation cpWriteSpeed = new InstantProgressSpeedCalculation();
 
     /**
      * Used for calculating speed of marking pages dirty.
@@ -145,8 +145,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final long donePages = cpDonePagesEstimation(cpWrittenPages);
 
         final long markDirtySpeed = markSpeedAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-        cpWriteSpeed.setCounter(donePages, curNanoTime);
-        final long curCpWriteSpeed = cpWriteSpeed.getSpeedOpsPerSec(curNanoTime);
+        cpWriteSpeed.setProgress(donePages, curNanoTime);
+        final long curCpWriteSpeed = cpWriteSpeed.getOpsPerSecond(curNanoTime);
 
         final int cpTotalPages = cpTotalPages();
 
@@ -403,7 +403,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * @return Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
      */
     public long getCpWriteSpeed() {
-        return cpWriteSpeed.getSpeedOpsPerSecReadOnly();
+        return cpWriteSpeed.getOpsPerSecondAtNow();
     }
 
     /***/
@@ -485,7 +485,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * Resets the throttle to its initial state (for example, in the beginning of a checkpoint).
      */
     void initialize() {
-        cpWriteSpeed.setCounter(0L, System.nanoTime());
+        cpWriteSpeed.setProgress(0L, System.nanoTime());
         initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
         lastObservedWritten.set(0);
     }
@@ -494,7 +494,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * Moves the throttle to its finalized state (for example, when a checkpoint ends).
      */
     void finish() {
-        cpWriteSpeed.finishInterval();
+        cpWriteSpeed.stop();
         threadIds.clear();
     }
 }
