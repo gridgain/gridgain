@@ -61,6 +61,7 @@ import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLIENT_CONNECTOR_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_META_KEY;
 
@@ -177,6 +178,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .directMode(true)
                             .writerFactory(ses -> new DirectMessageWriter((byte)1))
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
+                            .metricRegistry(ctx.metric().registry(CLIENT_CONNECTOR_METRICS))
                             .build();
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
@@ -335,7 +337,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
             SSLContext sslCtxBase = sslCtxFactory.create();
             SSLContext sslCtx = new SSLContextClientAuthWrapper(sslCtxBase, cliConnCfg.isSslClientAuth());
-            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log);
+            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log, ctx.metric().registry(CLIENT_CONNECTOR_METRICS));
 
             sslFilter.directMode(true);
 

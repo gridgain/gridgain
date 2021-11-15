@@ -3331,7 +3331,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 false,
                 topVer,
                 replicate ? DR_LOAD : DR_NONE,
-                true);
+                true,
+                false);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException("Failed to put cache value: " + entry, e);

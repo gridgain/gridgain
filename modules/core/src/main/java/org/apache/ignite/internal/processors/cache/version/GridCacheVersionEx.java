@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.version;
 
+import org.apache.ignite.cache.CacheEntryVersion;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
@@ -31,9 +32,7 @@ import java.nio.ByteBuffer;
  */
 @IgniteCodeGeneratingFail
 public class GridCacheVersionEx extends GridCacheVersion {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** DR version. */
@@ -117,6 +116,11 @@ public class GridCacheVersionEx extends GridCacheVersion {
     /** {@inheritDoc} */
     @Override public GridCacheVersion conflictVersion() {
         return drVer;
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheEntryVersion otherClusterVersion() {
+        return conflictVersion();
     }
 
     /** {@inheritDoc} */

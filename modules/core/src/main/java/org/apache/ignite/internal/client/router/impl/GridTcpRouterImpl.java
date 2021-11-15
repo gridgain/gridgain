@@ -240,7 +240,7 @@ public class GridTcpRouterImpl implements GridTcpRouter, GridTcpRouterMBean, Lif
             if (sslCtx != null) {
                 SSLContext sslCtxWithClientAuth = new SSLContextClientAuthWrapper(sslCtx, needClientAuth);
 
-                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxWithClientAuth, false, ByteOrder.nativeOrder(), log);
+                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxWithClientAuth, false, ByteOrder.nativeOrder(), log, null);
 
                 filters = new GridNioFilter[] { codec, sslFilter };
             }
