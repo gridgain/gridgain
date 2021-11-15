@@ -149,15 +149,13 @@ class SpeedBasedCleanPagesProtectionThrottle {
         speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
         final long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
 
-        final int nThreads = threadIdsCount();
-
         final int cpTotalPages = cpTotalPages();
 
         if (cpTotalPages == 0) {
             boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
 
             if (throttleByCpSpeed) {
-                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, nThreads, 1);
+                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, threadIdsCount(), 1);
                 shouldThrottle = true;
             }
         }
@@ -176,7 +174,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
                 throttleParkTimeNs = getParkTime(dirtyPagesRatio,
                         fullyCompletedPages,
                         Math.max(notEvictedPagesTotal, 0),
-                        nThreads,
+                        threadIdsCount(),
                         markDirtySpeed,
                         curCpWriteSpeed);
                 shouldThrottle = throttleParkTimeNs != 0;
