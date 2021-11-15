@@ -231,7 +231,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         final long targetSpeedToMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio, donePages,
                 curCpWriteSpeed, cpTotalPages);
-        final double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
+        final double targetDirtyRatio = targetCurrentDirtyRatio(donePages, cpTotalPages);
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
@@ -348,16 +348,15 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * @param cpTotalPages      Total amount of pages under checkpoint.
      * @return size-based calculation of target ratio.
      */
-    private double calcTargetDirtyRatio(long donePages, int cpTotalPages) {
+    private double targetCurrentDirtyRatio(long donePages, int cpTotalPages) {
         double cpProgress = ((double) donePages) / cpTotalPages;
 
         // Starting with initialDirtyRatioAtCpBegin to avoid throttle right after checkpoint start
         double constStart = initDirtyRatioAtCpBegin;
 
-        double throttleTotalWeight = 1.0 - constStart;
+        double fractionToVaryDirtyRatio = 1.0 - constStart;
 
-        // .75 is maximum ratio of dirty pages
-        return (cpProgress * throttleTotalWeight + constStart) * MAX_DIRTY_PAGES;
+        return (cpProgress * fractionToVaryDirtyRatio + constStart) * MAX_DIRTY_PAGES;
     }
 
     /**
