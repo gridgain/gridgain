@@ -109,39 +109,6 @@ class SpeedBasedCleanPagesProtectionThrottle {
         totalPages = pageMemory.totalPages();
     }
 
-    /**
-     * @return Target (maximum) dirty pages ratio, after which throttling will start.
-     */
-    public double getTargetDirtyRatio() {
-        return targetDirtyRatio;
-    }
-
-    /**
-     * @return Current dirty pages ratio.
-     */
-    public double getCurrDirtyRatio() {
-        double ratio = currDirtyRatio;
-
-        if (ratio >= 0)
-            return ratio;
-
-        return pageMemory.getDirtyPagesRatio();
-    }
-
-    /**
-     * @return Returns {@link #speedForMarkAll}.
-     */
-    public long getLastEstimatedSpeedForMarkAll() {
-        return speedForMarkAll;
-    }
-
-    /**
-     * @return Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
-     */
-    public long getCpWriteSpeed() {
-        return speedCpWrite.getSpeedOpsPerSecReadOnly();
-    }
-
     /***/
     long protectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
@@ -321,6 +288,39 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         // .75 is maximum ratio of dirty pages
         return (cpProgress * throttleTotalWeight + constStart) * MAX_DIRTY_PAGES;
+    }
+
+    /**
+     * @return Target (maximum) dirty pages ratio, after which throttling will start.
+     */
+    public double getTargetDirtyRatio() {
+        return targetDirtyRatio;
+    }
+
+    /**
+     * @return Current dirty pages ratio.
+     */
+    public double getCurrDirtyRatio() {
+        double ratio = currDirtyRatio;
+
+        if (ratio >= 0)
+            return ratio;
+
+        return pageMemory.getDirtyPagesRatio();
+    }
+
+    /**
+     * @return Returns {@link #speedForMarkAll}.
+     */
+    public long getLastEstimatedSpeedForMarkAll() {
+        return speedForMarkAll;
+    }
+
+    /**
+     * @return Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
+     */
+    public long getCpWriteSpeed() {
+        return speedCpWrite.getSpeedOpsPerSecReadOnly();
     }
 
     /***/
