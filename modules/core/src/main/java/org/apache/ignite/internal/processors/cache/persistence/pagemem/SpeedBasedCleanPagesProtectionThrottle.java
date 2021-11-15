@@ -142,16 +142,16 @@ class SpeedBasedCleanPagesProtectionThrottle {
         boolean shouldThrottle = false;
         long throttleParkTimeNs = 0;
 
-        int cpWrittenPages = writtenPagesCounter == null ? 0 : writtenPagesCounter.get();
-        long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
+        final int cpWrittenPages = writtenPagesCounter == null ? 0 : writtenPagesCounter.get();
+        final long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
-        long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
+        final long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
         speedCpWrite.setCounter(fullyCompletedPages, curNanoTime);
-        long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
+        final long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
 
-        int nThreads = threadIdsCount();
+        final int nThreads = threadIdsCount();
 
-        int cpTotalPages = cpTotalPages();
+        final int cpTotalPages = cpTotalPages();
 
         if (cpTotalPages == 0) {
             boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
