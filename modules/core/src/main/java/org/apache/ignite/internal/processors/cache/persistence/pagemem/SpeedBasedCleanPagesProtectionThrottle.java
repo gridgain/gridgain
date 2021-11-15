@@ -198,15 +198,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
         if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
             return 0; // too late to throttle, will wait on safe to update instead.
         else {
-            int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
-
             return getParkTime(dirtyPagesRatio,
                     donePages,
-                    Math.max(notEvictedPagesTotal, 0),
+                    notEvictedPagesTotal(cpTotalPages),
                     threadIdsCount(),
                     markDirtySpeed,
                     curCpWriteSpeed);
         }
+    }
+
+    /***/
+    private int notEvictedPagesTotal(int cpTotalPages) {
+        return Math.max(cpTotalPages - cpEvictedPages(), 0);
     }
 
     /**
