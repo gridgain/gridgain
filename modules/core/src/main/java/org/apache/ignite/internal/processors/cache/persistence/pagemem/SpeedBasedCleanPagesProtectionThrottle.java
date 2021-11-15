@@ -235,17 +235,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
-        long delayByCpWrite = delayByCpWrite(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
+        long delayByCpWrite = delayIfMarkingFasterThanCPIsWritten(markDirtySpeed, curCpWriteSpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetDirtyRatio);
-        long delayByMarkAllWrite = delayByMarkAllWrite(markDirtySpeed, dirtyPagesRatio, nThreads,
+        long delayByMarkAllWrite = delayIfMarkingFasterThanTargetSpeed(markDirtySpeed, dirtyPagesRatio, nThreads,
                 targetSpeedToMarkAll, targetDirtyRatio);
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
 
     /***/
-    private long delayByCpWrite(long markDirtySpeed, long curCpWriteSpeed, double dirtyPagesRatio, int nThreads,
-                                long targetSpeedToMarkAll, double targetDirtyRatio) {
+    private long delayIfMarkingFasterThanCPIsWritten(long markDirtySpeed, long curCpWriteSpeed, double dirtyPagesRatio,
+                                                     int nThreads,
+                                                     long targetSpeedToMarkAll, double targetDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
@@ -278,8 +279,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private long delayByMarkAllWrite(long markDirtySpeed, double dirtyPagesRatio, int nThreads,
-                                     long targetSpeedToMarkAll, double targetDirtyRatio) {
+    private long delayIfMarkingFasterThanTargetSpeed(long markDirtySpeed, double dirtyPagesRatio, int nThreads,
+                                                     long targetSpeedToMarkAll, double targetDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
