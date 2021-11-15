@@ -250,9 +250,13 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
         // for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
-        final double allowWriteFasterThanCp = (markDirtySpeed > 0 && targetSpeedToMarkAll > markDirtySpeed)
-                ? (0.1 * targetSpeedToMarkAll / markDirtySpeed)
-                : (dirtyPagesRatio > targetDirtyRatio ? 0.0 : 0.1);
+        final double allowWriteFasterThanCp;
+        if (markDirtySpeed > 0 && markDirtySpeed < targetSpeedToMarkAll)
+            allowWriteFasterThanCp = 0.1 * targetSpeedToMarkAll / markDirtySpeed;
+        else if (dirtyPagesRatio > targetDirtyRatio)
+            allowWriteFasterThanCp = 0.0;
+        else
+            allowWriteFasterThanCp = 0.1;
 
         final double fasterThanCpWriteSpeed = lowSpaceLeft
                 ? 1.0
