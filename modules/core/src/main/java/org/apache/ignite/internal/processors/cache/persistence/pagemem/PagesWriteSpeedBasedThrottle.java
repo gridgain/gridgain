@@ -32,7 +32,7 @@ import org.apache.ignite.lang.IgniteOutClosure;
  * Designed to avoid zero dropdowns that can happen if checkpoint buffer is overflowed.
  * When a page is in checkpoint and Checkpoint Buffer is filled over 2/3, uses exponentially
  * growing sleep time to throttle.
- * Otherwise, uses average checkpoint write speed and moment speed of marking pages as dirty.<br>
+ * Otherwise, uses average checkpoint write speed and instant speed of marking pages as dirty.<br>
  *
  * See also: <a href="https://github.com/apache/ignite/tree/master/modules/core/src/main/java/org/apache/ignite/internal/processors/cache/persistence/pagemem#speed-based-throttling">Speed-based throttling description</a>.
  */
