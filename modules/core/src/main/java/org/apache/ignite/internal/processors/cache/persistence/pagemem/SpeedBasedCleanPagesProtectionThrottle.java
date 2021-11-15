@@ -247,8 +247,29 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private long delayIfMarkingFasterThanCPIsWritten(long markDirtySpeed, long curCpWriteSpeed, double dirtyPagesRatio,
                                                      int nThreads,
                                                      long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
+        final double allowedCpWriteSpeedExcessMultiplier = allowedCpWriteSpeedExcessMultiplier(markDirtySpeed,
+                dirtyPagesRatio, targetSpeedToMarkAll, targetCurrentDirtyRatio);
+        final boolean throttleByCpSpeed = curCpWriteSpeed > 0
+                && markDirtySpeed > (allowedCpWriteSpeedExcessMultiplier * curCpWriteSpeed);
+
+        if (throttleByCpSpeed) {
+            int slowdown = flowdownIfLowSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
+            long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
+            return calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
+        }
+        else
+            return 0;
+    }
+
+    /***/
+    private int flowdownIfLowSpaceLeft(double dirtyPagesRatio, double targetCurrentDirtyRatio) {
+        boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
+        return slowdownIfLowSpaceLeft(lowSpaceLeft);
+    }
+
+    /***/
+    private double allowedCpWriteSpeedExcessMultiplier(long markDirtySpeed, double dirtyPagesRatio, long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
-        final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
         // for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
         final double allowWriteFasterThanCp;
@@ -259,18 +280,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
         else
             allowWriteFasterThanCp = 0.1;
 
-        final double fasterThanCpWriteSpeed = lowSpaceLeft
+        return lowSpaceLeft
                 ? 1.0
                 : 1.0 + allowWriteFasterThanCp;
-        final boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > (fasterThanCpWriteSpeed * curCpWriteSpeed);
-
-        if (throttleByCpSpeed) {
-            long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
-
-            return calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
-        }
-        else
-            return 0;
     }
 
     /***/
