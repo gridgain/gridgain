@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -37,6 +38,7 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskMapAsync;
 import org.apache.ignite.compute.ComputeTaskName;
+import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -66,6 +68,10 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatus;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusDiff;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -156,6 +162,19 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * {@code true} if local node has persistent region in configuration and is not a client.
      */
     private final boolean isPersistenceEnabled;
+
+    /**
+     * Task statuses update monitors.
+     * Guarded by {@link #lock}.
+     */
+    private final Collection<ComputeGridMonitor> taskStatusMonitors = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Snapshots of task statuses.
+     * Mapping: {@link ComputeTaskSession#getId} -> task status.
+     * Guarded by {@link #lock}.
+     */
+    private final ConcurrentMap<IgniteUuid, ComputeTaskStatusSnapshot> taskStatusSnapshots = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -1061,6 +1080,11 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             ctx.event().record(evt);
         }
 
+        notifyTaskStatusMonitors(
+            ComputeTaskStatus.onChangeAttributes(ses),
+            () -> taskStatusSnapshots.put(ses.getId(), ComputeTaskStatus.snapshot(ses))
+        );
+
         IgniteCheckedException ex = null;
 
         // Every job gets an individual message to keep track of ghost requests.
@@ -1282,6 +1306,23 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             // Register for timeout notifications.
             if (worker.endTime() < Long.MAX_VALUE)
                 ctx.timeout().addTimeoutObject(worker);
+
+            GridTaskSessionImpl session = worker.getSession();
+
+            notifyTaskStatusMonitors(
+                ComputeTaskStatus.onStartNewTask(session),
+                () -> taskStatusSnapshots.put(worker.getTaskSessionId(), ComputeTaskStatus.snapshot(session))
+            );
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onTaskSplit(GridTaskWorker<?, ?> worker) {
+            GridTaskSessionImpl session = worker.getSession();
+
+            notifyTaskStatusMonitors(
+                ComputeTaskStatus.onChangeJobNodes(session),
+                () -> taskStatusSnapshots.put(worker.getTaskSessionId(), ComputeTaskStatus.snapshot(session))
+            );
         }
 
         /** {@inheritDoc} */
@@ -1325,7 +1366,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         /** {@inheritDoc} */
-        @Override public void onTaskFinished(GridTaskWorker<?, ?> worker) {
+        @Override public void onTaskFinished(GridTaskWorker<?, ?> worker, @Nullable Throwable err) {
             GridTaskSessionImpl ses = worker.getSession();
 
             if (ses.isFullSupport()) {
@@ -1365,6 +1406,11 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                     U.error(log, "Failed to unregister job communication message listeners and counters.", e);
                 }
             }
+
+            notifyTaskStatusMonitors(
+                ComputeTaskStatus.onFinishTask(worker.getSession(), err),
+                () -> taskStatusSnapshots.remove(worker.getTaskSessionId())
+            );
         }
     }
 
@@ -1550,5 +1596,66 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         return task != null && task.getSession() != null
             ? ", task name: " + task.getSession().getTaskName()
             : "";
+    }
+
+    /**
+     * Subscription to update the status of tasks.
+     *
+     * <p>NOTE: {@link ComputeGridMonitor#processStatusSnapshots} will be called only on subscription,
+     * then only {@link ComputeGridMonitor#processStatusDiff} will be called.
+     *
+     * @param monitor Task status update monitor.
+     * @throws IllegalStateException If the node is stopped.
+     */
+    public void listenStatusUpdates(ComputeGridMonitor monitor) {
+        lock.writeLock();
+
+        try {
+            if (stopping)
+                throw new IllegalStateException("Failed to add monitor due to grid shutdown: " + monitor);
+
+            taskStatusMonitors.add(monitor);
+
+            monitor.processStatusSnapshots(taskStatusSnapshots.values());
+        }
+        finally {
+            lock.writeUnlock();
+        }
+    }
+
+    /**
+     * Unsubscribe to update the status of tasks.
+     *
+     * @param monitor Task status update monitor.
+     */
+    public void stopListenStatusUpdates(ComputeGridMonitor monitor) {
+        lock.writeLock();
+
+        try {
+            taskStatusMonitors.remove(monitor);
+        }
+        finally {
+            lock.writeUnlock();
+        }
+    }
+
+    /**
+     * Notify {@link #taskStatusMonitors} about task status changes.
+     *
+     * @param diff Task status diff.
+     * @param beforeNotify Function to be executed before notifying {@link #taskStatusMonitors}.
+     */
+    private void notifyTaskStatusMonitors(ComputeTaskStatusDiff diff, Runnable beforeNotify) {
+        lock.readLock();
+
+        try {
+            beforeNotify.run();
+
+            for (ComputeGridMonitor monitor : taskStatusMonitors)
+                monitor.processStatusDiff(diff);
+        }
+        finally {
+            lock.readUnlock();
+        }
     }
 }

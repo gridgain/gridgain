@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,10 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableCollection;
+import static java.util.Collections.unmodifiableList;
+
 /**
  * Task session.
  */
@@ -73,7 +77,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
     /** */
     private Collection<ComputeJobSibling> siblings;
 
-    /** */
+    /** Guarded by {@link #mux}. */
     private Map<Object, Object> attrs;
 
     /** */
@@ -120,6 +124,12 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
 
     /** */
     private final String execName;
+
+    /**
+     * Nodes on which the jobs of the task will be executed.
+     * Guarded by {@link #mux}.
+     */
+    @Nullable private List<UUID> jobNodes;
 
     /**
      * @param taskNodeId Task node ID.
@@ -173,7 +183,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
         this.sesId = sesId;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.siblings = siblings != null ? Collections.unmodifiableCollection(siblings) : null;
+        this.siblings = siblings != null ? unmodifiableCollection(siblings) : null;
         this.ctx = ctx;
 
         if (attrs != null && !attrs.isEmpty()) {
@@ -528,7 +538,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
      */
     public void setJobSiblings(Collection<ComputeJobSibling> siblings) {
         synchronized (mux) {
-            this.siblings = Collections.unmodifiableCollection(siblings);
+            this.siblings = unmodifiableCollection(siblings);
         }
     }
 
@@ -544,7 +554,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
             tmp.addAll(this.siblings);
             tmp.addAll(siblings);
 
-            this.siblings = Collections.unmodifiableCollection(tmp);
+            this.siblings = unmodifiableCollection(tmp);
         }
     }
 
@@ -922,6 +932,28 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
      */
     @Nullable public String executorName() {
         return execName;
+    }
+
+    /**
+     * Sets nodes on which the jobs of the task will be executed.
+     *
+     * @param jobNodes Nodes on which the jobs of the task will be executed.
+     */
+    public void jobNodes(Collection<UUID> jobNodes) {
+        if (!jobNodes.isEmpty()) {
+            synchronized (mux) {
+                this.jobNodes = new ArrayList<>(jobNodes);
+            }
+        }
+    }
+
+    /**
+     * @return Nodes on which the jobs of the task will be executed.
+     */
+    public List<UUID> jobNodes() {
+        synchronized (mux) {
+            return jobNodes == null ? emptyList() : unmodifiableList(jobNodes);
+        }
     }
 
     /** {@inheritDoc} */
