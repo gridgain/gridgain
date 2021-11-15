@@ -268,7 +268,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /***/
-    private double allowedCpWriteSpeedExcessMultiplier(long markDirtySpeed, double dirtyPagesRatio, long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
+    private double allowedCpWriteSpeedExcessMultiplier(long markDirtySpeed, double dirtyPagesRatio,
+                                                       long targetSpeedToMarkAll, double targetCurrentDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetCurrentDirtyRatio);
 
         // for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
