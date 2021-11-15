@@ -267,6 +267,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
             delayByCpWrite = 0;
 
         long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(speedForMarkAll, nThreads, slowdown) : 0;
+
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
 
