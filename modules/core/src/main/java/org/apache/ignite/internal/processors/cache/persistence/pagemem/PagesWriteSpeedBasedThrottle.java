@@ -58,7 +58,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * {@link IntervalBasedMeasurement#getSpeedOpsPerSec(long)} returns pages marked/second.
      * {@link IntervalBasedMeasurement#getAverage()} returns average throttle time.
      * */
-    private final IntervalBasedMeasurement speedMarkAndAvgParkTime = new IntervalBasedMeasurement(250, 3);
+    private final IntervalBasedMeasurement markSpeedAndAvgParkTime = new IntervalBasedMeasurement(250, 3);
 
     /** Checkpoint lock state provider. */
     private final CheckpointLockStateChecker cpLockStateChecker;
@@ -103,7 +103,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         this.log = log;
 
         cleanPagesProtector = new SpeedBasedCleanPagesProtectionThrottle(pageMemory, cpProgress,
-            speedMarkAndAvgParkTime);
+                markSpeedAndAvgParkTime);
         cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
     }
 
@@ -122,7 +122,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         }
 
         pageMemory.metrics().addThrottlingTime(U.nanosToMillis(System.nanoTime() - curNanoTime));
-        speedMarkAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
+        markSpeedAndAvgParkTime.addMeasurementForAverageCalculation(throttleParkTimeNs);
     }
 
     /***/
@@ -241,7 +241,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         cpBufferProtector.resetBackoff();
 
         cleanPagesProtector.finish();
-        speedMarkAndAvgParkTime.finishInterval();
+        markSpeedAndAvgParkTime.finishInterval();
         unparkParkedThreads();
     }
 
@@ -254,7 +254,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @return Exponential backoff counter.
      */
     public long throttleParkTime() {
-        return speedMarkAndAvgParkTime.getAverage();
+        return markSpeedAndAvgParkTime.getAverage();
     }
 
     /**
@@ -275,7 +275,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @return  Speed of marking pages dirty. Value from past 750-1000 millis only. Pages/second.
      */
     public long getMarkDirtySpeed() {
-        return speedMarkAndAvgParkTime.getSpeedOpsPerSec(System.nanoTime());
+        return markSpeedAndAvgParkTime.getSpeedOpsPerSec(System.nanoTime());
     }
 
     /**
@@ -298,7 +298,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
      * @return metric started from 0.0 and showing how much throttling is involved into current marking process.
      */
     public double throttleWeight() {
-        long speed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(System.nanoTime());
+        long speed = markSpeedAndAvgParkTime.getSpeedOpsPerSec(System.nanoTime());
 
         if (speed <= 0)
             return 0;

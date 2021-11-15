@@ -87,9 +87,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private volatile double initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
 
     /**
-     * Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
+     * Average checkpoint write speed. Only the current value is used. Pages/second.
      */
-    private final IntervalBasedMeasurement speedCpWrite = new IntervalBasedMeasurement();
+    private final IntervalBasedMeasurement cpWriteSpeed = new IntervalBasedMeasurement();
 
     /**
      * Used for calculating speed of marking pages dirty.
@@ -97,15 +97,15 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * {@link IntervalBasedMeasurement#getSpeedOpsPerSec(long)} returns pages marked/second.
      * {@link IntervalBasedMeasurement#getAverage()} returns average throttle time.
      */
-    private final IntervalBasedMeasurement speedMarkAndAvgParkTime;
+    private final IntervalBasedMeasurement markSpeedAndAvgParkTime;
 
     /***/
     SpeedBasedCleanPagesProtectionThrottle(PageMemoryImpl pageMemory,
                                            IgniteOutClosure<CheckpointProgress> cpProgress,
-                                           IntervalBasedMeasurement speedMarkAndAvgParkTime) {
+                                           IntervalBasedMeasurement markSpeedAndAvgParkTime) {
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
-        this.speedMarkAndAvgParkTime = speedMarkAndAvgParkTime;
+        this.markSpeedAndAvgParkTime = markSpeedAndAvgParkTime;
 
         totalPages = pageMemory.totalPages();
     }
@@ -144,9 +144,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final int cpWrittenPages = writtenPagesCounter.get();
         final long donePages = cpDonePagesEstimation(cpWrittenPages);
 
-        final long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
-        speedCpWrite.setCounter(donePages, curNanoTime);
-        final long curCpWriteSpeed = speedCpWrite.getSpeedOpsPerSec(curNanoTime);
+        final long markDirtySpeed = markSpeedAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
+        cpWriteSpeed.setCounter(donePages, curNanoTime);
+        final long curCpWriteSpeed = cpWriteSpeed.getSpeedOpsPerSec(curNanoTime);
 
         final int cpTotalPages = cpTotalPages();
 
@@ -403,7 +403,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * @return Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
      */
     public long getCpWriteSpeed() {
-        return speedCpWrite.getSpeedOpsPerSecReadOnly();
+        return cpWriteSpeed.getSpeedOpsPerSecReadOnly();
     }
 
     /***/
@@ -485,7 +485,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * Resets the throttle to its initial state (for example, in the beginning of a checkpoint).
      */
     void initialize() {
-        speedCpWrite.setCounter(0L, System.nanoTime());
+        cpWriteSpeed.setCounter(0L, System.nanoTime());
         initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
         lastObservedWritten.set(0);
     }
@@ -494,7 +494,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
      * Moves the throttle to its finalized state (for example, when a checkpoint ends).
      */
     void finish() {
-        speedCpWrite.finishInterval();
+        cpWriteSpeed.finishInterval();
         threadIds.clear();
     }
 }
