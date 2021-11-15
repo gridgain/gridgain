@@ -142,7 +142,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /***/
     private long computeParkTime(@NotNull AtomicInteger writtenPagesCounter, long curNanoTime) {
         final int cpWrittenPages = writtenPagesCounter.get();
-        final long donePages = (cpWrittenPages + cpSyncedPages()) / 2;
+        final long donePages = cpDonePagesEstimation(cpWrittenPages);
 
         final long markDirtySpeed = speedMarkAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
         speedCpWrite.setCounter(donePages, curNanoTime);
@@ -161,6 +161,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
             return speedBasedParkTime(cpWrittenPages, donePages, markDirtySpeed,
                     curCpWriteSpeed, cpTotalPages);
         }
+    }
+
+    /**
+     * Returns an estimation of the progress made during the current checkpoint. Currently, it is an average of
+     * written pages and fully synced pages (probably, to account for both writing (which may be pretty
+     * ahead of syncing) and syncing at the same time).
+     *
+     * @param cpWrittenPages    count of pages written during current checkpoint
+     * @return estimation of work done (in pages)
+     */
+    private int cpDonePagesEstimation(int cpWrittenPages) {
+        return (cpWrittenPages + cpSyncedPages()) / 2;
     }
 
     /***/
