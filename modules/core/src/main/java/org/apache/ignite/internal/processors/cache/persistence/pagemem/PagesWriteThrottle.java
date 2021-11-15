@@ -39,7 +39,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final boolean throttleOnlyPagesInCheckpoint;
 
     /** Checkpoint lock state checker. */
-    private CheckpointLockStateChecker stateChecker;
+    private final CheckpointLockStateChecker stateChecker;
 
     /** Starting throttle time. Limits write speed to 1000 MB/s. */
     private static final long STARTING_THROTTLE_NANOS = 4000;
@@ -54,7 +54,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final AtomicInteger inCheckpointBackoffCntr = new AtomicInteger(0);
 
     /** Logger. */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** Threads that are throttled due to checkpoint buffer overflow. */
     private final ConcurrentHashMap<Long, Thread> cpBufThrottledThreads = new ConcurrentHashMap<>();
