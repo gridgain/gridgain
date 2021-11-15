@@ -33,12 +33,20 @@ namespace Apache.Ignite.Core.Tests.Client
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
-            var igniteConfiguration = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 SpringConfigUrl = Path.Combine("Config", "Client", "server-with-ssl.xml")
             };
 
-            Ignition.Start(igniteConfiguration);
+            Ignition.Start(cfg);
+
+            var cfgNoClientAuth = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                SpringConfigUrl = Path.Combine("Config", "Client", "server-with-ssl-no-client-auth.xml"),
+                AutoGenerateIgniteInstanceName = true
+            };
+
+            Ignition.Start(cfgNoClientAuth);
         }
 
         [TestFixtureTearDown]
@@ -54,7 +62,7 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestHandshake([Values(true, false)] bool clientCert)
         {
             const string host = "127.0.0.1";
-            const int port = 11110;
+            var port = clientCert ? 11110 : 11120;
 
             using (var client = new TcpClient(host, port))
             using (var sslStream = new SslStream(client.GetStream(), false, ValidateServerCertificate, null))
@@ -62,7 +70,14 @@ namespace Apache.Ignite.Core.Tests.Client
                 var certsCollection = new X509CertificateCollection(new X509Certificate[] { LoadCertificateFile() });
 
 #if !NETCOREAPP
-                sslStream.AuthenticateAsClient(host, certsCollection, SslProtocols.Tls, false);
+                if (clientCert)
+                {
+                    sslStream.AuthenticateAsClient(host, certsCollection, SslProtocols.Tls, false);
+                }
+                else
+                {
+                    sslStream.AuthenticateAsClient(host);
+                }
 #else
                 if (clientCert)
                 {
@@ -142,7 +157,9 @@ namespace Apache.Ignite.Core.Tests.Client
         private static byte[] ReceiveMessage(Stream sock)
         {
             var buf = new byte[4];
-            sock.Read(buf, 0, 4);
+            var read = sock.Read(buf, 0, 4);
+
+            Assert.AreEqual(4, read);
 
             using (var stream = new BinaryHeapStream(buf))
             {
@@ -169,6 +186,5 @@ namespace Apache.Ignite.Core.Tests.Client
                 sock.Write(stream.GetArray(), 0, stream.Position);
             }
         }
-
     }
 }
