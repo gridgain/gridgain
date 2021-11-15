@@ -229,11 +229,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
             long markDirtySpeed,
             long curCpWriteSpeed) {
 
-        final long speedForMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio, donePages,
+        final long targetSpeedToMarkAll = calcSpeedToMarkAllSpaceTillEndOfCp(dirtyPagesRatio, donePages,
                 curCpWriteSpeed, cpTotalPages);
         final double targetDirtyRatio = calcTargetDirtyRatio(donePages, cpTotalPages);
 
-        updateSpeedAndRatio(speedForMarkAll, targetDirtyRatio);
+        updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
         final boolean lowSpaceLeft = dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
         final int slowdown = lowSpaceLeft ? 3 : 1;
@@ -242,12 +242,13 @@ class SpeedBasedCleanPagesProtectionThrottle {
                 ? 0.8
                 : 1.0;
 
-        boolean markingTooFast = speedForMarkAll > 0 && markDirtySpeed > multiplierForSpeedForMarkAll * speedForMarkAll;
+        boolean markingTooFast = targetSpeedToMarkAll > 0
+                && markDirtySpeed > multiplierForSpeedForMarkAll * targetSpeedToMarkAll;
         boolean throttleBySizeAndMarkSpeed = dirtyPagesRatio > targetDirtyRatio && markingTooFast;
 
         //for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
-        final double allowWriteFasterThanCp = (markDirtySpeed > 0 && speedForMarkAll > markDirtySpeed)
-                ? (0.1 * speedForMarkAll / markDirtySpeed)
+        final double allowWriteFasterThanCp = (markDirtySpeed > 0 && targetSpeedToMarkAll > markDirtySpeed)
+                ? (0.1 * targetSpeedToMarkAll / markDirtySpeed)
                 : (dirtyPagesRatio > targetDirtyRatio ? 0.0 : 0.1);
 
         final double fasterThanCpWriteSpeed = lowSpaceLeft
@@ -264,7 +265,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
         else
             delayByCpWrite = 0;
 
-        final long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(speedForMarkAll, nThreads, slowdown) : 0;
+        final long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
 
         return Math.max(delayByCpWrite, delayByMarkAllWrite);
     }
