@@ -56,7 +56,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THROTTLE_LOG_THRES
  * <ul>
  *     <li>{@link #tryWakeupThrottledThreads()} which wakes up the threads currently being throttled; in the current
  *     implementation, it is called  when Checkpoint Buffer utilization falls below 1/2.</li>
- *     <li>{@link #shouldThrottle()} which is called by a checkpointer to see whether the Checkpoint Buffer is
+ *     <li>{@link #isCPBufferInDangerZone()} which is called by a checkpointer to see whether the Checkpoint Buffer is
  *     in the danger zone and, if yes, it starts to prioretize writing pages from Checkpoint Buffer over
  *     pages from the normal checkpoint sequence.</li>
  * </ul>
@@ -96,9 +96,10 @@ public interface PagesWriteThrottlePolicy {
     /**
      * Whether Checkpoint Buffer is currently in the danger zone.
      *
-     * @return {@code true} if throttling to protect Checkpoint Buffer should be enabled, and {@code false} otherwise.
+     * @return {@code true} if measures like throttling to protect Checkpoint Buffer should be applied,
+     * and {@code false} otherwise.
      */
-    default boolean shouldThrottle() {
+    default boolean isCPBufferInDangerZone() {
         return false;
     }
 }

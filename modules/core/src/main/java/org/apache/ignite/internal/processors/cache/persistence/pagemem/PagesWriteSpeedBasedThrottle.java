@@ -138,7 +138,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /***/
     private boolean shouldThrottleToProtectCPBuffer(boolean isPageInCheckpoint) {
-        return isPageInCheckpoint && shouldThrottle();
+        return isPageInCheckpoint && isCPBufferInDangerZone();
     }
 
     /***/
@@ -312,7 +312,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
-        if (!shouldThrottle()) {
+        if (!isCPBufferInDangerZone()) {
             cpBufferProtector.resetBackoff();
 
             unparkParkedThreads();
@@ -320,7 +320,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean shouldThrottle() {
+    @Override public boolean isCPBufferInDangerZone() {
         return cpBufferKeeper.isInDangerZone();
     }
 }
