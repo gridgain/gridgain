@@ -102,7 +102,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         cpLockStateChecker = stateChecker;
         this.log = log;
 
-        cleanPagesProtector = new SpeedBasedCleanPagesProtectionThrottle(pageMemory, cpProgress, speedMarkAndAvgParkTime);
+        cleanPagesProtector = new SpeedBasedCleanPagesProtectionThrottle(pageMemory, cpProgress,
+            speedMarkAndAvgParkTime);
         cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
     }
 
