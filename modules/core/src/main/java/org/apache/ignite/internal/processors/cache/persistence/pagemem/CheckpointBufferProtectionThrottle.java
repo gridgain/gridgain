@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 /**
  *
  */
@@ -33,18 +31,23 @@ class CheckpointBufferProtectionThrottle {
     private static final double BACKOFF_RATIO = 1.05;
 
     /**
-     * Exponential backoff counter.
+     * Exponential backoff used to throttle threads.
      */
-    private final AtomicInteger exponentialBackoffCntr = new AtomicInteger(0);
+    private final ExponentialBackoff backoff = new ExponentialBackoff(STARTING_THROTTLE_NANOS, BACKOFF_RATIO);
 
-    /***/
+    /**
+     * Computes next duration (in nanos) to throttle a thread to protect Checkpoint Buffer.
+     *
+     * @return park time in nanos
+     */
     long computeProtectionParkTime() {
-        int exponent = exponentialBackoffCntr.getAndIncrement();
-        return (long) (STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, exponent));
+        return backoff.nextDuration();
     }
 
-    /***/
-    void resetExponentialBackoffCounter() {
-        exponentialBackoffCntr.set(0);
+    /**
+     * Resets backoff counter. Invoked when no throttling is needed anymore.
+     */
+    void resetBackoffCounter() {
+        backoff.reset();
     }
 }

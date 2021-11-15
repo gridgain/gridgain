@@ -124,7 +124,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return computeCPBufferProtectionParkTime();
         else {
             if (isPageInCheckpoint) {
-                cpBufferProtector.resetExponentialBackoffCounter();
+                cpBufferProtector.resetBackoffCounter();
             }
             return computeCleanPagesProtectionParkTime(curNanoTime);
         }
@@ -231,7 +231,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onFinishCheckpoint() {
-        cpBufferProtector.resetExponentialBackoffCounter();
+        cpBufferProtector.resetBackoffCounter();
 
         cleanPagesProtector.close();
         speedMarkAndAvgParkTime.finishInterval();
@@ -307,7 +307,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
         if (!shouldThrottle()) {
-            cpBufferProtector.resetExponentialBackoffCounter();
+            cpBufferProtector.resetBackoffCounter();
 
             unparkParkedThreads();
         }
