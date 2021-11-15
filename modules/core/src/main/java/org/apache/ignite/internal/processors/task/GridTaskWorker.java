@@ -518,10 +518,6 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 (Callable<Map<? extends ComputeJob, ClusterNode>>)() -> task.map(shuffledNodes, arg)
             );
 
-            ses.jobNodes(F.viewReadOnly(mappedJobs.values(), F.node2id()));
-
-            evtLsnr.onTaskSplit(this);
-
             if (log.isDebugEnabled()) {
                 log.debug("Mapped task jobs to nodes [jobCnt=" + (mappedJobs != null ? mappedJobs.size() : 0) +
                     ", mappedJobs=" + mappedJobs + ", ses=" + ses + ']');
@@ -634,6 +630,10 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                         "@ComputeTaskNoResultCache annotation.");
             }
         }
+
+        ses.jobNodes(F.viewReadOnly(jobs.values(), F.node2id()));
+
+        evtLsnr.onJobsMapped(this);
 
         // Set mapped flag.
         ses.onMapped();

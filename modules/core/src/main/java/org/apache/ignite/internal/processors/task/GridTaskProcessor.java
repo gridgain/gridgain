@@ -1316,7 +1316,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         /** {@inheritDoc} */
-        @Override public void onTaskSplit(GridTaskWorker<?, ?> worker) {
+        @Override public void onJobsMapped(GridTaskWorker<?, ?> worker) {
             GridTaskSessionImpl session = worker.getSession();
 
             notifyTaskStatusMonitors(

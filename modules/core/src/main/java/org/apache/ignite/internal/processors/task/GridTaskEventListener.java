@@ -35,7 +35,7 @@ interface GridTaskEventListener extends EventListener {
      *
      * @param worker Grid task worker.
      */
-    void onTaskSplit(GridTaskWorker<?, ?> worker);
+    void onJobsMapped(GridTaskWorker<?, ?> worker);
 
     /**
      * @param worker Grid task worker.
