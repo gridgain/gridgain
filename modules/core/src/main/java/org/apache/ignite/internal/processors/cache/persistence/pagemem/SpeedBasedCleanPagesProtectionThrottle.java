@@ -302,8 +302,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final boolean markingTooFastNow = targetSpeedToMarkAll > 0
                 && markDirtySpeed > multiplierForSpeedToMarkAll * targetSpeedToMarkAll;
         final boolean markedTooFastSinceCPStart = dirtyPagesRatio > targetCurrentDirtyRatio;
-        final boolean throttleBySizeAndMarkSpeed = markedTooFastSinceCPStart && markingTooFastNow;
-        return throttleBySizeAndMarkSpeed ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
+        final boolean markingTooFast = markedTooFastSinceCPStart && markingTooFastNow;
+        return markingTooFast ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
     }
 
     /**
