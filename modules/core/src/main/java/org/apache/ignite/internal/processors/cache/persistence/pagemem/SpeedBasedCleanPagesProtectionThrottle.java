@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,7 +25,7 @@ import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.lang.IgniteOutClosure;
 
 /**
- * Speed-based throttle used to protect clean pages.
+ * Speed-based throttle used to protect clean pages from exhaustion.
  */
 class SpeedBasedCleanPagesProtectionThrottle {
     /**
@@ -71,7 +72,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /**
      * Threads set. Contains identifiers of all threads which were marking pages for current checkpoint.
      */
-    private final GridConcurrentHashSet<Long> threadIds = new GridConcurrentHashSet<>();
+    private final Set<Long> threadIds = new GridConcurrentHashSet<>();
 
     /**
      * Counter of written pages from checkpoint. Value is saved here for detecting checkpoint start.
