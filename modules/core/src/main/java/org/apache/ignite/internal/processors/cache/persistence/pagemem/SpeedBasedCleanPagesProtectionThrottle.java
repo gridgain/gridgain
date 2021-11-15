@@ -118,7 +118,8 @@ class SpeedBasedCleanPagesProtectionThrottle {
         CheckpointProgress progress = cpProgress.apply();
         AtomicInteger writtenPagesCounter = progress == null ? null : progress.writtenPagesCounter();
 
-        if (writtenPagesCounter == null) {
+        boolean checkopointProgressIsNotYetReported = writtenPagesCounter == null;
+        if (checkopointProgressIsNotYetReported) {
             resetStatistics();
 
             return PagesWriteSpeedBasedThrottle.NO_THROTTLING_MARKER;
