@@ -139,9 +139,6 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /***/
     private long computeParkTime(AtomicInteger writtenPagesCounter, long curNanoTime) {
-        boolean shouldThrottle = false;
-        long throttleParkTimeNs = 0;
-
         final int cpWrittenPages = writtenPagesCounter == null ? 0 : writtenPagesCounter.get();
         final long fullyCompletedPages = (cpWrittenPages + cpSyncedPages()) / 2; // written & sync'ed
 
@@ -155,8 +152,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
             boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
 
             if (throttleByCpSpeed) {
-                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed);
-                shouldThrottle = true;
+                return calcDelayTime(curCpWriteSpeed);
+            } else {
+                return 0;
             }
         }
         else {
@@ -167,24 +165,18 @@ class SpeedBasedCleanPagesProtectionThrottle {
             detectCpPagesWriteStart(cpWrittenPages, dirtyPagesRatio);
 
             if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
-                shouldThrottle = false; // too late to throttle, will wait on safe to update instead.
+                return 0; // too late to throttle, will wait on safe to update instead.
             else {
                 int notEvictedPagesTotal = cpTotalPages - cpEvictedPages();
 
-                throttleParkTimeNs = getParkTime(dirtyPagesRatio,
+                return getParkTime(dirtyPagesRatio,
                         fullyCompletedPages,
                         Math.max(notEvictedPagesTotal, 0),
                         threadIdsCount(),
                         markDirtySpeed,
                         curCpWriteSpeed);
-                shouldThrottle = throttleParkTimeNs != 0;
             }
         }
-
-        if (!shouldThrottle)
-            throttleParkTimeNs = 0;
-
-        return throttleParkTimeNs;
     }
 
     /**
