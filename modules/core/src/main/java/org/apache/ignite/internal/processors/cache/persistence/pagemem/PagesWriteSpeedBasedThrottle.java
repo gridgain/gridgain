@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
@@ -75,10 +76,14 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     static final double WARN_THRESHOLD = 0.2;
 
     /** Checkpoint buffer protection logic. */
-    private final ExponentialBackoffMemoryProtectionThrottle cpBufferProtector = new ExponentialBackoffMemoryProtectionThrottle();
+    private final ExponentialBackoffMemoryProtectionThrottle cpBufferProtector
+        = new ExponentialBackoffMemoryProtectionThrottle();
 
     /** Clean pages protection logic. */
     private final SpeedBasedCleanPagesProtectionThrottle cleanPagesProtector;
+
+    /** Checpoint Buffer-related logic used to keep it safe. */
+    private final CheckpointBufferKeeper cpBufferKeeper;
 
     /**
      * @param pageMemory Page memory.
@@ -98,6 +103,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         this.log = log;
 
         cleanPagesProtector = new SpeedBasedCleanPagesProtectionThrottle(pageMemory, cpProgress, speedMarkAndAvgParkTime);
+        cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
     }
 
     /** {@inheritDoc} */
@@ -315,8 +321,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public boolean shouldThrottle() {
-        int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
-
-        return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;
+        return cpBufferKeeper.isInDangerZone();
     }
 }

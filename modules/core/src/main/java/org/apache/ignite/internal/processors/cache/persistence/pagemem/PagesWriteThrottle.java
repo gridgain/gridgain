@@ -50,6 +50,9 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final ExponentialBackoffMemoryProtectionThrottle notInCheckpointProtection
         = new ExponentialBackoffMemoryProtectionThrottle();
 
+    /** Checpoint Buffer-related logic used to keep it safe. */
+    private final CheckpointBufferKeeper cpBufferKeeper;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -73,6 +76,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         this.cpProgress = cpProgress;
         this.stateChecker = stateChecker;
         this.throttleOnlyPagesInCheckpoint = throttleOnlyPagesInCheckpoint;
+        cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
         this.log = log;
 
         assert throttleOnlyPagesInCheckpoint || cpProgress != null
@@ -182,8 +186,6 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public boolean shouldThrottle() {
-        int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
-
-        return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;
+        return cpBufferKeeper.isInDangerZone();
     }
 }
