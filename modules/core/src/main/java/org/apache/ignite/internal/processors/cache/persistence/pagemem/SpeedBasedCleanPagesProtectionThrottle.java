@@ -150,13 +150,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
         final int cpTotalPages = cpTotalPages();
 
         if (cpTotalPages == 0) {
-            boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
-
-            if (throttleByCpSpeed) {
-                return calcDelayTime(curCpWriteSpeed);
-            } else {
-                return 0;
-            }
+            return throttleByCPSpeed(markDirtySpeed, curCpWriteSpeed);
         }
         else {
             double dirtyPagesRatio = pageMemory.getDirtyPagesRatio();
@@ -178,6 +172,17 @@ class SpeedBasedCleanPagesProtectionThrottle {
                         curCpWriteSpeed);
             }
         }
+    }
+
+    /***/
+    private long throttleByCPSpeed(long markDirtySpeed, long curCpWriteSpeed) {
+        boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
+
+        if (throttleByCpSpeed) {
+            return calcDelayTime(curCpWriteSpeed);
+        }
+
+        return 0;
     }
 
     /**
