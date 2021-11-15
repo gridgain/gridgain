@@ -116,15 +116,15 @@ class SpeedBasedCleanPagesProtectionThrottle {
      */
     long protectionParkTime(long curNanoTime) {
         CheckpointProgress progress = cpProgress.apply();
-        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
+        AtomicInteger writtenPagesCounter = progress == null ? null : progress.writtenPagesCounter();
 
-        if (writtenPagesCntr == null) {
+        if (writtenPagesCounter == null) {
             resetStatistics();
 
             return PagesWriteSpeedBasedThrottle.NO_THROTTLING_MARKER;
         }
 
-        return computeParkTime(writtenPagesCntr, curNanoTime);
+        return computeParkTime(writtenPagesCounter, curNanoTime);
     }
 
     /***/
