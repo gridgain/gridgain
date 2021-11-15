@@ -155,7 +155,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
             boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
 
             if (throttleByCpSpeed) {
-                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed, threadIdsCount(), 1);
+                throttleParkTimeNs = calcDelayTime(curCpWriteSpeed);
                 shouldThrottle = true;
             }
         }
@@ -358,11 +358,19 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /**
      * @param baseSpeed   speed to slow down.
+     * @return sleep time in nanoseconds.
+     */
+    long calcDelayTime(long baseSpeed) {
+        return calcDelayTime(baseSpeed, threadIdsCount(), 1);
+    }
+
+    /**
+     * @param baseSpeed   speed to slow down.
      * @param nThreads    operating threads.
      * @param coefficient how much it is needed to slowdown base speed. 1.0 means delay to get exact base speed.
      * @return sleep time in nanoseconds.
      */
-    long calcDelayTime(long baseSpeed, int nThreads, int coefficient) {
+    private long calcDelayTime(long baseSpeed, int nThreads, int coefficient) {
         if (coefficient <= 0)
             throw new IllegalStateException("Coefficient should be positive");
 

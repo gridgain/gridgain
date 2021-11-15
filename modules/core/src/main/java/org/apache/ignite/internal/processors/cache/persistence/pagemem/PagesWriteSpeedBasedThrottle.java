@@ -303,7 +303,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (speed <= 0)
             return 0;
 
-        long timeForOnePage = cleanPagesProtector.calcDelayTime(speed, cleanPagesProtector.threadIdsCount(), 1);
+        long timeForOnePage = cleanPagesProtector.calcDelayTime(speed);
 
         if (timeForOnePage == 0)
             return 0;
