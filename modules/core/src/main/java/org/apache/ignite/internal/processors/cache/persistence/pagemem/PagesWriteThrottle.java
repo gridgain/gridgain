@@ -122,7 +122,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
                 ? inCheckpointProtection : notInCheckpointProtection;
 
         if (shouldThrottle) {
-            long throttleParkTimeNs = exponentialThrottle.computeProtectionParkTime();
+            long throttleParkTimeNs = exponentialThrottle.protectionParkTime();
 
             Thread curThread = Thread.currentThread();
 
