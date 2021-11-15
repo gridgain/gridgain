@@ -278,12 +278,17 @@ class SpeedBasedCleanPagesProtectionThrottle {
     }
 
     /**
+     * Calculates speed needed to mark dirty all currently clean pages before the current checkpoint ends.
+     * May return 0 if the provided parameters do not give enough information to calculate the speed, OR
+     * if the current dirty pages ratio is too high (higher than {@link #MAX_DIRTY_PAGES}), in which case
+     * we're not going to throttle anyway.
+     *
      * @param dirtyPagesRatio     current percent of dirty pages.
      * @param donePages           roughly, count of written and sync'ed pages
      * @param curCpWriteSpeed     pages/second checkpoint write speed. 0 speed means 'no data'.
      * @param cpTotalPages        total pages in checkpoint.
      * @return pages/second to mark to mark all clean pages as dirty till the end of checkpoint. 0 speed means 'no
-     * data'.
+     * data', or when we are not going to throttle due to the current dirty pages ratio being too high
      */
     private long calcSpeedToMarkAllSpaceTillEndOfCp(double dirtyPagesRatio,
                                                     long donePages,
@@ -299,11 +304,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
         if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
             return 0;
 
-        double remainedClear = (MAX_DIRTY_PAGES - dirtyPagesRatio) * totalPages;
+        double remainedClearPages = (MAX_DIRTY_PAGES - dirtyPagesRatio) * totalPages;
 
-        double timeRemainedSeconds = 1.0 * (cpTotalPages - donePages) / curCpWriteSpeed;
+        double secondsTillCPEnd = 1.0 * (cpTotalPages - donePages) / curCpWriteSpeed;
 
-        return (long) (remainedClear / timeRemainedSeconds);
+        return (long) (remainedClearPages / secondsTillCPEnd);
     }
 
     /**
