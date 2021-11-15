@@ -235,8 +235,19 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         updateSpeedAndRatio(targetSpeedToMarkAll, targetDirtyRatio);
 
+        long delayByCpWrite = delayByCpWrite(dirtyPagesRatio, nThreads, markDirtySpeed, curCpWriteSpeed,
+                targetSpeedToMarkAll, targetDirtyRatio);
+        long delayByMarkAllWrite = delayByMarkAllWrite(dirtyPagesRatio, nThreads, markDirtySpeed,
+                targetSpeedToMarkAll, targetDirtyRatio);
+
+        return Math.max(delayByCpWrite, delayByMarkAllWrite);
+    }
+
+    /***/
+    private long delayByCpWrite(double dirtyPagesRatio, int nThreads, long markDirtySpeed, long curCpWriteSpeed,
+                                long targetSpeedToMarkAll, double targetDirtyRatio) {
         final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
-        final int slowdown = lowSpaceLeft ? 3 : 1;
+        final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
         //for case of speedForMarkAll >> markDirtySpeed, allow write little bit faster than CP average
         final double allowWriteFasterThanCp = (markDirtySpeed > 0 && targetSpeedToMarkAll > markDirtySpeed)
@@ -248,22 +259,31 @@ class SpeedBasedCleanPagesProtectionThrottle {
                 : 1.0 + allowWriteFasterThanCp;
         final boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > (fasterThanCpWriteSpeed * curCpWriteSpeed);
 
-        final long delayByCpWrite;
         if (throttleByCpSpeed) {
-            long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / (markDirtySpeed);
+            long nanosecPerDirtyPage = TimeUnit.SECONDS.toNanos(1) * nThreads / markDirtySpeed;
 
-            delayByCpWrite = calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
+            return calcDelayTime(curCpWriteSpeed, nThreads, slowdown) - nanosecPerDirtyPage;
         }
         else
-            delayByCpWrite = 0;
+            return 0;
+    }
+
+    /***/
+    private int slowdownIfLowSpaceLeft(boolean lowSpaceLeft) {
+        return lowSpaceLeft ? 3 : 1;
+    }
+
+    /***/
+    private long delayByMarkAllWrite(double dirtyPagesRatio, int nThreads, long markDirtySpeed,
+                                     long targetSpeedToMarkAll, double targetDirtyRatio) {
+        final boolean lowSpaceLeft = lowCleanSpaceLeft(dirtyPagesRatio, targetDirtyRatio);
+        final int slowdown = slowdownIfLowSpaceLeft(lowSpaceLeft);
 
         final double multiplierForSpeedForMarkAll = lowSpaceLeft ? 0.8 : 1.0;
         final boolean markingTooFast = targetSpeedToMarkAll > 0
                 && markDirtySpeed > multiplierForSpeedForMarkAll * targetSpeedToMarkAll;
         final boolean throttleBySizeAndMarkSpeed = dirtyPagesRatio > targetDirtyRatio && markingTooFast;
-        final long delayByMarkAllWrite = throttleBySizeAndMarkSpeed ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
-
-        return Math.max(delayByCpWrite, delayByMarkAllWrite);
+        return throttleBySizeAndMarkSpeed ? calcDelayTime(targetSpeedToMarkAll, nThreads, slowdown) : 0;
     }
 
     /**
