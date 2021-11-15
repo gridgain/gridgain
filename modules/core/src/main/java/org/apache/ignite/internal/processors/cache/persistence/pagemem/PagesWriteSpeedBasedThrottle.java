@@ -75,7 +75,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     static final double WARN_THRESHOLD = 0.2;
 
     /** Checkpoint buffer protection logic. */
-    private final CheckpointBufferProtectionThrottle cpBufferProtector = new CheckpointBufferProtectionThrottle();
+    private final ExponentialBackoffMemoryProtectionThrottle cpBufferProtector = new ExponentialBackoffMemoryProtectionThrottle();
 
     /** Clean pages protection logic. */
     private final SpeedBasedCleanPagesProtectionThrottle cleanPagesProtector;
@@ -124,7 +124,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             return computeCPBufferProtectionParkTime();
         else {
             if (isPageInCheckpoint) {
-                cpBufferProtector.resetBackoffCounter();
+                cpBufferProtector.resetBackoff();
             }
             return computeCleanPagesProtectionParkTime(curNanoTime);
         }
@@ -231,7 +231,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onFinishCheckpoint() {
-        cpBufferProtector.resetBackoffCounter();
+        cpBufferProtector.resetBackoff();
 
         cleanPagesProtector.close();
         speedMarkAndAvgParkTime.finishInterval();
@@ -307,7 +307,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
         if (!shouldThrottle()) {
-            cpBufferProtector.resetBackoffCounter();
+            cpBufferProtector.resetBackoff();
 
             unparkParkedThreads();
         }

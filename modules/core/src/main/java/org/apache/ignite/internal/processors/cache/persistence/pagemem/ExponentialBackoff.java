@@ -36,7 +36,7 @@ class ExponentialBackoff {
     /**
      * Exponential backoff counter.
      */
-    private final AtomicInteger exponentialBackoffCntr = new AtomicInteger(0);
+    private final AtomicInteger exponentialBackoffCounter = new AtomicInteger(0);
 
     /**
      * Constructs a new instance with the given parameters.
@@ -56,15 +56,18 @@ class ExponentialBackoff {
      * @return next backoff duration in nanoseconds
      */
     public long nextDuration() {
-        int exponent = exponentialBackoffCntr.getAndIncrement();
+        int exponent = exponentialBackoffCounter.getAndIncrement();
         return (long) (startingBackoffNanos * Math.pow(backoffRatio, exponent));
     }
 
     /**
      * Resets the  exponential backoff counter so that next call to {@link #nextDuration()}
      * will return {@link #startingBackoffNanos}.
+     *
+     * @return {@code true} iff this backoff was not already in a reset state
      */
-    public void reset() {
-        exponentialBackoffCntr.set(0);
+    public boolean reset() {
+        int oldValue = exponentialBackoffCounter.getAndSet(0);
+        return oldValue != 0;
     }
 }

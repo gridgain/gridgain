@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
@@ -41,17 +42,13 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     /** Checkpoint lock state checker. */
     private final CheckpointLockStateChecker stateChecker;
 
-    /** Starting throttle time. Limits write speed to 1000 MB/s. */
-    private static final long STARTING_THROTTLE_NANOS = 4000;
+    /** In-checkpoint protection logic. */
+    private final ExponentialBackoffMemoryProtectionThrottle inCheckpointProtection
+        = new ExponentialBackoffMemoryProtectionThrottle();
 
-    /** Backoff ratio. Each next park will be this times longer. */
-    private static final double BACKOFF_RATIO = 1.05;
-
-    /** Counter for dirty pages ratio throttling. */
-    private final AtomicInteger notInCheckpointBackoffCntr = new AtomicInteger(0);
-
-    /** Counter for checkpoint buffer usage ratio throttling (we need a separate one due to IGNITE-7751). */
-    private final AtomicInteger inCheckpointBackoffCntr = new AtomicInteger(0);
+    /** Not-in-checkpoint protection logic. */
+    private final ExponentialBackoffMemoryProtectionThrottle notInCheckpointProtection
+        = new ExponentialBackoffMemoryProtectionThrottle();
 
     /** Logger. */
     private final IgniteLogger log;
@@ -78,7 +75,8 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         this.throttleOnlyPagesInCheckpoint = throttleOnlyPagesInCheckpoint;
         this.log = log;
 
-        assert throttleOnlyPagesInCheckpoint || cpProgress != null : "cpProgress must be not null if ratio based throttling mode is used";
+        assert throttleOnlyPagesInCheckpoint || cpProgress != null
+                : "cpProgress must be not null if ratio based throttling mode is used";
     }
 
     /** {@inheritDoc} */
@@ -116,12 +114,11 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
             }
         }
 
-        AtomicInteger cntr = isPageInCheckpoint ? inCheckpointBackoffCntr : notInCheckpointBackoffCntr;
+        ExponentialBackoffMemoryProtectionThrottle exponentialThrottle = isPageInCheckpoint
+                ? inCheckpointProtection : notInCheckpointProtection;
 
         if (shouldThrottle) {
-            int throttleLevel = cntr.getAndIncrement();
-
-            long throttleParkTimeNs = (long) (STARTING_THROTTLE_NANOS * Math.pow(BACKOFF_RATIO, throttleLevel));
+            long throttleParkTimeNs = exponentialThrottle.computeProtectionParkTime();
 
             Thread curThread = Thread.currentThread();
 
@@ -153,20 +150,24 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
             pageMemory.metrics().addThrottlingTime(U.currentTimeMillis() - startTime);
         }
         else {
-            int oldCntr = cntr.getAndSet(0);
+            boolean backoffWasAlreadyStarted = exponentialThrottle.resetBackoff();
 
-            if (isPageInCheckpoint && oldCntr != 0)
-                cpBufThrottledThreads.values().forEach(LockSupport::unpark);
+            if (isPageInCheckpoint && backoffWasAlreadyStarted)
+                unparkParkedThreads();
         }
     }
 
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
         if (!shouldThrottle()) {
-            inCheckpointBackoffCntr.set(0);
+            inCheckpointProtection.resetBackoff();
 
-            cpBufThrottledThreads.values().forEach(LockSupport::unpark);
+            unparkParkedThreads();
         }
+    }
+
+    private void unparkParkedThreads() {
+        cpBufThrottledThreads.values().forEach(LockSupport::unpark);
     }
 
     /** {@inheritDoc} */
@@ -175,9 +176,8 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onFinishCheckpoint() {
-        inCheckpointBackoffCntr.set(0);
-
-        notInCheckpointBackoffCntr.set(0);
+        inCheckpointProtection.resetBackoff();
+        notInCheckpointProtection.resetBackoff();
     }
 
     /** {@inheritDoc} */

@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 /**
  *
  */
-class CheckpointBufferProtectionThrottle {
+class ExponentialBackoffMemoryProtectionThrottle {
     /**
      * Starting throttle time. Limits write speed to 1000 MB/s.
      */
@@ -46,8 +46,10 @@ class CheckpointBufferProtectionThrottle {
 
     /**
      * Resets backoff counter. Invoked when no throttling is needed anymore.
+     *
+     * @return {@code true} iff the backoff was not already in a reset state
      */
-    void resetBackoffCounter() {
-        backoff.reset();
+    boolean resetBackoff() {
+        return backoff.reset();
     }
 }
