@@ -447,11 +447,11 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /**
      * @param baseSpeed   speed to slow down.
      * @param nThreads    operating threads.
-     * @param coefficient how much it is needed to slowdown base speed. 1.0 means delay to get exact base speed.
+     * @param factor      how much it is needed to slowdown base speed. 1 means delay to get exact base speed.
      * @return sleep time in nanoseconds.
      */
-    private long calcDelayTime(long baseSpeed, int nThreads, int coefficient) {
-        if (coefficient <= 0)
+    private long calcDelayTime(long baseSpeed, int nThreads, int factor) {
+        if (factor <= 0)
             throw new IllegalStateException("Coefficient should be positive");
 
         if (baseSpeed <= 0)
@@ -459,7 +459,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
         long updTimeNsForOnePage = TimeUnit.SECONDS.toNanos(1) * nThreads / (baseSpeed);
 
-        return coefficient * updTimeNsForOnePage;
+        return factor * updTimeNsForOnePage;
     }
 
     /**
