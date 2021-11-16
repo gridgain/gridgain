@@ -89,7 +89,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     /**
      * Average checkpoint write speed. Only the current value is used. Pages/second.
      */
-    private final InstantProgressSpeedCalculation cpWriteSpeed = new InstantProgressSpeedCalculation();
+    private final ProgressInstantSpeedCalculation cpWriteSpeed = new ProgressInstantSpeedCalculation();
 
     /**
      * Used for calculating speed of marking pages dirty.

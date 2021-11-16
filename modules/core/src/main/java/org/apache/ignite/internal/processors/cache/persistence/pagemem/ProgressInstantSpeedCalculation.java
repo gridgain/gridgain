@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 /**
  * Represents instant speed calculation of some progress starting from zero.
  */
-class InstantProgressSpeedCalculation {
+class ProgressInstantSpeedCalculation {
     /**
      * Measurement used to calculate average speed. History recording is disabled.
      */
