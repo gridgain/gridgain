@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.database;
 import java.io.Externalizable;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -47,6 +48,8 @@ import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.util.IgniteUtils.MB;
+
 /**
  * Test is based on {@link BPlusTreeSelfTest} and has a partial copy of its code.
  */
@@ -59,9 +62,6 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
 
     /** */
     protected static final int PAGE_SIZE = 512;
-
-    /** */
-    protected static final long MB = 1024 * 1024;
 
     /** */
     private static final int CACHE_ID = 100500;
@@ -173,6 +173,7 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
                 new IOVersions<>(new TestPairLeafIO()),
                 PageIdAllocator.FLAG_IDX,
                 new FailureProcessor(new GridTestKernalContext(log)) {
+                    /** {@inheritdoc} */
                     @Override public boolean process(FailureContext failureCtx) {
                         return true;
                     }
@@ -402,10 +403,10 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
 
             // Wait for both operations.
             try {
-                putFut.get();
+                putFut.get(1, TimeUnit.SECONDS);
             }
             finally {
-                remFut.get();
+                remFut.get(1, TimeUnit.SECONDS);
             }
 
             // Just in case.
