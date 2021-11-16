@@ -817,7 +817,11 @@ public class CheckpointHistory {
                     Map<Integer, GroupStateSnapshot> groupStates = new HashMap<>();
 
                     map.forEach((k, v) ->
-                        groupStates.put(k, new GroupStateSnapshot(v.partitionIds(), v.partitionCounters()))
+                        groupStates.put(k, new GroupStateSnapshot(
+                            v.partitionIds(),
+                            v.partitionCounters(),
+                            v.size()
+                        ))
                     );
 
                     data.put(checkpointId, groupStates);

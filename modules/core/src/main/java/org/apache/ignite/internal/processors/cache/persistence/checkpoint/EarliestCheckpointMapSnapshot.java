@@ -74,7 +74,11 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
                 Integer k = e.getKey();
                 GroupStateSnapshot v = e.getValue();
 
-                groupStateMap.put(k, new CheckpointEntry.GroupState(v.partitionIds(), v.partitionCounters()));
+                groupStateMap.put(k, new CheckpointEntry.GroupState(
+                    v.partitionIds(),
+                    v.partitionCounters(),
+                    v.size()
+                ));
             }
 
         }
@@ -114,13 +118,18 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
         /** Partition counters which corresponds to partition ids. */
         private long[] cnts;
 
+        /** Partitions count. */
+        private int size;
+
         /**
          * @param parts Partitions' ids.
          * @param cnts Partitions' counters.
+         * @param size Partitions count.
          */
-        GroupStateSnapshot(int[] parts, long[] cnts) {
+        GroupStateSnapshot(int[] parts, long[] cnts, int size) {
             this.parts = parts;
             this.cnts = cnts;
+            this.size = size;
         }
 
         /**
@@ -143,16 +152,25 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
             return cnts;
         }
 
+        /**
+         * @return Partitions count.
+         */
+        public int size() {
+            return size;
+        }
+
         /** {@inheritDoc} */
         @Override protected void writeExternalData(ObjectOutput out) throws IOException {
             U.writeIntArray(out, parts);
             U.writeLongArray(out, cnts);
+            out.writeInt(size);
         }
 
         /** {@inheritDoc} */
         @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
             parts = U.readIntArray(in);
             cnts = U.readLongArray(in);
+            size = in.readInt();
         }
     }
 }

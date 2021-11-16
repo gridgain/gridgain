@@ -192,10 +192,12 @@ public class CheckpointEntry {
         /**
          * @param parts Partitions' ids.
          * @param cnts Partitions' counters.
+         * @param size Partitions count.
          */
-        GroupState(int parts[], long[] cnts) {
+        GroupState(int parts[], long[] cnts, int size) {
             this.parts = parts;
             this.cnts = cnts;
+            this.idx = size;
         }
 
         /**
