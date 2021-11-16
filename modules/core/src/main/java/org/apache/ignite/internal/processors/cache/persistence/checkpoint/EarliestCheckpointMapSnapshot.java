@@ -103,11 +103,6 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
         checkpointIds = U.readSet(in);
     }
 
-    /** {@inheritDoc} */
-    @Override public byte getProtocolVersion() {
-        return V1;
-    }
-
     /** {@link CheckpointEntry.GroupState} snapshot. */
     static class GroupStateSnapshot extends IgniteDataTransferObject {
         /** Serial version UUID. */
@@ -158,11 +153,6 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
         @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
             parts = U.readIntArray(in);
             cnts = U.readLongArray(in);
-        }
-
-        /** {@inheritDoc} */
-        @Override public byte getProtocolVersion() {
-            return V1;
         }
     }
 }

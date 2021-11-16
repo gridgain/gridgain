@@ -185,7 +185,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
             IgniteUtils.delete(cpSnapshotMap);
 
-            assertTrue(!cpSnapshotMap.exists());
+            assertFalse(cpSnapshotMap.exists());
         }
 
         grid = startGrid(0);

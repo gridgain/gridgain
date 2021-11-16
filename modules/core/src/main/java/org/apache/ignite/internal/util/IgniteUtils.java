@@ -5609,7 +5609,7 @@ public abstract class IgniteUtils {
      * @param arr Array to write, possibly <tt>null</tt>.
      * @throws IOException If write failed.
      */
-    public static void writeBooleanArray(DataOutput out, boolean @Nullable [] arr) throws IOException {
+    public static void writeBooleanArray(DataOutput out, @Nullable boolean[] arr) throws IOException {
         if (arr == null)
             out.writeInt(-1);
         else {
@@ -5627,7 +5627,7 @@ public abstract class IgniteUtils {
      * @param arr Array to write, possibly <tt>null</tt>.
      * @throws IOException If write failed.
      */
-    public static void writeIntArray(DataOutput out, int @Nullable [] arr) throws IOException {
+    public static void writeIntArray(DataOutput out, @Nullable int[] arr) throws IOException {
         if (arr == null)
             out.writeInt(-1);
         else {
@@ -5645,7 +5645,7 @@ public abstract class IgniteUtils {
      * @param arr Array to write.
      * @throws IOException If write failed.
      */
-    public static void writeLongArray(DataOutput out, long @Nullable [] arr) throws IOException {
+    public static void writeLongArray(DataOutput out, @Nullable long[] arr) throws IOException {
         if (arr == null)
             out.writeInt(-1);
         else {
@@ -5663,7 +5663,7 @@ public abstract class IgniteUtils {
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static boolean @Nullable [] readBooleanArray(DataInput in) throws IOException {
+    public static @Nullable boolean[] readBooleanArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5684,7 +5684,7 @@ public abstract class IgniteUtils {
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static int @Nullable [] readIntArray(DataInput in) throws IOException {
+    public static @Nullable int[] readIntArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5705,7 +5705,7 @@ public abstract class IgniteUtils {
      * @return Read long array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static long @Nullable [] readLongArray(DataInput in) throws IOException {
+    public static @Nullable long[] readLongArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
