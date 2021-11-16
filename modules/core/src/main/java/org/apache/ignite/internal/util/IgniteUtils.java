@@ -5663,7 +5663,7 @@ public abstract class IgniteUtils {
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static @Nullable boolean[] readBooleanArray(DataInput in) throws IOException {
+    @Nullable public static boolean[] readBooleanArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5684,7 +5684,7 @@ public abstract class IgniteUtils {
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static @Nullable int[] readIntArray(DataInput in) throws IOException {
+    @Nullable public static int[] readIntArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5705,7 +5705,7 @@ public abstract class IgniteUtils {
      * @return Read long array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    public static @Nullable long[] readLongArray(DataInput in) throws IOException {
+    @Nullable public static long[] readLongArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
