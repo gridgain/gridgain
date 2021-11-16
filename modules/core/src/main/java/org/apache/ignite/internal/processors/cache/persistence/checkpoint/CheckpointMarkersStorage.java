@@ -178,8 +178,12 @@ public class CheckpointMarkersStorage {
         File snapshotTmpFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_TMP_FILE);
 
         if (snapshotTmpFile.exists()) {
-            if (!IgniteUtils.delete(snapshotTmpFile))
-                log.error("Failed to remove invalid earliest checkpoint map snapshot temporary file: " + snapshotFile);
+            if (!IgniteUtils.delete(snapshotTmpFile)) {
+                throw new IgniteCheckedException(
+                    "Failed to remove invalid earliest checkpoint map snapshot temporary file: " + snapshotTmpFile +
+                        ". Remove it manually and restart the node."
+                );
+            }
         }
 
         EarliestCheckpointMapSnapshot snap = null;
@@ -193,15 +197,19 @@ public class CheckpointMarkersStorage {
             catch (IOException e) {
                 log.error("Failed to unmarshal earliest checkpoint map snapshot", e);
 
-                if (!IgniteUtils.delete(snapshotFile))
-                    log.error("Failed to remove invalid earliest checkpoint map snapshot file: " + snapshotFile);
+                if (!IgniteUtils.delete(snapshotFile)) {
+                    throw new IgniteCheckedException(
+                        "Failed to remove invalid earliest checkpoint map snapshot file: " + snapshotFile + ". " +
+                            "Remove it manually and restart the node."
+                    );
+                }
             }
         }
 
         if (snap == null)
             snap = new EarliestCheckpointMapSnapshot();
 
-        cpHistory.initialize(snap, retrieveHistory());
+        cpHistory.initialize(retrieveHistory(), snap);
     }
 
     /**

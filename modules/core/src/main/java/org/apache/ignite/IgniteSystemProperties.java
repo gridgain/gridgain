@@ -831,8 +831,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /**
-     * Earliest checkpoint map changes threshold. After this thresold is reached, a snapshot of the earliest checkpoint
-     * map will be captured.
+     * Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot.
+     * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";

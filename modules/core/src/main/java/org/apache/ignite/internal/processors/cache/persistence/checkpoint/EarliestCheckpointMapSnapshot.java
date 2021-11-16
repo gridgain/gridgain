@@ -59,8 +59,7 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
      * @param checkpointId Checkpoint id.
      * @return Group state.
      */
-    @Nullable
-    public Map<Integer, CheckpointEntry.GroupState> groupState(UUID checkpointId) {
+    @Nullable public Map<Integer, CheckpointEntry.GroupState> groupState(UUID checkpointId) {
         Map<Integer, GroupStateSnapshot> groupStateSnapshotMap = data.get(checkpointId);
 
         Map<Integer, CheckpointEntry.GroupState> groupStateMap = null;

@@ -110,12 +110,12 @@ public class CheckpointHistory {
     }
 
     /**
-     * @param snapshot Earliest checkpoint map snapshot.
      * @param checkpoints Checkpoints.
+     * @param snapshot Earliest checkpoint map snapshot.
      */
     public void initialize(
-        EarliestCheckpointMapSnapshot snapshot,
-        List<CheckpointEntry> checkpoints
+        List<CheckpointEntry> checkpoints,
+        EarliestCheckpointMapSnapshot snapshot
     ) {
         for (CheckpointEntry e : checkpoints)
             histMap.put(e.timestamp(), e);
@@ -136,7 +136,7 @@ public class CheckpointHistory {
                 if (groupStateMap != null)
                     entry.fillStore(groupStateMap);
 
-                updateEarliestCpMap(groupStateMap, entry);
+                updateEarliestCpMap(entry, groupStateMap);
             }
             catch (IgniteCheckedException e) {
                 U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
@@ -218,12 +218,12 @@ public class CheckpointHistory {
     /**
      * Update map which stored the earliest checkpoint each partitions for groups.
      *
-     * @param groupStateMapFromSnapshot Group state map from the snapshot.
      * @param entry Checkpoint entry.
+     * @param groupStateMapFromSnapshot Group state map from the snapshot.
      */
     private void updateEarliestCpMap(
-        @Nullable Map<Integer, GroupState> groupStateMapFromSnapshot,
-        CheckpointEntry entry
+        CheckpointEntry entry,
+        @Nullable Map<Integer, GroupState> groupStateMapFromSnapshot
     ) {
         try {
             Map<Integer, GroupState> states = groupStateMapFromSnapshot != null ?

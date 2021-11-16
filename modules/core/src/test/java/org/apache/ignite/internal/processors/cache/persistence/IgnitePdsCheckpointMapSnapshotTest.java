@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
 import org.apache.ignite.plugin.PluginContext;
@@ -67,10 +66,12 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
         // Plugin that creates a WAL manager that counts replays
         configuration.setPluginProviders(new AbstractTestPluginProvider() {
+            /** {@inheritDoc} */
             @Override public String name() {
                 return "testPlugin";
             }
 
+            /** {@inheritDoc} */
             @Override public <T> @Nullable T createComponent(PluginContext ctx, Class<T> cls) {
                 if (IgniteWriteAheadLogManager.class.equals(cls))
                     return (T) new TestFileWriteAheadLogManager(((IgniteEx)ctx.grid()).context());
@@ -92,6 +93,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             super(ctx);
         }
 
+        /** {@link GroupStateLazyStore} class name. */
         private static final String clsName = GroupStateLazyStore.class.getName();
 
         /** {@inheritDoc} */
@@ -102,6 +104,8 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             Exception exception = new Exception();
             StackTraceElement[] trace = exception.getStackTrace();
 
+            // Here we only want to record replays from GroupStateLazyStore
+            // because they're performed if the snapshot doesn't include the data for a checkpoint
             if (Arrays.stream(trace).anyMatch(el -> el.getClassName().equals(clsName)))
                 replayCount.incrementAndGet();
 
@@ -112,6 +116,8 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+
+        stopAllGrids();
 
         cleanPersistenceDir();
     }
@@ -159,7 +165,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         // Count of inserts and checkpoints
         int cnt = 100;
 
-        CacheConfiguration<Integer, Integer> configuration = new CacheConfiguration<>("some-cache");
+        CacheConfiguration<Integer, Integer> configuration = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
         IgniteCache<Integer, Integer> cache = grid.getOrCreateCache(configuration);
 
@@ -168,9 +174,6 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
             forceCheckpoint(grid);
         }
-
-        // Sleep enough to trigger checkpoint map snapshot capture
-        U.sleep(300);
 
         stopGrid(0, true);
 
@@ -181,6 +184,8 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
 
             IgniteUtils.delete(cpSnapshotMap);
+
+            assertTrue(!cpSnapshotMap.exists());
         }
 
         grid = startGrid(0);

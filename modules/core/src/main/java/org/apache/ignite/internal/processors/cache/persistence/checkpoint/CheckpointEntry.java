@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
-import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -35,6 +33,7 @@ import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
@@ -135,8 +134,7 @@ public class CheckpointEntry {
     /**
      * @return Checkpoint entry's group states.
      */
-    @Nullable
-    Map<Integer, GroupState> groupStates() {
+    @Nullable Map<Integer, GroupState> groupStates() {
         GroupStateLazyStore store = grpStateLazyStore.get();
 
         return store != null ? store.groupStates() : null;
@@ -172,10 +170,7 @@ public class CheckpointEntry {
     /**
      *
      */
-    public static class GroupState implements Serializable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
+    public static class GroupState {
         /** Partition ids. */
         private final int[] parts;
 
@@ -295,7 +290,7 @@ public class CheckpointEntry {
             AtomicIntegerFieldUpdater.newUpdater(GroupStateLazyStore.class, "initGuard");
 
         /** Cache states. Initialized lazily. */
-        private volatile Map<Integer, GroupState> grpStates;
+        @Nullable private volatile Map<Integer, GroupState> grpStates;
 
         /**
          *
@@ -338,10 +333,7 @@ public class CheckpointEntry {
         /**
          * @param stateRec Cache group state.
          */
-        private static Map<Integer, GroupState> remap(Map<Integer, CacheState> stateRec) {
-            if (stateRec == null)
-                return Collections.emptyMap();
-
+        private static Map<Integer, GroupState> remap(@NotNull Map<Integer, CacheState> stateRec) {
             Map<Integer, GroupState> grpStates = U.newHashMap(stateRec.size());
 
             for (Integer grpId : stateRec.keySet()) {
@@ -370,7 +362,7 @@ public class CheckpointEntry {
         /**
          * @return Partitions' states by group id.
          */
-        Map<Integer, GroupState> groupStates() {
+        @Nullable Map<Integer, GroupState> groupStates() {
             return grpStates;
         }
 
