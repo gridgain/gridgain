@@ -185,8 +185,6 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
      *
      * @param ctx Context.
      * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
      */
     protected void corruptDataEntry(
         GridCacheContext<Object, Object> ctx,
@@ -209,7 +207,8 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
                 new GridCacheVersion(),
                 0L,
                 partId,
-                updateCntr
+                updateCntr,
+                DataEntry.EMPTY_FLAGS
             );
 
             GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();

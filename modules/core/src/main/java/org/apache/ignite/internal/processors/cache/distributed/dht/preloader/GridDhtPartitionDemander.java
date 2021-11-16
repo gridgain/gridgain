@@ -799,7 +799,7 @@ public class GridDhtPartitionDemander {
      * @param node Node which sent entry.
      * @param p Partition id.
      * @param infos Entries info for preload.
-     * @throws IgniteInterruptedCheckedException If interrupted.
+     * @throws IgniteCheckedException If failed.
      */
     private void mvccPreloadEntries(
         AffinityTopologyVersion topVer,
@@ -999,6 +999,7 @@ public class GridDhtPartitionDemander {
                             true,
                             topVer,
                             cctx.isDrEnabled() ? DR_PRELOAD : DR_NONE,
+                            false,
                             false
                         )) {
                             cached.touch(); // Start tracking.
@@ -1418,7 +1419,7 @@ public class GridDhtPartitionDemander {
             final CacheConfiguration cfg = grp.config();
 
             for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
-                final ClusterNode node = e.getKey();
+                ClusterNode node = e.getKey();
 
                 GridDhtPartitionDemandMessage d = e.getValue();
 

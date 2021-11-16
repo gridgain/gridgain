@@ -63,6 +63,7 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.binary.BinaryMetadata;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -2611,7 +2612,16 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (binaryVal) {
             int typeId = ctx.cacheObjects().typeId(val);
-
+            //In the case of using a simple name mapper, the typeId may be different, and we
+            // won't be able to find it in the types map.
+            // Therefore, we additionally calculate typeId based on typeName from metadata.
+            if (val instanceof BinaryObjectImpl) {
+                BinaryType metadata = ctx.cacheObjects().metadata(typeId);
+    
+                if (metadata != null)
+                    typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
+            }
+            
             id = new QueryTypeIdKey(cacheName, typeId);
         }
         else {
