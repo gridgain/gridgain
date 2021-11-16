@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 
-import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -25,6 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,18 +32,9 @@ import org.jetbrains.annotations.Nullable;
  * Earliest checkpoint map snapshot.
  * Speeds up construction of the earliestCp map in the {@link CheckpointHistory}.
  */
-public class EarliestCheckpointMapSnapshot implements Externalizable {
-    /** */
-    private static final long serialVersionUID = 0L;
-
-    /** Class protocol version. */
-    private static final int PROTO_VER = 1;
-
-    /** Protocol version of the object. */
-    private int ver = PROTO_VER;
-
+public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
     /** Last snapshot's checkpoint timestamp. */
-    private Map</*Checkpoint id */ UUID, Map</* Group id */ Integer, CheckpointEntry.GroupState>> data = new HashMap<>();
+    private Map</*Checkpoint id */ UUID, Map</* Group id */ Integer, GroupStateSnapshot>> data = new HashMap<>();
 
     /** Ids of checkpoints present at the time of the snapshot capture. */
     private Set<UUID> checkpointIds;
@@ -51,7 +42,7 @@ public class EarliestCheckpointMapSnapshot implements Externalizable {
     /** Constructor. */
     public EarliestCheckpointMapSnapshot(
         Set<UUID> checkpointIds,
-        Map<UUID, Map<Integer, CheckpointEntry.GroupState>> earliestCp
+        Map<UUID, Map<Integer, GroupStateSnapshot>> earliestCp
     ) {
         this.checkpointIds = checkpointIds;
         this.data = earliestCp;
@@ -69,8 +60,23 @@ public class EarliestCheckpointMapSnapshot implements Externalizable {
      * @return Group state.
      */
     @Nullable
-    public Map<Integer, CheckpointEntry.GroupState> getGroupState(UUID checkpointId) {
-        return data.get(checkpointId);
+    public Map<Integer, CheckpointEntry.GroupState> groupState(UUID checkpointId) {
+        Map<Integer, GroupStateSnapshot> groupStateSnapshotMap = data.get(checkpointId);
+
+        Map<Integer, CheckpointEntry.GroupState> groupStateMap = null;
+
+        if (groupStateSnapshotMap != null) {
+            groupStateMap = new HashMap<>();
+
+            for (Map.Entry<Integer, GroupStateSnapshot> e : groupStateSnapshotMap.entrySet()) {
+                Integer k = e.getKey();
+                GroupStateSnapshot v = e.getValue();
+
+                groupStateMap.put(k, new CheckpointEntry.GroupState(v.partitionIds(), v.partitionCounters()));
+            }
+
+        }
+        return groupStateMap;
     }
 
     /**
@@ -84,18 +90,74 @@ public class EarliestCheckpointMapSnapshot implements Externalizable {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeExternal(ObjectOutput out) throws IOException {
-        out.writeInt(ver);
-
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeMap(out, data);
         U.writeCollection(out, checkpointIds);
     }
 
     /** {@inheritDoc} */
-    @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        ver = in.readInt();
-
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         data = U.readMap(in);
         checkpointIds = U.readSet(in);
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V1;
+    }
+
+    /** {@link CheckpointEntry.GroupState} snapshot. */
+    static class GroupStateSnapshot extends IgniteDataTransferObject {
+        /** Partition ids. */
+        private int[] parts;
+
+        /** Partition counters which corresponds to partition ids. */
+        private long[] cnts;
+
+        /**
+         * @param parts Partitions' ids.
+         * @param cnts Partitions' counters.
+         */
+        GroupStateSnapshot(int[] parts, long[] cnts) {
+            this.parts = parts;
+            this.cnts = cnts;
+        }
+
+        /**
+         * Constructor for serialization.
+         */
+        public GroupStateSnapshot() {
+        }
+
+        /**
+         * @return Partitions' ids.
+         */
+        int[] partitionIds() {
+            return parts;
+        }
+
+        /**
+         * @return Partitions' counters.
+         */
+        long[] partitionCounters() {
+            return cnts;
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+            U.writeIntArray(out, parts);
+            U.writeLongArray(out, cnts);
+        }
+
+        /** {@inheritDoc} */
+        @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+            parts = U.readIntArray(in);
+            cnts = U.readLongArray(in);
+        }
+
+        /** {@inheritDoc} */
+        @Override public byte getProtocolVersion() {
+            return V1;
+        }
     }
 }

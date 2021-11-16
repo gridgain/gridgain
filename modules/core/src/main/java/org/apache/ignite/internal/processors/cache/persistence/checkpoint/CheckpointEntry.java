@@ -194,6 +194,29 @@ public class CheckpointEntry {
         }
 
         /**
+         * @param parts Partitions' ids.
+         * @param cnts Partitions' counters.
+         */
+        GroupState(int parts[], long[] cnts) {
+            this.parts = parts;
+            this.cnts = cnts;
+        }
+
+        /**
+         * @return Partitions' ids.
+         */
+        int[] partitionIds() {
+            return parts;
+        }
+
+        /**
+         * @return Partitions' counters.
+         */
+        long[] partitionCounters() {
+            return cnts;
+        }
+
+        /**
          * @param partId Partition ID to add.
          * @param cntr Partition counter.
          */
@@ -295,6 +318,11 @@ public class CheckpointEntry {
             this(null);
         }
 
+        /**
+         * Constructor with group state map.
+         *
+         * @param stateMap Group state map.
+         */
         GroupStateLazyStore(@Nullable Map<Integer, GroupState> stateMap) {
             if (stateMap != null) {
                 initGuard = 1;
@@ -339,6 +367,9 @@ public class CheckpointEntry {
             return grpStates;
         }
 
+        /**
+         * @return Partitions' states by group id.
+         */
         Map<Integer, GroupState> groupStates() {
             return grpStates;
         }

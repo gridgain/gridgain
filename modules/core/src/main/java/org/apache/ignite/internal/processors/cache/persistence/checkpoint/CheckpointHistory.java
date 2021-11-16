@@ -39,6 +39,8 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry.GroupState;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.EarliestCheckpointMapSnapshot.GroupStateSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.lang.IgniteThrowableBiPredicate;
@@ -124,7 +126,7 @@ public class CheckpointHistory {
 
                 UUID checkpointId = entry.checkpointId();
 
-                Map<Integer, CheckpointEntry.GroupState> groupStateMap = snapshot.getGroupState(checkpointId);
+                Map<Integer, GroupState> groupStateMap = snapshot.groupState(checkpointId);
 
                 // Ignore checkpoint that was present at the time of the snapshot and whose group
                 // states map was not persisted (that means this checkpoint wasn't a part of earliestCp map)
@@ -220,11 +222,11 @@ public class CheckpointHistory {
      * @param entry Checkpoint entry.
      */
     private void updateEarliestCpMap(
-        @Nullable Map<Integer, CheckpointEntry.GroupState> groupStateMapFromSnapshot,
+        @Nullable Map<Integer, GroupState> groupStateMapFromSnapshot,
         CheckpointEntry entry
     ) {
         try {
-            Map<Integer, CheckpointEntry.GroupState> states = groupStateMapFromSnapshot != null ?
+            Map<Integer, GroupState> states = groupStateMapFromSnapshot != null ?
                 groupStateMapFromSnapshot : entry.groupState(wal);
 
             Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
@@ -302,10 +304,10 @@ public class CheckpointHistory {
      */
     private void addCpGroupStatesToEarliestCpMap(
         CheckpointEntry entry,
-        Map<Integer, CheckpointEntry.GroupState> cacheGrpStates
+        Map<Integer, GroupState> cacheGrpStates
     ) {
         for (Integer grpId : cacheGrpStates.keySet()) {
-            CheckpointEntry.GroupState grpState = cacheGrpStates.get(grpId);
+            GroupState grpState = cacheGrpStates.get(grpId);
 
             for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
                 int part = grpState.getPartitionByIndex(pIdx);
@@ -798,7 +800,7 @@ public class CheckpointHistory {
      * @return Snapshot of a map.
      */
     public EarliestCheckpointMapSnapshot earliestCheckpointsMapSnapshot() {
-        Map<UUID, Map<Integer, CheckpointEntry.GroupState>> data = new HashMap<>();
+        Map<UUID, Map<Integer, GroupStateSnapshot>> data = new HashMap<>();
 
         synchronized (earliestCp) {
             Collection<CheckpointEntry> values = earliestCp.values();
@@ -809,9 +811,17 @@ public class CheckpointHistory {
                 if (data.containsKey(checkpointId))
                     continue;
 
-                Map<Integer, CheckpointEntry.GroupState> groupStates = cp.groupStates();
+                Map<Integer, GroupState> map = cp.groupStates();
 
-                data.put(checkpointId, groupStates);
+                if (map != null) {
+                    Map<Integer, GroupStateSnapshot> groupStates = new HashMap<>();
+
+                    map.forEach((k, v) ->
+                        groupStates.put(k, new GroupStateSnapshot(v.partitionIds(), v.partitionCounters()))
+                    );
+
+                    data.put(checkpointId, groupStates);
+                }
             }
         }
 

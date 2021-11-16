@@ -5609,7 +5609,7 @@ public abstract class IgniteUtils {
      * @param arr Array to write, possibly <tt>null</tt>.
      * @throws IOException If write failed.
      */
-    public static void writeBooleanArray(DataOutput out, @Nullable boolean[] arr) throws IOException {
+    public static void writeBooleanArray(DataOutput out, boolean @Nullable [] arr) throws IOException {
         if (arr == null)
             out.writeInt(-1);
         else {
@@ -5627,7 +5627,7 @@ public abstract class IgniteUtils {
      * @param arr Array to write, possibly <tt>null</tt>.
      * @throws IOException If write failed.
      */
-    public static void writeIntArray(DataOutput out, @Nullable int[] arr) throws IOException {
+    public static void writeIntArray(DataOutput out, int @Nullable [] arr) throws IOException {
         if (arr == null)
             out.writeInt(-1);
         else {
@@ -5639,13 +5639,31 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Writes long array to output stream.
+     *
+     * @param out Output stream to write to.
+     * @param arr Array to write.
+     * @throws IOException If write failed.
+     */
+    public static void writeLongArray(DataOutput out, long @Nullable [] arr) throws IOException {
+        if (arr == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(arr.length);
+
+            for (long b : arr)
+                out.writeLong(b);
+        }
+    }
+
+    /**
      * Reads boolean array from input stream accounting for <tt>null</tt> values.
      *
      * @param in Stream to read from.
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    @Nullable public static boolean[] readBooleanArray(DataInput in) throws IOException {
+    public static boolean @Nullable [] readBooleanArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5666,7 +5684,7 @@ public abstract class IgniteUtils {
      * @return Read byte array, possibly <tt>null</tt>.
      * @throws IOException If read failed.
      */
-    @Nullable public static int[] readIntArray(DataInput in) throws IOException {
+    public static int @Nullable [] readIntArray(DataInput in) throws IOException {
         int len = in.readInt();
 
         if (len == -1)
@@ -5676,6 +5694,27 @@ public abstract class IgniteUtils {
 
         for (int i = 0; i < len; i++)
             res[i] = in.readInt();
+
+        return res;
+    }
+
+    /**
+     * Reads long array from input stream.
+     *
+     * @param in Stream to read from.
+     * @return Read long array, possibly <tt>null</tt>.
+     * @throws IOException If read failed.
+     */
+    public static long @Nullable [] readLongArray(DataInput in) throws IOException {
+        int len = in.readInt();
+
+        if (len == -1)
+            return null; // Value "-1" indicates null.
+
+        long[] res = new long[len];
+
+        for (int i = 0; i < len; i++)
+            res[i] = in.readLong();
 
         return res;
     }
