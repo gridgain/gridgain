@@ -240,7 +240,6 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertEquals(session.getId(), diff.sessionId());
         assertEquals(FAILED, diff.status());
-        assertTrue(diff.endTime() >= U.currentTimeMillis());
 
         assertNotNull(diff.failReason());
 
@@ -248,6 +247,7 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         assertNull(diff.originatingNodeId());
 
         assertEquals(0L, diff.startTime());
+        assertTrue(diff.endTime() > 0L);
 
         assertTrue(diff.jobNodes().isEmpty());
         assertTrue(diff.attributes().isEmpty());
@@ -263,13 +263,13 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertEquals(session.getId(), diff.sessionId());
         assertEquals(FINISHED, diff.status());
-        assertTrue(diff.endTime() >= U.currentTimeMillis());
 
         assertNull(diff.taskName());
         assertNull(diff.originatingNodeId());
         assertNull(diff.failReason());
 
         assertEquals(0L, diff.startTime());
+        assertTrue(diff.endTime() > 0);
 
         assertTrue(diff.jobNodes().isEmpty());
         assertTrue(diff.attributes().isEmpty());
