@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
@@ -201,7 +202,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getTaskName(),
             sessionImp.getTaskNodeId(),
             sessionImp.getStartTime(),
-            sessionImp.getEndTime(),
+            0L,
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
             null,
@@ -225,7 +226,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             sessionImp.getTaskName(),
             sessionImp.getTaskNodeId(),
             sessionImp.getStartTime(),
-            sessionImp.getEndTime(),
+            0L,
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
             null,
@@ -298,7 +299,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             null,
             null,
             0L,
-            0L,
+            U.currentTimeMillis(),
             null,
             null,
             err,

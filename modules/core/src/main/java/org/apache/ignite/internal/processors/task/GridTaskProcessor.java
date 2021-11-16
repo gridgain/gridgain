@@ -56,6 +56,7 @@ import org.apache.ignite.internal.GridTaskSessionRequest;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.compute.ComputeTaskCancelledCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
@@ -1605,18 +1606,23 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * then only {@link ComputeGridMonitor#processStatusDiff} will be called.
      *
      * @param monitor Task status update monitor.
-     * @throws IllegalStateException If the node is stopped.
+     * @throws NodeStoppingException If the node is stopped.
      */
-    public void listenStatusUpdates(ComputeGridMonitor monitor) {
+    public void listenStatusUpdates(ComputeGridMonitor monitor) throws NodeStoppingException {
         lock.writeLock();
 
         try {
             if (stopping)
-                throw new IllegalStateException("Failed to add monitor due to grid shutdown: " + monitor);
+                throw new NodeStoppingException("Failed to add monitor due to grid shutdown: " + monitor);
 
             taskStatusMonitors.add(monitor);
 
-            monitor.processStatusSnapshots(taskStatusSnapshots.values());
+            try {
+                monitor.processStatusSnapshots(taskStatusSnapshots.values());
+            }
+            catch (Throwable t) {
+                log.error("Error processing snapshots of task statuses: " + monitor, t);
+            }
         }
         finally {
             lock.writeUnlock();
@@ -1640,19 +1646,26 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
     }
 
     /**
-     * Notify {@link #taskStatusMonitors} about task status changes.
+     * Guarded by {@link #lock} for atomic update of the {@link #taskStatusSnapshots}
+     * and notifying {@link #taskStatusMonitors} about task changes.
      *
      * @param diff Task status diff.
-     * @param beforeNotify Function to be executed before notifying {@link #taskStatusMonitors}.
+     * @param snapshotFun Snapshot processing function (update / delete / etc.).
      */
-    private void notifyTaskStatusMonitors(ComputeTaskStatusDiff diff, Runnable beforeNotify) {
+    private void notifyTaskStatusMonitors(ComputeTaskStatusDiff diff, Runnable snapshotFun) {
         lock.readLock();
 
         try {
-            beforeNotify.run();
+            snapshotFun.run();
 
-            for (ComputeGridMonitor monitor : taskStatusMonitors)
-                monitor.processStatusDiff(diff);
+            for (ComputeGridMonitor monitor : taskStatusMonitors) {
+                try {
+                    monitor.processStatusDiff(diff);
+                }
+                catch (Throwable t) {
+                    log.error("Error processing task status diff: " + monitor, t);
+                }
+            }
         }
         finally {
             lock.readUnlock();

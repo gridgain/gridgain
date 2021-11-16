@@ -39,10 +39,11 @@ public interface ComputeTaskStatusDiff extends ComputeTaskStatusSnapshot {
     boolean hasAttributesChanged();
 
     /**
-     * Only {@link ComputeTaskStatusSnapshot#status} has changed, if it is equal to
-     *      {@link ComputeTaskStatusEnum#FAILED}, then you can get {@link ComputeTaskStatusSnapshot#failReason}.
+     * {@link ComputeTaskStatusSnapshot#status} and {@link ComputeTaskStatusSnapshot#endTime} have changed,
+     *      if it is equal to {@link ComputeTaskStatusEnum#FAILED}, then you can get
+     *      {@link ComputeTaskStatusSnapshot#failReason}.
      *
-     * @return {@code true} if the task has completed its execution, .
+     * @return {@code true} if the task has completed its execution.
      */
     boolean taskFinished();
 }

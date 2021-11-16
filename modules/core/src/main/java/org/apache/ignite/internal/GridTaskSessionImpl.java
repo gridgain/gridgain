@@ -940,10 +940,8 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
      * @param jobNodes Nodes on which the jobs of the task will be executed.
      */
     public void jobNodes(Collection<UUID> jobNodes) {
-        if (!jobNodes.isEmpty()) {
-            synchronized (mux) {
-                this.jobNodes = new ArrayList<>(jobNodes);
-            }
+        synchronized (mux) {
+            this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : new ArrayList<>(jobNodes);
         }
     }
 

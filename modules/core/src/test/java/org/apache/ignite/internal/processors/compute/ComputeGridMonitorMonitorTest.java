@@ -32,7 +32,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
@@ -82,6 +82,8 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         super.afterTestsStopped();
 
         stopAllGrids();
+
+        CRD = null;
     }
 
     /** {@inheritDoc} */
@@ -99,9 +101,8 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setFailureHandler(new StopNodeFailureHandler());
+    @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
+        return new StopNodeFailureHandler();
     }
 
     /**
@@ -147,6 +148,11 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         checkFailTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
     }
 
+    /**
+     * Checking get of diffs when changing the task attribute.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void changeAttributesTest() throws Exception {
         ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
@@ -157,7 +163,10 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         taskFut.getTaskSession().setAttribute("test", "test");
 
-        task.waitOnJobExecFut.onDone();
+        assertEquals(
+            "test",
+            taskFut.getTaskSession().waitForAttribute("test", getTestTimeout())
+        );
 
         taskFut.get(getTestTimeout());
 
@@ -189,8 +198,6 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         try {
             CRD.context().task().listenStatusUpdates(monitor1);
 
-            task.waitOnJobExecFut.onDone();
-
             assertTrue(monitor.statusSnapshots.isEmpty());
 
             assertEquals(1, monitor1.statusSnapshots.size());
@@ -212,7 +219,7 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         assertEquals(session.getTaskName(), snapshot.taskName());
         assertEquals(session.getTaskNodeId(), snapshot.originatingNodeId());
         assertEquals(session.getStartTime(), snapshot.startTime());
-        assertEquals(session.getEndTime(), snapshot.endTime());
+        assertEquals(0L, snapshot.endTime());
 
         assertTrue(snapshot.attributes().isEmpty());
         assertNull(snapshot.failReason());
@@ -233,13 +240,14 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertEquals(session.getId(), diff.sessionId());
         assertEquals(FAILED, diff.status());
+        assertTrue(diff.endTime() >= U.currentTimeMillis());
+
         assertNotNull(diff.failReason());
 
         assertNull(diff.taskName());
         assertNull(diff.originatingNodeId());
 
         assertEquals(0L, diff.startTime());
-        assertEquals(0L, diff.endTime());
 
         assertTrue(diff.jobNodes().isEmpty());
         assertTrue(diff.attributes().isEmpty());
@@ -255,13 +263,13 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertEquals(session.getId(), diff.sessionId());
         assertEquals(FINISHED, diff.status());
+        assertTrue(diff.endTime() >= U.currentTimeMillis());
 
         assertNull(diff.taskName());
         assertNull(diff.originatingNodeId());
         assertNull(diff.failReason());
 
         assertEquals(0L, diff.startTime());
-        assertEquals(0L, diff.endTime());
 
         assertTrue(diff.jobNodes().isEmpty());
         assertTrue(diff.attributes().isEmpty());
@@ -333,7 +341,7 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         assertEquals(session.getTaskName(), diff.taskName());
         assertEquals(session.getTaskNodeId(), diff.originatingNodeId());
         assertEquals(session.getStartTime(), diff.startTime());
-        assertEquals(session.getEndTime(), diff.endTime());
+        assertEquals(0L, diff.endTime());
 
         assertTrue(diff.jobNodes().isEmpty());
         assertTrue(diff.attributes().isEmpty());
@@ -381,9 +389,6 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
     private static class ComputeFullWithWaitTask extends ComputeTaskAdapter<Void, Void> {
         /** */
         final GridFutureAdapter<Void> doneOnMapFut = new GridFutureAdapter<>();
-
-        /** */
-        final GridFutureAdapter<Void> waitOnJobExecFut = new GridFutureAdapter<>();
 
         /** */
         final long timeout;
