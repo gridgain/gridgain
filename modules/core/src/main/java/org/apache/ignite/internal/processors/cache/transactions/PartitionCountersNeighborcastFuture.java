@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -35,8 +36,10 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
@@ -78,14 +81,11 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
      * Starts processing.
      */
     public void init() {
-        if (log.isInfoEnabled()) {
-            log.info("Starting delivery partition countres to remote nodes [txId=" + tx.nearXidVersion() +
-                ", futId=" + futId);
-        }
-
         HashSet<UUID> siblings = siblingBackups();
 
         cctx.mvcc().addFuture(this, futId);
+
+        List<T2<UUID, List<PartitionUpdateCountersMessage>>> peerMsgs = new ArrayList<>();
 
         for (UUID peer : siblings) {
             List<PartitionUpdateCountersMessage> cntrs = cctx.tm().txHandler()
@@ -101,6 +101,8 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
 
             if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), n, IgniteFeatures.TX_TRACKING_UPDATE_COUNTER))
                 continue; // Skip old version node.
+
+            peerMsgs.add(new T2<>(peer, cntrs));
 
             MiniFuture miniFut = new MiniFuture(peer);
 
@@ -118,6 +120,13 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
 
                 miniFut.onDone();
             }
+        }
+
+        if (log.isInfoEnabled()) {
+            log.info("Starting delivery partition countres to remote nodes [txId=" + tx.nearXidVersion() +
+                ", futId=" + futId +
+                ", topVer=" + tx.topologyVersion() +
+                ", msgs=" + peerMsgs);
         }
 
         markInitialized();
@@ -159,7 +168,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
      */
     public void onResult(UUID nodeId) {
         if (log.isInfoEnabled()) {
-            log.info("Remote peer acked partition counters delivery [futId=" + futId +
+            log.info("Remote peer acked partition counters delivery [futId=" + futId + ", txId=" + tx.nearXidVersion() +
                 ", node=" + nodeId + ']');
         }
 
