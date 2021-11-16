@@ -86,8 +86,8 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = new IgniteConfiguration().setMetricExporterSpi(new NoopMetricExporterSpi());
 
         DataRegionMetricsImpl metrics = new DataRegionMetricsImpl(
-                new DataRegionConfiguration(),
-                new GridTestKernalContext(new GridTestLog4jLogger(), cfg));
+            new DataRegionConfiguration(),
+            new GridTestKernalContext(new GridTestLog4jLogger(), cfg));
 
         when(pageMemory2g.metrics()).thenReturn(metrics);
     }
@@ -100,11 +100,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, null, stateChecker, log);
 
         long time = throttle.getCleanPagesProtectionParkTime(0.67,
-                (362584 + 67064) / 2,
-                328787,
-                1,
-                60184,
-                23103);
+            (362584 + 67064) / 2,
+            328787,
+            1,
+            60184,
+            23103);
 
         assertTrue(time > 0);
     }
@@ -117,11 +117,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, null, stateChecker, log);
 
         long time = throttle.getCleanPagesProtectionParkTime(0.47,
-                ((362584 + 67064) / 2),
-                328787,
-                1,
-                20103,
-                23103);
+            ((362584 + 67064) / 2),
+            328787,
+            1,
+            20103,
+            23103);
 
         assertEquals(0, time);
     }
@@ -137,11 +137,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         int markDirtySpeed = 34422;
         int cpWriteSpeed = 19416;
         long time = throttle.getCleanPagesProtectionParkTime(0.04,
-                ((903150 + 227217) / 2),
-                903150,
-                1,
-                markDirtySpeed,
-                cpWriteSpeed);
+            ((903150 + 227217) / 2),
+            903150,
+            1,
+            markDirtySpeed,
+            cpWriteSpeed);
 
         long mdSpeed = TimeUnit.SECONDS.toNanos(1) / markDirtySpeed;
         long cpSpeed = TimeUnit.SECONDS.toNanos(1) / cpWriteSpeed;
@@ -222,23 +222,23 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, null, stateChecker, log);
 
         assertEquals(0, throttle.getCleanPagesProtectionParkTime(0.01, 100, 400000,
-                1,
-                20103,
-                23103));
+            1,
+            20103,
+            23103));
 
         //mark speed 22413 for mark all remaining as dirty
         long time = throttle.getCleanPagesProtectionParkTime(0.024, 100, 400000,
-                1,
-                24000,
-                23103);
+            1,
+            24000,
+            23103);
         assertTrue(time > 0);
 
         assertEquals(0, throttle.getCleanPagesProtectionParkTime(0.01,
-                100,
-                400000,
-                1,
-                22412,
-                23103));
+            100,
+            400000,
+            1,
+            22412,
+            23103));
     }
 
     /**
@@ -249,16 +249,16 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, null, stateChecker, log);
 
         long time1 = throttle.getCleanPagesProtectionParkTime(0.70, 300000, 400000,
-                1, 20200, 23000);
+            1, 20200, 23000);
         long time2 = throttle.getCleanPagesProtectionParkTime(0.71, 300000, 400000,
-                1, 20200, 23000);
+            1, 20200, 23000);
 
         assertTrue(time2 >= time1 * 2); // extra slowdown should be applied.
 
         long time3 = throttle.getCleanPagesProtectionParkTime(0.73, 300000, 400000,
-                1, 20200, 23000);
+            1, 20200, 23000);
         long time4 = throttle.getCleanPagesProtectionParkTime(0.74, 300000, 400000,
-                1, 20200, 23000);
+            1, 20200, 23000);
 
         assertTrue(time3 > time2);
         assertTrue(time4 > time3);
@@ -273,11 +273,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
 
         // 363308 350004 348976 10604
         long time = throttle.getCleanPagesProtectionParkTime(0.75,
-                ((350004 + 348976) / 2),
-                350004 - 10604,
-                4,
-                279,
-                23933);
+            ((350004 + 348976) / 2),
+            350004 - 10604,
+            4,
+            279,
+            23933);
 
         System.err.println(time);
 
@@ -310,11 +310,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < 10; i++) {
             loadThreads.add(new Thread(
-                    () -> {
-                        while (!stopLoad.get())
-                            plc.onMarkDirty(true);
-                    },
-                    "load-" + i
+                () -> {
+                    while (!stopLoad.get())
+                        plc.onMarkDirty(true);
+                },
+                "load-" + i
             ));
         }
 
@@ -366,11 +366,11 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < 3; i++) {
             loadThreads.add(new Thread(
-                    () -> {
-                        while (!stopLoad.get())
-                            plc.onMarkDirty(true);
-                    },
-                    "load-" + i
+                () -> {
+                    while (!stopLoad.get())
+                        plc.onMarkDirty(true);
+                },
+                "load-" + i
             ));
         }
 
