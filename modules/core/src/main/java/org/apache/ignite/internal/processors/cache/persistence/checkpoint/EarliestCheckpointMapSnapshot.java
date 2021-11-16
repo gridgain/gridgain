@@ -33,6 +33,9 @@ import org.jetbrains.annotations.Nullable;
  * Speeds up construction of the earliestCp map in the {@link CheckpointHistory}.
  */
 public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
+    /** Serial version UUID. */
+    private static final long serialVersionUID = 0L;
+
     /** Last snapshot's checkpoint timestamp. */
     private Map</*Checkpoint id */ UUID, Map</* Group id */ Integer, GroupStateSnapshot>> data = new HashMap<>();
 
@@ -107,6 +110,9 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
 
     /** {@link CheckpointEntry.GroupState} snapshot. */
     static class GroupStateSnapshot extends IgniteDataTransferObject {
+        /** Serial version UUID. */
+        private static final long serialVersionUID = 0L;
+
         /** Partition ids. */
         private int[] parts;
 
