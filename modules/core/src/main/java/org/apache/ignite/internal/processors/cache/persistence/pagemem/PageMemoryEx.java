@@ -178,12 +178,12 @@ public interface PageMemoryEx extends PageMemory {
     public FullPageId pullPageFromCpBuffer();
 
     /**
-     * Checks if the Checkpoint Buffer is currently in a danger zone.
+     * Checks if the Checkpoint Buffer is currently close to exhaustion.
      *
      * @return {@code true} if measures like throttling to protect Checkpoint Buffer should be applied,
      * and {@code false} otherwise.
      */
-    public boolean isCPBufferInDangerZone();
+    public boolean isCpBufferOverflowThresholdExceeded();
 
     /**
      * Total pages can be placed to memory.
