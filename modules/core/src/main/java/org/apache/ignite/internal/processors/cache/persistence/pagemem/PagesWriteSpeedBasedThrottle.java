@@ -130,8 +130,11 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         if (isPageInCheckpoint && isCPBufferInDangerZone())
             return cpBufferProtector.protectionParkTime();
         else {
-            if (isPageInCheckpoint)
+            if (isPageInCheckpoint) {
+                // The fact that we are here means that we checked whether CP Buffer is in danger zone and found that
+                // it is ok, so its protector may relax, hence we reset it.
                 cpBufferProtector.resetBackoff();
+            }
             return computeCleanPagesProtectionParkTime(curNanoTime);
         }
     }
