@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 class SpeedBasedCleanPagesProtectionThrottle {
     /**
-     * Maximum dirty pages in region.
+     * Maximum dirty pages in a region.
      */
     private static final double MAX_DIRTY_PAGES = 0.75;
 
@@ -50,7 +50,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private final IgniteOutClosure<CheckpointProgress> cpProgress;
 
     /**
-     * Total pages which is possible to store in page memory.
+     * Total pages possible to store in page memory.
      */
     private final long totalPages;
 
@@ -66,22 +66,22 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private volatile double targetDirtyRatio;
 
     /**
-     * Current dirty pages ratio (percent of dirty pages in most used segment), negative value means no cp is running.
+     * Current dirty pages ratio (percent of dirty pages in the most used segment), negative value means no cp is running.
      */
     private volatile double currDirtyRatio;
 
     /**
-     * Threads set. Contains identifiers of all threads which were marking pages for current checkpoint.
+     * Threads set. Contains identifiers of all threads which were marking pages for the current checkpoint.
      */
     private final Set<Long> threadIds = new GridConcurrentHashSet<>();
 
     /**
-     * Counter of written pages from checkpoint. Value is saved here for detecting checkpoint start.
+     * Counter of written pages from a checkpoint. Value is saved here for detecting a checkpoint start.
      */
     private final AtomicInteger lastObservedWritten = new AtomicInteger(0);
 
     /**
-     * Dirty pages ratio was observed at checkpoint start (here start is moment when first page was actually saved to
+     * Dirty pages ratio that was observed at a checkpoint start (here the start is a moment when the first page was actually saved to
      * store). This ratio is excluded from throttling.
      */
     private volatile double initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
@@ -112,7 +112,7 @@ class SpeedBasedCleanPagesProtectionThrottle {
 
     /**
      * Computes next duration (in nanos) to throttle a thread.
-     * Might return #NO_THROTTLING_MARKER as a marker that no throttling should be applied.
+     * Might return {@link PagesWriteSpeedBasedThrottle#NO_THROTTLING_MARKER} as a marker that no throttling should be applied.
      *
      * @return park time in nanos or #NO_THROTTLING_MARKER if no throttling is needed
      */
