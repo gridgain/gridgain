@@ -26,7 +26,7 @@ class CheckpointBufferKeeper {
     private final PageMemoryImpl pageMemory;
 
     /**
-     * Creates new instance.
+     * Creates a new instance.
      *
      * @param pageMemory page memory to use
      */
@@ -40,7 +40,7 @@ class CheckpointBufferKeeper {
      *
      * @return {@code true} iff Checkpoint Buffer is in danger zone
      */
-    public boolean isInDangerZone() {
+    boolean isInDangerZone() {
         int checkpointBufLimit = (int)(pageMemory.checkpointBufferPagesSize() * CP_BUF_FILL_THRESHOLD);
 
         return pageMemory.checkpointBufferPagesCount() > checkpointBufLimit;

@@ -45,7 +45,7 @@ class ExponentialBackoffMemoryProtectionThrottle {
     }
 
     /**
-     * Resets backoff counter. Invoked when no throttling is needed anymore.
+     * Resets the backoff counter. Invoked when no throttling is needed anymore.
      *
      * @return {@code true} iff the backoff was not already in a reset state
      */

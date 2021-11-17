@@ -34,7 +34,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THROTTLE_LOG_THRES
  *     </li>
  * </ul>
  * Both resources are limited in size. Both are freed when checkpoint finishes. This means that, if writers
- * write too fast, they can consume any of these two resources before we have a change to finish a checkpoint.
+ * write too fast, they can consume any of these two resources before we have a chance to finish a checkpoint.
  * If this happens, the cluster fails or stalls.
  * <p>
  * Write throttling solves this problem by slowing down the writers to a rate at which they do not exhaust
@@ -57,7 +57,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THROTTLE_LOG_THRES
  *     <li>{@link #tryWakeupThrottledThreads()} which wakes up the threads currently being throttled; in the current
  *     implementation, it is called  when Checkpoint Buffer utilization falls below 1/2.</li>
  *     <li>{@link #isCPBufferInDangerZone()} which is called by a checkpointer to see whether the Checkpoint Buffer is
- *     in the danger zone and, if yes, it starts to prioretize writing pages from Checkpoint Buffer over
+ *     in a danger zone and, if yes, it starts to prioritize writing pages from the Checkpoint Buffer over
  *     pages from the normal checkpoint sequence.</li>
  * </ul>
  */

@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Implements exponential backoff logic. Contains a counter and on each {@link #nextDuration()} increments it.
+ * Implements exponential backoff logic. Contains a counter and increments it on each {@link #nextDuration()}.
  * May be reset using {@link #reset()}.
  */
 class ExponentialBackoff {
@@ -61,7 +61,7 @@ class ExponentialBackoff {
     }
 
     /**
-     * Resets the  exponential backoff counter so that next call to {@link #nextDuration()}
+     * Resets the exponential backoff counter so that next call to {@link #nextDuration()}
      * will return {@link #startingBackoffNanos}.
      *
      * @return {@code true} iff this backoff was not already in a reset state

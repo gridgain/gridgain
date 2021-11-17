@@ -178,7 +178,7 @@ public interface PageMemoryEx extends PageMemory {
     public FullPageId pullPageFromCpBuffer();
 
     /**
-     * Whether Checkpoint Buffer is currently in the danger zone.
+     * Checks if the Checkpoint Buffer is currently in a danger zone.
      *
      * @return {@code true} if measures like throttling to protect Checkpoint Buffer should be applied,
      * and {@code false} otherwise.
