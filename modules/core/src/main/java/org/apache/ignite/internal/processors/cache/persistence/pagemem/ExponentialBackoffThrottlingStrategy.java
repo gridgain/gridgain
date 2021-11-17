@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 /**
  * Logic used to protect memory (mainly, Checkpoint Buffer) from exhaustion using exponential backoff.
  */
-class ExponentialBackoffMemoryProtectionThrottle {
+class ExponentialBackoffThrottlingStrategy {
     /**
      * Starting throttle time. Limits write speed to 1000 MB/s.
      */

@@ -76,8 +76,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     static final double WARN_THRESHOLD = 0.2;
 
     /** Checkpoint buffer protection logic. */
-    private final ExponentialBackoffMemoryProtectionThrottle cpBufferProtector
-        = new ExponentialBackoffMemoryProtectionThrottle();
+    private final ExponentialBackoffThrottlingStrategy cpBufferProtector
+        = new ExponentialBackoffThrottlingStrategy();
 
     /** Clean pages protection logic. */
     private final SpeedBasedCleanPagesProtectionThrottle cleanPagesProtector;

@@ -43,12 +43,12 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final CheckpointLockStateChecker stateChecker;
 
     /** In-checkpoint protection logic. */
-    private final ExponentialBackoffMemoryProtectionThrottle inCheckpointProtection
-        = new ExponentialBackoffMemoryProtectionThrottle();
+    private final ExponentialBackoffThrottlingStrategy inCheckpointProtection
+        = new ExponentialBackoffThrottlingStrategy();
 
     /** Not-in-checkpoint protection logic. */
-    private final ExponentialBackoffMemoryProtectionThrottle notInCheckpointProtection
-        = new ExponentialBackoffMemoryProtectionThrottle();
+    private final ExponentialBackoffThrottlingStrategy notInCheckpointProtection
+        = new ExponentialBackoffThrottlingStrategy();
 
     /** Checpoint Buffer-related logic used to keep it safe. */
     private final CheckpointBufferKeeper cpBufferKeeper;
@@ -118,7 +118,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
             }
         }
 
-        ExponentialBackoffMemoryProtectionThrottle exponentialThrottle = isPageInCheckpoint
+        ExponentialBackoffThrottlingStrategy exponentialThrottle = isPageInCheckpoint
                 ? inCheckpointProtection : notInCheckpointProtection;
 
         if (shouldThrottle) {
