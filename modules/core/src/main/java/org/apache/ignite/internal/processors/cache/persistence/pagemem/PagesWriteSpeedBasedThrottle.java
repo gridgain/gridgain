@@ -128,17 +128,12 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /***/
     private long computeThrottlingParkTime(boolean isPageInCheckpoint, long curNanoTime) {
         if (isPageInCheckpoint && isCPBufferInDangerZone())
-            return computeCPBufferProtectionParkTime();
+            return cpBufferProtector.protectionParkTime();
         else {
             if (isPageInCheckpoint)
                 cpBufferProtector.resetBackoff();
             return computeCleanPagesProtectionParkTime(curNanoTime);
         }
-    }
-
-    /***/
-    private long computeCPBufferProtectionParkTime() {
-        return cpBufferProtector.protectionParkTime();
     }
 
     /***/
