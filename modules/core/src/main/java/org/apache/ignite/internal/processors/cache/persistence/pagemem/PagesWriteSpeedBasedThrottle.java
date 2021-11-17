@@ -111,8 +111,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     @Override public void onMarkDirty(boolean isPageInCheckpoint) {
         assert cpLockStateChecker.checkpointLockIsHeldByThread();
 
-        final long curNanoTime = System.nanoTime();
-        final long throttleParkTimeNs = computeThrottlingParkTime(isPageInCheckpoint, curNanoTime);
+        long curNanoTime = System.nanoTime();
+        long throttleParkTimeNs = computeThrottlingParkTime(isPageInCheckpoint, curNanoTime);
 
         if (throttleParkTimeNs == NO_THROTTLING_MARKER)
             return;
