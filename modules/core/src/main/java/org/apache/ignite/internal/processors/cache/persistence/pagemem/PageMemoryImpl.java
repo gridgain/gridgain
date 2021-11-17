@@ -1898,7 +1898,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** {@inheritDoc} */
     @Override public boolean isCpBufferOverflowThresholdExceeded() {
-        return writeThrottle.isCPBufferInDangerZone();
+        return writeThrottle.isCpBufferOverflowThresholdExceeded();
     }
 
     /** {@inheritDoc} */

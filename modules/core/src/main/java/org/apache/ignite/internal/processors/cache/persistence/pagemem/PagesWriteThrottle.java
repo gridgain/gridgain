@@ -90,7 +90,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         boolean shouldThrottle = false;
 
         if (isPageInCheckpoint)
-            shouldThrottle = isCPBufferInDangerZone();
+            shouldThrottle = isCpBufferOverflowThresholdExceeded();
 
         if (!shouldThrottle && !throttleOnlyPagesInCheckpoint) {
             CheckpointProgress progress = cpProgress.apply();
@@ -163,7 +163,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void tryWakeupThrottledThreads() {
-        if (!isCPBufferInDangerZone()) {
+        if (!isCpBufferOverflowThresholdExceeded()) {
             inCheckpointProtection.resetBackoff();
 
             unparkParkedThreads();
@@ -185,7 +185,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isCPBufferInDangerZone() {
+    @Override public boolean isCpBufferOverflowThresholdExceeded() {
         return cpBufferWatchdog.isInDangerZone();
     }
 }
