@@ -135,13 +135,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
                 // it is ok, so its protector may relax, hence we reset it.
                 cpBufferProtector.resetBackoff();
             }
-            return computeCleanPagesProtectionParkTime(curNanoTime);
+            return cleanPagesProtector.protectionParkTime(curNanoTime);
         }
-    }
-
-    /***/
-    private long computeCleanPagesProtectionParkTime(long curNanoTime) {
-        return cleanPagesProtector.protectionParkTime(curNanoTime);
     }
 
     /**
