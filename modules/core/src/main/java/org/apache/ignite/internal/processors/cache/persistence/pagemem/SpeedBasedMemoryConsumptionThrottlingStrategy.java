@@ -28,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Speed-based throttle used to protect clean pages from exhaustion.
  */
-class SpeedBasedCleanPagesProtectionThrottle {
+class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
      * Maximum fraction of dirty pages in a region.
      */
@@ -100,9 +100,9 @@ class SpeedBasedCleanPagesProtectionThrottle {
     private final IntervalBasedMeasurement markSpeedAndAvgParkTime;
 
     /***/
-    SpeedBasedCleanPagesProtectionThrottle(PageMemoryImpl pageMemory,
-                                           IgniteOutClosure<CheckpointProgress> cpProgress,
-                                           IntervalBasedMeasurement markSpeedAndAvgParkTime) {
+    SpeedBasedMemoryConsumptionThrottlingStrategy(PageMemoryImpl pageMemory,
+                                                  IgniteOutClosure<CheckpointProgress> cpProgress,
+                                                  IntervalBasedMeasurement markSpeedAndAvgParkTime) {
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
         this.markSpeedAndAvgParkTime = markSpeedAndAvgParkTime;
