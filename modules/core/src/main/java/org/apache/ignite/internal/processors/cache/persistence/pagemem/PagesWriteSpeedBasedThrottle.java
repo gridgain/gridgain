@@ -83,7 +83,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     private final SpeedBasedMemoryConsumptionThrottlingStrategy cleanPagesProtector;
 
     /** Checkpoint Buffer-related logic used to keep it safe. */
-    private final CheckpointBufferKeeper cpBufferKeeper;
+    private final CheckpointBufferOverflowWatchdog cpBufferWatchdog;
 
     /**
      * @param pageMemory Page memory.
@@ -104,7 +104,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         cleanPagesProtector = new SpeedBasedMemoryConsumptionThrottlingStrategy(pageMemory, cpProgress,
                 markSpeedAndAvgParkTime);
-        cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
+        cpBufferWatchdog = new CheckpointBufferOverflowWatchdog(pageMemory);
     }
 
     /** {@inheritDoc} */
@@ -309,6 +309,6 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public boolean isCPBufferInDangerZone() {
-        return cpBufferKeeper.isInDangerZone();
+        return cpBufferWatchdog.isInDangerZone();
     }
 }

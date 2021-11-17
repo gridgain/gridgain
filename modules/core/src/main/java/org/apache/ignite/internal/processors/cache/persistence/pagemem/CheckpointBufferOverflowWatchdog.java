@@ -21,7 +21,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.pagemem.Pa
 /**
  * Logic used to determine whether Checkpoint Buffer is in danger zone and writer threads should be throttled.
  */
-class CheckpointBufferKeeper {
+class CheckpointBufferOverflowWatchdog {
     /** Page memory. */
     private final PageMemoryImpl pageMemory;
 
@@ -30,7 +30,7 @@ class CheckpointBufferKeeper {
      *
      * @param pageMemory page memory to use
      */
-    CheckpointBufferKeeper(PageMemoryImpl pageMemory) {
+    CheckpointBufferOverflowWatchdog(PageMemoryImpl pageMemory) {
         this.pageMemory = pageMemory;
     }
 

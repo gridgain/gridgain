@@ -51,7 +51,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         = new ExponentialBackoffThrottlingStrategy();
 
     /** Checpoint Buffer-related logic used to keep it safe. */
-    private final CheckpointBufferKeeper cpBufferKeeper;
+    private final CheckpointBufferOverflowWatchdog cpBufferWatchdog;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -76,7 +76,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         this.cpProgress = cpProgress;
         this.stateChecker = stateChecker;
         this.throttleOnlyPagesInCheckpoint = throttleOnlyPagesInCheckpoint;
-        cpBufferKeeper = new CheckpointBufferKeeper(pageMemory);
+        cpBufferWatchdog = new CheckpointBufferOverflowWatchdog(pageMemory);
         this.log = log;
 
         assert throttleOnlyPagesInCheckpoint || cpProgress != null
@@ -186,6 +186,6 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public boolean isCPBufferInDangerZone() {
-        return cpBufferKeeper.isInDangerZone();
+        return cpBufferWatchdog.isInDangerZone();
     }
 }
