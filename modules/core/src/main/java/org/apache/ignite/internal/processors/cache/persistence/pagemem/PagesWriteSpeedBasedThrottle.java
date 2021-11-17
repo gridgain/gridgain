@@ -220,7 +220,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
     /** {@inheritDoc} */
     @Override public void onBeginCheckpoint() {
-        cleanPagesProtector.initialize();
+        cleanPagesProtector.reset();
     }
 
     /** {@inheritDoc} */

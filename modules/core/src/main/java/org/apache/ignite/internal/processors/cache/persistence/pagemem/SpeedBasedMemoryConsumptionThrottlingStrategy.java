@@ -484,7 +484,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
      * Resets the throttle to its initial state (for example, in the beginning of a checkpoint).
      */
-    void initialize() {
+    void reset() {
         cpWriteSpeed.setProgress(0L, System.nanoTime());
         initDirtyRatioAtCpBegin = MIN_RATIO_NO_THROTTLE;
         lastObservedWritten.set(0);
