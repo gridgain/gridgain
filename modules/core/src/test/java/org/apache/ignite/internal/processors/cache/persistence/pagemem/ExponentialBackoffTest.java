@@ -16,29 +16,36 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
-import org.junit.Test;
-
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
 
 /**
  * Tests for {@link ExponentialBackoff}.
  */
 public class ExponentialBackoffTest {
-    private final ExponentialBackoff backoff = new ExponentialBackoff(1000, 1.1);
+    /** Starting backoff duration used for test scenarios. */
+    private static final long STARTING_BACKOFF_NANOS = 1000;
+    /** Backoff ratio used for test scenarios. */
+    private static final double BACKOFF_RATIO = 1.1;
+
+    /** The object under test. */
+    private final ExponentialBackoff backoff = new ExponentialBackoff(STARTING_BACKOFF_NANOS, BACKOFF_RATIO);
 
     @Test
     public void firstBackoffDurationShouldEqualStartingDuration() {
-        assertThat(backoff.nextDuration(), is(1000L));
+        assertThat(backoff.nextDuration(), is(STARTING_BACKOFF_NANOS));
     }
 
     @Test
     public void nextBackoffDurationShouldBeLongerThanPreviousOne() {
         backoff.nextDuration();
 
-        assertThat(backoff.nextDuration(), is(1100L));
+        assertThat(backoff.nextDuration(), equalTo((long) (STARTING_BACKOFF_NANOS * BACKOFF_RATIO)));
     }
 
     @Test
@@ -47,7 +54,7 @@ public class ExponentialBackoffTest {
         backoff.nextDuration();
         backoff.reset();
 
-        assertThat(backoff.nextDuration(), is(1000L));
+        assertThat(backoff.nextDuration(), is(STARTING_BACKOFF_NANOS));
     }
 
     @Test
