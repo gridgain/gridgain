@@ -30,6 +30,7 @@ import org.junit.Test;
 public class ExponentialBackoffTest {
     /** Starting backoff duration used for test scenarios. */
     private static final long STARTING_BACKOFF_NANOS = 1000;
+
     /** Backoff ratio used for test scenarios. */
     private static final double BACKOFF_RATIO = 1.1;
 
