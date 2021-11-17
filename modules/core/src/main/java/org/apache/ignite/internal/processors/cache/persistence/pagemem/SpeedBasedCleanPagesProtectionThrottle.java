@@ -30,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
  */
 class SpeedBasedCleanPagesProtectionThrottle {
     /**
-     * Maximum dirty pages in a region.
+     * Maximum fraction of dirty pages in a region.
      */
     private static final double MAX_DIRTY_PAGES = 0.75;
 
