@@ -38,7 +38,7 @@ import org.apache.ignite.lang.IgniteOutClosure;
  */
 public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /**
-     * Throttling 'duration' used to signal that no trottling is needed, and no certain side-effects are allowed
+     * Throttling 'duration' used to signal that no throttling is needed, and no certain side-effects are allowed
      * (like stats collection).
      */
     static final long NO_THROTTLING_MARKER = Long.MIN_VALUE;
@@ -82,7 +82,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     /** Clean pages protection logic. */
     private final SpeedBasedCleanPagesProtectionThrottle cleanPagesProtector;
 
-    /** Checpoint Buffer-related logic used to keep it safe. */
+    /** Checkpoint Buffer-related logic used to keep it safe. */
     private final CheckpointBufferKeeper cpBufferKeeper;
 
     /**
