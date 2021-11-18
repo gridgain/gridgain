@@ -199,6 +199,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
     }
 
     /**
+     * This is only used in tests.
+     *
      * @param dirtyPagesRatio actual percent of dirty pages.
      * @param fullyCompletedPages written & fsynced pages count.
      * @param cpTotalPages total checkpoint scope.

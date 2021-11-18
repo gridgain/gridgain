@@ -27,6 +27,10 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Speed-based throttle used to protect clean pages from exhaustion.
+ *
+ * The main method is {@link #protectionParkTime(long)} which is used to compute park time, if throttling is needed.
+ *
+ * @see #protectionParkTime(long)
  */
 class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
@@ -220,6 +224,8 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
     }
 
     /**
+     * Computes park time for throttling.
+     *
      * @param dirtyPagesRatio     actual percent of dirty pages.
      * @param donePages           roughly, written & fsynced pages count.
      * @param cpTotalPages        total checkpoint scope.
