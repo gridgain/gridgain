@@ -153,6 +153,8 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         // we only use the computed speed in this same scenario and for reporting in logs (where it's not super
         // important to display an ideally accurate speed), but not in the CP Buffer protection scenario.
         // This is to simplify code.
+        // The progress is set to 0 at the beginning of a checkpoint, so we can be sure that the start time remembered
+        // in cpWriteSpeed is pretty accurate even without writing to cpWriteSpeed from this method.
         cpWriteSpeed.setProgress(donePages, curNanoTime);
         final long curCpWriteSpeed = cpWriteSpeed.getOpsPerSecond(curNanoTime);
 
