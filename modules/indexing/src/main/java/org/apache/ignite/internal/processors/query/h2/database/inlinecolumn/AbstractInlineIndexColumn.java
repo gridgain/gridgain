@@ -149,6 +149,9 @@ public abstract class AbstractInlineIndexColumn implements InlineIndexColumn {
         if (c != COMPARE_UNSUPPORTED)
             return c;
 
+        if (type != this.type)
+            return CANT_BE_COMPARE;
+
         Value v1 = get(pageAddr, off, maxSize);
 
         if (v1 == null)
