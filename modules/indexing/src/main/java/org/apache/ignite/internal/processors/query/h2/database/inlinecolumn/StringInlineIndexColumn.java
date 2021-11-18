@@ -58,7 +58,7 @@ public class StringInlineIndexColumn extends AbstractInlineIndexColumn {
     /** {@inheritDoc} */
     @Override protected int compare0(long pageAddr, int off, Value v, int type) {
         if (type() != type || !useOptimizedCompare)
-            return COMPARE_UNSUPPORTED;
+            return CANT_BE_COMPARE;
 
         return compareAsString(pageAddr, off, v, compareIgnoreCase);
     }
