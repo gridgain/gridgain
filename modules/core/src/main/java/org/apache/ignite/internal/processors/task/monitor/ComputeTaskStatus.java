@@ -35,9 +35,8 @@ import static org.apache.ignite.internal.processors.task.monitor.ComputeTaskStat
  * Task status container.
  *
  * @see ComputeTaskStatusSnapshot
- * @see ComputeTaskStatusDiff
  */
-public class ComputeTaskStatus implements ComputeTaskStatusDiff {
+public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     /** Session ID of the task being executed. */
     private final IgniteUuid sessionId;
 
@@ -65,18 +64,6 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
     /** Reason for the failure of the task. */
     @Nullable private final Throwable failReason;
 
-    /** Flag of a new task. */
-    private final boolean newTask;
-
-    /** {@link #jobNodes} field change flag. */
-    private final boolean jobNodesChanged;
-
-    /** {@link #attributes} field change flag. */
-    private final boolean attributesChanged;
-
-    /** Task completion flag. */
-    private final boolean taskFinished;
-
     /**
      * Constructor for a new task.
      *
@@ -89,10 +76,6 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
      * @param jobNodes Nodes IDs on which the task jobs will execute.
      * @param attributes All session attributes.
      * @param failReason Reason for the failure of the task.
-     * @param newTask Flag of a new task.
-     * @param jobNodesChanged {@code jobNodes} field change flag.
-     * @param attributesChanged {@code attributes} field change flag.
-     * @param taskFinished Task completion flag.
      */
     private ComputeTaskStatus(
         IgniteUuid sessionId,
@@ -103,11 +86,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         long endTime,
         List<UUID> jobNodes,
         Map<?, ?> attributes,
-        @Nullable Throwable failReason,
-        boolean newTask,
-        boolean jobNodesChanged,
-        boolean attributesChanged,
-        boolean taskFinished
+        @Nullable Throwable failReason
     ) {
         this.sessionId = sessionId;
         this.status = status;
@@ -118,10 +97,6 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : jobNodes;
         this.attributes = F.isEmpty(attributes) ? emptyMap() : attributes;
         this.failReason = failReason;
-        this.newTask = newTask;
-        this.jobNodesChanged = jobNodesChanged;
-        this.attributesChanged = attributesChanged;
-        this.taskFinished = taskFinished;
     }
 
     /** {@inheritDoc} */
@@ -169,28 +144,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         return failReason;
     }
 
-    /** {@inheritDoc} */
-    @Override public boolean newTask() {
-        return newTask;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasJobNodesChanged() {
-        return jobNodesChanged;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasAttributesChanged() {
-        return attributesChanged;
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean taskFinished() {
-        return taskFinished;
-    }
-
     /**
-     * Creates the status (snapshot) of a task that is in progress.
+     * Creates the status of a task that is in progress.
      *
      * @param sessionImp Task session.
      * @return New instance.
@@ -205,88 +160,12 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
             0L,
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
-            null,
-            false,
-            false,
-            false,
-            false
+            null
         );
     }
 
     /**
-     * Creates a task status (diff) on starting new task.
-     *
-     * @param sessionImp Task session.
-     * @return New instance.
-     */
-    public static ComputeTaskStatus onStartNewTask(GridTaskSessionImpl sessionImp) {
-        return new ComputeTaskStatus(
-            sessionImp.getId(),
-            RUNNING,
-            sessionImp.getTaskName(),
-            sessionImp.getTaskNodeId(),
-            sessionImp.getStartTime(),
-            0L,
-            sessionImp.jobNodesSafeCopy(),
-            sessionImp.attributesSafeCopy(),
-            null,
-            true,
-            false,
-            false,
-            false
-        );
-    }
-
-    /**
-     * Creates a task status (diff) on changing nodes on which jobs will be executed.
-     *
-     * @param sessionImp Task session.
-     * @return New instance.
-     */
-    public static ComputeTaskStatus onChangeJobNodes(GridTaskSessionImpl sessionImp) {
-        return new ComputeTaskStatus(
-            sessionImp.getId(),
-            null,
-            null,
-            null,
-            0L,
-            0L,
-            sessionImp.jobNodesSafeCopy(),
-            null,
-            null,
-            false,
-            true,
-            false,
-            false
-        );
-    }
-
-    /**
-     * Creates a task status (diff) on changing session attributes.
-     *
-     * @param sessionImp Task session.
-     * @return New instance.
-     */
-    public static ComputeTaskStatus onChangeAttributes(GridTaskSessionImpl sessionImp) {
-        return new ComputeTaskStatus(
-            sessionImp.getId(),
-            null,
-            null,
-            null,
-            0L,
-            0L,
-            null,
-            sessionImp.getAttributes(),
-            null,
-            false,
-            false,
-            true,
-            false
-        );
-    }
-
-    /**
-     * Creates a task status (diff) on finishing task.
+     * Creates a task status on finishing task.
      *
      * @param sessionImp Task session.
      * @param err – Reason for the failure of the task, null if the task completed successfully.
@@ -296,17 +175,13 @@ public class ComputeTaskStatus implements ComputeTaskStatusDiff {
         return new ComputeTaskStatus(
             sessionImp.getId(),
             err == null ? FINISHED : FAILED,
-            null,
-            null,
-            0L,
+            sessionImp.getTaskName(),
+            sessionImp.getTaskNodeId(),
+            sessionImp.getStartTime(),
             U.currentTimeMillis(),
-            null,
-            null,
-            err,
-            false,
-            false,
-            false,
-            true
+            sessionImp.jobNodesSafeCopy(),
+            sessionImp.attributesSafeCopy(),
+            err
         );
     }
 }

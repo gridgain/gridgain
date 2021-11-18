@@ -71,7 +71,6 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatus;
-import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusDiff;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
@@ -1081,10 +1080,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             ctx.event().record(evt);
         }
 
-        notifyTaskStatusMonitors(
-            ComputeTaskStatus.onChangeAttributes(ses),
-            () -> taskStatusSnapshots.put(ses.getId(), ComputeTaskStatus.snapshot(ses))
-        );
+        notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(ses), false);
 
         IgniteCheckedException ex = null;
 
@@ -1310,20 +1306,14 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
             GridTaskSessionImpl session = worker.getSession();
 
-            notifyTaskStatusMonitors(
-                ComputeTaskStatus.onStartNewTask(session),
-                () -> taskStatusSnapshots.put(worker.getTaskSessionId(), ComputeTaskStatus.snapshot(session))
-            );
+            notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(session), false);
         }
 
         /** {@inheritDoc} */
         @Override public void onJobsMapped(GridTaskWorker<?, ?> worker) {
             GridTaskSessionImpl session = worker.getSession();
 
-            notifyTaskStatusMonitors(
-                ComputeTaskStatus.onChangeJobNodes(session),
-                () -> taskStatusSnapshots.put(worker.getTaskSessionId(), ComputeTaskStatus.snapshot(session))
-            );
+            notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(session), false);
         }
 
         /** {@inheritDoc} */
@@ -1408,10 +1398,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                 }
             }
 
-            notifyTaskStatusMonitors(
-                ComputeTaskStatus.onFinishTask(worker.getSession(), err),
-                () -> taskStatusSnapshots.remove(worker.getTaskSessionId())
-            );
+            notifyTaskStatusMonitors(ComputeTaskStatus.onFinishTask(worker.getSession(), err), true);
         }
     }
 
@@ -1603,7 +1590,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * Subscription to update the status of tasks.
      *
      * <p>NOTE: {@link ComputeGridMonitor#processStatusSnapshots} will be called only on subscription,
-     * then only {@link ComputeGridMonitor#processStatusDiff} will be called.
+     * then only {@link ComputeGridMonitor#processStatusChange} will be called.
      *
      * @param monitor Task status update monitor.
      * @throws NodeStoppingException If the node is stopped.
@@ -1649,18 +1636,22 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * Guarded by {@link #lock} for atomic update of the {@link #taskStatusSnapshots}
      * and notifying {@link #taskStatusMonitors} about task changes.
      *
-     * @param diff Task status diff.
-     * @param snapshotFun Snapshot processing function (update / delete / etc.).
+     * @param snapshotChanges Changes to task status.
+     * @param remove {@code True} if it is necessary to remove the {@code snapshotChanges} from
+     *      {@link #taskStatusSnapshots}, otherwise it will be updated.
      */
-    private void notifyTaskStatusMonitors(ComputeTaskStatusDiff diff, Runnable snapshotFun) {
+    private void notifyTaskStatusMonitors(ComputeTaskStatusSnapshot snapshotChanges, boolean remove) {
         lock.readLock();
 
         try {
-            snapshotFun.run();
+            if (remove)
+                taskStatusSnapshots.remove(snapshotChanges.sessionId());
+            else
+                taskStatusSnapshots.put(snapshotChanges.sessionId(), snapshotChanges);
 
             for (ComputeGridMonitor monitor : taskStatusMonitors) {
                 try {
-                    monitor.processStatusDiff(diff);
+                    monitor.processStatusChange(snapshotChanges);
                 }
                 catch (Throwable t) {
                     log.error("Error processing task status diff: " + monitor, t);

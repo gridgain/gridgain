@@ -32,7 +32,7 @@ public interface ComputeGridMonitor {
     /**
      * Processing a change in a task.
      *
-     * @param diff Changes to the task.
+     * @param snapshot Snapshot of the task.
      */
-    void processStatusDiff(ComputeTaskStatusDiff diff);
+    void processStatusChange(ComputeTaskStatusSnapshot snapshot);
 }

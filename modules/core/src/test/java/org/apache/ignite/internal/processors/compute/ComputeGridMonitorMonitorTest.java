@@ -34,10 +34,11 @@ import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
+import org.apache.ignite.internal.GridTaskSessionInternal;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
-import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusDiff;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusEnum;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -116,11 +117,11 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertTrue(monitor.statusSnapshots.isEmpty());
 
-        assertEquals(3, monitor.statusDiffs.size());
+        assertEquals(3, monitor.statusChanges.size());
 
-        checkStartTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkChangeJobNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkFinishTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFinished(monitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
@@ -129,7 +130,9 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
     @Test
     public void failTaskTest() {
         NoopComputeTask task = new NoopComputeTask() {
-            /** {@inheritDoc} */
+            /**
+             * {@inheritDoc}
+             */
             @Override public Void reduce(List<ComputeJobResult> results) throws IgniteException {
                 throw new IgniteException("FAIL TASK");
             }
@@ -141,11 +144,11 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertTrue(monitor.statusSnapshots.isEmpty());
 
-        assertEquals(3, monitor.statusDiffs.size());
+        assertEquals(3, monitor.statusChanges.size());
 
-        checkStartTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkChangeJobNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkFailTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFailed(monitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
@@ -172,12 +175,12 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
 
         assertTrue(monitor.statusSnapshots.isEmpty());
 
-        assertEquals(4, monitor.statusDiffs.size());
+        assertEquals(4, monitor.statusChanges.size());
 
-        checkStartTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkChangeJobNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkChangeAttributesNodes(monitor.statusDiffs.poll(), taskFut.getTaskSession());
-        checkFinishTask(monitor.statusDiffs.poll(), taskFut.getTaskSession());
+        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkAttributeChanged(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFinished(monitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
@@ -212,141 +215,78 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void checkSnapshot(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
-        assertEquals(RUNNING, snapshot.status());
+    private void checkTaskStarted(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, RUNNING, false, false);
+    }
 
+    /** */
+    private void checkTaskMapped(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, RUNNING, true, false);
+    }
+
+    /** */
+    private void checkAttributeChanged(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, RUNNING, true, true);
+    }
+
+    /** */
+    private void checkTaskFinished(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, FINISHED, true, true);
+    }
+
+    /** */
+    private void checkTaskFailed(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, FAILED, true, true);
+    }
+
+    /** */
+    private void checkSnapshot(ComputeTaskStatusSnapshot snapshot, ComputeTaskSession session) {
+        checkSnapshot(snapshot, (GridTaskSessionInternal)session, RUNNING, true, true);
+    }
+
+    /** */
+    private void checkSnapshot(
+        ComputeTaskStatusSnapshot snapshot,
+        GridTaskSessionInternal session,
+        ComputeTaskStatusEnum expStatus,
+        boolean checkJobNodes,
+        boolean checkAttributes
+    ) {
         assertEquals(session.getId(), snapshot.sessionId());
+        assertEquals(expStatus, snapshot.status());
+
         assertEquals(session.getTaskName(), snapshot.taskName());
         assertEquals(session.getTaskNodeId(), snapshot.originatingNodeId());
         assertEquals(session.getStartTime(), snapshot.startTime());
-        assertEquals(0L, snapshot.endTime());
 
-        assertTrue(snapshot.attributes().isEmpty());
-        assertNull(snapshot.failReason());
+        if (checkJobNodes) {
+            assertEquals(
+                new TreeSet<>(session.getTopology()),
+                new TreeSet<>(snapshot.jobNodes())
+            );
+        }
+        else
+            assertTrue(snapshot.jobNodes().isEmpty());
 
-        assertEqualsCollections(
-            new TreeSet<>(session.getTopology()),
-            new TreeSet<>(snapshot.jobNodes())
-        );
-    }
+        if (checkAttributes && session.isFullSupport()) {
+            assertEquals(
+                new TreeMap<>(session.getAttributes()),
+                new TreeMap<>(snapshot.attributes())
+            );
+        }
 
-    /** */
-    private void checkFailTask(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
-        assertTrue(diff.taskFinished());
-
-        assertFalse(diff.newTask());
-        assertFalse(diff.hasJobNodesChanged());
-        assertFalse(diff.hasAttributesChanged());
-
-        assertEquals(session.getId(), diff.sessionId());
-        assertEquals(FAILED, diff.status());
-
-        assertNotNull(diff.failReason());
-
-        assertNull(diff.taskName());
-        assertNull(diff.originatingNodeId());
-
-        assertEquals(0L, diff.startTime());
-        assertTrue(diff.endTime() > 0L);
-
-        assertTrue(diff.jobNodes().isEmpty());
-        assertTrue(diff.attributes().isEmpty());
-    }
-
-    /** */
-    private void checkFinishTask(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
-        assertTrue(diff.taskFinished());
-
-        assertFalse(diff.newTask());
-        assertFalse(diff.hasJobNodesChanged());
-        assertFalse(diff.hasAttributesChanged());
-
-        assertEquals(session.getId(), diff.sessionId());
-        assertEquals(FINISHED, diff.status());
-
-        assertNull(diff.taskName());
-        assertNull(diff.originatingNodeId());
-        assertNull(diff.failReason());
-
-        assertEquals(0L, diff.startTime());
-        assertTrue(diff.endTime() > 0);
-
-        assertTrue(diff.jobNodes().isEmpty());
-        assertTrue(diff.attributes().isEmpty());
-    }
-
-    /** */
-    private void checkChangeJobNodes(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
-        assertTrue(diff.hasJobNodesChanged());
-
-        assertFalse(diff.newTask());
-        assertFalse(diff.hasAttributesChanged());
-        assertFalse(diff.taskFinished());
-
-        assertEquals(session.getId(), diff.sessionId());
-
-        assertEqualsCollections(
-            new TreeSet<>(session.getTopology()),
-            new TreeSet<>(diff.jobNodes())
-        );
-
-        assertNull(diff.status());
-        assertNull(diff.taskName());
-        assertNull(diff.originatingNodeId());
-        assertNull(diff.failReason());
-
-        assertEquals(0L, diff.startTime());
-        assertEquals(0L, diff.endTime());
-
-        assertTrue(diff.attributes().isEmpty());
-    }
-
-    /** */
-    private void checkChangeAttributesNodes(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
-        assertTrue(diff.hasAttributesChanged());
-
-        assertFalse(diff.newTask());
-        assertFalse(diff.hasJobNodesChanged());
-        assertFalse(diff.taskFinished());
-
-        assertEquals(session.getId(), diff.sessionId());
-
-        assertEquals(
-            new TreeMap<>(session.getAttributes()),
-            new TreeMap<>(diff.attributes())
-        );
-
-        assertNull(diff.status());
-        assertNull(diff.taskName());
-        assertNull(diff.originatingNodeId());
-        assertNull(diff.failReason());
-
-        assertEquals(0L, diff.startTime());
-        assertEquals(0L, diff.endTime());
-
-        assertTrue(diff.jobNodes().isEmpty());
-    }
-
-    /** */
-    private void checkStartTask(ComputeTaskStatusDiff diff, ComputeTaskSession session) {
-        assertTrue(diff.newTask());
-
-        assertFalse(diff.hasJobNodesChanged());
-        assertFalse(diff.hasAttributesChanged());
-        assertFalse(diff.taskFinished());
-
-        assertEquals(session.getId(), diff.sessionId());
-        assertEquals(RUNNING, diff.status());
-
-        assertEquals(session.getTaskName(), diff.taskName());
-        assertEquals(session.getTaskNodeId(), diff.originatingNodeId());
-        assertEquals(session.getStartTime(), diff.startTime());
-        assertEquals(0L, diff.endTime());
-
-        assertTrue(diff.jobNodes().isEmpty());
-        assertTrue(diff.attributes().isEmpty());
-
-        assertNull(diff.failReason());
+        if (expStatus == FINISHED) {
+            assertTrue(snapshot.endTime() > 0L);
+            assertNull(snapshot.failReason());
+        }
+        else if (expStatus == FAILED) {
+            assertTrue(snapshot.endTime() > 0L);
+            assertNotNull(snapshot.failReason());
+        }
+        else {
+            assertEquals(0L, snapshot.endTime());
+            assertNull(snapshot.failReason());
+        }
     }
 
     /** */
@@ -355,7 +295,7 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         final Queue<ComputeTaskStatusSnapshot> statusSnapshots = new ConcurrentLinkedQueue<>();
 
         /** */
-        final Queue<ComputeTaskStatusDiff> statusDiffs = new ConcurrentLinkedQueue<>();
+        final Queue<ComputeTaskStatusSnapshot> statusChanges = new ConcurrentLinkedQueue<>();
 
         /** {@inheritDoc} */
         @Override public void processStatusSnapshots(Collection<ComputeTaskStatusSnapshot> snapshots) {
@@ -363,8 +303,8 @@ public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void processStatusDiff(ComputeTaskStatusDiff diff) {
-            statusDiffs.add(diff);
+        @Override public void processStatusChange(ComputeTaskStatusSnapshot snapshot) {
+            statusChanges.add(snapshot);
         }
     }
 
