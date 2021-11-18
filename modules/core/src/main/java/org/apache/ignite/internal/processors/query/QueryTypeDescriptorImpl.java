@@ -134,6 +134,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
     /** Primary key fields. */
     private Set<String> pkFields;
+    
+    /** Whether to allow deduplication of composite PKs with null parts or not. */
+    private boolean allowCompositePKsDeduplication;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -744,5 +747,15 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void primaryKeyFields(Set<String> keys) {
         pkFields = keys;
+    }
+    
+    /** {@inheritDoc} */
+    @Override public boolean isAllowCompositePKsDeduplication() {
+        return allowCompositePKsDeduplication;
+    }
+    
+    /** {@inheritDoc} */
+    @Override public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication) {
+        this.allowCompositePKsDeduplication = allowCompositePKsDeduplication;
     }
 }

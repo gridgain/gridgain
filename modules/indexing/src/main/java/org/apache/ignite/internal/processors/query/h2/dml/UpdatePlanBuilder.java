@@ -82,8 +82,6 @@ public final class UpdatePlanBuilder {
     /** Allow hidden key value columns at the INSERT/UPDATE/MERGE statements (not final for tests). */
     private static boolean ALLOW_KEY_VAL_UPDATES = IgniteSystemProperties.getBoolean(
         IgniteSystemProperties.IGNITE_SQL_ALLOW_KEY_VAL_UPDATES, false);
-
-    public static boolean testProperty = false;
     
     /**
      * Constructor.
@@ -263,8 +261,8 @@ public final class UpdatePlanBuilder {
             else
                 hasValProps = true;
         }
-
-        if (testProperty && hasKeyProps && !rowKeys.isEmpty()) {
+        
+        if (type.isAllowCompositePKsDeduplication() && hasKeyProps && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
@@ -341,7 +339,8 @@ public final class UpdatePlanBuilder {
             rowsNum,
             null,
             distributed,
-            false
+            false,
+            type.isAllowCompositePKsDeduplication()
         );
     }
 
@@ -503,7 +502,8 @@ public final class UpdatePlanBuilder {
                     0,
                     null,
                     distributed,
-                    sel.canBeLazy()
+                    sel.canBeLazy(),
+                    false
                 );
             }
             else {
@@ -622,7 +622,8 @@ public final class UpdatePlanBuilder {
             0,
             null,
             null,
-            true
+            true,
+            false
         );
     }
 

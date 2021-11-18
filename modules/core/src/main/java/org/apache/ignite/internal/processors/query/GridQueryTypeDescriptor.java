@@ -210,4 +210,18 @@ public interface GridQueryTypeDescriptor {
      * @param keys Primary keys.
      */
     public void primaryKeyFields(Set<String> keys);
+    
+    /**
+     * Returns {@code true} if composite PKs with null parts deduplication is allowed.
+     *
+     * @return If PKs deduplication is allowed.
+     */
+    public boolean isAllowCompositePKsDeduplication();
+    
+    /**
+     * Sets up allowCompositePKsDeduplication flag.
+     *
+     * @param allowCompositePKsDeduplication Flag.
+     */
+    public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication);
 }

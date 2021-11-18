@@ -85,7 +85,10 @@ public final class UpdatePlan {
 
     /** Number of rows in rows based MERGE or INSERT. */
     private final int rowsNum;
-
+    
+    /** Whether to allow deduplication of composite PKs with null parts or not. */
+    private boolean deduplicateCompositePKs;
+    
     /** Arguments for fast UPDATE or DELETE. */
     private final FastUpdate fastUpdate;
 
@@ -128,13 +131,15 @@ public final class UpdatePlan {
         int rowsNum,
         @Nullable FastUpdate fastUpdate,
         @Nullable DmlDistributedPlanInfo distributed,
-        boolean canSelectBeLazy
+        boolean canSelectBeLazy,
+        boolean deduplicateKeys
     ) {
         this.colNames = colNames;
         this.colTypes = colTypes;
         this.rows = rows;
         this.rowsNum = rowsNum;
-
+        this.deduplicateCompositePKs = deduplicateKeys;
+    
         assert mode != null;
         assert tbl != null;
 
@@ -182,7 +187,8 @@ public final class UpdatePlan {
             0,
             fastUpdate,
             distributed,
-            true
+            true,
+            false
         );
     }
 
@@ -470,7 +476,7 @@ public final class UpdatePlan {
 
             for (int j = 0; j < colNames.length; j++) {
                 Object colVal;
-                if (UpdatePlanBuilder.testProperty)
+                if (deduplicateCompositePKs)
                      colVal = row.size() > j ? row.get(j).get(args) : null;
                 else
                      colVal = row.get(j).get(args);

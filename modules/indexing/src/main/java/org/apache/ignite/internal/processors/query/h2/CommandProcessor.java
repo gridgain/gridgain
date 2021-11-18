@@ -1187,7 +1187,9 @@ public class CommandProcessor {
 
         if (!F.isEmpty(notNullFields))
             res.setNotNullFields(notNullFields);
-
+        
+        res.setAllowPKsDeduplication(true);
+        
         return res;
     }
 

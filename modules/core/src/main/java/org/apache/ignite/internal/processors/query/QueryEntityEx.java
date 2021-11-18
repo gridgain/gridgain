@@ -36,7 +36,10 @@ public class QueryEntityEx extends QueryEntity {
 
     /** Whether to preserve order specified by {@link #getKeyFields()} or not. */
     private boolean preserveKeysOrder;
-
+    
+    /** Whether to allow deduplication of composite PKs with null parts or not. */
+    private boolean allowDeduplication;
+    
     /**
      * Default constructor.
      */
@@ -58,6 +61,8 @@ public class QueryEntityEx extends QueryEntity {
             notNullFields = other0.notNullFields != null ? new HashSet<>(other0.notNullFields) : null;
 
             preserveKeysOrder = other0.preserveKeysOrder;
+            
+            allowDeduplication = other0.allowDeduplication;
         }
     }
 
@@ -87,6 +92,23 @@ public class QueryEntityEx extends QueryEntity {
     public QueryEntity setPreserveKeysOrder(boolean preserveKeysOrder) {
         this.preserveKeysOrder = preserveKeysOrder;
 
+        return this;
+    }
+    
+    /**
+     * @return {@code true} if PKs with null parts can be deduplicate, {@code false} otherwise.
+     */
+    public boolean isAllowPKsDeduplication() {
+        return allowDeduplication;
+    }
+    
+    /**
+     * @param allowDeduplication Whether the PKs should be deduplicate or not.
+     * @return {@code this} for chaining.
+     */
+    public QueryEntity setAllowPKsDeduplication(boolean allowDeduplication) {
+        this.allowDeduplication = allowDeduplication;
+        
         return this;
     }
 
