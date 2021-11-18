@@ -336,11 +336,8 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
      * @return pages/second to mark to mark all clean pages as dirty till the end of checkpoint. 0 speed means 'no
      * data', or when we are not going to throttle due to the current dirty pages ratio being too high
      */
-    private long calcSpeedToMarkAllSpaceTillEndOfCp(double dirtyPagesRatio,
-                                                    long donePages,
-                                                    long curCpWriteSpeed,
-                                                    int cpTotalPages) {
-
+    private long calcSpeedToMarkAllSpaceTillEndOfCp(double dirtyPagesRatio, long donePages,
+                                                    long curCpWriteSpeed, int cpTotalPages) {
         if (curCpWriteSpeed == 0)
             return 0;
 
