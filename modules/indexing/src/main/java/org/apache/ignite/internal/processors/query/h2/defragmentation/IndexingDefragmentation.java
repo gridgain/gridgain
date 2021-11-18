@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
@@ -44,21 +46,22 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
-import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2InnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2LeafIO;
+import org.apache.ignite.internal.processors.query.h2.database.io.H2IOUtils;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.gridgain.internal.h2.index.Index;
+import org.gridgain.internal.h2.util.Utils;
 import org.gridgain.internal.h2.value.Value;
 
 /**
@@ -207,6 +210,12 @@ public class IndexingDefragmentation {
                     final H2Tree.MetaPageInfo oldInfo = tree.getMetaInfo();
 
                     final H2Tree newTree = newIdx.treeForRead(i);
+
+                    // Set IO wrappers for new tree.
+                    BPlusInnerIO<H2Row> innerIO = (BPlusInnerIO<H2Row>) wrap(newTree.latestInnerIO());
+                    BPlusLeafIO<H2Row> leafIo = (BPlusLeafIO<H2Row>) wrap(newTree.latestLeafIO());
+                    newTree.setIos(new IOVersions<>(innerIO), new IOVersions<>(leafIo));
+
                     newTree.copyMetaInfo(oldInfo);
 
                     newTree.enableSequentialWriteMode();
@@ -278,23 +287,14 @@ public class IndexingDefragmentation {
 
         int off = io.offset(idx);
 
-        IntMap<Value> values = new IntHashMap<>();
+        int payloadSize = io.getPayloadSize();
 
-        if (inlineIdxs != null) {
-            int fieldOff = 0;
+        byte[] values;
 
-            for (int i = 0; i < inlineIdxs.size(); i++) {
-                AbstractInlineIndexColumn inlineIndexColumn = (AbstractInlineIndexColumn) inlineIdxs.get(i);
-
-                Value value = inlineIndexColumn.get(pageAddr, off + fieldOff, io.getPayloadSize() - fieldOff);
-
-                fieldOff += inlineIndexColumn.inlineSizeOf(value);
-
-                final int columnIndex = inlineIndexColumn.columnIndex();
-
-                values.put(columnIndex, value);
-            }
-        }
+        if (inlineIdxs != null)
+            values = PageUtils.getBytes(pageAddr, off, payloadSize);
+        else
+            values = Utils.EMPTY_BYTES;
 
         if (io.storeMvccInfo()) {
             long mvccCrdVer = io.getMvccCoordinatorVersion(pageAddr, idx);
@@ -330,6 +330,35 @@ public class IndexingDefragmentation {
         }
     }
 
+    /**
+     * Stores the needed info about the row in the page. Overrides {@link BPlusIO#storeByOffset(long, int, Object)}.
+     *
+     * @param io Page io.
+     * @param pageAddr Page address.
+     * @param off Data offset.
+     * @param row H2 cache row.
+     * @param <IO> Type of the Page io.
+     * @throws IgniteCheckedException If failed.
+     */
+    private static <IO extends BPlusIO<?> & H2RowLinkIO> void storeByOffset(
+        IO io,
+        long pageAddr,
+        int off,
+        H2CacheRowWithIndex row
+    ) throws IgniteCheckedException {
+        int payloadSize = io.getPayloadSize();
+
+        assert row.link() != 0;
+
+        List<InlineIndexColumn> inlineIdxs = InlineIndexColumnFactory.getCurrentInlineIndexes();
+
+        assert inlineIdxs != null : "no inline index helpers";
+
+        io.store(pageAddr, off, null, row.values, false);
+
+        H2IOUtils.storeRow(row, pageAddr, off + payloadSize, io.storeMvccInfo());
+    }
+
     /** */
     private static class BPlusInnerIoDelegate<IO extends BPlusInnerIO<H2Row> & H2RowLinkIO>
         extends BPlusInnerIO<H2Row> implements H2RowLinkIO {
@@ -344,7 +373,7 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void storeByOffset(long pageAddr, int off, H2Row row) throws IgniteCheckedException {
-            io.storeByOffset(pageAddr, off, row);
+            IndexingDefragmentation.storeByOffset(io, pageAddr, off, (H2CacheRowWithIndex) row);
         }
 
         /** {@inheritDoc} */
@@ -404,7 +433,7 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void storeByOffset(long pageAddr, int off, H2Row row) throws IgniteCheckedException {
-            io.storeByOffset(pageAddr, off, row);
+            IndexingDefragmentation.storeByOffset(io, pageAddr, off, (H2CacheRowWithIndex) row);
         }
 
         /** {@inheritDoc} */
@@ -454,11 +483,11 @@ public class IndexingDefragmentation {
      * H2CacheRow with stored index values
      */
     private static class H2CacheRowWithIndex extends H2CacheRow {
-        /** List of index values. */
-        private final IntMap<Value> values;
+        /** Byte array of index values. */
+        private final byte[] values;
 
         /** Constructor. */
-        public H2CacheRowWithIndex(GridH2RowDescriptor desc, CacheDataRow row, IntMap<Value> values) {
+        public H2CacheRowWithIndex(GridH2RowDescriptor desc, CacheDataRow row, byte[] values) {
             super(desc, row);
             this.values = values;
         }
@@ -485,10 +514,8 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public Value getValue(int col) {
-            if (values.isEmpty())
-                return null;
-
-            return values.get(col);
+            // Value is not needed, byte array of serialized values will be used
+            return null;
         }
     }
 }
