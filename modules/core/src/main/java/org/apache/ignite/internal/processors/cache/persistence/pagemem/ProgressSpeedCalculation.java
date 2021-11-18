@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
 /**
- * Represents instant speed calculation of some progress starting from zero.
+ * Represents speed calculation of some progress starting from zero.
+ * This class not only takes into account current progress value, but also 3 previous values, each of them
+ * is pushed to history when {@link #closeInterval()} is called.
  */
-class ProgressInstantSpeedCalculation {
+class ProgressSpeedCalculation {
     /**
      * Measurement used to calculate average speed. History recording is disabled.
      */
@@ -36,28 +38,31 @@ class ProgressInstantSpeedCalculation {
     }
 
     /**
-     * Returns speed of progress in operations per second.
+     * Returns speed of progress in operations per second calculated from the current value and 3 latest historical
+     * intervals. This method may change internal state (namely, initialize the current interval).
      *
      * @param nanoTime time instant at which the speed is to be calculated
-     * @return ops per second
+     * @return average ops per second
      */
     public long getOpsPerSecond(long nanoTime) {
         return measurement.getSpeedOpsPerSec(nanoTime);
     }
 
     /**
-     * Returns speed of progress in operations per second as calculated for the 'now' instant.
+     * Returns speed of progress in operations per second calculated from the current value and 3 latest historical
+     * intervals. This method does not change internal state.
      *
      * @return ops per second
      */
-    public long getOpsPerSecondAtNow() {
+    public long getOpsPerSecondReadOnly() {
         return measurement.getSpeedOpsPerSecReadOnly();
     }
 
     /**
-     * Stops updates, finalizes its internals.
+     * Closes the current interval by pushing it to the history. The 3 latest intervals put into history affect
+     * the average speed calculation via {@link #getOpsPerSecond(long)} and {@link #getOpsPerSecondReadOnly()}.
      */
-    public void stop() {
+    public void closeInterval() {
         measurement.finishInterval();
     }
 }

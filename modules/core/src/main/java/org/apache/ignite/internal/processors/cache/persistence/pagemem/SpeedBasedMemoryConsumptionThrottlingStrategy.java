@@ -89,7 +89,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
      * Average checkpoint write speed. Only the current value is used. Pages/second.
      */
-    private final ProgressInstantSpeedCalculation cpWriteSpeed = new ProgressInstantSpeedCalculation();
+    private final ProgressSpeedCalculation cpWriteSpeed = new ProgressSpeedCalculation();
 
     /**
      * Used for calculating speed of marking pages dirty.
@@ -400,7 +400,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
      * @return Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.
      */
     public long getCpWriteSpeed() {
-        return cpWriteSpeed.getOpsPerSecondAtNow();
+        return cpWriteSpeed.getOpsPerSecondReadOnly();
     }
 
     /***/
@@ -491,7 +491,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
      * Moves the throttle to its finalized state (for example, when a checkpoint ends).
      */
     void finish() {
-        cpWriteSpeed.stop();
+        cpWriteSpeed.closeInterval();
         threadIds.clear();
     }
 }

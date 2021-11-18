@@ -59,8 +59,6 @@ import static org.mockito.Mockito.when;
  *
  */
 public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
-    private static final long FIRST_CP_BUFFER_PROTECTION_PARK_TIME_NANOS = 4000;
-
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = Timeout.millis((int)GridTestUtils.DFLT_TEST_TIMEOUT);
