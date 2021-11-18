@@ -149,6 +149,10 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         final long donePages = cpDonePagesEstimation(cpWrittenPages);
 
         final long markDirtySpeed = markSpeedAndAvgParkTime.getSpeedOpsPerSec(curNanoTime);
+        // NB: we update progress for speed calculation only in this (clean pages protection) scenario, because
+        // we only use the computed speed in this same scenario and for reporting in logs (where it's not super
+        // important to display an ideally accurate speed), but not in the CP Buffer protection scenario.
+        // This is to simplify code.
         cpWriteSpeed.setProgress(donePages, curNanoTime);
         final long curCpWriteSpeed = cpWriteSpeed.getOpsPerSecond(curNanoTime);
 
