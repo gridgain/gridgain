@@ -151,11 +151,11 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         final int cpTotalPages = cpTotalPages();
 
         if (cpTotalPages == 0) {
-            // ??? It would be great to ask dspavlov (original author) or Alexey Goncharuk (reviewer) why we need
-            // this branch at all as, from the current code analysis, we can only get here by accident when
+            // From the current code analysis, we can only get here by accident when
             // CheckpointProgressImpl.clearCounters() is invoked at the end of a checkpoint (by falling through
-            // between two volatile assignments).
-            return parkTimeToThrottleByCPSpeed(markDirtySpeed, curCpWriteSpeed);
+            // between two volatile assignments). When we get here, we don't have any information about the total
+            // number of pages in the current CP, so we calculate park time by only using information we have.
+            return parkTimeToThrottleByJustCPSpeed(markDirtySpeed, curCpWriteSpeed);
         }
         else {
             return speedBasedParkTime(cpWrittenPages, donePages, markDirtySpeed,
@@ -175,8 +175,15 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         return (cpWrittenPages + cpSyncedPages()) / 2;
     }
 
-    /***/
-    private long parkTimeToThrottleByCPSpeed(long markDirtySpeed, long curCpWriteSpeed) {
+    /**
+     * Simplified version of park time calculation used when we don't have information about total CP size (in pages).
+     * Such a situation seems to be very rare, but it can happen when finishing a CP.
+     *
+     * @param markDirtySpeed    speed of page dirtying
+     * @param curCpWriteSpeed   speed of CP writing pages
+     * @return park time (nanos)
+     */
+    private long parkTimeToThrottleByJustCPSpeed(long markDirtySpeed, long curCpWriteSpeed) {
         boolean throttleByCpSpeed = curCpWriteSpeed > 0 && markDirtySpeed > curCpWriteSpeed;
 
         if (throttleByCpSpeed) {
