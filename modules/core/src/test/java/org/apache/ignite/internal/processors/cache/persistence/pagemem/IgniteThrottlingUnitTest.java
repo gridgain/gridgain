@@ -324,7 +324,7 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
                 assertTrue(t.getName(), waitForCondition(() -> t.getState() == TIMED_WAITING, 1000L));
 
             //when: Disable throttling
-            simulateCheckpointBufferIsInSafeZone();
+            simulateCheckpointBufferInSafeZoneSituation();
             stopReportingCheckpointProgress(cpProgress);
 
             //and: Finish the checkpoint.
@@ -340,11 +340,6 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         finally {
             stopLoad.set(true);
         }
-    }
-
-    /***/
-    private void simulateCheckpointBufferIsInSafeZone() {
-        when(pageMemory2g.checkpointBufferPagesCount()).thenReturn(0);
     }
 
     /***/
@@ -585,5 +580,38 @@ public class IgniteThrottlingUnitTest extends GridCommonAbstractTest {
         simulateCheckpointBufferInDangerZoneSituation();
         throttle.onMarkDirty(true);
         assertThat(parkTimeNanos.get(), is(4410L));
+    }
+
+    /***/
+    @Test
+    public void speedBasedThrottleShouldReportCpWriteSpeedWhenThePageIsNotInCheckpointAndProgressIsReported()
+            throws InterruptedException {
+        PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
+                stateChecker, log);
+        simulateCheckpointProgressIsStarted();
+        allowSomeTimeToPass();
+        throttle.onMarkDirty(false);
+
+        assertThat(throttle.getCpWriteSpeed(), is(greaterThan(0L)));
+    }
+
+    /***/
+    private void allowSomeTimeToPass() throws InterruptedException {
+        Thread.sleep(10);
+    }
+
+    /***/
+    @Test
+    public void speedBasedThrottleShouldResetCPProgressToZeroOnCheckpointStart() throws InterruptedException {
+        PagesWriteSpeedBasedThrottle throttle = new PagesWriteSpeedBasedThrottle(pageMemory2g, cpProvider,
+                stateChecker, log);
+        simulateCheckpointProgressIsStarted();
+        allowSomeTimeToPass();
+        throttle.onMarkDirty(false);
+
+        throttle.onBeginCheckpoint();
+
+        // verify progress speed to make a conclusion about progress itself
+        assertThat(throttle.getCpWriteSpeed(), is(0L));
     }
 }
