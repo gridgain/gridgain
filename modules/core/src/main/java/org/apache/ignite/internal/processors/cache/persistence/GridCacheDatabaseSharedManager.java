@@ -545,7 +545,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
                 kernalCtx.cache(),
-                cpFreqDeviation::get
+                cpFreqDeviation::get,
+                kernalCtx.pools().getSystemExecutorService()
             );
 
             final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()
@@ -3301,7 +3302,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
-            CheckpointEntry lastCp = checkpointHistory().lastCheckpointMarkingAsInapplicable(grpId);
+            CheckpointEntry lastCp = checkpointManager.checkpointMarkerStorage().removeFromEarliestCheckpoints(grpId);
+
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
             if (lastCpTs != 0)
