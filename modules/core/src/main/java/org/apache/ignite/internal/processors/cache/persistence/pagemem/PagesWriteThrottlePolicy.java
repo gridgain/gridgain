@@ -54,7 +54,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THROTTLE_LOG_THRES
  * <p>
  * There are two additional methods for interfacing with other parts of the system:
  * <ul>
- *     <li>{@link #tryWakeupThrottledThreads()} which wakes up the threads currently being throttled; in the current
+ *     <li>{@link #wakeupThrottledThreads()} which wakes up the threads currently being throttled; in the current
  *     implementation, it is called  when Checkpoint Buffer utilization falls below 1/2.</li>
  *     <li>{@link #isCpBufferOverflowThresholdExceeded()} which is called by a checkpointer to see whether the Checkpoint Buffer is
  *     in a danger zone and, if yes, it starts to prioritize writing pages from the Checkpoint Buffer over
@@ -76,10 +76,10 @@ public interface PagesWriteThrottlePolicy {
     void onMarkDirty(boolean isPageInCheckpoint);
 
     /**
-     * Callback to try wakeup throttled threads. Invoked when the Checkpoint Buffer use drops below a certain
+     * Callback to wakeup throttled threads. Invoked when the Checkpoint Buffer use drops below a certain
      * threshold.
      */
-    void tryWakeupThrottledThreads();
+    void wakeupThrottledThreads();
 
     /**
      * Callback to notify throttling policy checkpoint was started.

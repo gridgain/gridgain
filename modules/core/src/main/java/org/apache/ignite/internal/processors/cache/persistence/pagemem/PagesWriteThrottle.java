@@ -162,7 +162,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     }
 
     /** {@inheritDoc} */
-    @Override public void tryWakeupThrottledThreads() {
+    @Override public void wakeupThrottledThreads() {
         if (!isCpBufferOverflowThresholdExceeded()) {
             inCheckpointProtection.resetBackoff();
 
