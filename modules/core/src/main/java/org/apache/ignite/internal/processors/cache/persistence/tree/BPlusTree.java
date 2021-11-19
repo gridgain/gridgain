@@ -4389,7 +4389,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return t;
         }
 
-
         /**
          * @param tail Tail.
          * @return Insertion point. May be negative.
@@ -4670,11 +4669,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return false;
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Result finishTail() throws IgniteCheckedException {
+        /** {@inheritDoc} */
+        @Override protected Result finishTail() throws IgniteCheckedException {
             assert !isFinished();
             assert tail.type == Tail.EXACT && tail.lvl >= 0 : tail;
 
@@ -5215,11 +5211,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             reuseFreePages();
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        protected Result finishOrLockTail(long pageId, long page, long backId, long fwdId, int lvl)
+        /** {@inheritDoc} */
+        @Override protected Result finishOrLockTail(long pageId, long page, long backId, long fwdId, int lvl)
             throws IgniteCheckedException {
             Result res = finishTail();
 
