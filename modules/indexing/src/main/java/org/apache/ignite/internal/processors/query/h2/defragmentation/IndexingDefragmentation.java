@@ -354,7 +354,7 @@ public class IndexingDefragmentation {
 
         assert inlineIdxs != null : "no inline index helpers";
 
-        io.store(pageAddr, off, null, row.values, false);
+        PageUtils.putBytes(pageAddr, off, row.values);
 
         H2IOUtils.storeRow(row, pageAddr, off + payloadSize, io.storeMvccInfo());
     }
