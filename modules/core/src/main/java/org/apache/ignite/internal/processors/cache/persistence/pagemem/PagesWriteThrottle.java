@@ -50,7 +50,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final ExponentialBackoffThrottlingStrategy notInCheckpointProtection
         = new ExponentialBackoffThrottlingStrategy();
 
-    /** Checpoint Buffer-related logic used to keep it safe. */
+    /** Checkpoint Buffer-related logic used to keep it safe. */
     private final CheckpointBufferOverflowWatchdog cpBufferWatchdog;
 
     /** Logger. */
