@@ -3680,7 +3680,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             // Unlock everything until the leaf, there's no need to hold these locks anymore.
             while (tail.lvl != 0) {
-                writeUnlockAndClose(tail.pageId, tail.page, tail.page, null);
+                writeUnlockAndClose(tail.pageId, tail.page, tail.buf, null);
 
                 tail = tail.down;
             }
