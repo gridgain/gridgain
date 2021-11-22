@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1023,8 +1023,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         Set<UUID> rcvrs = new HashSet<>();
 
-        UUID locNodeId = ctx.localNodeId();
-
         synchronized (ses) {
             if (ses.isClosed()) {
                 if (log.isDebugEnabled())
@@ -1042,7 +1040,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
                 UUID nodeId = sib.nodeId();
 
-                if (!nodeId.equals(locNodeId) && !sib.isJobDone() && !rcvrs.contains(nodeId))
+                if (!sib.isJobDone())
                     rcvrs.add(nodeId);
             }
         }
@@ -1063,14 +1061,20 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         IgniteCheckedException ex = null;
 
+        UUID locNodeId = ctx.localNodeId();
+
         // Every job gets an individual message to keep track of ghost requests.
         for (ComputeJobSibling s : ses.getJobSiblings()) {
             GridJobSiblingImpl sib = (GridJobSiblingImpl)s;
 
             UUID nodeId = sib.nodeId();
 
-            // Pair can be null if job is finished.
-            if (rcvrs.remove(nodeId)) {
+            if (locNodeId.equals(nodeId)) {
+                // Local job notification.
+                ctx.job().onChangeTaskAttributes(ses.getId(), s.getJobId(), attrs);
+            }
+            else if (rcvrs.remove(nodeId)) {
+                // Pair can be null if job is finished.
                 ClusterNode node = ctx.discovery().node(nodeId);
 
                 // Check that node didn't change (it could happen in case of failover).
@@ -1079,9 +1083,10 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
                     GridTaskSessionRequest req = new GridTaskSessionRequest(
                         ses.getId(),
-                        null,
+                        s.getJobId(),
                         loc ? null : U.marshal(marsh, attrs),
-                        attrs);
+                        attrs
+                    );
 
                     // Make sure to go through IO manager always, since order
                     // should be preserved here.

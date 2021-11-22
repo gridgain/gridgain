@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -469,6 +469,9 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
 
             // Inject resources.
             ctx.resource().inject(dep, taskCls, job, ses, jobCtx);
+
+            // Event notification.
+            evtLsnr.onJobQueued(this);
 
             if (!internal && ctx.event().isRecordable(EVT_JOB_QUEUED))
                 recordEvent(EVT_JOB_QUEUED, "Job got queued for computation.");
