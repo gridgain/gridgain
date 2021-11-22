@@ -132,6 +132,7 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.concat;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD;
@@ -4314,7 +4315,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
                             .filter(info -> !info.isHistoryReserved())
                             .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
-                    ).collect(Collectors.joining(", ")) + ']');
+                    ).collect(joining(", ")) + ']');
             }
 
             if (hasPartitionToLog(supplyInfoMap, true)) {
@@ -4327,8 +4328,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                     ", minCntr=" + info.minCntr() +
                                     ", maxReserved=" + info.maxReserved() +
                                     ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
-                            ).collect(Collectors.joining(", ")) + ']'
-                    ).collect(Collectors.joining(", ")) + ']');
+                            ).collect(joining(", ")) + ']'
+                    ).collect(joining(", ")) + ']');
             }
         }
         catch (Exception e) {
@@ -4362,6 +4363,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         // Reserve at least 2 threads for system operations.
         int parallelismLvl = U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2);
 
+        Map<Integer, Map<Integer, List<T2<Long, Long>>>> rollbacks = new ConcurrentHashMap<>();
+
         try {
             U.<CacheGroupContext, Void>doInParallelUninterruptibly(
                 parallelismLvl,
@@ -4380,7 +4383,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     else
                         parts = grp.topology().localPartitionMap().keySet();
 
-                    grp.topology().finalizeUpdateCounters(parts);
+                    Map<Integer, List<T2<Long, Long>>> r = grp.topology().finalizeUpdateCounters(parts);
+
+                    if (!r.isEmpty() && rollbacks.size() < 10)
+                        rollbacks.put(grp.groupId(), r);
 
                     return null;
                 }
@@ -4390,7 +4396,26 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to finalize partition counters", e);
         }
 
+        U.log(log, "Partition counters finalized " + rollbacksDump(rollbacks));
+
         timeBag.finishGlobalStage("Finalize update counters");
+    }
+
+    private String rollbacksDump(Map<Integer, Map<Integer, List<T2<Long, Long>>>> rollbacks) {
+        if (rollbacks.isEmpty())
+            return "";
+        else {
+            return rollbacks.entrySet().stream()
+                .map(rb -> "[grpId=" + rb.getKey() + ", rollbacks=[" +
+                    rb.getValue().entrySet().stream()
+                        .map(e -> "[partId=" + e.getKey() + ", recs=[" +
+                            e.getValue().stream()
+                                .map(c -> "[" + c.get1() + ':' + c.get2() + ']')
+                                .collect(joining(",")) + "]]")
+                        .collect(joining(",")) +
+                    "]]")
+                .collect(joining(","));
+        }
     }
 
     /**

@@ -39,7 +39,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
@@ -113,10 +112,10 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
                 cctx.io().send(n, new PartitionCountersNeighborcastRequest(cntrs, futId, tx.topologyVersion()), SYSTEM_POOL);
             }
             catch (IgniteCheckedException e) {
-                if (!(e instanceof ClusterTopologyCheckedException))
-                    log.warning("Failed to send partition counters to remote node [node=" + peer + ']', e);
-                else
+                if (e instanceof ClusterTopologyCheckedException)
                     logNodeLeft(peer);
+                else
+                    log.warning("Failed to send partition counters to remote node [node=" + peer + ", txId=" + tx.nearXidVersion() + ']', e);
 
                 miniFut.onDone();
             }
@@ -168,7 +167,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
      */
     public void onResult(UUID nodeId) {
         if (log.isInfoEnabled()) {
-            log.info("Remote peer acked partition counters delivery [futId=" + futId + ", txId=" + tx.nearXidVersion() +
+            log.info("Remote peer acked partition counters delivery [txId=" + tx.nearXidVersion() + ", futId=" + futId +
                 ", node=" + nodeId + ']');
         }
 
@@ -215,6 +214,7 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
         if (log.isInfoEnabled()) {
             log.info("Failed during partition counters delivery to remote node. " +
                 "Node left cluster (will ignore) [futId=" + futId +
+                ", txId=" + tx.nearXidVersion() +
                 ", node=" + nodeId + ']');
         }
     }
