@@ -46,7 +46,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
-import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2InnerIO;
@@ -338,21 +337,16 @@ public class IndexingDefragmentation {
      * @param off Data offset.
      * @param row H2 cache row.
      * @param <IO> Type of the Page io.
-     * @throws IgniteCheckedException If failed.
      */
     private static <IO extends BPlusIO<?> & H2RowLinkIO> void storeByOffset(
         IO io,
         long pageAddr,
         int off,
         H2CacheRowWithIndex row
-    ) throws IgniteCheckedException {
+    ) {
         int payloadSize = io.getPayloadSize();
 
         assert row.link() != 0;
-
-        List<InlineIndexColumn> inlineIdxs = InlineIndexColumnFactory.getCurrentInlineIndexes();
-
-        assert inlineIdxs != null : "no inline index helpers";
 
         PageUtils.putBytes(pageAddr, off, row.values);
 
@@ -378,13 +372,13 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx)
-            throws IgniteCheckedException
-        {
+            throws IgniteCheckedException {
             io.store(dstPageAddr, dstIdx, srcIo, srcPageAddr, srcIdx);
         }
 
         /** {@inheritDoc} */
-        @Override public H2Row getLookupRow(BPlusTree<H2Row, ?> tree, long pageAddr, int idx) throws IgniteCheckedException {
+        @Override public H2Row getLookupRow(BPlusTree<H2Row, ?> tree, long pageAddr, int idx)
+            throws IgniteCheckedException {
             return lookupRow(tree, pageAddr, idx, this);
         }
 
@@ -438,13 +432,13 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx)
-            throws IgniteCheckedException
-        {
+            throws IgniteCheckedException {
             io.store(dstPageAddr, dstIdx, srcIo, srcPageAddr, srcIdx);
         }
 
         /** {@inheritDoc} */
-        @Override public H2Row getLookupRow(BPlusTree<H2Row, ?> tree, long pageAddr, int idx) throws IgniteCheckedException {
+        @Override public H2Row getLookupRow(BPlusTree<H2Row, ?> tree, long pageAddr, int idx)
+            throws IgniteCheckedException {
             return lookupRow(tree, pageAddr, idx, this);
         }
 
