@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -37,6 +38,7 @@ import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.compute.ComputeTaskMapAsync;
 import org.apache.ignite.compute.ComputeTaskName;
+import org.apache.ignite.compute.ComputeTaskSession;
 import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -54,6 +56,7 @@ import org.apache.ignite.internal.GridTaskSessionRequest;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.compute.ComputeTaskCancelledCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
@@ -66,6 +69,9 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatus;
+import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
 import org.apache.ignite.internal.util.lang.GridPeerDeployAware;
@@ -76,6 +82,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
@@ -156,6 +163,19 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * {@code true} if local node has persistent region in configuration and is not a client.
      */
     private final boolean isPersistenceEnabled;
+
+    /**
+     * Task statuses update monitors.
+     * Guarded by {@link #lock}.
+     */
+    private final Collection<ComputeGridMonitor> taskStatusMonitors = ConcurrentHashMap.newKeySet();
+
+    /**
+     * Snapshots of task statuses.
+     * Mapping: {@link ComputeTaskSession#getId} -> task status.
+     * Guarded by {@link #lock}.
+     */
+    private final ConcurrentMap<IgniteUuid, ComputeTaskStatusSnapshot> taskStatusSnapshots = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -642,11 +662,13 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                     throw new IgniteDeploymentCheckedException("Unknown task name or failed to auto-deploy " +
                         "task (was task (re|un)deployed?): " + taskName);
 
-                taskCls = dep.deployedClass(taskName);
+                IgniteBiTuple<Class<?>, Throwable> cls = dep.deployedClass(taskName);
 
-                if (taskCls == null)
+                if (cls.get1() == null)
                     throw new IgniteDeploymentCheckedException("Unknown task name or failed to auto-deploy " +
-                        "task (was task (re|un)deployed?) [taskName=" + taskName + ", dep=" + dep + ']');
+                        "task (was task (re|un)deployed?) [taskName=" + taskName + ", dep=" + dep + ']', cls.get2());
+
+                taskCls = cls.get1();
 
                 if (!ComputeTask.class.isAssignableFrom(taskCls))
                     throw new IgniteCheckedException("Failed to auto-deploy task (deployed class is not a task) " +
@@ -1059,6 +1081,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             ctx.event().record(evt);
         }
 
+        notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(ses), false);
+
         IgniteCheckedException ex = null;
 
         UUID locNodeId = ctx.localNodeId();
@@ -1287,6 +1311,17 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             // Register for timeout notifications.
             if (worker.endTime() < Long.MAX_VALUE)
                 ctx.timeout().addTimeoutObject(worker);
+
+            GridTaskSessionImpl session = worker.getSession();
+
+            notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(session), false);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onJobsMapped(GridTaskWorker<?, ?> worker) {
+            GridTaskSessionImpl session = worker.getSession();
+
+            notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(session), false);
         }
 
         /** {@inheritDoc} */
@@ -1330,7 +1365,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         }
 
         /** {@inheritDoc} */
-        @Override public void onTaskFinished(GridTaskWorker<?, ?> worker) {
+        @Override public void onTaskFinished(GridTaskWorker<?, ?> worker, @Nullable Throwable err) {
             GridTaskSessionImpl ses = worker.getSession();
 
             if (ses.isFullSupport()) {
@@ -1370,6 +1405,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
                     U.error(log, "Failed to unregister job communication message listeners and counters.", e);
                 }
             }
+
+            notifyTaskStatusMonitors(ComputeTaskStatus.onFinishTask(worker.getSession(), err), true);
         }
     }
 
@@ -1555,5 +1592,82 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         return task != null && task.getSession() != null
             ? ", task name: " + task.getSession().getTaskName()
             : "";
+    }
+
+    /**
+     * Subscription to update the status of tasks.
+     *
+     * <p>NOTE: {@link ComputeGridMonitor#processStatusSnapshots} will be called only on subscription,
+     * then only {@link ComputeGridMonitor#processStatusChange} will be called.
+     *
+     * @param monitor Task status update monitor.
+     * @throws NodeStoppingException If the node is stopped.
+     */
+    public void listenStatusUpdates(ComputeGridMonitor monitor) throws NodeStoppingException {
+        lock.writeLock();
+
+        try {
+            if (stopping)
+                throw new NodeStoppingException("Failed to add monitor due to grid shutdown: " + monitor);
+
+            taskStatusMonitors.add(monitor);
+
+            try {
+                monitor.processStatusSnapshots(taskStatusSnapshots.values());
+            }
+            catch (Throwable t) {
+                log.error("Error processing snapshots of task statuses: " + monitor, t);
+            }
+        }
+        finally {
+            lock.writeUnlock();
+        }
+    }
+
+    /**
+     * Unsubscribe to update the status of tasks.
+     *
+     * @param monitor Task status update monitor.
+     */
+    public void stopListenStatusUpdates(ComputeGridMonitor monitor) {
+        lock.writeLock();
+
+        try {
+            taskStatusMonitors.remove(monitor);
+        }
+        finally {
+            lock.writeUnlock();
+        }
+    }
+
+    /**
+     * Guarded by {@link #lock} for atomic update of the {@link #taskStatusSnapshots}
+     * and notifying {@link #taskStatusMonitors} about task changes.
+     *
+     * @param snapshotChanges Changes to task status.
+     * @param remove {@code True} if it is necessary to remove the {@code snapshotChanges} from
+     *      {@link #taskStatusSnapshots}, otherwise it will be updated.
+     */
+    private void notifyTaskStatusMonitors(ComputeTaskStatusSnapshot snapshotChanges, boolean remove) {
+        lock.readLock();
+
+        try {
+            if (remove)
+                taskStatusSnapshots.remove(snapshotChanges.sessionId());
+            else
+                taskStatusSnapshots.put(snapshotChanges.sessionId(), snapshotChanges);
+
+            for (ComputeGridMonitor monitor : taskStatusMonitors) {
+                try {
+                    monitor.processStatusChange(snapshotChanges);
+                }
+                catch (Throwable t) {
+                    log.error("Error processing task status diff: " + monitor, t);
+                }
+            }
+        }
+        finally {
+            lock.readUnlock();
+        }
     }
 }

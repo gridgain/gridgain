@@ -510,7 +510,7 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
                 if (log.isDebugEnabled())
                     log.debug("Found class in local deployment [cls=" + name + ", dep=" + dep + ']');
 
-                return dep.deployedClass(name);
+                return dep.deployedClass(name).get1();
             }
         }
 
@@ -522,10 +522,10 @@ class GridDeploymentClassLoader extends ClassLoader implements GridDeploymentInf
             Class<?> cls = findLoadedClass(name);
 
             if (cls == null) {
+                cls = defineClass(name, byteSrc.internalArray(), 0, byteSrc.size());
+
                 if (byteMap != null)
                     byteMap.put(path, byteSrc.array());
-
-                cls = defineClass(name, byteSrc.internalArray(), 0, byteSrc.size());
 
                 /* Define package in classloader. See URLClassLoader.defineClass(). */
                 int i = name.lastIndexOf('.');

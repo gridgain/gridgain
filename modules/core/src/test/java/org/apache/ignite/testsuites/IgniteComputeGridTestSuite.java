@@ -78,6 +78,7 @@ import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManagerSelfT
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointTaskSelfTest;
 import org.apache.ignite.internal.managers.communication.GridCommunicationManagerListenersSelfTest;
 import org.apache.ignite.internal.processors.compute.ComputeJobChangePriorityTest;
+import org.apache.ignite.internal.processors.compute.ComputeGridMonitorTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorConfigurationSelfTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
@@ -178,6 +179,7 @@ import org.junit.runners.Suite;
     VisorManagementEventSelfTest.class,
     VisorCacheRebalanceCollectorTaskSelfTest.class,
 
+    ComputeGridMonitorTest.class,
     ComputeJobChangePriorityTest.class
 })
 public class IgniteComputeGridTestSuite {
