@@ -807,13 +807,13 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public void restorePartitionStates() throws IgniteCheckedException {
+    @Override public void restorePartitionStates(Map<GroupPartitionId, Integer> partRecoveryStates) throws IgniteCheckedException {
         if (grp.isLocal() || !grp.affinityNode() || !grp.dataRegion().config().isPersistenceEnabled()
             || partitionStatesRestored)
             return;
 
         for (int p = 0; p < grp.affinity().partitions(); p++)
-            restoreStateOfPartition(p, null);
+            restoreStateOfPartition(p, partRecoveryStates.get(new GroupPartitionId(grp.groupId(), p)));
 
         confirmPartitionStatesRestored();
     }
