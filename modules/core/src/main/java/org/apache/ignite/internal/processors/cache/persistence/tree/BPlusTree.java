@@ -2461,7 +2461,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         if (!p.isFinished()) {
                             res = p.finishTail();
 
-                            // If not found, then the tree grew beyond our call stack -> retry from the actual root.
+                            // If not found, then the root split has happened and operation should be retried from the actual root.
                             if (res == RETRY || res == NOT_FOUND) {
                                 p.releaseTail();
 
