@@ -37,10 +37,15 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
+import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadFactory;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -50,6 +55,7 @@ import static java.util.stream.Collectors.toMap;
 import static java.util.stream.IntStream.range;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests if a concurrent tombstones cleanup doesn't trigger queue refill by same elements.
@@ -170,7 +176,8 @@ public class ConcurrentTombstonesCleanupTest extends GridCommonAbstractTest {
 
                     try {
                         l.await();
-                    } catch (InterruptedException e) {
+                    }
+                    catch (InterruptedException e) {
                         fail();
                     }
 
@@ -190,6 +197,90 @@ public class ConcurrentTombstonesCleanupTest extends GridCommonAbstractTest {
         doSleep(1000);
 
         assertTrue("Expecting empty queue", evictMgr.evictQueue(true).isEmpty());
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore
+    public void testConcurrentTimeouts() throws Exception {
+        IgniteEx crd = startGrids(1);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        GridCacheContext<Object, Object> ctx0 = crd.cachex(DEFAULT_CACHE_NAME).context();
+
+        PartitionsEvictManager evictMgr = ctx0.shared().evict();
+
+        for (int i = 0; i < 10; i++) {
+            doSleep(11); // Internal timer resolution is 10 ms.
+
+            evictMgr.processEvictions(true);
+        }
+
+        GridTimeoutProcessor prc = crd.context().timeout();
+
+        GridConcurrentSkipListSet<GridTimeoutObject> tmp = U.field(prc, "timeoutObjs");
+
+        int cnt = 0;
+
+        for (GridTimeoutObject object : tmp) {
+            if (object instanceof PartitionsEvictManager.FillEvictQueueTask)
+                cnt++;
+        }
+
+        assertTrue(cnt <= 1);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore
+    public void testCleanupAfterCacheRestart() throws Exception {
+        IgniteEx crd = startGrids(1);
+        crd.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+        int total = 32;
+
+        Map<Integer, Integer> data = range(0, total).boxed().collect(toMap(k -> k, v -> v));
+
+        cache.putAll(data);
+
+        GridCacheContext<Object, Object> ctx0 = crd.cachex(DEFAULT_CACHE_NAME).context();
+
+        assertEquals(0, tombstonesCnt(ctx0.group()));
+
+        cache.removeAll(data.keySet());
+
+        assertEquals(total, tombstonesCnt(ctx0.group()));
+
+        doSleep(600);
+
+        assertTrue(waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+
+        cache.close();
+
+        try {
+            cache.put(100, 100);
+
+            fail();
+        }
+        catch (Exception e) {
+            // Expected.
+        }
+
+        PartitionsEvictManager evictMgr = crd.context().cache().context().evict();
+
+        int sizex = evictMgr.evictQueue(true).sizex();
+
+        ctx0.ttl().expire(sizex);
+
+        int sizex2 = evictMgr.evictQueue(true).sizex();
+
+        System.out.println();
     }
 
     /**
