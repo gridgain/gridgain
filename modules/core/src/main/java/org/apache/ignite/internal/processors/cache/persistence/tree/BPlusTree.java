@@ -2457,7 +2457,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         continue;
 
                     case FOUND:
-                        // We may need to perform an inner replace in the upper level.
+                        // We may need to perform an inner replace on the upper level.
                         if (!p.isFinished()) {
                             res = p.finishTail();
 
@@ -3636,7 +3636,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             // Add this page to the tail if inner replace has not happened.
             if (res == NOT_FOUND) {
-                // Set forward id to check triangle invariand under the write-lock.
+                // Set forward id to check the triangle invariant under the write-lock.
                 fwdId(fwdId);
 
                 res = write(pageId, page, lockTailExact, this, lvl, RETRY, statisticsHolder());
