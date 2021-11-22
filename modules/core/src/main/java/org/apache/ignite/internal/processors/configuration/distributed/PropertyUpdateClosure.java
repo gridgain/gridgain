@@ -36,7 +36,7 @@ public interface PropertyUpdateClosure {
     public GridFutureAdapter<?> update(String key, Serializable newValue) throws IgniteCheckedException;
 
     /**
-     * Update property on cluster.
+     * Update property on cluster using compare and set way.
      *
      * @param key Property key.
      * @param expectedValue Expected value for CAS.
