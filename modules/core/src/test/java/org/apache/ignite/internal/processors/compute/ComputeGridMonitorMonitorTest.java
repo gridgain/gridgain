@@ -56,7 +56,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 /**
  * Test class for {@link ComputeGridMonitor}.
  */
-public class ComputeGridMonitorMonitorTest extends GridCommonAbstractTest {
+public class ComputeGridMonitorTest extends GridCommonAbstractTest {
     /** Coordinator. */
     private static IgniteEx CRD;
 
