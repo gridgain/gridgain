@@ -400,7 +400,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             // Lock the leaf if the row should be replaced in an inner node as well.
             if (canGetRowFromInner && idx + 1 == cnt && p.fwdId != 0L) {
-                Tail<L> tail = p.addTail(pageId, page, pageAddr, io, lvl, Tail.EXACT);
+                Tail<L> tail = p.addTail("Replace", pageId, page, pageAddr, io, lvl, Tail.EXACT);
 
                 // Row index is cached, because it won't change until the leaf is unlocked.
                 tail.idx = (short)idx;
@@ -626,7 +626,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (io.getForward(pageAddr) != u.fwdId)
                 return RETRY;
 
-            u.addTail(pageId, page, pageAddr, io, lvl, Tail.EXACT);
+            u.addTail("LockTailExact", pageId, page, pageAddr, io, lvl, Tail.EXACT);
 
             return FOUND;
         }
@@ -3735,7 +3735,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Old tail must be unlocked.
             releaseTail();
 
-            addTail(tailId, tailPage, tailPageAddr, io, lvl, Tail.EXACT);
+            addTail("setTailForSplit", tailId, tailPage, tailPageAddr, io, lvl, Tail.EXACT);
         }
 
         /**
@@ -4356,8 +4356,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * @param type Type.
          * @return Added tail.
          */
-        protected final Tail<L> addTail(long pageId, long page, long pageAddr, BPlusIO<L> io, int lvl, byte type) {
-            final Tail<L> t = new Tail<>(pageId, page, pageAddr, io, type, lvl);
+        protected final Tail<L> addTail(String src, long pageId, long page, long pageAddr, BPlusIO<L> io, int lvl, byte type) {
+            final Tail<L> t = new Tail<>(src, pageId, page, pageAddr, io, type, lvl);
 
             if (tail == null)
                 tail = t;
