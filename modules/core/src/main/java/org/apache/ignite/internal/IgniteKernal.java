@@ -1869,7 +1869,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         if (cfg.getAffinityAttributes() != null) {
             for (Map.Entry<String, String> entry : cfg.getAffinityAttributes().entrySet())
-                ctx.addNodeAttribute(AFFINITY_ATTR_PREFIX + '.' + entry.getKey(), entry.getValue());
+                ctx.addNodeAttribute(AFFINITY_ATTR_PREFIX + entry.getKey(), entry.getValue());
         }
 
         ctx.addNodeAttribute(ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED,

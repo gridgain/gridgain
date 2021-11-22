@@ -143,6 +143,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     public static final String DATA_LOST_ON_DEACTIVATION_WARNING = "Deactivation stopped. Deactivation clears " +
         "in-memory caches (without persistence) including the system caches. Use '--force' flag if you`re still sure.";
 
+    /** Warning for missing affinity attributes. */
+    public static final String MISSING_AFF_ATTRS_WARNING =
+        "Some affinity attributes in cluster baseline topology are missing on joining node. " +
+        "To join this node you should add missing attributes to node configurations or deactivate cluster, " +
+        "add the node and activate the cluster again.In this case options listed below will be removed from " +
+        "cluster baseline topology for joining node.";
+
     /**
      * Error message for join node validation, if cluster in {@link ClusterState#ACTIVE_READ_ONLY} and joining node not
      * supports that cluster state.
@@ -1493,16 +1500,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (!attrsMissingOnNode.isEmpty()) {
                 SB sb = new SB();
 
-                sb.a("Some affinity attributes in cluster baseline topology are missing on joining node. ")
-                    .a("To join this node you should add missing attributes to node configurations or ")
-                    .a("deactivate cluster, add the node and activate the cluster again.")
-                    .a("In this case options listed below will be removed from cluster baseline topology for joining node.")
+                sb.a(MISSING_AFF_ATTRS_WARNING)
                     .a("\n")
-                    .a("Missing options:\n");
+                    .a("Missing options:");
 
                 for (Map.Entry<String, Object> missingAttr : attrsMissingOnNode.entrySet()) {
-                    sb.a("Attr name: ").a(missingAttr.getKey().substring((AFFINITY_ATTR_PREFIX + '.').length()))
-                        .a(" Attr val: ").a(missingAttr.getValue());
+                    sb.a("\n")
+                        .a("Attr name: ").a(missingAttr.getKey().substring((AFFINITY_ATTR_PREFIX).length()))
+                        .a("; ")
+                        .a("Attr val: ").a(missingAttr.getValue());
                 }
 
                 String msg = sb.toString();

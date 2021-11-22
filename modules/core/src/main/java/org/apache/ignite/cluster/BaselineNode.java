@@ -17,7 +17,10 @@
 package org.apache.ignite.cluster;
 
 import java.util.Map;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.lang.IgnitePredicate;
 
 import static org.apache.ignite.internal.IgniteNodeAttributes.AFFINITY_ATTR_PREFIX;
 import static org.apache.ignite.internal.util.IgniteUtils.filterAffinityAttributes;
@@ -72,17 +75,25 @@ public interface BaselineNode {
     public Map<String, Object> attributes();
 
     /**
-     * Gets affinity attribute by name.
+     * Gets affinity attribute by name. The difference from attributes is that values
+     * of affinity attributes of the newly connected node are propagated to all the cluster
+     * nodes. Affinity attributes should be used for customizing affinity function via
+     * {@link CacheConfiguration#setNodeFilter(IgnitePredicate)} or
+     * {@link RendezvousAffinityFunction#setAffinityBackupFilter(org.apache.ignite.lang.IgniteBiPredicate)}
      *
      * @param name of the attribute.
      * @return Affinity attribute.
      */
     public default String affinityAttribute(String name) {
-        return (String)attributes().get(AFFINITY_ATTR_PREFIX + '.' + name);
+        return (String)attributes().get(AFFINITY_ATTR_PREFIX + name);
     }
 
     /**
-     * Gets all affinity attributes.
+     * Gets all affinity attributes. The difference from attributes is that values
+     * of affinity attributes of the newly connected node are propagated to all the cluster
+     * nodes. Affinity attributes should be used for customizing affinity function via
+     * {@link CacheConfiguration#setNodeFilter(IgnitePredicate)} or
+     * {@link RendezvousAffinityFunction#setAffinityBackupFilter(org.apache.ignite.lang.IgniteBiPredicate)}
      *
      * @return All affinity attributes.
      */

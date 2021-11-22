@@ -24,7 +24,7 @@ public final class IgniteNodeAttributes {
     public static final String ATTR_PREFIX = "org.apache.ignite";
 
     /** Prefix for marking affinity attributes. */
-    public static final String AFFINITY_ATTR_PREFIX = "affinity.attr";
+    public static final String AFFINITY_ATTR_PREFIX = "affinity.attr.";
 
     /** Node compound version. */
     public static final String ATTR_BUILD_VER = ATTR_PREFIX + ".build.ver";

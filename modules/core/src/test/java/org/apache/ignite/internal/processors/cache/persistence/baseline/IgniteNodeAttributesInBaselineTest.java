@@ -31,6 +31,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.MISSING_AFF_ATTRS_WARNING;
 
 /**
  * Tests that check grid behavior when node joins baseline topology and it's set of attributes
@@ -159,12 +160,10 @@ public class IgniteNodeAttributesInBaselineTest extends GridCommonAbstractTest {
 
             String msg = rootCause.getMessage();
 
-            String expMsg = "Some affinity attributes in cluster baseline topology are missing on joining node. " +
-                "To join this node you should add missing attributes to node configurations or deactivate cluster, " +
-                "add the node and activate the cluster again.In this case options listed below will be removed from " +
-                "cluster baseline topology for joining node.\n" +
+            String expMsg = MISSING_AFF_ATTRS_WARNING +
+                "\n" +
                 "Missing options:\n" +
-                "Attr name: basicUserAttrName Attr val: basicUserAttrVal";
+                "Attr name: basicUserAttrName; Attr val: basicUserAttrVal";
 
             assertEquals(expMsg, msg);
         }
