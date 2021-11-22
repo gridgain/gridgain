@@ -1501,6 +1501,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 EventType.EVT_NODE_JOINED, localNode());
 
         startTimer.finishGlobalStage("Await exchange");
+
+        if (IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN) != null) {
+            log.warning("IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN system property is deprecated and will be removed " +
+                "in a future version. Use ShutdownPolicy instead.");
+        }
     }
 
     /** */
