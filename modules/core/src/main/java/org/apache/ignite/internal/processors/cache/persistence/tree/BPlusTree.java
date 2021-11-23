@@ -2047,7 +2047,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         // Level must be equal to bottom level. This is the place when we would insert values into
                         // parent nodes during splits.
-                        assert lvl == (x.isPut() ? ((Put)x.op).btmLvl : 0) : "NOT_FOUND on the wrong level: lvl=" + lvl;
+                        assert lvl == (x.isPut() ? ((Put)x.op).btmLvl : 0)
+                            : "NOT_FOUND on the wrong level  [lvl=" + lvl + ", x=" + x
+                            + ", btmLvl=" + (x.isPut() ? ((Put)x.op).btmLvl : 0) + ']';
 
                         return x.onNotFound(pageId, page, fwdId, lvl);
 
@@ -4360,12 +4362,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     tail.sibling = t;
                 }
             }
-            else if (tail.lvl == lvl - 1) { // Add on top of existing level.
+            else { // Add on top of existing level.
+                assert tail.lvl == lvl - 1 : "tail=" + tail + ", lvl=" + lvl;
+
                 t.down = tail;
                 tail = t;
             }
-            else
-                throw new IllegalStateException();
 
             return t;
         }
