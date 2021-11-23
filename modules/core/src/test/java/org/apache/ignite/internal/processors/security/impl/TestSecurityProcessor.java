@@ -195,7 +195,12 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
 
         authorizeRecords.add(new AuthorizeRecord(name, perm, (String)securityCtx.subject().login()));
 
-        if (!((TestSecurityContext)securityCtx).operationAllowed(name, perm))
+        // TODO GG-42621
+//        if (!((TestSecurityContext)securityCtx).operationAllowed(name, perm))
+//            throw new SecurityException("Authorization failed [perm=" + perm +
+//                ", name=" + name +
+//                ", subject=" + securityCtx.subject() + ']');
+        if (!operationAllowed(securityCtx, name, perm))
             throw new SecurityException("Authorization failed [perm=" + perm +
                 ", name=" + name +
                 ", subject=" + securityCtx.subject() + ']');
@@ -238,5 +243,42 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
 
         for (TestSecurityData data : predefinedAuthData)
             PERMS.remove(data.credentials());
+    }
+
+    private static boolean operationAllowed(SecurityContext ctx, String opName, SecurityPermission perm) {
+        switch (perm) {
+            case CACHE_CREATE:
+            case CACHE_DESTROY:
+                return ctx.systemOperationAllowed(perm) || ctx.cacheOperationAllowed(opName, perm);
+
+            case CACHE_PUT:
+            case CACHE_READ:
+            case CACHE_REMOVE:
+                return ctx.cacheOperationAllowed(opName, perm);
+
+            case TASK_CANCEL:
+            case TASK_EXECUTE:
+                return ctx.taskOperationAllowed(opName, perm);
+
+            case SERVICE_DEPLOY:
+            case SERVICE_INVOKE:
+            case SERVICE_CANCEL:
+                return ctx.serviceOperationAllowed(opName, perm);
+
+            case TRACING_CONFIGURATION_UPDATE:
+                return ctx.tracingOperationAllowed(perm);
+
+            case EVENTS_DISABLE:
+            case EVENTS_ENABLE:
+            case ADMIN_VIEW:
+            case ADMIN_CACHE:
+            case ADMIN_QUERY:
+            case ADMIN_OPS:
+            case JOIN_AS_SERVER:
+                return ctx.systemOperationAllowed(perm);
+
+            default:
+                throw new IllegalStateException("Invalid security permission: " + perm);
+        }
     }
 }
