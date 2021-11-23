@@ -1045,6 +1045,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         Set<UUID> rcvrs = new HashSet<>();
 
+        UUID locNodeId = ctx.localNodeId();
+
         synchronized (ses) {
             if (ses.isClosed()) {
                 if (log.isDebugEnabled())
@@ -1062,7 +1064,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
                 UUID nodeId = sib.nodeId();
 
-                if (!sib.isJobDone())
+                if (!nodeId.equals(locNodeId) && !sib.isJobDone())
                     rcvrs.add(nodeId);
             }
         }
@@ -1084,8 +1086,6 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         notifyTaskStatusMonitors(ComputeTaskStatus.snapshot(ses), false);
 
         IgniteCheckedException ex = null;
-
-        UUID locNodeId = ctx.localNodeId();
 
         // Every job gets an individual message to keep track of ghost requests.
         for (ComputeJobSibling s : ses.getJobSiblings()) {

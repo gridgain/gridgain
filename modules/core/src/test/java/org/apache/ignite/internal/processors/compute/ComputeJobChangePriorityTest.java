@@ -236,7 +236,7 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
 
         /** */
         static PriorityQueueCollisionSpiEx spiEx(Ignite n) {
-            return ((PriorityQueueCollisionSpiEx)((IgniteEx)n).context().collision().collisionSpi());
+            return ((PriorityQueueCollisionSpiEx)((IgniteEx)n).context().config().getCollisionSpi());
         }
     }
 

@@ -88,6 +88,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.spi.collision.CollisionSpi;
 import org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.systemview.view.ComputeJobView;
@@ -358,9 +359,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
                 return new ComputeJobView(e.getKey(), e.getValue(), state);
             });
 
-        if (!jobAlwaysActivate && ctx.collision().collisionSpi() instanceof PriorityQueueCollisionSpi) {
-            taskPriAttrKey = ((PriorityQueueCollisionSpi)ctx.collision().collisionSpi()).getPriorityAttributeKey();
-            jobPriAttrKey = ((PriorityQueueCollisionSpi)ctx.collision().collisionSpi()).getJobPriorityAttributeKey();
+        CollisionSpi collisionSpi = ctx.config().getCollisionSpi();
+
+        if (!jobAlwaysActivate && collisionSpi instanceof PriorityQueueCollisionSpi) {
+            taskPriAttrKey = ((PriorityQueueCollisionSpi)collisionSpi).getPriorityAttributeKey();
+            jobPriAttrKey = ((PriorityQueueCollisionSpi)collisionSpi).getJobPriorityAttributeKey();
         }
         else {
             taskPriAttrKey = null;

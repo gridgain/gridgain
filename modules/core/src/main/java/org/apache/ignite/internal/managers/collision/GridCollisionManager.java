@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.apache.ignite.internal.managers.collision;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.SkipDaemon;
@@ -128,12 +129,5 @@ public class GridCollisionManager extends GridManagerAdapter<CollisionSpi> {
                 }
             });
         }
-    }
-
-    /**
-     * @return Collision SPI.
-     */
-    public CollisionSpi collisionSpi() {
-        return getSpi();
     }
 }
