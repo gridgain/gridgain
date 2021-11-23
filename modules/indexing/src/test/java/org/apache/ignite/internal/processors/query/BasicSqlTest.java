@@ -20,6 +20,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -179,6 +180,36 @@ public class BasicSqlTest extends AbstractIndexingCommonTest {
 
         res0.forEach(r -> assertEquals("Invalid result type: " +
             r.get(0) + ",\n at results: " + res0, "A", r.get(0)));
+    }
+
+    /**
+     */
+    @Test
+    public void compareDifferentTypesInInlineIndex() {
+        sql("CREATE TABLE TEST0 (ID0 INT, ID1 INT, VAL INT, PRIMARY KEY(ID0, ID1)) WITH\"AFFINITY_KEY=ID0\"");
+        sql("CREATE TABLE TEST1 (ID0 INT, ID1 VARCHAR, VAL INT, PRIMARY KEY(ID0, ID1)) WITH\"AFFINITY_KEY=ID0\"");
+        sql("INSERT INTO TEST0 VALUES (1,  1, 0)");
+        sql("INSERT INTO TEST1 VALUES (1, '1', 0)");
+        sql("INSERT INTO TEST0 VALUES (2,  10000000, 0)");
+        sql("INSERT INTO TEST1 VALUES (2, '10000000', 0)");
+
+        List<List<?>> res;
+
+        res = sql("SELECT * FROM TEST1 WHERE ID0 = 2 AND ID1 = 10000000").getAll();
+
+        assertEquals(1, res.size());
+
+        res = grid(0).context().query().querySqlFields(
+            new SqlFieldsQuery("SELECT * FROM TEST0, TEST1 WHERE TEST0.ID0 = TEST1.ID0 AND TEST0.ID1 = TEST1.ID1")
+                .setEnforceJoinOrder(true), false).getAll();
+
+        assertEquals(2, res.size());
+
+        res = grid(0).context().query().querySqlFields(
+            new SqlFieldsQuery("SELECT * FROM TEST1, TEST0 WHERE TEST0.ID0 = TEST1.ID0 AND TEST0.ID1 = TEST1.ID1")
+                .setEnforceJoinOrder(true), false).getAll();
+
+        assertEquals(2, res.size());
     }
 
     /**

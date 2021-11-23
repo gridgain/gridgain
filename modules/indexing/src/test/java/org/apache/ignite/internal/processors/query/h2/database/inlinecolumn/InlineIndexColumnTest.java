@@ -17,8 +17,10 @@
 
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
+
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -26,7 +28,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.commons.io.Charsets;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
@@ -100,13 +102,13 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     @Test
     public void testConvert() {
         // 8 bytes total: 1b, 1b, 3b, 3b.
-        byte[] bytes = StringInlineIndexColumn.trimUTF8("00\u20ac\u20ac".getBytes(Charsets.UTF_8), 7);
+        byte[] bytes = StringInlineIndexColumn.trimUTF8("00\u20ac\u20ac".getBytes(StandardCharsets.UTF_8), 7);
         assertEquals(5, bytes.length);
 
         String s = new String(bytes);
         assertEquals(3, s.length());
 
-        bytes = StringInlineIndexColumn.trimUTF8("aaaaaa".getBytes(Charsets.UTF_8), 4);
+        bytes = StringInlineIndexColumn.trimUTF8("aaaaaa".getBytes(StandardCharsets.UTF_8), 4);
         assertEquals(4, bytes.length);
     }
 
@@ -209,6 +211,92 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         }
     }
 
+    /** */
+    @Test
+    public void compareDifferentTypes() throws Exception {
+        // Check String
+        assertEquals(0, putAndCompare("1", 1, String.class, Integer.class, 5));
+        assertEquals(0, putAndCompare("11", 11, String.class, Integer.class, 5));
+
+        // Not enough space to inline full string value.
+        assertEquals(CANT_BE_COMPARE, putAndCompare("222", 222, String.class, Integer.class, 5));
+
+        // Check byte[]
+        UUID uuid = UUID.randomUUID();
+        ValueUuid valUuid = ValueUuid.get(uuid);
+        assertEquals(0, putAndCompare(valUuid.getBytes(), uuid, byte[].class, UUID.class, 100));
+
+        // Not enough space to inline full string value.
+        assertEquals(CANT_BE_COMPARE, putAndCompare(valUuid.getBytes(), uuid, byte[].class, UUID.class, 5));
+
+        // Check inline HASH
+        inlineObjHash = true;
+        TestPojo val = new TestPojo(0, 0);
+        assertEquals(CANT_BE_COMPARE, putAndCompare(val, uuid, TestPojo.class, UUID.class, 5));
+    }
+
+    /**
+     * @param inlineVal Value to inline.
+     * @param val Value to compare.
+     * @param maxSize Max inline size.
+     * @return Compare result.
+     * @throws Exception If failed.
+     */
+    private <InlineT, ValueT> int putAndCompare(
+            InlineT inlineVal,
+            ValueT val,
+            Class<InlineT> clsInline,
+            Class<ValueT> clsVal,
+            int maxSize
+    ) throws Exception {
+        DataRegionConfiguration plcCfg = new DataRegionConfiguration()
+                .setInitialSize(1024 * MB)
+                .setMaxSize(1024 * MB);
+
+        PageMemory pageMem = new PageMemoryNoStoreImpl(log,
+                new UnsafeMemoryProvider(log),
+                null,
+                PAGE_SIZE,
+                plcCfg,
+                new LongAdderMetric("NO_OP", null),
+                false
+        );
+
+        pageMem.start();
+
+        long pageId = 0L;
+        long page = 0L;
+
+        try {
+            pageId = pageMem.allocatePage(CACHE_ID, 1, PageIdAllocator.FLAG_DATA);
+            page = pageMem.acquirePage(CACHE_ID, pageId);
+            long pageAddr = pageMem.readLock(CACHE_ID, pageId, page);
+
+            int off = 0;
+
+            CompareMode cmpMode = CompareMode.getInstance(CompareMode.OFF, 1);
+
+            InlineIndexColumnFactory factory = new InlineIndexColumnFactory(cmpMode);
+
+            InlineIndexColumn ih = factory.createInlineHelper(new Column("", wrap(inlineVal, clsInline).getValueType()), inlineObjHash);
+
+            ih.put(pageAddr, off, wrap(inlineVal, clsInline), maxSize);
+
+            return ih.compare(
+                    pageAddr,
+                    off,
+                    maxSize,
+                    wrap(val, clsVal),
+                    (v1, v2) -> v1.compareTo(v2, null, cmpMode));
+        }
+        finally {
+            if (page != 0L)
+                pageMem.releasePage(CACHE_ID, pageId, page);
+
+            pageMem.stop(true);
+        }
+    }
+
     /**
      * @param v1 Value 1.
      * @param v2 Value 2.
@@ -260,7 +348,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     @Test
     public void testStringCut() {
         // 6 bytes total: 3b, 3b.
-        byte[] bytes = StringInlineIndexColumn.trimUTF8("\u20ac\u20ac".getBytes(Charsets.UTF_8), 2);
+        byte[] bytes = StringInlineIndexColumn.trimUTF8("\u20ac\u20ac".getBytes(StandardCharsets.UTF_8), 2);
 
         assertNull(bytes);
     }
@@ -915,6 +1003,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         switch (type) {
             case Value.BOOLEAN:
                 return ValueBoolean.get((Boolean)val);
+
             case Value.BYTE:
                 return ValueByte.get((Byte)val);
 
@@ -956,6 +1045,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
 
             case Value.JAVA_OBJECT:
                 return ValueJavaObject.getNoCopy(marsh.marshal(val), null, null);
+
+            case Value.BYTES:
+                return ValueBytes.getNoCopy((byte[])val);
 
             case Value.DECIMAL:
                 return ValueDecimal.get((BigDecimal)val);
@@ -1013,10 +1105,13 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         if (BigDecimal.class.isAssignableFrom(cls))
             return Value.DECIMAL;
 
+        if (byte[].class.isAssignableFrom(cls))
+            return Value.BYTES;
+
         return Value.JAVA_OBJECT;
     }
 
-    /** Class wrapper, necessary to distinguish simple string and string with fixred length. */
+    /** Class wrapper, necessary to distinguish simple string and string with fixed length. */
     private static class FixedString {
         /** */
         private final String val;
