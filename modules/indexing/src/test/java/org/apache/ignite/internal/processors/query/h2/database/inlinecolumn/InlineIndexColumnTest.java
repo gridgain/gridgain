@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
@@ -16,7 +15,6 @@
  */
 
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
-
 
 import java.io.Serializable;
 import java.math.BigDecimal;
