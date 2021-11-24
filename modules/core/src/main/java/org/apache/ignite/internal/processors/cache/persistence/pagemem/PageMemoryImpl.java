@@ -937,7 +937,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         int resCntr = checkpointPool.releaseFreePage(tmpBufPtr);
 
         if (resCntr == checkpointBufferPagesSize() / 2 && writeThrottle != null)
-            writeThrottle.tryWakeupThrottledThreads();
+            writeThrottle.wakeupThrottledThreads();
     }
 
     /**
@@ -1897,8 +1897,8 @@ public class PageMemoryImpl implements PageMemoryEx {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean shouldThrottle() {
-        return writeThrottle.shouldThrottle();
+    @Override public boolean isCpBufferOverflowThresholdExceeded() {
+        return writeThrottle.isCpBufferOverflowThresholdExceeded();
     }
 
     /** {@inheritDoc} */
