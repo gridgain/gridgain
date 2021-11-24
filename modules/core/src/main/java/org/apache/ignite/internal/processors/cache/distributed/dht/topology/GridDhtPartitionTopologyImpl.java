@@ -2860,9 +2860,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public Map<Integer, List<T2<Long, Long>>> finalizeUpdateCounters(Set<Integer> parts) {
-        Map<Integer, List<T2<Long, Long>>> res = new HashMap<>();
-
+    @Override public void finalizeUpdateCounters(Set<Integer> parts) {
         // It is need to acquire checkpoint lock before topology lock acquiring.
         ctx.database().checkpointReadLock();
 
@@ -2915,9 +2913,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             for (GridCacheContext ctx0 : grp.caches())
                                 ctx0.continuousQueries().closeBackupUpdateCountersGaps(ctx0, part.id(), topVer, gaps);
-
-                            if (!rollbackRecList.isEmpty() && res.size() < 100)
-                                res.put(part.id(), rollbackRecList);
                         }
                     }
                 }
@@ -2938,8 +2933,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         finally {
             ctx.database().checkpointReadUnlock();
         }
-
-        return res;
     }
 
     /** {@inheritDoc} */

@@ -55,7 +55,6 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -1347,8 +1346,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public Map<Integer, List<T2<Long, Long>>> finalizeUpdateCounters(Set<Integer> parts) {
-        return new HashMap<>();
+    @Override public void finalizeUpdateCounters(Set<Integer> parts) {
+        // No-op.
     }
 
     /** {@inheritDoc} */

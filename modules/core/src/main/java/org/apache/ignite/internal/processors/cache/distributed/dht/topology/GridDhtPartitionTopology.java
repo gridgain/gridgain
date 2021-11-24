@@ -35,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -355,7 +354,7 @@ public interface GridDhtPartitionTopology {
      *
      * @param parts Partitions.
      */
-    public Map<Integer, List<T2<Long, Long>>> finalizeUpdateCounters(Set<Integer> parts);
+    public void finalizeUpdateCounters(Set<Integer> parts);
 
     /**
      * @return Partition update counters.
