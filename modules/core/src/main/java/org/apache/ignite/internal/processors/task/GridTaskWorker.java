@@ -527,7 +527,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 synchronized (mux) {
                     // Check if some jobs are sent from continuous mapper.
                     if (F.isEmpty(jobRes))
-                        throw new IgniteCheckedException("Task map operation produced no mapped jobs: " + ses);
+                        throw new IgniteCheckedException("No suitable node found for a task: " + ses);
                 }
             }
             else
