@@ -138,6 +138,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** Whether to allow deduplication of composite PKs with null parts or not. */
     private boolean allowCompositePKsDeduplication;
 
+    /** Whether to preserve order specified by {@link #primaryKeyFields()} or not. */
+    private boolean preserveKeysOrder;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -757,5 +760,15 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication) {
         this.allowCompositePKsDeduplication = allowCompositePKsDeduplication;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isPreserveKeysOrder() {
+        return preserveKeysOrder;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setPreserveKeysOrder(boolean preserveKeysOrder) {
+        this.preserveKeysOrder = preserveKeysOrder;
     }
 }

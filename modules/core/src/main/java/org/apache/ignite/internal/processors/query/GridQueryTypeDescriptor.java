@@ -224,4 +224,16 @@ public interface GridQueryTypeDescriptor {
      * @param allowCompositePKsDeduplication Flag.
      */
     public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication);
+    
+    /**
+     * @return {@code true} if order should be preserved, {@code false} otherwise.
+     */
+    public boolean isPreserveKeysOrder();
+    
+    /**
+     * Sets up preserveKeysOrder flag.
+     *
+     * @param preserveKeysOrder Flag.
+     */
+    public void setPreserveKeysOrder(boolean preserveKeysOrder);
 }

@@ -16,10 +16,15 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
 
@@ -109,6 +114,45 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
             () -> sql("insert into test (val) values (1);"),
             TransactionDuplicateKeyException.class,
             "Duplicate key during INSERT");
+    }
+    
+    /**
+     * Same test as above, but with table created by cache api.
+     */
+    @Test
+    public void testInsertKeyWithNullKeyParts2() {
+        Set<String> keyFields = new LinkedHashSet<>();
+        keyFields.add("ID1");
+        keyFields.add("ID2");
+        
+        grid(0).getOrCreateCache(
+                new CacheConfiguration<>("test")
+                        .setSqlSchema("PUBLIC")
+                        .setQueryEntities(F.asList(
+                                new QueryEntity()
+                                        .setTableName("TEST")
+                                        .setKeyType("MY_KEY_TYPE")
+                                        .setValueType("MY_VALUE_TYPE")
+                                        .addQueryField("ID1", Integer.class.getName(), "ID1")
+                                        .addQueryField("ID2", Integer.class.getName(), "ID2")
+                                        .addQueryField("VAL", Integer.class.getName(), "VAL")
+                                        .setKeyFields(keyFields)
+                        ))
+        );
+        
+        sql("insert into test (id1, id2, val) values (1, null, 1);");
+        
+        assertThrows(log,
+                () -> sql("insert into test (id1, id2, val) values (1, null, 1);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+        
+        assertThrows(log,
+                () -> sql("insert into test (id1, val) values (1, 1);"),
+                TransactionDuplicateKeyException.class,
+                "Duplicate key during INSERT");
+        
+        assertEquals(sql("SELECT * FROM test").getAll().size(), 1);
     }
     
     /**
