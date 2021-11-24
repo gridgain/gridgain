@@ -132,7 +132,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptySet;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Stream.concat;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD;
@@ -4315,7 +4314,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         "[grp=" + entry.getKey() + " part=[" + S.compact(entry.getValue().stream()
                             .filter(info -> !info.isHistoryReserved())
                             .map(info -> info.part()).collect(Collectors.toSet())) + "]]"
-                    ).collect(joining(", ")) + ']');
+                    ).collect(Collectors.joining(", ")) + ']');
             }
 
             if (hasPartitionToLog(supplyInfoMap, true)) {
@@ -4328,8 +4327,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                     ", minCntr=" + info.minCntr() +
                                     ", maxReserved=" + info.maxReserved() +
                                     ", maxReservedNodeId=" + info.maxReservedNodeId() + ']'
-                            ).collect(joining(", ")) + ']'
-                    ).collect(joining(", ")) + ']');
+                            ).collect(Collectors.joining(", ")) + ']'
+                    ).collect(Collectors.joining(", ")) + ']');
             }
         }
         catch (Exception e) {

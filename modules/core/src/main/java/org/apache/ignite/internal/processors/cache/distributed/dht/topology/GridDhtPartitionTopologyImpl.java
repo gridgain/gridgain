@@ -62,7 +62,6 @@ import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -2884,8 +2883,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridLongList gaps = part.finalizeUpdateCounters();
 
                         if (gaps != null) {
-                            List<T2<Long, Long>> rollbackRecList = new ArrayList<>();
-
                             for (int j = 0; j < gaps.size() / 2; j++) {
                                 long gapStart = gaps.get(j * 2);
                                 long gapStop = gaps.get(j * 2 + 1);
@@ -2893,11 +2890,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 if (part.group().persistenceEnabled() &&
                                     part.group().walEnabled() &&
                                     !part.group().mvccEnabled()) {
-                                    long start = gapStart - 1;
-                                    long range = gapStop - gapStart + 1;
                                     // Rollback record tracks applied out-of-order updates while finalizeUpdateCounters
                                     // return gaps (missing updates). The code below transforms gaps to updates.
-                                    RollbackRecord rec = new RollbackRecord(part.group().groupId(), part.id(), start, range);
+                                    RollbackRecord rec = new RollbackRecord(part.group().groupId(), part.id(),
+                                        gapStart - 1, gapStop - gapStart + 1);
 
                                     try {
                                         ptr = ctx.wal().log(rec);
@@ -2905,9 +2901,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     catch (IgniteCheckedException e) {
                                         throw new IgniteException(e);
                                     }
-
-                                    if (rollbackRecList.size() < 10)
-                                        rollbackRecList.add(new T2<>(start, range));
                                 }
                             }
 
