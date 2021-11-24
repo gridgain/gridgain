@@ -238,7 +238,7 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
         while (item != null) {
             if (gaps == null)
-                gaps = new GridLongList((queue.size() + 1) * 3);
+                gaps = new GridLongList((queue.size() + 1) * 2);
 
             long start = cntr.get() + 1;
             long end = item.getValue().start;
