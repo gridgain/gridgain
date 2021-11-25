@@ -707,7 +707,7 @@ public class QueryEntity implements Serializable {
     }
 
     /**
-     * The property is used for compisite primary key.
+     * The property is used for composite primary key.
      *
      * @return  {@code true} if the PK index is created on fields of PK;
      * {@code false} in case the PK index is created on the whole key (composite binary object).
@@ -718,7 +718,7 @@ public class QueryEntity implements Serializable {
     }
 
     /**
-     * The property is used for compisite primary key.
+     * The property is used for composite primary key.
      *
      * @param unwrapPk {@code true} if the PK index is created on fields of PK;
      *                             {@code false} in case the PK index is created on the whole key (composite binary object).
