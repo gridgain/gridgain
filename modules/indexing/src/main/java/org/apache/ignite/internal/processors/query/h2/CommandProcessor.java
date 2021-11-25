@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1187,6 +1188,14 @@ public class CommandProcessor {
 
         if (!F.isEmpty(notNullFields))
             res.setNotNullFields(notNullFields);
+
+        res.setUnwrapPrimaryKeyFields(createTbl.unwrapPrimaryKeyFields());
+
+        if (Objects.nonNull(createTbl.primaryKeyInlineSize()))
+            res.setPrimaryKeyInlineSize(createTbl.primaryKeyInlineSize());
+
+        if (Objects.nonNull(createTbl.affinityKeyInlineSize()))
+            res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
 
         return res;
     }
