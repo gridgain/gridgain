@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.util.GridConcurrentMultiPairQueue;
 import org.apache.ignite.internal.util.future.CountDownFuture;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
@@ -152,8 +151,10 @@ public class CheckpointPagesWriter implements Runnable {
             if (pagesToRetry.isEmpty())
                 doneFut.onDone();
             else {
-                LT.warn(log, pagesToRetry.initialSize() + " checkpoint pages were not written yet due to unsuccessful " +
-                    "page write lock acquisition and will be retried");
+                if (log.isInfoEnabled()) {
+                    log.info(pagesToRetry.initialSize() + " checkpoint pages were not written yet due to " +
+                        "unsuccessful page write lock acquisition and will be retried");
+                }
 
                 while (!pagesToRetry.isEmpty())
                     pagesToRetry = writePages(pagesToRetry);
@@ -205,7 +206,7 @@ public class CheckpointPagesWriter implements Runnable {
             pageMem.checkpointWritePage(fullId, tmpWriteBuf, pageStoreWriter, tracker);
 
             if (throttlingEnabled) {
-                while (pageMem.shouldThrottle()) {
+                while (pageMem.isCpBufferOverflowThresholdExceeded()) {
                     FullPageId cpPageId = pageMem.pullPageFromCpBuffer();
 
                     if (cpPageId.equals(FullPageId.NULL_PAGE))

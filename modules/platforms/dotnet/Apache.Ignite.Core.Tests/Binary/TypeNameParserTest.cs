@@ -86,7 +86,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 #else
             const string coreAsmNamePrefix = "mscorlib,";
 #endif
-            
+
             // Simple name.
             var res = TypeNameParser.Parse("List`1[[Int]]");
             Assert.AreEqual("List`1", res.GetName());
@@ -192,9 +192,9 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual("System.Int32", gen.GetNameWithNamespace());
 
             res = TypeNameParser.Parse(typeof(NestedGeneric<int>.NestedGeneric2<string>).AssemblyQualifiedName);
-            
+
             Assert.AreEqual("NestedGeneric2`1", res.GetName());
-            Assert.AreEqual("Apache.Ignite.Core.Tests.Binary.TypeNameParserTest+NestedGeneric`1+NestedGeneric2`1", 
+            Assert.AreEqual("Apache.Ignite.Core.Tests.Binary.TypeNameParserTest+NestedGeneric`1+NestedGeneric2`1",
                 res.GetNameWithNamespace());
 
             Assert.AreEqual(2, res.Generics.Count);
@@ -236,6 +236,20 @@ namespace Apache.Ignite.Core.Tests.Binary
             CheckType(typeof(List<int>[]));
             CheckType(typeof(List<int>[,]));
             CheckType(typeof(List<int>[][]));
+        }
+
+        [Test]
+        public void TestCompilerGeneratedTypes()
+        {
+            var res = TypeNameParser.Parse(
+                @"Foo.Bar+<Abc-Def<System-String\,System-Byte\[\]>-Convert>d__0");
+
+            Assert.AreEqual(@"<Abc-Def<System-String\,System-Byte\[\]>-Convert>d__0", res.GetName());
+
+            var res2 = TypeNameParser.Parse(
+                @"Foo.Bar+<Foo-Bar<Abc-Def<System-Byte\[\]>\,Abc-Def<System-String>>-Convert>d__4`1");
+
+            Assert.AreEqual(@"<Foo-Bar<Abc-Def<System-Byte\[\]>\,Abc-Def<System-String>>-Convert>d__4`1", res2.GetName());
         }
 
         /// <summary>

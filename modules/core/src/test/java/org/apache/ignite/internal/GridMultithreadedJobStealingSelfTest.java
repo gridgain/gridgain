@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,14 +67,41 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+
         ignite = startGridsMultiThreaded(2);
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        ignite = null;
+        super.afterTest();
 
         stopAllGrids();
+
+        ignite = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        JobStealingCollisionSpi colSpi = new JobStealingCollisionSpi();
+
+        // One job at a time.
+        colSpi.setActiveJobsThreshold(1);
+        colSpi.setWaitJobsThreshold(0);
+
+        JobStealingFailoverSpi failSpi = new JobStealingFailoverSpi();
+
+        // Verify defaults.
+        assert failSpi.getMaximumFailoverAttempts() == JobStealingFailoverSpi.DFLT_MAX_FAILOVER_ATTEMPTS;
+
+        cfg.setCollisionSpi(colSpi);
+        cfg.setFailoverSpi(failSpi);
+
+        return cfg;
     }
 
     /**
@@ -189,7 +216,7 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
 
         assertNull("Test failed with exception: ",fail.get());
 
-        // Total jobs number is threadsNum * 3
+        // Total jobs number is threadsNum * 4
         assertEquals("Incorrect processed jobs number",threadsNum * jobsPerTask, stolen.get() + noneStolen.get());
 
         assertFalse( "No jobs were stolen.",stolen.get() == 0);
@@ -198,29 +225,7 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
             assertTrue("Node get no jobs.", nodes.contains(g.name()));
 
         assertTrue( "Stats [stolen=" + stolen + ", noneStolen=" + noneStolen + ']',
-            Math.abs(stolen.get() - 2 * noneStolen.get()) <= 6);
-    }
-
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        JobStealingCollisionSpi colSpi = new JobStealingCollisionSpi();
-
-        // One job at a time.
-        colSpi.setActiveJobsThreshold(1);
-        colSpi.setWaitJobsThreshold(0);
-
-        JobStealingFailoverSpi failSpi = new JobStealingFailoverSpi();
-
-        // Verify defaults.
-        assert failSpi.getMaximumFailoverAttempts() == JobStealingFailoverSpi.DFLT_MAX_FAILOVER_ATTEMPTS;
-
-        cfg.setCollisionSpi(colSpi);
-        cfg.setFailoverSpi(failSpi);
-
-        return cfg;
+            Math.abs(stolen.get() - 2 * noneStolen.get()) <= 8);
     }
 
     /**
@@ -299,7 +304,10 @@ public class GridMultithreadedJobStealingSelfTest extends GridCommonAbstractTest
         /** {@inheritDoc} */
         @Override public Serializable execute() {
             try {
-                jobExecutedLatch.countDown();
+                CountDownLatch latch = jobExecutedLatch;
+
+                if (latch != null)
+                    latch.countDown();
 
                 Long sleep = argument(0);
 
