@@ -44,6 +44,9 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.logStart;
  * @param <J> Job result type
  */
 public abstract class VisorMultiNodeTask<A, R, J> implements ComputeTask<VisorTaskArgument<A>, R> {
+    /** No suitable node found for task message. */
+    public static final String NO_SUITABLE_NODE_MESSAGE = "No suitable node found for a task";
+
     /** Auto-injected grid instance. */
     @IgniteInstanceResource
     protected transient IgniteEx ignite;
@@ -105,7 +108,7 @@ public abstract class VisorMultiNodeTask<A, R, J> implements ComputeTask<VisorTa
                     map.put(job(taskArg), node);
 
             if (map.isEmpty())
-                ignite.log().warning("No mapped jobs: [task=" + getClass().getName() +
+                ignite.log().warning(NO_SUITABLE_NODE_MESSAGE + ": [task=" + getClass().getName() +
                     ", topVer=" + ignite.cluster().topologyVersion() +
                     ", jobNids=" + nodeIds +
                     ", subGrid=" + U.toShortString(subgrid) + "]");

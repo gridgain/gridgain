@@ -104,6 +104,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.PUB
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_IO_POLICY;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_FAILOVER;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_RESULT_CACHE;
+import static org.apache.ignite.internal.visor.VisorMultiNodeTask.NO_SUITABLE_NODE_MESSAGE;
 
 /**
  * Grid task worker. Handles full task life cycle.
@@ -528,7 +529,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 synchronized (mux) {
                     // Check if some jobs are sent from continuous mapper.
                     if (F.isEmpty(jobRes))
-                        throw new IgniteCheckedException("Task map operation produced no mapped jobs: " + ses);
+                        throw new IgniteCheckedException(NO_SUITABLE_NODE_MESSAGE + ": " + ses);
                 }
             }
             else
