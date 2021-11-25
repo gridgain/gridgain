@@ -978,6 +978,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         ackP2pConfiguration();
         ackRebalanceConfiguration();
         ackIPv4StackFlagIsSet();
+        ackWaitForBackupsOnShutdownPropertyIsUsed();
 
         // Ack 3-rd party licenses location.
         if (log.isInfoEnabled() && cfg.getIgniteHome() != null)
@@ -1501,11 +1502,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 EventType.EVT_NODE_JOINED, localNode());
 
         startTimer.finishGlobalStage("Await exchange");
-
-        if (IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN) != null) {
-            log.warning("IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN system property is deprecated and will be removed " +
-                "in a future version. Use ShutdownPolicy instead.");
-        }
     }
 
     /** */
@@ -2979,6 +2975,16 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             U.quietAndWarn(log, "Please set system property '-Djava.net.preferIPv4Stack=true' " +
                 "to avoid possible problems in mixed environments.");
+        }
+    }
+
+    /**
+     * Prints warning if IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN is used.
+     */
+    private void ackWaitForBackupsOnShutdownPropertyIsUsed() {
+        if (IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN) != null) {
+            log.warning("IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN system property is deprecated and will be removed " +
+                "in a future version. Use ShutdownPolicy instead.");
         }
     }
 
