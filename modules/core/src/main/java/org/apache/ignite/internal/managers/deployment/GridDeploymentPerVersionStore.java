@@ -46,6 +46,7 @@ import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.AbstractMarshaller;
 import org.apache.ignite.spi.deployment.DeploymentSpi;
@@ -437,11 +438,11 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                     log.debug("Found SHARED or CONTINUOUS deployment after first check: " + dep);
 
                 // Cache the deployed class.
-                Class<?> cls = dep.deployedClass(meta.className(), meta.alias());
+                IgniteBiTuple<Class<?>, Throwable> cls = dep.deployedClass(meta.className(), meta.alias());
 
-                if (cls == null) {
+                if (cls.get1() == null) {
                     U.warn(log, "Failed to load peer class (ignore if class got undeployed during preloading) [alias=" +
-                        meta.alias() + ", dep=" + dep + ']');
+                        meta.alias() + ", dep=" + dep + ']', cls.get2());
 
                     return null;
                 }
@@ -463,7 +464,7 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
             for (SharedDeployment d : depsToCheck) {
                 // Load class. Note, that remote node will not load this class.
                 // The class will only be loaded on this node.
-                Class<?> cls = d.deployedClass(meta.className(), meta.alias());
+                Class<?> cls = d.deployedClass(meta.className(), meta.alias()).get1();
 
                 if (cls != null) {
                     synchronized (mux) {
@@ -507,11 +508,11 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
                         }
                     }
 
-                    Class<?> depCls = d.deployedClass(meta.className(), meta.alias());
+                    IgniteBiTuple<Class<?>, Throwable> depCls = d.deployedClass(meta.className(), meta.alias());
 
-                    if (depCls == null) {
+                    if (depCls.get1() == null) {
                         U.error(log, "Failed to peer load class after loading it as a resource [alias=" +
-                            meta.alias() + ", dep=" + dep + ']');
+                            meta.alias() + ", dep=" + dep + ']', depCls.get2());
 
                         return null;
                     }
@@ -592,11 +593,11 @@ public class GridDeploymentPerVersionStore extends GridDeploymentStoreAdapter {
 
             if (dep != null) {
                 // Cache the deployed class.
-                Class<?> cls = dep.deployedClass(meta.className(), meta.alias());
+                IgniteBiTuple<Class<?>, Throwable> cls = dep.deployedClass(meta.className(), meta.alias());
 
-                if (cls == null) {
+                if (cls.get1() == null) {
                     U.warn(log, "Failed to load peer class (ignore if class got undeployed during preloading) [alias=" +
-                        meta.alias() + ", dep=" + dep + ']');
+                        meta.alias() + ", dep=" + dep + ']', cls.get2());
 
                     return null;
                 }

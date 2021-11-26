@@ -234,7 +234,7 @@ public class FailureProcessor extends GridProcessorAdapter {
         if (dumpThreadsTrottlingTimeout <= 0)
             return false;
 
-        long curr = U.currentTimeMillis();
+        long curr = System.currentTimeMillis();
 
         Long last = threadDumpPerFailureTypeTs.get(type);
 
