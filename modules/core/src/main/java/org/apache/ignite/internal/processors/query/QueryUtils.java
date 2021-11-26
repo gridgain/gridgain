@@ -297,7 +297,9 @@ public class QueryUtils {
             return entity;
         }
 
-        QueryEntity normalEntity = entity instanceof QueryEntityEx ? new QueryEntityEx() : new QueryEntity();
+        QueryEntity normalEntity = entity instanceof QueryEntityEx ?
+            new QueryEntityEx().copyExtended((QueryEntityEx)entity)
+            : new QueryEntity();
 
         // Propagate plain properties.
         normalEntity.setKeyType(entity.getKeyType());
@@ -310,9 +312,6 @@ public class QueryUtils {
         normalEntity.setDefaultFieldValues(entity.getDefaultFieldValues());
         normalEntity.setFieldsPrecision(entity.getFieldsPrecision());
         normalEntity.setFieldsScale(entity.getFieldsScale());
-        normalEntity.setUnwrapPrimaryKeyFields(entity.isUnwrapPrimaryKeyFields());
-        normalEntity.setPrimaryKeyInlineSize(entity.getPrimaryKeyInlineSize());
-        normalEntity.setAffinityKeyInlineSize(entity.getAffinityFieldInlineSize());
 
         // Normalize table name.
         String normalTblName = entity.getTableName();
