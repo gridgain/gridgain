@@ -61,7 +61,7 @@ public class GridH2RowDescriptor {
     private final int valType;
 
     /** */
-    private volatile GridQueryProperty[] props;
+    public volatile GridQueryProperty[] props;
 
     /** Id of user-defined key column */
     private volatile int keyAliasColId;

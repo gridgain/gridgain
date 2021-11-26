@@ -642,12 +642,8 @@ public class QueryUtils {
             d.addProperty(prop, false);
         }
 
-        if (!isKeyClsSqlType) {
+        if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
             d.primaryKeyFields(keyFields);
-    
-            if (qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
-                d.setPreserveKeysOrder(true);
-        }
 
         d.setAllowCompositePKsDeduplication(qryEntity.isAllowPKsDeduplication());
         

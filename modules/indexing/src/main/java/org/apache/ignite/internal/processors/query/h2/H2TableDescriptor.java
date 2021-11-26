@@ -327,7 +327,7 @@ public class H2TableDescriptor {
             if (QueryUtils.isSqlType(type.keyClass()))
                 keyCols.add(keyCol);
             else {
-                if (type.isPreserveKeysOrder() && !type.primaryKeyFields().isEmpty()) {
+                if (!type.primaryKeyFields().isEmpty()) {
                     for (String keyName : type.primaryKeyFields()) {
                         GridQueryProperty prop = type.property(keyName);
 

@@ -761,14 +761,4 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     @Override public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication) {
         this.allowCompositePKsDeduplication = allowCompositePKsDeduplication;
     }
-
-    /** {@inheritDoc} */
-    @Override public boolean isPreserveKeysOrder() {
-        return preserveKeysOrder;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void setPreserveKeysOrder(boolean preserveKeysOrder) {
-        this.preserveKeysOrder = preserveKeysOrder;
-    }
 }

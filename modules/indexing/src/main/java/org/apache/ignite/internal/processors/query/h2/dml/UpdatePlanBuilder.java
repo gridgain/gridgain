@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -225,7 +226,9 @@ public final class UpdatePlanBuilder {
 
         GridQueryTypeDescriptor type = desc.type();
 
-        Set<String> rowKeys = new HashSet<>(type.primaryKeyFields());
+        Set<String> rowKeys = Arrays.stream(desc.props).filter(GridQueryProperty::key)
+                .map(GridQueryProperty::name)
+                .collect(Collectors.toSet());
 
         for (int i = 0; i < cols.length; i++) {
             GridSqlColumn col = cols[i];
