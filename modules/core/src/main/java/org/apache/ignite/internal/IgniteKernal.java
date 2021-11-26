@@ -998,6 +998,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         ackP2pConfiguration();
         ackRebalanceConfiguration();
         ackIPv4StackFlagIsSet();
+        ackWaitForBackupsOnShutdownPropertyIsUsed();
 
         // Run background network diagnostics.
         GridDiagnostic.runBackgroundCheck(igniteInstanceName, execSvc, log);
@@ -3073,6 +3074,16 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         }
         finally {
             unguard();
+        }
+    }
+
+    /**
+     * Prints warning if IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN is used.
+     */
+    private void ackWaitForBackupsOnShutdownPropertyIsUsed() {
+        if (IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN) != null) {
+            log.warning("IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN system property is deprecated and will be removed " +
+                "in a future version. Use ShutdownPolicy instead.");
         }
     }
 
