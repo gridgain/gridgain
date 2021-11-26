@@ -233,6 +233,8 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
 
         crd.cluster().active(true);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
+
         assertEquals(0, crd.cache(DEFAULT_CACHE_NAME).size());
 
         int[][] ranges = new int[sizes.length][2];

@@ -37,6 +37,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.utils.SystemTime;
 import org.apache.kafka.common.utils.Utils;
+import org.apache.kafka.connect.connector.policy.NoneConnectorClientConfigOverridePolicy;
 import org.apache.kafka.connect.runtime.ConnectorConfig;
 import org.apache.kafka.connect.runtime.Herder;
 import org.apache.kafka.connect.runtime.Worker;
@@ -103,10 +104,10 @@ public class IgniteSinkConnectorTest extends GridCommonAbstractTest {
         OffsetBackingStore offBackingStore = mock(OffsetBackingStore.class);
         offBackingStore.configure(workerCfg);
 
-        worker = new Worker(WORKER_ID, new SystemTime(), new Plugins(props), workerCfg, offBackingStore);
+        worker = new Worker(WORKER_ID, new SystemTime(), new Plugins(props), workerCfg, offBackingStore, new NoneConnectorClientConfigOverridePolicy());
         worker.start();
 
-        herder = new StandaloneHerder(worker, ConnectUtils.lookupKafkaClusterId(workerCfg));
+        herder = new StandaloneHerder(worker, ConnectUtils.lookupKafkaClusterId(workerCfg), new NoneConnectorClientConfigOverridePolicy());
         herder.start();
     }
 

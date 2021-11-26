@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.tests.p2p.cache;
 
-/**
- * Lifecycle listener for distributed configuration.
- */
-@FunctionalInterface
-public interface DistributedConfigurationLifecycleListener {
-    /**
-     * Notify about processor ready to register properties.
-     */
-    void onReadyToRegister(DistributedPropertyDispatcher dispatcher);
+/** */
+public class Container {
+    /** */
+    private Object field;
 
-    /**
-     * Notify about processor ready to write.
-     */
-    default void onReadyToWrite() {
+    /** */
+    public Container(Object field) {
+        this.field = field;
     }
 }

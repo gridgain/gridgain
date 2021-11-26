@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.configuration.distributed;
+package org.apache.ignite.testsuites;
+
+import org.apache.ignite.testframework.config.GridTestProperties;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
 /**
- * Lifecycle listener for distributed configuration.
+ * Cache query suite part 2 with binary marshaller.
  */
-@FunctionalInterface
-public interface DistributedConfigurationLifecycleListener {
-    /**
-     * Notify about processor ready to register properties.
-     */
-    void onReadyToRegister(DistributedPropertyDispatcher dispatcher);
-
-    /**
-     * Notify about processor ready to write.
-     */
-    default void onReadyToWrite() {
+@RunWith(Suite.class)
+@Suite.SuiteClasses({IgniteBinaryCacheQueryTestSuite2.class})
+public class IgniteBinarySimpleNameMapperCacheQueryTestSuite2 {
+    /** */
+    @BeforeClass
+    public static void init() {
+        GridTestProperties.setProperty(GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER, "true");
     }
 }
