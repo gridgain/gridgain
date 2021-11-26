@@ -721,9 +721,9 @@ public class QueryEntity implements Serializable {
      * The property is used for composite primary key.
      *
      * @param unwrapPk {@code true} if the PK index is created on fields of PK;
-     *                             {@code false} in case the PK index is created on the whole key (composite binary object).
-     *                             {@code null} - compatible behavior (unwrap for a table created by SQL and wrapped key
-     *                             for a table created by API).
+     *      {@code false} in case the PK index is created on the whole key (composite binary object).
+     *      {@code null} - compatible behavior (unwrap for a table created by SQL and wrapped key
+     *      for a table created by API).
      * @return {@code this} for chaining.
      */
     public QueryEntity setUnwrapPrimaryKeyFields(Boolean unwrapPk) {

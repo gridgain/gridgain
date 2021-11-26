@@ -1782,7 +1782,7 @@ public class GridSqlQueryParser {
         else if ("false".equalsIgnoreCase(val) || "0".equals(val))
             return false;
         else {
-            throw new IgniteSQLException("Parameter value must be an boolean [name=" + name + ", value=" + val + ']',
+            throw new IgniteSQLException("A boolean parameter is expected [name=" + name + ", value=" + val + ']',
                     IgniteQueryErrorCode.PARSING);
         }
     }
