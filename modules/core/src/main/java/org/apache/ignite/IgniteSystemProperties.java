@@ -1406,7 +1406,9 @@ public final class IgniteSystemProperties {
      * When enabled, node will wait until all of its data is backed up before shutting down.
      * Please note that it will completely prevent last node in cluster from shutting down if any caches exist
      * that have backups configured.
+     * @deprecated Use {@link ShutdownPolicy} instead.
      */
+    @Deprecated
     @IgniteExperimental
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
 
