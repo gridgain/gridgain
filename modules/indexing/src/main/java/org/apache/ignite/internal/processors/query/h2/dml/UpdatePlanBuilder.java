@@ -272,7 +272,13 @@ public final class UpdatePlanBuilder {
     
         rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
     
-        if (type.isAllowCompositePKsDeduplication() && onlyVisibleColumns && !rowKeys.isEmpty()) {
+        boolean fillPKsWithNulls = IgniteSystemProperties.getBoolean(
+                IgniteSystemProperties.IGNITE_SQL_FILL_MISSING_PK_WITH_NULLS, false);
+        
+        boolean forceFillEmptyKeysWithNull = type.isAllowCompositePKsDeduplication()
+                || fillPKsWithNulls;
+        
+        if (forceFillEmptyKeysWithNull && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
@@ -350,7 +356,7 @@ public final class UpdatePlanBuilder {
             null,
             distributed,
             false,
-            type.isAllowCompositePKsDeduplication()
+            forceFillEmptyKeysWithNull
         );
     }
 
