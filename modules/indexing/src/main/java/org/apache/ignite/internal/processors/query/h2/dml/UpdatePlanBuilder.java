@@ -230,9 +230,14 @@ public final class UpdatePlanBuilder {
                 .map(GridQueryProperty::name)
                 .collect(Collectors.toSet());
 
+        boolean onlyVisibleColumns = true;
+        
         for (int i = 0; i < cols.length; i++) {
             GridSqlColumn col = cols[i];
 
+            if (!col.column().getVisible())
+                onlyVisibleColumns = false;
+            
             String colName = col.columnName();
 
             colNames[i] = colName;
@@ -266,8 +271,9 @@ public final class UpdatePlanBuilder {
         }
     
         rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
-        
-        if (type.isAllowCompositePKsDeduplication() && (hasKeyProps || hasValProps) && !rowKeys.isEmpty()) {
+    
+        System.out.println(rowKeys + " " + type.isAllowCompositePKsDeduplication() + " " + hasKeyProps + " " + hasValProps);
+        if (type.isAllowCompositePKsDeduplication() && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
