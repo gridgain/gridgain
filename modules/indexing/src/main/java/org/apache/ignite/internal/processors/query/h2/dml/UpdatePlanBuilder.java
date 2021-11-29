@@ -264,8 +264,10 @@ public final class UpdatePlanBuilder {
             else
                 hasValProps = true;
         }
+    
+        rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
         
-        if (type.isAllowCompositePKsDeduplication() && hasKeyProps && !rowKeys.isEmpty()) {
+        if (type.isAllowCompositePKsDeduplication() && (hasKeyProps || hasValProps) && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
