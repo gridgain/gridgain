@@ -159,8 +159,7 @@ public class IgniteInsertNullableDuplicatesSqlTest extends AbstractIndexingCommo
         Set<String> keyFields = new LinkedHashSet<>();
         keyFields.add("ID1");
         keyFields.add("ID2");
-    
-    
+        
         Map<String, Object> defsFK2 = new HashMap<>();
         defsFK2.put("ID2", 20);
         
