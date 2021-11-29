@@ -72,10 +72,10 @@ import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
  */
 public class ComputeJobStatusTest extends GridCommonAbstractTest {
     /** Coordinator. */
-    private static IgniteEx N0;
+    private static IgniteEx node0;
 
     /** Second node. */
-    private static IgniteEx N1;
+    private static IgniteEx node1;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -89,8 +89,8 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
 
         awaitPartitionMapExchange();
 
-        N0 = crd;
-        N1 = grid(1);
+        node0 = crd;
+        node1 = grid(1);
     }
 
     /** {@inheritDoc} */
@@ -99,8 +99,8 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
 
         stopAllGrids();
 
-        N0 = null;
-        N1 = null;
+        node0 = null;
+        node1 = null;
     }
 
     /** {@inheritDoc} */
@@ -115,6 +115,8 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName)
             .setFailureHandler(new StopNodeFailureHandler())
             .setCollisionSpi(new PriorityQueueCollisionSpiEx())
+            // Disable automatic update of metrics, which can call PriorityQueueCollisionSpi.onCollision
+            // - leads to the activation (execute) of jobs.
             .setMetricsUpdateFrequency(Long.MAX_VALUE)
             .setClientFailureDetectionTimeout(Long.MAX_VALUE);
     }
@@ -131,7 +133,7 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks that the statuses of the work will be:
+     * Checks that the statuses of the job will be:
      * {@link ComputeJobStatusEnum#QUEUED} -> {@link ComputeJobStatusEnum#RUNNING} -> {@link ComputeJobStatusEnum#FINISHED}.
      *
      * @throws Exception If failed.
@@ -179,11 +181,13 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
     private void checkJobStatuses(ComputeJobStatusEnum exp) throws Exception {
         applyAllNodes(spiEx -> spiEx.waitJobCls = WaitJob.class);
 
-        ComputeTaskFuture<Void> taskFut = N0.compute().executeAsync(
+        ComputeTaskFuture<Void> taskFut = node0.compute().executeAsync(
             new SimpleTask(() -> new WaitJob(getTestTimeout())),
             null
         );
 
+        // We are waiting for the jobs (PriorityQueueCollisionSpiEx#waitJobCls == WaitJob.class)
+        // to be received on the nodes to ensure that the correct statistics are obtained.
         applyAllNodes(spiEx -> spiEx.waitJobFut.get(getTestTimeout()));
 
         IgniteUuid sesId = taskFut.getTaskSession().getId();
@@ -191,18 +195,20 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
         checkTaskJobStatuses(sesId, QUEUED, null);
         checkJobJobStatuses(sesId, QUEUED, QUEUED);
 
-        PriorityQueueCollisionSpiEx spiEx0 = PriorityQueueCollisionSpiEx.spiEx(N0);
-        PriorityQueueCollisionSpiEx spiEx1 = PriorityQueueCollisionSpiEx.spiEx(N1);
+        PriorityQueueCollisionSpiEx spiEx0 = PriorityQueueCollisionSpiEx.spiEx(node0);
+        PriorityQueueCollisionSpiEx spiEx1 = PriorityQueueCollisionSpiEx.spiEx(node1);
 
         WaitJob waitJob0 = spiEx0.task();
         WaitJob waitJob1 = spiEx1.task();
 
+        // Activating and waiting for a job (WaitJob) to start on node0.
         spiEx0.handleCollisions();
         waitJob0.onStartFut.get(getTestTimeout());
 
         checkTaskJobStatuses(sesId, RUNNING, null);
         checkJobJobStatuses(sesId, RUNNING, QUEUED);
 
+        // Activating and waiting for a job (WaitJob) to start on node1.
         spiEx1.handleCollisions();
         waitJob1.onStartFut.get(getTestTimeout());
 
@@ -211,15 +217,18 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
 
         switch (exp) {
             case FINISHED:
+                // Just letting job (WaitJob) finish on node0.
                 waitJob0.waitFut.onDone();
                 break;
 
             case FAILED:
-                waitJob0.waitFut.onDone(new Exception("form test"));
+                // Finish the job (WaitJob) with an error on node0.
+                waitJob0.waitFut.onDone(new Exception("from test"));
                 break;
 
             case CANCELLED:
-                N0.context().job().cancelJob(
+                // Cancel the job (WaitJob) on node0.
+                node0.context().job().cancelJob(
                     sesId,
                     spiEx0.waitJobFut.result().getJobContext().getJobId(),
                     false
@@ -227,6 +236,7 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
                 break;
 
             case SUSPENDED:
+                // Hold the job (WaitJob) with on node0.
                 spiEx0.waitJobFut.result().getJobContext().holdcc();
                 break;
 
@@ -234,11 +244,13 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
                 fail("Unknown: " + exp);
         }
 
+        // Let's wait a bit for the operation (above) to complete.
         U.sleep(100);
 
         checkTaskJobStatuses(sesId, exp, null);
 
         if (exp == SUSPENDED) {
+            // Must resume (unhold) the job (WaitJob) to finish correctly.
             checkJobJobStatuses(sesId, exp, RUNNING);
             waitJob0.waitFut.onDone();
             spiEx0.waitJobFut.result().getJobContext().callcc();
@@ -246,12 +258,16 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
             checkTaskJobStatuses(sesId, FINISHED, null);
         }
 
+        // Let's check that the job (WaitJob) on the node0 has finished
+        // and that the statistics about it will be empty (on node0).
         checkJobJobStatuses(sesId, null, RUNNING);
 
+        // Let's finish the job (WaitJob) on node1.
         waitJob1.waitFut.onDone();
 
         taskFut.get(getTestTimeout());
 
+        // After the completion of the task, we will no longer receive statistics about it.
         checkTaskJobStatuses(sesId, null, null);
         checkJobJobStatuses(sesId, null, null);
     }
@@ -265,8 +281,8 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
         Map<ComputeJobStatusEnum, Long> exp0 = expN0 == null ? emptyMap() : F.asMap(expN0, 1L);
         Map<ComputeJobStatusEnum, Long> exp1 = expN1 == null ? emptyMap() : F.asMap(expN1, 1L);
 
-        assertEqualsMaps(exp0, N0.context().task().jobStatuses(sesId));
-        assertEqualsMaps(exp1, N1.context().task().jobStatuses(sesId));
+        assertEqualsMaps(exp0, node0.context().task().jobStatuses(sesId));
+        assertEqualsMaps(exp1, node1.context().task().jobStatuses(sesId));
     }
 
     /** */
@@ -278,8 +294,8 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
         Map<ComputeJobStatusEnum, Long> exp0 = expN0 == null ? emptyMap() : F.asMap(expN0, 1L);
         Map<ComputeJobStatusEnum, Long> exp1 = expN1 == null ? emptyMap() : F.asMap(expN1, 1L);
 
-        assertEqualsMaps(exp0, N0.context().job().jobStatuses(sesId));
-        assertEqualsMaps(exp1, N1.context().job().jobStatuses(sesId));
+        assertEqualsMaps(exp0, node0.context().job().jobStatuses(sesId));
+        assertEqualsMaps(exp1, node1.context().job().jobStatuses(sesId));
     }
 
     /** */
