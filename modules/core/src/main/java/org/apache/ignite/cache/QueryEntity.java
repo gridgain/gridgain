@@ -1026,6 +1026,6 @@ public class QueryEntity implements Serializable {
 
     /** */
     private static boolean equalsIntegersWithDefault(Integer i0, Integer i1, int dflt) {
-        return (i0 == i1 || (i0 == null && i1 == dflt) || (i1 == null && i0 == dflt));
+        return (F.eq(i0, i1) || (i0 == null && i1 == dflt) || (i1 == null && i0 == dflt));
     }
 }
