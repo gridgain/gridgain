@@ -35,10 +35,14 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  * Unit tests for memory manager and memory tracker
  */
 public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractTest {
-    /** */
+    /**
+     *
+     */
     private static final long DFLT_GLOBAL_QUOTA = U.parseBytes("60%");
 
-    /** */
+    /**
+     *
+     */
     private static final long DFLT_QUERY_QUOTA = U.parseBytes("0");
 
     /** {@inheritDoc} */
@@ -76,9 +80,9 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
     public void testQuotaNonDefaults() throws IgniteCheckedException {
         IgniteConfiguration cfg = new IgniteConfiguration()
             .setSqlConfiguration(new SqlConfiguration()
-            .setSqlGlobalMemoryQuota("20k")
-            .setSqlQueryMemoryQuota("10K")
-            .setSqlOffloadingEnabled(!SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED));
+                .setSqlGlobalMemoryQuota("20k")
+                .setSqlQueryMemoryQuota("10K")
+                .setSqlOffloadingEnabled(!SqlConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED));
 
         System.setProperty(IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, "5000");
 
@@ -188,8 +192,8 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
     public void testGlobalQuotaDisabledDefaultPerQueryQuotaEnabled() throws IgniteCheckedException {
         IgniteConfiguration cfg = new IgniteConfiguration()
             .setSqlConfiguration(new SqlConfiguration()
-            .setSqlGlobalMemoryQuota("0")
-            .setSqlQueryMemoryQuota("33"));
+                .setSqlGlobalMemoryQuota("0")
+                .setSqlQueryMemoryQuota("33"));
         QueryMemoryManager memMgr = new QueryMemoryManager(newContext(cfg));
 
         // Check defaults for manager.
@@ -279,10 +283,10 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
      */
     private void assertThrows(String s) {
         GridTestUtils.assertThrows(log, () -> {
-            U.parseBytes(s);
-        }, IllegalArgumentException.class,
+                U.parseBytes(s);
+            }, IllegalArgumentException.class,
             "Wrong format of bytes string. It is expected to be a number or a number followed by one of the symbols: 'k', 'm', 'g', '%'.\n" +
-            " For example: '10000', '10k', '33m', '2G'. But was: " + s);
+                " For example: '10000', '10k', '33m', '2G'. But was: " + s);
     }
 
     /**
@@ -297,10 +301,10 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         long expQryQuota,
         boolean expOffloadingEnabled,
         long expBlockSize) {
-        assertEquals(expGlobalQuota, memMgr.memoryLimit());
-        assertEquals(expQryQuota, (long) GridTestUtils.getFieldValue(memMgr, "qryQuota"));
-        assertEquals(expOffloadingEnabled, (boolean) GridTestUtils.getFieldValue(memMgr, "offloadingEnabled"));
-        assertEquals(expBlockSize, (long) GridTestUtils.getFieldValue(memMgr, "blockSize"));
+        assertTrue(((double)Math.abs(expGlobalQuota - memMgr.memoryLimit())) / expGlobalQuota < 0.01d /* error is < 1% */);
+        assertEquals(expQryQuota, (long)GridTestUtils.getFieldValue(memMgr, "qryQuota"));
+        assertEquals(expOffloadingEnabled, (boolean)GridTestUtils.getFieldValue(memMgr, "offloadingEnabled"));
+        assertEquals(expBlockSize, (long)GridTestUtils.getFieldValue(memMgr, "blockSize"));
     }
 
     /**
@@ -313,8 +317,8 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         long expQuota,
         boolean expOffloadingEnabled,
         long expBlockSize) {
-        assertEquals(expQuota, (long) GridTestUtils.getFieldValue(memTracker, "quota"));
-        assertEquals(expOffloadingEnabled, (boolean) GridTestUtils.getFieldValue(memTracker, "offloadingEnabled"));
-        assertEquals(expBlockSize, (long) GridTestUtils.getFieldValue(memTracker, "blockSize"));
+        assertEquals(expQuota, (long)GridTestUtils.getFieldValue(memTracker, "quota"));
+        assertEquals(expOffloadingEnabled, (boolean)GridTestUtils.getFieldValue(memTracker, "offloadingEnabled"));
+        assertEquals(expBlockSize, (long)GridTestUtils.getFieldValue(memTracker, "blockSize"));
     }
 }
