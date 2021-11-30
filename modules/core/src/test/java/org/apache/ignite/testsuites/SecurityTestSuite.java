@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.security.compute.closure.ExecutorSe
 import org.apache.ignite.internal.processors.security.datastreamer.DataStreamerPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.datastreamer.closure.DataStreamerRemoteSecurityContextCheckTest;
 import org.apache.ignite.internal.processors.security.service.ServiceAuthorizationTest;
+import org.apache.ignite.internal.processors.security.service.ServiceStaticConfigTest;
 import org.apache.ignite.internal.processors.security.tracing.TracingSecurityTest;
 import org.apache.ignite.ssl.MultipleSSLContextsTest;
 import org.apache.ignite.ssl.OneWaySslTcpClientTest;
@@ -82,6 +83,7 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
     ThinClientSecurityContextOnRemoteNodeTest.class,
     IgniteSecurityProcessorTest.class,
     ServiceAuthorizationTest.class,
+    ServiceStaticConfigTest.class,
 
     MultipleSSLContextsTest.class,
     OneWaySslTest.class,

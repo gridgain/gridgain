@@ -19,12 +19,19 @@ package org.apache.ignite.internal.processors.security.service;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteServices;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureHandler;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.security.AbstractSecurityTest;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginProvider;
 import org.apache.ignite.internal.util.typedef.G;
@@ -36,8 +43,6 @@ import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.services.ServiceDeploymentException;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,11 +58,12 @@ import static org.apache.ignite.plugin.security.SecurityPermission.TASK_EXECUTE;
 import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.create;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
-import static org.apache.ignite.testframework.LogListener.matches;
 
 /** Tests permissions that are required to perform service operations. */
 @RunWith(Parameterized.class)
+@WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR", value = "true")
 // TODO GG-42621 @WithSystemProperty(key = "IGNITE_SECURITY_PROCESSOR_V2", value = "true")
 public class ServiceAuthorizationTest extends AbstractSecurityTest {
     /** Name of the test service.*/
@@ -68,18 +74,14 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
         .put("key", "val")
         .build();
 
-    /** Error that occurs in case service deployment fails. */
-    private static final String DEPLOYMENT_AUTHORIZATION_FAILED_ERR =
-        "Authorization failed [perm=SERVICE_DEPLOY, name=" + TEST_SERVICE_NAME;
-
     /** Index of the node that is allowed to perform test operation. */
     private static final int ALLOWED_NODE_IDX = 1;
 
     /** Index of the node that is forbidden to perform test operation. */
     private static final int FORBIDDEN_NODE_IDX = 2;
 
-    /** Instance of the test logger to check logged messages. */
-    private static ListeningTestLogger listeningLog;
+    /** */
+    private CountDownLatch authErrLatch;
 
     /** Whether a client node is an initiator of the test operations. */
     @Parameterized.Parameter()
@@ -89,11 +91,6 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
     @Parameterized.Parameters(name = "isClient={0}")
     public static Iterable<Object[]> data() {
         return Arrays.asList(new Object[] {true}, new Object[] {false});
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        listeningLog = new ListeningTestLogger(log);
     }
 
     /** {@inheritDoc} */
@@ -192,16 +189,13 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
      * {@link SecurityPermission#SERVICE_DEPLOY} permission.
      */
     @Test
-    public void testPreconfiguredServiceDeployment() throws Exception {
+    public void testStartServiceDeployment() throws Exception {
         startClientAllowAll(getTestIgniteInstanceName(1));
 
-        LogListener srvcDeploymentFailedLogLsnr = matches(DEPLOYMENT_AUTHORIZATION_FAILED_ERR).times(2).build();
-
-        listeningLog.registerListener(srvcDeploymentFailedLogLsnr);
-
-        startGrid(configuration(2, SERVICE_INVOKE).setServiceConfiguration(serviceConfiguration()));
-
-        srvcDeploymentFailedLogLsnr.check(getTestTimeout());
+        assertThrowsWithCause(
+            () -> startGrid(configuration(2, SERVICE_INVOKE).setServiceConfiguration(serviceConfiguration())),
+            IgniteCheckedException.class
+        );
 
         checkServiceOnAllNodes(TEST_SERVICE_NAME, false);
 
@@ -226,13 +220,23 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
 
             stopGrid(0);
 
-            srvcDeploymentFailedLogLsnr = matches(DEPLOYMENT_AUTHORIZATION_FAILED_ERR).times(1).build();
+            authErrLatch = new CountDownLatch(1);
 
-            listeningLog.registerListener(srvcDeploymentFailedLogLsnr);
+            IgniteInternalFuture<IgniteEx> fut = null;
 
-            startGrid(configuration(0, SERVICE_INVOKE).setServiceConfiguration(serviceConfiguration()));
+            try {
+                fut = runAsync(
+                    () -> startGrid(configuration(2, SERVICE_INVOKE).setServiceConfiguration(serviceConfiguration()))
+                );
 
-            srvcDeploymentFailedLogLsnr.check(getTestTimeout());
+                assertTrue(authErrLatch.await(5, TimeUnit.SECONDS));
+            }
+            finally {
+                authErrLatch = null;
+
+                if (fut != null)
+                    fut.cancel();
+            }
 
             checkServiceOnAllNodes(TEST_SERVICE_NAME, false);
         }
@@ -255,8 +259,6 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
 
         IgniteConfiguration cfg = getConfiguration(name);
 
-        cfg.setGridLogger(listeningLog);
-
         cfg.setPluginProviders(
             new TestSecurityPluginProvider(
                 name,
@@ -275,6 +277,22 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
             )
         ).setClientMode(isClient);
 
+        if (authErrLatch != null) {
+            cfg.setFailureHandler(new FailureHandler() {
+                @Override public boolean onFailure(Ignite ignite, FailureContext failureCtx) {
+                    assertTrue(failureCtx.error() instanceof SecurityException);
+
+                    assertTrue(failureCtx.error().getMessage().startsWith(
+                        "Authorization failed [perm=SERVICE_DEPLOY, name=test-service-name"
+                    ));
+
+                    authErrLatch.countDown();
+
+                    return true;
+                }
+            });
+        }
+
         return cfg;
     }
 
@@ -286,8 +304,10 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
 
                 if (deployed)
                     assertNotNull(srvc);
+                    assertNotNull("Failed to find deployed service [node=" + node.configuration().getIgniteInstanceName() + ']', srvc);
                 else
                     assertNull(srvc);
+                    assertNull("Detected deployed service [node=" + node.configuration().getIgniteInstanceName() + ']', srvc);
             }
         }
     }
@@ -412,12 +432,15 @@ public class ServiceAuthorizationTest extends AbstractSecurityTest {
             return true;
         }
 
+        /** {@inheritDoc} */
         @Override public void init(ServiceContext ctx) throws Exception {
         }
 
+        /** {@inheritDoc} */
         @Override public void execute(ServiceContext ctx) throws Exception {
         }
 
+        /** {@inheritDoc} */
         @Override public void cancel(ServiceContext ctx) {
         }
     }
