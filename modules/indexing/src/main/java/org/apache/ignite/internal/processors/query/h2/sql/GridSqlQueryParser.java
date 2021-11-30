@@ -533,7 +533,7 @@ public class GridSqlQueryParser {
     private static final String PARAM_AFFINITY_INDEX_INLINE_SIZE = "AFFINITY_INDEX_INLINE_SIZE";
 
     /** */
-    private static final String PARAM_PK_INDEX_UNWRAP_FILEDS = "PK_INDEX_UNWRAP_FILEDS";
+    private static final String PARAM_PK_INDEX_UNWRAP_FIELDS = "PK_INDEX_UNWRAP_FIELDS";
 
     /** */
     private final IdentityHashMap<Object, Object> h2ObjToGridObj = new IdentityHashMap<>();
@@ -1712,10 +1712,10 @@ public class GridSqlQueryParser {
 
                 break;
 
-            case PARAM_PK_INDEX_UNWRAP_FILEDS:
+            case PARAM_PK_INDEX_UNWRAP_FIELDS:
                 ensureNotEmpty(name, val);
 
-                boolean unwrapPk = parseBooleanParam(PARAM_PK_INDEX_UNWRAP_FILEDS, val);
+                boolean unwrapPk = parseBooleanParam(PARAM_PK_INDEX_UNWRAP_FIELDS, val);
 
                 res.unwrapPrimaryKeyFields(unwrapPk);
 

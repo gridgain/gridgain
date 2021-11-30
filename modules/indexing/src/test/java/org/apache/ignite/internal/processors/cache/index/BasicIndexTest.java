@@ -35,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -57,7 +58,6 @@ import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -1814,16 +1814,14 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             new CacheConfiguration<>()
                 .setName("test")
                 .setQueryEntities(Collections.singleton(
-                    new QueryEntityEx(
-                        new QueryEntity()
-                            .setKeyType("TestKeyType")
-                            .setValueType("TestValType")
-                            .addQueryField("ID", String.class.getName(), null)
-                            .addQueryField("ID_AFF", Integer.class.getName(), null)
-                            .addQueryField("VAL", Integer.class.getName(), null)
-                            .setKeyFields(new LinkedHashSet<>(Arrays.asList("ID", "ID_AFF")))
-                            .setTableName("TEST")
-                    )
+                    new QueryEntity()
+                        .setKeyType("TestKeyType")
+                        .setValueType("TestValType")
+                        .addQueryField("ID", String.class.getName(), null)
+                        .addQueryField("ID_AFF", Integer.class.getName(), null)
+                        .addQueryField("VAL", Integer.class.getName(), null)
+                        .setKeyFields(new LinkedHashSet<>(Arrays.asList("ID", "ID_AFF")))
+                        .setTableName("TEST")
                         .setPrimaryKeyInlineSize(pkInlineSize)
                         .setAffinityKeyInlineSize(affInlineSize)
                         .setUnwrapPrimaryKeyFields(true)
@@ -1873,14 +1871,14 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         sql("CREATE TABLE TEST_WRAP (ID0 VARCHAR, ID1 INT, VAL INT, "
             + "PRIMARY KEY (ID0, ID1)) WITH"
             + "\""
-            + "PK_INDEX_UNWRAP_FILEDS=false"
+            + "PK_INDEX_UNWRAP_FIELDS=false"
             + "\""
         );
 
         sql("CREATE TABLE TEST_UNWRAP_EXPLICIT (ID0 VARCHAR, ID1 INT, VAL INT, "
             + "PRIMARY KEY (ID0, ID1)) WITH"
             + "\""
-            + "PK_INDEX_UNWRAP_FILEDS=true"
+            + "PK_INDEX_UNWRAP_FIELDS=true"
             + "\""
         );
 
