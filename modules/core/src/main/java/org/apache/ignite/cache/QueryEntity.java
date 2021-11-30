@@ -656,7 +656,7 @@ public class QueryEntity implements Serializable {
     /**
      * @return {@code true} if PKs with null parts can be deduplicate, {@code false} otherwise.
      */
-    public boolean isAllowPKsDeduplication() {
+    public boolean forceFillAbsentPKsWithDefaults() {
         return forceFillAbsentPKsWithDefaults;
     }
     
