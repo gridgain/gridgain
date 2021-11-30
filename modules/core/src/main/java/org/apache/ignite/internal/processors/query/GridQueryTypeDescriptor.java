@@ -216,12 +216,12 @@ public interface GridQueryTypeDescriptor {
      *
      * @return If PKs deduplication is allowed.
      */
-    public boolean isAllowCompositePKsDeduplication();
+    public boolean forceFillAbsentPKsWithDefaults();
     
     /**
-     * Sets up allowCompositePKsDeduplication flag.
+     * Sets up forceFillAbsentPKsWithDefaults flag.
      *
-     * @param allowCompositePKsDeduplication Flag.
+     * @param forceFillAbsentPKsWithDefaults Flag.
      */
-    public void setAllowCompositePKsDeduplication(boolean allowCompositePKsDeduplication);
+    public void setForceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults);
 }

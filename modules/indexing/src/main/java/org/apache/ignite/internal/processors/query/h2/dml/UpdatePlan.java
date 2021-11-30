@@ -87,7 +87,7 @@ public final class UpdatePlan {
     private final int rowsNum;
     
     /** Whether to allow deduplication of composite PKs with null parts or not. */
-    private boolean deduplicateCompositePKs;
+    private boolean forceFillAbsentPKsWithDefaults;
     
     /** Arguments for fast UPDATE or DELETE. */
     private final FastUpdate fastUpdate;
@@ -115,6 +115,7 @@ public final class UpdatePlan {
      * @param rowsNum Rows number.
      * @param fastUpdate Fast update (if any).
      * @param distributed Distributed plan (if any)
+     * @param forceFillAbsentPKsWithDefaults Force fills absent PKs with nulls or defaults.
      */
     public UpdatePlan(
         UpdateMode mode,
@@ -132,13 +133,13 @@ public final class UpdatePlan {
         @Nullable FastUpdate fastUpdate,
         @Nullable DmlDistributedPlanInfo distributed,
         boolean canSelectBeLazy,
-        boolean deduplicateKeys
+        boolean forceFillAbsentPKsWithDefaults
     ) {
         this.colNames = colNames;
         this.colTypes = colTypes;
         this.rows = rows;
         this.rowsNum = rowsNum;
-        this.deduplicateCompositePKs = deduplicateKeys;
+        this.forceFillAbsentPKsWithDefaults = forceFillAbsentPKsWithDefaults;
     
         assert mode != null;
         assert tbl != null;
@@ -476,7 +477,7 @@ public final class UpdatePlan {
 
             for (int j = 0; j < colNames.length; j++) {
                 Object colVal;
-                if (deduplicateCompositePKs)
+                if (forceFillAbsentPKsWithDefaults)
                      colVal = row.size() > j ? row.get(j).get(args) : null;
                 else
                      colVal = row.get(j).get(args);

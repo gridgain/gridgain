@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -226,9 +225,7 @@ public final class UpdatePlanBuilder {
 
         GridQueryTypeDescriptor type = desc.type();
 
-        Set<String> rowKeys = Arrays.stream(desc.props).filter(GridQueryProperty::key)
-                .map(GridQueryProperty::name)
-                .collect(Collectors.toSet());
+        Set<String> rowKeys = desc.getRowKeyColumnNames();
 
         boolean onlyVisibleColumns = true;
         
@@ -272,13 +269,13 @@ public final class UpdatePlanBuilder {
     
         rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
     
-        boolean fillPKsWithNulls = IgniteSystemProperties.getBoolean(
-                IgniteSystemProperties.IGNITE_SQL_FILL_MISSING_PK_WITH_NULLS, false);
+        boolean fillPKsWithDefaultsSysSetting = IgniteSystemProperties.getBoolean(
+                IgniteSystemProperties.IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS, false);
         
-        boolean forceFillEmptyKeysWithNull = type.isAllowCompositePKsDeduplication()
-                || fillPKsWithNulls;
+        boolean forceFillAbsentPKsWithNullsOrDefaults = type.forceFillAbsentPKsWithDefaults()
+                || fillPKsWithDefaultsSysSetting;
         
-        if (forceFillEmptyKeysWithNull && onlyVisibleColumns && !rowKeys.isEmpty()) {
+        if (forceFillAbsentPKsWithNullsOrDefaults && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
@@ -356,7 +353,7 @@ public final class UpdatePlanBuilder {
             null,
             distributed,
             false,
-            forceFillEmptyKeysWithNull
+            forceFillAbsentPKsWithNullsOrDefaults
         );
     }
 

@@ -455,7 +455,7 @@ public class QueryUtils {
 
         desc.aliases(qryEntity.getAliases());
 
-        desc.setAllowCompositePKsDeduplication(qryEntity.isAllowPKsDeduplication());
+        desc.setForceFillAbsentPKsWithDefaults(qryEntity.isAllowPKsDeduplication());
 
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
@@ -645,7 +645,7 @@ public class QueryUtils {
         if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
             d.primaryKeyFields(keyFields);
 
-        d.setAllowCompositePKsDeduplication(qryEntity.isAllowPKsDeduplication());
+        d.setForceFillAbsentPKsWithDefaults(qryEntity.isAllowPKsDeduplication());
         
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,

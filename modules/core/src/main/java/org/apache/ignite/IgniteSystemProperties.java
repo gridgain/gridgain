@@ -1305,7 +1305,7 @@ public final class IgniteSystemProperties {
     /**
      * Forcibly fills missing columns belonging to the primary key with nulls or default values if those have been specified.
      */
-    public static final String IGNITE_SQL_FILL_MISSING_PK_WITH_NULLS = "IGNITE_SQL_FILL_MISSING_PK_WITH_NULLS";
+    public static final String IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS = "IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS";
 
     /**
      * Interval between logging of time of next auto-adjust.
