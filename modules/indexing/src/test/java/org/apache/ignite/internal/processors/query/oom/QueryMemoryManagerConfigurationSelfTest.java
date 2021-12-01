@@ -296,12 +296,19 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
      * @param expOffloadingEnabled Expected offloading enabled flag.
      * @param expBlockSize Expected block size.
      */
-    private static void assertManagerState(QueryMemoryManager memMgr,
+    private static void assertManagerState(
+        QueryMemoryManager memMgr,
         long expGlobalQuota,
         long expQryQuota,
         boolean expOffloadingEnabled,
-        long expBlockSize) {
-        assertTrue(((double)Math.abs(expGlobalQuota - memMgr.memoryLimit())) / expGlobalQuota < 0.01d /* error is < 1% */);
+        long expBlockSize
+    ) {
+
+        if (expGlobalQuota > 0)
+            assertEquals(1.0d, (double)memMgr.memoryLimit() / (double)expGlobalQuota, 0.01d);
+        else
+            assertEquals(0, memMgr.memoryLimit());
+
         assertEquals(expQryQuota, (long)GridTestUtils.getFieldValue(memMgr, "qryQuota"));
         assertEquals(expOffloadingEnabled, (boolean)GridTestUtils.getFieldValue(memMgr, "offloadingEnabled"));
         assertEquals(expBlockSize, (long)GridTestUtils.getFieldValue(memMgr, "blockSize"));
