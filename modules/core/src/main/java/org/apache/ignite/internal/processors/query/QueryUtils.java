@@ -296,8 +296,8 @@ public class QueryUtils {
 
             return entity;
         }
-
-        QueryEntity normalEntity = entity instanceof QueryEntityEx ? new QueryEntityEx() : new QueryEntity();
+    
+        QueryEntityEx normalEntity = new QueryEntityEx();
 
         // Propagate plain properties.
         normalEntity.setKeyType(entity.getKeyType());
@@ -355,6 +355,8 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
+        
+        normalEntity.forceFillAbsentPKsWithDefaults(true);
 
         validateQueryEntity(normalEntity);
 
@@ -454,9 +456,10 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-
-        desc.setForceFillAbsentPKsWithDefaults(qryEntity.forceFillAbsentPKsWithDefaults());
-
+        
+        if (qryEntity instanceof QueryEntityEx)
+            desc.setForceFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).forceFillAbsentPKsWithDefaults());
+        
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -645,7 +648,8 @@ public class QueryUtils {
         if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
             d.primaryKeyFields(keyFields);
 
-        d.setForceFillAbsentPKsWithDefaults(qryEntity.forceFillAbsentPKsWithDefaults());
+        if (qryEntity instanceof QueryEntityEx)
+            d.setForceFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).forceFillAbsentPKsWithDefaults());
         
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,

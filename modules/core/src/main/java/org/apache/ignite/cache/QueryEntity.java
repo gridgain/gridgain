@@ -101,14 +101,11 @@ public class QueryEntity implements Serializable {
     /** Scale for fields. */
     private Map<String, Integer> fieldsScale = new HashMap<>();
     
-    /** Whether to allow deduplication of composite PKs with null parts or not. */
-    private boolean forceFillAbsentPKsWithDefaults;
-    
     /**
      * Creates an empty query entity.
      */
     public QueryEntity() {
-        forceFillAbsentPKsWithDefaults = true;
+        // No-op constructor.
     }
 
     /**
@@ -139,8 +136,6 @@ public class QueryEntity implements Serializable {
         fieldsPrecision = other.fieldsPrecision != null ? new HashMap<>(other.fieldsPrecision) : new HashMap<>();
 
         fieldsScale = other.fieldsScale != null ? new HashMap<>(other.fieldsScale) : new HashMap<>();
-        
-        forceFillAbsentPKsWithDefaults = other.forceFillAbsentPKsWithDefaults;
     }
 
     /**
@@ -650,23 +645,6 @@ public class QueryEntity implements Serializable {
     public QueryEntity setDefaultFieldValues(Map<String, Object> defaultFieldValues) {
         this.defaultFieldValues = defaultFieldValues;
 
-        return this;
-    }
-    
-    /**
-     * @return {@code true} if PKs with null parts can be deduplicate, {@code false} otherwise.
-     */
-    public boolean forceFillAbsentPKsWithDefaults() {
-        return forceFillAbsentPKsWithDefaults;
-    }
-    
-    /**
-     * @param forceFillAbsentPKsWithDefaults Whether the PKs should be deduplicate or not.
-     * @return {@code this} for chaining.
-     */
-    public QueryEntity forceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults) {
-        this.forceFillAbsentPKsWithDefaults = forceFillAbsentPKsWithDefaults;
-        
         return this;
     }
 
