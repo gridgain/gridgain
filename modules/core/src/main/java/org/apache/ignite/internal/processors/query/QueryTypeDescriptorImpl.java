@@ -138,6 +138,15 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** Whether to allow deduplication of composite PKs with absent parts or not. */
     private boolean forceFillAbsentPKsWithDefaults;
 
+    /** */
+    private int pkInlineSize;
+
+    /** */
+    private int affFieldInlineSize;
+
+    /** */
+    private Boolean unwrapPk;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -747,6 +756,36 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void primaryKeyFields(Set<String> keys) {
         pkFields = keys;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int primaryKeyInlineSize() {
+        return pkInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void primaryKeyInlineSize(int pkInlineSize) {
+        this.pkInlineSize = pkInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int affinityFieldInlineSize() {
+        return affFieldInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void affinityFieldInlineSize(int affFieldInlineSize) {
+        this.affFieldInlineSize = affFieldInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Boolean unwrapPrimaryKeyFields() {
+        return unwrapPk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void unwrapPrimaryKeyFields(Boolean unwrapPk) {
+        this.unwrapPk = unwrapPk;
     }
     
     /** {@inheritDoc} */
