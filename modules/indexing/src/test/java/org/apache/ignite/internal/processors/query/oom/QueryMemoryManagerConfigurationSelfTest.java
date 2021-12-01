@@ -35,14 +35,10 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  * Unit tests for memory manager and memory tracker
  */
 public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractTest {
-    /**
-     *
-     */
+    /** /
     private static final long DFLT_GLOBAL_QUOTA = U.parseBytes("60%");
 
-    /**
-     *
-     */
+    /** */
     private static final long DFLT_QUERY_QUOTA = U.parseBytes("0");
 
     /** {@inheritDoc} */
