@@ -66,6 +66,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -2675,5 +2679,35 @@ public final class GridTestUtils {
      */
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
+    }
+
+    /**
+     * Repeats messages which were sent to the logger into the alternative consumer.
+     * Useful for the intercepting of logs without breaking usual output to stdout.
+     * (It is painful to see failed tests at TC without actual logs).
+     *
+     * @param logger j.u.l.Logger.
+     * @param printer Alternative log consumer.
+     */
+    public static void echoLogOutput(@NotNull Logger logger, Consumer<String> printer) {
+        logger.addHandler(
+            new Handler() {
+                /** {@inheritDoc} */
+                @Override public void publish(LogRecord record) {
+                    printer.accept(record.getMessage());
+                    printer.accept(U.nl());
+                }
+
+                /** {@inheritDoc} */
+                @Override public void flush() {
+                    // No-op.
+                }
+
+                /** {@inheritDoc} */
+                @Override public void close() {
+                    // No-op.
+                }
+            }
+        );
     }
 }

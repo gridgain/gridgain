@@ -112,6 +112,11 @@ namespace Apache.Ignite.Core.Impl.Binary
                 return GetArrayHashCode(val, marsh, affinityKeyFieldIds);
             }
 
+            if (type == typeof(BinaryObject))
+            {
+                return val.GetHashCode();
+            }
+
             // DateTime, when used as key, is always written as BinaryObject.
             return GetComplexTypeHashCode(val, marsh, affinityKeyFieldIds);
         }

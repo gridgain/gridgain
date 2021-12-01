@@ -49,9 +49,13 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Counter conflicts. */
+    /** Update counter conflicts. */
     @GridToStringInclude
-    private Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts;
+    private Map<PartitionKeyV2, List<PartitionHashRecordV2>> updateCntrConflicts;
+
+    /** Reserve counter conflicts. */
+    @GridToStringInclude
+    private Map<PartitionKeyV2, List<PartitionHashRecordV2>> reserveCntrConflicts;
 
     /** Hash conflicts. */
     @GridToStringInclude
@@ -70,19 +74,21 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
     private Map<ClusterNode, Exception> exceptions;
 
     /**
-     * @param cntrConflicts Counter conflicts.
+     * @param updateCntrConflicts Counter conflicts.
      * @param hashConflicts Hash conflicts.
      * @param movingPartitions Moving partitions.
      * @param exceptions Occured exceptions.
      */
     public IdleVerifyResultV2(
-        Map<PartitionKeyV2, List<PartitionHashRecordV2>> cntrConflicts,
+        Map<PartitionKeyV2, List<PartitionHashRecordV2>> updateCntrConflicts,
+        Map<PartitionKeyV2, List<PartitionHashRecordV2>> reserveCntrConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> hashConflicts,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions,
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> lostPartitions,
         Map<ClusterNode, Exception> exceptions
     ) {
-        this.cntrConflicts = cntrConflicts;
+        this.updateCntrConflicts = updateCntrConflicts;
+        this.reserveCntrConflicts = reserveCntrConflicts;
         this.hashConflicts = hashConflicts;
         this.movingPartitions = movingPartitions;
         this.lostPartitions = lostPartitions;
@@ -97,22 +103,23 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeMap(out, cntrConflicts);
+        U.writeMap(out, updateCntrConflicts);
         U.writeMap(out, hashConflicts);
         U.writeMap(out, movingPartitions);
         U.writeMap(out, exceptions);
         U.writeMap(out, lostPartitions);
+        U.writeMap(out, reserveCntrConflicts);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer,
         ObjectInput in) throws IOException, ClassNotFoundException {
-        cntrConflicts = U.readMap(in);
+        updateCntrConflicts = U.readMap(in);
         hashConflicts = U.readMap(in);
         movingPartitions = U.readMap(in);
 
@@ -121,13 +128,27 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
         if (protoVer >= V3)
             lostPartitions = U.readMap(in);
+
+        if (protoVer >= V4)
+            reserveCntrConflicts = U.readMap(in);
     }
 
     /**
-     * @return Counter conflicts.
+     * Update counter conflicts.
+     *
+     * @return Update counter conflicts.
      */
-    public Map<PartitionKeyV2, List<PartitionHashRecordV2>> counterConflicts() {
-        return cntrConflicts;
+    public Map<PartitionKeyV2, List<PartitionHashRecordV2>> updateCounterConflicts() {
+        return updateCntrConflicts;
+    }
+
+    /**
+     * Reserve count conflicts.
+     *
+     * @return Reserve count conflicts.
+     */
+    public Map<PartitionKeyV2, List<PartitionHashRecordV2>> reserveCntrConflicts() {
+        return reserveCntrConflicts;
     }
 
     /**
@@ -155,7 +176,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
      * @return <code>true</code> if any conflicts were discovered during idle_verify check.
      */
     public boolean hasConflicts() {
-        return !F.isEmpty(hashConflicts()) || !F.isEmpty(counterConflicts());
+        return !F.isEmpty(hashConflicts()) || !F.isEmpty(updateCounterConflicts()) || !F.isEmpty(reserveCntrConflicts());
     }
 
     /**
@@ -294,17 +315,32 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
 
     /** */
     private void printConflicts(Consumer<String> printer) {
-        int cntrConflictsSize = counterConflicts().size();
+        int updCntrConflictsSize = updateCounterConflicts().size();
         int hashConflictsSize = hashConflicts().size();
+        int resCntrConflictsSize = reserveCntrConflicts().size();
 
-        printer.accept("idle_verify check has finished, found " + (cntrConflictsSize + hashConflictsSize) +
-            " conflict partitions: [counterConflicts=" + cntrConflictsSize + ", hashConflicts=" +
-            hashConflictsSize + "]\n");
+        printer.accept("idle_verify check has finished, found "
+                           + (updCntrConflictsSize + hashConflictsSize + resCntrConflictsSize) +
+            " conflict partitions: [updateCounterConflicts=" + updCntrConflictsSize
+                           + ", reserveCounterConflicts=" + resCntrConflictsSize
+                           + ", hashConflicts=" + hashConflictsSize + "]\n");
 
-        if (!F.isEmpty(counterConflicts())) {
+        if (!F.isEmpty(updateCounterConflicts())) {
             printer.accept("Update counter conflicts:\n");
 
-            for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : counterConflicts().entrySet()) {
+            for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : updateCounterConflicts().entrySet()) {
+                printer.accept("Conflict partition: " + entry.getKey() + "\n");
+
+                printer.accept("Partition instances: " + entry.getValue() + "\n");
+            }
+
+            printer.accept("\n");
+        }
+
+        if (!F.isEmpty(reserveCntrConflicts())) {
+            printer.accept("Reserve counter conflicts:\n");
+
+            for (Map.Entry<PartitionKeyV2, List<PartitionHashRecordV2>> entry : reserveCntrConflicts().entrySet()) {
                 printer.accept("Conflict partition: " + entry.getKey() + "\n");
 
                 printer.accept("Partition instances: " + entry.getValue() + "\n");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,22 @@ import java.util.EventListener;
  */
 interface GridJobEventListener extends EventListener {
     /**
+     * @param worker Job worker.
+     */
+    void onJobQueued(GridJobWorker worker);
+
+    /**
      * @param worker Started job worker.
      */
-    public void onJobStarted(GridJobWorker worker);
+    void onJobStarted(GridJobWorker worker);
 
     /**
      * @param worker Job worker.
      */
-    public void onBeforeJobResponseSent(GridJobWorker worker);
+    void onBeforeJobResponseSent(GridJobWorker worker);
 
     /**
      * @param worker Finished job worker.
      */
-    public void onJobFinished(GridJobWorker worker);
+    void onJobFinished(GridJobWorker worker);
 }

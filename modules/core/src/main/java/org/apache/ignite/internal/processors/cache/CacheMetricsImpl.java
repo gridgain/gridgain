@@ -1270,11 +1270,6 @@ public class CacheMetricsImpl implements CacheMetrics {
      * Calculates entries count/partitions count metrics using one iteration over local partitions for all metrics
      */
     public EntriesStatMetrics getEntriesStat() {
-        AffinityTopologyVersion topVer = cctx.affinity().affinityTopologyVersion();
-
-        if (AffinityTopologyVersion.NONE.equals(topVer))
-            return unknownEntriesStat();
-
         int owningPartCnt = 0;
         int movingPartCnt = 0;
         long offHeapEntriesCnt = 0L;
@@ -1286,6 +1281,11 @@ public class CacheMetricsImpl implements CacheMetrics {
         boolean isEmpty;
 
         try {
+            AffinityTopologyVersion topVer = cctx.affinity().affinityTopologyVersion();
+
+            if (AffinityTopologyVersion.NONE.equals(topVer))
+                return unknownEntriesStat();
+
             final GridCacheAdapter<?, ?> cache = cctx.cache();
 
             if (cache != null) {

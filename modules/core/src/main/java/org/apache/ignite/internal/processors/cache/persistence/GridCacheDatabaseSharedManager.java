@@ -170,6 +170,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -545,7 +546,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
                 kernalCtx.cache(),
-                cpFreqDeviation::get
+                cpFreqDeviation::get,
+                kernalCtx.pools().getSystemExecutorService()
             );
 
             final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()
@@ -1394,7 +1396,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     cctx.database().checkpointReadLock();
 
                     try {
-                        cacheGroup.offheap().restorePartitionStates(Collections.emptyMap());
+                        cacheGroup.offheap().restorePartitionStates(emptyMap());
 
                         if (cacheGroup.localStartVersion().equals(fut.initialVersion()))
                             cacheGroup.topology().afterStateRestored(fut.initialVersion());
@@ -3299,7 +3301,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
-            CheckpointEntry lastCp = checkpointHistory().lastCheckpointMarkingAsInapplicable(grpId);
+            CheckpointEntry lastCp = checkpointManager.checkpointMarkerStorage().removeFromEarliestCheckpoints(grpId);
+
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
             if (lastCpTs != 0)
