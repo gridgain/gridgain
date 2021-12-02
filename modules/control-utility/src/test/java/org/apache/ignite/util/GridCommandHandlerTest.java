@@ -2403,7 +2403,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             assertContains(
                 log,
                 dumpWithConflicts,
-                "found 2 conflict partitions: [updateCounterConflicts=0, reserveCounterConflicts=0, hashConflicts=1]"
+                "found 2 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=1]"
             );
         }
         else
