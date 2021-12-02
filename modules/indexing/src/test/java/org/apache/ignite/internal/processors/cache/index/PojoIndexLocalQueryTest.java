@@ -87,7 +87,6 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    @Ignore("GG-34106")
     public void testJavaPojoIndexLocal() {
         createPopulateAndVerify(TestPojo.class, null, null);
         createPopulateAndVerify(TestPojo.class, null, TestKeyWithAff.class);
@@ -96,7 +95,6 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    @Ignore("GG-34106")
     public void localPojoReproducerTest() {
         String tblName = TestPojo.class.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
 
@@ -109,7 +107,7 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
         fields.put("idxVal", idxCls.getName());
         fields.put("val", Integer.class.getName());
 
-        QueryEntity qe = new QueryEntity(keyCls == null ? idxCls.getName() : keyCls.getName(), Integer.class.getName())
+        QueryEntity qe = new QueryEntity(keyCls.getName(), Integer.class.getName())
             .setTableName(tblName)
             .setValueFieldName("val")
             .setFields(fields);
@@ -125,9 +123,9 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
                 .setKeyConfiguration(new CacheKeyConfiguration((TestKeyWithIdx.class).getName(), "idxVal"))
                 .setQueryEntities(Collections.singletonList(qe)).setSqlSchema("PUBLIC"));
 
-        int[] a1 = {-903276852, 1418672434, 2025232370, };
-        int[] b1 = {-876295916, 765062782, -1925029873, };
-        int[] c1 = {-726212217, 1099431688, -1820831091, };
+        int[] a1 = {-903, 141, 202, };
+        int[] b1 = {-876, 765, -192, };
+        int[] c1 = {-726, 109, -182, };
 
         TestPojo pojo1 = new TestPojo(b1[0]);
         TestPojo pojo2 = new TestPojo(b1[1]);
@@ -137,18 +135,18 @@ public class PojoIndexLocalQueryTest extends AbstractIndexingCommonTest {
         TestKeyWithIdx<TestPojo> idx2 = new TestKeyWithIdx<>(a1[1], pojo2);
         TestKeyWithIdx<TestPojo> idx3 = new TestKeyWithIdx<>(a1[2], pojo3);
 
-        cache.put(idx3, c1[2]);
         cache.put(idx1, c1[0]);
         cache.put(idx2, c1[1]);
+        cache.put(idx3, c1[2]);
 
         String format = String.format(SELECT_VALUE_TEMPLATE, tblName, idxName, idxFieldName);
 
-        Integer val = cache.get(idx3);
         List<List<?>> sqlRes = grid(0).context().query().querySqlFields(
             new SqlFieldsQuery(format).setArgs(pojo3).setLocal(true), false
         ).getAll();
 
-        assertEquals(sqlRes.size(), 1);
+        assertEquals(1, sqlRes.size());
+        Integer val = cache.get(idx3);
         assertEquals(val, sqlRes.get(0).get(0));
 
         grid(0).destroyCache(tblName + "_CACHE");
