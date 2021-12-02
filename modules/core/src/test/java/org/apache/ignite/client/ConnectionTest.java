@@ -80,7 +80,6 @@ public class ConnectionTest {
 
     /** */
     @Test(expected = org.apache.ignite.client.ClientConnectionException.class)
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-23022")
     public void testInvalidBigHandshakeMessage() throws Exception {
         char[] data = new char[1024 * 1024 * 128];
         String userName = new String(data);
