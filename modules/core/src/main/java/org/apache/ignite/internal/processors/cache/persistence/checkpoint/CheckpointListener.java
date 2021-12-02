@@ -60,6 +60,8 @@ public interface CheckpointListener {
      */
     public void onMarkCheckpointBegin(Context ctx) throws IgniteCheckedException;
 
+    public default void onAfterMarkCheckpointBegin(Context ctx) throws IgniteCheckedException {}
+
     /**
      * @throws IgniteCheckedException If failed.
      */

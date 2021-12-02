@@ -364,6 +364,9 @@ public class CheckpointWorkflow {
 
             tracker.onSplitAndSortCpPagesEnd();
 
+            for (CheckpointListener lsnr : dbLsnrs)
+                lsnr.onAfterMarkCheckpointBegin(ctx0);
+
             return new Checkpoint(checkpointEntry, cpPages, curr);
         }
         else {
