@@ -50,10 +50,10 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
     private static final String REBALANCE_TEST_CACHE_NAME = "rebalanceCache";
 
     /** Test logger. */
-    ListeningTestLogger logger = null;
+    private ListeningTestLogger logger = null;
 
     /** Flag showing wheather to use small rebalance batch size. */
-    boolean useSmallRebalanceBatchSize;
+    private boolean useSmallRebalanceBatchSize;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {

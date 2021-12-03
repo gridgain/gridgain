@@ -246,11 +246,8 @@ public class GridDhtPartitionSupplier {
         Map<Integer, Long> initUpdateCntrs;
 
         int sentPartNum = 0;
-
         int missingPartNum = 0;
-
         long sentEntriesNum = 0;
-
         long rejectedByPredNum = 0;
 
         GridDhtPartitionSupplyMessage supplyMsg = new GridDhtPartitionSupplyMessage(
@@ -521,8 +518,8 @@ public class GridDhtPartitionSupplier {
                 log.info("Finished supplying rebalancing [" +
                     "partitions=" +  sentPartNum +
                     ", entries=" + sentEntriesNum +
-                    ", missing partitions=" + missingPartNum +
-                    ", entries rejected by preload predicate=" + rejectedByPredNum +
+                    ", missingPartitions=" + missingPartNum +
+                    ", entriesRejectedByPreloadPredicate=" + rejectedByPredNum +
                     ", " + supplyRoutineInfo(topicId, nodeId, demandMsg) + "]");
         }
         catch (Throwable t) {
@@ -776,7 +773,7 @@ public class GridDhtPartitionSupplier {
          * @param sentEntriesNum Number of entries sent to the demander.
          * @param rejectedEntriesNum Number of entries rejected by {@code preloadPred}.
          * @param sentPartitionsNum Number of partitions sent to the demander.
-         * @param missingPartitionsNum Number of partitions marked as minssed.
+         * @param missingPartitionsNum Number of partitions marked as missed.
          */
         SupplyContext(
             IgniteRebalanceIterator iterator,
