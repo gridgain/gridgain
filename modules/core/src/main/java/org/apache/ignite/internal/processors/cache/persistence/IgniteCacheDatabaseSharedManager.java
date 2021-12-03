@@ -1477,7 +1477,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                     }
 
                     if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
+                        cacheCtx.offheap().dataStore(locPart).updateInitialCounter(dataEntry.partitionCounter() - 1, 1);
                 }
                 finally {
                     if (lockEntry) {
@@ -1512,7 +1512,7 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
                         cacheCtx.offheap().removeWithTombstone(cacheCtx, dataEntry.key(), dataEntry.writeVersion(), locPart);
 
                     if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
+                        cacheCtx.offheap().dataStore(locPart).updateInitialCounter(dataEntry.partitionCounter() - 1, 1);
                 }
                 finally {
                     if (lockEntry) {
