@@ -1197,7 +1197,10 @@ public class CommandProcessor {
         if (Objects.nonNull(createTbl.affinityKeyInlineSize()))
             res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
         
-        res.forceFillAbsentPKsWithDefaults(true);
+        if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FORCE_FILLS_ABSENT_PKS_WITH_DEFAULTS)
+        )
+            res.forceFillAbsentPKsWithDefaults(true);
         
         return res;
     }

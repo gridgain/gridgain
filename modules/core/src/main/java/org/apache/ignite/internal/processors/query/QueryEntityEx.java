@@ -96,14 +96,14 @@ public class QueryEntityEx extends QueryEntity {
     }
     
     /**
-     * @return {@code true} if PKs with null parts can be deduplicate, {@code false} otherwise.
+     * @return {@code true} if absent PK parts should be filled with defaults, {@code false} otherwise.
      */
     public boolean forceFillAbsentPKsWithDefaults() {
         return forceFillAbsentPKsWithDefaults;
     }
     
     /**
-     * @param forceFillAbsentPKsWithDefaults Whether the PKs should be deduplicate or not.
+     * @param forceFillAbsentPKsWithDefaults Whether absent PK parts should be filled with defaults or not.
      * @return {@code this} for chaining.
      */
     public QueryEntity forceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults) {

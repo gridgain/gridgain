@@ -250,9 +250,7 @@ public interface GridQueryTypeDescriptor {
     public void unwrapPrimaryKeyFields(Boolean unwrapPk);
     
     /**
-     * Returns {@code true} if composite PKs with null parts deduplication is allowed.
-     *
-     * @return If PKs deduplication is allowed.
+     * @return {@code true} if absent PK parts should be filled with defaults, {@code false} otherwise.
      */
     public boolean forceFillAbsentPKsWithDefaults();
     
