@@ -1072,7 +1072,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             assertContains(
                 log,
                 dumpWithConflicts,
-                "found 3 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=2]"
+                "found 4 conflict partitions: [updateCounterConflicts=2, reserveCounterConflicts=0, hashConflicts=2]"
             );
         }
         else
