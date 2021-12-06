@@ -49,6 +49,7 @@ import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.ShutdownPolicy;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CommunicationFailureResolver;
 import org.apache.ignite.events.EventType;
@@ -116,17 +117,38 @@ import static org.apache.zookeeper.CreateMode.PERSISTENT;
  * Zookeeper Discovery Impl.
  */
 public class ZookeeperDiscoveryImpl {
-    /** */
-    static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD";
+    /** @see #IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD */
+    public static final int DFLT_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD = 5;
+
+    /** @see #IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT */
+    public static final int DFLT_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT = 60_000;
+
+    /** @see #IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS */
+    public static final int DFLT_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS = 100;
+
+    /** @see #IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE */
+    public static final int DFLT_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE = 0;
 
     /** */
-    static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT";
+    @SystemProperty(value = "Maximum count of unprocessed events", type = Long.class,
+        defaults = "" + DFLT_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD)
+    public static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_THRESHOLD";
 
     /** */
-    static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS";
+    @SystemProperty(value = "Timeout to update processed events", type = Long.class,
+        defaults = "" + DFLT_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT)
+    public static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT";
 
     /** */
-    private static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE";
+    @SystemProperty(value = "Maximum count of unrpocessed events", type = Long.class,
+        defaults = "" + DFLT_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS)
+    public static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS = "IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS";
+
+    /** */
+    @SystemProperty(value = "Maximum count of events to delay alive nodes change process", type = Long.class,
+        defaults = "" + DFLT_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE)
+    public static final String IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE =
+        "IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE";
 
     /** */
     final ZookeeperDiscoverySpi spi;
@@ -1668,7 +1690,8 @@ public class ZookeeperDiscoveryImpl {
 
         int newEvts = 0;
 
-        final int MAX_NEW_EVTS = IgniteSystemProperties.getInteger(IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS, 100);
+        final int MAX_NEW_EVTS = IgniteSystemProperties.getInteger(IGNITE_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS,
+            DFLT_ZOOKEEPER_DISCOVERY_SPI_MAX_EVTS);
 
         List<ZookeeperClusterNode> failedNodes = null;
 
@@ -1878,7 +1901,8 @@ public class ZookeeperDiscoveryImpl {
      *
      */
     private void throttleNewEventsGeneration() {
-        long delay = IgniteSystemProperties.getLong(IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE, 0);
+        long delay = IgniteSystemProperties.getLong(IGNITE_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE,
+            DFLT_ZOOKEEPER_DISCOVERY_SPI_EVTS_THROTTLE);
 
         if (delay > 0) {
             if (log.isInfoEnabled())
@@ -2947,7 +2971,7 @@ public class ZookeeperDiscoveryImpl {
 
                 if (rtState.procEvtsUpdateTo == null) {
                     long updateTimeout = IgniteSystemProperties.getLong(IGNITE_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT,
-                        60_000);
+                        DFLT_ZOOKEEPER_DISCOVERY_SPI_ACK_TIMEOUT);
 
                     if (updateTimeout > 0) {
                         rtState.procEvtsUpdateTo = new UpdateProcessedEventsTimeoutObject(rtState, updateTimeout);
