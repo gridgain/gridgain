@@ -37,7 +37,7 @@ public class QueryEntityEx extends QueryEntity {
     /** Whether to preserve order specified by {@link #getKeyFields()} or not. */
     private boolean preserveKeysOrder;
     
-    /** Whether to allow deduplication of composite PKs with null parts or not. */
+    /** Whether absent PK parts should be filled with defaults or not. */
     private boolean forceFillAbsentPKsWithDefaults;
     
     /**

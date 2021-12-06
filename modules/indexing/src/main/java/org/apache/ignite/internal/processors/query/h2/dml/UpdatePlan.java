@@ -86,7 +86,7 @@ public final class UpdatePlan {
     /** Number of rows in rows based MERGE or INSERT. */
     private final int rowsNum;
     
-    /** Whether to allow deduplication of composite PKs with null parts or not. */
+    /** Whether absent PK parts should be filled with defaults or not. */
     private boolean forceFillAbsentPKsWithDefaults;
     
     /** Arguments for fast UPDATE or DELETE. */

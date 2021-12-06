@@ -135,7 +135,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** Primary key fields. */
     private Set<String> pkFields;
     
-    /** Whether to allow deduplication of composite PKs with absent parts or not. */
+    /** Whether absent PK parts should be filled with defaults or not. */
     private boolean forceFillAbsentPKsWithDefaults;
 
     /** Logger. */
