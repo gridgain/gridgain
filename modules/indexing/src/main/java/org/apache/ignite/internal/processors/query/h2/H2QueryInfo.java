@@ -18,9 +18,12 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.UUID;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
@@ -59,18 +62,23 @@ public class H2QueryInfo {
     /** Prepared statement. */
     private final Prepared stmt;
 
+    /** Originator node uid. */
+    private final UUID node;
+
     /**
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
+     * @param node Originator node.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long runningQryId) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, ClusterNode node,
+        Long runningQryId) {
         try {
             assert stmt != null;
-
             this.type = type;
             this.sql = sql;
+            this.node = node.id();
             this.runningQryId = runningQryId;
 
             beginTs = U.currentTimeMillis();
@@ -105,15 +113,6 @@ public class H2QueryInfo {
         return U.currentTimeMillis() - beginTs;
     }
 
-    /**
-     * @param log Logger.
-     * @param msg Log message
-     * @param additionalInfo Additional query info.
-     */
-    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
-        printLogMessage(log, null, msg, additionalInfo);
-    }
-
     /** @return Query id assigned by {@link RunningQueryManager}. */
     public Long runningQueryId() {
         return runningQryId;
@@ -122,10 +121,9 @@ public class H2QueryInfo {
     /**
      * @param log Logger.
      * @param msg Log message
-     * @param connMgr Connection manager.
      * @param additionalInfo Additional query info.
      */
-    public void printLogMessage(IgniteLogger log, ConnectionManager connMgr, String msg, String additionalInfo) {
+    public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
         StringBuilder msgSb = new StringBuilder(msg + " [");
 
         if (additionalInfo != null)
@@ -147,7 +145,7 @@ public class H2QueryInfo {
 
         msgSb.append(']');
 
-        LT.warn(log, runningQryId + "#" + sql, msgSb.toString());
+        LT.warn(log, QueryUtils.globalQueryId(node, runningQryId) + "#" + sql, msgSb.toString());
     }
 
     /**
@@ -156,7 +154,7 @@ public class H2QueryInfo {
     public String description() {
         return "H2QueryInfo ["
             + "type=" + type
-            + ", runningQryId=" + runningQryId
+            + ", globalQueryId=" + QueryUtils.globalQueryId(node, runningQryId)
             + ", beginTs=" + beginTs
             + ", distributedJoin=" + distributedJoin
             + ", enforceJoinOrder=" + enforceJoinOrder
