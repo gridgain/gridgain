@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.persistence.Storable;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.evict.PageEvictionTracker;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
@@ -374,9 +375,11 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
         assert U.isPow2(BUCKETS);
         assert BUCKETS <= pageSize : pageSize;
 
+        DataPageIO dataPageIO = DataPageIO.versions(pageMem.bigPages()).latest();
+
         // TODO this constant is used because currently we cannot reuse data pages as index pages
         // TODO and vice-versa. It should be removed when data storage format is finalized.
-        MIN_SIZE_FOR_DATA_PAGE = pageSize - AbstractDataPageIO.MIN_DATA_PAGE_OVERHEAD;
+        MIN_SIZE_FOR_DATA_PAGE = pageSize - dataPageIO.minDataPageOverhead();
 
         int shift = 0;
 
@@ -508,7 +511,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
                 if (remaining < MIN_SIZE_FOR_DATA_PAGE) {
                     for (int b = bucket(remaining, false) + 1; b < BUCKETS - 1; b++) {
-                        pageId = takeEmptyPage(b, row.ioVersions(), statHolder);
+                        pageId = takeEmptyPage(b, row.ioVersions(pageMem.bigPages()), statHolder);
 
                         if (pageId != 0L)
                             break;
@@ -517,12 +520,12 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
                 if (pageId == 0L) { // Handle reuse bucket.
                     if (reuseList == this)
-                        pageId = takeEmptyPage(REUSE_BUCKET, row.ioVersions(), statHolder);
+                        pageId = takeEmptyPage(REUSE_BUCKET, row.ioVersions(pageMem.bigPages()), statHolder);
                     else {
                         pageId = reuseList.takeRecycledPage();
 
                         if (pageId != 0)
-                            pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions().latest());
+                            pageId = reuseList.initRecycledPage(pageId, FLAG_DATA, row.ioVersions(pageMem.bigPages()).latest());
                     }
                 }
 
@@ -531,10 +534,10 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
                 if (pageId == 0L) {
                     pageId = allocateDataPage(row.partition());
 
-                    initIo = row.ioVersions().latest();
+                    initIo = row.ioVersions(pageMem.bigPages()).latest();
                 } else {
                     assert PageIdUtils.flag(pageId) == FLAG_DATA
-                        : "rowVersions=" + row.ioVersions() + ", pageId=" + PageIdUtils.toDetailString(pageId);
+                        : "rowVersions=" + row.ioVersions(pageMem.bigPages()) + ", pageId=" + PageIdUtils.toDetailString(pageId);
 
                     pageId = PageIdUtils.changePartitionId(pageId, row.partition());
                 }
@@ -574,7 +577,7 @@ public abstract class AbstractFreeList<T extends Storable> extends PagesList imp
 
             try {
                 return initReusedPage(reusedPageId, reusedPage, reusedPageAddr,
-                    partId, PageIdAllocator.FLAG_DATA, row.ioVersions().latest());
+                    partId, PageIdAllocator.FLAG_DATA, row.ioVersions(pageMem.bigPages()).latest());
             }
             finally {
                 writeUnlock(reusedPageId, reusedPage, reusedPageAddr, true);

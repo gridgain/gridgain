@@ -44,6 +44,7 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerListener;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.NotNull;
 
 import static java.util.stream.IntStream.range;
@@ -537,6 +538,15 @@ public class StripedExecutor implements ExecutorService {
             thread.start();
         }
 
+        /**
+         * Wrapper that takes advantage of {@link Async.Execute}. A counterpart of the {@link Stripe#execute(Runnable)}.
+         *
+         * @param cmd Runnable.
+         */
+        private void run0(@Async.Execute Runnable cmd) {
+            cmd.run();
+        }
+
         /** {@inheritDoc} */
         @SuppressWarnings("NonAtomicOperationOnVolatileField")
         @Override public void body() {
@@ -561,7 +571,7 @@ public class StripedExecutor implements ExecutorService {
                         updateHeartbeat();
 
                         try {
-                            cmd.run();
+                            run0(cmd);
                         }
                         finally {
                             active = false;
@@ -594,7 +604,7 @@ public class StripedExecutor implements ExecutorService {
          *
          * @param cmd Command.
          */
-        abstract void execute(Runnable cmd);
+        abstract void execute(@Async.Schedule Runnable cmd);
 
         /**
          * @return Next runnable.
@@ -748,7 +758,7 @@ public class StripedExecutor implements ExecutorService {
         }
 
         /** {@inheritDoc} */
-        @Override void execute(Runnable cmd) {
+        @Override void execute(@Async.Schedule Runnable cmd) {
             queue.add(cmd);
 
             if (parked)

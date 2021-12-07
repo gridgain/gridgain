@@ -201,7 +201,7 @@ public class IgnitePdsTaskCancelingTest extends GridCommonAbstractTest {
 
         int pageSize = dbCfg.getPageSize();
 
-        PageIO pageIO = PageIO.getPageIO(PageIO.T_DATA, 1);
+        PageIO pageIO = PageIO.getPageIO(PageIO.T_DATA, 1, false);
 
         long ptr = GridUnsafe.allocateMemory(NUM_TASKS * pageSize);
 

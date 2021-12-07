@@ -878,7 +878,7 @@ public abstract class PagesList extends DataStructure {
                 boolean ok = false;
 
                 try {
-                    PagesListNodeIO io = PageIO.getPageIO(tailAddr);
+                    PagesListNodeIO io = PageIO.getPageIO(tailAddr, null);
 
                     ok = bag != null ?
                         // Here we can always take pages from the bag to build our list.
@@ -949,7 +949,7 @@ public abstract class PagesList extends DataStructure {
             if (needWalDeltaRecord(pageId, page, null))
                 wal.log(new PagesListAddPageRecord(grpId, pageId, dataId));
 
-            AbstractDataPageIO dataIO = PageIO.getPageIO(dataAddr);
+            AbstractDataPageIO<?> dataIO = PageIO.getPageIO(dataAddr, pageMem.bigPages());
             dataIO.setFreeListPageId(dataAddr, pageId);
 
             if (needWalDeltaRecord(dataId, dataPage, null))
@@ -977,7 +977,7 @@ public abstract class PagesList extends DataStructure {
         if (pagesCache.add(dataId)) {
             incrementBucketSize(bucket);
 
-            AbstractDataPageIO dataIO = PageIO.getPageIO(dataAddr);
+            AbstractDataPageIO<?> dataIO = PageIO.getPageIO(dataAddr, pageMem.bigPages());
 
             if (dataIO.getFreeListPageId(dataAddr) != 0L) {
                 dataIO.setFreeListPageId(dataAddr, 0L);
@@ -1020,7 +1020,7 @@ public abstract class PagesList extends DataStructure {
         int bucket,
         IoStatisticsHolder statHolder
     ) throws IgniteCheckedException {
-        AbstractDataPageIO dataIO = PageIO.getPageIO(dataAddr);
+        AbstractDataPageIO<?> dataIO = PageIO.getPageIO(dataAddr, pageMem.bigPages());
 
         // Attempt to add page failed: the node page is full.
         if (isReuseBucket(bucket)) {

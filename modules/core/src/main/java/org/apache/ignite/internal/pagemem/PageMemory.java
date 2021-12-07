@@ -47,6 +47,8 @@ public interface PageMemory extends PageIdAllocator, PageSupport {
      */
     public int realPageSize(int grpId);
 
+    public boolean bigPages();
+
     /**
      * @return Page size with system overhead, in bytes.
      */

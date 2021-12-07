@@ -31,19 +31,17 @@ public final class PageIdUtils {
     public static final int PART_ID_SIZE = 16;
 
     /** */
-    public static final int FLAG_SIZE = 8;
+    public static final int FLAG_SIZE = 4;
 
-    /** */
-    public static final int OFFSET_SIZE = 8;
+    public static final int OFFSET_HIGH_BITS_SIZE = 4;
+
+    public static final int OFFSET_LOW_BITS_SIZE = 8;
 
     /** */
     public static final int TAG_SIZE = 16;
 
     /** */
     public static final long PAGE_IDX_MASK = ~(-1L << PAGE_IDX_SIZE);
-
-    /** */
-    public static final long OFFSET_MASK = ~(-1L << OFFSET_SIZE);
 
     /** */
     public static final long TAG_MASK = ~(-1L << TAG_SIZE);
@@ -57,16 +55,15 @@ public final class PageIdUtils {
     /** */
     private static final long EFFECTIVE_PAGE_ID_MASK = ~(-1L << (PAGE_IDX_SIZE + PART_ID_SIZE));
 
-    /**
-     * Offset of a Rotation ID inside a Page ID.
-     */
-    private static final long ROTATION_ID_OFFSET = PAGE_IDX_SIZE + PART_ID_SIZE + FLAG_SIZE;
+    private static final long ROTATION_ID_HIGH_BITS_OFFSET = PAGE_IDX_SIZE + PART_ID_SIZE + FLAG_SIZE;
+
+    private static final long ROTATION_ID_LOW_BITS_OFFSET = PAGE_IDX_SIZE + PART_ID_SIZE + FLAG_SIZE + OFFSET_HIGH_BITS_SIZE;
 
     /** */
-    private static final long PAGE_ID_MASK = ~(-1L << ROTATION_ID_OFFSET);
+    private static final long PAGE_ID_MASK = ~(-1L << ROTATION_ID_HIGH_BITS_OFFSET);
 
     /** Max itemid number. */
-    public static final int MAX_ITEMID_NUM = 0xFE;
+    public static final int MAX_ITEMID_NUM = ~(-1 << OFFSET_LOW_BITS_SIZE + OFFSET_HIGH_BITS_SIZE);
 
     /** Maximum page number. */
     public static final long MAX_PAGE_NUM = (1L << PAGE_IDX_SIZE) - 1;
@@ -89,10 +86,9 @@ public final class PageIdUtils {
      * @return Page link.
      */
     public static long link(long pageId, int itemId) {
-        assert itemId >= 0 && itemId <= MAX_ITEMID_NUM : itemId;
-        assert (pageId >> ROTATION_ID_OFFSET) == 0 : U.hexLong(pageId);
+        assert readItemId(pageId) == 0 : U.hexLong(pageId);
 
-        return pageId | (((long)itemId) << ROTATION_ID_OFFSET);
+        return createLink(pageId, itemId);
     }
 
     /**
@@ -138,7 +134,7 @@ public final class PageIdUtils {
      * @return Offset in 8-byte words.
      */
     public static int itemId(long link) {
-        return (int)((link >> ROTATION_ID_OFFSET) & OFFSET_MASK);
+        return (int) readItemId(link);
     }
 
     /**
@@ -186,7 +182,7 @@ public final class PageIdUtils {
      * Returns the Rotation ID of a page identified by the given ID.
      */
     public static long rotationId(long pageId) {
-        return pageId >>> ROTATION_ID_OFFSET;
+        return readItemId(pageId);
     }
 
     /**
@@ -199,7 +195,7 @@ public final class PageIdUtils {
         if (updatedRotationId > MAX_ITEMID_NUM)
             updatedRotationId = 1; // We always want non-zero updatedRotationId
 
-        return (pageId & PAGE_ID_MASK) | (updatedRotationId << ROTATION_ID_OFFSET);
+        return createLink((pageId & PAGE_ID_MASK), updatedRotationId);
     }
 
     /**
@@ -242,5 +238,26 @@ public final class PageIdUtils {
         int pageIdx = pageIndex(pageId);
 
         return pageId(partId, flag, pageIdx);
+    }
+
+    private static final long OFFSET_HIGH_BITS_MASK_IN_NUMBER = 0xF << OFFSET_LOW_BITS_SIZE;
+
+    private static final long OFFSET_LOW_BITS_MASK_IN_NUMBER = ~(-1L << OFFSET_LOW_BITS_SIZE);
+
+    private static final long OFFSET_HIGH_BITS_MASK_IN_PAGE_ID = 0xFL << ROTATION_ID_HIGH_BITS_OFFSET;
+
+    private static long readItemId(long pageId) {
+        return (pageId >>> ROTATION_ID_LOW_BITS_OFFSET)
+            + ((pageId & OFFSET_HIGH_BITS_MASK_IN_PAGE_ID) >>> (ROTATION_ID_HIGH_BITS_OFFSET - OFFSET_LOW_BITS_SIZE));
+    }
+
+    private static long createLink(long pageId, long itemId) {
+        assert itemId >= 0 && itemId <= MAX_ITEMID_NUM : itemId;
+
+        long highBits = (itemId & OFFSET_HIGH_BITS_MASK_IN_NUMBER) >> OFFSET_LOW_BITS_SIZE;
+
+        long lowBits = itemId & OFFSET_LOW_BITS_MASK_IN_NUMBER;
+
+        return pageId | (highBits << ROTATION_ID_HIGH_BITS_OFFSET) | (lowBits << ROTATION_ID_LOW_BITS_OFFSET);
     }
 }

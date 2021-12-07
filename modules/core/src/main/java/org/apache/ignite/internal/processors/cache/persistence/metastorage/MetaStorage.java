@@ -515,7 +515,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                         return true;
                     }
 
-                    PagePartitionMetaIO io = PageIO.getPageIO(pageAddr);
+                    PagePartitionMetaIO io = PageIO.getPageIO(pageAddr, null);
 
                     long treeRoot = io.getTreeRoot(pageAddr);
                     long reuseListRoot = io.getReuseListRoot(pageAddr);
@@ -572,7 +572,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
                         allocated = true;
                     }
                     else {
-                        PagePartitionMetaIO io = PageIO.getPageIO(pageAddr);
+                        PagePartitionMetaIO io = PageIO.getPageIO(pageAddr, null);
 
                         treeRoot = io.getTreeRoot(pageAddr);
                         reuseListRoot = io.getReuseListRoot(pageAddr);
@@ -665,7 +665,7 @@ public class MetaStorage implements CheckpointListener, ReadWriteMetastorage {
             boolean changed = false;
 
             try {
-                PagePartitionMetaIO io = PageIO.getPageIO(partMetaPageAddr);
+                PagePartitionMetaIO io = PageIO.getPageIO(partMetaPageAddr, null);
 
                 changed |= io.setGlobalRemoveId(partMetaPageAddr, rmvId.get());
             }

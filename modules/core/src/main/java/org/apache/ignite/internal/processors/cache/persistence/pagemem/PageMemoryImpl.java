@@ -167,6 +167,9 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Encrypted page size. */
     private final int encPageSize;
 
+    /** Use big layout for data pages. */
+    private final boolean bigPages;
+
     /** Shared context. */
     private final GridCacheSharedContext<?, ?> ctx;
 
@@ -350,6 +353,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             default:
                 throw new IgniteException("Unexpected page replacement mode: " + pageReplacementMode);
         }
+
+        bigPages = true;
     }
 
     /** {@inheritDoc} */
@@ -979,7 +984,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
                                     assert snapshot.pageDataSize() < realPageSize : snapshot.pageDataSize();
 
-                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize);
+                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize, bigPages);
                                 }
                             }
 
@@ -1050,6 +1055,11 @@ public class PageMemoryImpl implements PageMemoryEx {
             return pageSize();
 
         return encPageSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean bigPages() {
+        return bigPages;
     }
 
     /** {@inheritDoc} */
@@ -2226,6 +2236,8 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (ctx.kernalContext().query() == null || !ctx.kernalContext().query().moduleEnabled())
                 return;
 
+            int grpId = fullPageId.groupId();
+
             long pageAddr = PageMemoryImpl.this.readLock(absPtr, fullPageId.pageId(), true, false);
 
             try {
@@ -2233,12 +2245,12 @@ public class PageMemoryImpl implements PageMemoryEx {
                     return;
 
                 GridQueryRowCacheCleaner cleaner = ctx.kernalContext().query()
-                    .getIndexing().rowCacheCleaner(fullPageId.groupId());
+                    .getIndexing().rowCacheCleaner(grpId);
 
                 if (cleaner == null)
                     return;
 
-                DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                DataPageIO io = DataPageIO.versions(bigPages).forPage(pageAddr);
 
                 io.forAllItems(pageAddr, new DataPageIO.CC<Void>() {
                     @Override public Void apply(long link) {

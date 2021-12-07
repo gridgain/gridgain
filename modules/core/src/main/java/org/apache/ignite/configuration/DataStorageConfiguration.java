@@ -95,7 +95,7 @@ public class DataStorageConfiguration implements Serializable {
     public static final int DFLT_PAGE_SIZE = 4 * 1024;
 
     /** Max memory page size. */
-    public static final int MAX_PAGE_SIZE = 16 * 1024;
+    public static final int MAX_PAGE_SIZE = 256 * 1024;
 
     /** Min memory page size. */
     public static final int MIN_PAGE_SIZE = 1024;
@@ -411,7 +411,7 @@ public class DataStorageConfiguration implements Serializable {
     public DataStorageConfiguration setPageSize(int pageSize) {
         if (pageSize != 0) {
             A.ensure(pageSize >= MIN_PAGE_SIZE && pageSize <= MAX_PAGE_SIZE,
-                "Page size must be between 1kB and 16kB.");
+                "Page size must be between 1kB and 256kB.");
             A.ensure(U.isPow2(pageSize), "Page size must be a power of 2.");
         }
 

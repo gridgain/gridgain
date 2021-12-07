@@ -254,7 +254,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
                     assert pageAddr != 0L : nextLink;
 
                     try {
-                        DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                        DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                         int itemId = itemId(nextLink);
 
@@ -759,7 +759,7 @@ public class CacheDataRowAdapter implements CacheDataRow {
                 long pageAddr = pageMem.readLock(grpId, nextLinkPageId, page);
 
                 try {
-                    DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                    DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                     int itemId = itemId(nextLink);
 

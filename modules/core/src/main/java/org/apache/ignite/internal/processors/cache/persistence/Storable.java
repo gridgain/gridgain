@@ -52,7 +52,9 @@ public interface Storable {
     public int headerSize();
 
     /**
+     * @param bigDataPages Big layout for data pages.
+     *
      * @return I/O for handling this storable.
      */
-    public IOVersions<? extends AbstractDataPageIO> ioVersions();
+    public IOVersions<? extends AbstractDataPageIO> ioVersions(boolean bigDataPages);
 }

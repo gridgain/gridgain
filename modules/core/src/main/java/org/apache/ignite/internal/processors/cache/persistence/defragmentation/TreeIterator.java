@@ -93,7 +93,7 @@ public class TreeIterator {
             long metaPageAddr = partPageMemory.readLock(grpId, metaPageId, metaPage);
 
             try {
-                BPlusMetaIO metaIO = PageIO.getPageIO(metaPageAddr);
+                BPlusMetaIO metaIO = PageIO.getPageIO(metaPageAddr, null);
 
                 return metaIO.getFirstPageId(metaPageAddr, 0);
             }

@@ -774,7 +774,7 @@ public class CachePartitionDefragmentationManager {
             long oldPartMetaPageAddr = partCtx.cachePageMemory.readLock(partCtx.grpId, partMetaPageId, oldPartMetaPage);
 
             try {
-                PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr);
+                PagePartitionMetaIO oldPartMetaIo = PageIO.getPageIO(oldPartMetaPageAddr, null);
 
             // Newer meta versions may contain new data that we don't copy during defragmentation.
             assert Arrays.asList(1, 2, 3, 4, GG_VERSION_OFFSET, GG_VERSION_OFFSET + 1).contains(oldPartMetaIo.getVersion())
@@ -787,7 +787,7 @@ public class CachePartitionDefragmentationManager {
                     long newPartMetaPageAddr = partCtx.partPageMemory.writeLock(partCtx.grpId, partMetaPageId, newPartMetaPage);
 
                     try {
-                        PagePartitionMetaIO newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr);
+                        PagePartitionMetaIO newPartMetaIo = PageIO.getPageIO(newPartMetaPageAddr, null);
 
                         // Copy partition state.
                         byte partState = oldPartMetaIo.getPartitionState(oldPartMetaPageAddr);

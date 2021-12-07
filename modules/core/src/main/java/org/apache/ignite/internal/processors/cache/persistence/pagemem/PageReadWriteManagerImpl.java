@@ -27,6 +27,7 @@ import org.apache.ignite.internal.pagemem.store.PageStoreCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -67,7 +68,9 @@ public class PageReadWriteManagerImpl implements PageReadWriteManager {
         try {
             store.read(pageId, pageBuf, keepCrc);
 
-            ctx.compress().decompressPage(pageBuf, store.getPageSize());
+            boolean extendedDataPages = DataPageLayout.shouldBeExtended(store.getPageSize());
+
+            ctx.compress().decompressPage(pageBuf, store.getPageSize(), extendedDataPages);
         }
         catch (StorageException e) {
             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));

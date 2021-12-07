@@ -91,8 +91,8 @@ public class SimpleDataRow implements Storable {
     }
 
     /** {@inheritDoc} */
-    @Override public IOVersions<? extends AbstractDataPageIO> ioVersions() {
-        return SimpleDataPageIO.VERSIONS;
+    @Override public IOVersions<? extends AbstractDataPageIO> ioVersions(boolean bigDataPages) {
+        return SimpleDataPageIO.versions(bigDataPages);
     }
 
     /** {@inheritDoc} */

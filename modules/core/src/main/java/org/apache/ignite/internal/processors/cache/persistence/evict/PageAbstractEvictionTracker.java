@@ -90,7 +90,7 @@ public abstract class PageAbstractEvictionTracker implements PageEvictionTracker
                 if (PageIO.getType(pageAddr) != PageIO.T_DATA)
                     return false; // Can't evict: page has been recycled into non-data page.
 
-                DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                 long realPageId = PageIO.getPageId(pageAddr);
 

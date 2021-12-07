@@ -44,7 +44,7 @@ public class MetaPageUpdateLastAllocatedIndex extends PageDeltaRecord {
 
         assert type == PageIO.T_META || type == PageIO.T_PART_META;
 
-        PageMetaIO io = PageIO.getPageIO(type, PageIO.getVersion(pageAddr));
+        PageMetaIO io = PageIO.getPageIO(type, PageIO.getVersion(pageAddr), null);
 
         io.setLastAllocatedPageCount(pageAddr, lastAllocatedIdx);
     }

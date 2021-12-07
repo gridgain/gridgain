@@ -54,7 +54,7 @@ public class DataPageInsertFragmentRecord extends PageDeltaRecord {
 
     /** {@inheritDoc} */
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
-        AbstractDataPageIO io = PageIO.getPageIO(pageAddr);
+        AbstractDataPageIO<?> io = PageIO.getPageIO(pageAddr, pageMem.bigPages());
 
         io.addRowFragment(PageIO.getPageId(pageAddr), pageAddr, payload, lastLink, pageMem.realPageSize(groupId()));
     }

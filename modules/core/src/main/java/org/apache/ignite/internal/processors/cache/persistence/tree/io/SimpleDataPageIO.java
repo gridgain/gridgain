@@ -20,6 +20,9 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.ExtendedDataPageLayout;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.RegularDataPageLayout;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
@@ -27,24 +30,35 @@ import org.apache.ignite.internal.util.GridStringBuilder;
  */
 public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     /** */
-    public static final IOVersions<SimpleDataPageIO> VERSIONS = new IOVersions<>(
-        new SimpleDataPageIO(1)
+    private static final IOVersions<SimpleDataPageIO> SMALL_LAYOUT_VERSIONS = new IOVersions<>(
+        new SimpleDataPageIO(1, new RegularDataPageLayout())
     );
+
+    /** */
+    private static final IOVersions<SimpleDataPageIO> BIG_LAYOUT_VERSIONS = new IOVersions<>(
+        new SimpleDataPageIO(1, new ExtendedDataPageLayout())
+    );
+
+    public static IOVersions<SimpleDataPageIO> versions(boolean bigPages) {
+        return bigPages ? BIG_LAYOUT_VERSIONS : SMALL_LAYOUT_VERSIONS;
+    }
 
     /**
      * @param ver Page format version.
+     * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int ver) {
-        super(T_DATA_PART, ver);
+    public SimpleDataPageIO(int ver, DataPageLayout pageLayout) {
+        super(T_DATA_PART, ver, pageLayout);
     }
 
     /**
      * Constructor is intended for extending types.
      * @param type IO type.
      * @param ver Page format version.
+     * @param pageLayout Page layout.
      */
-    public SimpleDataPageIO(int type, int ver) {
-        super(type, ver);
+    public SimpleDataPageIO(int type, int ver, DataPageLayout pageLayout) {
+        super(type, ver, pageLayout);
     }
 
     /** {@inheritDoc} */
@@ -105,11 +119,18 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
     ) throws IgniteCheckedException {
         long addr = pageAddr + dataOff;
 
-        if (newRow)
-            PageUtils.putShort(addr, 0, (short)payloadSize);
+        int offset = 0;
 
-        PageUtils.putInt(addr, 2, row.value().length);
-        PageUtils.putBytes(addr, 6, row.value());
+        if (newRow)
+            pageLayout.putPayloadSize(addr, offset, payloadSize);
+
+        offset += pageLayout.payloadLenSize();
+
+        PageUtils.putInt(addr, offset, row.value().length);
+
+        offset += Integer.BYTES;
+
+        PageUtils.putBytes(addr, offset, row.value());
     }
 
     /** {@inheritDoc} */

@@ -158,7 +158,7 @@ public class CorruptedTreeFailureHandlingTest extends GridCommonAbstractTest imp
 
         OpenOption[] options = {StandardOpenOption.READ, StandardOpenOption.WRITE};
         try (RandomAccessFileIO fileIO = new RandomAccessFileIO(fileRef.get(), options)) {
-            DataPageIO dataPageIO = DataPageIO.VERSIONS.latest();
+            DataPageIO dataPageIO = DataPageIO.versions(false).latest();
 
             long pageOff = pageSize + PageIdUtils.pageIndex(pageId) * pageSize;
 

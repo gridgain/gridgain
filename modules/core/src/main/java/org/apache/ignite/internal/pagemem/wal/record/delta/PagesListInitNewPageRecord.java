@@ -102,7 +102,7 @@ public class PagesListInitNewPageRecord extends InitNewPageRecord {
 
     /** {@inheritDoc} */
     @Override public void applyDelta(PageMemory pageMem, long pageAddr) throws IgniteCheckedException {
-        PagesListNodeIO io = PageIO.getPageIO(PageIO.T_PAGE_LIST_NODE, ioVer);
+        PagesListNodeIO io = PageIO.getPageIO(PageIO.T_PAGE_LIST_NODE, ioVer, null);
 
         PageMetrics metrics = pageMem.metrics().cacheGrpPageMetrics(groupId());
 

@@ -452,7 +452,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     boolean changed = false;
 
                     try {
-                        PagePartitionMetaIO io = PageIO.getPageIO(partMetaPageAddr);
+                        PagePartitionMetaIO io = PageIO.getPageIO(partMetaPageAddr, null);
 
                         changed |= io.setPartitionState(partMetaPageAddr, state != null ? (byte)state.ordinal() : -1);
                         changed |= io.setUpdateCounter(partMetaPageAddr, updCntr);
@@ -898,7 +898,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 assert curAddr != 0;
 
                 try {
-                    PagePartitionCountersIO cntrsIO = PageIO.getPageIO(curAddr);
+                    PagePartitionCountersIO cntrsIO = PageIO.getPageIO(curAddr, null);
 
                     if (cntrsIO.readCacheSizes(curAddr, cacheSizes))
                         break;
@@ -963,7 +963,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         partCntrIo.initNewPage(curAddr, curId, pageMem.realPageSize(grpId), metrics);
                     }
                     else
-                        partCntrIo = PageIO.getPageIO(curAddr);
+                        partCntrIo = PageIO.getPageIO(curAddr, null);
 
                     written += partCntrIo.writeCacheSizes(pageMem.realPageSize(grpId), curAddr, data, written);
 
@@ -1012,7 +1012,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             boolean changed = false;
 
             try {
-                PageMetaIO metaIo = PageMetaIO.getPageIO(metaPageAddr);
+                PageMetaIO metaIo = PageMetaIO.getPageIO(metaPageAddr, null);
 
                 int pageCnt = this.ctx.pageStore().pages(grpId, PageIdAllocator.INDEX_PARTITION);
 
@@ -1221,7 +1221,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     allocated = true;
                 }
                 else {
-                    if (io != PageIO.getPageIO(pageAddr)) {
+                    if (io != PageIO.getPageIO(pageAddr, pageMem.bigPages())) {
                         if (log.isDebugEnabled()) {
                             log.debug("Upgrade index partition meta page version: [grpId=" + grpId +
                                 ", oldVer=" + PagePartitionMetaIO.getVersion(pageAddr) +
@@ -1557,7 +1557,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             long metaPageAddr = pageMem.writeLock(grpId, metaPageId, metaPage);
 
             try {
-                PageMetaIOV2 metaIo = PageMetaIO.getPageIO(metaPageAddr);
+                PageMetaIOV2 metaIo = PageMetaIO.getPageIO(metaPageAddr, null);
 
                 int encryptIdx = ReencryptStateUtils.pageIndex(state);
                 int encryptCnt = ReencryptStateUtils.pageCount(state);
@@ -2511,7 +2511,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         allocated = true;
                     }
                     else {
-                        if (io != PageIO.getPageIO(pageAddr)) {
+                        if (io != PageIO.getPageIO(pageAddr, pageMem.bigPages())) {
                             if (log.isDebugEnabled()) {
                                 log.debug("Upgrade partition meta page version: [part=" + partId +
                                     ", grpId=" + grpId +

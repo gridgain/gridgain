@@ -250,7 +250,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
                             if (PageIO.getType(pageAddr) != T_DATA)
                                 continue; // Not a data page.
 
-                            DataPageIO io = PageIO.getPageIO(T_DATA, PageIO.getVersion(pageAddr));
+                            DataPageIO io = PageIO.getPageIO(T_DATA, PageIO.getVersion(pageAddr), pageMem.bigPages());
 
                             int rowsCnt = io.getRowsCount(pageAddr);
 
@@ -451,7 +451,7 @@ public class CacheDataTree extends BPlusTree<CacheSearchRow, CacheDataRow> {
             assert pageAddr != 0L : link;
 
             try {
-                DataPageIO io = DataPageIO.VERSIONS.forPage(pageAddr);
+                DataPageIO io = DataPageIO.versions(pageMem.bigPages()).forPage(pageAddr);
 
                 DataPagePayload data = io.readPayload(pageAddr,
                     itemId(link),

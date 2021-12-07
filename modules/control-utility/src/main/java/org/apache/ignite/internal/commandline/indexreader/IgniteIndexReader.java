@@ -66,6 +66,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageP
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PagePartitionMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
@@ -166,6 +167,9 @@ public class IgniteIndexReader implements AutoCloseable {
     /** Page size. */
     private final int pageSize;
 
+    /** Extended data page layout. */
+    private final boolean extendedDataPageLayout;
+
     /** Partition count. */
     private final int partCnt;
 
@@ -211,6 +215,7 @@ public class IgniteIndexReader implements AutoCloseable {
         IgniteIndexReaderFilePageStoreFactory filePageStoreFactory
     ) throws IgniteCheckedException {
         pageSize = filePageStoreFactory.pageSize();
+        extendedDataPageLayout = DataPageLayout.shouldBeExtended(pageSize);
         partCnt = filePageStoreFactory.partitionCount();
         this.checkParts = checkParts;
         this.idxFilter = idxFilter;
@@ -364,7 +369,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 doWithBuffer((buf, addr) -> {
                     readPage(idxStore, pageMetaPageId, buf);
 
-                    PageMetaIO pageMetaIO = PageIO.getPageIO(addr);
+                    PageMetaIO pageMetaIO = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                     long metaTreeRootId = normalizePageId(pageMetaIO.getTreeRoot(addr));
 
@@ -540,7 +545,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     readPage(store, pageId, buf);
 
-                    PageIO io = PageIO.getPageIO(addr);
+                    PageIO io = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                     if (!c.apply(pageId, addr, io))
                         break;
@@ -594,7 +599,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 doWithBuffer((buf, addr) -> {
                     readPage(partStore, partMetaId, buf);
 
-                    PagePartitionMetaIO partMetaIO = PageIO.getPageIO(addr);
+                    PagePartitionMetaIO partMetaIO = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                     long cacheDataTreeRoot = partMetaIO.getTreeRoot(addr);
 
@@ -783,7 +788,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         readPage(idxStore, nextMetaId, buf);
 
-                        PagesListMetaIO io = PageIO.getPageIO(addr);
+                        PagesListMetaIO io = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                         Map<Integer, GridLongList> data = new HashMap<>();
 
@@ -843,7 +848,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     readPage(idxStore, nextNodeId, nodeBuf);
 
-                    PagesListNodeIO io = PageIO.getPageIO(nodeAddr);
+                    PagesListNodeIO io = PageIO.getPageIO(nodeAddr, extendedDataPageLayout);
 
                     for (int i = 0; i < io.getCount(nodeAddr); i++) {
                         pageBuf.rewind();
@@ -854,7 +859,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         readPage(idxStore, pageId, pageBuf);
 
-                        PageIO pageIO = PageIO.getPageIO(pageAddr);
+                        PageIO pageIO = PageIO.getPageIO(pageAddr, extendedDataPageLayout);
 
                         pageStat.compute(pageIO.getClass(), (k, v) -> v == null ? 1 : v + 1);
                     }
@@ -1118,7 +1123,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             readPage(store, rootPageId, buf);
 
-            PageIO pageIO = PageIO.getPageIO(addr);
+            PageIO pageIO = PageIO.getPageIO(addr, extendedDataPageLayout);
 
             if (!(pageIO instanceof BPlusMetaIO))
                 throw new IgniteException("Root page is not meta, pageId=" + rootPageId);
@@ -1140,7 +1145,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         readPage(store, pageId, buf);
 
-                        pageIO = PageIO.getPageIO(addr);
+                        pageIO = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                         if (i == 0 && !(pageIO instanceof BPlusLeafIO))
                             throw new IgniteException("Not-leaf page found on leaf level, pageId=" + pageId + ", level=" + i);
@@ -1198,7 +1203,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 final long addr = bufferAddress(buf);
 
-                final PageIO io = PageIO.getPageIO(addr);
+                final PageIO io = PageIO.getPageIO(addr, extendedDataPageLayout);
 
                 nodeCtx.ioStat.compute(io.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
@@ -1553,7 +1558,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         tombstone = doWithBuffer((dataBuf, dataBufAddr) -> {
                             readPage(store, linkedPageId, dataBuf);
 
-                            PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf));
+                            PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf), extendedDataPageLayout);
 
                             if (dataIo instanceof AbstractDataPageIO) {
                                 AbstractDataPageIO dataPageIO = (AbstractDataPageIO) dataIo;

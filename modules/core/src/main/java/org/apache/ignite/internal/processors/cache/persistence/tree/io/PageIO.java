@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.io.Pages
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageBPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastoreDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.data.DataPageLayout;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataInnerIO;
@@ -68,13 +69,13 @@ import org.jetbrains.annotations.Nullable;
  *    static methods (like {@code {@link #getPageId(long)}}) intentionally:
  *    this base format can not be changed between versions.
  *
- * 2. IO must correctly override {@link #initNewPage(long, long, int)} method and call super.
+ * 2. IO must correctly override {@link #initNewPage(long, long, int, PageMetrics)} method and call super.
  *    We have logic that relies on this behavior.
  *
  * 3. Page IO type ID constant must be declared in this class to have a list of all the
  *    existing IO types in a single place.
  *
- * 4. IO must be added to {@link #getBPlusIO(int, int)} or to {@link #getPageIO(int, int)}.
+ * 4. IO must be added to {@link #getBPlusIO(int, int)} or to {@link #getPageIO(int, int, Boolean)}.
  *
  * 5. Always keep in mind that IOs are versioned and their format can change from version
  *    to version. In this respect it is a good practice to avoid exposing details
@@ -675,11 +676,11 @@ public abstract class PageIO {
      * @return IO.
      * @throws IgniteCheckedException If failed.
      */
-    public static <Q extends PageIO> Q getPageIO(long pageAddr) throws IgniteCheckedException {
+    public static <Q extends PageIO> Q getPageIO(long pageAddr, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
         int type = getType(pageAddr);
         int ver = getVersion(pageAddr);
 
-        return getPageIO(type, ver);
+        return getPageIO(type, ver, bigDataPages);
     }
 
     /**
@@ -687,21 +688,23 @@ public abstract class PageIO {
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    public static <Q extends PageIO> Q getPageIO(ByteBuffer page) throws IgniteCheckedException {
-        return getPageIO(getType(page), getVersion(page));
+    public static <Q extends PageIO> Q getPageIO(ByteBuffer page, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
+        return getPageIO(getType(page), getVersion(page), bigDataPages);
     }
 
     /**
      * @param type IO Type.
      * @param ver IO Version.
+     * @param bigDataPages Big layout for data pages.
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
-    public static <Q extends PageIO> Q getPageIO(int type, int ver) throws IgniteCheckedException {
+    public static <Q extends PageIO> Q getPageIO(int type, int ver, @Nullable Boolean bigDataPages) throws IgniteCheckedException {
         switch (type) {
             case T_DATA:
-                return (Q)DataPageIO.VERSIONS.forVersion(ver);
+                assert bigDataPages != null;
+
+                return (Q)DataPageIO.versions(bigDataPages).forVersion(ver);
 
             case T_BPLUS_META:
                 return (Q)BPlusMetaIO.VERSIONS.forVersion(ver);
@@ -725,10 +728,14 @@ public abstract class PageIO {
                 return (Q)TrackingPageIO.VERSIONS.forVersion(ver);
 
             case T_DATA_METASTORAGE:
-                return (Q)MetastoreDataPageIO.VERSIONS.forVersion(ver);
+                assert bigDataPages != null;
+
+                return (Q)MetastoreDataPageIO.metastorageIOVersions(bigDataPages).forVersion(ver);
 
             case T_DATA_PART:
-                return (Q)SimpleDataPageIO.VERSIONS.forVersion(ver);
+                assert bigDataPages != null;
+
+                return (Q)SimpleDataPageIO.versions(bigDataPages).forVersion(ver);
 
             case T_MARKER_PAGE:
                 return (Q)MarkerPageIO.VERSIONS.forVersion(ver);
@@ -761,7 +768,6 @@ public abstract class PageIO {
      * @return IO for either inner or leaf B+Tree page.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     public static <Q extends BPlusIO<?>> Q getBPlusIO(int type, int ver) throws IgniteCheckedException {
         assert type > 0 && type <= 65535 : type;
 
@@ -957,12 +963,15 @@ public abstract class PageIO {
 
     /**
      * @param addr Address.
+     * @param pageSize Page size.
      */
     public static String printPage(long addr, int pageSize) {
         GridStringBuilder sb = new GridStringBuilder("Header [\n\ttype=");
 
+        boolean extendedDataPages = DataPageLayout.shouldBeExtended(pageSize);
+
         try {
-            PageIO io = getPageIO(addr);
+            PageIO io = getPageIO(addr, extendedDataPages);
 
             sb.a(getType(addr)).a(" (").a(io.getClass().getSimpleName())
                 .a("),\n\tver=").a(getVersion(addr)).a(",\n\tcrc=").a(getCrc(addr))

@@ -121,6 +121,9 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** Page size. */
     private final int sysPageSize;
 
+    /** Big pages. */
+    private final boolean bigPages;
+
     /** */
     private final IgniteLogger log;
 
@@ -225,6 +228,8 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         totalPages = (int)(dataRegionCfg.getMaxSize() / sysPageSize);
 
         rwLock = new OffheapReadWriteLock(lockConcLvl);
+
+        bigPages = false;
     }
 
     /** {@inheritDoc} */
@@ -381,6 +386,11 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     /** {@inheritDoc} */
     @Override public int realPageSize(int grpId) {
         return pageSize();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean bigPages() {
+        return bigPages;
     }
 
     /**

@@ -154,7 +154,7 @@ public class TxLog implements CheckpointListener {
                             isNew = true;
                         }
                         else {
-                            PageMetaIO io = PageIO.getPageIO(pageAddr);
+                            PageMetaIO io = PageIO.getPageIO(pageAddr, pageMemory.bigPages());
 
                             treeRoot = io.getTreeRoot(pageAddr);
                             reuseListRoot = io.getReuseListRoot(pageAddr);
