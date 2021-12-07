@@ -326,7 +326,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * <p>
      * Value is {@code 30 sec}.
      */
-    private static final long PERIODIC_STARVATION_CHECK_FREQ = 1000 * 30;
+    public static final long DFLT_PERIODIC_STARVATION_CHECK_FREQ = 1000 * 30;
 
     /** Force complete reconnect future. */
     private static final Object STOP_RECONNECT = new Object();
@@ -336,6 +336,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** Default long operations dump timeout. */
     public static final long DFLT_LONG_OPERATIONS_DUMP_TIMEOUT = 60_000L;
+
+    /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
+    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = true;
+
+    /** @see IgniteSystemProperties#IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP */
+    public static final boolean DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP = true;
 
     /** Long jvm pause detector. */
     private LongJVMPauseDetector longJVMPauseDetector;
@@ -865,7 +871,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void ackClassPathContent() {
         assert log != null;
 
-        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
+        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP,
+            DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP);
 
         if (enabled) {
             String clsPath = System.getProperty("java.class.path", ".");
@@ -1367,7 +1374,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         boolean starveCheck = !isDaemon() && !"0".equals(intervalStr);
 
         if (starveCheck) {
-            final long interval = F.isEmpty(intervalStr) ? PERIODIC_STARVATION_CHECK_FREQ : Long.parseLong(intervalStr);
+            final long interval = F.isEmpty(intervalStr) ? DFLT_PERIODIC_STARVATION_CHECK_FREQ :
+                Long.parseLong(intervalStr);
 
             starveTask = ctx.timeout().schedule(new Runnable() {
                 /** Last completed task count. */
@@ -1518,7 +1526,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @return Service processor.
      */
     private GridProcessorAdapter createServiceProcessor() {
-        final boolean srvcProcMode = getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, false);
+        final boolean srvcProcMode = getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED,
+            DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
 
         if (srvcProcMode)
             return new IgniteServiceProcessor(ctx);

@@ -20,6 +20,9 @@ package org.apache.ignite.internal.binary.streams;
  * Memory allocator chunk.
  */
 public interface BinaryMemoryAllocatorChunk {
+    /** @see IgniteSystemProperties#IGNITE_MARSHAL_BUFFERS_RECHECK */
+    public static final int DFLT_MARSHAL_BUFFERS_RECHECK = 10000;
+
     /**
      * Allocate.
      *

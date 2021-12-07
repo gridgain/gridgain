@@ -145,6 +145,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     public static final int DFLT_LOCK_TIMEOUT_ENV = 1000;
 
     /** Property name for entry lock timeout in milliseconds. Default is 1000. */
+    @SystemProperty(value = "Sets the entry's lock timeout in milliseconds",
+        type = Long.class, defaults = "" + DFLT_LOCK_TIMEOUT_ENV)
     public static final String ENTRY_LOCK_TIMEOUT_ENV = "ENTRY_LOCK_TIMEOUT";
 
     /** Entry lock time awaiting. */
