@@ -124,12 +124,16 @@ public class H2QueryInfo {
      * @param additionalInfo Additional query info.
      */
     public void printLogMessage(IgniteLogger log, String msg, String additionalInfo) {
+        String globalQueryId = runningQryId == null ? "(unknown)" // compatibility with old versions.
+            : QueryUtils.globalQueryId(node, runningQryId);
+
         StringBuilder msgSb = new StringBuilder(msg + " [");
 
         if (additionalInfo != null)
             msgSb.append(additionalInfo).append(", ");
 
-        msgSb.append("duration=").append(time()).append("ms")
+        msgSb.append("globalQueryId=").append(globalQueryId)
+            .append(", duration=").append(time()).append("ms")
             .append(", type=").append(type)
             .append(", distributedJoin=").append(distributedJoin)
             .append(", enforceJoinOrder=").append(enforceJoinOrder)
@@ -145,7 +149,9 @@ public class H2QueryInfo {
 
         msgSb.append(']');
 
-        LT.warn(log, QueryUtils.globalQueryId(node, runningQryId) + "#" + sql, msgSb.toString());
+        // Include 'sql' text into key for compatibility with older versions.
+        String throttleKey = globalQueryId + "#" + (runningQryId == null ? sql : type);
+        LT.warn(log, throttleKey, msgSb.toString());
     }
 
     /**
