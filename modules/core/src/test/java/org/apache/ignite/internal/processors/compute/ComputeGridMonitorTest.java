@@ -258,6 +258,7 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
         assertEquals(session.getTaskName(), snapshot.taskName());
         assertEquals(session.getTaskNodeId(), snapshot.originatingNodeId());
         assertEquals(session.getStartTime(), snapshot.startTime());
+        assertEquals(session.isFullSupport(), snapshot.fullSupported());
 
         if (checkJobNodes) {
             assertEquals(
