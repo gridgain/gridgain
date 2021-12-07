@@ -238,9 +238,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /** System view description for page lists. */
     public static final String CACHE_GRP_PAGE_LIST_VIEW_DESC = "Cache group page lists";
 
+    /** @see IgniteSystemProperties#IGNITE_ALLOW_START_CACHES_IN_PARALLEL */
+    public static final boolean DFLT_ALLOW_START_CACHES_IN_PARALLEL = true;
+
     /** Enables start caches in parallel. */
-    private final boolean IGNITE_ALLOW_START_CACHES_IN_PARALLEL =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_ALLOW_START_CACHES_IN_PARALLEL, true);
+    private final boolean IGNITE_ALLOW_START_CACHES_IN_PARALLEL = IgniteSystemProperties.getBoolean(
+        IgniteSystemProperties.IGNITE_ALLOW_START_CACHES_IN_PARALLEL, DFLT_ALLOW_START_CACHES_IN_PARALLEL);
 
     /** */
     private final boolean keepStaticCacheConfiguration = IgniteSystemProperties.getBoolean(

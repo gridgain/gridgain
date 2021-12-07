@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
@@ -76,8 +77,17 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  * </ul>
  */
 public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
+    /** Default eviction progress show frequency. */
+    private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000;
+
+    /** Eviction progress frequency property name. */
+    @SystemProperty(value = "Eviction progress frequency in milliseconds", type = Long.class,
+        defaults = "" + DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS)
+    public static final String SHOW_EVICTION_PROGRESS_FREQ = "SHOW_EVICTION_PROGRESS_FREQ";
+
     /** Eviction progress frequency in ms. */
-    private final long evictionProgressFreqMs = getLong("SHOW_EVICTION_PROGRESS_FREQ", 2 * 60 * 1000);
+    private final long evictionProgressFreqMs = getLong(SHOW_EVICTION_PROGRESS_FREQ,
+        DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS);
 
     /** */
     private static final int MAX_EVICT_QUEUE_SIZE = getInteger("MAX_EVICT_QUEUE_SIZE", 10_000);
@@ -366,7 +376,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     log.debug("Filled the queue for the group [grpName=" + ctx0.grp.cacheOrGroupName() +
                         ", tombstone=" + tombstone + ", total=" + cnt + ']');
                 }
-                
+
                 total += cnt;
             }
 

@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.jetbrains.annotations.Nullable;
 import org.apache.ignite.util.deque.FastSizeDeque;
@@ -35,9 +36,25 @@ import org.apache.ignite.util.deque.FastSizeDeque;
  *
  */
 public class CacheContinuousQueryEventBuffer {
+    /** @see #IGNITE_CONTINUOUS_QUERY_PENDING_BUFF_SIZE */
+    public static final int DFLT_CONTINUOUS_QUERY_PENDING_BUFF_SIZE = 10_000;
+
+    /** @see #IGNITE_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE */
+    public static final int DFLT_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE = 1000;
+
     /** */
-    private static final int BUF_SIZE =
-        IgniteSystemProperties.getInteger("IGNITE_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE", 1000);
+    @SystemProperty(value = "The max size of the buffer with pending continuous queries events",
+        type = Long.class, defaults = "" + DFLT_CONTINUOUS_QUERY_PENDING_BUFF_SIZE)
+    public static final String IGNITE_CONTINUOUS_QUERY_PENDING_BUFF_SIZE = "IGNITE_CONTINUOUS_QUERY_PENDING_BUFF_SIZE";
+
+    /** */
+    @SystemProperty(value = "Continuous queries batch buffer size", type = Long.class,
+        defaults = "" + DFLT_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE)
+    public static final String IGNITE_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE = "IGNITE_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE";
+
+    /** */
+    private static final int BUF_SIZE = IgniteSystemProperties.getInteger(
+        IGNITE_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE, DFLT_CONTINUOUS_QUERY_SERVER_BUFFER_SIZE);
 
     /** */
     private static final Object RETRY = new Object();
