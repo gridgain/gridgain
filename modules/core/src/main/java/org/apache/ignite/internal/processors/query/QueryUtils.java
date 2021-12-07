@@ -363,10 +363,9 @@ public class QueryUtils {
 
         normalEntity.setIndexes(normalIdxs);
     
-        if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
-                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FORCE_FILLS_ABSENT_PKS_WITH_DEFAULTS)
-        )
-            normalEntity.forceFillAbsentPKsWithDefaults(true);
+        if (entity instanceof QueryEntityEx)
+            normalEntity.forceFillAbsentPKsWithDefaults(
+                    ((QueryEntityEx) entity).forceFillAbsentPKsWithDefaults());
 
         validateQueryEntity(normalEntity);
 
