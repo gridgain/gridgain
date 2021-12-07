@@ -692,7 +692,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
     }
 
     /**
-     * Runs fsync on pre-java15 JVMs that doesn't offer a possibility to fsync mapped byte buffers in an aligned way.
+     * Runs fsync on pre-java15 JVMs that don't offer a possibility to fsync mapped byte buffers in an aligned way.
      */
     private static class LegacyFSyncer implements MMapFSyncer {
         /** {@link MappedByteBuffer#force0(java.io.FileDescriptor, long, long)}. */
