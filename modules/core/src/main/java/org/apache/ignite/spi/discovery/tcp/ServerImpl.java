@@ -6407,10 +6407,6 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             synchronized (mux) {
                 joiningEmpty = joiningNodes.isEmpty();
-
-                if (log.isDebugEnabled())
-                    log.debug("Delay custom message processing, there are joining nodes [msg=" + msg +
-                        ", joiningNodes=" + joiningNodes + ']');
             }
 
             boolean delayMsg = msg.topologyVersion() == 0L && !joiningEmpty;
@@ -6419,6 +6415,10 @@ class ServerImpl extends TcpDiscoveryImpl {
                 synchronized (mux) {
                     pendingCustomMsgs.add(msg);
                 }
+
+                if (log.isDebugEnabled())
+                    log.debug("Delay custom message processing, there are joining nodes [msg=" + msg +
+                        ", joiningNodes=" + joiningNodes + ']');
 
                 return true;
             }
