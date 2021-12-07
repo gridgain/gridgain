@@ -590,15 +590,18 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override public void validateKeyAndValue(Object key, Object val) throws IgniteCheckedException {
-        if (F.isEmpty(validateProps) && F.isEmpty(idxs))
-            return;
-
         validateProps(key, val);
 
         validateIndexes(key, val);
     }
 
-    /** Validate properties. */
+    /**
+     * Validate properties.
+     *
+     * @param key Key to validate properties for.
+     * @param val Value to validate properties for.
+     * @throws IgniteCheckedException In case of errors.
+     */
     private void validateProps(Object key, Object val) throws IgniteCheckedException {
         if (F.isEmpty(validateProps))
             return;
@@ -615,12 +618,10 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
                 isKey = true;
             }
-            else if (F.eq(prop.name(), valFieldName) || (valFieldName == null && F.eq(prop.name(), VAL_FIELD_NAME))) {
+            else if (F.eq(prop.name(), valFieldName) || (valFieldName == null && F.eq(prop.name(), VAL_FIELD_NAME)))
                 propVal = val instanceof CacheObject ? ((CacheObject)val).value(coCtx, true) : val;
-            }
-            else {
+            else
                 propVal = prop.value(key, val);
-            }
 
             if (propVal == null && prop.notNull()) {
                 throw new IgniteSQLException("Null value is not allowed for column '" + prop.name() + "'",
@@ -644,8 +645,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                         "Maximum precision: " + prop.precision() + ", actual precision: " + dec.precision(),
                         isKey ? TOO_LONG_KEY : TOO_LONG_VALUE);
                 }
-                else if (prop.scale() != -1 &&
-                    dec.scale() > prop.scale()) {
+                else if (prop.scale() != -1 && dec.scale() > prop.scale()) {
                     throw new IgniteSQLException("Value for a column '" + prop.name() + "' is out of range. " +
                         "Maximum scale : " + prop.scale() + ", actual scale: " + dec.scale(),
                         isKey ? KEY_SCALE_OUT_OF_RANGE : VALUE_SCALE_OUT_OF_RANGE);
@@ -682,7 +682,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                     propType = prop.type();
                 }
 
-                if (propVal == null)
+                if (propVal == null || Object.class.equals(propType))
                     continue;
 
                 if (!(propVal instanceof BinaryObject)) {
@@ -690,7 +690,8 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
                         // Some reference type arrays end up being converted to Object[]
                         if (!(propType.isArray() && Object[].class == propVal.getClass() &&
                             Arrays.stream((Object[]) propVal).
-                                noneMatch(x -> x != null && !U.box(propType.getComponentType()).isAssignableFrom(U.box(x.getClass())))))
+                                noneMatch(x -> x != null &&
+                                    !U.box(propType.getComponentType()).isAssignableFrom(U.box(x.getClass())))))
                         {
                             throw new IgniteSQLException("Type for a column '" + idxField +
                                 "' is not compatible with index definition. Expected '" +
@@ -705,15 +706,18 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
 
                     // Check for classes/enums implementing indexed interfaces.
                     String clsName = ((BinaryObject) propVal).type().typeName();
+
                     try {
                         final Class<?> cls = Class.forName(clsName);
 
                         if (propType.isAssignableFrom(cls))
                             continue;
-                    } catch (ClassNotFoundException e) {
+                    }
+                    catch (ClassNotFoundException e) {
                         if (log.isDebugEnabled())
                             U.error(log, "Failed to find child class: " + clsName, e);
                     }
+
                     throw new IgniteSQLException("Type for a column '" + idxField +
                         "' is not compatible with index definition. Expected '" +
                         propType.getSimpleName() + "', actual type '" +
