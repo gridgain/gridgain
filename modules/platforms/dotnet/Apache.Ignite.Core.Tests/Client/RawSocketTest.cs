@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Collections.Generic;
     using System.Net;
     using System.Net.Sockets;
     using Apache.Ignite.Core.Client;
@@ -31,6 +32,17 @@ namespace Apache.Ignite.Core.Tests.Client
     /// </summary>
     public class RawSocketTest : ClientTestBase
     {
+        /** */
+        private readonly List<Socket> _createdSockets = new List<Socket>();
+
+        /** */
+        [TearDown]
+        public void TearDown()
+        {
+            _createdSockets.ForEach(x => x.Dispose());
+            _createdSockets.Clear();
+        }
+
         /// <summary>
         /// Tests the socket handshake connection.
         /// </summary>
@@ -130,10 +142,25 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Tests that invalid handshake data causes the connection to be closed by the server.
+        /// </summary>
+        [Test]
+        public void TestInvalidHandshakeClosesConnection()
+        {
+            var sock = GetSocket(ClientConnectorConfiguration.DefaultPort);
+            Assert.IsTrue(sock.Connected);
+
+            sock.Send(new byte[] { 1, 1, 1, 1, 1 });
+
+            // Receive returns 0 when connection has been closed, blocks otherwise.
+            Assert.AreEqual(0, sock.Receive(new byte[4]));
+        }
+
+        /// <summary>
         /// Gets the socket.
         /// </summary>
         /// <returns>Connected socket after handshake.</returns>
-        private static Socket GetSocket()
+        private Socket GetSocket()
         {
             var sock = GetSocket(ClientConnectorConfiguration.DefaultPort);
             Assert.IsTrue(sock.Connected);
@@ -209,11 +236,14 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Gets the socket.
         /// </summary>
-        private static Socket GetSocket(int port)
+        private Socket GetSocket(int port)
         {
             var endPoint = new IPEndPoint(IPAddress.Loopback, port);
             var sock = new Socket(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             sock.Connect(endPoint);
+
+            _createdSockets.Add(sock);
+
             return sock;
         }
     }

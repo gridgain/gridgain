@@ -124,6 +124,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -269,6 +270,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
     /** {@inheritDoc} */
     @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+        assert F.size(cacheDataStores().iterator(), CacheDataStore::destroyed) == 0;
+
         // Optimization: reducing the holding time of checkpoint write lock.
         syncMetadata(ctx, ctx.executor(), false);
     }
@@ -352,7 +355,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (execSvc == null) {
             reuseList.saveMetadata(grp.statisticsHolderData());
 
-            for (CacheDataStore store : partDataStores.values())
+            for (CacheDataStore store : cacheDataStores())
                 saveStoreMetadata(store, ctx, false, needSnapshot);
         }
         else {
@@ -365,7 +368,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                 }
             });
 
-            for (CacheDataStore store : partDataStores.values())
+            for (CacheDataStore store : cacheDataStores())
                 execSvc.execute(() -> {
                     try {
                         saveStoreMetadata(store, ctx, false, needSnapshot);
@@ -1107,12 +1110,11 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
      * Invalidates page memory for given partition. Destroys partition store.
      * <b>NOTE:</b> This method can be invoked only within checkpoint lock or checkpointer thread.
      *
-     * @param grpId Group ID.
      * @param partId Partition ID.
      *
      * @throws IgniteCheckedException If destroy has failed.
      */
-    public void destroyPartitionStore(int grpId, int partId) throws IgniteCheckedException {
+    public void destroyPartitionStore(int partId) throws IgniteCheckedException {
         PageMemoryEx pageMemory = (PageMemoryEx)grp.dataRegion().pageMemory();
 
         if (grp.config().isEncryptionEnabled())
@@ -1123,33 +1125,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (grp.walEnabled())
             ctx.wal().log(new PartitionDestroyRecord(grp.groupId(), partId));
 
-        ctx.pageStore().onPartitionDestroyed(grpId, partId, tag);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionCounterUpdated(int part, long cntr) {
-        CacheDataStore store = partDataStores.get(part);
-
-        assert store != null;
-
-        long oldCnt = store.updateCounter();
-
-        if (oldCnt < cntr)
-            store.updateCounter(cntr);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionInitialCounterUpdated(int part, long start, long delta) {
-        CacheDataStore store = partDataStores.get(part);
-
-        assert store != null;
-
-        store.updateInitialCounter(start, delta);
-    }
-
-    /** {@inheritDoc} */
-    @Override public long lastUpdatedPartitionCounter(int part) {
-        return partDataStores.get(part).updateCounter();
+        ctx.pageStore().truncate(grp.groupId(), partId, tag);
     }
 
     /** {@inheritDoc} */
@@ -1472,14 +1448,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public void preloadPartition(int part) throws IgniteCheckedException {
+    @Override public void preloadPartition(int partId) throws IgniteCheckedException {
         if (grp.isLocal()) {
-            dataStore(part).preload();
+            dataStore(null).preload();
 
             return;
         }
 
-        GridDhtLocalPartition locPart = grp.topology().localPartition(part, AffinityTopologyVersion.NONE, false, false);
+        GridDhtLocalPartition locPart = grp.topology().localPartition(partId, AffinityTopologyVersion.NONE, false, false);
 
         assert locPart != null && locPart.reservations() > 0;
 
@@ -1494,7 +1470,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     long freeSpace() {
         long freeSpace = 0;
 
-        for (CacheDataStore store : partDataStores.values()) {
+        for (CacheDataStore store : cacheDataStores()) {
             assert store instanceof GridCacheDataStore;
 
             AbstractFreeList freeList = ((GridCacheDataStore)store).getCacheStoreFreeList();
@@ -1516,7 +1492,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     long emptyDataPages() {
         long emptyDataPages = 0;
 
-        for (CacheDataStore store : partDataStores.values()) {
+        for (CacheDataStore store : cacheDataStores()) {
             assert store instanceof GridCacheDataStore;
 
             AbstractFreeList freeList = ((GridCacheDataStore)store).getCacheStoreFreeList();
@@ -2122,13 +2098,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         private volatile CacheDataStoreImpl delegate;
 
         /** */
-        private GridQueryRowCacheCleaner rowCacheCleaner;
-
-        /**
-         * Mutex used to synchronise publication of initialized delegate link and actions that should change
-         * the delegate's state, so the delegate will not be in obsolete state.
-         */
-        private final Object delegatePublicationMux = new Object();
+        private volatile GridQueryRowCacheCleaner rowCacheCleaner;
 
         /** */
         private PartitionMetaStorageImpl<SimpleDataRow> partStorage;
@@ -2375,7 +2345,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         () -> pendingTree0,
                         grp,
                         busyLock,
-                        log
+                        log,
+                        () -> rowCacheCleaner
                     ) {
                         /** {@inheritDoc} */
                         @Override public PendingEntriesTree pendingTree() {
@@ -2452,11 +2423,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         pageMem.releasePage(grpId, partMetaId, partMetaPage);
                     }
 
-                    synchronized (delegatePublicationMux) {
-                        delegate0.setRowCacheCleaner(rowCacheCleaner);
-
-                        delegate = delegate0;
-                    }
+                    delegate = delegate0;
                 }
                 catch (Throwable ex) {
                     U.error(log, "Unhandled exception during page store initialization. All further operations will " +
@@ -2916,19 +2883,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         /** {@inheritDoc} */
         @Override public void setRowCacheCleaner(GridQueryRowCacheCleaner rowCacheCleaner) {
-            try {
-                synchronized (delegatePublicationMux) {
-                    this.rowCacheCleaner = rowCacheCleaner;
-                }
-
-                CacheDataStore delegate0 = init0(true);
-
-                if (delegate0 != null)
-                    delegate0.setRowCacheCleaner(rowCacheCleaner);
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
+            this.rowCacheCleaner = rowCacheCleaner;
         }
 
         /** {@inheritDoc} */
@@ -3260,6 +3215,21 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             if (delegate != null)
                 delegate.markDestroyed();
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean destroyed() {
+            try {
+                CacheDataStore delegate = init0(true);
+
+                if (delegate != null)
+                    return delegate.destroyed();
+
+                return false;
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
         }
 
         /** {@inheritDoc} */
