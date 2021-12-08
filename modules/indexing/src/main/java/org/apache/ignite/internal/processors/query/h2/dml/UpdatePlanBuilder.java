@@ -106,10 +106,11 @@ public final class UpdatePlanBuilder {
         GridSqlStatement stmt,
         boolean mvccEnabled,
         IgniteH2Indexing idx,
-        IgniteLogger log
+        IgniteLogger log,
+        boolean forceFillAbsentPKsWithDefaults
     ) throws IgniteCheckedException {
         if (stmt instanceof GridSqlMerge || stmt instanceof GridSqlInsert)
-            return planForInsert(planKey, stmt, idx, mvccEnabled, log);
+            return planForInsert(planKey, stmt, idx, mvccEnabled, log, forceFillAbsentPKsWithDefaults);
         else if (stmt instanceof GridSqlUpdate || stmt instanceof GridSqlDelete)
             return planForUpdate(planKey, stmt, idx, mvccEnabled, log);
         else
@@ -133,7 +134,8 @@ public final class UpdatePlanBuilder {
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
         boolean mvccEnabled,
-        IgniteLogger log
+        IgniteLogger log,
+        boolean forceFillAbsentPKsWithDefaults
     ) throws IgniteCheckedException {
         GridSqlQuery sel = null;
 
@@ -268,12 +270,9 @@ public final class UpdatePlanBuilder {
         }
     
         rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
-    
-        boolean fillPKsWithDefaultsSysSetting = IgniteSystemProperties.getBoolean(
-                IgniteSystemProperties.IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS, false);
         
         boolean forceFillAbsentPKsWithNullsOrDefaults = type.forceFillAbsentPKsWithDefaults()
-                || fillPKsWithDefaultsSysSetting;
+                || forceFillAbsentPKsWithDefaults;
         
         if (forceFillAbsentPKsWithNullsOrDefaults && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
