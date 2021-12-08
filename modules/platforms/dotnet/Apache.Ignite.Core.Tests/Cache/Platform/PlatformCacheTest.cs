@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+// ReSharper disable LoopVariableIsNeverChangedInsideLoop
 namespace Apache.Ignite.Core.Tests.Cache.Platform
 {
     using System;
