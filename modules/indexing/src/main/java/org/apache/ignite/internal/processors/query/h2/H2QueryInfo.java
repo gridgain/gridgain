@@ -119,6 +119,13 @@ public class H2QueryInfo {
     }
 
     /**
+     * @param type Query type.
+     */
+    public QueryType type() {
+        return type;
+    }
+
+    /**
      * @param log Logger.
      * @param msg Log message
      * @param additionalInfo Additional query info.
