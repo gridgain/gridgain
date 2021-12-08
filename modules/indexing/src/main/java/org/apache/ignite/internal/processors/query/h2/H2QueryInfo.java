@@ -127,23 +127,21 @@ public class H2QueryInfo {
         String globalQueryId = runningQryId == null ? "(unknown)" // compatibility with old versions.
             : QueryUtils.globalQueryId(node, runningQryId);
 
-        StringBuilder msgSb = new StringBuilder(msg + " [");
+        StringBuilder msgSb = new StringBuilder(msg)
+            .append(" [globalQueryId=").append(globalQueryId);
 
         if (additionalInfo != null)
-            msgSb.append(additionalInfo).append(", ");
+            msgSb.append(", ").append(additionalInfo);
 
-        msgSb.append("globalQueryId=").append(globalQueryId)
+        msgSb
             .append(", duration=").append(time()).append("ms")
             .append(", type=").append(type)
             .append(", distributedJoin=").append(distributedJoin)
             .append(", enforceJoinOrder=").append(enforceJoinOrder)
             .append(", lazy=").append(lazy)
-            .append(", schema=").append(schema);
-
-        msgSb.append(", sql='")
-            .append(sql);
-
-        msgSb.append("', plan=").append(stmt.getPlanSQL(false));
+            .append(", schema=").append(schema)
+            .append(", sql='").append(sql)
+            .append("', plan=").append(stmt.getPlanSQL(false));
 
         printInfo(msgSb);
 
