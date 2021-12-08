@@ -16,16 +16,15 @@
 
 package org.apache.ignite.yardstick.jdbc;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Date;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.yardstickframework.BenchmarkConfiguration;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Date;
 
 import static org.yardstickframework.BenchmarkUtils.println;
 
@@ -164,7 +163,7 @@ public class JdbcUtils {
     }
 
     /** */
-    public static Date dateOfEpochDay(long day ) {
+    public static Date dateOfEpochDay(long day) {
         return java.sql.Date.valueOf(LocalDate.ofEpochDay(day));
     }
 }
