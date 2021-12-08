@@ -19,7 +19,9 @@ namespace Apache.Ignite.Core.Tests.Binary
     using System;
     using System.Collections.Generic;
     using System.Reflection;
+#if NETCOREAPP
     using System.Reflection.Emit;
+#endif
 #if !NETCOREAPP
     using System.Linq;
 #endif
@@ -171,6 +173,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 resolver.ResolveType("TestGenericBinarizable`1[[TypeResolverTest]][]", nameMapper: mapper));
         }
 
+#if NETCOREAPP
         /// <summary>
         /// Tests that types from dynamic assemblies can be resolved.
         /// </summary>
@@ -191,6 +194,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             Assert.AreEqual(generatedType, resolvedType);
         }
+#endif
 
 #if !NETCOREAPP
         /// <summary>
