@@ -65,7 +65,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     @Nullable private final Throwable failReason;
 
     /** Availability of changing task attributes. */
-    private final boolean fullSupported;
+    private final boolean fullSupport;
 
     /**
      * Constructor for a new task.
@@ -79,7 +79,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
      * @param jobNodes Nodes IDs on which the task jobs will execute.
      * @param attributes All session attributes.
      * @param failReason Reason for the failure of the task.
-     * @param fullSupported Availability of changing task attributes.
+     * @param fullSupport Availability of changing task attributes.
      */
     private ComputeTaskStatus(
         IgniteUuid sessionId,
@@ -91,7 +91,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         List<UUID> jobNodes,
         Map<?, ?> attributes,
         @Nullable Throwable failReason,
-        boolean fullSupported
+        boolean fullSupport
     ) {
         this.sessionId = sessionId;
         this.status = status;
@@ -102,7 +102,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : jobNodes;
         this.attributes = F.isEmpty(attributes) ? emptyMap() : attributes;
         this.failReason = failReason;
-        this.fullSupported = fullSupported;
+        this.fullSupport = fullSupport;
     }
 
     /** {@inheritDoc} */
@@ -151,8 +151,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean fullSupported() {
-        return fullSupported;
+    @Override public boolean fullSupport() {
+        return fullSupport;
     }
 
     /**

@@ -74,5 +74,5 @@ public interface ComputeTaskStatusSnapshot {
     /**
      * @return {@code true} if change of task attributes is available.
      */
-    boolean fullSupported();
+    boolean fullSupport();
 }
