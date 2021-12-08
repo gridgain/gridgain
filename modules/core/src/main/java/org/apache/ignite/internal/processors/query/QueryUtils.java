@@ -49,7 +49,9 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.CacheDefaultBinaryAffinityKeyMapper;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
@@ -360,8 +362,12 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
-    
-        if (entity instanceof QueryEntityEx)
+        
+        if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FORCE_FILLS_ABSENT_PKS_WITH_DEFAULTS)
+        )
+            normalEntity.forceFillAbsentPKsWithDefaults(true);
+        else if (entity instanceof QueryEntityEx)
             normalEntity.forceFillAbsentPKsWithDefaults(
                     ((QueryEntityEx) entity).forceFillAbsentPKsWithDefaults());
 
