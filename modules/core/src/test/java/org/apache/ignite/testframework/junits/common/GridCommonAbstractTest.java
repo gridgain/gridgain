@@ -1475,10 +1475,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param cnt Keys count.
      * @param startFrom Start value for keys search.
      * @return Collection of keys for which given cache is neither primary nor backup.
-     * @throws IgniteCheckedException If failed.
      */
-    protected List<Integer> nearKeys(IgniteCache<?, ?> cache, int cnt, int startFrom)
-        throws IgniteCheckedException {
+    protected List<Integer> nearKeys(IgniteCache<?, ?> cache, int cnt, int startFrom) {
         return findKeys(cache, cnt, startFrom, 2);
     }
 
@@ -1665,10 +1663,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     /**
      * @param cache Cache.
      * @return Key for which given cache is neither primary nor backup.
-     * @throws IgniteCheckedException If failed.
      */
-    protected Integer nearKey(IgniteCache<?, ?> cache)
-        throws IgniteCheckedException {
+    protected Integer nearKey(IgniteCache<?, ?> cache) {
         return nearKeys(cache, 1, 1).get(0);
     }
 
