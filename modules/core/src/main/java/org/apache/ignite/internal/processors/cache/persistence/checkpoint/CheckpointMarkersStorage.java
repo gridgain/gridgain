@@ -653,7 +653,7 @@ public class CheckpointMarkersStorage {
 
                 // For fail-safety we should first write the snapshot to a temporary file
                 // and then atomically rename it
-                File tmpFile = new File(EARLIEST_CP_SNAPSHOT_TMP_FILE);
+                File tmpFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_TMP_FILE);
 
                 if (tmpFile.exists() && !IgniteUtils.delete(tmpFile)) {
                     log.error("Failed to delete temporary checkpoint snapshot file: " + tmpFile.getAbsolutePath());
