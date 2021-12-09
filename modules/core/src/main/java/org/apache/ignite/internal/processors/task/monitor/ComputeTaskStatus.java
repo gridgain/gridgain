@@ -67,6 +67,9 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     /** Availability of changing task attributes. */
     private final boolean fullSupport;
 
+    /** User who created the task, {@code null} if security is not available. */
+    @Nullable private Object createdBy;
+
     /**
      * Constructor for a new task.
      *
@@ -80,6 +83,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
      * @param attributes All session attributes.
      * @param failReason Reason for the failure of the task.
      * @param fullSupport Availability of changing task attributes.
+     * @param createdBy User who created the task, {@code null} if security is not available.
      */
     private ComputeTaskStatus(
         IgniteUuid sessionId,
@@ -91,7 +95,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         List<UUID> jobNodes,
         Map<?, ?> attributes,
         @Nullable Throwable failReason,
-        boolean fullSupport
+        boolean fullSupport,
+        @Nullable Object createdBy
     ) {
         this.sessionId = sessionId;
         this.status = status;
@@ -103,6 +108,7 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         this.attributes = F.isEmpty(attributes) ? emptyMap() : attributes;
         this.failReason = failReason;
         this.fullSupport = fullSupport;
+        this.createdBy = createdBy;
     }
 
     /** {@inheritDoc} */
@@ -155,6 +161,11 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         return fullSupport;
     }
 
+    /** {@inheritDoc} */
+    @Override public @Nullable Object createBy() {
+        return createdBy;
+    }
+
     /**
      * Creates the status of a task that is in progress.
      *
@@ -172,7 +183,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
             null,
-            sessionImp.isFullSupport()
+            sessionImp.isFullSupport(),
+            sessionImp.login()
         );
     }
 
@@ -194,7 +206,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
             err,
-            sessionImp.isFullSupport()
+            sessionImp.isFullSupport(),
+            sessionImp.login()
         );
     }
 }
