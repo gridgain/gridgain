@@ -744,7 +744,7 @@ public class Checkpointer extends GridWorker {
 
             Runnable destroyPartTask = () -> {
                 try {
-                    offheap.destroyPartitionStore(grpId, partId);
+                    offheap.destroyPartitionStore(partId);
 
                     req.onDone(null);
 

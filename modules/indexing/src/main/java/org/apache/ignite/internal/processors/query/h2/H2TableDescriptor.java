@@ -236,7 +236,7 @@ public class H2TableDescriptor {
             false,
             unwrappedKeyAndAffinityCols,
             wrappedKeyCols,
-            tbl.rowDescriptor().tableDescriptor().type().primaryKeyInlineSize()
+            -1
         );
 
         idxs.add(pkIdx);
@@ -300,7 +300,7 @@ public class H2TableDescriptor {
                     true,
                     colsWithUnwrappedKey,
                     cols,
-                    tbl.rowDescriptor().tableDescriptor().type().affinityFieldInlineSize())
+                    -1)
                 );
             }
         }
@@ -320,7 +320,7 @@ public class H2TableDescriptor {
     @NotNull private List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {
         ArrayList<IndexColumn> keyCols;
 
-        if (isUnwrapPrimaryKey()) {
+        if (isSql) {
             keyCols = new ArrayList<>(type.fields().size() + 1);
 
             // Check if key is simple type.
@@ -455,11 +455,6 @@ public class H2TableDescriptor {
         }
 
         return null;
-    }
-
-    /** */
-    public boolean isUnwrapPrimaryKey() {
-        return type().unwrapPrimaryKeyFields() != null ? type().unwrapPrimaryKeyFields() : isSql;
     }
 
     /**

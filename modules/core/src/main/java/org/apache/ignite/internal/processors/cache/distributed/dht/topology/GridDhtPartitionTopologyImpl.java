@@ -906,16 +906,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             // Create a partition in lost state.
             if (lostParts != null && lostParts.contains(p))
                 loc.markLost();
-
-            if (ctx.pageStore() != null) {
-                try {
-                    ctx.pageStore().onPartitionCreated(grp.groupId(), p);
-                }
-                catch (IgniteCheckedException e) {
-                    // TODO ignite-db
-                    throw new IgniteException(e);
-                }
-            }
         }
 
         return loc;
@@ -1034,16 +1024,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         }
         finally {
             ctx.database().checkpointReadUnlock();
-        }
-
-        if (created && ctx.pageStore() != null) {
-            try {
-                ctx.pageStore().onPartitionCreated(grp.groupId(), p);
-            }
-            catch (IgniteCheckedException e) {
-                // TODO ignite-db
-                throw new IgniteException(e);
-            }
         }
 
         return loc;
