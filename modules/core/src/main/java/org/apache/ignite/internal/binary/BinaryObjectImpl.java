@@ -16,6 +16,17 @@
 
 package org.apache.ignite.internal.binary;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -36,18 +47,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
@@ -321,21 +320,31 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Nullable @Override public <F> F field(String fieldName) throws BinaryObjectException {
-        return (F) reader(null, false).unmarshalField(fieldName);
+        BinaryReaderExImpl reader = reader(null, false);
+        F field = (F) reader.unmarshalField(fieldName);
+        ctx.readerPool().offer(reader);
+        return field;
     }
 
     /** {@inheritDoc} */
     @Nullable @Override public <F> F field(int fieldId) throws BinaryObjectException {
-        return (F) reader(null, false).unmarshalField(fieldId);
+        BinaryReaderExImpl reader = reader(null, false);
+        F field = (F) reader.unmarshalField(fieldId);
+        ctx.readerPool().offer(reader);
+        return field;
     }
 
     /** {@inheritDoc} */
     @Override public <F> @Nullable F fieldNoHandle(int fieldId) throws BinaryObjectException {
-        return (F) reader(new BinaryReaderHandles() {
+        BinaryReaderExImpl reader = reader(new BinaryReaderHandles() {
+            /** {@inheritDoc} */
             @Override public boolean ignoreHandle() {
                 return true;
             }
-        }, false).unmarshalField(fieldId);
+        }, false);
+        F field = (F) reader.unmarshalField(fieldId);
+        ctx.readerPool().offer(reader);
+        return field;
     }
 
     /** {@inheritDoc} */
@@ -644,12 +653,18 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Nullable @Override protected <F> F field(BinaryReaderHandles rCtx, String fieldName) {
-        return (F)reader(rCtx, false).unmarshalField(fieldName);
+        BinaryReaderExImpl reader = reader(rCtx, false);
+        F field = (F) reader.unmarshalField(fieldName);
+        ctx.readerPool().offer(reader);
+        return field;
     }
 
     /** {@inheritDoc} */
     @Override public boolean hasField(String fieldName) {
-        return reader(null, false).findFieldByName(fieldName);
+        BinaryReaderExImpl reader = reader(null, false);
+        boolean hasField = reader.findFieldByName(fieldName);
+        ctx.readerPool().offer(reader);
+        return hasField;
     }
 
     /** {@inheritDoc} */
@@ -660,7 +675,10 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         GridBinaryMarshaller.USE_CACHE.set(Boolean.FALSE);
 
         try {
-            return (T)reader(null, ldr, true).deserialize();
+            BinaryReaderExImpl reader = reader(null, ldr, true);
+            T deserialized = (T) reader.deserialize();
+            ctx.readerPool().offer(reader);
+            return deserialized;
         }
         finally {
             GridBinaryMarshaller.USE_CACHE.set(Boolean.TRUE);
@@ -835,6 +853,8 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
         BinaryClassDescriptor desc = reader.descriptor();
 
+        ctx.readerPool().offer(reader);
+
         assert desc != null;
 
         if (coCtx != null && coCtx.storeValue())
@@ -864,7 +884,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (ldr == null)
             ldr = ctx.configuration().getClassLoader();
 
-        return new BinaryReaderExImpl(ctx,
+        return ctx.readerPool().getReader(ctx,
             BinaryHeapInputStream.create(arr, start),
             ldr,
             rCtx,

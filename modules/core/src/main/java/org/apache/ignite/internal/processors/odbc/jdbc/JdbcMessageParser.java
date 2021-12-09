@@ -63,7 +63,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     protected BinaryReaderExImpl createReader(ClientMessage msg) {
         BinaryInputStream stream = new BinaryHeapInputStream(msg.payload());
 
-        return new BinaryReaderExImpl(binCtx, stream, ctx.config().getClassLoader(), true);
+        return binCtx.readerPool().getReader(binCtx, stream, ctx.config().getClassLoader(), true);
     }
 
     /**
@@ -81,7 +81,11 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryReaderExImpl reader = createReader(msg);
 
-        return JdbcRequest.readRequest(reader, protoCtx);
+        JdbcRequest request = JdbcRequest.readRequest(reader, protoCtx);
+
+        binCtx.readerPool().offer(reader);
+
+        return request;
     }
 
     /** {@inheritDoc} */

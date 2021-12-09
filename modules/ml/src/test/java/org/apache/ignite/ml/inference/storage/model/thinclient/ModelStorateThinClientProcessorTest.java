@@ -28,7 +28,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryNoopMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterHandles;
 import org.apache.ignite.internal.binary.BinaryWriterSchemaHolder;
@@ -37,7 +36,13 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
-import org.apache.ignite.internal.processors.platform.client.*;
+import org.apache.ignite.internal.processors.platform.client.ClientAffinityTopologyVersion;
+import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientCustomQueryRequest;
+import org.apache.ignite.internal.processors.platform.client.ClientProtocolContext;
+import org.apache.ignite.internal.processors.platform.client.ClientResponse;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
+import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.ml.inference.storage.model.DefaultModelStorage;
 import org.apache.ignite.ml.inference.storage.model.FileOrDirectory;
@@ -736,7 +741,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
     /** */
     private BinaryRawReader toReader(byte[] buf) {
-        return new BinaryReaderExImpl(
+        return bctx.readerPool().getReader(
             bctx,
             new BinaryHeapInputStream(buf),
             getClass().getClassLoader(),

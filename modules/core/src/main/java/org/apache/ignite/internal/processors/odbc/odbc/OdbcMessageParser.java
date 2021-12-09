@@ -83,7 +83,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryInputStream stream = new BinaryHeapInputStream(msg.payload());
 
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(marsh.context(), stream, ctx.config().getClassLoader(), true);
+        BinaryReaderExImpl reader = marsh.context().readerPool().getReader(marsh.context(), stream, ctx.config().getClassLoader(), true);
 
         byte cmd = reader.readByte();
 
@@ -231,6 +231,8 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
             default:
                 throw new IgniteException("Unknown ODBC command: [cmd=" + cmd + ']');
         }
+
+        marsh.context().readerPool().offer(reader);
 
         return res;
     }

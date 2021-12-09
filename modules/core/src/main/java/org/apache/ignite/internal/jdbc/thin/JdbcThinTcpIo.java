@@ -24,8 +24,8 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -34,11 +34,11 @@ import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.configuration.BinaryConfiguration;
-import org.apache.ignite.internal.ThinProtocolFeature;
-import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.MarshallerContextImpl;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryThreadLocalContext;
@@ -326,7 +326,7 @@ public class JdbcThinTcpIo {
 
         send(writer.array());
 
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(ctx, new BinaryHeapInputStream(read()),
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(ctx, new BinaryHeapInputStream(read()),
             null, null, false);
 
         boolean accepted = reader.readBoolean();
@@ -370,6 +370,8 @@ public class JdbcThinTcpIo {
                 handshakeRes.serverTimezone(TimeZone.getTimeZone(srvTzId));
             }
 
+            ctx.readerPool().offer(reader);
+
             return handshakeRes;
         }
         else {
@@ -385,6 +387,8 @@ public class JdbcThinTcpIo {
             }
             catch (Exception ignored) {
             }
+
+            ctx.readerPool().offer(reader);
 
             ClientListenerProtocolVersion srvProtoVer0 = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
@@ -438,7 +442,7 @@ public class JdbcThinTcpIo {
 
         send(writer.array());
 
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(null, new BinaryHeapInputStream(read()),
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(null, new BinaryHeapInputStream(read()),
             null, null, false);
 
         boolean accepted = reader.readBoolean();
@@ -451,6 +455,8 @@ public class JdbcThinTcpIo {
 
             handshakeRes.serverProtocolVersion(VER_2_1_0);
 
+            ctx.readerPool().offer(reader);
+
             return handshakeRes;
         }
         else {
@@ -459,6 +465,8 @@ public class JdbcThinTcpIo {
             short maintenance = reader.readShort();
 
             String err = reader.readString();
+
+            ctx.readerPool().offer(reader);
 
             ClientListenerProtocolVersion ver = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
@@ -528,11 +536,13 @@ public class JdbcThinTcpIo {
      * @throws IOException In case of IO error.
      */
     JdbcResponse readResponse() throws IOException {
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(ctx, new BinaryHeapInputStream(read()), null, true);
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(ctx, new BinaryHeapInputStream(read()), null, true);
 
         JdbcResponse res = new JdbcResponse();
 
         res.readBinary(reader, protoCtx);
+
+        ctx.readerPool().offer(reader);
 
         return res;
     }

@@ -16,23 +16,22 @@
 
 package org.apache.ignite.internal.binary.builder;
 
-import org.apache.ignite.binary.BinaryObjectException;
-import org.apache.ignite.internal.binary.BinaryObjectImpl;
-import org.apache.ignite.internal.binary.BinaryReaderExImpl;
-import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.binary.GridBinaryMarshaller;
-import org.apache.ignite.internal.binary.BinaryContext;
-import org.apache.ignite.internal.binary.BinaryPositionReadable;
-import org.apache.ignite.internal.binary.BinaryPrimitives;
-import org.apache.ignite.internal.binary.BinarySchema;
-import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
-import org.apache.ignite.internal.binary.BinaryUtils;
-
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.ignite.binary.BinaryObjectException;
+import org.apache.ignite.internal.binary.BinaryContext;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
+import org.apache.ignite.internal.binary.BinaryPositionReadable;
+import org.apache.ignite.internal.binary.BinaryPrimitives;
+import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinarySchema;
+import org.apache.ignite.internal.binary.BinaryUtils;
+import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -66,7 +65,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         arr = objImpl.array();
         pos = objImpl.start();
 
-        reader = new BinaryReaderExImpl(ctx,
+        reader = ctx.readerPool().getReader(ctx,
             BinaryHeapInputStream.create(arr, pos),
             ctx.configuration().getClassLoader(),
             false);
@@ -85,7 +84,7 @@ public class BinaryBuilderReader implements BinaryPositionReadable {
         this.arr = other.arr;
         this.pos = start;
 
-        reader = new BinaryReaderExImpl(ctx,
+        reader = ctx.readerPool().getReader(ctx,
             BinaryHeapInputStream.create(arr, start),
             null,
             other.reader.handles(),

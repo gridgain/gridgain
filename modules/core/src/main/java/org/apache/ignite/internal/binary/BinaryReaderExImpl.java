@@ -92,55 +92,55 @@ import static org.apache.ignite.internal.binary.GridBinaryMarshaller.UUID_ARR;
 @SuppressWarnings("unchecked")
 public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, BinaryReaderHandlesHolder, ObjectInput {
     /** Binary context. */
-    private final BinaryContext ctx;
+    private BinaryContext ctx;
 
     /** Input stream. */
-    private final BinaryInputStream in;
+    private BinaryInputStream in;
 
-    /** Class loaded. */
-    private final ClassLoader ldr;
+    /** Class loader. */
+    private ClassLoader ldr;
 
     /** Reader context which is constantly passed between objects. */
     private BinaryReaderHandles hnds;
 
     /** */
-    private final int start;
+    private int start;
 
     /** Start of actual data. Positioned right after the header. */
-    private final int dataStart;
+    private int dataStart;
 
     /** Type ID. */
-    private final int typeId;
+    private int typeId;
 
     /** Raw offset. */
-    private final int rawOff;
+    private int rawOff;
 
     /** Footer start. */
-    private final int footerStart;
+    private int footerStart;
 
     /** Footer end. */
-    private final int footerLen;
+    private int footerLen;
 
     /** Class descriptor. */
     private BinaryClassDescriptor desc;
 
     /** Mapper. */
-    private final BinaryInternalMapper mapper;
+    private BinaryInternalMapper mapper;
 
     /** Schema Id. */
-    private final int schemaId;
+    private int schemaId;
 
     /** Whether this is user type or not. */
-    private final boolean userType;
+    private boolean userType;
 
     /** Whether field IDs exist. */
-    private final int fieldIdLen;
+    private int fieldIdLen;
 
     /** Offset size in bytes. */
-    private final int fieldOffLen;
+    private int fieldOffLen;
 
     /** Object schema. */
-    private final BinarySchema schema;
+    private BinarySchema schema;
 
     /** Whether passed IDs matches schema order. Reset to false as soon as a single mismatch detected. */
     private boolean matching = true;
@@ -151,42 +151,8 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     /** Whether stream is in raw mode. */
     private boolean raw;
 
-    /**
-     * Constructor.
-     *
-     * @param ctx Context.
-     * @param in Input stream.
-     * @param ldr Class loader.
-     * @param forUnmarshal {@code True} if reader is needed to unmarshal object.
-     */
-    public BinaryReaderExImpl(BinaryContext ctx, BinaryInputStream in, ClassLoader ldr, boolean forUnmarshal) {
-        this(ctx,
-            in,
-            ldr,
-            null,
-            forUnmarshal);
-    }
+    BinaryReaderExImpl() {
 
-    /**
-     * Constructor.
-     *
-     * @param ctx Context.
-     * @param in Input stream.
-     * @param ldr Class loader.
-     * @param hnds Context.
-     * @param forUnmarshal {@code True} if reader is need to unmarshal object.
-     */
-    public BinaryReaderExImpl(BinaryContext ctx,
-        BinaryInputStream in,
-        ClassLoader ldr,
-        @Nullable BinaryReaderHandles hnds,
-        boolean forUnmarshal) {
-        this(ctx,
-            in,
-            ldr,
-            hnds,
-            false,
-            forUnmarshal);
     }
 
     /**
@@ -199,7 +165,7 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      * @param skipHdrCheck Whether to skip header check.
      * @param forUnmarshal {@code True} if reader is need to unmarshal object.
      */
-    public BinaryReaderExImpl(BinaryContext ctx,
+    void reset(BinaryContext ctx,
         BinaryInputStream in,
         ClassLoader ldr,
         @Nullable BinaryReaderHandles hnds,
@@ -1984,7 +1950,10 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
         if (!findFieldById(fieldId))
             return null;
 
-        return new BinaryReaderExImpl(ctx, in, ldr, hnds, false, true).deserialize();
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(ctx, in, ldr, hnds, false, true);
+        Object field = reader.deserialize();
+        ctx.readerPool().offer(reader);
+        return field;
     }
 
     /**

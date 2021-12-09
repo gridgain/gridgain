@@ -1825,7 +1825,10 @@ public class BinaryUtils {
      */
     @Nullable public static Object doReadObject(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles) throws BinaryObjectException {
-        return new BinaryReaderExImpl(ctx, in, ldr, handles.handles(), false, true).deserialize();
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(ctx, in, ldr, handles.handles(), false, true);
+        Object deserialized = reader.deserialize();
+        ctx.readerPool().offer(reader);
+        return deserialized;
     }
 
     /**

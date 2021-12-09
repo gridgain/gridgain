@@ -296,7 +296,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
         ctx.configure(marsh, new BinaryConfiguration());
 
-        BinaryReaderExImpl reader = new BinaryReaderExImpl(ctx, new BinaryHeapInputStream(msg.payload()), null, true);
+        BinaryReaderExImpl reader = ctx.readerPool().getReader(
+            ctx,
+            new BinaryHeapInputStream(msg.payload()),
+            null,
+            true
+        );
 
         byte cmd = reader.readByte();
 
@@ -304,6 +309,8 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             U.warn(log, "Unexpected client request (will close session): " + ses.remoteAddress());
 
             ses.close();
+
+            ctx.readerPool().offer(reader);
 
             return;
         }
@@ -327,11 +334,15 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
 
             if (connCtx.isVersionSupported(ver)) {
                 connCtx.initializeFromHandshake(ses, ver, reader);
+                ctx.readerPool().offer(reader);
 
                 ses.addMeta(CONN_CTX_META_KEY, connCtx);
             }
-            else
+            else {
+                ctx.readerPool().offer(reader);
+
                 throw new IgniteCheckedException("Unsupported version: " + ver.asString());
+            }
 
             cancelHandshakeTimeout(ses);
 

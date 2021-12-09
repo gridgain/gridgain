@@ -35,7 +35,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.cache.expiry.ExpiryPolicy;
-
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryRawWriter;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -565,7 +564,7 @@ final class ClientUtils {
      * @param in Input stream.
      */
     static BinaryReaderExImpl createBinaryReader(@Nullable BinaryContext binaryCtx, BinaryInputStream in) {
-        return new BinaryReaderExImpl(binaryCtx, in, null, null, true, true);
+        return binaryCtx.readerPool().getReader(binaryCtx, in, null, null, true, true);
     }
 
     /** Read Ignite binary object from input stream. */
