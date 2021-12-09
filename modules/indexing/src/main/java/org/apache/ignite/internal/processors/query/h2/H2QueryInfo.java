@@ -119,6 +119,13 @@ public class H2QueryInfo {
     }
 
     /**
+     * @return Node originator uid.
+     */
+    public UUID node() {
+        return node;
+    }
+
+    /**
      * @param type Query type.
      */
     public QueryType type() {
