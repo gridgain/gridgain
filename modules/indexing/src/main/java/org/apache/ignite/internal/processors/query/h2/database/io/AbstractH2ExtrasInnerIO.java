@@ -63,7 +63,6 @@ public abstract class AbstractH2ExtrasInnerIO extends BPlusInnerIO<H2Row> implem
      * @param mvccEnabled Mvcc flag.
      * @return IOVersions for given payload.
      */
-    @SuppressWarnings("unchecked")
     public static IOVersions<? extends BPlusInnerIO<H2Row>> getVersions(int payload, boolean mvccEnabled) {
         assert payload >= 0 && payload <= PageIO.MAX_PAYLOAD_SIZE;
 
@@ -98,6 +97,8 @@ public abstract class AbstractH2ExtrasInnerIO extends BPlusInnerIO<H2Row> implem
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override public final void storeByOffset(long pageAddr, int off, H2Row row) {
+        assertPageType(pageAddr);
+
         H2CacheRow row0 = (H2CacheRow)row;
 
         assert row0.link() != 0 : row0;
@@ -142,6 +143,8 @@ public abstract class AbstractH2ExtrasInnerIO extends BPlusInnerIO<H2Row> implem
 
     /** {@inheritDoc} */
     @Override public final void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx) {
+        assertPageType(dstPageAddr);
+
         int srcOff = srcIo.offset(srcIdx);
 
         byte[] payload = PageUtils.getBytes(srcPageAddr, srcOff, payloadSize);
