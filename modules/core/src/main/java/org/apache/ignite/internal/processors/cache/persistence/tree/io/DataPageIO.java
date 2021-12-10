@@ -324,8 +324,6 @@ public class DataPageIO extends AbstractDataPageIO<CacheDataRow> {
      * @param mvccCntr Mvcc counter.
      */
     private void updateNewVersion(long addr, long mvccCrd, long mvccCntr, int mvccOpCntr) {
-        assertPageType(addr);
-
         // Skip xid_min.
         addr += 20;
 
