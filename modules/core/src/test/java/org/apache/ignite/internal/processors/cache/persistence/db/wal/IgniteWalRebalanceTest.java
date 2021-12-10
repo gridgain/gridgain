@@ -596,10 +596,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Fill initial data and force checkpoint.
         final int entryCnt = PARTS_CNT * 200;
         final int preloadEntryCnt = PARTS_CNT * 201;
-        int val = 0;
 
         for (int k = 0; k < preloadEntryCnt; k++)
-            cache0.put(k, new IndexedObject(val++));
+            cache0.put(k, new IndexedObject(k));
 
         forceCheckpoint();
 
@@ -613,14 +612,14 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             // This fact allows moving partitions to OWNING state during rebalancing
             // even though the corresponding RebalanceFuture will be cancelled.
             if (grid(0).affinity(cacheName).partition(k) != 12)
-                cache0.put(k, new IndexedObject(val++));
+                cache0.put(k, new IndexedObject(k));
         }
 
         // Upload additional data to a particular partition (primary partition belongs to coordinator, for instance)
         // in order to trigger full rebalance for that partition instead of historical one.
         int[] primaries0 = grid(0).affinity(cacheName).primaryPartitions(grid(0).localNode());
         for (int i = 0; i < preloadEntryCnt; ++i)
-            cache0.put(primaries0[0], new IndexedObject(val++));
+            cache0.put(primaries0[0], new IndexedObject(primaries0[0]));
 
         forceCheckpoint();
 
@@ -797,7 +796,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
                 IgniteCache<Integer, IndexedObject> c1 = supplier1.cache("test-cache-1");
                 for (int i = 0; i < PARTS_CNT * 100; i++)
-                    c1.put(i, new IndexedObject(i + PARTS_CNT));
+                    c1.put(i, new IndexedObject(i));
             }
             catch (IgniteCheckedException | IOException e) {
                 throw new RuntimeException(e);
@@ -854,12 +853,11 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Fill initial data.
         final int entryCnt = PARTS_CNT * 200;
         final int preloadEntryCnt = PARTS_CNT * 400;
-        int val = 0;
 
         for (int k = 0; k < preloadEntryCnt; k++) {
-            c1.put(k, new IndexedObject(val++));
+            c1.put(k, new IndexedObject(k));
 
-            c2.put(k, new IndexedObject(val++));
+            c2.put(k, new IndexedObject(k));
         }
 
         forceCheckpoint();
@@ -868,9 +866,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         // Rewrite data to trigger further rebalance.
         for (int i = 0; i < entryCnt; i++) {
-            c1.put(i, new IndexedObject(val++));
+            c1.put(i, new IndexedObject(i));
 
-            c2.put(i, new IndexedObject(val++));
+            c2.put(i, new IndexedObject(i));
         }
 
         // Delay rebalance process for specified groups.
@@ -1034,12 +1032,11 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Fill initial data.
         final int entryCnt = PARTS_CNT * 200;
         final int preloadEntryCnt = PARTS_CNT * 400;
-        int val = 0;
 
         for (int k = 0; k < preloadEntryCnt; k++) {
-            c1.put(k, new IndexedObject(val++));
+            c1.put(k, new IndexedObject(k));
 
-            c2.put(k, new IndexedObject(val++));
+            c2.put(k, new IndexedObject(k));
         }
 
         forceCheckpoint();
@@ -1051,11 +1048,11 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Updating entryCnt keys allows to trigger historical rebalance.
         // This is an easy way to emulate missing partitions on the first rebalance.
         for (int i = 0; i < entryCnt; i++)
-            c1.put(i, new IndexedObject(val++));
+            c1.put(i, new IndexedObject(i));
 
         // Full rebalance for the cacheName2.
         for (int i = 0; i < preloadEntryCnt; i++)
-            c2.put(i, new IndexedObject(val++));
+            c2.put(i, new IndexedObject(i));
 
         // Delay rebalance process for specified groups.
         blockMsgPred = (node, msg) -> {
