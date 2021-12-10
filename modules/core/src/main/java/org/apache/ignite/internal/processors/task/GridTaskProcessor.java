@@ -789,12 +789,14 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             topPred,
             startTime,
             endTime,
-            Collections.<ComputeJobSibling>emptyList(),
+            Collections.emptyList(),
             emptyMap(),
             fullSup,
             internal,
             subjId,
-            execName);
+            execName,
+            ctx.security().enabled() ? ctx.security().securityContext().subject().login() : null
+        );
 
         ComputeTaskInternalFuture<R> fut = new ComputeTaskInternalFuture<>(ses, ctx);
 
