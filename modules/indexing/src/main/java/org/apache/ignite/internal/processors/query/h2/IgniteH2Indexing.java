@@ -630,7 +630,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         H2Utils.bindParameters(stmt, F.asList(params));
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, qryId);
+                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, ctx.discovery().localNode(), qryId);
 
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
@@ -1042,14 +1042,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (qryInfo.runningQueryId() != null)
             runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
 
-        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
-            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
-            return;
-
         H2MemoryTracker tracker = null;
 
-        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
-            tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+        if (runningQryInfo != null && runningQryInfo.nodeId().equals(qryInfo.node()) &&
+            runningQryInfo.memoryMetricProvider() != null) {
+
+            if (runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+                tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+            else
+                return;
+        }
 
         if (tracker == null)
             tracker = (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
