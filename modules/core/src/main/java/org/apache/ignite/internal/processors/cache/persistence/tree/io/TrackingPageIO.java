@@ -339,7 +339,7 @@ public class TrackingPageIO extends PageIO {
     /**
      * @param snapshotTag Snapshot id.
      *
-     * @return true if snapshotTag is odd, otherwise - false.
+     * @return true if snapshotTag is even, otherwise - false.
      */
     private boolean useLeftHalf(long snapshotTag) {
         return (snapshotTag & 0b1) == 0;
