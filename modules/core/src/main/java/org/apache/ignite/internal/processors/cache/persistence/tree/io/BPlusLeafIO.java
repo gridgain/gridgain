@@ -41,6 +41,7 @@ public abstract class BPlusLeafIO<L> extends BPlusIO<L> {
     @Override public final void copyItems(long srcPageAddr, long dstPageAddr, int srcIdx, int dstIdx, int cnt,
         boolean cpLeft) throws IgniteCheckedException {
         assert srcIdx != dstIdx || srcPageAddr != dstPageAddr;
+        assertPageType(dstPageAddr);
 
         PageHandler.copyMemory(srcPageAddr, offset(srcIdx), dstPageAddr, offset(dstIdx),
             cnt * getItemSize());
