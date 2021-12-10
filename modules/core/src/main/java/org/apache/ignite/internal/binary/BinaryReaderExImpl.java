@@ -155,6 +155,67 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
 
     }
 
+    void reset() {
+        this.ctx = null;
+
+        /** Input stream. */
+        this.in = null;
+
+        /** Class loader. */
+        this.ldr = null;
+
+        /** Reader context which is constantly passed between objects. */
+        this.hnds = null;
+
+        /** */
+        this.start = 0;
+
+        /** Start of actual data. Positioned right after the header. */
+        this.dataStart = 0;
+
+        /** Type ID. */
+        this.typeId = 0;
+
+        /** Raw offset. */
+        this.rawOff = 0;
+
+        /** Footer start. */
+        this.footerStart = 0;
+
+        /** Footer end. */
+        this.footerLen = 0;
+
+        /** Class descriptor. */
+        this.desc = null;
+
+        /** Mapper. */
+        this.mapper = null;
+
+        /** Schema Id. */
+        this.schemaId = 0;
+
+        /** Whether this is user type or not. */
+        this.userType = false;
+
+        /** Whether field IDs exist. */
+        this.fieldIdLen = 0;
+
+        /** Offset size in bytes. */
+        this.fieldOffLen = 0;
+
+        /** Object schema. */
+        this.schema = null;
+
+        /** Whether passed IDs matches schema order. Reset to false as soon as a single mismatch detected. */
+        this.matching = true;
+
+        /** Order of a field whose match is expected. */
+        this.matchingOrder = 0;
+
+        /** Whether stream is in raw mode. */
+        this.raw = false;
+    }
+
     /**
      * Constructor.
      *
@@ -165,12 +226,14 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
      * @param skipHdrCheck Whether to skip header check.
      * @param forUnmarshal {@code True} if reader is need to unmarshal object.
      */
-    void reset(BinaryContext ctx,
-        BinaryInputStream in,
-        ClassLoader ldr,
-        @Nullable BinaryReaderHandles hnds,
-        boolean skipHdrCheck,
-        boolean forUnmarshal) {
+    void restart(BinaryContext ctx,
+         BinaryInputStream in,
+         ClassLoader ldr,
+         @Nullable BinaryReaderHandles hnds,
+         boolean skipHdrCheck,
+         boolean forUnmarshal) {
+        reset();
+
         // Initialize base members.
         this.ctx = ctx;
         this.in = in;

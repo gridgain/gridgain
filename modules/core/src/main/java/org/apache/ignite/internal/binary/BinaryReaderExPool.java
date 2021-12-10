@@ -69,7 +69,7 @@ public class BinaryReaderExPool {
         if (reader == null)
             reader = new BinaryReaderExImpl();
 
-        reader.reset(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
+        reader.restart(ctx, in, ldr, hnds, skipHdrCheck, forUnmarshal);
 
         return reader;
     }
