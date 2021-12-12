@@ -70,6 +70,8 @@ public class TrackingPageIOTest {
 
         buf.order(ByteOrder.nativeOrder());
 
+        PageIO.setType(GridUnsafe.bufferAddress(buf), PageIO.T_PAGE_UPDATE_TRACKING);
+
         return buf;
     }
 
