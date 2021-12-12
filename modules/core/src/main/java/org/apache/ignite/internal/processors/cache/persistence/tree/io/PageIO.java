@@ -989,7 +989,7 @@ public abstract class PageIO {
      * @param pageAddr address of a page to use for assertion
      */
     protected final void assertPageType(long pageAddr) {
-        assert getType(pageAddr) == getType(): "Expected type " + getType() + ", but got " + getType(pageAddr);
+        assert getType(pageAddr) == getType() : "Expected type " + getType() + ", but got " + getType(pageAddr);
     }
 
     /**
@@ -998,6 +998,6 @@ public abstract class PageIO {
      * @param buf   buffer where the page for assertion is stored
      */
     protected final void assertPageType(ByteBuffer buf) {
-        assert getType(buf) == getType(): "Expected type " + getType() + ", but got " + getType(buf);
+        assert getType(buf) == getType() : "Expected type " + getType() + ", but got " + getType(buf);
     }
 }
