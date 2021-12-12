@@ -1261,7 +1261,6 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /** {@inheritDoc} */
     @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
         assertPageType(page);
-        assertPageType(out);
 
         // TODO May we compactDataEntries in-place and then copy compacted data to out?
         copyPage(page, out, pageSize);
