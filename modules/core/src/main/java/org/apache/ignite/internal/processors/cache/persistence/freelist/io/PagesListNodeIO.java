@@ -250,7 +250,6 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     /** {@inheritDoc} */
     @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
         assertPageType(page);
-        assertPageType(out);
 
         copyPage(page, out, pageSize);
 
