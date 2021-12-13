@@ -63,7 +63,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.findNonPublicMethod;
  * File handle for one log segment.
  */
 @SuppressWarnings("SignalWithoutCorrespondingAwait")
-class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle {
+public class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle {
     /** {@link MappedByteBuffer#force0(java.io.FileDescriptor, long, long)}. */
     private static final Method force0 = findNonPublicMethod(
         MappedByteBuffer.class, "force0",
@@ -500,7 +500,12 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
 
                             switchSegmentRecordOffset = filePtr.fileOffset() + switchSegmentRecSize;
                         }
+                        else {
+                            log.debug("Not enough space to write segment switch");
+                        }
                     }
+
+                    flushOrWait(null);
 
                     if (mmap) {
                         List<SegmentedRingByteBuffer.ReadSegment> segs = buf.poll(maxWalSegmentSize);
