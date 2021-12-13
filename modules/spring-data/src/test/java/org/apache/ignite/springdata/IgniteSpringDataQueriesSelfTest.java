@@ -36,16 +36,16 @@ import org.springframework.data.domain.Sort;
  */
 public class IgniteSpringDataQueriesSelfTest extends GridCommonAbstractTest {
     /** Repository. */
-    private static PersonRepository repo;
+    protected static PersonRepository repo;
 
     /** Repository 2. */
-    private static PersonSecondRepository repo2;
+    protected static PersonSecondRepository repo2;
 
     /** Context. */
-    private static AnnotationConfigApplicationContext ctx;
+    protected static AnnotationConfigApplicationContext ctx;
 
     /** Number of entries to store */
-    private static int CACHE_SIZE = 1000;
+    protected static int CACHE_SIZE = 1000;
 
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();

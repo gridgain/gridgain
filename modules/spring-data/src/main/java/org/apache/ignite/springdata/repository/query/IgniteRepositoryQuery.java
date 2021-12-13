@@ -24,12 +24,11 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import javax.cache.Cache;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
+import org.apache.ignite.springdata.proxy.IgniteCacheProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.data.domain.Pageable;
@@ -83,7 +82,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
     private final IgniteQuery qry;
 
     /** Cache. */
-    private final IgniteCache cache;
+    private final IgniteCacheProxy<?, ?> cache;
 
     /** Method. */
     private final Method mtd;
@@ -105,7 +104,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
      * @param cache Cache.
      */
     public IgniteRepositoryQuery(RepositoryMetadata metadata, IgniteQuery qry,
-        Method mtd, ProjectionFactory factory, IgniteCache cache) {
+        Method mtd, ProjectionFactory factory, IgniteCacheProxy<?, ?> cache) {
         type = metadata.getDomainType();
         this.qry = qry;
         this.cache = cache;
@@ -237,19 +236,19 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             }
         }
         else {
-            Iterable<CacheEntryImpl> qryIter = (Iterable<CacheEntryImpl>)qryCursor;
+            Iterable<Cache.Entry<?, ?>> qryIter = (Iterable<Cache.Entry<?, ?>>)qryCursor;
 
             switch (returnStgy) {
                 case LIST_OF_VALUES:
                     List list = new ArrayList<>();
 
-                    for (CacheEntryImpl entry : qryIter)
+                    for (Cache.Entry<?, ?> entry : qryIter)
                         list.add(entry.getValue());
 
                     return list;
 
                 case ONE_VALUE:
-                    Iterator<CacheEntryImpl> iter1 = qryIter.iterator();
+                    Iterator<Cache.Entry<?, ?>> iter1 = qryIter.iterator();
 
                     if (iter1.hasNext())
                         return iter1.next().getValue();
@@ -257,7 +256,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                     return null;
 
                 case CACHE_ENTRY:
-                    Iterator<CacheEntryImpl> iter2 = qryIter.iterator();
+                    Iterator<Cache.Entry<?, ?>> iter2 = qryIter.iterator();
 
                     if (iter2.hasNext())
                         return iter2.next();
@@ -267,7 +266,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                 case SLICE_OF_VALUES:
                     List content = new ArrayList<>();
 
-                    for (CacheEntryImpl entry : qryIter)
+                    for (Cache.Entry<?, ?> entry : qryIter)
                         content.add(entry.getValue());
 
                     return new SliceImpl(content, (Pageable)prmtrs[prmtrs.length - 1], true);

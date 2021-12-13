@@ -40,23 +40,23 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  */
 public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     /** Number of entries to store. */
-    private static final int CACHE_SIZE = 1000;
+    protected static final int CACHE_SIZE = 1000;
 
     /** Context. */
-    private static AnnotationConfigApplicationContext ctx;
+    protected static AnnotationConfigApplicationContext ctx;
 
     /** Repository. */
-    private static PersonRepository repo;
+    protected static PersonRepository repo;
 
     /** Repository. */
-    private static PersonRepositoryWithCompoundKey repoWithCompoundKey;
+    protected static PersonRepositoryWithCompoundKey repoWithCompoundKey;
 
     /** */
     @Rule
     public final ExpectedException expected = ExpectedException.none();
 
     /** */
-    private static IgniteEx ignite;
+    protected static IgniteEx ignite;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
