@@ -36,10 +36,10 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  */
 public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     /** Repository. */
-    private static PersonRepository repo;
+    protected static PersonRepository repo;
 
     /** Context. */
-    private static AnnotationConfigApplicationContext ctx;
+    protected static AnnotationConfigApplicationContext ctx;
 
     /** Number of entries to store */
     private static int CACHE_SIZE = 1000;

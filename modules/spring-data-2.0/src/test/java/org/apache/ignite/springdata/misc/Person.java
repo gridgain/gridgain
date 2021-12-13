@@ -16,6 +16,7 @@
 
 package org.apache.ignite.springdata.misc;
 
+import java.util.Date;
 import java.util.Objects;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QueryTextField;
@@ -33,6 +34,10 @@ public class Person {
     @QuerySqlField(index = true)
     private String secondName;
 
+    /** Birthday. */
+    @QuerySqlField
+    private Date birthday;
+
     /**
      * @param firstName First name.
      * @param secondName Second name.
@@ -40,6 +45,7 @@ public class Person {
     public Person(String firstName, String secondName) {
         this.firstName = firstName;
         this.secondName = secondName;
+        birthday = new Date();
     }
 
     /**
@@ -75,6 +81,7 @@ public class Person {
         return "Person{" +
             "firstName='" + firstName + '\'' +
             ", secondName='" + secondName + '\'' +
+            ", birthday='" + birthday + '\'' +
             '}';
     }
 
@@ -89,11 +96,12 @@ public class Person {
         Person person = (Person)o;
 
         return Objects.equals(firstName, person.firstName) &&
-            Objects.equals(secondName, person.secondName);
+            Objects.equals(secondName, person.secondName) &&
+            Objects.equals(birthday, person.birthday);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(firstName, secondName);
+        return Objects.hash(firstName, secondName, birthday);
     }
 }
