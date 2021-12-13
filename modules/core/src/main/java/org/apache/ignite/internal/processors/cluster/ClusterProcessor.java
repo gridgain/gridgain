@@ -264,7 +264,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         notifyEnabled.set(IgniteSystemProperties.getBoolean(IGNITE_UPDATE_NOTIFIER, DFLT_UPDATE_NOTIFIER));
 
-        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL, GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
+        updateNotifierUrl.set(IgniteSystemProperties.getString(GRIDGAIN_UPDATE_URL,
+            GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL));
 
         cluster = new IgniteClusterImpl(ctx);
 

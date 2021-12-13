@@ -29,6 +29,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.DiskPageCompression;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.GridClient;
@@ -48,6 +49,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cache.CacheManager.DFLT_JCACHE_DEFAULT_ISOLATED;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_USE_ASYNC_FILE_IO_FACTORY;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP;
@@ -56,21 +58,35 @@ import static org.apache.ignite.internal.IgniteKernal.DFLT_PERIODIC_STARVATION_C
 import static org.apache.ignite.internal.LongJVMPauseDetector.DEFAULT_JVM_PAUSE_DETECTOR_THRESHOLD;
 import static org.apache.ignite.internal.LongJVMPauseDetector.DFLT_JVM_PAUSE_DETECTOR_LAST_EVENTS_COUNT;
 import static org.apache.ignite.internal.LongJVMPauseDetector.DFLT_JVM_PAUSE_DETECTOR_PRECISION;
+import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DFLT_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE;
+import static org.apache.ignite.internal.binary.streams.BinaryMemoryAllocator.DFLT_MARSHAL_BUFFERS_RECHECK;
+import static org.apache.ignite.internal.managers.discovery.GridDiscoveryManager.DFLT_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.AffinityAssignment.DFLT_AFFINITY_BACKUPS_THRESHOLD;
+import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_AFFINITY_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache.DFLT_PART_DISTRIBUTION_WARN_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.CacheAffinitySharedManager.DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
+import static org.apache.ignite.internal.processors.cache.GridCacheAdapter.DFLT_CACHE_RETRIES_COUNT;
 import static org.apache.ignite.internal.processors.cache.GridCacheAdapter.DFLT_CACHE_START_SIZE;
 import static org.apache.ignite.internal.processors.cache.GridCacheContext.DFLT_READ_LOAD_BALANCING;
 import static org.apache.ignite.internal.processors.cache.GridCacheMvccManager.DFLT_MAX_NESTED_LISTENER_CALLS;
 import static org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager.DFLT_DIAGNOSTIC_WARN_LIMIT;
+import static org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager.DFLT_EXCHANGE_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager.DFLT_EXCHANGE_MERGE_DELAY;
 import static org.apache.ignite.internal.processors.cache.GridCacheProcessor.DFLT_ALLOW_START_CACHES_IN_PARALLEL;
 import static org.apache.ignite.internal.processors.cache.GridCacheTtlManager.DFLT_TTL_EXPIRE_BATCH_SIZE;
 import static org.apache.ignite.internal.processors.cache.WalStateManager.DFLT_DISABLE_WAL_DURING_REBALANCING;
 import static org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl.DFLT_WAIT_SCHEMA_UPDATE;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.CacheDistributedGetFutureAdapter.DFLT_MAX_REMAP_CNT;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache.DFLT_ATOMIC_DEFERRED_ACK_BUFFER_SIZE;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicCache.DFLT_ATOMIC_DEFERRED_ACK_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture.DFLT_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.DFLT_PRELOAD_RESEND_TIMEOUT;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition.DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.DFLT_MVCC_TX_SIZE_CACHING_THRESHOLD;
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory.DFLT_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage.DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointWorkflow.DFLT_CHECKPOINT_PARALLEL_SORT_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.DFLT_PAGE_LOCK_TRACKER_CAPACITY;
 import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerFactory.HEAP_LOG;
@@ -87,25 +103,45 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWr
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.DFLT_WAL_MMAP;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.filehandle.FileHandleManagerImpl.DFLT_WAL_SEGMENT_SYNC_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory.LATEST_SERIALIZER_VERSION;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_DUMP_TX_COLLISIONS_INTERVAL;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_MAX_COMPLETED_TX_CNT;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_SLOW_TX_WARN_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT;
+import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_TX_DEADLOCK_DETECTION_MAX_ITERS;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.DFLT_TX_OWNER_DUMP_REQUESTS_ALLOWED;
+import static org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.DFLT_TX_DEADLOCK_DETECTION_TIMEOUT;
 import static org.apache.ignite.internal.processors.cluster.ClusterProcessor.DFLT_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.internal.processors.cluster.ClusterProcessor.DFLT_UPDATE_NOTIFIER;
+import static org.apache.ignite.internal.processors.cluster.GridUpdateNotifier.DEFAULT_GRIDGAIN_UPDATES_URL;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DFLT_DUMP_PAGE_LOCK_ON_FAILURE;
 import static org.apache.ignite.internal.processors.failure.FailureProcessor.DFLT_FAILURE_HANDLER_RESERVE_BUFFER_SIZE;
+import static org.apache.ignite.internal.processors.job.GridJobProcessor.DFLT_JOBS_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor.DFLT_JOBS_METRICS_CONCURRENCY_LEVEL;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl.DFLT_MAX_HISTORY_BYTES;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_INDEXING_DISCOVERY_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.query.schema.SchemaIndexCachePartitionWorker.DFLT_IGNITE_INDEX_REBUILD_BATCH_SIZE;
 import static org.apache.ignite.internal.processors.rest.GridRestProcessor.DFLT_SES_TIMEOUT;
 import static org.apache.ignite.internal.processors.rest.GridRestProcessor.DFLT_SES_TOKEN_INVALIDATE_INTERVAL;
 import static org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandHandler.DFLT_MAX_TASK_RESULTS;
 import static org.apache.ignite.internal.util.GridLogThrottle.DFLT_LOG_THROTTLE_CAPACITY;
+import static org.apache.ignite.internal.util.GridReflectionCache.DFLT_REFLECTION_CACHE_SIZE;
 import static org.apache.ignite.internal.util.GridUnsafe.DFLT_MEMORY_PER_BYTE_COPY_THRESHOLD;
+import static org.apache.ignite.internal.util.IgniteExceptionRegistry.DEFAULT_QUEUE_SIZE;
+import static org.apache.ignite.internal.util.IgniteUtils.DFLT_MBEAN_APPEND_CLASS_LOADER_ID;
 import static org.apache.ignite.internal.util.StripedExecutor.DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD;
 import static org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor.DFLT_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT;
 import static org.apache.ignite.internal.util.nio.GridNioServer.DFLT_IO_BALANCE_PERIOD;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_COLLECTION_LIMIT;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.DFLT_TO_STRING_MAX_LENGTH;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_DISCOVERY_METRICS_QNT_WARN;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_DISCO_FAILED_CLIENT_RECONNECT_DELAY;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_NODE_IDS_HISTORY_SIZE;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_THROTTLE_RECONNECT_RESET_TIMEOUT_INTERVAL;
+import static org.apache.ignite.startup.cmdline.CommandLineStartup.DFLT_PROG_NAME;
 
 /**
  * Contains constants for all system properties and environmental variables in Ignite.
@@ -194,6 +230,7 @@ public final class IgniteSystemProperties {
     /**
      * Url of updates service.
      */
+    @SystemProperty(value = "Url of updates service", type = String.class, defaults = DEFAULT_GRIDGAIN_UPDATES_URL)
     public static final String GRIDGAIN_UPDATE_URL = "GRIDGAIN_UPDATE_URL";
 
     /**
@@ -252,6 +289,9 @@ public final class IgniteSystemProperties {
      * This property allows to override default behavior that rest processor
      * doesn't start on client node. If set {@code true} than rest processor will be started on client node.
      */
+    @SystemProperty(value = "This property allows to override default behavior that rest processor " +
+        "doesn't start on client node. If set {@code true} than rest processor will be started on client node",
+        defaults = "" + false)
     public static final String IGNITE_REST_START_ON_CLIENT = "IGNITE_REST_START_ON_CLIENT";
 
     /**
@@ -261,6 +301,8 @@ public final class IgniteSystemProperties {
      * @deprecated Should be made default in Apache Ignite 3.0.
      */
     @Deprecated
+    @SystemProperty(value = "Changes output format of {@link GridRestCommand#CACHE_GET_ALL} from {k: v, ...} " +
+        "to [{\"key\": k, \"value\": v}, ...] to allow non-string keys output", defaults = "" + false)
     public static final String IGNITE_REST_GETALL_AS_ARRAY = "IGNITE_REST_GETALL_AS_ARRAY";
 
     /**
@@ -268,6 +310,9 @@ public final class IgniteSystemProperties {
      * primary node. Remapping may be needed when topology is changed concurrently with
      * get operation.
      */
+    @SystemProperty(value = "Defines the maximum number of attempts to remap near get to the same " +
+        "primary node. Remapping may be needed when topology is changed concurrently with " +
+        "get operation", type = Integer.class, defaults = "" + DFLT_MAX_REMAP_CNT)
     public static final String IGNITE_NEAR_GET_MAX_REMAPS = "IGNITE_NEAR_GET_MAX_REMAPS";
 
     /**
@@ -278,6 +323,9 @@ public final class IgniteSystemProperties {
      * Note that if you use <tt>ignite.{sh|bat}</tt> scripts to start Ignite they
      * start by default in quiet mode. You can supply <tt>-v</tt> flag to override it.
      */
+    @SystemProperty(value = "In quiet mode, only warning and errors are printed into the log additionally to a " +
+        "shortened version of standard output on the start. Note that if you use ignite.{sh|bat} scripts to start " +
+        "Ignite they start by default in quiet mode. You can supply -v flag to override it", defaults = "true")
     public static final String IGNITE_QUIET = "IGNITE_QUIET";
 
     /**
@@ -285,6 +333,9 @@ public final class IgniteSystemProperties {
      * Troubleshooting logger makes logging more verbose without enabling debug mode
      * to provide more detailed logs without performance penalty.
      */
+    @SystemProperty("Enables troubleshooting logger. " +
+        "Troubleshooting logger makes logging more verbose without enabling debug mode to provide more detailed " +
+        "logs without performance penalty")
     public static final String IGNITE_TROUBLESHOOTING_LOGGER = "IGNITE_TROUBLESHOOTING_LOGGER";
 
     /**
@@ -293,6 +344,7 @@ public final class IgniteSystemProperties {
      * @deprecated Use {@link #IGNITE_SENSITIVE_DATA_LOGGING} instead.
      */
     @Deprecated
+    @SystemProperty(value = "Enables writing sensitive information in toString() output")
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
 
     /**
@@ -304,9 +356,17 @@ public final class IgniteSystemProperties {
      * "true" -> "plain",
      * "false" -> "none".
      */
+    @SystemProperty(value = "Setting to {@code \"plain\"} enables writing sensitive information in {@code toString()} output. " +
+        "Setting to {@code \"hash\"} enables writing hash of sensitive information in {@code toString()} output. " +
+        "Setting to {@code \"none\"} disables writing sensitive information in {@code toString()} output. " +
+        "IGNITE_TO_STRING_INCLUDE_SENSITIVE has higher priority. If it is explicitly set, then it is converted: " +
+        "\"true\" -> \"plain\", " +
+        "\"false\" -> \"none\"", type = String.class, defaults = DFLT_SENSITIVE_DATA_LOGGING)
     public static final String IGNITE_SENSITIVE_DATA_LOGGING = "IGNITE_SENSITIVE_DATA_LOGGING";
 
     /** Maximum length for {@code toString()} result. */
+    @SystemProperty(value = "Maximum length for toString() result", type = Integer.class,
+        defaults = "" + DFLT_TO_STRING_MAX_LENGTH)
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
 
     /**
@@ -316,11 +376,16 @@ public final class IgniteSystemProperties {
      *
      * {@code False} by default.
      */
+    @SystemProperty(value = "Boolean flag indicating whether GridToStringBuilder should throw RuntimeException " +
+        "     * when building string representation of an object or should just print information about exception into the log " +
+        "     * and proceed", defaults = "" + false)
     public static final String IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION = "IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION";
 
     /**
      * Limit collection (map, array) elements number to output.
      */
+    @SystemProperty(value = "Number of collection (map, array) elements to output",
+        type = Integer.class, defaults = "" + DFLT_TO_STRING_COLLECTION_LIMIT)
     public static final String IGNITE_TO_STRING_COLLECTION_LIMIT = "IGNITE_TO_STRING_COLLECTION_LIMIT";
 
     /**
@@ -329,17 +394,25 @@ public final class IgniteSystemProperties {
      * in configuration, then default console appender will be added.
      * Set this property to {@code false} if no appenders should be added.
      */
+    @SystemProperty(value = "If true (default) and Ignite is launched in verbose mode (see IGNITE_QUIET) " +
+        "and no console appenders can be found in configuration, then default console appender will be added. " +
+        "Set this property to false if no appenders should be added", defaults = "true")
     public static final String IGNITE_CONSOLE_APPENDER = "IGNITE_CONSOLE_APPENDER";
 
     /** Maximum size for exchange history. Default value is {@code 1000}.*/
+    @SystemProperty(value = "Maximum size for exchange history", type = Integer.class,
+        defaults = "" + DFLT_EXCHANGE_HISTORY_SIZE)
     public static final String IGNITE_EXCHANGE_HISTORY_SIZE = "IGNITE_EXCHANGE_HISTORY_SIZE";
 
     /** */
+    @SystemProperty(value = "Partition map exchange merge delay in milliseconds",
+        type = Long.class, defaults = "" + DFLT_EXCHANGE_MERGE_DELAY)
     public static final String IGNITE_EXCHANGE_MERGE_DELAY = "IGNITE_EXCHANGE_MERGE_DELAY";
 
     /**
      * Name of the system property defining name of command line program.
      */
+    @SystemProperty(value = "Name of command line program", type = String.class, defaults = DFLT_PROG_NAME)
     public static final String IGNITE_PROG_NAME = "IGNITE_PROG_NAME";
 
     /**
@@ -347,6 +420,8 @@ public final class IgniteSystemProperties {
      * is used with auto-restarting functionality when Ignite is started
      * by supplied <tt>ignite.{bat|sh}</tt> scripts.
      */
+    @SystemProperty(value = "Success file name. This file is used with auto-restarting functionality " +
+        "when Ignite is started by supplied ignite.{bat|sh} scripts", type = String.class)
     public static final String IGNITE_SUCCESS_FILE = "IGNITE_SUCCESS_FILE";
 
     /**
@@ -358,6 +433,11 @@ public final class IgniteSystemProperties {
      * However, this system property has bigger priority and overrides the settings set via
      * {@link org.apache.ignite.configuration.IgniteConfiguration}.
      */
+    @SystemProperty(value = "Sets a system-wide local IP address or hostname to be " +
+        "used by Ignite networking components. Once provided, the property overrides all the default local binding " +
+        "settings for Ignite nodes. Note, that the address can also be changed via " +
+        "IgniteConfiguration.setLocalHost(String) method. However, this system property has bigger priority and " +
+        "overrides the settings set via IgniteConfiguration", type = String.class)
     public static final String IGNITE_LOCAL_HOST = "IGNITE_LOCAL_HOST";
 
     /**
@@ -367,6 +447,8 @@ public final class IgniteSystemProperties {
      * @see org.apache.ignite.configuration.DeploymentMode
      * @see org.apache.ignite.configuration.IgniteConfiguration#getDeploymentMode()
      */
+    @SystemProperty(value = "Sets deployment mode configuration parameter. Valid " +
+        "values for property are: PRIVATE, ISOLATED, SHARED or CONTINUOUS", type = DeploymentMode.class)
     public static final String IGNITE_DEP_MODE_OVERRIDE = "IGNITE_DEPLOYMENT_MODE_OVERRIDE";
 
     /**
@@ -374,12 +456,19 @@ public final class IgniteSystemProperties {
      * is used to detect duplicate transaction and has a default value of {@code 102400}. In
      * most cases this value is large enough and does not need to be changed.
      */
+    @SystemProperty(value = "Size of buffer holding completed transaction versions. " +
+        "Buffer is used to detect duplicate transaction. " +
+        "In most cases this value is large enough and does not need to be changed",
+        type = Integer.class, defaults = "" + DFLT_MAX_COMPLETED_TX_CNT)
     public static final String IGNITE_MAX_COMPLETED_TX_COUNT = "IGNITE_MAX_COMPLETED_TX_COUNT";
 
     /**
      * Transactions that take more time, than value of this property, will be output to log
      * with warning level. {@code 0} (default value) disables warning on slow transactions.
      */
+    @SystemProperty(value = "Transactions that take more time, than value of this property (in milliseconds), " +
+        "will be output to warnings. 0 disables warnings on slow transactions",
+        type = Integer.class, defaults = "" + DFLT_SLOW_TX_WARN_TIMEOUT)
     public static final String IGNITE_SLOW_TX_WARN_TIMEOUT = "IGNITE_SLOW_TX_WARN_TIMEOUT";
 
     /**
@@ -389,17 +478,24 @@ public final class IgniteSystemProperties {
      * @deprecated Transactions are salvaged immediately to reduce PME latency.
      */
     @Deprecated
+    @SystemProperty(value = "Timeout after which all uncompleted transactions originated by left node will be\n" +
+        "     * salvaged (i.e. invalidated and committed)")
     public static final String IGNITE_TX_SALVAGE_TIMEOUT = "IGNITE_TX_SALVAGE_TIMEOUT";
 
     /**
      * Specifies maximum number of iterations for deadlock detection procedure.
      * If value of this property is less then or equal to zero then deadlock detection will be disabled.
      */
+    @SystemProperty(value = "Maximum number of iterations for deadlock detection procedure. " +
+        "If value of this property is less then or equal to zero then deadlock detection will be disabled",
+        type = Integer.class, defaults = "" + DFLT_TX_DEADLOCK_DETECTION_MAX_ITERS)
     public static final String IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS = "IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS";
 
     /**
      * Specifies timeout for deadlock detection procedure.
      */
+    @SystemProperty(value = "Timeout for deadlock detection procedure", type = Integer.class,
+        defaults = "" + DFLT_TX_DEADLOCK_DETECTION_TIMEOUT)
     public static final String IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT = "IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT";
 
     /**
@@ -409,23 +505,32 @@ public final class IgniteSystemProperties {
      * Now it is not nessessary setting this property before grid starting because enabling of pendingTxTracker happens
      * automatically if needed, and it should be used for test purposes only.
      */
+    @SystemProperty(value = "Enables pending transaction tracker. " +
+        "Affects impact of IGNITE_DISABLE_WAL_DURING_REBALANCING property:  if this property is set, " +
+        "WAL anyway won't be disabled during rebalancing triggered by baseline topology change", defaults = "" + false)
     public static final String IGNITE_PENDING_TX_TRACKER_ENABLED = "IGNITE_PENDING_TX_TRACKER_ENABLED";
 
     /**
      * System property to override multicast group taken from configuration.
      * Used for testing purposes.
      */
+    @SystemProperty(value = "Overrides multicast group taken from configuration. Used for testing purposes",
+        type = String.class)
     public static final String IGNITE_OVERRIDE_MCAST_GRP = "IGNITE_OVERRIDE_MCAST_GRP";
 
     /**
      * System property to override default reflection cache size. Default value is {@code 128}.
      */
+    @SystemProperty(value = "Overrides default reflection cache size", type = Integer.class,
+        defaults = "" + DFLT_REFLECTION_CACHE_SIZE)
     public static final String IGNITE_REFLECTION_CACHE_SIZE = "IGNITE_REFLECTION_CACHE_SIZE";
 
     /**
      * System property to override default job processor maps sizes for finished jobs and
      * cancellation requests. Default value is {@code 10240}.
      */
+    @SystemProperty(value = "Job processor maps sizes for finished jobs and cancellation requests. ",
+        type = Integer.class, defaults = "" + DFLT_JOBS_HISTORY_SIZE)
     public static final String IGNITE_JOBS_HISTORY_SIZE = "IGNITE_JOBS_HISTORY_SIZE";
 
     /**
@@ -436,40 +541,55 @@ public final class IgniteSystemProperties {
      * @deprecated Use {@link GridMetricManager} instead.
      */
     @Deprecated
+    @SystemProperty(value = "Job metrics processor property defining concurrency level " +
+        "for structure holding job metrics snapshots", type = Integer.class,
+        defaults = "" + DFLT_JOBS_METRICS_CONCURRENCY_LEVEL)
     public static final String IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL = "IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL";
 
     /**
      * System property to hold optional configuration URL.
      */
+    @SystemProperty(value = "Configuration URL", type = String.class)
     public static final String IGNITE_CONFIG_URL = "IGNITE_CONFIG_URL";
 
     /** System property to hold SSH host for visor-started nodes. */
+    @SystemProperty(value = "SSH host name for visor-started nodes", type = String.class)
     public static final String IGNITE_SSH_HOST = "IGNITE_SSH_HOST";
 
     /** System property to enable experimental commands in control.sh script. */
+    @SystemProperty("Enables experimental commands in control.sh script")
     public static final String IGNITE_ENABLE_EXPERIMENTAL_COMMAND = "IGNITE_ENABLE_EXPERIMENTAL_COMMAND";
 
     /** System property to hold SSH user name for visor-started nodes. */
+    @SystemProperty(value = "SSH user name for visor-started nodes", type = String.class)
     public static final String IGNITE_SSH_USER_NAME = "IGNITE_SSH_USER_NAME";
 
     /** System property to hold preload resend timeout for evicted partitions. */
+    @SystemProperty(value = "Preload resend timeout for evicted partitions in milliseconds", type = Long.class,
+        defaults = "" + DFLT_PRELOAD_RESEND_TIMEOUT)
     public static final String IGNITE_PRELOAD_RESEND_TIMEOUT = "IGNITE_PRELOAD_RESEND_TIMEOUT";
 
     /**
      * System property to specify how often in milliseconds marshal buffers
      * should be rechecked and potentially trimmed. Default value is {@code 10,000ms}.
      */
+    @SystemProperty(value = "How often in milliseconds marshal buffers should be rechecked and potentially trimmed",
+        type = Long.class, defaults = "" + DFLT_MARSHAL_BUFFERS_RECHECK)
     public static final String IGNITE_MARSHAL_BUFFERS_RECHECK = "IGNITE_MARSHAL_BUFFERS_RECHECK";
 
     /**
      * System property to specify per thread binary allocator chunk pool size. Default value is {@code 32}.
      */
+    @SystemProperty(value = "Per thread binary allocator chunk pool size",
+        type = Integer.class, defaults = "" + DFLT_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE)
     public static final String IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = "IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE";
 
     /**
      * System property to disable {@link HostnameVerifier} for SSL connections.
      * Can be used for development with self-signed certificates. Default value is {@code false}.
      */
+    @SystemProperty(value = "Disables HostnameVerifier for SSL connections. " +
+        "Can be used for development with self-signed certificates", defaults = "" + false)
     public static final String IGNITE_DISABLE_HOSTNAME_VERIFIER = "IGNITE_DISABLE_HOSTNAME_VERIFIER";
 
     /**
@@ -479,12 +599,16 @@ public final class IgniteSystemProperties {
      * @deprecated Not used anymore.
      */
     @Deprecated
+    @SystemProperty(value = "Disables buffered communication if node sends less messages count " +
+        "than specified by this property", type = Integer.class, defaults = "512")
     public static final String IGNITE_MIN_BUFFERED_COMMUNICATION_MSG_CNT = "IGNITE_MIN_BUFFERED_COMMUNICATION_MSG_CNT";
 
     /**
      * Flag that will force Ignite to fill memory block with some recognisable pattern right before
      * this memory block is released. This will help to recognize cases when already released memory is accessed.
      */
+    @SystemProperty("Force Ignite to fill memory block with some recognisable pattern right before this " +
+        "memory block is released. This will help to recognize cases when already released memory is accessed")
     public static final String IGNITE_OFFHEAP_SAFE_RELEASE = "IGNITE_OFFHEAP_SAFE_RELEASE";
 
     /**
@@ -493,6 +617,8 @@ public final class IgniteSystemProperties {
      * @deprecated No longer used.
      */
     @Deprecated
+    @SystemProperty(value = "Maximum size for atomic cache queue delete history",
+        type = Integer.class, defaults = "" + DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE + " per partition")
     public static final String IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE = "IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE";
 
     /**
@@ -501,48 +627,64 @@ public final class IgniteSystemProperties {
      * @deprecated No longer used.
      */
     @Deprecated
+    @SystemProperty(value = "Ttl of removed cache entries in milliseconds", type = Long.class)
     public static final String IGNITE_CACHE_REMOVED_ENTRIES_TTL = "IGNITE_CACHE_REMOVED_ENTRIES_TTL";
 
     /**
      * Comma separated list of addresses in format "10.100.22.100:45000,10.100.22.101:45000".
      * Makes sense only for {@link org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder}.
      */
+    @SystemProperty(value = "Comma separated list of addresses in format " +
+        "\"10.100.22.100:45000,10.100.22.101:45000\". Used only for " +
+        "org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder", type = String.class)
     public static final String IGNITE_TCP_DISCOVERY_ADDRESSES = "IGNITE_TCP_DISCOVERY_ADDRESSES";
 
     /**
      * Flag indicating whether performance suggestions output on start should be disabled.
      */
+    @SystemProperty(value = "Disables performance suggestions output on start", defaults = "" + false)
     public static final String IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED = "IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED";
 
     /**
      * Flag indicating whether atomic operations allowed for use inside transactions.
      */
+    @SystemProperty(value = "Allows atomic operations inside transactions", defaults = "true")
     public static final String IGNITE_ALLOW_ATOMIC_OPS_IN_TX = "IGNITE_ALLOW_ATOMIC_OPS_IN_TX";
 
     /**
      * Atomic cache deferred update response buffer size.
      */
+    @SystemProperty(value = "Atomic cache deferred update response buffer size", type = Integer.class,
+        defaults = "" + DFLT_ATOMIC_DEFERRED_ACK_BUFFER_SIZE)
     public static final String IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE = "IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE";
 
     /**
      * Atomic cache deferred update timeout.
      */
+    @SystemProperty(value = "Atomic cache deferred update response buffer size", type = Integer.class,
+        defaults = "" + DFLT_ATOMIC_DEFERRED_ACK_BUFFER_SIZE)
     public static final String IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT = "IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT";
 
     /**
      * Atomic cache deferred update timeout.
      */
+    @SystemProperty(value = "Atomic cache deferred update timeout", type = Integer.class,
+        defaults = "" + DFLT_ATOMIC_DEFERRED_ACK_TIMEOUT)
     public static final String IGNITE_ATOMIC_CACHE_QUEUE_RETRY_TIMEOUT = "IGNITE_ATOMIC_CACHE_QUEUE_RETRY_TIMEOUT";
 
     /**
      * One phase commit deferred ack request timeout.
      */
+    @SystemProperty(value = "One phase commit deferred ack request timeout", type = Integer.class,
+        defaults = "" + DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT)
     public static final String IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT =
         "IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT";
 
     /**
      * One phase commit deferred ack request buffer size.
      */
+    @SystemProperty(value = "One phase commit deferred ack request buffer size", type = Integer.class,
+        defaults = "" + DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE)
     public static final String IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE =
         "IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE";
 
@@ -552,6 +694,7 @@ public final class IgniteSystemProperties {
      * @deprecated Since 2.8. H2 console is no longer supported.
      */
     @Deprecated
+    @SystemProperty(value = "Enables debug console for H2 indexing SPI", type = String.class)
     public static final String IGNITE_H2_DEBUG_CONSOLE = "IGNITE_H2_DEBUG_CONSOLE";
 
     /**
@@ -563,16 +706,21 @@ public final class IgniteSystemProperties {
      * @deprecated Since 2.8. H2 console is no longer supported.
      */
     @Deprecated
+    @SystemProperty(value = "User defined port which H2 indexing SPI will use to start H2 debug console on. " +
+        "If this property is not set or set to 0, H2 debug console will use system-provided dynamic port. " +
+        "This property is only relevant when " + IGNITE_H2_DEBUG_CONSOLE + " property is set", type = Integer.class)
     public static final String IGNITE_H2_DEBUG_CONSOLE_PORT = "IGNITE_H2_DEBUG_CONSOLE_PORT";
 
     /**
      * If this property is set to {@code true} then shared memory space native debug will be enabled.
      */
+    @SystemProperty(value = "Enables native debug of the shared memory space", defaults = "" + false)
     public static final String IGNITE_IPC_SHMEM_SPACE_DEBUG = "IGNITE_IPC_SHMEM_SPACE_DEBUG";
 
     /**
      * Property allowing to skip configuration consistency checks.
      */
+    @SystemProperty(value = "Skip configuration consistency checks", defaults = "" + false)
     public static final String IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK =
         "IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK";
 
@@ -582,17 +730,21 @@ public final class IgniteSystemProperties {
      * @deprecated Since 2.7.26. Obsolete because of common use of binary marshaller.
      */
     @Deprecated
+    @SystemProperty("Disables validation of keys put to cache")
     public static final String IGNITE_CACHE_KEY_VALIDATION_DISABLED = "IGNITE_CACHE_KEY_VALIDATION_DISABLED";
 
     /**
      * Environment variable to override logging directory that has been set in logger configuration.
      */
+    @SystemProperty(value = "Logging directory. Overrides configuration value", type = String.class)
     public static final String IGNITE_LOG_DIR = "IGNITE_LOG_DIR";
 
     /**
      * Environment variable to set work directory. The property {@link org.apache.ignite.configuration.IgniteConfiguration#setWorkDirectory} has higher
      * priority.
      */
+    @SystemProperty(value = "Work directory. The property IgniteConfiguration.setWorkDirectory has higher priority",
+        type = String.class)
     public static final String IGNITE_WORK_DIR = "IGNITE_WORK_DIR";
 
     /**
@@ -605,6 +757,9 @@ public final class IgniteSystemProperties {
      * <p>
      * Default is {@code false}.
      */
+    @SystemProperty("Enables Ignite to append hash code of Ignite class as hex string and append JVM name " +
+        "returned by RuntimeMXBean.getName(). This may be helpful when running Ignite in some application server " +
+        "clusters or similar environments to avoid MBean name collisions")
     public static final String IGNITE_MBEAN_APPEND_JVM_ID = "IGNITE_MBEAN_APPEND_JVM_ID";
 
     /**
@@ -613,6 +768,8 @@ public final class IgniteSystemProperties {
      * <p>
      * Default is {@code true}.
      */
+    @SystemProperty(value = "Enables Ignite to append hash code of class loader to MXBean name",
+        defaults = "" + DFLT_MBEAN_APPEND_CLASS_LOADER_ID)
     public static final String IGNITE_MBEAN_APPEND_CLASS_LOADER_ID = "IGNITE_MBEAN_APPEND_CLASS_LOADER_ID";
 
     /**
@@ -621,6 +778,8 @@ public final class IgniteSystemProperties {
      *
      * Default is {@code false}
      */
+    @SystemProperty(value = "Disable MBeans registration. This may be helpful if MBeans are not allowed " +
+        "e.g. for security reasons", defaults = "" + false)
     public static final String IGNITE_MBEANS_DISABLED = "IGNITE_MBEANS_DISABLED";
 
     /**
@@ -628,16 +787,21 @@ public final class IgniteSystemProperties {
      *
      * Default is {@code false}.
      */
+    @SystemProperty(value = "Enables test features", defaults = "" + false)
     public static final String IGNITE_TEST_FEATURES_ENABLED = "IGNITE_TEST_FEATURES_ENABLED";
 
     /**
      * Property controlling size of buffer holding last exception. Default value of {@code 1000}.
      */
+    @SystemProperty(value = "Size of buffer holding last exception", type = Integer.class,
+        defaults = "" + DEFAULT_QUEUE_SIZE)
     public static final String IGNITE_EXCEPTION_REGISTRY_MAX_SIZE = "IGNITE_EXCEPTION_REGISTRY_MAX_SIZE";
 
     /**
      * Property controlling default behavior of cache client flag.
      */
+    @SystemProperty(value = "Starts node in client mode. Have lower priority than configuration value",
+        defaults = "" + false)
     public static final String IGNITE_CACHE_CLIENT = "IGNITE_CACHE_CLIENT";
 
     /**
@@ -645,6 +809,9 @@ public final class IgniteSystemProperties {
      * is passed in. This is needed to pass TCK tests which use default URL and assume isolated cache managers
      * for different class loaders.
      */
+    @SystemProperty(value = "Enables CacheManager to start grid with isolated " +
+        "IP finder when default URL is passed in. This is needed to pass TCK tests which use default URL and " +
+        "assume isolated cache managers for different class loaders", defaults = "" + DFLT_JCACHE_DEFAULT_ISOLATED)
     public static final String IGNITE_JCACHE_DEFAULT_ISOLATED = "IGNITE_CACHE_CLIENT";
 
     /**
@@ -652,15 +819,23 @@ public final class IgniteSystemProperties {
      * If there are less rows than this threshold then multiple passes throw a table will be possible,
      * otherwise only one pass (e.g. only result streaming is possible).
      */
+    @SystemProperty(value = "Maximum number of SQL result rows which can be fetched into a merge table. " +
+        "If there are less rows than this threshold then multiple passes throw a table will be possible, " +
+        "otherwise only one pass (e.g. only result streaming is possible)",
+        type = Integer.class, defaults = "10000")
     public static final String IGNITE_SQL_MERGE_TABLE_MAX_SIZE = "IGNITE_SQL_MERGE_TABLE_MAX_SIZE";
 
     /**
      * Property controlling number of SQL result rows that will be fetched into a merge table at once before
      * applying binary search for the bounds.
      */
+    @SystemProperty(value = "Number of SQL result rows that will be fetched into a merge table at once " +
+        "before applying binary search for the bounds", type = Integer.class, defaults = "1024")
     public static final String IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE = "IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE";
 
     /** Disable fallback to H2 SQL parser if the internal SQL parser fails to parse the statement. */
+    @SystemProperty(value = "Disables fallback to H2 SQL parser if the internal SQL parser fails to " +
+        "parse the statement", defaults = "" + false)
     public static final String IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK = "IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK";
 
     /**
@@ -669,15 +844,19 @@ public final class IgniteSystemProperties {
      * @deprecated Since version 2.8.
      */
     @Deprecated
+    @SystemProperty("Force all SQL queries to be processed lazily regardless of what clients request")
     public static final String IGNITE_SQL_FORCE_LAZY_RESULT_SET = "IGNITE_SQL_FORCE_LAZY_RESULT_SET";
 
     /** Disable SQL system views. */
+    @SystemProperty("Disables SQL system views")
     public static final String IGNITE_SQL_DISABLE_SYSTEM_VIEWS = "IGNITE_SQL_DISABLE_SYSTEM_VIEWS";
 
     /** SQL retry timeout. */
+    @SystemProperty(value = "SQL retry timeout in milliseconds", type = Long.class, defaults = "30 seconds")
     public static final String IGNITE_SQL_RETRY_TIMEOUT = "IGNITE_SQL_RETRY_TIMEOUT";
 
     /** Enable backward compatible handling of UUID through DDL. */
+    @SystemProperty("Enables backward compatible handling of UUID through DDL")
     public static final String IGNITE_SQL_UUID_DDL_BYTE_FORMAT = "IGNITE_SQL_UUID_DDL_BYTE_FORMAT";
 
     /**
@@ -687,6 +866,7 @@ public final class IgniteSystemProperties {
      * by security permission {@link SecurityPermission#SET_QUERY_MEMORY_QUOTA}.
      */
     @Deprecated
+    @SystemProperty(value = "Enable memory quotas per JDBC connection")
     public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
 
     /**
@@ -695,33 +875,49 @@ public final class IgniteSystemProperties {
      * Default is {@code true}.
      */
     @IgniteExperimental
+    @SystemProperty(value = "Enables subquery rewriting optimization. " +
+        "If enabled, subquery will be rewritten to JOIN where possible", defaults = "" + true)
     public static final String IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION = "IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION";
 
     /** Maximum size for affinity assignment history. */
+    @SystemProperty(value = "Maximum size for affinity assignment history", type = Integer.class,
+        defaults = "" + DFLT_AFFINITY_HISTORY_SIZE)
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
 
     /** Maximum size for discovery messages history. */
+    @SystemProperty(value = "Maximum size for discovery messages history", type = Integer.class,
+        defaults = "" + DFLT_DISCOVERY_HISTORY_SIZE)
     public static final String IGNITE_DISCOVERY_HISTORY_SIZE = "IGNITE_DISCOVERY_HISTORY_SIZE";
 
     /** Maximum number of discovery message history used to support client reconnect. */
+    @SystemProperty(value = "Maximum number of discovery message history used to support client reconnect",
+        type = Integer.class, defaults = "" + DFLT_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE)
     public static final String IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE =
         "IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE";
 
     /** Logging a warning message when metrics quantity exceeded a specified number. */
+    @SystemProperty(value = "Enables logging a warning message when metrics quantity exceeded a specified number",
+        type = Integer.class, defaults = "" + DFLT_DISCOVERY_METRICS_QNT_WARN)
     public static final String IGNITE_DISCOVERY_METRICS_QNT_WARN =
         "IGNITE_DISCOVERY_METRICS_QNT_WARN";
 
     /** Time interval that indicates that client reconnect throttle must be reset to zero. 2 minutes by default. */
+    @SystemProperty(value = "Time interval in milliseconds that indicates client reconnect throttle " +
+        "must be reset to zero", type = Long.class, defaults = "" + DFLT_THROTTLE_RECONNECT_RESET_TIMEOUT_INTERVAL)
     public static final String CLIENT_THROTTLE_RECONNECT_RESET_TIMEOUT_INTERVAL =
         "CLIENT_THROTTLE_RECONNECT_RESET_TIMEOUT_INTERVAL";
 
     /** Number of cache operation retries in case of topology exceptions. */
+    @SystemProperty(value = "Number of cache operation retries in case of topology exceptions", type = Integer.class,
+        defaults = "" + DFLT_CACHE_RETRIES_COUNT)
     public static final String IGNITE_CACHE_RETRIES_COUNT = "IGNITE_CACHE_RETRIES_COUNT";
 
     /** If this property is set to {@code true} then Ignite will log thread dump in case of partition exchange timeout. */
+    @SystemProperty("Enables logging thread dump in case of partition exchange timeout")
     public static final String IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT = "IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT";
 
     /** */
+    @SystemProperty(value = "Enables logging thread dump in case of partition exchange timeout", defaults = "" + false)
     public static final String IGNITE_IO_DUMP_ON_TIMEOUT = "IGNITE_IO_DUMP_ON_TIMEOUT";
 
     /** */
@@ -1005,6 +1201,9 @@ public final class IgniteSystemProperties {
      * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
+    @SystemProperty(value =  "hreshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
+        "After this thresold is reached, a snapshot of the earliest checkpoint map will be captured",
+        type = Integer.class, defaults = "" + DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD)
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
 
     /** Ignite page memory concurrency level. */
@@ -1071,6 +1270,8 @@ public final class IgniteSystemProperties {
      * Default value is fasle.
      *
      */
+    @SystemProperty(value = "If the property is set, coincidence of client identifier and subject " +
+        "is required when security is enabled", defaults = "" + false)
     public static final String IGNITE_CHECK_SENDER_NODE_SUBJECT = "IGNITE_CHECK_SENDER_NODE_SUBJECT";
 
     /**
@@ -1079,6 +1280,8 @@ public final class IgniteSystemProperties {
      * Default value is fasle.
      *
      */
+    @SystemProperty(value = "If the property is set, client nodes should have explicitly rights to access to system cache",
+    defaults = "" + false)
     public static final String IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED = "IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED";
 
     /**
@@ -1670,6 +1873,8 @@ public final class IgniteSystemProperties {
     /**
      * Defines factory class for H2 LocalResult (see org.gridgain.internal.h2.result.LocalResult).
      */
+    @SystemProperty(value = "Defines factory class for H2 LocalResult", type = String.class,
+        defaults = "org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory")
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
@@ -1677,6 +1882,7 @@ public final class IgniteSystemProperties {
      *
      * Default: 512K.
      */
+    @SystemProperty(value = "Defines default memory reservation block size", type = Long.class, defaults = "524288")
     public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
 
     /**
@@ -1733,6 +1939,8 @@ public final class IgniteSystemProperties {
      *
      * Default: 100_000 (rows).
      */
+    @SystemProperty(value = "Maximum size of table (rows count) when temporary hash index can be built on fly",
+        type = Integer.class, defaults = "100000")
     public static final String IGNITE_HASH_JOIN_MAX_TABLE_SIZE = "IGNITE_HASH_JOIN_MAX_TABLE_SIZE";
 
     /**
@@ -1743,6 +1951,8 @@ public final class IgniteSystemProperties {
      *
      * Default: false.
      */
+    @SystemProperty(value = "Enable hash join (create hash index on the fly) for query optimizer. " +
+        "When disabled hash join may be enabled only by index hint", defaults = "" + false)
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
     /**
@@ -1782,8 +1992,8 @@ public final class IgniteSystemProperties {
     /**
      * Disables smart DR throttling. Default value is <code>false</code>.
      */
-    public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
-        "IGNITE_DISABLE_SMART_DR_THROTTLING";
+    @SystemProperty(value = "Disables smart DR throttling", defaults = "" + false)
+    public static final String IGNITE_DISABLE_SMART_DR_THROTTLING = "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /*
      * Disable onheap caching of pages lists (free lists and reuse lists).
@@ -1815,6 +2025,8 @@ public final class IgniteSystemProperties {
      * Disable group state lazy store. It means that group state won't be cached for {@link CheckpointEntry} and will be
      * read from wal every time. Should be used for test purposes only.
      */
+    @SystemProperty(value = "Disable group state lazy store. It means that group state won't be cached " +
+        "and will be read from wal every time", defaults = "false")
     public static final String IGNITE_DISABLE_GRP_STATE_LAZY_STORE = "IGNITE_DISABLE_GRP_STATE_LAZY_STORE";
 
     /**
@@ -1852,6 +2064,9 @@ public final class IgniteSystemProperties {
      *
      * The last cost function is used by default.
      */
+    @SystemProperty(value = "Choose the index cost function. May be used to compatibility with old version\n" +
+        " The possible values: \"LAST\", \"COMPATIBLE_8_7_28\", \"COMPATIBLE_8_7_12\", \"COMPATIBLE_8_7_6\"",
+        defaults = "LAST")
     public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
 
     /**
@@ -1879,6 +2094,8 @@ public final class IgniteSystemProperties {
     /**
      * Defines how many exchange futures are kept uncleared in the queue. Default is 10.
      */
+    @SystemProperty(value = "Defines how many exchange futures are kept uncleared in the queue", type = Integer.class,
+        defaults = "10")
     public static final String IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
         "IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT";
 
@@ -1887,6 +2104,9 @@ public final class IgniteSystemProperties {
      * {@link SecurityPermissionSet#defaultAllowAll()} is set to true: if user's system permission set is empty,
      * all system actions will be prohibited.
      */
+    @SystemProperty(value = "If specified, enforces legacy behavior for system properties authorization when " +
+        "SecurityPermissionSet.defaultAllowAll() is set to true: if user's system permission set is empty, " +
+        "all system actions will be prohibited")
     public static final String IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS = "IGNITE_DFLT_ALLOW_EMPTY_SYS_PERMISSIONS";
 
     /**
@@ -1894,6 +2114,11 @@ public final class IgniteSystemProperties {
      * This percentage will be calculated from largest configured region size and then proportionally subtracted
      * from all configured regions.
      */
+    @SystemProperty(value = "Defragmentation region size percentage of configured region size. " +
+        "This percentage will be calculated from largest configured region size and then proportionally subtracted " +
+        "from all configured regions",
+        type = Integer.class,
+        defaults = "" + DFLT_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE)
     public static final String IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE =
         "IGNITE_DEFRAGMENTATION_REGION_SIZE_PERCENTAGE";
 
@@ -1902,6 +2127,9 @@ public final class IgniteSystemProperties {
      * but need to be completed, so they start after node start or cluster activation. If this option is set to
      * {@code false}, then tasks will not be started.
      */
+    @SystemProperty(value = "There can be background tasks that can be interrupted due to node stop, node fail, " +
+        "or cluster deactivation, but need to be completed, so they start after node start or cluster activation. " +
+        "If this option is set to false, then tasks will not be started", defaults = "" + true)
     public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
         "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
 
@@ -1912,24 +2140,30 @@ public final class IgniteSystemProperties {
      * Can be used for changing behaviour of tightly coupled code pieces during the tests.
      * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
      */
+    @SystemProperty(value = "Set to true only during the junit tests", defaults = "" + false)
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
      * Use TreeMap instead of HashMap to hold distinct values.
      * Default value is {@code false}. HashMap is used by default.
      */
+    @SystemProperty(value = "Use TreeMap instead of HashMap to hold distinct values", defaults = "" + false)
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
      * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
      * The default value is 1000.
      */
+    @SystemProperty(value = "Count of rows, being processed within a single checkpoint lock when indexes are rebuilt",
+        type = Integer.class, defaults = "" + DFLT_IGNITE_INDEX_REBUILD_BATCH_SIZE)
     public static final String IGNITE_INDEX_REBUILD_BATCH_SIZE = "IGNITE_INDEX_REBUILD_BATCH_SIZE";
 
     /**
      * Enables additional check that sender of communication handshake message corresponds to the node id
      * included in the message. The default value is {@code false}.
      */
+    @SystemProperty(value = "Enables additional check that sender of communication handshake message corresponds to " +
+        "the node id included in the message", defaults = "" + false)
     public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 

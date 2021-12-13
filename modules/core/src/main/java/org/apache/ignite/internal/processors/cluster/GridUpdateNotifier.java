@@ -51,7 +51,7 @@ import static java.net.URLEncoder.encode;
  * <p>
  * TODO GG-14736 rework this for GridGain Community versions.</p>
  */
-class GridUpdateNotifier {
+public class GridUpdateNotifier {
     /** Community edition. */
     private static final String COMMUNITY_EDITION = "ce";
 
@@ -74,7 +74,7 @@ class GridUpdateNotifier {
     private static final int WORKER_THREAD_SLEEP_TIME = 5000;
 
     /** Default url for request GridGain updates. */
-    static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update";
+    public static final String DEFAULT_GRIDGAIN_UPDATES_URL = "https://www.gridgain.com/notifier/update";
 
     /** Grid version. */
     private final String ver;
