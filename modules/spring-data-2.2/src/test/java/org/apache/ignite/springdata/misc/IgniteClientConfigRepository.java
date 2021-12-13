@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
+package org.apache.ignite.springdata.misc;
 
-import org.apache.ignite.springdata.*;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.springdata22.repository.IgniteRepository;
+import org.apache.ignite.springdata22.repository.config.RepositoryConfig;
 
-/**
- * Ignite Spring Data 2.2 test suite.
- */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteSpringDataCrudSelfTest.class,
-    IgniteSpringDataQueriesSelfTest.class,
-    IgniteSpringDataCrudSelfExpressionTest.class,
-    IgniteSpringDataCompoundKeyTest.class,
-    IgniteClientSpringDataCrudSelfTest.class,
-    IgniteClientSpringDataQueriesSelfTest.class,
-    IgniteClientSpringDataCompoundKeyTest.class
-})
-public class IgniteSpringData22TestSuite {
+import java.io.Serializable;
+
+/** Repository for testing repository configurion approach through {@link ClientConfiguration}. */
+@RepositoryConfig(cacheName = "PersonCache", igniteCfg = "clientConfiguration")
+public interface IgniteClientConfigRepository extends IgniteRepository<Object, Serializable> {
+    // No-op.
 }

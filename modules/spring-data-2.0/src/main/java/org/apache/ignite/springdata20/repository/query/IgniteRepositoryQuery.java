@@ -260,7 +260,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         @Nullable IgniteQuery staticQuery,
         Method mtd,
         ProjectionFactory factory,
-        IgniteCacheProxy<? ,?> cache,
+        IgniteCacheProxy<?, ?> cache,
         @Nullable DynamicQueryConfig staticQueryConfiguration,
         EvaluationContextProvider queryMethodEvaluationContextProvider) {
         this.metadata = metadata;
@@ -806,7 +806,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                 queryString = (String)eval;
             }
 
-            //FIXME: not implemented https://issues.apache.org/jira/browse/IGNITE-12189
             TextQuery textQuery = new TextQuery(type, queryString);
 
             textQuery.setLocal(config.local());
