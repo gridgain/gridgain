@@ -1529,7 +1529,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                             int realPageSize = data.length;
 
                             pageIO.compactPage(GridUnsafe.wrapPointer(bufPtr, realPageSize), buf, realPageSize);
-                            pageIO.compactPage(ByteBuffer.wrap(data), bufWal, realPageSize);
+                            ByteBuffer dataBuf = ByteBuffer.wrap(data).order(ByteOrder.nativeOrder());
+                            pageIO.compactPage(dataBuf, bufWal, realPageSize);
 
                             bufPtr = GridUnsafe.bufferAddress(buf);
                             data = new byte[bufWal.limit()];
