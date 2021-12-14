@@ -87,7 +87,7 @@ public final class UpdatePlan {
     private final int rowsNum;
     
     /** Whether absent PK parts should be filled with defaults or not. */
-    private boolean forceFillAbsentPKsWithDefaults;
+    private boolean fillAbsentPKsWithDefaults;
     
     /** Arguments for fast UPDATE or DELETE. */
     private final FastUpdate fastUpdate;
@@ -115,7 +115,7 @@ public final class UpdatePlan {
      * @param rowsNum Rows number.
      * @param fastUpdate Fast update (if any).
      * @param distributed Distributed plan (if any)
-     * @param forceFillAbsentPKsWithDefaults Force fills absent PKs with nulls or defaults.
+     * @param fillAbsentPKsWithDefaults Fills absent PKs with nulls or defaults setting.
      */
     public UpdatePlan(
         UpdateMode mode,
@@ -133,13 +133,13 @@ public final class UpdatePlan {
         @Nullable FastUpdate fastUpdate,
         @Nullable DmlDistributedPlanInfo distributed,
         boolean canSelectBeLazy,
-        boolean forceFillAbsentPKsWithDefaults
+        boolean fillAbsentPKsWithDefaults
     ) {
         this.colNames = colNames;
         this.colTypes = colTypes;
         this.rows = rows;
         this.rowsNum = rowsNum;
-        this.forceFillAbsentPKsWithDefaults = forceFillAbsentPKsWithDefaults;
+        this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;
     
         assert mode != null;
         assert tbl != null;
@@ -477,7 +477,7 @@ public final class UpdatePlan {
 
             for (int j = 0; j < colNames.length; j++) {
                 Object colVal;
-                if (forceFillAbsentPKsWithDefaults)
+                if (fillAbsentPKsWithDefaults)
                      colVal = row.size() > j ? row.get(j).get(args) : null;
                 else
                      colVal = row.get(j).get(args);
