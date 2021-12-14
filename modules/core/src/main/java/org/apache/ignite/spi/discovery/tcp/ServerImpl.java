@@ -2807,22 +2807,14 @@ class ServerImpl extends TcpDiscoveryImpl {
             @Nullable IgniteUuid customDiscardId
         ) {
             this.msgs.clear();
-            this.customDiscardId = null;
-            this.discardId = null;
 
             if (msgs != null) {
-                for (TcpDiscoveryAbstractMessage msg : msgs) {
-                    PendingMessage pm = new PendingMessage(msg);
-
-                    this.msgs.add(pm);
-
-                    if (pm.customMsg && pm.id.equals(customDiscardId))
-                        this.customDiscardId = customDiscardId;
-
-                    if (!pm.customMsg && pm.id.equals(discardId))
-                        this.discardId = discardId;
-                }
+                for (TcpDiscoveryAbstractMessage msg : msgs)
+                    this.msgs.add(new PendingMessage(msg));
             }
+
+            this.discardId = discardId;
+            this.customDiscardId = customDiscardId;
         }
 
         /**
