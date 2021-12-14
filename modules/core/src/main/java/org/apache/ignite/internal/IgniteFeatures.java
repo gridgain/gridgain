@@ -244,7 +244,7 @@ public enum IgniteFeatures {
     SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
     
     /** Whether the absent PK parts should be filled with defaults or not. */
-    FORCE_FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
 
     /**
      * Unique feature identifier.

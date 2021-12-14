@@ -136,7 +136,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     private Set<String> pkFields;
     
     /** Whether absent PK parts should be filled with defaults or not. */
-    private boolean forceFillAbsentPKsWithDefaults;
+    private boolean fillAbsentPKsWithDefaults;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -750,12 +750,12 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     }
     
     /** {@inheritDoc} */
-    @Override public boolean forceFillAbsentPKsWithDefaults() {
-        return forceFillAbsentPKsWithDefaults;
+    @Override public boolean fillAbsentPKsWithDefaults() {
+        return fillAbsentPKsWithDefaults;
     }
     
     /** {@inheritDoc} */
-    @Override public void setForceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults) {
-        this.forceFillAbsentPKsWithDefaults = forceFillAbsentPKsWithDefaults;
+    @Override public void setFillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults) {
+        this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;
     }
 }

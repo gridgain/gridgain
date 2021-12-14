@@ -38,7 +38,7 @@ public class QueryEntityEx extends QueryEntity {
     private boolean preserveKeysOrder;
     
     /** Whether absent PK parts should be filled with defaults or not. */
-    private boolean forceFillAbsentPKsWithDefaults;
+    private boolean fillAbsentPKsWithDefaults;
     
     /**
      * Default constructor.
@@ -62,7 +62,7 @@ public class QueryEntityEx extends QueryEntity {
 
             preserveKeysOrder = other0.preserveKeysOrder;
             
-            forceFillAbsentPKsWithDefaults = other0.forceFillAbsentPKsWithDefaults;
+            fillAbsentPKsWithDefaults = other0.fillAbsentPKsWithDefaults;
         }
     }
 
@@ -98,16 +98,16 @@ public class QueryEntityEx extends QueryEntity {
     /**
      * @return {@code true} if absent PK parts should be filled with defaults, {@code false} otherwise.
      */
-    public boolean forceFillAbsentPKsWithDefaults() {
-        return forceFillAbsentPKsWithDefaults;
+    public boolean fillAbsentPKsWithDefaults() {
+        return fillAbsentPKsWithDefaults;
     }
     
     /**
-     * @param forceFillAbsentPKsWithDefaults Whether absent PK parts should be filled with defaults or not.
+     * @param fillAbsentPKsWithDefaults Whether absent PK parts should be filled with defaults or not.
      * @return {@code this} for chaining.
      */
-    public QueryEntity forceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults) {
-        this.forceFillAbsentPKsWithDefaults = forceFillAbsentPKsWithDefaults;
+    public QueryEntity fillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults) {
+        this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;
         
         return this;
     }

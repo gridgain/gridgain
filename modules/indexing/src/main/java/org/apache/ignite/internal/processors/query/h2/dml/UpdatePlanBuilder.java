@@ -98,6 +98,7 @@ public final class UpdatePlanBuilder {
      * @param stmt Statement.
      * @param mvccEnabled MVCC enabled flag.
      * @param idx Indexing.
+     * @param forceFillAbsentPKsWithDefaults ForceFillAbsentPKsWithDefaults enabled flag.
      * @return Update plan.
      */
     @SuppressWarnings("ConstantConditions")
@@ -271,10 +272,10 @@ public final class UpdatePlanBuilder {
     
         rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
         
-        boolean forceFillAbsentPKsWithNullsOrDefaults = type.forceFillAbsentPKsWithDefaults()
+        boolean fillAbsentPKsWithNullsOrDefaults = type.fillAbsentPKsWithDefaults()
                 || forceFillAbsentPKsWithDefaults;
         
-        if (forceFillAbsentPKsWithNullsOrDefaults && onlyVisibleColumns && !rowKeys.isEmpty()) {
+        if (fillAbsentPKsWithNullsOrDefaults && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
@@ -352,7 +353,7 @@ public final class UpdatePlanBuilder {
             null,
             distributed,
             false,
-            forceFillAbsentPKsWithNullsOrDefaults
+            fillAbsentPKsWithNullsOrDefaults
         );
     }
 

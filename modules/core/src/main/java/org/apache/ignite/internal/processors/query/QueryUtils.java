@@ -364,12 +364,12 @@ public class QueryUtils {
         normalEntity.setIndexes(normalIdxs);
         
         if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
-                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FORCE_FILLS_ABSENT_PKS_WITH_DEFAULTS)
+                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
-            normalEntity.forceFillAbsentPKsWithDefaults(true);
+            normalEntity.fillAbsentPKsWithDefaults(true);
         else if (entity instanceof QueryEntityEx)
-            normalEntity.forceFillAbsentPKsWithDefaults(
-                    ((QueryEntityEx) entity).forceFillAbsentPKsWithDefaults());
+            normalEntity.fillAbsentPKsWithDefaults(
+                    ((QueryEntityEx) entity).fillAbsentPKsWithDefaults());
 
         validateQueryEntity(normalEntity);
 
@@ -471,7 +471,7 @@ public class QueryUtils {
         desc.aliases(qryEntity.getAliases());
         
         if (qryEntity instanceof QueryEntityEx)
-            desc.setForceFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).forceFillAbsentPKsWithDefaults());
+            desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
         
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
@@ -662,7 +662,7 @@ public class QueryUtils {
             d.primaryKeyFields(keyFields);
 
         if (qryEntity instanceof QueryEntityEx)
-            d.setForceFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).forceFillAbsentPKsWithDefaults());
+            d.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
         
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,

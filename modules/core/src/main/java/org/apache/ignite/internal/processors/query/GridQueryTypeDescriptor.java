@@ -214,12 +214,12 @@ public interface GridQueryTypeDescriptor {
     /**
      * @return {@code true} if absent PK parts should be filled with defaults, {@code false} otherwise.
      */
-    public boolean forceFillAbsentPKsWithDefaults();
+    public boolean fillAbsentPKsWithDefaults();
     
     /**
-     * Sets up forceFillAbsentPKsWithDefaults flag.
+     * Sets up fillAbsentPKsWithDefaults flag.
      *
-     * @param forceFillAbsentPKsWithDefaults Flag.
+     * @param fillAbsentPKsWithDefaults Flag.
      */
-    public void setForceFillAbsentPKsWithDefaults(boolean forceFillAbsentPKsWithDefaults);
+    public void setFillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults);
 }
