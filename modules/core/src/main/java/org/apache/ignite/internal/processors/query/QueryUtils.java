@@ -364,7 +364,7 @@ public class QueryUtils {
         normalEntity.setIndexes(normalIdxs);
         
         if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
-                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
+                IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
             normalEntity.fillAbsentPKsWithDefaults(true);
         else if (entity instanceof QueryEntityEx)

@@ -1189,7 +1189,7 @@ public class CommandProcessor {
             res.setNotNullFields(notNullFields);
         
         if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
-                IgniteDiscoverySpi.SRV_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
+                IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
             res.fillAbsentPKsWithDefaults(true);
     
