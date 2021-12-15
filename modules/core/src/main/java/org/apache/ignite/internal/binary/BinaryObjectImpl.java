@@ -94,10 +94,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     /** */
     private int part = -1;
 
-    /** */
-    @GridDirectTransient
-    private BinaryReaderHandles handles;
-
     /**
      * For {@link Externalizable}.
      */
@@ -117,8 +113,6 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         this.ctx = ctx;
         this.arr = arr;
         this.start = start;
-
-        handles = new BinaryReaderHandles();
     }
 
     /** {@inheritDoc} */
@@ -397,12 +391,12 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
 
     /** {@inheritDoc} */
     @Nullable @Override public <F> F field(String fieldName) throws BinaryObjectException {
-        return (F) reader(handles, false).unmarshalField(fieldName);
+        return (F) reader(null, false).unmarshalField(fieldName);
     }
 
     /** {@inheritDoc} */
     @Nullable @Override public <F> F field(int fieldId) throws BinaryObjectException {
-        return (F) reader(handles, false).unmarshalField(fieldId);
+        return (F) reader(null, false).unmarshalField(fieldId);
     }
 
     /** {@inheritDoc} */
