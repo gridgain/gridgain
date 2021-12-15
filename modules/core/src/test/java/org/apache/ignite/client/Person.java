@@ -29,7 +29,7 @@ public class Person {
     private final Integer id;
 
     /** Name. */
-    @QuerySqlField
+    @QuerySqlField(index = true)
     private final String name;
 
     /** Constructor. */

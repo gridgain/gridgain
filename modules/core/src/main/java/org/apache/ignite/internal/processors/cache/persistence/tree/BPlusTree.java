@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.IgniteTree;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridTreePrinter;
 import org.apache.ignite.internal.util.lang.GridTuple3;
@@ -98,6 +99,12 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
  */
 @SuppressWarnings({"ConstantValueVariableUse"})
 public abstract class BPlusTree<L, T extends L> extends DataStructure implements IgniteTree<L, T> {
+    public static volatile boolean waitRemoveX = false;
+    public static volatile boolean waitPutX = false;
+
+    public static final GridFutureAdapter<Void> waitRemoveXFut = new GridFutureAdapter<>();
+    public static final GridFutureAdapter<Void> waitPutXFut = new GridFutureAdapter<>();
+
     /** */
     private static final Object[] EMPTY = {};
 
@@ -294,6 +301,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             // Check the triangle invariant.
             if (io.getForward(pageAddr) != g.fwdId)
                 return RETRY;
+
+            if (lvl == 0 && waitRemoveX) {
+                waitPutXFut.onDone();
+                waitRemoveXFut.get();
+            }
 
             boolean needBackIfRouting = g.backId != 0;
 
@@ -2796,6 +2808,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 p.pageId = pageId;
                 p.fwdId = fwdId;
 
+//                if (lvl == 0 && waitRemoveX) {
+//                    waitPutXFut.onDone();
+//                    waitRemoveXFut.get();
+//                }
+
                 Result res = read(pageId, page, search, p, lvl, RETRY);
 
                 switch (res) {
@@ -3864,6 +3881,11 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                     return RETRY;
 
                 needReplaceInner = DONE; // We can have only a single matching inner key.
+
+                if (lvl == 0 && waitRemoveX) {
+                    waitPutXFut.onDone();
+                    waitRemoveXFut.get();
+                }
 
                 return FOUND;
             }

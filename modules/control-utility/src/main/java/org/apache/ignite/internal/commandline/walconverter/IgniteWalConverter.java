@@ -50,6 +50,10 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.BINARY_METADATA_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.MARSHALLER_MAPPING_DIR;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.SKIP_CRC;
+import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.Args.WAL_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.checkpoint;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.pageOwner;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.reader.WalFilters.partitionMetaStateUpdate;
@@ -63,6 +67,13 @@ public class IgniteWalConverter {
      * @throws Exception If failed.
      */
     public static void main(String[] args) {
+        args = new String[] {
+            WAL_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\autozone_16034\\wal\\node00-01504451-3b79-4f5e-bbd4-9b9e1ac0f953",
+            BINARY_METADATA_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\autozone_16034\\binary_meta",
+            MARSHALLER_MAPPING_DIR.arg(), "C:\\Users\\tkalk\\Downloads\\autozone_16034\\marshaller",
+            SKIP_CRC.arg()
+        };
+
         final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
         if (parameters != null)
