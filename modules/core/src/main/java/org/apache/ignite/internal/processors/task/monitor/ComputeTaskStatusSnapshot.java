@@ -70,4 +70,14 @@ public interface ComputeTaskStatusSnapshot {
      * @return Reason for the failure of the task.
      */
     @Nullable Throwable failReason();
+
+    /**
+     * @return {@code true} if change of task attributes is available.
+     */
+    boolean fullSupport();
+
+    /**
+     * @return User who created the task, {@code null} if security is not available.
+     */
+    @Nullable Object createBy();
 }

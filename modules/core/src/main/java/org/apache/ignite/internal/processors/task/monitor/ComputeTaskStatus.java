@@ -41,13 +41,13 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     private final IgniteUuid sessionId;
 
     /** Status of the task. */
-    @Nullable private final ComputeTaskStatusEnum status;
+    private final ComputeTaskStatusEnum status;
 
     /** Task name of the task this session belongs to. */
-    @Nullable private final String taskName;
+    private final String taskName;
 
     /** ID of the node on which task execution originated. */
-    @Nullable private final UUID originatingNodeId;
+    private final UUID originatingNodeId;
 
     /** Start of computation time for the task. */
     private final long startTime;
@@ -64,6 +64,12 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
     /** Reason for the failure of the task. */
     @Nullable private final Throwable failReason;
 
+    /** Availability of changing task attributes. */
+    private final boolean fullSupport;
+
+    /** User who created the task, {@code null} if security is not available. */
+    @Nullable private Object createdBy;
+
     /**
      * Constructor for a new task.
      *
@@ -76,17 +82,21 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
      * @param jobNodes Nodes IDs on which the task jobs will execute.
      * @param attributes All session attributes.
      * @param failReason Reason for the failure of the task.
+     * @param fullSupport Availability of changing task attributes.
+     * @param createdBy User who created the task, {@code null} if security is not available.
      */
     private ComputeTaskStatus(
         IgniteUuid sessionId,
-        @Nullable ComputeTaskStatusEnum status,
-        @Nullable String taskName,
-        @Nullable UUID originatingNodeId,
+        ComputeTaskStatusEnum status,
+        String taskName,
+        UUID originatingNodeId,
         long startTime,
         long endTime,
         List<UUID> jobNodes,
         Map<?, ?> attributes,
-        @Nullable Throwable failReason
+        @Nullable Throwable failReason,
+        boolean fullSupport,
+        @Nullable Object createdBy
     ) {
         this.sessionId = sessionId;
         this.status = status;
@@ -97,6 +107,8 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         this.jobNodes = F.isEmpty(jobNodes) ? emptyList() : jobNodes;
         this.attributes = F.isEmpty(attributes) ? emptyMap() : attributes;
         this.failReason = failReason;
+        this.fullSupport = fullSupport;
+        this.createdBy = createdBy;
     }
 
     /** {@inheritDoc} */
@@ -144,6 +156,16 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
         return failReason;
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean fullSupport() {
+        return fullSupport;
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable Object createBy() {
+        return createdBy;
+    }
+
     /**
      * Creates the status of a task that is in progress.
      *
@@ -160,7 +182,9 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
             0L,
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
-            null
+            null,
+            sessionImp.isFullSupport(),
+            sessionImp.login()
         );
     }
 
@@ -181,7 +205,9 @@ public class ComputeTaskStatus implements ComputeTaskStatusSnapshot {
             U.currentTimeMillis(),
             sessionImp.jobNodesSafeCopy(),
             sessionImp.attributesSafeCopy(),
-            err
+            err,
+            sessionImp.isFullSupport(),
+            sessionImp.login()
         );
     }
 }

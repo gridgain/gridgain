@@ -25,9 +25,6 @@ import org.jetbrains.annotations.Nullable;
  * Map query info.
  */
 public class MapH2QueryInfo extends H2QueryInfo {
-    /** Node. */
-    private final ClusterNode node;
-
     /** Request id. */
     private final long reqId;
 
@@ -37,24 +34,22 @@ public class MapH2QueryInfo extends H2QueryInfo {
     /**
      * @param stmt Query statement.
      * @param sql Query statement.
-     * @param node Originator node ID
+     * @param node Originator node.
      * @param reqId Request ID.
      * @param segment Segment.
      * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
     public MapH2QueryInfo(PreparedStatement stmt, String sql,
         ClusterNode node, long reqId, int segment, @Nullable Long runningQryId) {
-        super(QueryType.MAP, stmt, sql, runningQryId);
+        super(QueryType.MAP, stmt, sql, node, runningQryId);
 
-        this.node = node;
         this.reqId = reqId;
         this.segment = segment;
     }
 
     /** {@inheritDoc} */
     @Override protected void printInfo(StringBuilder msg) {
-        msg.append(", node=").append(node)
-            .append(", reqId=").append(reqId)
+        msg.append(", reqId=").append(reqId)
             .append(", segment=").append(segment);
     }
 }
