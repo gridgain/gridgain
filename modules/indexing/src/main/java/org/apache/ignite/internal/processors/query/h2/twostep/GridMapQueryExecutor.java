@@ -566,7 +566,7 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
-                            U.error(log, "Failed to execute local query.", e);
+                            U.warn(log, "Failed to execute local query.", e);
 
                             sendError(node, reqId, e);
 
