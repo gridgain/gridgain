@@ -16,15 +16,15 @@
 
 package org.apache.ignite.yardstick.jdbc;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Date;
 import org.apache.ignite.IgniteSemaphore;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.yardstickframework.BenchmarkConfiguration;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 import static org.yardstickframework.BenchmarkUtils.println;
 
@@ -136,7 +136,7 @@ public class JdbcUtils {
                 for (long l = 1; l < range; ++l) {
                     qProc.querySqlFields(
                         new SqlFieldsQuery(String.format("INSERT INTO %s VALUES (?, ?, ?, ?)", tblName))
-                            .setArgs(l, new BigDecimal(l + 1), LocalDate.ofEpochDay(l), l + 2), true);
+                            .setArgs(l, new BigDecimal(l + 1), dateOfEpochDay(l), l + 2), true);
 
                     if (l % 10000 == 0)
                         println(cfg, "Populate " + l);
@@ -160,5 +160,10 @@ public class JdbcUtils {
         finally {
             sem.release();
         }
+    }
+
+    /** */
+    public static Date dateOfEpochDay(long day) {
+        return java.sql.Date.valueOf(LocalDate.ofEpochDay(day));
     }
 }
