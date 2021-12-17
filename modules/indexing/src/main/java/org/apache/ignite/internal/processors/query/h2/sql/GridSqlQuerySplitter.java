@@ -1273,7 +1273,10 @@ public class GridSqlQuerySplitter {
         map.sortColumns(mapQry.sort());
         map.partitioned(traverser.hasPartitionedTables());
         map.hasSubQueries(traverser.hasSubQueries());
-        map.hasOuterJoinReplicatedPartitioned(traverser.hasOuterJoinReplicatedPartitioned());
+        map.hasOuterJoinReplicatedPartitioned(
+            traverser.hasOuterJoinReplicatedPartitioned() ||
+            traverser.isReplicatedWithPartitionedAndSubQuery()
+        );
 
         if (map.isPartitioned() && canExtractPartitions)
             map.derivedPartitions(extractor.extract(mapQry));
