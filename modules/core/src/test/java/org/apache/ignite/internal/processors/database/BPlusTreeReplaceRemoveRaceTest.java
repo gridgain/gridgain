@@ -340,7 +340,7 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
      *
      * Several iterations are required for this, given that there's no guaranteed way to force a tree to perform page
      * modifications in the desired order. Typically, less than {@code 10} attempts have been required to get a
-     * corrupted tree. Value {@code 50} is arbitrary and has been chosen to be big enough for test to fail in case of
+     * corrupted tree. Value {@code 100} is arbitrary and has been chosen to be big enough for test to fail in case of
      * regression, but not too big so that test won't run for too long.
      *
      * @throws Exception If failed.
@@ -389,6 +389,9 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
     /**
      * Checks that there will be no corrupted B+tree during concurrent update and deletion
      * of the same key that is contained in the inner and leaf nodes of the B+tree.
+     *
+     * NOTE: Test logic is the same as of {@link #testConcurrentPutRemove},
+     * the only difference is that it operates (puts and removes) on a single key.
      * 
      * @throws Exception If failed.
      */
