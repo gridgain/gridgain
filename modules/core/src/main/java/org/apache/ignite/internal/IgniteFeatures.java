@@ -209,7 +209,10 @@ public enum IgniteFeatures {
     SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62),
 
     /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
-    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63);
+    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
+    
+    /** Whether the absent PK parts should be filled with defaults or not. */
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
 
     /**
      * Unique feature identifier.
