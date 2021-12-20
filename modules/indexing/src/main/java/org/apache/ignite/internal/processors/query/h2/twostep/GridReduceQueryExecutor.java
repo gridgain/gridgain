@@ -602,12 +602,12 @@ public class GridReduceQueryExecutor {
                 }
                 finally {
                     if (release) {
+                        releaseRemoteResources(nodes, r, qryReqId, qry.distributedJoins(), mvccTracker);
+
                         if (!skipMergeTbl) {
                             for (int i = 0, mapQrys = mapQueries.size(); i < mapQrys; i++)
                                 fakeTable(null, i).innerTable(null); // Drop all merge tables.
                         }
-
-                        releaseRemoteResources(nodes, r, qryReqId, qry.distributedJoins(), mvccTracker);
                     }
                 }
             }
