@@ -51,7 +51,6 @@ import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
@@ -334,20 +333,6 @@ public class GridReduceQueryExecutor {
     }
 
     /**
-     * @param cacheId Cache ID.
-     * @return Cache context.
-     */
-    private GridCacheContext<?,?> cacheContext(Integer cacheId) {
-        GridCacheContext<?, ?> cctx = ctx.cache().context().cacheContext(cacheId);
-
-        if (cctx == null)
-            throw new CacheException(String.format("Cache not found on local node (was concurrently destroyed?) " +
-                "[cacheId=%d]", cacheId));
-
-        return cctx;
-    }
-
-    /**
      * @param schemaName Schema name.
      * @param qry Query.
      * @param keepBinary Keep binary.
@@ -482,31 +467,39 @@ public class GridReduceQueryExecutor {
                     final C2<ClusterNode, Message, Message> spec =
                         parts == null ? null : new ReducePartitionsSpecializer(mapping.queryPartitionsMap());
 
-                    if (!send(nodes, req, spec, false)) {
-                        assert runs.containsKey(qryReqId);
+                    boolean retry = false;
 
-                        continue; // Retry.
-                    }
+                    if (send(nodes, req, spec, false)) {
+                        awaitAllReplies(r, nodes, cancel);
 
-                    awaitAllReplies(r, nodes, cancel);
+                        if (r.hasErrorOrRetry()) {
+                            CacheException err = r.exception();
 
-                    if (r.hasErrorOrRetry()) {
-                        CacheException err = r.exception();
+                            if (err != null) {
+                                if (err.getCause() instanceof IgniteClientDisconnectedException)
+                                    throw err;
+                                else if (QueryUtils.wasCancelled(err))
+                                    throw new QueryCancelledException(); // Throw correct exception.
 
-                        if (err == null) {
+                                throw err;
+                            }
+
                             // If remote node asks us to retry then we have outdated full partition map.
                             h2.awaitForReadyTopologyVersion(r.retryTopologyVersion());
 
-                            assert runs.containsKey(qryReqId);
-
-                            continue; // Retry.
+                            retry = true;
                         }
-                        else if (err.getCause() instanceof IgniteClientDisconnectedException)
-                            throw err;
-                        else if (QueryUtils.wasCancelled(err))
-                            throw new QueryCancelledException(); // Throw correct exception.
+                    }
+                    else
+                        retry = true;
 
-                        throw err;
+
+                    if (retry) {
+                        lastRun = runs.get(qryReqId);
+
+                        assert lastRun != null;
+
+                        continue; // Retry.
                     }
 
                     Iterator<List<?>> resIter;
