@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Binary
 {
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Impl.Common;
 
@@ -71,6 +72,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Parses the specified type name.
         /// </summary>
+        [SuppressMessage("Microsoft.Globalization", "CA1307:SpecifyStringComparison", Justification = "Not available on .NET FW")]
         public static TypeNameParser Parse(string typeName)
         {
             IgniteArgumentCheck.NotNullOrEmpty(typeName, "typeName");

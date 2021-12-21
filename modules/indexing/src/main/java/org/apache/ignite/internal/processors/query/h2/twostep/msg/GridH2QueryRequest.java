@@ -163,7 +163,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     private long maxMem;
 
     /** Id of the query assigned by {@link RunningQueryManager}. */
-    @GridDirectTransient
     private Long runningQryId;
 
     /** */
@@ -722,6 +721,12 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                     return false;
 
                 writer.incrementState();
+
+            case 16:
+                if (!writer.writeLong("runningQryId", runningQryId))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -862,6 +867,14 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                     return false;
 
                 reader.incrementState();
+
+            case 16:
+                runningQryId = reader.readLong("runningQryId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -874,7 +887,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 16;
+        return 17;
     }
 
     /** {@inheritDoc} */
