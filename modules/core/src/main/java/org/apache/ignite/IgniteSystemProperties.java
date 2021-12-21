@@ -291,7 +291,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "This property allows to override default behavior that rest processor " +
         "doesn't start on client node. If set {@code true} than rest processor will be started on client node",
-        defaults = "" + false)
+        defaults = "false")
     public static final String IGNITE_REST_START_ON_CLIENT = "IGNITE_REST_START_ON_CLIENT";
 
     /**
@@ -302,7 +302,7 @@ public final class IgniteSystemProperties {
      */
     @Deprecated
     @SystemProperty(value = "Changes output format of {@link GridRestCommand#CACHE_GET_ALL} from {k: v, ...} " +
-        "to [{\"key\": k, \"value\": v}, ...] to allow non-string keys output", defaults = "" + false)
+        "to [{\"key\": k, \"value\": v}, ...] to allow non-string keys output", defaults = "false")
     public static final String IGNITE_REST_GETALL_AS_ARRAY = "IGNITE_REST_GETALL_AS_ARRAY";
 
     /**
@@ -378,7 +378,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "Boolean flag indicating whether GridToStringBuilder should throw RuntimeException " +
         "     * when building string representation of an object or should just print information about exception into the log " +
-        "     * and proceed", defaults = "" + false)
+        "     * and proceed", defaults = "false")
     public static final String IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION = "IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION";
 
     /**
@@ -507,7 +507,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "Enables pending transaction tracker. " +
         "Affects impact of IGNITE_DISABLE_WAL_DURING_REBALANCING property:  if this property is set, " +
-        "WAL anyway won't be disabled during rebalancing triggered by baseline topology change", defaults = "" + false)
+        "WAL anyway won't be disabled during rebalancing triggered by baseline topology change", defaults = "false")
     public static final String IGNITE_PENDING_TX_TRACKER_ENABLED = "IGNITE_PENDING_TX_TRACKER_ENABLED";
 
     /**
@@ -589,7 +589,7 @@ public final class IgniteSystemProperties {
      * Can be used for development with self-signed certificates. Default value is {@code false}.
      */
     @SystemProperty(value = "Disables HostnameVerifier for SSL connections. " +
-        "Can be used for development with self-signed certificates", defaults = "" + false)
+        "Can be used for development with self-signed certificates", defaults = "false")
     public static final String IGNITE_DISABLE_HOSTNAME_VERIFIER = "IGNITE_DISABLE_HOSTNAME_VERIFIER";
 
     /**
@@ -642,7 +642,7 @@ public final class IgniteSystemProperties {
     /**
      * Flag indicating whether performance suggestions output on start should be disabled.
      */
-    @SystemProperty(value = "Disables performance suggestions output on start", defaults = "" + false)
+    @SystemProperty(value = "Disables performance suggestions output on start", defaults = "false")
     public static final String IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED = "IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED";
 
     /**
@@ -714,13 +714,13 @@ public final class IgniteSystemProperties {
     /**
      * If this property is set to {@code true} then shared memory space native debug will be enabled.
      */
-    @SystemProperty(value = "Enables native debug of the shared memory space", defaults = "" + false)
+    @SystemProperty(value = "Enables native debug of the shared memory space", defaults = "false")
     public static final String IGNITE_IPC_SHMEM_SPACE_DEBUG = "IGNITE_IPC_SHMEM_SPACE_DEBUG";
 
     /**
      * Property allowing to skip configuration consistency checks.
      */
-    @SystemProperty(value = "Skip configuration consistency checks", defaults = "" + false)
+    @SystemProperty(value = "Skip configuration consistency checks", defaults = "false")
     public static final String IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK =
         "IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK";
 
@@ -779,7 +779,7 @@ public final class IgniteSystemProperties {
      * Default is {@code false}
      */
     @SystemProperty(value = "Disable MBeans registration. This may be helpful if MBeans are not allowed " +
-        "e.g. for security reasons", defaults = "" + false)
+        "e.g. for security reasons", defaults = "false")
     public static final String IGNITE_MBEANS_DISABLED = "IGNITE_MBEANS_DISABLED";
 
     /**
@@ -787,7 +787,7 @@ public final class IgniteSystemProperties {
      *
      * Default is {@code false}.
      */
-    @SystemProperty(value = "Enables test features", defaults = "" + false)
+    @SystemProperty(value = "Enables test features", defaults = "false")
     public static final String IGNITE_TEST_FEATURES_ENABLED = "IGNITE_TEST_FEATURES_ENABLED";
 
     /**
@@ -801,7 +801,7 @@ public final class IgniteSystemProperties {
      * Property controlling default behavior of cache client flag.
      */
     @SystemProperty(value = "Starts node in client mode. Have lower priority than configuration value",
-        defaults = "" + false)
+        defaults = "false")
     public static final String IGNITE_CACHE_CLIENT = "IGNITE_CACHE_CLIENT";
 
     /**
@@ -835,7 +835,7 @@ public final class IgniteSystemProperties {
 
     /** Disable fallback to H2 SQL parser if the internal SQL parser fails to parse the statement. */
     @SystemProperty(value = "Disables fallback to H2 SQL parser if the internal SQL parser fails to " +
-        "parse the statement", defaults = "" + false)
+        "parse the statement", defaults = "false")
     public static final String IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK = "IGNITE_SQL_PARSER_DISABLE_H2_FALLBACK";
 
     /**
@@ -876,7 +876,7 @@ public final class IgniteSystemProperties {
      */
     @IgniteExperimental
     @SystemProperty(value = "Enables subquery rewriting optimization. " +
-        "If enabled, subquery will be rewritten to JOIN where possible", defaults = "" + true)
+        "If enabled, subquery will be rewritten to JOIN where possible", defaults = "true")
     public static final String IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION = "IGNITE_ENABLE_SUBQUERY_REWRITE_OPTIMIZATION";
 
     /** Maximum size for affinity assignment history. */
@@ -917,7 +917,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT = "IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT";
 
     /** */
-    @SystemProperty(value = "Enables logging thread dump in case of partition exchange timeout", defaults = "" + false)
+    @SystemProperty(value = "Enables logging thread dump in case of partition exchange timeout", defaults = "false")
     public static final String IGNITE_IO_DUMP_ON_TIMEOUT = "IGNITE_IO_DUMP_ON_TIMEOUT";
 
     /** */
@@ -1271,7 +1271,7 @@ public final class IgniteSystemProperties {
      *
      */
     @SystemProperty(value = "If the property is set, coincidence of client identifier and subject " +
-        "is required when security is enabled", defaults = "" + false)
+        "is required when security is enabled", defaults = "false")
     public static final String IGNITE_CHECK_SENDER_NODE_SUBJECT = "IGNITE_CHECK_SENDER_NODE_SUBJECT";
 
     /**
@@ -1281,7 +1281,7 @@ public final class IgniteSystemProperties {
      *
      */
     @SystemProperty(value = "If the property is set, client nodes should have explicitly rights to access to system cache",
-    defaults = "" + false)
+    defaults = "false")
     public static final String IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED = "IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED";
 
     /**
@@ -1952,7 +1952,7 @@ public final class IgniteSystemProperties {
      * Default: false.
      */
     @SystemProperty(value = "Enable hash join (create hash index on the fly) for query optimizer. " +
-        "When disabled hash join may be enabled only by index hint", defaults = "" + false)
+        "When disabled hash join may be enabled only by index hint", defaults = "false")
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
     /**
@@ -1992,7 +1992,7 @@ public final class IgniteSystemProperties {
     /**
      * Disables smart DR throttling. Default value is <code>false</code>.
      */
-    @SystemProperty(value = "Disables smart DR throttling", defaults = "" + false)
+    @SystemProperty(value = "Disables smart DR throttling", defaults = "false")
     public static final String IGNITE_DISABLE_SMART_DR_THROTTLING = "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
     /*
@@ -2129,7 +2129,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "There can be background tasks that can be interrupted due to node stop, node fail, " +
         "or cluster deactivation, but need to be completed, so they start after node start or cluster activation. " +
-        "If this option is set to false, then tasks will not be started", defaults = "" + true)
+        "If this option is set to false, then tasks will not be started", defaults = "true")
     public static final String IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE =
         "IGNITE_EXECUTE_DURABLE_BACKGROUND_TASKS_ON_NODE_START_OR_ACTIVATE";
 
@@ -2140,14 +2140,14 @@ public final class IgniteSystemProperties {
      * Can be used for changing behaviour of tightly coupled code pieces during the tests.
      * Use it as a last resort only, prefer another toolchain like DI, mocks and etc. if possible
      */
-    @SystemProperty(value = "Set to true only during the junit tests", defaults = "" + false)
+    @SystemProperty(value = "Set to true only during the junit tests", defaults = "false")
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
      * Use TreeMap instead of HashMap to hold distinct values.
      * Default value is {@code false}. HashMap is used by default.
      */
-    @SystemProperty(value = "Use TreeMap instead of HashMap to hold distinct values", defaults = "" + false)
+    @SystemProperty(value = "Use TreeMap instead of HashMap to hold distinct values", defaults = "false")
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
@@ -2163,7 +2163,7 @@ public final class IgniteSystemProperties {
      * included in the message. The default value is {@code false}.
      */
     @SystemProperty(value = "Enables additional check that sender of communication handshake message corresponds to " +
-        "the node id included in the message", defaults = "" + false)
+        "the node id included in the message", defaults = "false")
     public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 
