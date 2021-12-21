@@ -93,8 +93,6 @@ public final class CommandLineStartup {
         LocalDeploymentSpi.class,
         GridCacheDatabaseSharedManager.class,
 
-        // TODO: GG-34386
-        //GridJmxPortFinder.class,
         PartitionsEvictManager.class,
         PagesList.class,
         PagesList.PagesCache.class,
