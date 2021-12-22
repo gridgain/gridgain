@@ -60,6 +60,8 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV1GG {
 
     /** {@inheritDoc} */
     @Override public boolean setTombstonesCount(long pageAddr, long tombstonesCnt) {
+        assertPageType(pageAddr);
+
         if (getTombstonesCount(pageAddr) == tombstonesCnt)
             return false;
 
@@ -70,7 +72,7 @@ public class PagePartitionMetaIOV2GG extends PagePartitionMetaIOV1GG {
 
     /** {@inheritDoc} */
     @Override public void upgradePage(long pageAddr) {
-        assert PageIO.getType(pageAddr) == getType();
+        assertPageType(pageAddr);
 
         // Will be overrided by super call, need to store.
         int from = PageIO.getVersion(pageAddr);

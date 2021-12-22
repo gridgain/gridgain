@@ -237,6 +237,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param freeListPageId Free list page ID.
      */
     public void setFreeListPageId(long pageAddr, long freeListPageId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, FREE_LIST_PAGE_ID_OFF, freeListPageId);
     }
 
@@ -294,6 +296,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      */
     private void setFirstEntryOffset(long pageAddr, int dataOff, int pageSize) {
         assert dataOff >= ITEMS_OFF + ITEM_SIZE && dataOff <= pageSize : dataOff;
+        assertPageType(pageAddr);
 
         PageUtils.putShort(pageAddr, FIRST_ENTRY_OFF, (short)dataOff);
     }
@@ -313,6 +316,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      */
     private void setRealFreeSpace(long pageAddr, int freeSpace, int pageSize) {
         assert freeSpace == actualFreeSpace(pageAddr, pageSize) : freeSpace + " != " + actualFreeSpace(pageAddr, pageSize);
+        assertPageType(pageAddr);
 
         PageUtils.putShort(pageAddr, FREE_SPACE_OFF, (short)freeSpace);
     }
@@ -363,6 +367,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      */
     private void setDirectCount(long pageAddr, int cnt) {
         assert checkCount(cnt) : cnt;
+        assertPageType(pageAddr);
 
         PageUtils.putByte(pageAddr, DIRECT_CNT_OFF, (byte)cnt);
     }
@@ -386,16 +391,18 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
     /**
      * @param pageAddr Page address.
      * @param c Closure.
-     * @param <T> Closure return type.
+     * @param <U> Closure return type.
      * @return Collection of closure results for all items in page.
      * @throws IgniteCheckedException In case of error in closure body.
      */
-    public <T> List<T> forAllItems(long pageAddr, CC<T> c) throws IgniteCheckedException {
+    public <U> List<U> forAllItems(long pageAddr, CC<U> c) throws IgniteCheckedException {
+        assertPageType(pageAddr);
+
         long pageId = getPageId(pageAddr);
 
         int cnt = getDirectCount(pageAddr);
 
-        List<T> res = new ArrayList<>(cnt);
+        List<U> res = new ArrayList<>(cnt);
 
         for (int i = 0; i < cnt; i++) {
             long link = PageIdUtils.link(pageId, i);
@@ -665,6 +672,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      * @param item Item.
      */
     private void setItem(long pageAddr, int idx, short item) {
+        assertPageType(pageAddr);
+
         PageUtils.putShort(pageAddr, itemOffset(idx), item);
     }
 
@@ -796,6 +805,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         final int rowSize) throws IgniteCheckedException {
         assert checkIndex(itemId) : itemId;
         assert row != null ^ payload != null;
+        assertPageType(pageAddr);
 
         final int dataOff = getDataOffset(pageAddr, itemId, pageSize);
 
@@ -819,6 +829,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
      */
     public long removeRow(long pageAddr, int itemId, int pageSize) throws IgniteCheckedException {
         assert checkIndex(itemId) : itemId;
+        assertPageType(pageAddr);
 
         final int dataOff = getDataOffset(pageAddr, itemId, pageSize);
         final long nextLink = isFragmented(pageAddr, dataOff) ? getNextFragmentLink(pageAddr, dataOff) : 0;
@@ -933,6 +944,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         final int pageSize
     ) throws IgniteCheckedException {
         assert rowSize <= getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
+        assertPageType(pageAddr);
 
         int fullEntrySize = getPageEntrySize(rowSize, SHOW_PAYLOAD_LEN | SHOW_ITEM);
 
@@ -963,6 +975,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         int pageSize
     ) throws IgniteCheckedException {
         assert payload.length <= getFreeSpace(pageAddr) : "can't call addRow if not enough space for the whole row";
+        assertPageType(pageAddr);
 
         int fullEntrySize = getPageEntrySize(payload.length, SHOW_PAYLOAD_LEN | SHOW_ITEM);
 
@@ -993,6 +1006,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         int dataOff,
         int pageSize
     ) {
+        assertPageType(pageAddr);
+
         if (!isEnoughSpace(entryFullSize, dataOff, directCnt, indirectCnt)) {
             dataOff = compactDataEntries(pageAddr, directCnt, pageSize);
 
@@ -1076,6 +1091,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         int rowSize,
         int pageSize
     ) throws IgniteCheckedException {
+        assertPageType(pageAddr);
+
         return addRowFragment(pageMem, pageId, pageAddr, written, rowSize, row.link(), row, null, pageSize);
     }
 
@@ -1096,6 +1113,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         long lastLink,
         int pageSize
     ) throws IgniteCheckedException {
+        assertPageType(pageAddr);
+
         addRowFragment(null, pageId, pageAddr, 0, 0, lastLink, null, payload, pageSize);
     }
 
@@ -1241,6 +1260,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
 
     /** {@inheritDoc} */
     @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
+        assertPageType(page);
+
         // TODO May we compactDataEntries in-place and then copy compacted data to out?
         copyPage(page, out, pageSize);
 
@@ -1273,6 +1294,7 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         assert page.isDirect();
         assert page.position() == 0;
         assert page.limit() <= pageSize;
+        assertPageType(page);
 
         long pageAddr = bufferAddress(page);
 
@@ -1447,6 +1469,8 @@ public abstract class AbstractDataPageIO<T extends Storable> extends PageIO impl
         int dataOff,
         byte[] payload
     ) {
+        assertPageType(pageAddr);
+
         PageUtils.putShort(pageAddr, dataOff, (short)payload.length);
         dataOff += 2;
 
