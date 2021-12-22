@@ -493,7 +493,6 @@ public class GridReduceQueryExecutor {
                     else
                         retry = true;
 
-
                     if (retry) {
                         lastRun = runs.get(qryReqId);
 
