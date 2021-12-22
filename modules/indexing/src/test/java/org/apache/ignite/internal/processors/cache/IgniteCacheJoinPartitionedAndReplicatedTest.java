@@ -269,23 +269,23 @@ public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstr
         // Subquery in `FROM` clause
         checkQuery("select p1._key, p1.name " +
             "from (select p._key, p.name, p.orgId from \"person\".Person p " +
-            "    where p.orgId > 5 or p.orgId in (select o.id from \"org\".Organization o)) p1 " +
-            "where p1.orgId < 10", orgCache, 3);
+            "    where p.orgId < 10 or p.orgId in (select o.id from \"org\".Organization o)) p1 " +
+            "where p1.orgId > -1", orgCache, 3);
 
         checkQuery("select o1.name " +
             "from (select o.id, o.name from \"org\".Organization o " +
-            "    where o.id > 5 or o.id in (select p.orgId from \"person\".Person p)) o1 " +
-            "where o1.id < 10 ", orgCache, 1);
+            "    where o.id < 10 or o.id in (select p.orgId from \"person\".Person p)) o1 " +
+            "where o1.id > -1", orgCache, 1);
 
         checkQuery("select p1._key, p1.name " +
             "from (select p._key, p.name, p.orgId from \"person\".Person p " +
-            "    where p.orgId > 5 or p.orgId in (select o.id from \"org\".Organization o)) p1 " +
-            "where p1.orgId < 10", orgCacheRepl, 3);
+            "    where p.orgId < 10 or p.orgId in (select o.id from \"org\".Organization o)) p1 " +
+            "where p1.orgId > -1", orgCacheRepl, 3);
 
         checkQuery("select o1.name " +
             "from (select o.id, o.name from \"org\".Organization o " +
-            "    where o.id > 5 or o.id in (select p.orgId from \"person\".Person p)) o1 " +
-            "where o1.id < 10", orgCacheRepl, 1);
+            "    where o.id < 10 or o.id in (select p.orgId from \"person\".Person p)) o1 " +
+            "where o1.id > -1", orgCacheRepl, 1);
 
         // Join with subquery
         checkQuery("select o1.name, p._key, p.name " +
