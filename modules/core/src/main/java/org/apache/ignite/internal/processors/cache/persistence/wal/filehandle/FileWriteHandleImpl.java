@@ -512,6 +512,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                         }
                     }
 
+                    // Unconditional flush (tail of the buffer)
                     flushOrWait(null);
 
                     if (mmap) {
