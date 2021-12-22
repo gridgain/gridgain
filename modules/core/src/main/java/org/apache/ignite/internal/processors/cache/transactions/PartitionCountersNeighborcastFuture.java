@@ -125,7 +125,8 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
             log.info("Starting delivery partition countres to remote nodes [txId=" + tx.nearXidVersion() +
                 ", futId=" + futId +
                 ", topVer=" + tx.topologyVersion() +
-                ", msgs=" + peerMsgs);
+                ", msgs=" + peerMsgs +
+                ']');
         }
 
         markInitialized();

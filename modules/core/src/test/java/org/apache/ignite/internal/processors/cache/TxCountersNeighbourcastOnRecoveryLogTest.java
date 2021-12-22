@@ -33,6 +33,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -88,7 +89,8 @@ public class TxCountersNeighbourcastOnRecoveryLogTest extends GridCommonAbstract
         final int NODES_CNT = 3;
 
         Pattern cntrsDeliveryPattern = Pattern.compile("Starting delivery partition countres to remote nodes.*?msgs=" +
-            ".*PartitionUpdateCountersMessage\\{cacheId=1544803905, size=1, cntrs=\\[part=.*?, initCntr=1, cntr=1\\]\\}");
+            ".*PartitionUpdateCountersMessage\\{cacheId=" + CU.cacheId(DEFAULT_CACHE_NAME) +
+            ", size=1, cntrs=\\[part=.*?, initCntr=1, cntr=1\\]\\}");
 
         LogListener cntrsDeliveryLsnr = LogListener.matches(cntrsDeliveryPattern).build();
         LogListener ackLsnr = LogListener.matches("Remote peer acked partition counters delivery [txId=").build();
