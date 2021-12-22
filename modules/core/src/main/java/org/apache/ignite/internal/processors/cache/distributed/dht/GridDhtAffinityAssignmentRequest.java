@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
 import java.nio.ByteBuffer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheGroupIdMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -68,6 +69,9 @@ public class GridDhtAffinityAssignmentRequest extends GridCacheGroupIdMessage {
 
         if (sndPartMap)
             flags |= SND_PART_STATE_MASK;
+
+        throw new IgniteException(">>>>> creating GridDhtAffinityAssignmentRequest ");
+//        U.dumpStack(">>>>> creating GridDhtAffinityAssignmentRequest ");
     }
 
     /**
