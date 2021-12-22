@@ -344,13 +344,16 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void storeByOffset(long pageAddr, int off, H2Row row) throws IgniteCheckedException {
+            assertPageType(pageAddr);
+
             io.storeByOffset(pageAddr, off, row);
         }
 
         /** {@inheritDoc} */
         @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx)
-            throws IgniteCheckedException
-        {
+            throws IgniteCheckedException {
+            assertPageType(dstPageAddr);
+
             io.store(dstPageAddr, dstIdx, srcIo, srcPageAddr, srcIdx);
         }
 
@@ -404,13 +407,16 @@ public class IndexingDefragmentation {
 
         /** {@inheritDoc} */
         @Override public void storeByOffset(long pageAddr, int off, H2Row row) throws IgniteCheckedException {
+            assertPageType(pageAddr);
+
             io.storeByOffset(pageAddr, off, row);
         }
 
         /** {@inheritDoc} */
         @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx)
-            throws IgniteCheckedException
-        {
+            throws IgniteCheckedException {
+            assertPageType(dstPageAddr);
+
             io.store(dstPageAddr, dstIdx, srcIo, srcPageAddr, srcIdx);
         }
 

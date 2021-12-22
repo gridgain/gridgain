@@ -48,6 +48,8 @@ public class PagePartitionMetaIOV4 extends PagePartitionMetaIOV3 {
 
     /** {@inheritDoc} */
     @Override public boolean setTombstonesCount(long pageAddr, long tombstonesCnt) {
+        assertPageType(pageAddr);
+
         if (getTombstonesCount(pageAddr) == tombstonesCnt)
             return false;
 

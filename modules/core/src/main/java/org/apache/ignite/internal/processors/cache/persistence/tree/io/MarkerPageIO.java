@@ -85,6 +85,8 @@ public class MarkerPageIO extends PageIO {
      * @param markerType Marker type.
      */
     public void setMarkerType(long pageAddr, int markerType) {
+        assertPageType(pageAddr);
+
         PageUtils.putInt(pageAddr, MARKER_TYPE_OFF, markerType);
     }
 
@@ -114,6 +116,8 @@ public class MarkerPageIO extends PageIO {
      * @param v Version.
      */
     public void setWalRecordSerializerVersion(long pageAddr, int v) {
+        assertPageType(pageAddr);
+
         PageUtils.putInt(pageAddr, WAL_RECORD_SERIALIZER_VERSION_OFF, v);
     }
 
@@ -142,6 +146,8 @@ public class MarkerPageIO extends PageIO {
      * @param v WAL records count.
      */
     public void setWalRecordsCnt(long pageAddr, int v) {
+        assertPageType(pageAddr);
+
         PageUtils.putInt(pageAddr, WAL_RECORDS_CNT_OFF, v);
     }
 

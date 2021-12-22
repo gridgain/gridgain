@@ -41,6 +41,7 @@ public abstract class AbstractUpdateLogLeafIO extends BPlusLeafIO<UpdateLogRow> 
     @Override public void storeByOffset(long pageAddr, int off, UpdateLogRow row) {
         assert row.link != 0;
         assert row.updCntr != 0;
+        assertPageType(pageAddr);
 
         PageUtils.putLong(pageAddr, off, row.updCntr);
         PageUtils.putLong(pageAddr, off + 8, row.link);
@@ -59,6 +60,8 @@ public abstract class AbstractUpdateLogLeafIO extends BPlusLeafIO<UpdateLogRow> 
         BPlusIO<UpdateLogRow> srcIo,
         long srcPageAddr,
         int srcIdx) throws IgniteCheckedException {
+        assertPageType(dstPageAddr);
+
         int dstOff = offset(dstIdx);
 
         long link = ((UpdateLogRowIO)srcIo).getLink(srcPageAddr, srcIdx);
