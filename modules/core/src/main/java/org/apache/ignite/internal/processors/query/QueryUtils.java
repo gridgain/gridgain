@@ -49,7 +49,9 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.cache.CacheDefaultBinaryAffinityKeyMapper;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
@@ -243,19 +245,22 @@ public class QueryUtils {
     /**
      * Normalize cache query entities.
      *
+     *
+     * @param ctx Kernal context.
      * @param entities Query entities.
      * @param cfg Cache config.
      * @return Normalized query entities.
      */
-    public static Collection<QueryEntity> normalizeQueryEntities(Collection<QueryEntity> entities,
-        CacheConfiguration<?, ?> cfg) {
+    public static Collection<QueryEntity> normalizeQueryEntities(
+            GridKernalContext ctx, Collection<QueryEntity> entities,
+            CacheConfiguration<?, ?> cfg) {
         Collection<QueryEntity> normalEntities = new ArrayList<>(entities.size());
 
         for (QueryEntity entity : entities) {
             if (!F.isEmpty(entity.getNotNullFields()))
                 checkNotNullAllowed(cfg);
 
-            normalEntities.add(normalizeQueryEntity(entity, cfg.isSqlEscapeAll()));
+            normalEntities.add(normalizeQueryEntity(ctx, entity, cfg.isSqlEscapeAll()));
         }
 
         return normalEntities;
@@ -265,11 +270,13 @@ public class QueryUtils {
      * Normalize query entity. If "escape" flag is set, nothing changes. Otherwise we convert all object names to
      * upper case and replace inner class separator characters ('$' for Java and '.' for .NET) with underscore.
      *
+     * @param ctx Kernal context.
      * @param entity Query entity.
      * @param escape Escape flag taken form configuration.
      * @return Normalized query entity.
      */
-    public static QueryEntity normalizeQueryEntity(QueryEntity entity, boolean escape) {
+    public static QueryEntity normalizeQueryEntity(GridKernalContext ctx,
+            QueryEntity entity, boolean escape) {
         if (escape) {
             String tblName = tableName(entity);
 
@@ -296,8 +303,8 @@ public class QueryUtils {
 
             return entity;
         }
-
-        QueryEntity normalEntity = entity instanceof QueryEntityEx ? new QueryEntityEx() : new QueryEntity();
+    
+        QueryEntityEx normalEntity = new QueryEntityEx();
 
         // Propagate plain properties.
         normalEntity.setKeyType(entity.getKeyType());
@@ -355,6 +362,14 @@ public class QueryUtils {
         }
 
         normalEntity.setIndexes(normalIdxs);
+        
+        if (!ctx.recoveryMode() && IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
+        )
+            normalEntity.fillAbsentPKsWithDefaults(true);
+        else if (entity instanceof QueryEntityEx)
+            normalEntity.fillAbsentPKsWithDefaults(
+                    ((QueryEntityEx) entity).fillAbsentPKsWithDefaults());
 
         validateQueryEntity(normalEntity);
 
@@ -454,7 +469,10 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-
+        
+        if (qryEntity instanceof QueryEntityEx)
+            desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
+        
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -643,6 +661,9 @@ public class QueryUtils {
         if (!isKeyClsSqlType && qryEntity instanceof QueryEntityEx && ((QueryEntityEx)qryEntity).isPreserveKeysOrder())
             d.primaryKeyFields(keyFields);
 
+        if (qryEntity instanceof QueryEntityEx)
+            d.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
+        
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,
         // so we have to add binary properties for them

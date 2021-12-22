@@ -62,6 +62,8 @@ import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -645,7 +647,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             assertContains(log, dumpWithZeros, "idle_verify check has finished, found " + parts + " partitions");
             assertContains(log, dumpWithZeros, "Partition: PartitionKeyV2 [grpId=1544803905, grpName=default, partId=0]");
-            assertContains(log, dumpWithZeros, "updateCntr=0, partitionState=OWNING, size=0, partHash=0");
+            assertContains(log, dumpWithZeros, "updateCntr=0, reserveCntr=0, partitionState=OWNING, size=0, partHash=0");
             assertContains(log, dumpWithZeros, "no conflicts have been found");
 
             assertSort(parts, dumpWithZeros);
@@ -875,6 +877,95 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
+     * Checks that breaking LWM/HWM invariant on primary partition is detected by idle_verify utility.
+     */
+    @Test
+    public void testIdleVerifyShouldFindReserveCounterConflictsOnPrimary() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
+
+        breakReserveCounterInvariant(cache, true);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "found 1 conflict partitions: [updateCounterConflicts=0, reserveCounterConflicts=1, hashConflicts=0]"
+        );
+
+    }
+
+    /**
+     * Checks that breaking LWM/HWM invariant on backup partition is <b>ignored</b> by idle_verify utility.
+     * Ignoring on backup partition is necessary due to on the backup partition hwm is not increased during prepare,
+     *     else utility will give false-positive results.
+     */
+    @Test
+    public void testIdleVerifyShouldNotFindReserveCounterConflictsOnBackup() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
+
+        breakReserveCounterInvariant(cache, false);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "idle_verify check has finished, no conflicts have been found."
+        );
+    }
+
+    /**
+     * Breaks reserve counter invariant (HWM >= LWM) on some partition for given cache.
+     *
+     * @param cache Ignite cache.
+     * @param usePrimaryPartition If {@code true} breaks on primary partition, else on backup.
+     */
+    public void breakReserveCounterInvariant(IgniteCache<String, String> cache, boolean usePrimaryPartition) {
+        String key = "foo";
+
+        cache.put(key, "bar");
+
+        int partNum = crd.affinity(cache.getName()).partition(key);
+
+        IgniteEx node = (IgniteEx) (usePrimaryPartition
+            ? primaryNode(key, cache.getName())
+            : backupNode(key, cache.getName()));
+
+        GridDhtLocalPartition part = node.context()
+            .cache()
+            .cache(cache.getName())
+            .context()
+            .topology()
+            .localPartition(partNum);
+
+        PartitionUpdateCounter counter = part.dataStore().partUpdateCounter();
+
+        assert counter != null;
+
+        if (!usePrimaryPartition)// HWM on backup may lag LWM.
+            counter.finalizeUpdateCounters();
+
+        counter.reserve(-1);
+
+        assertTrue("HWM should not be negative.", counter.reserved() >= 0);
+
+        assertTrue("HWM/LWM invariant should be broken.", counter.get() > counter.reserved());
+    }
+
+    /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
      * @param dump Whether idle_verify should be launched with dump option or not.
@@ -913,7 +1004,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             resReport = testOut.toString();
         }
 
-        assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+        assertContains(
+            log,
+            resReport,
+            "found 2 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=1]"
+        );
     }
 
     /**
@@ -974,8 +1069,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             U.log(log, dumpWithConflicts);
 
             // Non-persistent caches do not have counter conflicts
-            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
-                "hashConflicts=2]");
+            assertContains(
+                log,
+                dumpWithConflicts,
+                "found 4 conflict partitions: [updateCounterConflicts=2, reserveCounterConflicts=0, hashConflicts=2]"
+            );
         }
         else
             fail("Should be found dump with conflicts");

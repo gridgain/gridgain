@@ -53,6 +53,9 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
     /** Update counter. */
     private long updateCntr;
 
+    /** Reserve counter. */
+    private long reserveCntr;
+
     /** Size. */
     @GridToStringExclude
     private long size;
@@ -61,6 +64,8 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
     private PartitionState partitionState;
 
     /**
+     * All-arg constructor.
+     *
      * @param partKey Partition key.
      * @param isPrimary Is primary.
      * @param consistentId Consistent id.
@@ -69,8 +74,16 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
      * @param size Size.
      * @param partitionState Partition state.
      */
-    public PartitionHashRecordV2(PartitionKeyV2 partKey, boolean isPrimary,
-        Object consistentId, int partHash, long updateCntr, long size, PartitionState partitionState) {
+    public PartitionHashRecordV2(
+        PartitionKeyV2 partKey,
+        boolean isPrimary,
+        Object consistentId,
+        int partHash,
+        long updateCntr,
+        long reserveCntr,
+        long size,
+        PartitionState partitionState
+    ) {
         this.partKey = partKey;
         this.isPrimary = isPrimary;
         this.consistentId = consistentId;
@@ -78,6 +91,7 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
         this.updateCntr = updateCntr;
         this.size = size;
         this.partitionState = partitionState;
+        this.reserveCntr = reserveCntr;
     }
 
     /**
@@ -122,6 +136,15 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
     }
 
     /**
+     * Reserve counter.
+     *
+     * @return Reserve counter.
+     */
+    public long reserveCounter() {
+        return reserveCntr;
+    }
+
+    /**
      * @return Size.
      */
     public long size() {
@@ -144,6 +167,7 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
         out.writeLong(updateCntr);
         out.writeLong(size);
         U.writeEnum(out, partitionState);
+        out.writeLong(reserveCntr);
     }
 
     /** {@inheritDoc} */
@@ -160,11 +184,16 @@ public class PartitionHashRecordV2 extends VisorDataTransferObject {
             partitionState = PartitionState.fromOrdinal(in.readByte());
         else
             partitionState = size == MOVING_PARTITION_SIZE ? PartitionState.MOVING : PartitionState.OWNING;
+
+        if (protoVer >= V3)
+            reserveCntr = in.readLong();
+        else
+            reserveCntr = -1L;// Not valid value, means source node has old code.
     }
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V2;
+        return V3;
     }
 
     /** {@inheritDoc} */

@@ -82,7 +82,7 @@ public final class UpdatePlanBuilder {
     /** Allow hidden key value columns at the INSERT/UPDATE/MERGE statements (not final for tests). */
     private static boolean ALLOW_KEY_VAL_UPDATES = IgniteSystemProperties.getBoolean(
         IgniteSystemProperties.IGNITE_SQL_ALLOW_KEY_VAL_UPDATES, false);
-
+    
     /**
      * Constructor.
      */
@@ -98,6 +98,7 @@ public final class UpdatePlanBuilder {
      * @param stmt Statement.
      * @param mvccEnabled MVCC enabled flag.
      * @param idx Indexing.
+     * @param forceFillAbsentPKsWithDefaults ForceFillAbsentPKsWithDefaults enabled flag.
      * @return Update plan.
      */
     @SuppressWarnings("ConstantConditions")
@@ -106,10 +107,11 @@ public final class UpdatePlanBuilder {
         GridSqlStatement stmt,
         boolean mvccEnabled,
         IgniteH2Indexing idx,
-        IgniteLogger log
+        IgniteLogger log,
+        boolean forceFillAbsentPKsWithDefaults
     ) throws IgniteCheckedException {
         if (stmt instanceof GridSqlMerge || stmt instanceof GridSqlInsert)
-            return planForInsert(planKey, stmt, idx, mvccEnabled, log);
+            return planForInsert(planKey, stmt, idx, mvccEnabled, log, forceFillAbsentPKsWithDefaults);
         else if (stmt instanceof GridSqlUpdate || stmt instanceof GridSqlDelete)
             return planForUpdate(planKey, stmt, idx, mvccEnabled, log);
         else
@@ -133,7 +135,8 @@ public final class UpdatePlanBuilder {
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
         boolean mvccEnabled,
-        IgniteLogger log
+        IgniteLogger log,
+        boolean forceFillAbsentPKsWithDefaults
     ) throws IgniteCheckedException {
         GridSqlQuery sel = null;
 
@@ -225,11 +228,16 @@ public final class UpdatePlanBuilder {
 
         GridQueryTypeDescriptor type = desc.type();
 
-        Set<String> rowKeys = new HashSet<>(type.primaryKeyFields());
+        Set<String> rowKeys = desc.getRowKeyColumnNames();
 
+        boolean onlyVisibleColumns = true;
+        
         for (int i = 0; i < cols.length; i++) {
             GridSqlColumn col = cols[i];
 
+            if (!col.column().getVisible())
+                onlyVisibleColumns = false;
+            
             String colName = col.columnName();
 
             colNames[i] = colName;
@@ -261,8 +269,13 @@ public final class UpdatePlanBuilder {
             else
                 hasValProps = true;
         }
-
-        if (hasKeyProps && !rowKeys.isEmpty()) {
+    
+        rowKeys.removeIf(rowKey -> desc.type().property(rowKey).defaultValue() != null);
+        
+        boolean fillAbsentPKsWithNullsOrDefaults = type.fillAbsentPKsWithDefaults()
+                || forceFillAbsentPKsWithDefaults;
+        
+        if (fillAbsentPKsWithNullsOrDefaults && onlyVisibleColumns && !rowKeys.isEmpty()) {
             String[] extendedColNames = new String[rowKeys.size() + colNames.length];
             int[] extendedColTypes = new int[rowKeys.size() + colTypes.length];
 
@@ -339,7 +352,8 @@ public final class UpdatePlanBuilder {
             rowsNum,
             null,
             distributed,
-            false
+            false,
+            fillAbsentPKsWithNullsOrDefaults
         );
     }
 
@@ -501,7 +515,8 @@ public final class UpdatePlanBuilder {
                     0,
                     null,
                     distributed,
-                    sel.canBeLazy()
+                    sel.canBeLazy(),
+                    false
                 );
             }
             else {
@@ -620,7 +635,8 @@ public final class UpdatePlanBuilder {
             0,
             null,
             null,
-            true
+            true,
+            false
         );
     }
 

@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -67,6 +68,7 @@ import org.apache.ignite.internal.compute.ComputeTaskTimeoutCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.closure.AffinityTask;
+import org.apache.ignite.internal.processors.job.ComputeJobStatusEnum;
 import org.apache.ignite.internal.processors.service.GridServiceNotFoundException;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
@@ -88,6 +90,7 @@ import org.apache.ignite.resources.TaskContinuousMapperResource;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static org.apache.ignite.compute.ComputeJobResultPolicy.FAILOVER;
 import static org.apache.ignite.compute.ComputeJobResultPolicy.WAIT;
 import static org.apache.ignite.events.EventType.EVT_JOB_FAILED_OVER;
@@ -102,9 +105,13 @@ import static org.apache.ignite.internal.GridTopic.TOPIC_JOB;
 import static org.apache.ignite.internal.GridTopic.TOPIC_JOB_CANCEL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MANAGEMENT_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.PUBLIC_POOL;
+import static org.apache.ignite.internal.processors.job.ComputeJobStatusEnum.CANCELLED;
+import static org.apache.ignite.internal.processors.job.ComputeJobStatusEnum.FAILED;
+import static org.apache.ignite.internal.processors.job.ComputeJobStatusEnum.FINISHED;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_IO_POLICY;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_FAILOVER;
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_NO_RESULT_CACHE;
+import static org.apache.ignite.internal.visor.VisorMultiNodeTask.NO_SUITABLE_NODE_MESSAGE;
 
 /**
  * Grid task worker. Handles full task life cycle.
@@ -160,7 +167,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
     /** */
     private final GridTaskEventListener evtLsnr;
 
-    /** */
+    /** Guarded by {@link #mux}. */
     private Map<IgniteUuid, GridJobResultImpl> jobRes;
 
     /** */
@@ -527,7 +534,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 synchronized (mux) {
                     // Check if some jobs are sent from continuous mapper.
                     if (F.isEmpty(jobRes))
-                        throw new IgniteCheckedException("Task map operation produced no mapped jobs: " + ses);
+                        throw new IgniteCheckedException(NO_SUITABLE_NODE_MESSAGE + ": " + ses);
                 }
             }
             else
@@ -1665,6 +1672,57 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
     /** @return Affinity partition id. */
     public int affPartId() {
         return affPartId;
+    }
+
+    /**
+     * Collects statistics on jobs locally, only for those jobs that have
+     * already sent a response or are being executed locally.
+     *
+     * @return Job statistics for the task. Mapping: Job status -> count of jobs.
+     */
+    Map<ComputeJobStatusEnum, Long> jobStatuses() {
+        List<GridJobResultImpl> jobResults = null;
+
+        synchronized (mux) {
+            if (jobRes != null)
+                jobResults = new ArrayList<>(jobRes.values());
+        }
+
+        // Jobs have not been mapped yet.
+        if (F.isEmpty(jobResults))
+            return emptyMap();
+
+        UUID locNodeId = ctx.localNodeId();
+
+        boolean getLocJobStatistics = false;
+
+        Map<ComputeJobStatusEnum, Long> res = new EnumMap<>(ComputeJobStatusEnum.class);
+
+        for (GridJobResultImpl jobResult : jobResults) {
+            if (jobResult.hasResponse()) {
+                ComputeJobStatusEnum jobStatus;
+
+                if (jobResult.isCancelled())
+                    jobStatus = CANCELLED;
+                else if (jobResult.getException() != null)
+                    jobStatus = FAILED;
+                else
+                    jobStatus = FINISHED;
+
+                res.merge(jobStatus, 1L, Long::sum);
+            }
+            else if (!getLocJobStatistics && locNodeId.equals(jobResult.getNode().id()))
+                getLocJobStatistics = true;
+        }
+
+        if (getLocJobStatistics) {
+            Map<ComputeJobStatusEnum, Long> jobStatuses = ctx.job().jobStatuses(getTaskSessionId());
+
+            for (Map.Entry<ComputeJobStatusEnum, Long> e : jobStatuses.entrySet())
+                res.merge(e.getKey(), e.getValue(), Long::sum);
+        }
+
+        return res;
     }
 
     /** {@inheritDoc} */

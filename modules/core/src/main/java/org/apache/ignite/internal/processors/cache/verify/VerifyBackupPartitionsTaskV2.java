@@ -119,7 +119,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
         if (results.size() != exceptions.size())
             return checkConflicts(clusterHashes, exceptions);
         else
-            return new IdleVerifyResultV2(emptyMap(), emptyMap(), emptyMap(), emptyMap(), exceptions);
+            return new IdleVerifyResultV2(emptyMap(), emptyMap(), emptyMap(), emptyMap(), emptyMap(), exceptions);
     }
 
     /** {@inheritDoc} */
@@ -156,6 +156,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
 
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> updateCntrConflicts = new HashMap<>();
 
+        Map<PartitionKeyV2, List<PartitionHashRecordV2>> reserveCntrConflicts = new HashMap<>();
+
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingParts = new HashMap<>();
 
         Map<PartitionKeyV2, List<PartitionHashRecordV2>> lostParts = new HashMap<>();
@@ -164,37 +166,52 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             Integer partHash = null;
             Long updateCntr = null;
 
-            for (PartitionHashRecordV2 record : e.getValue()) {
-                if (record.partitionState() == PartitionState.MOVING) {
+            List<PartitionHashRecordV2> records = e.getValue();
+
+            for (PartitionHashRecordV2 rec : records) {
+                if (rec.partitionState() == PartitionState.MOVING) {
                     movingParts.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
-                        .add(record);
+                        .add(rec);
 
                     continue;
                 }
 
-                if (record.partitionState() == PartitionState.LOST) {
+                if (rec.partitionState() == PartitionState.LOST) {
                     lostParts.computeIfAbsent(e.getKey(), k -> new ArrayList<>())
-                        .add(record);
+                        .add(rec);
 
                     continue;
                 }
 
                 if (partHash == null) {
-                    partHash = record.partitionHash();
+                    partHash = rec.partitionHash();
 
-                    updateCntr = record.updateCounter();
+                    updateCntr = rec.updateCounter();
                 }
                 else {
-                    if (record.updateCounter() != updateCntr)
-                        updateCntrConflicts.putIfAbsent(e.getKey(), e.getValue());
+                    if (rec.updateCounter() != updateCntr)
+                        updateCntrConflicts.putIfAbsent(e.getKey(), records);
 
-                    if (record.partitionHash() != partHash)
-                        hashConflicts.putIfAbsent(e.getKey(), e.getValue());
+                    if (rec.partitionHash() != partHash)
+                        hashConflicts.putIfAbsent(e.getKey(), records);
                 }
+
+                // We can check HWM >= LWM invariant only on primary partitions
+                // because backups update their HWM during PME.
+                // We ignore value -1 from old version nodes.
+                if (rec.isPrimary() && rec.reserveCounter() != -1 && rec.updateCounter() > rec.reserveCounter())
+                    reserveCntrConflicts.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(rec);
             }
         }
 
-        return new IdleVerifyResultV2(updateCntrConflicts, hashConflicts, movingParts, lostParts, exceptions);
+        return new IdleVerifyResultV2(
+            updateCntrConflicts,
+            reserveCntrConflicts,
+            hashConflicts,
+            movingParts,
+            lostParts,
+            exceptions
+        );
     }
 
     /** */
@@ -529,6 +546,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             int partHash = 0;
             long partSize;
             long updateCntrBefore = part.updateCounter();
+            long reserveCntrBefore = part.reservedCounter();
 
             PartitionKeyV2 partKey = new PartitionKeyV2(grpCtx.groupId(), part.id(), grpCtx.cacheOrGroupName());
 
@@ -544,6 +562,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                         consId,
                         partHash,
                         updateCntrBefore,
+                        reserveCntrBefore,
                         part.state() == GridDhtPartitionState.MOVING ? PartitionHashRecordV2.MOVING_PARTITION_SIZE : 0,
                         part.state() == GridDhtPartitionState.MOVING ? PartitionState.MOVING : PartitionState.LOST
                     );
@@ -589,7 +608,14 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             }
 
             PartitionHashRecordV2 partRec = new PartitionHashRecordV2(
-                partKey, isPrimary, consId, partHash, updateCntrBefore, partSize, PartitionState.OWNING
+                partKey,
+                isPrimary,
+                consId,
+                partHash,
+                updateCntrBefore,
+                reserveCntrBefore,
+                partSize,
+                PartitionState.OWNING
             );
 
             completionCntr.incrementAndGet();
