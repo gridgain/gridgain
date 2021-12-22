@@ -54,6 +54,8 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
         final int rowOff,
         final int payloadSize
     ) throws IgniteCheckedException {
+        assertPageType(buf);
+
         int written = writeSizeFragment(row, buf, rowOff, payloadSize);
 
         if (payloadSize == written)
@@ -103,6 +105,8 @@ public class SimpleDataPageIO extends AbstractDataPageIO<SimpleDataRow> {
         SimpleDataRow row,
         boolean newRow
     ) throws IgniteCheckedException {
+        assertPageType(pageAddr);
+
         long addr = pageAddr + dataOff;
 
         if (newRow)

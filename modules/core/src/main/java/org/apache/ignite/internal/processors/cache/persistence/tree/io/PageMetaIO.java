@@ -100,6 +100,8 @@ public class PageMetaIO extends PageIO {
      * @param treeRoot Tree root
      */
     public void setTreeRoot(long pageAddr, long treeRoot) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, TREE_ROOT_OFF, treeRoot);
     }
 
@@ -116,6 +118,8 @@ public class PageMetaIO extends PageIO {
      * @param pageId Root page ID.
      */
     public void setReuseListRoot(long pageAddr, long pageId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, REUSE_LIST_ROOT_OFF, pageId);
     }
 
@@ -126,6 +130,8 @@ public class PageMetaIO extends PageIO {
      */
     @Deprecated
     public void setLastSuccessfulSnapshotId(long pageAddr, long lastSuccessfulSnapshotId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, LAST_SUCCESSFUL_SNAPSHOT_ID_OFF, lastSuccessfulSnapshotId);
     }
 
@@ -145,6 +151,8 @@ public class PageMetaIO extends PageIO {
      */
     @Deprecated
     public void setLastSuccessfulFullSnapshotId(long pageAddr, long lastSuccessfulFullSnapshotId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, LAST_SUCCESSFUL_FULL_SNAPSHOT_ID_OFF, lastSuccessfulFullSnapshotId);
     }
 
@@ -164,6 +172,8 @@ public class PageMetaIO extends PageIO {
      */
     @Deprecated
     public void setNextSnapshotTag(long pageAddr, long nextSnapshotTag) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, NEXT_SNAPSHOT_TAG_OFF, nextSnapshotTag);
     }
 
@@ -183,6 +193,8 @@ public class PageMetaIO extends PageIO {
      */
     @Deprecated
     public void setLastSuccessfulSnapshotTag(long pageAddr, long lastSuccessfulSnapshotTag) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, LAST_SUCCESSFUL_FULL_SNAPSHOT_TAG_OFF, lastSuccessfulSnapshotTag);
     }
 
@@ -202,6 +214,8 @@ public class PageMetaIO extends PageIO {
      * @param pageCnt Last allocated pages count to set
      */
     public void setLastAllocatedPageCount(final long pageAddr, final int pageCnt) {
+        assertPageType(pageAddr);
+
         PageUtils.putInt(pageAddr, LAST_PAGE_COUNT_OFF, pageCnt);
     }
 
@@ -229,6 +243,8 @@ public class PageMetaIO extends PageIO {
      * @param pageCnt Last page count.
      */
     public boolean setCandidatePageCount(long pageAddr, int pageCnt) {
+        assertPageType(pageAddr);
+
         if (getCandidatePageCount(pageAddr) == pageCnt)
             return false;
 

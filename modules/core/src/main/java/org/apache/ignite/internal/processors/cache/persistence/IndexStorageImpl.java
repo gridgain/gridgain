@@ -543,6 +543,8 @@ public class IndexStorageImpl implements IndexStorage {
 
         /** {@inheritDoc} */
         @Override public void storeByOffset(long buf, int off, IndexItem row) throws IgniteCheckedException {
+            assertPageType(buf);
+
             storeRow(buf, off, row);
         }
 
@@ -552,6 +554,8 @@ public class IndexStorageImpl implements IndexStorage {
             final BPlusIO<IndexItem> srcIo,
             final long srcPageAddr,
             final int srcIdx) throws IgniteCheckedException {
+            assertPageType(dstPageAddr);
+
             storeRow(dstPageAddr, offset(dstIdx), srcPageAddr, ((IndexIO)srcIo).getOffset(srcPageAddr, srcIdx));
         }
 

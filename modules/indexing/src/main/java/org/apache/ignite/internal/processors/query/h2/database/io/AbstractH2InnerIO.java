@@ -40,6 +40,8 @@ public abstract class AbstractH2InnerIO extends BPlusInnerIO<H2Row> implements H
 
     /** {@inheritDoc} */
     @Override public void storeByOffset(long pageAddr, int off, H2Row row) {
+        assertPageType(pageAddr);
+
         H2CacheRow row0 = (H2CacheRow)row;
 
         H2IOUtils.storeRow(row0, pageAddr, off, storeMvccInfo());
@@ -63,6 +65,8 @@ public abstract class AbstractH2InnerIO extends BPlusInnerIO<H2Row> implements H
 
     /** {@inheritDoc} */
     @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx) {
+        assertPageType(dstPageAddr);
+
         H2IOUtils.store(dstPageAddr, offset(dstIdx), srcIo, srcPageAddr, srcIdx, storeMvccInfo());
     }
 
