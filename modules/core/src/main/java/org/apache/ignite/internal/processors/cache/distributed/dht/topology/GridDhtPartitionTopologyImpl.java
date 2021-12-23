@@ -597,7 +597,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 long updateSeq = this.updateSeq.incrementAndGet();
 
-                cntrMap.clear();
+                if (exchFut.exchangeType() == ALL && !exchFut.rebalanced())
+                    cntrMap.clear();
 
                 initializeFullMap(updateSeq);
 
