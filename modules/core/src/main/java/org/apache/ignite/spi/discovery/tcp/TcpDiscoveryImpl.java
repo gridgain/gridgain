@@ -54,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCOVERY_METRICS_QNT_WARN;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_DISCOVERY_METRICS_QNT_WARN;
 
 /**
  *
@@ -97,7 +98,7 @@ abstract class TcpDiscoveryImpl {
     protected ConcurrentLinkedDeque<String> debugLogQ;
 
     /** Logging a warning message when metrics quantity exceeded a specified number. */
-    protected int METRICS_QNT_WARN = getInteger(IGNITE_DISCOVERY_METRICS_QNT_WARN, 500);
+    protected int METRICS_QNT_WARN = getInteger(IGNITE_DISCOVERY_METRICS_QNT_WARN, DFLT_DISCOVERY_METRICS_QNT_WARN);
 
     /** */
     protected long endTimeMetricsSizeProcessWait = System.currentTimeMillis();

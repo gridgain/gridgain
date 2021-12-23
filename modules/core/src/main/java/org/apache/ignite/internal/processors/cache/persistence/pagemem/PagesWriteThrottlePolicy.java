@@ -62,9 +62,12 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_THROTTLE_LOG_THRES
  * </ul>
  */
 public interface PagesWriteThrottlePolicy {
+    /** @see IgniteSystemProperties#IGNITE_THROTTLE_LOG_THRESHOLD */
+    static int DFLT_THROTTLE_LOG_THRESHOLD = 10;
+
     /** Min park time which triggers logging. */
     long LOGGING_THRESHOLD = TimeUnit.SECONDS.toNanos(
-        IgniteSystemProperties.getInteger(IGNITE_THROTTLE_LOG_THRESHOLD, 10));
+        IgniteSystemProperties.getInteger(IGNITE_THROTTLE_LOG_THRESHOLD, DFLT_THROTTLE_LOG_THRESHOLD));
 
     /** Checkpoint buffer fullfill upper bound. */
     float CP_BUF_FILL_THRESHOLD = 2f / 3;

@@ -119,8 +119,12 @@ public class QueryUtils {
     /** Well-known template name for REPLICATED cache. */
     public static final String TEMPLATE_REPLICATED = "REPLICATED";
 
+    /** @see IgniteSystemProperties#IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE */
+    public static final int DFLT_INDEXING_DISCOVERY_HISTORY_SIZE = 1000;
+
     /** Discovery history size. */
-    private static final int DISCO_HIST_SIZE = getInteger(IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE, 1000);
+    private static final int DISCO_HIST_SIZE = getInteger(IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE,
+        DFLT_INDEXING_DISCOVERY_HISTORY_SIZE);
 
     /** */
     private static final Class<?> GEOMETRY_CLASS = U.classForName("org.locationtech.jts.geom.Geometry", null);
@@ -138,7 +142,7 @@ public class QueryUtils {
      */
     public static String sysSchemaName() {
         if (schemaSys == null)
-            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
+            schemaSys = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE) ? "IGNITE" : "SYS";
 
         return schemaSys;
     }

@@ -165,9 +165,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** Partition state failed message. */
     public static final String PARTITION_STATE_FAILED_MSG = "Partition states validation has failed for group: %s, msg: %s";
 
+    /** @see IgniteSystemProperties#IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD */
+    public static final int DFLT_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD = 0;
+
     /** */
-    private static final int RELEASE_FUTURE_DUMP_THRESHOLD =
-        IgniteSystemProperties.getInteger(IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD, 0);
+    private static final int RELEASE_FUTURE_DUMP_THRESHOLD = IgniteSystemProperties.getInteger(
+        IGNITE_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD, DFLT_PARTITION_RELEASE_FUTURE_DUMP_THRESHOLD);
 
     /** */
     private static final IgniteProductVersion FORCE_AFF_REASSIGNMENT_SINCE = IgniteProductVersion.fromString("2.4.3");
