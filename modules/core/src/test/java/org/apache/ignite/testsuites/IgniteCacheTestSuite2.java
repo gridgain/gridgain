@@ -59,6 +59,7 @@ import org.apache.ignite.internal.processors.cache.MemoryPolicyConfigValidationT
 import org.apache.ignite.internal.processors.cache.NoPresentCacheInterceptorOnClientTest;
 import org.apache.ignite.internal.processors.cache.NonAffinityCoordinatorDynamicStartStopTest;
 import org.apache.ignite.internal.processors.cache.RebalanceIteratorLargeEntriesOOMTest;
+import org.apache.ignite.internal.processors.cache.TxCountersNeighbourcastOnRecoveryLogTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheDetectLostPartitionsTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheLoadingConcurrentGridStartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheLoadingConcurrentGridStartSelfTestAllowOverwrite;
@@ -391,6 +392,8 @@ public class IgniteCacheTestSuite2 {
         GridTestUtils.addTestIfNeeded(suite, TransactionValidationTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, RebalanceIteratorLargeEntriesOOMTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, TxCountersNeighbourcastOnRecoveryLogTest.class, ignoredTests);
 
         return suite;
     }
