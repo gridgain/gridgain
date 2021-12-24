@@ -40,6 +40,8 @@ public abstract class AbstractH2LeafIO extends BPlusLeafIO<H2Row> implements H2R
 
     /** {@inheritDoc} */
     @Override public final void storeByOffset(long pageAddr, int off, H2Row row) {
+        assertPageType(pageAddr);
+
         H2CacheRow row0 = (H2CacheRow)row;
 
         H2IOUtils.storeRow(row0, pageAddr, off, storeMvccInfo());
@@ -48,6 +50,7 @@ public abstract class AbstractH2LeafIO extends BPlusLeafIO<H2Row> implements H2R
     /** {@inheritDoc} */
     @Override public final void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx) {
         assert srcIo == this;
+        assertPageType(dstPageAddr);
 
         H2IOUtils.store(dstPageAddr, offset(dstIdx), srcIo, srcPageAddr, srcIdx, storeMvccInfo());
     }
