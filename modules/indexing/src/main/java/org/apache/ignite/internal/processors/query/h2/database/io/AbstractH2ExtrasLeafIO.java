@@ -97,6 +97,8 @@ public abstract class AbstractH2ExtrasLeafIO extends BPlusLeafIO<H2Row> implemen
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override public final void storeByOffset(long pageAddr, int off, H2Row row) {
+        assertPageType(pageAddr);
+
         H2CacheRow row0 = (H2CacheRow)row;
 
         assert row0.link() != 0;
@@ -123,6 +125,8 @@ public abstract class AbstractH2ExtrasLeafIO extends BPlusLeafIO<H2Row> implemen
 
     /** {@inheritDoc} */
     @Override public final void store(long dstPageAddr, int dstIdx, BPlusIO<H2Row> srcIo, long srcPageAddr, int srcIdx) {
+        assertPageType(dstPageAddr);
+
         int srcOff = srcIo.offset(srcIdx);
 
         byte[] payload = PageUtils.getBytes(srcPageAddr, srcOff, payloadSize);
