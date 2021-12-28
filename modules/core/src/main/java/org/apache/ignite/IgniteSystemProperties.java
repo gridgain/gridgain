@@ -1201,7 +1201,7 @@ public final class IgniteSystemProperties {
      * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
-    @SystemProperty(value =  "hreshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
+    @SystemProperty(value = "Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
         "After this thresold is reached, a snapshot of the earliest checkpoint map will be captured",
         type = Integer.class, defaults = "" + DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD)
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
@@ -1830,10 +1830,12 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty("Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements")
     public static final String IGNITE_SQL_ALLOW_KEY_VAL_UPDATES = "IGNITE_SQL_ALLOW_KEY_VAL_UPDATES";
-    
+
     /**
      * Forcibly fills missing columns belonging to the primary key with nulls or default values if those have been specified.
      */
+    @SystemProperty(value = "Forcibly fills missing columns belonging to the primary key with nulls or default values " +
+        "if those have been specified", defaults = "false")
     public static final String IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS = "IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS";
 
     /**
