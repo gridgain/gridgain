@@ -1066,6 +1066,13 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
         }, IgniteSQLException.class, "Table already exists: Person");
     }
 
+    @Test
+    public void testWrapKey() {
+        execute("CREATE TABLE \"City2\" (\"name\" varchar primary key, \"code\" int) WITH \"wrap_key=true,value_type=org.apache.ignite.internal.processors.cache.index.CodeType\"");
+
+        ignite(0).cache("SQL_PUBLIC_City2").put("123", new CodeType(1));
+    }
+
     /**
      * @throws Exception if failed.
      */
