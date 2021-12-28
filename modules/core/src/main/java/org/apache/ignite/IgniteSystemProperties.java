@@ -1201,7 +1201,7 @@ public final class IgniteSystemProperties {
      * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
-    @SystemProperty(value =  "hreshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
+    @SystemProperty(value = "Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
         "After this thresold is reached, a snapshot of the earliest checkpoint map will be captured",
         type = Integer.class, defaults = "" + DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD)
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
