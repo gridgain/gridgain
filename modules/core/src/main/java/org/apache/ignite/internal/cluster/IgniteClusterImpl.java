@@ -96,12 +96,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** Client reconnect future. */
     private IgniteFuture<?> reconnecFut;
 
-    /** Unique ID of cluster. Generated on start, shared by all nodes. */
-    private volatile UUID id;
-
-    /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
-    private volatile String tag;
-
     /** Ignite logger. */
     private IgniteLogger log;
 
@@ -596,27 +590,27 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public UUID id() {
-        return id;
+        if (ctx.clientDisconnected())
+            return null;
+
+        try {
+            return ctx.cluster().getId();
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
-    /**
-     * Not part of public API.
-     * Enables ClusterProcessor to set ID in the following cases:
-     * <ol>
-     *     <li>For the first time on node startup.</li>
-     *     <li>Set to null on client disconnect.</li>
-     *     <li>Set to some not-null value on client reconnect.</li>
-     * </ol>
-     *
-     * @param id ID to set.
-     */
-    public void setId(UUID id) {
-        this.id = id;
-    }
 
     /** {@inheritDoc} */
     @Override public String tag() {
-        return tag;
+        if (ctx.clientDisconnected())
+            return null;
+
+        try {
+            return ctx.cluster().getTag();
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /** {@inheritDoc} */
@@ -641,21 +635,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
             throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
 
         ctx.cluster().updateTag(tag);
-    }
-
-    /**
-     * Not part of public API.
-     * Enables ClusterProcessor to set tag in the following cases:
-     * <ol>
-     *     <li>For the first time on node startup.</li>
-     *     <li>Set to null on client disconnect.</li>
-     *     <li>Set to some not-null value on client reconnect.</li>
-     * </ol>
-     *
-     * @param tag Tag to set.
-     */
-    public void setTag(@Nullable String tag) {
-        this.tag = tag;
     }
 
     /** {@inheritDoc} */

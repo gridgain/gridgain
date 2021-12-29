@@ -96,11 +96,6 @@ import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLU
  *
  */
 public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
-    /**
-     * Ignite cluster ID system property. If is not set, random UUID will be used.
-     */
-    private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
-
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
@@ -171,12 +166,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /** */
     private final boolean sndMetrics;
 
-    /** Cluster ID is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile UUID locClusterId;
-
-    /** Cluster tag is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile String locClusterTag;
-
     /** */
     private volatile DistributedMetaStorage metastorage;
 
@@ -188,63 +177,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * No values should be stored in metastorage nor passed in joining node discovery data.
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
-
-    /**
-     * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
-     */
-    private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
-        @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
-            if (!compatibilityMode)
-                return;
-
-            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
-                IgniteFeatures.CLUSTER_ID_AND_TAG)
-            ) {
-                // Only coordinator initializes ID and tag.
-                if (U.isLocalNodeCoordinator(ctx.discovery())) {
-                    locClusterId = locClusterId == null ? UUID.randomUUID() : locClusterId;
-
-                    locClusterTag = locClusterTag == null ? ClusterTagGenerator.generateTag() : locClusterTag;
-
-                    if (metastorage != null) {
-                        IgniteInternalFuture<?> clusterIdTagFut = null;
-
-                        try {
-                            ClusterIdAndTag idAndTag = new ClusterIdAndTag(locClusterId, locClusterTag);
-
-                            if (log.isInfoEnabled())
-                                log.info(
-                                    "Writing cluster ID and tag to metastorage " +
-                                        "on leaving compatibility mode " +
-                                        idAndTag
-                                );
-
-                            clusterIdTagFut = metastorage.writeAsync(CLUSTER_ID_TAG_KEY,
-                                idAndTag);
-                        }
-                        catch (IgniteCheckedException e) {
-                            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                        }
-
-                        if (clusterIdTagFut != null) {
-                            clusterIdTagFut.listen(fut -> {
-                                if (fut.error() != null)
-                                    log.error("Write to metastorage failed unexpectedly", fut.error());
-                            });
-                        }
-                    }
-
-                    cluster.setId(locClusterId);
-
-                    cluster.setTag(locClusterTag);
-
-                    compatibilityMode = false;
-                }
-
-                ctx.event().removeDiscoveryEventListener(discoLsnr);
-            }
-        }
-    };
 
     /** */
     private ObjectName mBean;
@@ -289,22 +221,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        try {
-            ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
-
-            if (log.isInfoEnabled())
-                log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
-
-            if (idAndTag != null) {
-                locClusterId = idAndTag.id();
-                locClusterTag = idAndTag.tag();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            U.warn(log, "Reading cluster ID and tag from metastorage failed, " +
-            "default values will be generated", e);
-        }
-
         metastorage.listen(
             (k) -> k.equals(CLUSTER_ID_TAG_KEY),
             (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
@@ -315,7 +231,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                             ", previous value was: " +
                             (oldVal != null ? oldVal.tag() : "null"));
 
-                if (oldVal != null && newVal != null) {
+                if (oldVal != null && newVal != null && !Objects.equals(oldVal.tag(), newVal.tag())) {
                     if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
                         String msg = "Tag of cluster with id " +
                             oldVal.id() +
@@ -335,22 +251,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                         ));
                     }
                 }
-
-                cluster.setTag(newVal != null ? newVal.tag() : null);
-
-                if (compatibilityMode) {
-                    // In compatibility mode ID and tag
-                    // will be stored to metastorage on coordinator instead of receiving them on join.
-                    assert oldVal == null;
-                    assert newVal != null;
-
-                    if (log.isInfoEnabled())
-                        log.info("Cluster ID will be initialized to the value: " + newVal.id());
-
-                    cluster.setId(newVal.id());
-
-                    compatibilityMode = false;
-                }
             }
         );
     }
@@ -359,50 +259,47 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
         this.metastorage = metastorage;
 
-        // Fast and dirty workaround for tests.
-        if (ctx.clientNode()) {
-            try {
-                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
-
-                if (idAndTag != null) {
-                    locClusterId = idAndTag.id();
-                    locClusterTag = idAndTag.tag();
-
-                    cluster.setId(locClusterId);
-                    cluster.setTag(locClusterTag);
-                }
-            }
-            catch (IgniteCheckedException e) {
-                U.warn(log, e);
-            }
-
-            return;
-        }
-
         if (!clusterIdAndTagSupport)
             return;
 
-        //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
+        //TODO GG-21718 - close
 
-        // Should not write to metastorage before exiting compatibility mode.
-        // On coordinator this happens in disco listener, on other nodes in metastorage update listener.
-        if (!compatibilityMode) {
-            ctx.closure().runLocalSafe(
-                () -> {
-                    try {
-                        ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
+        if (compatibilityMode)
+            return;
 
-                        if (log.isInfoEnabled())
-                            log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
-
-                        metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
-                    }
-                    catch (IgniteCheckedException e) {
-                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                    }
-                }
-            );
+        if (U.isLocalNodeCoordinator(ctx.discovery())) {
+            initializeClusterIdAndTagIfNeeded();
         }
+    }
+
+    /**
+     * @return Returns cluster ID.
+     */
+    public UUID getId() throws IgniteCheckedException {
+        if (compatibilityMode)
+            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+
+        if (metastorage == null)
+            return null;
+
+        ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+        return oldTag == null ? null : oldTag.id();
+    }
+
+    /**
+     * @return Returns cluster tag.
+     */
+    public String getTag() throws IgniteCheckedException {
+        if (compatibilityMode)
+            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+
+        if (metastorage == null)
+            return null;
+
+        ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+        return oldTag == null ? null : oldTag.tag();
     }
 
     /**
@@ -428,8 +325,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
                 concurrentValue.tag());
         }
-        else
-            cluster.setTag(newTag);
     }
 
     /**
@@ -453,46 +348,72 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             IgniteFeatures.CLUSTER_ID_AND_TAG)
         ) {
             compatibilityMode = true;
-
-            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
-
-            return;
         }
 
-        if (!ctx.discovery().localNode().isClient()) {
-            cluster.setId(locClusterId != null ? locClusterId :
-                IgniteSystemProperties.getUUID(IGNITE_CLUSTER_ID, UUID.randomUUID()));
+        ctx.event().addDiscoveryEventListener(new DiscoveryEventListener() {
+            @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+                if (!U.isLocalNodeCoordinator(ctx.discovery()))
+                    return;
 
-            cluster.setTag(locClusterTag != null ? locClusterTag :
-                ClusterTagGenerator.generateTag());
-        }
+                // Initialize cluster ID and tag if all old servers have left.
+                if (compatibilityMode
+                    && IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                    IgniteFeatures.CLUSTER_ID_AND_TAG)
+                ) {
+                    initializeClusterIdAndTagIfNeeded();
+                    compatibilityMode = false;
+                }
+
+                // Try to initialize cluster ID and tag if local node became coordinator.
+                // This for the case when the old coordinator failed before initializing cluster ID and tag.
+                boolean localBecameCoordinator = evt.eventNode().isClient() && !evt.eventNode().isDaemon()
+                    && evt.eventNode().order() < ctx.discovery().localNode().order();
+                if (localBecameCoordinator) {
+                    initializeClusterIdAndTagIfNeeded();
+                }
+            }
+        }, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
 
-    /** {@inheritDoc} */
-    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
-        if (!clusterIdAndTagSupport)
+    /**
+     * Initialize cluster ID and tag in the metastore if not present.
+     * Must be called only on coordinator.
+     *
+     * This is called whenever there is a chance that the ID and tag might need to be initialized:
+     * <ul>
+     *     <li>When a node starts and forms a new cluster</li>
+     *     <li>When a node becomes the coordinator (in case the old coordinator failed to initialize ID and tag)</li>
+     *     <li>When all nodes that didn't support ID and tag have left</li>
+     * </ul>
+     */
+    private void initializeClusterIdAndTagIfNeeded() {
+        // Only coordinator initializes ID and tag.
+        assert U.isLocalNodeCoordinator(ctx.discovery());
+
+        if (metastorage == null)
             return;
+        try {
+            ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
 
-        assert ctx.clientNode();
+            if (idAndTag == null) {
+                idAndTag = new ClusterIdAndTag(UUID.randomUUID(),
+                    ClusterTagGenerator.generateTag());
 
-        locClusterId = null;
-        locClusterTag = null;
+                if (log.isInfoEnabled())
+                    log.info("New cluster ID and tag have been generated (no value in metastore): "
+                        + idAndTag);
 
-        cluster.setId(null);
-        cluster.setTag(null);
-    }
+                IgniteInternalFuture<?> clusterIdTagFut = metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
 
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
-        if (!clusterIdAndTagSupport)
-            return null;
-
-        assert ctx.clientNode();
-
-        cluster.setId(locClusterId);
-        cluster.setTag(locClusterTag);
-
-        return null;
+                clusterIdTagFut.listen(fut -> {
+                    // TODO: call FH?
+                    if (fut.error() != null)
+                        log.error("Write to metastorage failed unexpectedly", fut.error());
+                });
+            }
+        } catch (IgniteCheckedException e) {
+            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+        }
     }
 
     /**
@@ -679,31 +600,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
-        }
-
-        if (!clusterIdAndTagSupport)
-            return;
-
-        ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
-
-        if (commonData != null) {
-            UUID remoteClusterId = commonData.id();
-
-            if (remoteClusterId != null) {
-                if (locClusterId != null && !locClusterId.equals(remoteClusterId)) {
-                    log.warning("Received cluster ID differs from locally stored cluster ID " +
-                        "and will be rewritten. " +
-                        "Received cluster ID: " + remoteClusterId +
-                        ", local cluster ID: " + locClusterId);
-                }
-
-                locClusterId = remoteClusterId;
-            }
-
-            String remoteClusterTag = commonData.tag();
-
-            if (remoteClusterTag != null)
-                locClusterTag = remoteClusterTag;
         }
     }
 
