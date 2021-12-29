@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.query.stat.hll.FullHLLTest;
 import org.apache.ignite.internal.sql.SqlParserAnalyzeSelfTest;
 import org.apache.ignite.internal.sql.SqlParserDropStatisticsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserRefreshStatisticsSelfTest;
+import org.apache.ignite.internal.systemview.JmxExporterSpiTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -92,7 +93,8 @@ import org.junit.runners.Suite;
 
     // Views
     StatisticsViewsPersistenceTest.class,
-    StatisticsViewsInMemoryTest.class
+    StatisticsViewsInMemoryTest.class,
+    JmxExporterSpiTest.class
 })
 public class IgniteStatisticsTestSuite {
 }
