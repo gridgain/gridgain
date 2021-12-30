@@ -34,7 +34,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -303,10 +302,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      *
      * @return A {@code True} if a eviction task was scheduled.
      */
-    private boolean processEvictions(boolean tombstone) {
-        GridKernalContext ctx = cctx.kernalContext();
-
-        return ctx.timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
+    public boolean processEvictions(boolean tombstone) {
+        return cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
     }
 
     /**
@@ -349,6 +346,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                             cnt = ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
                                 queue.addLast(key);
 
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Added the cleanup entry [grpName=" + ctx0.grp.cacheOrGroupName() +
+                                        ", tombstone=" + key.tombstone + ", expireTime=" + key.expireTime +
+                                        ", cacheId=" + key.cacheId + ", link=" + key.link +
+                                        ']');
+                                }
+
                                 // Stop on queue overflow.
                                 return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
                             });
@@ -366,13 +370,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     log.debug("Filled the queue for the group [grpName=" + ctx0.grp.cacheOrGroupName() +
                         ", tombstone=" + tombstone + ", total=" + cnt + ']');
                 }
-                
+
                 total += cnt;
             }
 
             if (log.isDebugEnabled() && total > 0) {
                 log.debug("After filling the evict queue [total=" + total + ", tombstone=" + tombstone +
-                    ", qSize=" + queue.sizex() + ']');
+                    ", qSize=" + queue.sizex() + ", upperBound=" + upper + ']');
             }
         }
         catch (Throwable e) {
@@ -413,7 +417,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
-                        c.apply(entry, now); // Second argument is used for "forced expiration" logic.
+                        boolean rmv = c.apply(entry, now);// Second argument is used for "forced expiration" logic.
+
+                        if (!rmv) {
+                            if (log.isDebugEnabled())
+                                log.debug("Failed to remove cache entry " + entry.toString());
+                        }
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         // The row belongs to obsolete partition, remove it.
@@ -423,6 +432,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         catch (IgniteCheckedException e) {
                             log.error("Failed to remove pending row [row=" + row + ']', e);
                         }
+                    }
+                }
+                else {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Skipping a cleanup row due to deploymend mismatch [expected=" +
+                            row.deploymentId + ", actual=" + (ctx == null ? null : ctx.dynamicDeploymentId()) + ']');
                     }
                 }
 
@@ -861,7 +876,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Timer task for evict queue fill.
      */
-    private final class FillEvictQueueTask extends GridTimeoutObjectAdapter {
+    public final class FillEvictQueueTask extends GridTimeoutObjectAdapter {
         /** The tombstone flag. */
         private final boolean tombstone;
 
@@ -883,8 +898,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     fillEvictQueue(tombstone, U.currentTimeMillis());
 
                     if (queue.isEmptyx() && PROCESS_EMPTY_EVICT_QUEUE_FREQ > 0) {
-                        // Queue is empty, try again later.
-                        cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
+                        // Queue is empty, try filling again later.
+                        processEvictions(tombstone);
                     }
                 }
             });
