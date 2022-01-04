@@ -33,6 +33,14 @@ public interface IgniteClusterMXBean {
     public UUID getId();
 
     /**
+     * Changes cluster ID to provided value.
+     *
+     * @param newId New value to be set as cluster ID.
+     */
+    @MXBeanDescription("Set new cluster tag value.")
+    public void id(@MXBeanParameter(name = "newId", description = "New ID value to be set.") UUID newId);
+
+    /**
      * Gets current cluster tag.
      *
      * @return Current cluster tag.
@@ -44,12 +52,7 @@ public interface IgniteClusterMXBean {
      * Changes cluster tag to provided value.
      *
      * @param newTag New value to be set as cluster tag.
-     * @throws JMException If provided value failed validation or concurrent change tag operation succeeded.
      */
     @MXBeanDescription("Set new cluster tag value.")
-    @MXBeanParametersNames("newTag")
-    @MXBeanParametersDescriptions(
-        "New tag value to be set."
-    )
-    public void tag(String newTag) throws JMException;
+    public void tag(@MXBeanParameter(name = "newTag", description = "New tag value to be set.") String newTag);
 }

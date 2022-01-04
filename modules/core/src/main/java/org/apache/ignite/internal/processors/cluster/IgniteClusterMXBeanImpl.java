@@ -42,6 +42,11 @@ public class IgniteClusterMXBeanImpl implements IgniteClusterMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public void id(UUID newId) {
+        cluster.id(newId);
+    }
+
+    /** {@inheritDoc} */
     @Override public String getTag() {
         return cluster.tag();
     }
