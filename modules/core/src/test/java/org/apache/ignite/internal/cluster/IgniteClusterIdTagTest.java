@@ -380,7 +380,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
             fail("Expected exception has not been thrown.");
         }
-        catch (IgniteCheckedException e) {
+        catch (NullPointerException e) {
             assertTrue(e.getMessage().contains("cannot be null"));
         }
 
@@ -389,7 +389,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
             fail("Expected exception has not been thrown.");
         }
-        catch (IgniteCheckedException e) {
+        catch (IllegalArgumentException e) {
             assertTrue(e.getMessage().contains("should not be empty"));
         }
 
@@ -400,7 +400,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
             fail("Expected exception has not been thrown.");
         }
-        catch (IgniteCheckedException e) {
+        catch (IllegalArgumentException e) {
             assertTrue(e.getMessage().contains("Maximum tag length is exceeded"));
         }
     }
@@ -415,15 +415,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         isPersistenceEnabled = true;
 
         IgniteEx ig0 = startGrid(0);
-
-        try {
-            ig0.cluster().tag(CUSTOM_TAG_0);
-
-            fail("Expected exception has not been thrown.");
-        }
-        catch (IgniteCheckedException e) {
-            assertTrue(e.getMessage().contains("Can not change cluster tag on inactive cluster."));
-        }
 
         IgniteEx ig1 = startGrid(1);
 
