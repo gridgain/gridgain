@@ -258,8 +258,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         cluster.start();
     }
 
-    //TODO GG-21718 - close
-
     /**
      * @return Returns cluster ID.
      */
