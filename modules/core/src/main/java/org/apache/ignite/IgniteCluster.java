@@ -567,6 +567,15 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public UUID id();
 
     /**
+     * Sets a new cluster ID.
+     *
+     * @param id New cluster ID to be set.
+     *
+     * @see #id()
+     */
+    public void id(UUID id) throws IgniteCheckedException;
+
+    /**
      * User-defined tag describing the cluster.
      *
      * @return Current tag value same across all nodes of the cluster..

@@ -272,6 +272,19 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     /**
+     * Method is called when user requests updating cluster ID through public API.
+     *
+     * @param newId New ID.
+     */
+    public void updateId(UUID newId) throws IgniteCheckedException {
+        if (compatibilityMode)
+            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+
+        ClusterIdAndTag old = clusterIdAndTagProperty.get();
+        clusterIdAndTagProperty.propagate(new ClusterIdAndTag(newId, old.tag()));
+    }
+
+    /**
      * @return Returns cluster tag.
      */
     public String getTag() throws IgniteCheckedException {

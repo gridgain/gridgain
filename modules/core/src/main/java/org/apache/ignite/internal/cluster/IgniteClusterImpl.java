@@ -24,12 +24,7 @@ import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -600,6 +595,16 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
     }
 
+    /** {@inheritDoc} */
+    @Override public void id(UUID id) throws IgniteCheckedException {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        if (id == null)
+            throw new IgniteCheckedException("ID cannot be null.");
+
+        ctx.cluster().updateId(id);
+    }
 
     /** {@inheritDoc} */
     @Override public String tag() {
@@ -630,9 +635,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
                 " symbols, provided value has " +
                 tag.length() +
                 " symbols.");
-
-        if (!ctx.state().publicApiActiveState(true))
-            throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
 
         ctx.cluster().updateTag(tag);
     }
