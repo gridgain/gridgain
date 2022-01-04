@@ -284,9 +284,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /**
      * @return Returns cluster ID.
      */
-    public UUID getId() throws IgniteCheckedException {
+    public UUID getId() {
         if (compatibilityMode)
-            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
         ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
         return clusterIdAndTag != null ? clusterIdAndTag.id() : null;
@@ -312,9 +312,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     /**
      * @return Returns cluster tag.
      */
-    public String getTag() throws IgniteCheckedException {
+    public String getTag() {
         if (compatibilityMode)
-            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
         ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
         return clusterIdAndTag != null ? clusterIdAndTag.tag() : null;

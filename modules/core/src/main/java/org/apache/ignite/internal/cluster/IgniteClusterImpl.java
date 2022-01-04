@@ -588,11 +588,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         if (ctx.clientDisconnected())
             return null;
 
-        try {
-            return ctx.cluster().getId();
-        } catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        return ctx.cluster().getId();
     }
 
     /** {@inheritDoc} */
@@ -610,11 +606,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         if (ctx.clientDisconnected())
             return null;
 
-        try {
-            return ctx.cluster().getTag();
-        } catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
+        return ctx.cluster().getTag();
     }
 
     /** {@inheritDoc} */

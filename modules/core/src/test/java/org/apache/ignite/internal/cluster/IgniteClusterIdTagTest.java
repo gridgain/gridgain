@@ -19,10 +19,11 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.ClusterIdUpdatedEvent;
 import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -35,8 +36,6 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -47,6 +46,18 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_
  * Tests for ID and tag features of IgniteCluster.
  */
 public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
+    /** */
+    private static final UUID CUSTOM_ID_0 = UUID.fromString("11111111-1111-1111-1111-111111111111");
+
+    /** */
+    private static final UUID CUSTOM_ID_1 = UUID.fromString("22222222-2222-2222-2222-222222222222");
+
+    /** */
+    private static final UUID CLIENT_CUSTOM_ID_0 = UUID.fromString("33333333-3333-3333-3333-333333333333");
+
+    /** */
+    private static final UUID CLIENT_CUSTOM_ID_1 = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
     /** */
     private static final String CUSTOM_TAG_0 = "my_super_cluster";
 
@@ -62,15 +73,9 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     /** */
     private boolean isPersistenceEnabled;
 
-    /** */
-    private ListeningTestLogger logger;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        if (logger != null)
-            cfg.setGridLogger(logger);
 
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
@@ -173,6 +178,10 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         clustMxBean.tag(newTag);
 
         assertEquals(newTag, srv0.cluster().tag());
+
+        clustMxBean.id(CUSTOM_ID_0);
+
+        assertEquals(CUSTOM_ID_0, srv0.cluster().id());
     }
 
     /**
@@ -185,42 +194,46 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     public void testInMemoryClusterId() throws Exception {
         Ignite ig0 = startGrid(0);
 
-        UUID id0 = ((IgniteClusterEx)ig0.cluster()).id();
+        UUID id0 = ig0.cluster().id();
 
         assertNotNull(id0);
 
+        ig0.cluster().id(CUSTOM_ID_0);
+
         Ignite ig1 = startGrid(1);
 
-        UUID id1 = ((IgniteClusterEx)ig0.cluster()).id();
+        UUID id1 = ig1.cluster().id();
 
-        assertEquals(id0, id1);
+        assertNotNull(id1);
 
-        stopAllGrids();
+        assertEquals(CUSTOM_ID_0, id1);
 
-        ig0 = startGrid(0);
+        IgniteEx ig2 = startGrid(2);
 
-        assertNotSame(id0, ((IgniteClusterEx)ig0.cluster()).id());
+        assertEquals(CUSTOM_ID_0, ig2.cluster().id());
 
-        IgniteEx cl0 = startGrid("client0");
+        ig2.cluster().id(CUSTOM_ID_1);
 
-        assertEquals(((IgniteClusterEx)ig0.cluster()).id(), cl0.cluster().id());
-    }
+        // ID set from one server node is applied on all other nodes.
+        assertEquals(CUSTOM_ID_1, ig0.cluster().id());
 
-    /**
-     * Test verifies that feature is not mentioned in logs when is turned off.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
-    public void testNoLoggingForClusterIdTag() throws Exception {
-        LogListener lsnr = LogListener.matches("Cluster ID and tag has been read from metastorage:").build();
-        logger = new ListeningTestLogger();
-        logger.registerListener(lsnr);
+        assertEquals(CUSTOM_ID_1, ig1.cluster().id());
 
-        startGrid(0);
+        Ignite cl0 = startGrid("client0");
 
-        assertFalse("Line about Cluster ID and tag feature is found in1 logs", lsnr.check());
+        assertEquals(CUSTOM_ID_1, cl0.cluster().id());
+
+        cl0.cluster().id(CLIENT_CUSTOM_ID_0);
+
+        //tag set from client is applied on server nodes
+        assertEquals(CLIENT_CUSTOM_ID_0, ig0.cluster().id());
+
+        IgniteEx cl1 = startGrid("client1");
+
+        cl1.cluster().id(CLIENT_CUSTOM_ID_1);
+
+        // ID set from client is applied on other client nodes.
+        assertTrue(GridTestUtils.waitForCondition(() -> CLIENT_CUSTOM_ID_1.equals(cl0.cluster().id()), 5_000));
     }
 
     /**
@@ -242,6 +255,10 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         cl.tag("new_tag");
 
         assertNull(cl.tag());
+
+        cl.id(CUSTOM_ID_0);
+
+        assertNull(cl.id());
     }
 
     /**
@@ -294,15 +311,35 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         IgniteEx ig0 = startGrid(0);
 
-        ig0.cluster().active(true);
+        IgniteEx ig1 = startGrid(1);
 
-        UUID id0 = ig0.cluster().id();
+        assertEquals(ig0.cluster().id(), ig1.cluster().id());
+
+        UUID id1 = ig1.cluster().id();
+
+        ig0.cluster().state(ClusterState.ACTIVE);
 
         stopAllGrids();
 
         ig0 = startGrid(0);
 
-        assertEquals(id0, ig0.cluster().id());
+        ig1 = startGrid(1);
+
+        assertEquals(id1, ig0.cluster().id());
+
+        ig1.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx cl0 = startGrid("client0");
+
+        cl0.cluster().id(CUSTOM_ID_0);
+
+        stopAllGrids();
+
+        startGrid(0);
+
+        ig1 = startGrid(1);
+
+        assertEquals(CUSTOM_ID_0, ig1.cluster().id());
     }
 
     /**
@@ -405,6 +442,29 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         }
     }
 
+
+    /**
+     * Verifies restrictions for new ID provided for {@link IgniteClusterEx#id(UUID)} method:
+     * <ol>
+     *     <li>Not null.</li>
+     * </ol>
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testChangeIdExceptions() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        try {
+            ig0.cluster().id(null);
+
+            fail("Expected exception has not been thrown.");
+        }
+        catch (NullPointerException e) {
+            assertTrue(e.getMessage().contains("cannot be null"));
+        }
+    }
+
     /**
      *  Verifies consistency of tag when set up in inactive and active clusters and on client nodes.
      *
@@ -422,7 +482,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         String tag1 = ig1.cluster().tag();
 
-        ig0.cluster().active(true);
+        ig0.cluster().state(ClusterState.ACTIVE);
 
         stopAllGrids();
 
@@ -432,7 +492,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
 
         assertEquals(tag1, ig0.cluster().tag());
 
-        ig1.cluster().active(true);
+        ig1.cluster().state(ClusterState.ACTIVE);
 
         IgniteEx cl0 = startGrid("client0");
 
@@ -489,6 +549,43 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Verifies that event is fired when ID change request sent by user is completed.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIdChangedEvent() throws Exception {
+        IgniteEx ig = startGrid(0);
+
+        UUID generatedId = ig.cluster().id();
+
+        AtomicReference<UUID> previousIdFromEvent = new AtomicReference<>(null);
+        AtomicReference<UUID> newIdFromEvent = new AtomicReference<>(null);
+
+        AtomicBoolean evtFired = new AtomicBoolean(false);
+
+        ig.events().localListen((evt) ->
+            {
+                evtFired.set(true);
+
+                ClusterIdUpdatedEvent tagUpdatedEvt = (ClusterIdUpdatedEvent)evt;
+
+                previousIdFromEvent.set(tagUpdatedEvt.previousId());
+                newIdFromEvent.set(tagUpdatedEvt.newId());
+
+                return true;
+            },
+            EventType.EVT_CLUSTER_ID_UPDATED);
+
+        ig.cluster().id(CUSTOM_ID_0);
+
+        assertTrue(GridTestUtils.waitForCondition(evtFired::get, 10_000));
+
+        assertEquals(generatedId, previousIdFromEvent.get());
+        assertEquals(CUSTOM_ID_0, newIdFromEvent.get());
+    }
+
+    /**
      * Verifies that event about cluster tag update is fired on remote nodes as well.
      *
      * @throws Exception If failed.
@@ -535,5 +632,50 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         assertEquals(clusterId, clusterIdFromEvent.get());
         assertEquals(generatedTag, oldTagFromEvent.get());
         assertEquals(CUSTOM_TAG_0, newTagFromEvent.get());
+    }
+
+    /**
+     * Verifies that event about cluster ID update is fired on remote nodes as well.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIdChangedEventMultinodeWithRemoteFilter() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        IgniteEx ig1 = startGrid(1);
+
+        UUID generatedId = ig0.cluster().id();
+
+        AtomicReference<UUID> eventNodeId = new AtomicReference<>(null);
+
+        AtomicReference<UUID> previousIdFromEvent = new AtomicReference<>(null);
+        AtomicReference<UUID> newIdFromEvent = new AtomicReference<>(null);
+
+        AtomicBoolean evtFired = new AtomicBoolean(false);
+
+        ig0.events(ig0.cluster().forRemotes()).remoteListen(
+            (IgniteBiPredicate<UUID, Event>)(uuid, event) -> {
+                eventNodeId.set(uuid);
+
+                evtFired.set(true);
+
+                ClusterIdUpdatedEvent tagUpdatedEvt = (ClusterIdUpdatedEvent)event;
+
+                previousIdFromEvent.set(tagUpdatedEvt.previousId());
+                newIdFromEvent.set(tagUpdatedEvt.newId());
+
+                return true;
+            },
+            (IgnitePredicate<Event>)event -> event.type() == EventType.EVT_CLUSTER_ID_UPDATED);
+
+        ig0.cluster().id(CUSTOM_ID_0);
+
+        assertTrue(GridTestUtils.waitForCondition(evtFired::get, 10_000));
+
+        assertEquals(ig1.localNode().id(), eventNodeId.get());
+
+        assertEquals(generatedId, previousIdFromEvent.get());
+        assertEquals(CUSTOM_ID_0, newIdFromEvent.get());
     }
 }

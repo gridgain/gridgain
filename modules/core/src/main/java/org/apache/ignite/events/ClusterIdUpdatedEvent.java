@@ -28,21 +28,21 @@ public class ClusterIdUpdatedEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** New ID. */
-    private final UUID oldId;
+    /** Previous ID. */
+    private final UUID previousId;
 
-    /** Old ID. */
+    /** New ID. */
     private final UUID newId;
 
     /**
      * @param node Node on which the event was fired.
      * @param msg Optional event message.
-     * @param oldId Previous cluster ID replaced during update.
+     * @param previousId Previous cluster ID replaced during update.
      * @param newId New cluster ID.
      */
-    public ClusterIdUpdatedEvent(ClusterNode node, String msg, UUID oldId, UUID newId) {
+    public ClusterIdUpdatedEvent(ClusterNode node, String msg, UUID previousId, UUID newId) {
         super(node, msg, EventType.EVT_CLUSTER_ID_UPDATED);
-        this.oldId = oldId;
+        this.previousId = previousId;
         this.newId = newId;
     }
 
@@ -51,8 +51,8 @@ public class ClusterIdUpdatedEvent extends EventAdapter {
      *
      * @return Previous value of ID.
      */
-    public UUID oldId() {
-        return oldId;
+    public UUID previousId() {
+        return previousId;
     }
 
     /**
