@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.ClusterIdUpdatedEvent;
 import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
@@ -207,8 +208,29 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
                     clusterIdAndTagProperty.addListener(makeUpdateListener(logMsgFmt, log));
                     clusterIdAndTagProperty.addListener((name, oldVal, newVal) -> {
-                        if (oldVal != null && newVal != null && !Objects.equals(oldVal.tag(), newVal.tag())) {
-                            if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                        // User-requested updates always have both old and new val set.
+                        if (oldVal != null && newVal != null) {
+                            // Record ID update event.
+                            if (!Objects.equals(oldVal.id(), newVal.id())
+                                && ctx.event().isRecordable(EVT_CLUSTER_ID_UPDATED)) {
+                                String msg = "ID has been updated to new value: " +
+                                    newVal.id() +
+                                    ", previous value was " +
+                                    oldVal.id();
+
+                                ctx.closure().runLocalSafe(() -> ctx.event().record(
+                                    new ClusterIdUpdatedEvent(
+                                        ctx.discovery().localNode(),
+                                        msg,
+                                        oldVal.id(),
+                                        newVal.id()
+                                    )
+                                ));
+                            }
+
+                            // Record tag update event.
+                            if (!Objects.equals(oldVal.tag(), newVal.tag())
+                                && ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
                                 String msg = "Tag has been updated to new value: " +
                                     newVal.tag() +
                                     ", previous value was " +
