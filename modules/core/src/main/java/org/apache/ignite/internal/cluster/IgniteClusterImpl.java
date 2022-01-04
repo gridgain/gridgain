@@ -596,12 +596,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void id(UUID id) throws IgniteCheckedException {
+    @Override public void id(UUID id) {
         if (!clusterIdAndTagSupport)
             return;
 
-        if (id == null)
-            throw new IgniteCheckedException("ID cannot be null.");
+        Objects.requireNonNull(id, "ID cannot be null.");
 
         ctx.cluster().updateId(id);
     }
@@ -619,22 +618,21 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void tag(String tag) throws IgniteCheckedException {
+    @Override public void tag(String tag) {
         if (!clusterIdAndTagSupport)
             return;
 
-        if (tag == null)
-            throw new IgniteCheckedException("Tag cannot be null.");
+        Objects.requireNonNull(tag, "Tag cannot be null.");
 
         if (tag.isEmpty())
-            throw new IgniteCheckedException("Tag should not be empty.");
+            throw new IllegalArgumentException("Tag should not be empty.");
 
         if (tag.length() > MAX_TAG_LENGTH)
-            throw new IgniteCheckedException("Maximum tag length is exceeded, max length is " +
+            throw new IllegalArgumentException("Maximum tag length is exceeded, max length is " +
                 MAX_TAG_LENGTH +
                 " symbols, provided value has " +
                 tag.length() +
-                " symbols.");
+                " symbols. Provided tag: " + tag);
 
         ctx.cluster().updateTag(tag);
     }

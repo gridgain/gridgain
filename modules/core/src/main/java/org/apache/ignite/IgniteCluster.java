@@ -571,9 +571,11 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *
      * @param id New cluster ID to be set.
      *
+     * @throws NullPointerException If provided id is null.
+     *
      * @see #id()
      */
-    public void id(UUID id) throws IgniteCheckedException;
+    public void id(UUID id);
 
     /**
      * User-defined tag describing the cluster.
@@ -592,11 +594,10 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *
      * @param tag New tag to be set.
      *
-     * @throws IgniteCheckedException In case tag change is requested on inactive cluster
-     *  or concurrent tag change request was completed before the current one.
-     *  Also provided tag is checked for max length.
+     * @throws NullPointerException If provided tag is null.
+     * @throws IllegalArgumentException If provided tag is empty, or if it's longer than {@link #MAX_TAG_LENGTH}.
      */
-    public void tag(String tag) throws IgniteCheckedException;
+    public void tag(String tag);
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.

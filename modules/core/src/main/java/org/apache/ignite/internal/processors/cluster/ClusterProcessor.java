@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cluster;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -274,12 +275,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      *
      * @param newId New ID.
      */
-    public void updateId(UUID newId) throws IgniteCheckedException {
+    public void updateId(UUID newId) {
         if (compatibilityMode)
-            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
         ClusterIdAndTag old = clusterIdAndTagProperty.get();
-        clusterIdAndTagProperty.propagate(new ClusterIdAndTag(newId, old.tag()));
+        try {
+            clusterIdAndTagProperty.propagate(new ClusterIdAndTag(newId, old.tag()));
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException("Unexpectedly failed to update cluster ID and tag", e);
+        }
     }
 
     /**
@@ -298,12 +303,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      *
      * @param newTag New tag.
      */
-    public void updateTag(String newTag) throws IgniteCheckedException {
+    public void updateTag(String newTag) {
         if (compatibilityMode)
-            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
         ClusterIdAndTag old = clusterIdAndTagProperty.get();
-        clusterIdAndTagProperty.propagate(new ClusterIdAndTag(old.id(), newTag));
+        try {
+            clusterIdAndTagProperty.propagate(new ClusterIdAndTag(old.id(), newTag));
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException("Unexpectedly failed to update cluster ID and tag", e);
+        }
     }
 
     /**

@@ -29,6 +29,6 @@ public class NotWritablePropertyException extends IgniteCheckedException {
      * @param name Name of detached property.
      */
     public NotWritablePropertyException(String name) {
-        super("Property '" + name + "' is not ready for cluster wide update, perhaps cluster is not active yet.");
+        super("Property '" + name + "' is not ready for cluster wide update.");
     }
 }

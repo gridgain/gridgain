@@ -369,7 +369,7 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void id(UUID id) throws IgniteCheckedException {
+    @Override public void id(UUID id) {
         cluster.id(id);
     }
 
@@ -379,7 +379,7 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void tag(String tag) throws IgniteCheckedException {
+    @Override public void tag(String tag) {
         cluster.tag(tag);
     }
 

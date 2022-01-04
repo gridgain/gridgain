@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.visor.id_and_tag;
 
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -69,21 +68,11 @@ public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChan
         private VisorClusterChangeTagTaskResult update(String newTag) {
             IgniteClusterEx cl = ignite.cluster();
 
-            boolean success = false;
-            String errMsg = null;
-
             String oldTag = cl.tag();
 
-            try {
-                cl.tag(newTag);
+            cl.tag(newTag);
 
-                success = true;
-            }
-            catch (IgniteCheckedException e) {
-                errMsg = e.getMessage();
-            }
-
-            return new VisorClusterChangeTagTaskResult(oldTag, Boolean.valueOf(success), errMsg);
+            return new VisorClusterChangeTagTaskResult(oldTag, true, null);
         }
     }
 }
