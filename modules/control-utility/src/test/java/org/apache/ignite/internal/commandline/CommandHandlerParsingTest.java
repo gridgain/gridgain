@@ -53,6 +53,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_ID;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
@@ -379,6 +380,8 @@ public class CommandHandlerParsingTest {
 
             if (cmdL == CLUSTER_CHANGE_TAG)
                 args = parseArgs(asList(cmdL.text(), "test_tag"));
+            else if (cmdL == CLUSTER_CHANGE_ID)
+                args = parseArgs(asList(cmdL.text(), "11111111-1111-1111-1111-111111111111"));
             else if (cmdL == SET_STATE)
                 args = parseArgs(asList(cmdL.text(), "ACTIVE"));
             else if (cmdL == ROLLING_UPGRADE)
@@ -444,6 +447,16 @@ public class CommandHandlerParsingTest {
                     assertEquals("xid1", txTaskArg.getXid());
                     assertEquals(10_000, txTaskArg.getMinDuration().longValue());
                     assertEquals(VisorTxOperation.KILL, txTaskArg.getOperation());
+
+                    break;
+                }
+
+                case CLUSTER_CHANGE_ID: {
+                    args = parseArgs(asList(cmdL.text(), "11111111-1111-1111-1111-111111111111", "--yes"));
+
+                    checkCommonParametersCorrectlyParsed(cmdL, args, true);
+
+                    assertEquals(UUID.fromString("11111111-1111-1111-1111-111111111111"), ((ClusterChangeIdCommand)args.command()).arg());
 
                     break;
                 }
@@ -1112,6 +1125,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WAL ||
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
+            cmd == CommandList.CLUSTER_CHANGE_ID ||
             cmd == CommandList.DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
             cmd == CommandList.ENCRYPTION ||

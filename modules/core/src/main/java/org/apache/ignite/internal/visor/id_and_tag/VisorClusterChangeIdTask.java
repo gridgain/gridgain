@@ -24,26 +24,27 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  *
  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> {
+public class VisorClusterChangeIdTask extends VisorOneNodeTask<VisorClusterChangeIdTaskArg, VisorClusterChangeIdTaskResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> job(
-        VisorClusterChangeTagTaskArg arg) {
-        return new VisorClusterChangeTagJob(arg, debug);
+    @Override protected VisorJob<VisorClusterChangeIdTaskArg, VisorClusterChangeIdTaskResult> job(
+        VisorClusterChangeIdTaskArg arg) {
+        return new VisorClusterChangeIdJob(arg, debug);
     }
 
     /**
      * 
      */
-    private static class VisorClusterChangeTagJob extends VisorJob<VisorClusterChangeTagTaskArg, VisorClusterChangeTagTaskResult> {
+    private static class VisorClusterChangeIdJob extends VisorJob<VisorClusterChangeIdTaskArg, VisorClusterChangeIdTaskResult> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -53,29 +54,28 @@ public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChan
          * @param arg Job argument.
          * @param debug Flag indicating whether debug information should be printed into node log.
          */
-        VisorClusterChangeTagJob(
-            @Nullable VisorClusterChangeTagTaskArg arg, boolean debug) {
+        VisorClusterChangeIdJob(@Nullable VisorClusterChangeIdTaskArg arg, boolean debug) {
             super(arg, debug);
         }
 
         /** {@inheritDoc} */
-        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorClusterChangeTagTaskArg arg) {
+        @Override protected VisorClusterChangeIdTaskResult run(@Nullable VisorClusterChangeIdTaskArg arg) {
             Objects.requireNonNull(arg);
 
-            return update(arg.newTag());
+            return update(arg.newId());
         }
 
         /**
-         * @param newTag New tag.
+         * @param newId New ID.
          */
-        private VisorClusterChangeTagTaskResult update(String newTag) {
+        private VisorClusterChangeIdTaskResult update(UUID newId) {
             IgniteClusterEx cl = ignite.cluster();
 
-            String oldTag = cl.tag();
+            UUID oldId = cl.id();
 
-            cl.tag(newTag);
+            cl.id(newId);
 
-            return new VisorClusterChangeTagTaskResult(oldTag, true, null);
+            return new VisorClusterChangeIdTaskResult(oldId);
         }
     }
 }
