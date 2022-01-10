@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,62 +13,82 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.persistence.ReadWriteMetaStorageMock;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.collection.IntMap;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.stream.Collectors;
 
 /**
  * Test for statistics repository.
  */
+@RunWith(Parameterized.class)
 public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
     /** First default key. */
-    private static final StatisticsKey K1 = new StatisticsKey(SCHEMA, "tab1");
+    protected static final StatisticsKey K1 = new StatisticsKey(SCHEMA, "tab1");
 
     /** Second default key. */
-    private static final StatisticsKey K2 = new StatisticsKey(SCHEMA, "tab2");
+    protected static final StatisticsKey K2 = new StatisticsKey(SCHEMA, "tab2");
 
     /** Column statistics with 100 nulls. */
-    ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
-        0, new byte[0]);
+    protected ColumnStatistics cs1 = new ColumnStatistics(null, null, 100, 0, 100,
+        0, new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 100 integers 0-100. */
-    ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
-        4, new byte[0]);
+    protected ColumnStatistics cs2 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(100), 0, 100, 100,
+        4, new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 0 rows. */
-    ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0, new byte[0]);
+    protected ColumnStatistics cs3 = new ColumnStatistics(null, null, 0, 0, 0, 0,
+        new byte[0], 0, U.currentTimeMillis());
 
     /** Column statistics with 100 integers 0-10. */
-    ColumnStatistics cs4 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(10), 0, 10, 100,
-            4, new byte[0]);
+    protected ColumnStatistics cs4 = new ColumnStatistics(ValueInt.get(0), ValueInt.get(10), 0, 10, 100,
+        4, new byte[0], 0, U.currentTimeMillis());
 
-    /**
-     * Test ignite statistics repository on server node without persistence.
+    /** Persistence enabled flag. */
+    @Parameterized.Parameter(value = 0)
+    public boolean persist;
+
+    /** Repository to test. */
+    @Parameterized.Parameter(value = 1)
+    public IgniteStatisticsRepository repo;
+
+    /** Parameters: boolean, store.
+     * boolean - is persistence store;
+     * store - store instance.
      */
-    @Test
-    public void testServerWithoutPersistence() {
-        IgniteStatisticsStore store = new IgniteStatisticsInMemoryStoreImpl(cls -> log);
-        IgniteStatisticsRepository statsRepos = new IgniteStatisticsRepository(store, null, cls -> log);
+    @Parameterized.Parameters(name = "persist={0}")
+    public static List<Object[]> parameters() throws IgniteCheckedException {
+        ArrayList<Object[]> params = new ArrayList<>();
 
-        testRepositoryPartitions(statsRepos);
-    }
+        // Without persistence
+        IgniteStatisticsStore storeInMemory = new IgniteStatisticsInMemoryStoreImpl(
+            IgniteStatisticsRepositoryTest::getLogger);
+        GridSystemViewManager sysViewMgr = Mockito.mock(GridSystemViewManager.class);
+        IgniteStatisticsRepository inMemRepo = new IgniteStatisticsRepository(storeInMemory, sysViewMgr, null,
+            IgniteStatisticsRepositoryTest::getLogger);
+        params.add(new Object[] {false, inMemRepo});
 
-    /**
-     * Test ignite statistics repository on server node with persistence.
-     */
-    @Test
-    public void testServerWithPersistence() throws IgniteCheckedException {
+        // With persistence
         MetastorageLifecycleListener lsnr[] = new MetastorageLifecycleListener[1];
 
         GridInternalSubscriptionProcessor subscriptionProcessor = Mockito.mock(GridInternalSubscriptionProcessor.class);
@@ -77,14 +97,28 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
         IgniteCacheDatabaseSharedManager db = Mockito.mock(IgniteCacheDatabaseSharedManager.class);
 
         IgniteStatisticsRepository statsRepos[] = new IgniteStatisticsRepository[1];
-        IgniteStatisticsStore store = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db, cls -> log);
+        IgniteStatisticsStore storePersistent = new IgniteStatisticsPersistenceStoreImpl(subscriptionProcessor, db,
+            IgniteStatisticsRepositoryTest::getLogger);
         IgniteStatisticsHelper helper = Mockito.mock(IgniteStatisticsHelper.class);
-        statsRepos[0] = new IgniteStatisticsRepository(store, helper, cls -> log);
+        statsRepos[0] = new IgniteStatisticsRepository(storePersistent, sysViewMgr, helper,
+            IgniteStatisticsRepositoryTest::getLogger);
 
         ReadWriteMetaStorageMock metastorage = new ReadWriteMetaStorageMock();
         lsnr[0].onReadyForReadWrite(metastorage);
 
-        testRepositoryPartitions(statsRepos[0]);
+        params.add(new Object[]{true, statsRepos[0]});
+
+        return params;
+    }
+
+    /**
+     * Logger builder.
+     *
+     * @param cls Class to build logger by.
+     * @return Ignite logger.
+     */
+    private static IgniteLogger getLogger(Class cls) {
+        return new GridTestLog4jLogger();
     }
 
     /**
@@ -95,24 +129,21 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
      * 3) Put local partition statistics.
      * 4) Read and check partition statistics one by one.
      * 5) Read all partition statistics by object and check its size.
-     * 6) Save few partition statistics at once.
-     * 7) Real all partition statistics by object and check its size.
-     *
-     * @param repo Ignite statistics repository to test.
      */
-    public void testRepositoryPartitions(IgniteStatisticsRepository repo) {
+    @Test
+    public void testRepositoryPartitions() {
         ObjectPartitionStatisticsImpl stat1 = getPartitionStatistics(1);
         ObjectPartitionStatisticsImpl stat10 = getPartitionStatistics(10);
-        ObjectPartitionStatisticsImpl stat100 = getPartitionStatistics(100);
 
         ObjectPartitionStatisticsImpl stat1_2 = getPartitionStatistics(1);
 
         assertTrue(repo.getLocalPartitionsStatistics(K1).isEmpty());
         assertTrue(repo.getLocalPartitionsStatistics(K2).isEmpty());
 
-        repo.saveLocalPartitionStatistics(K1, stat1);
-        repo.saveLocalPartitionStatistics(K1, stat10);
-        repo.saveLocalPartitionStatistics(K2, stat1_2);
+        IgniteStatisticsStore store = repo.statisticsStore();
+        store.saveLocalPartitionStatistics(K1, stat1);
+        store.saveLocalPartitionStatistics(K1, stat10);
+        store.saveLocalPartitionStatistics(K2, stat1_2);
 
         ObjectPartitionStatisticsImpl stat1Readed = repo.getLocalPartitionStatistics(K1, 1);
         assertNotNull(stat1Readed);
@@ -126,88 +157,115 @@ public class IgniteStatisticsRepositoryTest extends StatisticsAbstractTest {
 
         assertEquals(2, repo.getLocalPartitionsStatistics(K1).size());
         assertEquals(1, repo.getLocalPartitionsStatistics(K2).size());
-
-        repo.saveLocalPartitionsStatistics(K1, Arrays.asList(stat10, stat100));
-
-        assertEquals(2, repo.getLocalPartitionsStatistics(K1).size());
     }
 
     /**
-     * Test object statistics add:
+     * Save few object partition statistics, delete some of them and check the results.
+     */
+    @Test
+    public void testClearLocalPartitionIdsStatistics() {
+        ObjectPartitionStatisticsImpl stat1 = getPartitionStatistics(1);
+        ObjectPartitionStatisticsImpl stat10 = getPartitionStatistics(10);
+        ObjectPartitionStatisticsImpl stat100 = getPartitionStatistics(100);
+
+        IgniteStatisticsStore store = repo.statisticsStore();
+        store.saveLocalPartitionStatistics(K1, stat1);
+        store.saveLocalPartitionStatistics(K1, stat10);
+        store.saveLocalPartitionStatistics(K1, stat100);
+
+        assertNotNull(repo.getLocalPartitionStatistics(K1, 10));
+
+        repo.clearLocalPartitionsStatistics(K1, setOf(1, 2, 10));
+
+        assertNull(repo.getLocalPartitionStatistics(K1, 10));
+        assertNotNull(repo.getLocalPartitionStatistics(K1, 100));
+    }
+
+    /**
+     * Test local statistics processing:
      *
-     * 1) Add statistics with partially the same columns.
-     * 2) Add statistics with new columns.
-     * 3) Add statistics with the same columns.
+     * 1) Save two local statistics.
+     * 2) Check it.
+     * 3) Remove all partitions statistics by first key.
+     * 4) Check it and endure the second one are still presented in repo.
      */
     @Test
-    public void addTest() {
-        // 1) Add statistics with partially the same columns.
-        HashMap<String, ColumnStatistics> colStat1 = new HashMap<>();
-        colStat1.put("col1", cs1);
-        colStat1.put("col2", cs2);
+    public void testLocalStatistics() {
+        ObjectStatisticsImpl stat1 = getStatistics();
+        ObjectStatisticsImpl stat2 = getStatistics();
 
-        HashMap<String, ColumnStatistics> colStat2 = new HashMap<>();
-        colStat2.put("col2", cs3);
-        colStat2.put("col3", cs4);
+        repo.saveLocalStatistics(K1, stat1);
+        repo.saveLocalStatistics(K2, stat2);
 
-        ObjectStatisticsImpl os1 = new ObjectStatisticsImpl(100, colStat1);
-        ObjectStatisticsImpl os2 = new ObjectStatisticsImpl(101, colStat2);
+        assertEquals(stat1, repo.getLocalStatistics(K1));
+        assertEquals(stat1, repo.getLocalStatistics(K2));
 
-        ObjectStatisticsImpl sumStat1 = IgniteStatisticsRepository.add(os1, os2);
+        repo.clearLocalPartitionsStatistics(K1, null);
 
-        assertEquals(101, sumStat1.rowCount());
-        assertEquals(3, sumStat1.columnsStatistics().size());
-        assertEquals(cs3, sumStat1.columnStatistics("col2"));
-
-        // 2) Add statistics with new columns.
-        ObjectStatisticsImpl os3 = new ObjectStatisticsImpl(101, Collections.singletonMap("col3", cs3));
-
-        ObjectStatisticsImpl sumStat2 = IgniteStatisticsRepository.add(os1, os3);
-
-        assertEquals(3, sumStat2.columnsStatistics().size());
-
-        // 3) Add statistics with the same columns.
-        HashMap<String, ColumnStatistics> colStat3 = new HashMap<>();
-        colStat3.put("col1", cs3);
-        colStat3.put("col2", cs4);
-
-        ObjectStatisticsImpl os4 = new ObjectStatisticsImpl(99, colStat3);
-
-        ObjectStatisticsImpl sumStat3 = IgniteStatisticsRepository.add(os1, os4);
-
-        assertEquals(99, sumStat3.rowCount());
-        assertEquals(2, sumStat3.columnsStatistics().size());
-        assertEquals(cs3, sumStat3.columnStatistics("col1"));
+        assertNull(repo.getLocalStatistics(K1));
+        assertEquals(stat2, repo.getLocalStatistics(K2));
     }
 
     /**
-     * 1) Remove not existing column.
-     * 2) Remove some columns.
-     * 3) Remove all columns.
+     * Test refresh for partition obsolescence info:
+     *
+     * 1) Try to refresh partition obsolescence info.
+     * 2) Get it as key.
+     * 3) Check there is data in store.
+     * 4) Mark info as durty
+     * 5) Save obsolescence by right key.
+     * 6) Check there is obsolescence info in store.
+     * 7) Check there is clean object in repo.
      */
     @Test
-    public void subtractTest() {
-        HashMap<String, ColumnStatistics> colStat1 = new HashMap<>();
-        colStat1.put("col1", cs1);
-        colStat1.put("col2", cs2);
+    public void testRefreshObsolescence() {
+        IgniteStatisticsStore store = repo.statisticsStore();
 
-        ObjectStatisticsImpl os = new ObjectStatisticsImpl(100, colStat1);
+        repo.stop();
+        store.clearAllStatistics();
+        repo.start();
 
-        // 1) Remove not existing column.
-        ObjectStatisticsImpl os1 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col0"));
+        // 1) Try to refresh partition obsolescence info.
+        repo.refreshObsolescence(K1, 1);
 
-        assertEquals(os, os1);
+        // 2) Get it as key.
+        List<StatisticsKey> keys = repo.getObsolescenceKeys();
 
-        // 2) Remove some columns.
-        ObjectStatisticsImpl os2 = IgniteStatisticsRepository.subtract(os, Collections.singleton("col1"));
+        assertEquals(1, keys.size());
 
-        assertEquals(1, os2.columnsStatistics().size());
-        assertEquals(cs2, os2.columnStatistics("col2"));
+        // 3) Check there is data in store.
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> allObs = store.loadAllObsolescence();
 
-        // 3) Remove all columns.
-        ObjectStatisticsImpl os3 = IgniteStatisticsRepository.subtract(os,
-            Arrays.stream(new String[] {"col2", "col1"}).collect(Collectors.toSet()));
+        assertNotNull(allObs.get(K1));
 
-        assertTrue(os3.columnsStatistics().isEmpty());
+        // 4) Mark info as durty.
+        repo.getObsolescence(K1, 1).onModified(new byte[]{1, 2, 3});
+
+        // 5) Save obsolescence by right key.
+        repo.saveObsolescenceInfo(K1);
+
+        // 6) Check there is obsolescence info in store.
+        allObs = store.loadAllObsolescence();
+
+        assertEquals(1L, allObs.get(K1).get(1).modified());
+
+        // 7) Check there is clean object in repo.
+        assertFalse(repo.getObsolescence(K1, 1).dirty());
+    }
+
+    /**
+     * Save obsolescence info and check it saved into the store.
+     */
+    @Test
+    public void testSaveObsolescenceInfo() {
+        IgniteStatisticsStore store = repo.statisticsStore();
+
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> statObs = GridTestUtils
+            .getFieldValue(repo, "statObs");
+
+        repo.refreshObsolescence(K1, 2);
+        repo.saveObsolescenceInfo(K1);
+
+        assertNotNull(statObs.get(K1).get(2));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +13,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.query.stat;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnLocalDataViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.StatisticsColumnPartitionDataViewWalker;
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
-import org.apache.ignite.internal.processors.query.stat.messages.StatisticsKeyMessage;
+import org.apache.ignite.internal.processors.query.stat.view.ColumnLocalDataViewSupplier;
+import org.apache.ignite.internal.processors.query.stat.view.ColumnPartitionDataViewSupplier;
+import org.apache.ignite.internal.util.collection.IntHashMap;
+import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
- * Statistics repository implementation.
+ * Statistics repository implementation. Store all statistics data (except configuration) and offer high level
+ * operations to transform it.
  */
 public class IgniteStatisticsRepository {
+    /** Statistics partition data view name. */
+    public static final String STAT_PART_DATA_VIEW = "statisticsPartitionData";
+
+    /** Statistics partition data view description. */
+    public static final String STAT_PART_DATA_VIEW_DESC = "Statistics per partition data.";
+
+    /** Statistics local data view name. */
+    public static final String STAT_LOCAL_DATA_VIEW = "statisticsLocalData";
+
+    /** Statistics local data view description. */
+    public static final String STAT_LOCAL_DATA_VIEW_DESC = "Statistics local node data.";
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -39,27 +59,45 @@ public class IgniteStatisticsRepository {
     private final IgniteStatisticsStore store;
 
     /** Local (for current node) object statistics. */
-    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats;
+    private final Map<StatisticsKey, ObjectStatisticsImpl> locStats = new ConcurrentHashMap<>();
 
-    /** Statistics gathering. */
+    /** Obsolescence for each partition. */
+    private final Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> statObs = new ConcurrentHashMap<>();
+
+    /** Statistics helper (msg converter). */
     private final IgniteStatisticsHelper helper;
 
     /**
      * Constructor.
      *
      * @param store Ignite statistics store to use.
+     * @param sysViewMgr Grid system view manager.
      * @param helper IgniteStatisticsHelper.
      * @param logSupplier Ignite logger supplier to get logger from.
      */
     public IgniteStatisticsRepository(
-            IgniteStatisticsStore store,
-            IgniteStatisticsHelper helper,
-            Function<Class<?>, IgniteLogger> logSupplier
+        IgniteStatisticsStore store,
+        GridSystemViewManager sysViewMgr,
+        IgniteStatisticsHelper helper,
+        Function<Class<?>, IgniteLogger> logSupplier
     ) {
         this.store = store;
-        this.locStats = new ConcurrentHashMap<>();
         this.helper = helper;
-        this.log = logSupplier.apply(IgniteStatisticsRepository.class);
+        log = logSupplier.apply(IgniteStatisticsRepository.class);
+
+        ColumnPartitionDataViewSupplier colPartDataViewSupplier = new ColumnPartitionDataViewSupplier(store);
+
+        sysViewMgr.registerFiltrableView(STAT_PART_DATA_VIEW, STAT_PART_DATA_VIEW_DESC,
+            new StatisticsColumnPartitionDataViewWalker(),
+            colPartDataViewSupplier::columnPartitionStatisticsViewSupplier,
+            Function.identity());
+
+        ColumnLocalDataViewSupplier colLocDataViewSupplier = new ColumnLocalDataViewSupplier(this);
+
+        sysViewMgr.registerFiltrableView(STAT_LOCAL_DATA_VIEW, STAT_LOCAL_DATA_VIEW_DESC,
+            new StatisticsColumnLocalDataViewWalker(),
+            colLocDataViewSupplier::columnLocalStatisticsViewSupplier,
+            Function.identity());
     }
 
     /**
@@ -73,64 +111,41 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Clear partition statistics for specified object.
+     * Get partition obsolescence info.
      *
-     * @param key Object to clear statistics by.
-     * @param colNames if specified - only statistics by specified columns will be cleared.
+     * @param key Statistics key.
+     * @param partId Parititon id.
+     * @return Partition obsolescence info or {@code null} if it doesn't exist.
      */
-    public void clearLocalPartitionsStatistics(StatisticsKey key, Set<String> colNames) {
-        if (F.isEmpty(colNames)) {
-            store.clearLocalPartitionsStatistics(key);
+    public ObjectPartitionStatisticsObsolescence getObsolescence(StatisticsKey key, int partId) {
+        IntMap<ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
 
-            return;
-        }
+        if (objObs == null)
+            return null;
 
-        Collection<ObjectPartitionStatisticsImpl> oldStatistics = store.getLocalPartitionsStatistics(key);
-
-        if (oldStatistics.isEmpty())
-            return;
-
-        Collection<ObjectPartitionStatisticsImpl> newStatistics = new ArrayList<>(oldStatistics.size());
-        Collection<Integer> partitionsToRmv = new ArrayList<>();
-
-        for (ObjectPartitionStatisticsImpl oldStat : oldStatistics) {
-            ObjectPartitionStatisticsImpl newStat = subtract(oldStat, colNames);
-
-            if (!newStat.columnsStatistics().isEmpty())
-                newStatistics.add(newStat);
-            else
-                partitionsToRmv.add(oldStat.partId());
-        }
-
-        if (newStatistics.isEmpty()) {
-            store.clearLocalPartitionsStatistics(key);
-
-            return;
-        }
-
-        if (!partitionsToRmv.isEmpty())
-            store.clearLocalPartitionsStatistics(key, partitionsToRmv);
-
-        store.replaceLocalPartitionsStatistics(key, newStatistics);
+        return objObs.get(partId);
     }
 
     /**
-     * Save specified local partition statistics.
+     * Refresh statistics obsolescence and save clear object to store, after partition gathering.
      *
-     * @param key Object key.
-     * @param statistics Statistics to save.
+     * @param key Statistics key.
+     * @param partId Partition id.
      */
-    public void saveLocalPartitionStatistics(
-        StatisticsKey key,
-        ObjectPartitionStatisticsImpl statistics
-    ) {
-        ObjectPartitionStatisticsImpl oldPartStat = store.getLocalPartitionStatistics(key, statistics.partId());
-        if (oldPartStat == null)
-            store.saveLocalPartitionStatistics(key, statistics);
-        else {
-            ObjectPartitionStatisticsImpl combinedStats = add(oldPartStat, statistics);
-            store.saveLocalPartitionStatistics(key, combinedStats);
-        }
+    public void refreshObsolescence(StatisticsKey key, int partId) {
+        ObjectPartitionStatisticsObsolescence newObs = new ObjectPartitionStatisticsObsolescence();
+        newObs.dirty(false);
+
+        statObs.compute(key, (k, v) -> {
+            if (v == null)
+                v = new IntHashMap<>();
+
+            v.put(partId, newObs);
+
+            return v;
+        });
+
+        store.saveObsolescenceInfo(key, partId, newObs);
     }
 
     /**
@@ -147,19 +162,6 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Replace all object statistics with specified ones.
-     *
-     * @param key Object key.
-     * @param statistics Collection of tables partition statistics.
-     */
-    public void saveLocalPartitionsStatistics(
-        StatisticsKey key,
-        Collection<ObjectPartitionStatisticsImpl> statistics
-    ) {
-        store.replaceLocalPartitionsStatistics(key, statistics);
-    }
-
-    /**
      * Get partition statistics.
      *
      * @param key Object key.
@@ -168,16 +170,6 @@ public class IgniteStatisticsRepository {
      */
     public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         return store.getLocalPartitionStatistics(key, partId);
-    }
-
-    /**
-     * Clear partition statistics.
-     *
-     * @param key Object key.
-     * @param partId Partition id.
-     */
-    public void clearLocalPartitionStatistics(StatisticsKey key, int partId) {
-        store.clearLocalPartitionStatistics(key, partId);
     }
 
     /**
@@ -191,6 +183,32 @@ public class IgniteStatisticsRepository {
     }
 
     /**
+     * Clear specified partition ids statistics.
+     *
+     * @param key Key to remove statistics by.
+     * @param partsToRemove Set of parititon ids to remove.
+     */
+    public void clearLocalPartitionsStatistics(StatisticsKey key, Set<Integer> partsToRemove) {
+        if (F.isEmpty(partsToRemove)) {
+            store.clearLocalPartitionsStatistics(key);
+            store.clearObsolescenceInfo(key, null);
+            locStats.remove(key);
+            statObs.remove(key);
+        }
+        else {
+            store.clearLocalPartitionsStatistics(key, partsToRemove);
+            store.clearObsolescenceInfo(key, partsToRemove);
+
+            statObs.computeIfPresent(key, (k, v) -> {
+                for (Integer partToRemove : partsToRemove)
+                    v.remove(partToRemove);
+
+                return (v.isEmpty()) ? null : v;
+            });
+        }
+    }
+
+    /**
      * Get local statistics.
      *
      * @param key Object key to load statistics by.
@@ -201,36 +219,12 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Clear local object statistics.
+     * Get all local statistics. Return internal map without copying.
      *
-     * @param key Object key to clear local statistics by.
+     * @return Local (for current node) object statistics.
      */
-    public void clearLocalStatistics(StatisticsKey key) {
-        locStats.remove(key);
-    }
-
-    /**
-     * Clear local object statistics.
-     *
-     * @param key Object key to clear local statistics by.
-     * @param colNames Only statistics by specified columns will be cleared.
-     */
-    public void clearLocalStatistics(StatisticsKey key, Set<String> colNames) {
-        if (log.isDebugEnabled()) {
-            log.debug("Clear local statistics [key=" + key +
-                ", columns=" + colNames + ']');
-        }
-
-        if (locStats == null) {
-            log.warning("Unable to clear local statistics for " + key + " on non server node.");
-
-            return;
-        }
-
-        locStats.computeIfPresent(key, (k, v) -> {
-            ObjectStatisticsImpl locStatNew = subtract(v, colNames);
-            return locStatNew.columnsStatistics().isEmpty() ? null : locStatNew;
-        });
+    public Map<StatisticsKey, ObjectStatisticsImpl> localStatisticsMap() {
+        return locStats;
     }
 
     /**
@@ -241,72 +235,25 @@ public class IgniteStatisticsRepository {
     }
 
     /**
-     * Add new statistics into base one (with overlapping of existing data).
-     *
-     * @param base Old statistics.
-     * @param add Updated statistics.
-     * @param <T> Statistics type (partition or object one).
-     * @return Combined statistics.
-     */
-    public static <T extends ObjectStatisticsImpl> T add(T base, T add) {
-        T res = (T)add.clone();
-        for (Map.Entry<String, ColumnStatistics> entry : base.columnsStatistics().entrySet())
-            res.columnsStatistics().putIfAbsent(entry.getKey(), entry.getValue());
-
-        return res;
-    }
-
-    /**
-     * Remove specified columns from clone of base ObjectStatistics object.
-     *
-     * @param base ObjectStatistics to remove columns from.
-     * @param cols Columns to remove.
-     * @return Cloned object without specified columns statistics.
-     */
-    public static <T extends ObjectStatisticsImpl> T subtract(T base, Set<String> cols) {
-        T res = (T)base.clone();
-
-        for (String col : cols)
-            res.columnsStatistics().remove(col);
-
-        return res;
-    }
-
-    /**
      * Scan local partitioned statistic and aggregate local statistic for specified statistic object.
-     * @param parts Partitions numbers to aggregate,
+     *
+     * @param stats Partitions statistics to aggregate.
      * @param cfg Statistic configuration to specify statistic object to aggregate.
      * @return aggregated local statistic.
      */
     public ObjectStatisticsImpl aggregatedLocalStatistics(
-        Set<Integer> parts,
+        Collection<ObjectPartitionStatisticsImpl> stats,
         StatisticsObjectConfiguration cfg
     ) {
         if (log.isDebugEnabled()) {
             log.debug("Refresh local aggregated statistic [cfg=" + cfg +
-                ", part=" + parts + ']');
+                ", part.size()=" + stats.size() + ']');
         }
 
-        Collection<ObjectPartitionStatisticsImpl> stats = store.getLocalPartitionsStatistics(cfg.key());
+        ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(cfg, stats);
 
-        Collection<ObjectPartitionStatisticsImpl> statsToAgg = stats.stream()
-            .filter(s -> parts.contains(s.partId()))
-            .collect(Collectors.toList());
-
-        assert statsToAgg.size() == parts.size() : "Cannot aggregate local statistics: not enough partitioned statistics";
-
-        StatisticsKeyMessage keyMsg = new StatisticsKeyMessage(
-            cfg.key().schema(),
-            cfg.key().obj(),
-            new ArrayList<>(cfg.columns().keySet())
-        );
-
-        ObjectStatisticsImpl locStat = helper.aggregateLocalStatistics(
-            keyMsg,
-            statsToAgg
-        );
-
-        saveLocalStatistics(cfg.key(), locStat);
+        if (locStat != null)
+            saveLocalStatistics(cfg.key(), locStat);
 
         return locStat;
     }
@@ -314,7 +261,7 @@ public class IgniteStatisticsRepository {
     /**
      * Stop repository.
      */
-    public void stop() {
+    public synchronized void stop() {
         locStats.clear();
 
         if (log.isDebugEnabled())
@@ -324,8 +271,52 @@ public class IgniteStatisticsRepository {
     /**
      * Start repository.
      */
-    public void start() {
+    public synchronized void start() {
         if (log.isDebugEnabled())
             log.debug("Statistics repository started.");
+    }
+
+    /**
+     * Get list of all obsolescence keys.
+     *
+     * @return List of all obsolescence keys.
+     */
+    public synchronized List<StatisticsKey> getObsolescenceKeys() {
+        return new ArrayList<>(statObs.keySet());
+    }
+
+    /**
+     * Get map partitionId to partition obsolescence by key.
+     *
+     * @param key Statistics key to get obsolescence info by.
+     * @return Obsolescence map.
+     */
+    public synchronized IntMap<ObjectPartitionStatisticsObsolescence> getObsolescence(StatisticsKey key) {
+        IntMap<ObjectPartitionStatisticsObsolescence> res = statObs.get(key);
+
+        if (res == null)
+            return new IntHashMap<>(0);
+        else
+            return new IntHashMap<>(res);
+    }
+
+    /**
+     * Save obsolescence info by specified key. Reset dirty flags.
+     *
+     * @param key Key to save obsolescence info by.
+     */
+    public void saveObsolescenceInfo(StatisticsKey key) {
+        IntMap<ObjectPartitionStatisticsObsolescence> objObs = statObs.get(key);
+
+        if (objObs == null)
+            return;
+
+        objObs.forEach((k, v) -> {
+            if (v.dirty()) {
+                store.saveObsolescenceInfo(key, k, v);
+
+                v.dirty(false);
+            }
+        });
     }
 }

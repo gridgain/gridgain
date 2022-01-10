@@ -44,6 +44,9 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Defines supported features and check its on other nodes.
+ *
+ * Note: for creating a new feature and assigning an ID, please update the
+ * <a href ="https://ggsystems.atlassian.net/wiki/spaces/GG/pages/1192198276/Community+edition+features+list">page</a>.
  */
 public enum IgniteFeatures {
     /**
@@ -197,6 +200,9 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
+    /** Transaction distributed configuration. */
+    TRANSACTION_DISTRIBUTED_PROPERTIES(52),
+
     /** Custom snapshot operations. */
     CUSTOM_SNAPSHOT_OPERATIONS(53),
 
@@ -217,7 +223,28 @@ public enum IgniteFeatures {
     DISTRIBUTED_ROLLING_UPGRADE_MODE_V2(58),
 
     /** Chains of snapshot operations. */
-    SNAPSHOT_OPERATIONS_CHAINING(59);
+    SNAPSHOT_OPERATIONS_CHAINING(59),
+
+    /** Previous snapshot SFTP upload had a race condition, so it must be disabled in mixed-cluster with older versions. */
+    SNAPSHOT_SFTP_UPLOAD_V2(60),
+
+    /**
+     * Snapshot operation can handle {@code -excluded_caches} parameter
+     * and cache groups in {@code --caches} and {@code --excluded_caches} parameters.
+     */
+    SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62),
+
+    /**
+     * The feature allows authenticating a node remotely.
+     * It is need when the one node which does not have an authentication required to authorize itself or another one.
+     */
+    REMOTE_AUTH(61),
+
+    /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
+    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
+    
+    /** Whether the absent PK parts should be filled with defaults or not. */
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
 
     /**
      * Unique feature identifier.

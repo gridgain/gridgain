@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(TestValues)
 
     CheckStrInfo(SQL_DRIVER_NAME, "Apache Ignite");
     CheckStrInfo(SQL_DBMS_NAME, "Apache Ignite");
-    CheckStrInfo(SQL_DRIVER_ODBC_VER, "03.00");
+    CheckStrInfo(SQL_DRIVER_ODBC_VER, "03.50");
     CheckStrInfo(SQL_DRIVER_VER, "02.04.0000");
     CheckStrInfo(SQL_DBMS_VER, "02.04.0000");
     CheckStrInfo(SQL_COLUMN_ALIAS, "Y");

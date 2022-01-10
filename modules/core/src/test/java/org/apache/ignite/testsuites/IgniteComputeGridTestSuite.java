@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.apache.ignite.internal.GridCancelOnGridStopSelfTest;
 import org.apache.ignite.internal.GridCancelUnusedJobSelfTest;
 import org.apache.ignite.internal.GridCancelledJobsMetricsSelfTest;
 import org.apache.ignite.internal.GridCollisionJobsContextSelfTest;
+import org.apache.ignite.internal.GridCollisionManagerLoggingSelfTest;
 import org.apache.ignite.internal.GridDeploymentMultiThreadedSelfTest;
 import org.apache.ignite.internal.GridDeploymentSelfTest;
 import org.apache.ignite.internal.GridEventStorageCheckAllEventsSelfTest;
@@ -76,6 +77,9 @@ import org.apache.ignite.internal.VisorManagementEventSelfTest;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointManagerSelfTest;
 import org.apache.ignite.internal.managers.checkpoint.GridCheckpointTaskSelfTest;
 import org.apache.ignite.internal.managers.communication.GridCommunicationManagerListenersSelfTest;
+import org.apache.ignite.internal.processors.compute.ComputeJobChangePriorityTest;
+import org.apache.ignite.internal.processors.compute.ComputeGridMonitorTest;
+import org.apache.ignite.internal.processors.compute.ComputeJobStatusTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorConfigurationSelfTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
@@ -166,6 +170,7 @@ import org.junit.runners.Suite;
     PublicThreadpoolStarvationTest.class,
     StripedExecutorTest.class,
     GridJobServicesAddNodeTest.class,
+    GridCollisionManagerLoggingSelfTest.class,
 
     IgniteComputeCustomExecutorConfigurationSelfTest.class,
     IgniteComputeCustomExecutorSelfTest.class,
@@ -173,7 +178,11 @@ import org.junit.runners.Suite;
     IgniteComputeJobOneThreadTest.class,
 
     VisorManagementEventSelfTest.class,
-    VisorCacheRebalanceCollectorTaskSelfTest.class
+    VisorCacheRebalanceCollectorTaskSelfTest.class,
+
+    ComputeGridMonitorTest.class,
+    ComputeJobChangePriorityTest.class,
+    ComputeJobStatusTest.class
 })
 public class IgniteComputeGridTestSuite {
     /** Activate service grid for test it. */

@@ -28,10 +28,17 @@ namespace Apache.Ignite.Core.Client
     /// </summary>
     public class SslStreamFactory : ISslStreamFactory
     {
+#if NETCOREAPP
+        /// <summary>
+        /// Default SSL protocols.
+        /// </summary>
+        public const SslProtocols DefaultSslProtocols = SslProtocols.None;
+#else
         /// <summary>
         /// Default SSL protocols.
         /// </summary>
         public const SslProtocols DefaultSslProtocols = SslProtocols.Tls;
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SslStreamFactory"/> class.
@@ -48,8 +55,13 @@ namespace Apache.Ignite.Core.Client
 
             var sslStream = new SslStream(stream, false, ValidateServerCertificate, null);
 
-            var cert = new X509Certificate2(CertificatePath, CertificatePassword);
-            var certs = new X509CertificateCollection(new X509Certificate[] { cert });
+            var cert = string.IsNullOrEmpty(CertificatePath)
+                ? null
+                : new X509Certificate2(CertificatePath, CertificatePassword);
+
+            var certs = cert == null
+                ? null
+                : new X509CertificateCollection(new X509Certificate[] { cert });
 
             sslStream.AuthenticateAsClient(targetHost, certs, SslProtocols, CheckCertificateRevocation);
 
@@ -59,7 +71,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Validates the server certificate.
         /// </summary>
-        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, 
+        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain,
             SslPolicyErrors sslPolicyErrors)
         {
             if (SkipServerCertificateValidation)

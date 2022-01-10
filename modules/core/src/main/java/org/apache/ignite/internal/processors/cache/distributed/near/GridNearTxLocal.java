@@ -17,11 +17,10 @@
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
 import java.io.Externalizable;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -145,10 +144,6 @@ import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
 public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeoutObject, AutoCloseable, MvccCoordinatorChangeAware {
     /** */
     private static final long serialVersionUID = 0L;
-
-    /** */
-    private static final ThreadLocal<SimpleDateFormat> TIME_FORMAT =
-        ThreadLocal.withInitial(() -> new SimpleDateFormat("HH:mm:ss.SSS"));
 
     /** Prepare future updater. */
     private static final AtomicReferenceFieldUpdater<GridNearTxLocal, IgniteInternalFuture> PREP_FUT_UPD =
@@ -832,7 +827,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
             return updateAsync(cacheCtx, new UpdateSourceIterator<IgniteBiTuple<KeyCacheObject, Object>>() {
 
-                private Iterator<Map.Entry<KeyCacheObject, Object>> it = enlisted.entrySet().iterator();
+                private final Iterator<Map.Entry<KeyCacheObject, Object>> it = enlisted.entrySet().iterator();
 
                 @Override public EnlistOperation operation() {
                     return transform ? EnlistOperation.TRANSFORM : EnlistOperation.UPSERT;
@@ -2025,7 +2020,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         return updateAsync(cacheCtx, new UpdateSourceIterator<KeyCacheObject>() {
 
-            private Iterator<KeyCacheObject> it = enlisted.iterator();
+            private final Iterator<KeyCacheObject> it = enlisted.iterator();
 
             @Override public EnlistOperation operation() {
                 return EnlistOperation.DELETE;
@@ -3908,7 +3903,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
         GridStringBuilder warning = new GridStringBuilder(isLong ? "Long transaction time dump " : "Transaction time dump ")
             .a("[startTime=")
-            .a(TIME_FORMAT.get().format(new Date(startTime)))
+            .a(IgniteUtils.DEBUG_DATE_FMT.format(Instant.ofEpochMilli(startTime)))
             .a(", totalTime=")
             .a(systemTimeMillis + userTimeMillis)
             .a(", systemTime=")

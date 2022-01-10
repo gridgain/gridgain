@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -263,6 +265,8 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
 
+        forceCheckpoint();
+
         // Restart first time.
         stopGrid(0);
 
@@ -286,6 +290,98 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
         cache.query(new SqlFieldsQuery("SELECT * FROM TEST WHERE VAL_OBJ > 0")).getAll();
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDecimalIndex() throws Exception {
+        startGrid(0).cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_DEC DECIMAL)"));
+
+        final String cacheName = "SQL_default_TEST";
+
+        cache.query(new SqlFieldsQuery("CREATE INDEX TEST_VAL_DEC ON TEST(VAL_DEC)"));
+
+        for (int i = 0; i < ADDED_KEYS_COUNT; i++)
+            cache.query(new SqlFieldsQuery("INSERT INTO TEST VALUES (?, ?, ?)").setArgs(i, i, BigDecimal.valueOf(i)));
+
+        cache.query(new SqlFieldsQuery("DELETE FROM TEST WHERE MOD(ID, 2) = 0"));
+
+        createMaintenanceRecord(cacheName);
+
+        CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
+
+        forceCheckpoint();
+
+        // Restart first time.
+        stopGrid(0);
+
+        defragmentAndValidateSizesDecreasedAfterDefragmentation(0, grp);
+
+        startGrid(0);
+
+        // Reinit cache object.
+        cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        assertTrue(explainQuery(cache, "EXPLAIN SELECT * FROM TEST WHERE ID > 0").contains("_key_pk_proxy"));
+
+        cache.query(new SqlFieldsQuery("SELECT * FROM TEST WHERE ID > 0")).getAll();
+
+        assertTrue(explainQuery(cache, "EXPLAIN SELECT * FROM TEST WHERE VAL_DEC > 0").contains("test_val_dec"));
+
+        cache.query(new SqlFieldsQuery("SELECT * FROM TEST WHERE VAL_DEC > 0")).getAll();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testVarcharIndex() throws Exception {
+        final String strPrefix = "AAAAAAAAAA";
+
+        startGrid(0).cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_STR VARCHAR)"));
+
+        final String cacheName = "SQL_default_TEST";
+
+        cache.query(new SqlFieldsQuery("CREATE INDEX TEST_VAL_STR ON TEST(VAL_STR)"));
+
+        for (int i = 0; i < ADDED_KEYS_COUNT; i++) {
+            cache.query(new SqlFieldsQuery("INSERT INTO TEST VALUES (?, ?, ?)")
+                .setArgs(i, i, strPrefix + i));
+        }
+
+        cache.query(new SqlFieldsQuery("DELETE FROM TEST WHERE MOD(ID, 2) = 0"));
+
+        createMaintenanceRecord(cacheName);
+
+        CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
+
+        forceCheckpoint();
+
+        // Restart first time.
+        stopGrid(0);
+
+        defragmentAndValidateSizesDecreasedAfterDefragmentation(0, grp);
+
+        startGrid(0);
+
+        // Reinit cache object.
+        cache = grid(0).cache(DEFAULT_CACHE_NAME);
+
+        assertTrue(explainQuery(cache, "EXPLAIN SELECT * FROM TEST WHERE VAL_STR = 'a'").contains("test_val_str"));
+
+        List<List<?>> res = cache.query(new SqlFieldsQuery("SELECT * FROM TEST WHERE VAL_STR = ?").setArgs(strPrefix + 1)).getAll();
+
+        assertEquals(1, res.size());
+    }
+
     /** */
     private static String explainQuery(IgniteCache<?, ?> cache, String qry) {
         return cache
@@ -307,8 +403,8 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
         private boolean rebuiltIndexes;
 
         /** {@inheritDoc} */
-        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
-            IgniteInternalFuture<?> future = super.rebuildIndexesFromHash(cctx);
+        @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {
+            IgniteInternalFuture<?> future = super.rebuildIndexesFromHash(cctx, force);
             rebuiltIndexes = future != null;
             return future;
         }

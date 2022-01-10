@@ -320,13 +320,13 @@ public class GridDhtPartitionSupplier {
                         initUpdateCntrs.put(part, loc.updateCounter());
                 }
 
-                iter = grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
-
                 for (int i = 0; i < histMap.size(); i++) {
                     int p = histMap.partitionAt(i);
 
                     remainingParts.add(p);
                 }
+
+                iter = grp.offheap().rebalanceIterator(demandMsg.partitions(), demandMsg.topologyVersion());
 
                 for (Integer part : demandMsg.partitions().fullSet()) {
                     if (iter.isPartitionMissing(part))
@@ -337,7 +337,7 @@ public class GridDhtPartitionSupplier {
                     assert loc != null && loc.state() == GridDhtPartitionState.OWNING
                         : "Partition should be in OWNING state: " + loc;
 
-                    supplyMsg.addEstimatedKeysCount(grp.offheap().totalPartitionEntriesCount(part));
+                    supplyMsg.addEstimatedKeysCount(loc.dataStore().fullSize());
                 }
 
                 for (int i = 0; i < histMap.size(); i++) {

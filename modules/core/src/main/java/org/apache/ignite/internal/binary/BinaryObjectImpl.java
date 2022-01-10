@@ -16,6 +16,17 @@
 
 package org.apache.ignite.internal.binary;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -32,23 +43,12 @@ import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProce
 import org.apache.ignite.internal.processors.cache.compress.EntryCompressionStrategy;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.jetbrains.annotations.Nullable;
-
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
@@ -75,6 +75,10 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     /** Compressed form of previous array, ready to be written to page or WAL. Local to a node. */
     @GridDirectTransient
     private byte[] compressedArr;
+
+    /** Compression strategy to check compressed form against. */
+    @GridDirectTransient
+    private EntryCompressionStrategy compressionStrategy;
 
     /** */
     private int start;
@@ -194,9 +198,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         int len = length();
 
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
-            if (compressedArr.length > 0) {
+            if (compressedArr != null && compressedArr.length > 0) {
                 type = CacheObject.TYPE_BINARY_COMPRESSED;
 
                 arr = compressedArr;
@@ -215,9 +217,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         byte[] arr = this.arr;
 
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
-            if (compressedArr.length > 0) {
+            if (compressedArr != null && compressedArr.length > 0) {
                 type = CacheObject.TYPE_BINARY_COMPRESSED;
 
                 arr = compressedArr;
@@ -230,9 +230,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     /** {@inheritDoc} */
     @Override public int valueBytesLength(CacheObjectContext ctx) throws IgniteCheckedException {
         if (detached()) {
-            assert compressedArr != null : "putValue() called before prepareForCache()";
-
-            if (compressedArr.length > 0)
+            if (compressedArr != null && compressedArr.length > 0)
                 return CacheObjectAdapter.objectPutSize(compressedArr.length);
         }
 
@@ -240,19 +238,26 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /** */
-    private void tryCompress(EntryCompressionStrategy entryCompressionCfg) {
-        if (compressedArr != null)
-            return;
+    private BinaryObjectImpl tryCompress(EntryCompressionStrategy entryCompressionStrategy) {
+        if (compressedArr != null) {
+            assert F.eq(this.compressionStrategy, entryCompressionStrategy) :
+                "Re-prepare compressed binary object form for a different cache";
 
-        if (entryCompressionCfg == null) {
-            compressedArr = UNCOMPRESSED;
-
-            return;
+            return this;
         }
 
-        byte[] tryCompressed = entryCompressionCfg.tryCompress(arr);
+        if (entryCompressionStrategy == null)
+            return this;
 
-        compressedArr = (tryCompressed == null) ? UNCOMPRESSED : tryCompressed;
+        byte[] tryCompressed = entryCompressionStrategy.tryCompress(arr);
+
+        BinaryObjectImpl compressedForm = new BinaryObjectImpl(ctx, arr, start);
+
+        compressedForm.part = part;
+        compressedForm.compressedArr = tryCompressed != null ? tryCompressed : UNCOMPRESSED;
+        compressedForm.compressionStrategy = entryCompressionStrategy;
+
+        return compressedForm;
     }
 
     /** {@inheritDoc} */
@@ -260,9 +265,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
         if (!detached() && detachAllowed)
             return detach().prepareForCache(ctx, compress);
         else if (compress)
-            tryCompress(ctx.compressionStrategy());
-        else
-            compressedArr = UNCOMPRESSED;
+            return tryCompress(ctx.compressionStrategy());
 
         return this;
     }
@@ -951,20 +954,20 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /**
-     * Compare two objects for DML operation.
+     * Compare two objects.
      *
      * @param first First.
      * @param second Second.
      * @return Comparison result.
      */
     @SuppressWarnings("unchecked")
-    public static int compareForDml(Object first, Object second) {
+    public static int compare(Object first, Object second) {
         boolean firstBinary = first instanceof BinaryObjectImpl;
         boolean secondBinary = second instanceof BinaryObjectImpl;
 
         if (firstBinary) {
             if (secondBinary)
-                return compareForDml0((BinaryObjectImpl)first, (BinaryObjectImpl)second);
+                return compare0((BinaryObjectImpl)first, (BinaryObjectImpl)second);
             else
                 return 1; // Go to the right part.
         }
@@ -983,7 +986,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
      * @param second Second item.
      * @return Comparison result.
      */
-    private static int compareForDml0(BinaryObjectImpl first, BinaryObjectImpl second) {
+    private static int compare0(BinaryObjectImpl first, BinaryObjectImpl second) {
         int res = Integer.compare(first.typeId(), second.typeId());
 
         if (res == 0) {

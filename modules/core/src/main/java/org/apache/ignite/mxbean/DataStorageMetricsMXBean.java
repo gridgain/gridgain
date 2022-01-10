@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,14 +157,11 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
     @MXBeanDescription(
         "Sets time interval for pages allocation and eviction monitoring purposes."
     )
-    @MXBeanParametersNames(
-        "rateTimeInterval"
-    )
-    @MXBeanParametersDescriptions(
-        "Time interval (in milliseconds) to set."
-    )
     @Deprecated
-    public void rateTimeInterval(long rateTimeInterval);
+    public void rateTimeInterval(
+        @MXBeanParameter(name = "rateTimeInterval", description = "Time interval (in milliseconds) to set.")
+            long rateTimeInterval
+    );
 
     /**
      * Sets a number of sub-intervals the whole {@link #rateTimeInterval(long)} will be split into to calculate
@@ -177,14 +174,10 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
     @MXBeanDescription(
         "Sets a number of sub-intervals to calculate allocation and eviction rates metrics."
     )
-    @MXBeanParametersNames(
-        "subInts"
-    )
-    @MXBeanParametersDescriptions(
-        "Number of subintervals to set."
-    )
     @Deprecated
-    public void subIntervals(int subInts);
+    public void subIntervals(
+        @MXBeanParameter(name = "subInts", description = "Number of subintervals to set.") int subInts
+    );
 
     /** {@inheritDoc} */
     @MXBeanDescription("Storage space allocated, in bytes.")
@@ -193,4 +186,12 @@ public interface DataStorageMetricsMXBean extends DataStorageMetrics {
     /** {@inheritDoc} */
     @MXBeanDescription("Storage space allocated adjusted for possible sparsity, in bytes.")
     @Override long getSparseStorageSize();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Getting the total number of logged bytes into the WAL.")
+    @Override long getWalWrittenBytes();
+
+    /** {@inheritDoc} */
+    @MXBeanDescription("Getting the total size of the compressed segments in bytes.")
+    @Override long getWalCompressedBytes();
 }

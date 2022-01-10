@@ -19,7 +19,7 @@ package org.apache.ignite.internal.commandline;
 import org.apache.ignite.internal.commandline.cache.CacheCommands;
 import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
-import org.apache.ignite.internal.commandline.encryption.EncryptionCommand;
+import org.apache.ignite.internal.commandline.encryption.EncryptionCommands;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
 import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
@@ -56,7 +56,7 @@ public enum CommandList {
     DIAGNOSTIC("--diagnostic", new DiagnosticCommand()),
 
     /** Encryption features command. */
-    ENCRYPTION("--encryption", new EncryptionCommand()),
+    ENCRYPTION("--encryption", new EncryptionCommands()),
 
     /** */
     ROLLING_UPGRADE("--rolling-upgrade", new RollingUpgradeCommand()),

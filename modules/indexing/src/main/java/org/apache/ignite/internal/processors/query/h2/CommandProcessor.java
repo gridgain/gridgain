@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
@@ -91,8 +92,9 @@ import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
 import org.apache.ignite.internal.processors.query.stat.StatisticsTarget;
+import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.sql.command.SqlAlterTableCommand;
 import org.apache.ignite.internal.sql.command.SqlAlterUserCommand;
 import org.apache.ignite.internal.sql.command.SqlAnalyzeCommand;
@@ -511,13 +513,21 @@ public class CommandProcessor {
     private void processAnalyzeCommand(SqlAnalyzeCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
-        StatisticsTarget[] targets = cmd.targets().stream()
-            .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
-            .toArray(StatisticsTarget[]::new);
+        StatisticsObjectConfiguration objCfgs[] = cmd.configurations().stream()
+            .map(t -> {
+                if (t.key().schema() == null) {
+                    StatisticsKey key = new StatisticsKey(cmd.schemaName(), t.key().obj());
 
-        statMgr.collectStatistics(targets);
+                    return new StatisticsObjectConfiguration(key, t.columns().values(),
+                        t.maxPartitionObsolescencePercent());
+                }
+                else
+                    return t;
+            }).toArray(StatisticsObjectConfiguration[]::new);
+
+        indexing.statsManager().collectStatistics(objCfgs);
     }
 
     /**
@@ -528,13 +538,13 @@ public class CommandProcessor {
     private void processRefreshStatisticsCommand(SqlRefreshStatitsicsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.REFRESH_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.refreshStatistics(targets);
+        indexing.statsManager().refreshStatistics(targets);
     }
 
     /**
@@ -545,13 +555,13 @@ public class CommandProcessor {
     private void processDropStatisticsCommand(SqlDropStatisticsCommand cmd) throws IgniteCheckedException {
         ctx.security().authorize(SecurityPermission.CHANGE_STATISTICS);
 
-        IgniteStatisticsManager statMgr = ctx.query().getIndexing().statsManager();
+        IgniteH2Indexing indexing = (IgniteH2Indexing)ctx.query().getIndexing();
 
         StatisticsTarget[] targets = cmd.targets().stream()
             .map(t -> (t.schema() == null) ? new StatisticsTarget(cmd.schemaName(), t.obj(), t.columns()) : t)
             .toArray(StatisticsTarget[]::new);
 
-        statMgr.dropStatistics(targets);
+        indexing.statsManager().dropStatistics(targets);
     }
 
     /**
@@ -1177,7 +1187,12 @@ public class CommandProcessor {
 
         if (!F.isEmpty(notNullFields))
             res.setNotNullFields(notNullFields);
-
+        
+        if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
+        )
+            res.fillAbsentPKsWithDefaults(true);
+    
         return res;
     }
 

@@ -125,7 +125,7 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
         private volatile long currentOwnerThreadId;
 
         /** UUID of this node. */
-        private final UUID thisNode;
+        private volatile UUID thisNode;
 
         /** FailoverSafe flag. */
         private final boolean failoverSafe;
@@ -316,6 +316,13 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
          */
         protected void setCurrentOwnerThread(long newOwnerThreadId) {
             currentOwnerThreadId = newOwnerThreadId;
+        }
+
+        /**
+         * @param nodeId Node ID.
+         */
+        protected void setThisNode(UUID nodeId) {
+            thisNode = nodeId;
         }
 
         /**
@@ -1136,6 +1143,11 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
     }
 
     /** {@inheritDoc} */
+    @Override public void onReconnected(UUID nodeId) {
+        sync.setThisNode(nodeId);
+    }
+
+    /** {@inheritDoc} */
     @Override public void onStop() {
         if (sync == null) {
             interruptAll = true;
@@ -1484,6 +1496,6 @@ public final class GridCacheLockImpl extends AtomicDataStructureProxy<GridCacheL
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridCacheLockImpl.class, this);
+        return S.toString(GridCacheLockImpl.class, this, super.toString());
     }
 }

@@ -29,12 +29,19 @@ import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.NOOP_LSNR;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  *
@@ -97,7 +104,12 @@ public class IndexStorageSelfTest extends GridCommonAbstractTest {
                 IndexStorageImpl metaStore = storeMap.get(cacheId);
 
                 if (metaStore == null) {
+                    PageLockTrackerManager pageLockTrackerManager = mock(PageLockTrackerManager.class);
+
+                    when(pageLockTrackerManager.createPageLockTracker(anyString())).thenReturn(NOOP_LSNR);
+
                     metaStore = new IndexStorageImpl(
+                        "indexStorageTree",
                         mem,
                         null,
                         new AtomicLong(),
@@ -109,7 +121,7 @@ public class IndexStorageSelfTest extends GridCommonAbstractTest {
                         mem.allocatePage(cacheId, PageIdAllocator.INDEX_PARTITION, PageMemory.FLAG_IDX),
                         true,
                         null,
-                        null
+                        pageLockTrackerManager
                     );
 
                     storeMap.put(cacheId, metaStore);
@@ -174,10 +186,9 @@ public class IndexStorageSelfTest extends GridCommonAbstractTest {
         return new PageMemoryNoStoreImpl(
             log,
             provider,
-            null,
             PAGE_SIZE,
             plcCfg,
-            new LongAdderMetric("NO_OP", null),
+            new DataRegionMetricsImpl(plcCfg, new GridTestKernalContext(log())),
             true);
     }
 }

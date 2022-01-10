@@ -50,7 +50,7 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
             sql(String.format("insert into tbl_select(id, lo_select, med_select, hi_select) values(%d, %d, %d, %d)",
                     i, i % 10, i % 100, i % 1000));
 
-        updateStatistics("tbl_select");
+        collectStatistics("tbl_select");
     }
 
     /**
@@ -70,6 +70,7 @@ public class PSUStatisticPartialGatheringTest extends StatisticsAbstractTest {
      */
     @Test
     public void compareSelectWithIntConditions() throws IgniteCheckedException {
+        System.out.println("+++ " + sql("select * from sys.statistics_local_data"));
         checkOptimalPlanChosenForDifferentIndexes(grid(0), new String[]{"TBL_SELECT_MED_IDX"},
                 String.format(SQL, 5, 5), NO_HINTS);
 

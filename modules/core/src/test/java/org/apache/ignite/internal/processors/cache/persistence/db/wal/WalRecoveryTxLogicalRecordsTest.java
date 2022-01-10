@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import javax.annotation.Nullable;
 import org.apache.ignite.Ignite;
@@ -49,6 +50,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.store.PageStore;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
@@ -84,6 +86,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  *
@@ -513,37 +517,6 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Reserves a WAL pointer for historical iterator.
-     *
-     * @param cctx Cache shared context.
-     * @return WAL pointer.
-     */
-    private FileWALPointer reserveWalPointerForIterator(GridCacheSharedContext cctx) {
-        final CheckpointHistory cpHist = ((GridCacheDatabaseSharedManager)cctx.database()).checkpointHistory();
-
-        FileWALPointer oldestPtr = (FileWALPointer)cpHist.firstCheckpointPointer();
-
-        GridTestUtils.setFieldValue(cctx.database(), "reservedForPreloading", oldestPtr);
-
-        cctx.wal().reserve(oldestPtr);
-
-        return oldestPtr;
-    }
-
-    /**
-     * Releases a WAL pointer for historical iterator.
-     *
-     * @param cctx Cache shared context.
-     * @param ptr WAL pointer to release.
-     * @throws IgniteCheckedException If the release failed.
-     */
-    private void releaseWalPointerForIterator(GridCacheSharedContext cctx, FileWALPointer ptr) throws IgniteCheckedException {
-        GridTestUtils.setFieldValue(cctx.database(), "reservedForPreloading", null);
-
-        cctx.wal().release(ptr);
-    }
-
-    /**
      * Test historical iterator works over WAL with reordered or missed data entries.
      *
      * @throws Exception if failed.
@@ -666,6 +639,40 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
         finally {
             stopAllGrids();
         }
+    }
+
+    /**
+     * Reserves a WAL pointer for historical iterator.
+     *
+     * @param cctx Cache shared context.
+     * @return WAL pointer.
+     */
+    private FileWALPointer reserveWalPointerForIterator(GridCacheSharedContext cctx) {
+        final CheckpointHistory cpHist = ((GridCacheDatabaseSharedManager)cctx.database()).checkpointHistory();
+
+        WALPointer oldestPtr = cpHist.firstCheckpointPointer();
+
+        AtomicReference<WALPointer> preloading = getFieldValue(cctx.database(), "reservedForPreloading");
+
+        preloading.set(oldestPtr);
+
+        cctx.wal().reserve(oldestPtr);
+
+        return (FileWALPointer)oldestPtr;
+    }
+
+    /**
+     * Releases a WAL pointer for historical iterator.
+     *
+     * @param cctx Cache shared context.
+     * @param ptr WAL pointer to release.
+     */
+    private void releaseWalPointerForIterator(GridCacheSharedContext cctx, WALPointer ptr) {
+        AtomicReference<WALPointer> preloading = getFieldValue(cctx.database(), "reservedForPreloading");
+
+        preloading.set(null);
+
+        cctx.wal().release(ptr);
     }
 
     /**
@@ -1129,8 +1136,8 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     private T2<long[], Integer> getReuseListData(Ignite ignite, String cacheName) {
         GridCacheContext ctx = ((IgniteEx)ignite).context().cache().cache(cacheName).context();
 
-        ReuseListImpl reuseList = GridTestUtils.getFieldValue(ctx.offheap(), "reuseList");
-        PagesList.Stripe[] bucket = GridTestUtils.getFieldValue(reuseList, "bucket");
+        ReuseListImpl reuseList = getFieldValue(ctx.offheap(), "reuseList");
+        PagesList.Stripe[] bucket = getFieldValue(reuseList, "bucket");
 
         long[] ids = null;
 
@@ -1141,7 +1148,7 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
                 ids[i] = bucket[i].tailId;
         }
 
-        AtomicLongArray bucketsSize = GridTestUtils.getFieldValue(reuseList, PagesList.class, "bucketsSize");
+        AtomicLongArray bucketsSize = getFieldValue(reuseList, PagesList.class, "bucketsSize");
         assertEquals(1, bucketsSize.length());
 
         return new T2<>(ids, (int)bucketsSize.get(0));
@@ -1217,10 +1224,10 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
                 // Flush free-list onheap cache to page memory.
                 freeList.saveMetadata(IoStatisticsHolderNoOp.INSTANCE);
 
-                AtomicReferenceArray<PagesList.Stripe[]> buckets = GridTestUtils.getFieldValue(freeList,
+                AtomicReferenceArray<PagesList.Stripe[]> buckets = getFieldValue(freeList,
                     AbstractFreeList.class, "buckets");
 
-                AtomicLongArray bucketsSize = GridTestUtils.getFieldValue(freeList, PagesList.class, "bucketsSize");
+                AtomicLongArray bucketsSize = getFieldValue(freeList, PagesList.class, "bucketsSize");
 
                 assertNotNull(buckets);
                 assertNotNull(bucketsSize);
@@ -1298,7 +1305,7 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
         CacheObject val0 = co.toCacheObject(cacheCtx.cacheObjectContext(), val, true);
 
         return new DataEntry(cacheId, key0, val0, op, cacheCtx.cache().nextVersion(),
-            cacheCtx.cache().nextVersion(), 0, partId, cntr);
+            cacheCtx.cache().nextVersion(), 0, partId, cntr, DataEntry.EMPTY_FLAGS);
     }
 
     /**

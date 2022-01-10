@@ -147,10 +147,6 @@ public class IgniteBenchmarkArguments {
     private boolean collocated;
 
     /** */
-    @Parameter(names = {"-stripe", "--singleStripe"}, description = "Generate keys belonging to single stripe per node")
-    private boolean singleStripe;
-
-    /** */
     @Parameter(names = {"-jdbc", "--jdbcUrl"}, description = "JDBC url")
     private String jdbcUrl;
 
@@ -249,6 +245,10 @@ public class IgniteBenchmarkArguments {
     private int cachesCnt = 1;
 
     /** */
+    @Parameter(names = {"-opc", "--operationsPerCache"}, description = "Number of cache operations")
+    private int opsPerCache = 1;
+
+    /** */
     @Parameter(names = {"-pds", "--persistentStore"}, description = "Persistent store flag")
     private boolean persistentStoreEnabled;
 
@@ -304,6 +304,11 @@ public class IgniteBenchmarkArguments {
     @DynamicParameter(names = {"-D", "--param"},
         description = "Allow add any dynamic parameters specific for some benchmarks")
     private Map<String, String> params = new HashMap<>();
+
+    /** Additional system prorperties. */
+    @DynamicParameter(names = {"-S", "--sysProp"},
+        description = "Allow add additinal dynamic system properties to benchmarks")
+    private Map<String, String> sysProps = new HashMap<>();
 
     /**
      * @return {@code True} if need set {@link DataStorageConfiguration}.
@@ -546,13 +551,6 @@ public class IgniteBenchmarkArguments {
     }
 
     /**
-     * @return Generate keys for single stripe per node.
-     */
-    public boolean singleStripe() {
-        return singleStripe;
-    }
-
-    /**
      * @return Delay in second which used in nodes restart algorithm.
      */
     public int restartDelay() {
@@ -786,6 +784,31 @@ public class IgniteBenchmarkArguments {
         String val = params.get(name);
 
         return val != null ? Long.parseLong(val) : dflt;
+    }
+
+    /**
+     * @param name Parameter name.
+     * @param dflt Default value.
+     * @return value.
+     */
+    public double getDoubleParameter(String name, double dflt) {
+        String val = params.get(name);
+
+        return val != null ? Double.parseDouble(val) : dflt;
+    }
+
+    /**
+     * @return Additional dynamic system properties.
+     */
+    public Map<String, String> systemProperties() {
+        return sysProps;
+    }
+
+    /**
+     * @return Operations per cache.
+     */
+    public int opsPerCache() {
+        return opsPerCache;
     }
 
     /** {@inheritDoc} */

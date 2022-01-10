@@ -21,10 +21,11 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.query.stat.IgniteStatisticsHelper.buildDefaultConfigurations;
 
 /**
  * Statistics cleaning tests.
@@ -45,42 +46,38 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
      */
     @Test
     public void testStatisticsClear() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
-
         updateStatistics(SMALL_TARGET);
 
-        Assert.assertNotNull(statMgr0.getLocalStatistics(SMALL_KEY));
+        Assert.assertNotNull(statisticsMgr(0).getLocalStatistics(SMALL_KEY));
 
-        Assert.assertNotNull(statMgr1.getLocalStatistics(SMALL_KEY));
+        Assert.assertNotNull(statisticsMgr(1).getLocalStatistics(SMALL_KEY));
 
-        statMgr1.dropStatistics(SMALL_TARGET);
+        statisticsMgr(1).dropStatistics(SMALL_TARGET);
 
         GridTestUtils.waitForCondition(
-            () -> null == statMgr0.getLocalStatistics(SMALL_KEY)
-            && null == statMgr1.getLocalStatistics(SMALL_KEY), TIMEOUT);
+            () -> null == statisticsMgr(0).getLocalStatistics(SMALL_KEY)
+            && null == statisticsMgr(1).getLocalStatistics(SMALL_KEY), TIMEOUT);
+
+        statisticsMgr(1).collectStatistics(buildDefaultConfigurations(SMALL_TARGET));
     }
 
     /**
-     * 1) Clear statistics by non existing table.
-     * 2) Acquire statistics by non existing table.
+     * Clear statistics by non existing table.
      *
      * @throws Exception In case of errors.
      */
-    @Test
+    @Test(expected = Throwable.class)
     public void testStatisticsClearOnNotExistingTable() throws Exception {
-        IgniteStatisticsManager statMgr0 = grid(0).context().query().getIndexing().statsManager();
-        IgniteStatisticsManager statMgr1 = grid(1).context().query().getIndexing().statsManager();
+        statisticsMgr(1).dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME"));
+    }
 
-        GridTestUtils.assertThrows(
-            log,
-            () -> statMgr1.dropStatistics(new StatisticsTarget(SCHEMA, "NO_NAME")),
-            IgniteSQLException.class,
-            "Statistic doesn't exist for [schema=PUBLIC, obj=NO_NAME]"
-        );
-
-        Assert.assertNull(statMgr0.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
-        Assert.assertNull(statMgr1.getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+    /**
+     * Acquire statistics by non existing table.
+     */
+    @Test
+    public void testGetNonExistingTableStatistics() {
+        Assert.assertNull(statisticsMgr(0).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
+        Assert.assertNull(statisticsMgr(1).getLocalStatistics(new StatisticsKey(SCHEMA, "NO_NAME")));
     }
 
     /**
@@ -165,7 +162,7 @@ public class StatisticsClearTest extends StatisticsRestartAbstractTest {
         db.checkpointReadLock();
 
         try {
-            assertEquals(1, db.metaStorage().read("stats.version"));
+            assertEquals(IgniteStatisticsPersistenceStoreImpl.VERSION, db.metaStorage().read("stats.version"));
         }
         finally {
             db.checkpointReadUnlock();

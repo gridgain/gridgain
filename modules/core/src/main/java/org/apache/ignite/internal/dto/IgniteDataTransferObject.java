@@ -31,7 +31,7 @@ import org.jetbrains.annotations.Nullable;
  * Base class for data transfer objects.
  */
 public abstract class IgniteDataTransferObject implements Externalizable {
-    /** */
+    /** Serial version UUID. */
     private static final long serialVersionUID = 0L;
 
     /** Magic number to detect correct transfer objects. */
@@ -66,6 +66,15 @@ public abstract class IgniteDataTransferObject implements Externalizable {
 
     /** Version 10. */
     protected static final byte V10 = 10;
+
+    /** Version 11. */
+    protected static final byte V11 = 11;
+
+    /** Version 12. */
+    protected static final byte V12 = 12;
+
+    /** Version 13. */
+    protected static final byte V13 = 13;
 
     /**
      * @param col Source collection.

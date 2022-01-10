@@ -23,14 +23,18 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
@@ -61,6 +65,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientFlag;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -124,7 +129,16 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     private final Collection<Consumer<ClientChannel>> topChangeLsnrs = new CopyOnWriteArrayList<>();
 
     /** Notification listeners. */
-    private final Collection<NotificationListener> notificationLsnrs = new CopyOnWriteArrayList<>();
+    @SuppressWarnings("unchecked")
+    private final Map<Long, NotificationListener>[] notificationLsnrs = new Map[ClientNotificationType.values().length];
+
+    /** Pending notification. */
+    @SuppressWarnings("unchecked")
+    private final Map<Long, Queue<T2<ByteBuffer, Exception>>>[] pendingNotifications =
+        new Map[ClientNotificationType.values().length];
+
+    /** Guard for notification listeners. */
+    private final ReadWriteLock notificationLsnrsGuard = new ReentrantReadWriteLock();
 
     /** Closed flag. */
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -139,6 +153,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     TcpClientChannel(ClientChannelConfiguration cfg, ClientConnectionMultiplexer connMgr)
         throws ClientConnectionException, ClientAuthenticationException, ClientProtocolError {
         validateConfiguration(cfg);
+
+        for (ClientNotificationType type : ClientNotificationType.values()) {
+            if (type.keepNotificationsWithoutListener())
+                pendingNotifications[type.ordinal()] = new ConcurrentHashMap<>();
+        }
 
         Executor cfgExec = cfg.getAsyncContinuationExecutor();
         asyncContinuationExecutor = cfgExec != null ? cfgExec : ForkJoinPool.commonPool();
@@ -168,12 +187,24 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /**
      * Close the channel with cause.
      */
-    private void close(Throwable cause) {
+    private void close(Exception cause) {
         if (closed.compareAndSet(false, true)) {
             U.closeQuiet(sock);
 
             for (ClientRequestFuture pendingReq : pendingReqs.values())
                 pendingReq.onDone(new ClientConnectionException("Channel is closed", cause));
+
+            notificationLsnrsGuard.readLock().lock();
+
+            try {
+                for (Map<Long, NotificationListener> lsnrs : notificationLsnrs) {
+                    if (lsnrs != null)
+                        lsnrs.values().forEach(lsnr -> lsnr.onChannelClosed(cause));
+                }
+            }
+            finally {
+                notificationLsnrsGuard.readLock().unlock();
+            }
         }
     }
 
@@ -216,7 +247,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         throws ClientException {
         long id = reqId.getAndIncrement();
 
-        try (PayloadOutputChannel payloadCh = new PayloadOutputChannel(this)) {
+        PayloadOutputChannel payloadCh = new PayloadOutputChannel(this);
+
+        try {
             if (closed())
                 throw new ClientConnectionException("Channel is closed");
 
@@ -235,13 +268,15 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
             req.writeInt(0, req.position() - 4); // Actual size.
 
-            // arrayCopy is required, because buffer is pooled, and write is async.
-            write(req.arrayCopy(), req.position());
+            write(req.array(), req.position(), payloadCh::close);
 
             return fut;
         }
         catch (Throwable t) {
             pendingReqs.remove(id);
+
+            // Potential double-close is handled in PayloadOutputChannel.
+            payloadCh.close();
 
             throw t;
         }
@@ -342,7 +377,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             return;
         }
 
-        long resId = dataInput.readLong();
+        Long resId = dataInput.readLong();
 
         int status = 0;
 
@@ -366,7 +401,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
                 notificationOp = ClientOperation.fromCode(notificationCode);
 
-                if (notificationOp == null || !notificationOp.isNotification())
+                if (notificationOp == null || notificationOp.notificationType() == null)
                     throw new ClientProtocolError(String.format("Unexpected notification code [%d]", notificationCode));
             }
 
@@ -405,11 +440,30 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             pendingReq.onDone(res, err);
         }
         else { // Notification received.
-            ClientOperation notificationOp0 = notificationOp;
+            ClientNotificationType notificationType = notificationOp.notificationType();
 
             asyncContinuationExecutor.execute(() -> {
-                for (NotificationListener lsnr : notificationLsnrs)
-                    lsnr.acceptNotification(this, notificationOp0, resId, res, err);
+                NotificationListener lsnr = null;
+
+                notificationLsnrsGuard.readLock().lock();
+
+                try {
+                    Map<Long, NotificationListener> lsrns = notificationLsnrs[notificationType.ordinal()];
+
+                    if (lsrns != null)
+                        lsnr = lsrns.get(resId);
+
+                    if (notificationType.keepNotificationsWithoutListener() && lsnr == null) {
+                        pendingNotifications[notificationType.ordinal()].computeIfAbsent(resId,
+                            k -> new ConcurrentLinkedQueue<>()).add(new T2<>(res, err));
+                    }
+                }
+                finally {
+                    notificationLsnrsGuard.readLock().unlock();
+                }
+
+                if (lsnr != null)
+                    lsnr.acceptNotification(res, err);
             });
         }
     }
@@ -435,8 +489,53 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     }
 
     /** {@inheritDoc} */
-    @Override public void addNotificationListener(NotificationListener lsnr) {
-        notificationLsnrs.add(lsnr);
+    @Override public void addNotificationListener(ClientNotificationType type, Long rsrcId, NotificationListener lsnr) {
+        Queue<T2<ByteBuffer, Exception>> pendingQueue = null;
+
+        notificationLsnrsGuard.writeLock().lock();
+
+        try {
+            if (closed())
+                throw new ClientConnectionException("Channel is closed");
+
+            Map<Long, NotificationListener> lsnrs = notificationLsnrs[type.ordinal()];
+
+            if (lsnrs == null)
+                notificationLsnrs[type.ordinal()] = lsnrs = new ConcurrentHashMap<>();
+
+            lsnrs.put(rsrcId, lsnr);
+
+            if (type.keepNotificationsWithoutListener())
+                pendingQueue = pendingNotifications[type.ordinal()].remove(rsrcId);
+        }
+        finally {
+            notificationLsnrsGuard.writeLock().unlock();
+        }
+
+        // Drain pending notifications queue.
+        if (pendingQueue != null)
+            pendingQueue.forEach(n -> lsnr.acceptNotification(n.get1(), n.get2()));
+    }
+
+    /** {@inheritDoc} */
+    @Override public void removeNotificationListener(ClientNotificationType type, Long rsrcId) {
+        notificationLsnrsGuard.writeLock().lock();
+
+        try {
+            Map<Long, NotificationListener> lsnrs = notificationLsnrs[type.ordinal()];
+
+            if (lsnrs == null)
+                return;
+
+            lsnrs.remove(rsrcId);
+
+            if (type.keepNotificationsWithoutListener())
+                pendingNotifications[type.ordinal()].remove(rsrcId);
+
+        }
+        finally {
+            notificationLsnrsGuard.writeLock().unlock();
+        }
     }
 
     /** {@inheritDoc} */
@@ -510,7 +609,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
             writer.out().writeInt(0, writer.out().position() - 4);// actual size
 
-            write(writer.out().arrayCopy(), writer.out().position());
+            write(writer.out().arrayCopy(), writer.out().position(), null);
         }
     }
 
@@ -580,11 +679,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     }
 
     /** Write bytes to the output stream. */
-    private void write(byte[] bytes, int len) throws ClientConnectionException {
+    private void write(byte[] bytes, int len, @Nullable Runnable onDone) throws ClientConnectionException {
         ByteBuffer buf = ByteBuffer.wrap(bytes, 0, len);
 
         try {
-            sock.send(buf);
+            sock.send(buf, onDone);
         }
         catch (IgniteCheckedException e) {
             throw new ClientConnectionException(e.getMessage(), e);

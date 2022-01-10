@@ -185,6 +185,48 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     /**
      * @param cctx Context.
      * @param type Query type.
+     * @param filter Scan filter.
+     * @param part Partition.
+     * @param keepBinary Keep binary flag.
+     * @param forceLocal Flag to force local query.
+     * @param dataPageScanEnabled Flag to enable data page scan.
+     * @param timeout Timeout or zero if no timeout.
+     */
+    public GridCacheQueryAdapter(
+            GridCacheContext<?, ?> cctx,
+            GridCacheQueryType type,
+            @Nullable IgniteBiPredicate<Object, Object> filter,
+            @Nullable IgniteClosure<Map.Entry, Object> transform,
+            @Nullable Integer part,
+            boolean keepBinary,
+            boolean forceLocal,
+            Boolean dataPageScanEnabled,
+            long timeout
+    ) {
+        assert cctx != null;
+        assert type != null;
+        assert part == null || part >= 0;
+
+        this.cctx = cctx;
+        this.type = type;
+        this.filter = filter;
+        this.transform = transform;
+        this.part = part;
+        this.keepBinary = keepBinary;
+        this.forceLocal = forceLocal;
+        this.dataPageScanEnabled = dataPageScanEnabled;
+        this.timeout = timeout;
+
+        log = cctx.logger(getClass());
+
+        incMeta = false;
+        clsName = null;
+        clause = null;
+    }
+
+    /**
+     * @param cctx Context.
+     * @param type Query type.
      * @param clsName Class name.
      * @param clause Clause.
      * @param filter Scan filter.

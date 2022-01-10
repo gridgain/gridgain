@@ -56,7 +56,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.sleep;
  */
 public class FileHandleManagerImpl implements FileHandleManager {
     /** Default wal segment sync timeout. */
-    private static final long DFLT_WAL_SEGMENT_SYNC_TIMEOUT = 500L;
+    public static final long DFLT_WAL_SEGMENT_SYNC_TIMEOUT = 500L;
 
     /** WAL writer worker. */
     private final WALWriter walWriter;
@@ -630,13 +630,17 @@ public class FileHandleManagerImpl implements FileHandleManager {
             }
         }
 
-        /** Shutted down the worker. */
-        private void shutdown() {
+        /**
+         * Shutted down the worker.
+         *
+         * @throws IgniteInterruptedCheckedException If the worker was interrupted while waiting for shutting down.
+         */
+        private void shutdown() throws IgniteInterruptedCheckedException {
             synchronized (this) {
                 U.cancel(this);
             }
 
-            U.join(this, log);
+            U.join(runner());
         }
 
         /**

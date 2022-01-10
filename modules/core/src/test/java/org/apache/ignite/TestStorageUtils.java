@@ -51,6 +51,29 @@ public class TestStorageUtils {
         GridCacheVersion ver,
         String brokenValPostfix
     ) {
+        corruptDataEntry(ctx, key, breakCntr, breakData, ver, brokenValPostfix, false);
+    }
+
+    /**
+     * Corrupts data entry.
+     *
+     * @param ctx Context.
+     * @param key Key.
+     * @param breakCntr Break counter.
+     * @param breakData Break data.
+     * @param ver GridCacheVersion to use.
+     * @param brokenValPostfix Postfix to add to value if breakData flag is set to true.
+     * @param needToLockEntry If true, update will be performed under entry lock.
+     */
+    public static void corruptDataEntry(
+        GridCacheContext<?, ?> ctx,
+        Object key,
+        boolean breakCntr,
+        boolean breakData,
+        GridCacheVersion ver,
+        String brokenValPostfix,
+        boolean needToLockEntry
+    ) {
         int partId = ctx.affinity().partition(key);
 
         try {
@@ -81,7 +104,8 @@ public class TestStorageUtils {
                 ver,
                 0L,
                 partId,
-                updateCntr
+                updateCntr,
+                DataEntry.EMPTY_FLAGS
             );
 
             IgniteCacheDatabaseSharedManager db = ctx.shared().database();
@@ -90,7 +114,7 @@ public class TestStorageUtils {
 
             try {
                 U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry,
-                    false);
+                    needToLockEntry);
             }
             finally {
                 db.checkpointReadUnlock();

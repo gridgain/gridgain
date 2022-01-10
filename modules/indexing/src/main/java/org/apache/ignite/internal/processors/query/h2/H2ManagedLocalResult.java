@@ -18,7 +18,11 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
+
+import org.apache.ignite.IgniteSystemProperties;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SessionInterface;
 import org.gridgain.internal.h2.expression.Expression;
@@ -31,10 +35,14 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueRow;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.calculateMemoryDelta;
 
 /** */
 public class H2ManagedLocalResult implements LocalResult {
+    /** Use  */
+    private static boolean USE_TREEMAP = IgniteSystemProperties.getBoolean(IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP, false);
+
     /** */
     private Session session;
 
@@ -57,7 +65,7 @@ public class H2ManagedLocalResult implements LocalResult {
     private SortOrder sort;
 
     /** */
-    private TreeMap<Value, Value[]> distinctRows;
+    private Map<Value, Value[]> distinctRows;
 
     /** */
     private Value[] currentRow;
@@ -209,14 +217,14 @@ public class H2ManagedLocalResult implements LocalResult {
     @Override public void setDistinct() {
         assert distinctIndexes == null;
         distinct = true;
-        distinctRows = new TreeMap<>(session.getDatabase().getCompareMode());
+        distinctRows = createDistinctMap();
     }
 
     /** {@inheritDoc} */
     @Override public void setDistinct(int[] distinctIndexes) {
         assert !distinct;
         this.distinctIndexes = distinctIndexes;
-        distinctRows = new TreeMap<>(session.getDatabase().getCompareMode());
+        distinctRows = createDistinctMap();
     }
 
     /**
@@ -250,7 +258,7 @@ public class H2ManagedLocalResult implements LocalResult {
             return external.contains(values);
         }
         if (distinctRows == null) {
-            distinctRows = new TreeMap<>(session.getDatabase().getCompareMode());
+            distinctRows = createDistinctMap();
             for (Value[] row : rows) {
                 ValueRow array = getDistinctRow(row);
                 distinctRows.put(array, array.getList());
@@ -683,5 +691,26 @@ public class H2ManagedLocalResult implements LocalResult {
 
             memReserved = 0;
         }
+    }
+
+    /** */
+    private Map<Value, Value[]> createDistinctMap() {
+        boolean useTreeMap = USE_TREEMAP;
+
+        if (!useTreeMap) {
+            if (distinctIndexes != null) {
+                for (int i : distinctIndexes) {
+                    if (expressions[i].getType().getValueType() == Value.DECIMAL) {
+                        useTreeMap = true;
+
+                        break;
+                    }
+                }
+            }
+            else
+                useTreeMap = Arrays.stream(expressions).anyMatch(e -> e.getType().getValueType() == Value.DECIMAL);
+        }
+
+        return useTreeMap ? new TreeMap<>(session.getDatabase().getCompareMode()) : new HashMap<>();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,8 @@ public abstract class WALRecord {
         /** */
         PAGE_RECORD(1, PHYSICAL),
 
-        /** */
+        /** @deprecated Use {@link #DATA_RECORD_V2} instead. */
+        @Deprecated
         DATA_RECORD(2, LOGICAL),
 
         /** Checkpoint (begin) record */
@@ -203,7 +204,11 @@ public abstract class WALRecord {
         /** Encrypted WAL-record. */
         ENCRYPTED_RECORD(52, PHYSICAL),
 
-        /** Ecnrypted data record. */
+        /**
+         * Ecnrypted data record.
+         * @deprecated Use {@link #ENCRYPTED_DATA_RECORD_V3} instead.
+         */
+        @Deprecated
         ENCRYPTED_DATA_RECORD(53, LOGICAL),
 
         /** Mvcc data record. */
@@ -221,7 +226,7 @@ public abstract class WALRecord {
         /** Partition meta page containing update counter gaps. */
         PARTITION_META_PAGE_UPDATE_COUNTERS_V2(58, PHYSICAL),
 
-        /** Init root meta page (with flags and created version)*/
+        /** Init root meta page (with flags and created version) */
         BTREE_META_PAGE_INIT_ROOT_V3(59, PHYSICAL),
 
         /** Master key change record. */
@@ -236,7 +241,11 @@ public abstract class WALRecord {
         /** Encrypted WAL-record. */
         ENCRYPTED_RECORD_V2(63, PHYSICAL),
 
-        /** Ecnrypted data record. */
+        /**
+         * Ecnrypted data record.
+         * @deprecated Use {@link #ENCRYPTED_DATA_RECORD_V3} instead.
+         */
+        @Deprecated
         ENCRYPTED_DATA_RECORD_V2(64, LOGICAL),
 
         /** Master key change record containing multiple keys for single cache group. */
@@ -251,8 +260,20 @@ public abstract class WALRecord {
         /** Index meta page delta record includes encryption status data. */
         INDEX_META_PAGE_DELTA_RECORD(68, PHYSICAL),
 
-        /** Partition meta page delta record includes tombstones count. */
-        PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL);
+        /** IGNITE-11704 placeholder: Partition meta page delta record includes tombstones count. */
+        PARTITION_META_PAGE_DELTA_RECORD_V4(69, PHYSICAL),
+
+        /** Data record V2. */
+        DATA_RECORD_V2(70, LOGICAL),
+
+        /** Ecnrypted data record. */
+        ENCRYPTED_DATA_RECORD_V3(71, LOGICAL),
+
+        /** Record for renaming the index root pages. */
+        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL),
+
+        /** Partition clearing start. */
+        PARTITION_CLEARING_START_RECORD(73, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;
@@ -337,12 +358,14 @@ public abstract class WALRecord {
         INTERNAL,
         /**
          * Physical records are needed for correct recovering physical state of {@link org.apache.ignite.internal.pagemem.PageMemory}.
-         * {@see org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager#restoreBinaryMemory(org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate)}.
+         * {@link org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager#restoreBinaryMemory(
+         * org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate)}.
          */
         PHYSICAL,
         /**
          * Logical records are needed to replay logical updates since last checkpoint.
-         * {@see GridCacheDatabaseSharedManager#applyLogicalUpdates(CheckpointStatus, org.apache.ignite.lang.IgnitePredicate, org.apache.ignite.lang.IgniteBiPredicate, boolean)}
+         * {@link GridCacheDatabaseSharedManager#applyLogicalUpdates(CheckpointStatus, org.apache.ignite.lang.IgnitePredicate,
+         * org.apache.ignite.lang.IgniteBiPredicate, boolean)}
          */
         LOGICAL,
         /**

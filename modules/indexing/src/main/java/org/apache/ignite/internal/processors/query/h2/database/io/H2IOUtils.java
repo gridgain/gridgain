@@ -25,7 +25,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 /**
  *
  */
-class H2IOUtils {
+public class H2IOUtils {
     /**
      *
      */
@@ -37,7 +37,7 @@ class H2IOUtils {
      * @param off Offset.
      * @param storeMvcc {@code True} to store mvcc data.
      */
-    static void storeRow(H2CacheRow row, long pageAddr, int off, boolean storeMvcc) {
+    public static void storeRow(H2CacheRow row, long pageAddr, int off, boolean storeMvcc) {
         assert row.link() != 0;
 
         PageUtils.putLong(pageAddr, off, row.link());

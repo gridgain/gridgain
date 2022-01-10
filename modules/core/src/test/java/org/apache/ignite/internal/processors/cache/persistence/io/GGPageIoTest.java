@@ -143,7 +143,7 @@ public class GGPageIoTest {
         try {
             long addr = GridUnsafe.bufferAddress(bb);
 
-            fromIO.initNewPage(addr, pageId, PAGE_SIZE);
+            fromIO.initNewPage(addr, pageId, PAGE_SIZE, null);
 
             setFields(addr);
 

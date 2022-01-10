@@ -24,6 +24,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerAbstractConnectionContext;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
+import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.JDBC_CLIENT;
 
 /**
  * JDBC Connection Context.
@@ -91,10 +93,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     private final int maxCursors;
 
     /** Message parser. */
-    private JdbcMessageParser parser = null;
+    private JdbcMessageParser parser;
 
     /** Request handler. */
-    private JdbcRequestHandler handler = null;
+    private JdbcRequestHandler handler;
 
     /** Current protocol context. */
     private JdbcProtocolContext protoCtx;
@@ -131,6 +133,11 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         this.maxCursors = maxCursors;
 
         log = ctx.log(getClass());
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte clientType() {
+        return JDBC_CLIENT;
     }
 
     /** {@inheritDoc} */
@@ -185,33 +192,39 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         long maxMemory = 0L;
         EnumSet<JdbcThinFeature> features = EnumSet.noneOf(JdbcThinFeature.class);
 
-        try {
-            if (ver.compareTo(VER_2_8_0) >= 0) {
+        if (ver.compareTo(VER_2_8_0) >= 0) {
+            BinaryHeapInputStream inStream = (BinaryHeapInputStream)reader.in();
+
+            int pos = inStream.position();
+
+            try {
                 dataPageScanEnabled = nullableBooleanFromByte(reader.readByte());
 
                 updateBatchSize = JdbcUtils.readNullableInteger(reader);
-
-                if (ver.compareTo(VER_2_8_1) >= 0) {
-                    if (reader.readBoolean())
-                        maxMemory = reader.readLong();
-                }
             }
+            catch (Exception ex) {
+                if (ver.compareTo(VER_2_8_0) != 0)
+                    throw ex;
 
-            if (ver.compareTo(VER_2_8_2) >= 0) {
-                byte[] cliFeatures = reader.readByteArray();
+                inStream.position(pos);
 
-                features = JdbcThinFeature.enumSet(cliFeatures);
+                // TODO: GG-25595 remove when version 8.7.X support ends
             }
-
-            if (ver.compareTo(VER_2_8_3) >= 0)
-                userAttrs = reader.readMap();
         }
-        catch (Exception ex) {
-            if (ver.compareTo(VER_2_8_0) != 0)
-                throw ex;
 
-            // TODO: GG-25595 remove when version 8.7.X support ends
+        if (ver.compareTo(VER_2_8_1) >= 0) {
+            if (reader.readBoolean())
+                maxMemory = reader.readLong();
         }
+
+        if (ver.compareTo(VER_2_8_2) >= 0) {
+            byte[] cliFeatures = reader.readByteArray();
+
+            features = JdbcThinFeature.enumSet(cliFeatures);
+        }
+
+        if (ver.compareTo(VER_2_8_3) >= 0)
+            userAttrs = reader.readMap();
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;

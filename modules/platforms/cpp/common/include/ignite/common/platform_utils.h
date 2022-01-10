@@ -51,15 +51,6 @@ namespace ignite
         IGNITE_IMPORT_EXPORT bool IgniteGmTime(time_t in, tm& out);
 
         /**
-         * Convert time_t to struct tm (Local time).
-         *
-         * @param in Standard C type time_t value.
-         * @param out Standard C type struct tm value.
-         * @return True on success.
-         */
-        IGNITE_IMPORT_EXPORT bool IgniteLocalTime(time_t in, tm& out);
-
-        /**
          * Read system environment variable taking thread-safety in count.
          *
          * @param name Environment variable name.

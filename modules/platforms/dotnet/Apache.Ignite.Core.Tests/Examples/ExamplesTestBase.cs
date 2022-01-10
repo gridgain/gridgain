@@ -34,6 +34,9 @@ namespace Apache.Ignite.Core.Tests.Examples
         /** */
         private TextWriter _oldOut;
 
+        /** */
+        private TextWriter _oldError;
+
         /// <summary>
         /// Sets up the test.
         /// </summary>
@@ -41,8 +44,13 @@ namespace Apache.Ignite.Core.Tests.Examples
         public void SetUp()
         {
             _oldOut = Console.Out;
+            _oldError = Console.Error;
+
             _outSb = new StringBuilder();
-            Console.SetOut(new StringWriter(_outSb));
+            var outWriter = new StringWriter(_outSb);
+
+            Console.SetOut(outWriter);
+            Console.SetError(outWriter);
         }
 
         /// <summary>
@@ -52,9 +60,11 @@ namespace Apache.Ignite.Core.Tests.Examples
         public void TearDown()
         {
             Console.SetOut(_oldOut);
+            Console.SetError(_oldError);
             Console.WriteLine(_outSb);
 
-            StringAssert.Contains(">>> Example finished, press any key to exit ...", GetOutput());
+            var output = GetOutput();
+            StringAssert.Contains(">>> Example finished, press any key to exit ...", output, output);
         }
 
         /// <summary>

@@ -13,10 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsSurvivesNodeRestartTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsageTest;
+import org.apache.ignite.internal.processors.query.stat.BusyExecutorTest;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorAggregationTest;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatisticsCollectorTest;
 import org.apache.ignite.internal.processors.query.stat.HasherSelfTest;
@@ -32,10 +34,14 @@ import org.apache.ignite.internal.processors.query.stat.SqlStatisticsCommandTest
 import org.apache.ignite.internal.processors.query.stat.StatisticsClearTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsConfigurationTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsGatheringTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsObsolescenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageInMemoryTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStoragePersistenceTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageRestartTest;
 import org.apache.ignite.internal.processors.query.stat.StatisticsStorageUnitTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsViewsInMemoryTest;
+import org.apache.ignite.internal.processors.query.stat.StatisticsViewsPersistenceTest;
+import org.apache.ignite.internal.processors.query.stat.hll.FullHLLTest;
 import org.apache.ignite.internal.sql.SqlParserAnalyzeSelfTest;
 import org.apache.ignite.internal.sql.SqlParserDropStatisticsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserRefreshStatisticsSelfTest;
@@ -68,6 +74,8 @@ import org.junit.runners.Suite;
     PSUStatisticsStorageTest.class,
 
     // Statistics collection components tests
+    BusyExecutorTest.class,
+    FullHLLTest.class,
     StatisticsStorageInMemoryTest.class,
     StatisticsStoragePersistenceTest.class,
     StatisticsStorageUnitTest.class,
@@ -78,6 +86,13 @@ import org.junit.runners.Suite;
     SqlParserDropStatisticsSelfTest.class,
     SqlStatisticsCommandTests.class,
     StatisticsConfigurationTest.class,
+
+    // Obsolescence
+    StatisticsObsolescenceTest.class,
+
+    // Views
+    StatisticsViewsPersistenceTest.class,
+    StatisticsViewsInMemoryTest.class
 })
 public class IgniteStatisticsTestSuite {
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     protected final GridFutureAdapter<Void> buildIdxFut;
 
     /** Logger. */
-    private IgniteLogger log;
+    protected final IgniteLogger log;
 
     /**
      * Constructor.
@@ -108,8 +108,9 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
         AtomicBoolean stop = new AtomicBoolean();
 
-        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> buildIdxCompoundFut =
-            new GridCompoundFuture<>();
+        // To avoid a race between clearing pageMemory (on a cache stop ex. deactivation)
+        // and rebuilding indexes, which can lead to a fail of the node.
+        SchemaIndexCacheCompoundFuture buildIdxCompoundFut = new SchemaIndexCacheCompoundFuture();
 
         for (GridDhtLocalPartition locPart : locParts) {
             GridWorkerFuture<SchemaIndexCacheStat> workerFut = new GridWorkerFuture<>();
@@ -119,7 +120,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             workerFut.setWorker(worker);
             buildIdxCompoundFut.add(workerFut);
 
-            cctx.kernalContext().buildIndexExecutorService().execute(worker);
+            cctx.kernalContext().pools().buildIndexExecutorService().execute(worker);
         }
 
         buildIdxCompoundFut.listen(fut -> {

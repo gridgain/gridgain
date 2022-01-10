@@ -24,7 +24,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
-import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteLogger;
@@ -159,10 +158,11 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Register existing metrics in this group with the specified name.
      *
+     * @param name Name.
      * @param metric Metric.
      */
-    public void register(Metric metric) {
-        addMetric(metric.name(), metric);
+    public void register(String name, Metric metric) {
+        addMetric(name, metric);
     }
 
     /**
@@ -289,7 +289,9 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return {@link LongAdderWithDelegateMetric}.
      */
-    public LongAdderMetric longAdderMetric(String name, LongConsumer delegate, @Nullable String desc) {
+    public LongAdderWithDelegateMetric longAdderMetric(
+        String name, LongAdderWithDelegateMetric.Delegate delegate, @Nullable String desc
+    ) {
         return addMetric(name, new LongAdderWithDelegateMetric(metricName(regName, name), delegate, desc));
     }
 

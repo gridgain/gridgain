@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -38,6 +39,7 @@ import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
@@ -73,11 +75,16 @@ import static org.apache.ignite.internal.processors.query.h2.database.inlinecolu
  * H2 tree index implementation.
  */
 public class H2Tree extends BPlusTree<H2Row, H2Row> {
+    /** @see #IGNITE_THROTTLE_INLINE_SIZE_CALCULATION */
+    public static final int DFLT_THROTTLE_INLINE_SIZE_CALCULATION = 1_000;
+
     /** */
+    @SystemProperty(value = "How often real invocation of inline size calculation will be skipped.", type = Long.class,
+        defaults = "" + DFLT_THROTTLE_INLINE_SIZE_CALCULATION)
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
 
     /** Cache context. */
-    private final GridCacheContext cctx;
+    private final GridCacheContext<?, ?> cctx;
 
     /** Owning table. */
     private final GridH2Table table;
@@ -117,7 +124,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     private final String idxName;
 
     /** */
-    private final IoStatisticsHolder stats;
+    @Nullable private final IoStatisticsHolder stats;
 
     /** */
     private final Comparator<Value> comp = this::compareValues;
@@ -127,7 +134,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** How often real invocation of inline size calculation will be skipped. */
     private final int THROTTLE_INLINE_SIZE_CALCULATION =
-        IgniteSystemProperties.getInteger(IGNITE_THROTTLE_INLINE_SIZE_CALCULATION, 1_000);
+        IgniteSystemProperties.getInteger(IGNITE_THROTTLE_INLINE_SIZE_CALCULATION,
+            DFLT_THROTTLE_INLINE_SIZE_CALCULATION);
 
     /** Counter of inline size calculation for throttling real invocations. */
     private final ThreadLocal<Long> inlineSizeCalculationCntr = ThreadLocal.withInitial(() -> 0L);
@@ -171,6 +179,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param mvccEnabled Mvcc flag.
      * @param rowCache Row cache.
      * @param failureProcessor if the tree is corrupted.
+     * @param pageLockTrackerManager Page lock tracker manager.
      * @param log Logger.
      * @param stats Statistics holder.
      * @param factory Inline helper factory.
@@ -179,7 +188,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @throws IgniteCheckedException If failed.
      */
     public H2Tree(
-        GridCacheContext cctx,
+        @Nullable GridCacheContext<?, ?> cctx,
         GridH2Table table,
         String name,
         String idxName,
@@ -201,8 +210,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         boolean mvccEnabled,
         @Nullable H2RowCache rowCache,
         @Nullable FailureProcessor failureProcessor,
+        PageLockTrackerManager pageLockTrackerManager,
         IgniteLogger log,
-        IoStatisticsHolder stats,
+        @Nullable IoStatisticsHolder stats,
         InlineIndexColumnFactory factory,
         int configuredInlineSize,
         PageIoResolver pageIoRslvr
@@ -218,7 +228,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             reuseList,
             PageIdAllocator.FLAG_IDX,
             failureProcessor,
-            null,
+            pageLockTrackerManager,
             pageIoRslvr
         );
 
@@ -855,7 +865,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
     /** {@inheritDoc} */
     @Override protected IoStatisticsHolder statisticsHolder() {
-        return stats;
+        return stats != null ? stats : super.statisticsHolder();
     }
 
     /**
@@ -990,7 +1000,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return New CorruptedTreeException instance.
      */
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
-        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpId, grpName, cacheName, idxName, pageIds);
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, cacheName, idxName, grpId, pageIds);
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 
@@ -1009,5 +1019,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         // Using timeout value reduced by 10 times to increase possibility of lock releasing before timeout.
         return sysWorkerBlockedTimeout == 0 ? Long.MAX_VALUE : (sysWorkerBlockedTimeout / 10);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected String lockRetryErrorMessage(String op) {
+        return super.lockRetryErrorMessage(op) + " Problem with the index [cacheName=" +
+            cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
     }
 }

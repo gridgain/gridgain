@@ -33,11 +33,13 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -84,6 +86,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
+import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 
 /**
  * Key partition.
@@ -92,8 +95,18 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** */
     private static final GridCacheMapEntryFactory ENTRY_FACTORY = GridDhtCacheEntry::new;
 
+    /** @see IgniteSystemProperties#IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE */
+    public static final int DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE = 200_000;
+
     /** Maximum size for delete queue. */
-    public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 200_000);
+    public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE,
+        DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE);
+
+    /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
+    private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
+
+    /** ONLY FOR TEST PURPOSES: partition id where test checkpoint was enforced during eviction. */
+    static volatile Integer partWhereTestCheckpointEnforced;
 
     /** Static logger to avoid re-creation. */
     private static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
@@ -565,11 +578,27 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             if (casState(state, MOVING)) {
                 // The state is switched under global topology lock, safe to record version here.
-                clearVer = ctx.versions().localOrder();
+                updateClearVersion();
 
                 return true;
             }
         }
+    }
+
+    /**
+     * Records a version for row clearing. Must be called when a partition is marked for full rebalancing.
+     * @see #clearAll(EvictionContext)
+     */
+    public void updateClearVersion() {
+        clearVer = ctx.versions().localOrder();
+    }
+
+    /**
+     * Used to set a version from {@link PartitionClearingStartRecord} when need to repeat a clearing after node restart.
+     * @param clearVer Clear version.
+     */
+    public void updateClearVersion(long clearVer) {
+        this.clearVer = clearVer;
     }
 
     /**
@@ -894,7 +923,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             clearClo = this::clearSafe;
         }
-        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING) {
+        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING ||
+            task.reason() == PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY) {
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);
@@ -960,6 +990,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 finally {
                     ctx.database().checkpointReadUnlock();
                 }
+            }
+
+            if (forceTestCheckpointOnEviction && partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
+                ctx.database().forceCheckpoint("test").futureFor(FINISHED).get();
+
+                log.warning("Forced checkpoint by test reasons for partition: " + this);
+
+                partWhereTestCheckpointEnforced = id;
             }
         }
         catch (NodeStoppingException e) {

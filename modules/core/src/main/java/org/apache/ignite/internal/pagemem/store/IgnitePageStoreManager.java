@@ -18,7 +18,6 @@ package org.apache.ignite.internal.pagemem.store;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -27,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManager;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 
@@ -50,10 +50,10 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @param cacheId Cache id.
      * @param partitions Partitions count.
      * @param workingDir Working directory.
-     * @param tracker Allocation tracker.
+     * @param pageMetrics Page metrics.
      * @throws IgniteCheckedException If failed.
      */
-    void initialize(int cacheId, int partitions, String workingDir, LongConsumer tracker)
+    public void initialize(int cacheId, int partitions, String workingDir, PageMetrics pageMetrics)
         throws IgniteCheckedException;
 
     /**
@@ -82,15 +82,6 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
     public void shutdownForCacheGroup(CacheGroupContext grp, boolean destroy) throws IgniteCheckedException;
 
     /**
-     * Callback called when a partition is created on the local node.
-     *
-     * @param grpId Cache group ID where the partition is being created.
-     * @param partId ID of the partition being created.
-     * @throws IgniteCheckedException If failed to handle partition create callback.
-     */
-    public void onPartitionCreated(int grpId, int partId) throws IgniteCheckedException;
-
-    /**
      * Callback called when a partition for the given cache is evicted from the local node.
      * After this callback is invoked, no data associated with the partition will be stored on disk.
      *
@@ -99,7 +90,7 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @param tag Partition tag (growing 1-based partition file version).
      * @throws IgniteCheckedException If failed to handle partition destroy callback.
      */
-    public void onPartitionDestroyed(int grpId, int partId, int tag) throws IgniteCheckedException;
+    public void truncate(int grpId, int partId, int tag) throws IgniteCheckedException;
 
     /**
      * Checks if partition store exists.

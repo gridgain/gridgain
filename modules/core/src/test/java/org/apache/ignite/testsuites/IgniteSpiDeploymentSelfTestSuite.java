@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.spi.deployment.local.GridLocalDeploymentSpiSelfTest;
 import org.apache.ignite.spi.deployment.local.GridLocalDeploymentSpiStartStopSelfTest;
+import org.apache.ignite.spi.deployment.local.LocalDeploymentSpiConsistencyCheckTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -27,7 +28,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     GridLocalDeploymentSpiSelfTest.class,
-    GridLocalDeploymentSpiStartStopSelfTest.class
+    GridLocalDeploymentSpiStartStopSelfTest.class,
+    LocalDeploymentSpiConsistencyCheckTest.class
 })
 public class IgniteSpiDeploymentSelfTestSuite {
 }

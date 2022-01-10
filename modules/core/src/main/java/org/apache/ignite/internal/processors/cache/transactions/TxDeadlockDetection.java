@@ -50,8 +50,12 @@ import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxM
  * Transactions deadlock detection.
  */
 public class TxDeadlockDetection {
+    /** @see IgniteSystemProperties#IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT */
+    public static final int DFLT_TX_DEADLOCK_DETECTION_TIMEOUT = 60000;
+
     /** Deadlock detection maximum iterations. */
-    private static int deadLockTimeout = getInteger(IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT, 60000);
+    private static int deadLockTimeout = getInteger(IGNITE_TX_DEADLOCK_DETECTION_TIMEOUT,
+        DFLT_TX_DEADLOCK_DETECTION_TIMEOUT);
 
     /** Sequence. */
     private static final AtomicLong SEQ = new AtomicLong();

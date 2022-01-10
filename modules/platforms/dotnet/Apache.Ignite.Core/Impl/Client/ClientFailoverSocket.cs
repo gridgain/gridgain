@@ -113,6 +113,7 @@ namespace Apache.Ignite.Core.Impl.Client
             _config = config;
             _marsh = marsh;
             _transactions = transactions;
+            _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
 
 #pragma warning disable 618 // Type or member is obsolete
             if (config.Host == null && (config.Endpoints == null || config.Endpoints.Count == 0))
@@ -128,8 +129,6 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 throw new IgniteClientException("Failed to resolve all specified hosts.");
             }
-
-            _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
 
             ConnectDefaultSocket();
             OnFirstConnection();
@@ -257,7 +256,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Checks the disposed state.
         /// </summary>
-        private ClientSocket GetSocket()
+        internal ClientSocket GetSocket()
         {
             var tx = _transactions.Tx;
             if (tx != null)
@@ -278,7 +277,7 @@ namespace Apache.Ignite.Core.Impl.Client
             }
         }
 
-        private ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
+        internal ClientSocket GetAffinitySocket<TKey>(int cacheId, TKey key)
         {
             ThrowIfDisposed();
 
@@ -338,8 +337,9 @@ namespace Apache.Ignite.Core.Impl.Client
             Justification = "There is no finalizer.")]
         public void Dispose()
         {
-            lock (_socketLock)
+            // Lock order: same as in OnAffinityTopologyVersionChange. 
             lock (_topologyUpdateLock)
+            lock (_socketLock)
             {
                 _disposed = true;
 

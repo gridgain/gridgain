@@ -15,16 +15,27 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import org.apache.ignite.internal.util.collection.IntMap;
+
 import java.util.Collection;
+import java.util.Map;
 
 /**
- * Statistics store interface.
+ * Statistics store interface. Wrap physical storage (in memory or local metastore) to give easy access to statistics.
  */
 public interface IgniteStatisticsStore {
     /**
      * Clear statistics of any type for any objects;
      */
     public void clearAllStatistics();
+
+    /**
+     * Get all local partition statistics.
+     *
+     * @param schema Schema name, if {@code null} - returl local partitions statistics for all schemas.
+     * @return Map with all local partitions statistics.
+     */
+    public Map<StatisticsKey, Collection<ObjectPartitionStatisticsImpl>> getAllLocalPartitionsStatistics(String schema);
 
     /**
      * Replace all tables partition statistics with specified ones.
@@ -81,4 +92,44 @@ public interface IgniteStatisticsStore {
      * @param statistics Statistics to save.
      */
     public void saveLocalPartitionStatistics(StatisticsKey key, ObjectPartitionStatisticsImpl statistics);
+
+    /**
+     *
+     * @param obsolescence Statistics key to partId to obsolescence info map to save.
+     */
+    public void saveObsolescenceInfo(
+        Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> obsolescence
+    );
+
+    /**
+     * Save obsolescence info.
+     *
+     * @param key Statistics key which it is belongs to.
+     * @param partId Partition id.
+     * @param partObs Info to save.
+     */
+    public void saveObsolescenceInfo(StatisticsKey key, int partId, ObjectPartitionStatisticsObsolescence partObs);
+
+    /**
+     * Remove obsolescence info for the given key and partitions (if specified).
+     *
+     * @param key Statistics key to remove obsolescense info by.
+     * @param partIds Partition ids, if {@code null} - remove all partitions info for specified key.
+     */
+    public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds);
+
+    /**
+     * Load all obsolescence info from store.
+     *
+     * @return StatisticsKey to partitionId to obsolescence info map.
+     */
+    public Map<StatisticsKey, IntMap<ObjectPartitionStatisticsObsolescence>> loadAllObsolescence();
+
+    /**
+     * Load partitions map by key.
+     *
+     * @param key Staistics key to load map by.
+     * @return Collection of all partition ids for which there are local partitions statistics.
+     */
+    public Collection<Integer> loadLocalPartitionMap(StatisticsKey key);
 }

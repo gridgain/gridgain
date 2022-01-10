@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.PartitionUpda
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
@@ -886,7 +887,8 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                                 writeVersion(),
                                                 0,
                                                 txEntry.key().partition(),
-                                                txEntry.updateCounter())));
+                                                txEntry.updateCounter(),
+                                                DataEntry.flags(CU.txOnPrimary(this)))));
                                         }
                                     }
 
@@ -951,7 +953,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
 
                 cctx.mvccCaching().onTxFinished(this, true);
 
-                if (ptr != null && !cctx.tm().logTxRecords())
+                if (ptr != null)
                     cctx.wal().flush(ptr, false);
             }
             catch (Throwable ex) {
@@ -963,7 +965,15 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                     U.warn(log, "Failed to commit transaction, node is stopping [tx=" + CU.txString(this) +
                         ", err=" + ex + ']');
 
-                    return;
+                    boolean persistenceEnabled = CU.isPersistenceEnabled(cctx.kernalContext().config());
+
+                    if (persistenceEnabled) {
+                        GridCacheDatabaseSharedManager dbManager = (GridCacheDatabaseSharedManager)cctx.database();
+
+                        dbManager.getCheckpointer().skipCheckpointOnNodeStop(true);
+                    }
+
+                    throw ex;
                 }
 
                 err = heuristicException(ex);

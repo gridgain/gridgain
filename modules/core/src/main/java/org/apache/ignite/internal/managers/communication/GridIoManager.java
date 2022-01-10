@@ -17,11 +17,10 @@
 package org.apache.ignite.internal.managers.communication;
 
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -51,7 +50,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridJobExecuteResponse;
@@ -85,6 +83,7 @@ import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -118,6 +117,7 @@ import org.apache.ignite.thread.IgniteThreadFactory;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -257,6 +257,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** No-op runnable. */
     private static final IgniteRunnable NOOP = () -> {};
+
+    /** Version of security processor feature supported by cluster, {@code null} if not supported. */
+    @Nullable private volatile IgniteFeatures secProcSupported;
 
     /**
      * @param ctx Grid kernal context.
@@ -709,8 +712,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             }
         }
 
-        SimpleDateFormat dateFmt = new SimpleDateFormat("HH:mm:ss,SSS");
-
         StringBuilder b = new StringBuilder(U.nl())
             .append("IO test results (round-trip count per each latency bin).")
             .append(U.nl());
@@ -756,25 +757,25 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 .append(String.format("%15d", e.getValue().totalLatency)).append(U.nl());
 
             b.append(U.nl()).append("Max latencies (ns):").append(U.nl());
-            format(b, e.getValue().maxLatency, dateFmt);
+            format(b, e.getValue().maxLatency);
 
             b.append(U.nl()).append("Max request send queue times (ns):").append(U.nl());
-            format(b, e.getValue().maxReqSendQueueTime, dateFmt);
+            format(b, e.getValue().maxReqSendQueueTime);
 
             b.append(U.nl()).append("Max request receive queue times (ns):").append(U.nl());
-            format(b, e.getValue().maxReqRcvQueueTime, dateFmt);
+            format(b, e.getValue().maxReqRcvQueueTime);
 
             b.append(U.nl()).append("Max response send queue times (ns):").append(U.nl());
-            format(b, e.getValue().maxResSendQueueTime, dateFmt);
+            format(b, e.getValue().maxResSendQueueTime);
 
             b.append(U.nl()).append("Max response receive queue times (ns):").append(U.nl());
-            format(b, e.getValue().maxResRcvQueueTime, dateFmt);
+            format(b, e.getValue().maxResRcvQueueTime);
 
             b.append(U.nl()).append("Max request wire times (millis):").append(U.nl());
-            format(b, e.getValue().maxReqWireTimeMillis, dateFmt);
+            format(b, e.getValue().maxReqWireTimeMillis);
 
             b.append(U.nl()).append("Max response wire times (millis):").append(U.nl());
-            format(b, e.getValue().maxResWireTimeMillis, dateFmt);
+            format(b, e.getValue().maxResWireTimeMillis);
 
             b.append(U.nl());
         }
@@ -786,18 +787,19 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     /**
      * @param b Builder.
      * @param pairs Pairs to format.
-     * @param dateFmt Formatter.
      */
-    private void format(StringBuilder b, Collection<IgnitePair<Long>> pairs, SimpleDateFormat dateFmt) {
+    private static void format(StringBuilder b, Collection<IgnitePair<Long>> pairs) {
         for (IgnitePair<Long> p : pairs) {
-            b.append(String.format("%15d", p.get1())).append(" ")
-                .append(dateFmt.format(new Date(p.get2()))).append(U.nl());
+            b.append(String.format("%15d", p.get1()))
+                .append(" ")
+                .append(IgniteUtils.DEBUG_DATE_FMT.format(Instant.ofEpochMilli(p.get2())))
+                .append(U.nl());
         }
     }
 
     /** {@inheritDoc} */
     @SuppressWarnings({"SynchronizationOnLocalVariableOrMethodParameter"})
-    @Override public void onKernalStart0() throws IgniteCheckedException {
+    @Override public void onKernalStart0() {
         discoLsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
                 assert evt instanceof DiscoveryEvent : "Invalid event: " + evt;
@@ -863,6 +865,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     default:
                         assert false : "Unexpected event: " + evt;
                 }
+
+                secProcSupported = currentSecurityProcSupport();
             }
         };
 
@@ -941,6 +945,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 closedTopics.add(e.getKey());
             }
         }
+
+        secProcSupported = currentSecurityProcSupport();
     }
 
     /**
@@ -1165,7 +1171,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         };
 
         try {
-            pools.p2pPool().execute(c);
+            pools.getPeerClassLoadingExecutorService().execute(c);
         }
         catch (RejectedExecutionException e) {
             U.error(log, "Failed to process P2P message due to execution rejection. Increase the upper bound " +
@@ -1238,7 +1244,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             if (msg0.processFromNioThread())
                 c.run();
             else
-                ctx.getStripedExecutorService().execute(-1, c);
+                ctx.pools().getStripedExecutorService().execute(-1, c);
 
             return;
         }
@@ -1249,7 +1255,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             /*if (msg0.processedFromNioThread())
                 c.run();
             else*/
-                ctx.getStripedExecutorService().execute(-1, c);
+                ctx.pools().getStripedExecutorService().execute(-1, c);
 
             return;
         }
@@ -1257,13 +1263,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         final int part = msg.partition(); // Store partition to avoid possible recalculation.
 
         if (plc == GridIoPolicy.SYSTEM_POOL && part != GridIoMessage.STRIPE_DISABLED_PART) {
-            ctx.getStripedExecutorService().execute(part, c);
+            ctx.pools().getStripedExecutorService().execute(part, c);
 
             return;
         }
 
         if (plc == GridIoPolicy.DATA_STREAMER_POOL && part != GridIoMessage.STRIPE_DISABLED_PART) {
-            ctx.getDataStreamerExecutorService().execute(part, c);
+            ctx.pools().getDataStreamerExecutorService().execute(part, c);
 
             return;
         }
@@ -1715,7 +1721,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         IgniteSecurity sec = ctx.security();
 
-        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(subjId)) {
+        try (OperationSecurityContext ignored = secCtx0 != null ? sec.withContext(secCtx0) : sec.withContext(nodeId, subjId)) {
             lsnr.onMessage(nodeId, msg, plc);
         }
         finally {
@@ -1856,17 +1862,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     ) throws IgniteCheckedException {
         if (ctx.security().enabled() &&
             !(msg instanceof GridDhtPartitionsAbstractMessage) && !(msg instanceof GridJobExecuteResponse)) {
-            // We don't need enabled v1 to enable v2.
-            boolean v2 = allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR_V2);
+            IgniteFeatures secProcSupported = this.secProcSupported;
 
-            if (v2 || allNodesSupports(ctx, ctx.discovery().allNodes(), IGNITE_SECURITY_PROCESSOR)) {
+            if (secProcSupported != null) {
                 SecurityContext secCtx = ctx.security().securityContext();
                 UUID subjId = secCtx.subject().id();
 
                 byte[] serSubj = null;
 
                 // Skip sending serialized subject if all nodes support IGNITE_SECURITY_PROCESSOR_V2 and state=ACTIVE.
-                if (!v2 || ctx.state().clusterState().state() == ClusterState.INACTIVE)
+                if (secProcSupported != IGNITE_SECURITY_PROCESSOR_V2 || ctx.state().clusterState().state() == INACTIVE)
                     serSubj = !locNodeId.equals(subjId) ? U.marshal(marsh, secCtx) : null;
 
                 return new GridIoSecurityAwareMessage(subjId, serSubj, plc, topic, topicOrd, msg, ordered, timeout,
@@ -1875,6 +1880,20 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         return new GridIoMessage(plc, topic, topicOrd, msg, ordered, timeout, skipOnTimeout);
+    }
+
+    /**
+     * @return Version of security processor feature supported by cluster.
+     */
+    private IgniteFeatures currentSecurityProcSupport() {
+        Collection<ClusterNode> allNodes = ctx.discovery().allNodes();
+
+        if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR_V2))
+            return IGNITE_SECURITY_PROCESSOR_V2;
+        else if (allNodesSupports(ctx, allNodes, IGNITE_SECURITY_PROCESSOR))
+            return IGNITE_SECURITY_PROCESSOR;
+        else
+            return null;
     }
 
     /**
@@ -2759,7 +2778,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     // Resource injection.
                     if (dep != null)
-                        ctx.resource().inject(dep, dep.deployedClass(ioMsg.deploymentClassName()), msgBody);
+                        ctx.resource().inject(dep, dep.deployedClass(ioMsg.deploymentClassName()).get1(), msgBody);
                 }
                 catch (IgniteCheckedException e) {
                     U.error(log, "Failed to unmarshal user message [node=" + nodeId + ", message=" +

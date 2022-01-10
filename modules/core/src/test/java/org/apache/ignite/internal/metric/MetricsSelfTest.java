@@ -123,7 +123,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
     public void testRegister() {
         AtomicLongMetric l = new AtomicLongMetric("rtest", "test");
 
-        mreg.register(l);
+        mreg.register(l.name(), l);
 
         assertEquals(l, mreg.findMetric("rtest"));
 

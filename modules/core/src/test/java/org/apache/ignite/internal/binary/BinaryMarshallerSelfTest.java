@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,6 +52,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -78,6 +80,7 @@ import org.apache.ignite.binary.BinaryWriter;
 import org.apache.ignite.binary.Binarylizable;
 import org.apache.ignite.configuration.BinaryConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.binary.builder.BinaryBuilderReader;
 import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
@@ -87,8 +90,8 @@ import org.apache.ignite.internal.managers.systemview.JmxSystemViewExporterSpi;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.lang.GridMapEntry;
+import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -1029,6 +1032,110 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         Object des = po.deserialize();
 
         assertEquals(obj, des);
+    }
+
+    /**
+     * Checks {@link BinaryBuilderReader#parseValue()} for object that contains handles to collection.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void handleToCollection() throws Exception {
+        final IgnitePair<String>[] fieldsColAndHandle = new IgnitePair[] {
+            new IgnitePair<>("lst", "hndLst"),
+            new IgnitePair<>("linkedLst", "hndLinkedLst"),
+            new IgnitePair<>("map", "hndMap"),
+            new IgnitePair<>("linkedMap", "hndLinkedMap")
+        };
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections obj = new HandleToCollections();
+
+        BinaryObject bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            if (i > 0)
+                assertEquals(i - 1, (int)bo.field("a"));
+
+            bob.setField("a", i);
+
+            for (IgnitePair<String> flds : fieldsColAndHandle) {
+                // Different orders to read collection and handle to collection.
+                Object col;
+                Object colHnd;
+
+                if (i % 2 == 0) {
+                    col = bob.getField(flds.get1());
+                    colHnd = bob.getField(flds.get2());
+                }
+                else {
+                    colHnd = bob.getField(flds.get2());
+                    col = bob.getField(flds.get1());
+                }
+
+                // Must be assertSame but now BinaryObjectBuilder doesn't support handle to collection.
+                // Now we check only that BinaryObjectBuilder#getField doesn't crash and returns valid collection.
+                assertEquals("Check: " + flds, col, colHnd);
+            }
+
+            bo = bob.build();
+        }
+    }
+
+    /** */
+    @Test
+    public void rebuildWithHandleToCollection() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections obj = new HandleToCollections();
+
+        BinaryObjectImpl bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            bob.setField("a", i);
+
+            bo = (BinaryObjectImpl)bob.build();
+
+            // Check unmarshal is OK.
+            HandleToCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst, modified.lst);
+            assertEquals(obj.hndLst, modified.hndLst);
+            assertEquals(obj.linkedLst, modified.linkedLst);
+            assertEquals(obj.hndLinkedLst, modified.hndLinkedLst);
+            assertEquals(obj.map, modified.map);
+            assertEquals(obj.hndMap, modified.hndMap);
+        }
+    }
+
+    /** */
+    @Test
+    public void rebuildObjectWithCollections() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        TwoCollections obj = new TwoCollections();
+
+        BinaryObjectImpl bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            bob.setField("a", i);
+
+            bo = (BinaryObjectImpl)bob.build();
+
+            // Check unmarshal is OK.
+            TwoCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst0, modified.lst0);
+            assertEquals(obj.lst1, modified.lst1);
+        }
     }
 
     /**
@@ -2115,9 +2222,8 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         try {
             binaryMarshaller(Arrays.asList(customType1, customType2));
         }
-        catch (IgniteCheckedException e) {
-            assertEquals("Duplicate type ID [clsName=org.gridgain.Class2, id=100]",
-                e.getCause().getCause().getMessage());
+        catch (BinaryObjectException e) {
+            assertEquals("Duplicate type ID [clsName=org.gridgain.Class2, id=100]", e.getMessage());
 
             return;
         }
@@ -3865,6 +3971,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param bo Binary object to deserialize.
+     * @param marsh Marshaller.
+     * @return Result object.
+     */
+    private <T> T unmarshal(BinaryObjectImpl bo, BinaryMarshaller marsh) throws IgniteCheckedException {
+        return marsh.unmarshal(bo.array(), null);
+    }
+
+    /**
      * @param obj Object.
      * @param marsh Marshaller.
      * @return Binary object.
@@ -3978,7 +4093,7 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
         marsh.setContext(marshCtx);
 
-        IgniteUtils.invoke(BinaryMarshaller.class, marsh, "setBinaryContext", ctx, iCfg);
+        marsh.setBinaryContext(ctx, iCfg);
 
         return marsh;
     }
@@ -5823,6 +5938,78 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
 
                 return a;
             }
+        }
+    }
+
+    /** */
+    public static class HandleToCollections {
+        /** */
+        int a;
+
+        /** */
+        List<Value> lst;
+
+        /** */
+        List<Value> hndLst;
+
+        /** */
+        List<Value> linkedLst;
+
+        /** */
+        List<Value> hndLinkedLst;
+
+        /** */
+        Map<Integer, Value> map;
+
+        /** */
+        Map<Integer, Value> hndMap;
+
+        /** */
+        Map<Integer, Value> linkedMap;
+
+        /** */
+        Map<Integer, Value> hndLinkedMap;
+
+        /** */
+        public HandleToCollections() {
+            lst = new ArrayList<>(Arrays.asList(new Value(0), new Value(1)));
+            hndLst = lst;
+
+            linkedLst = new LinkedList<>(Arrays.asList(new Value(0), new Value(1)));
+            hndLinkedLst = linkedLst;
+
+            map = IntStream.range(0, 1).boxed()
+                .collect(Collectors.toMap(Function.identity(), Value::new));
+            hndMap = map;
+
+            linkedMap = IntStream.range(0, 1).boxed()
+                .collect(Collectors.toMap(Function.identity(), Value::new, (a, b) -> a, LinkedHashMap::new));
+            hndLinkedMap = linkedMap;
+        }
+    }
+
+    /** */
+    public static class TwoCollections {
+        /** */
+        int a;
+
+        /** */
+        List<String> lst0;
+
+        /** */
+        List<String> lst1;
+
+        /** */
+        Value v;
+
+        /** */
+        public TwoCollections() {
+            a = 0;
+
+            lst0 = new ArrayList<>(Arrays.asList("a", "b"));
+            lst1 = new ArrayList<>(Arrays.asList("c", "d"));;
+
+            v = new Value(127);
         }
     }
 }

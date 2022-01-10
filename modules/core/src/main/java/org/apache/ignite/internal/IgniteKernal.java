@@ -228,7 +228,6 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.isolated.IsolatedDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.spi.tracing.TracingConfigurationManager;
-import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -298,6 +297,7 @@ import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
+import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 import static org.apache.ignite.lifecycle.LifecycleEventType.AFTER_NODE_START;
 import static org.apache.ignite.lifecycle.LifecycleEventType.BEFORE_NODE_START;
 
@@ -315,7 +315,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     public static final String SITE = "gridgain.com";
 
     /** System line separator. */
-    private static final String NL = U.nl();
+    public static final String NL = U.nl();
 
     /** System megabyte. */
     private static final int MEGABYTE = 1024 * 1024;
@@ -326,7 +326,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * <p>
      * Value is {@code 30 sec}.
      */
-    private static final long PERIODIC_STARVATION_CHECK_FREQ = 1000 * 30;
+    public static final long DFLT_PERIODIC_STARVATION_CHECK_FREQ = 1000 * 30;
 
     /** Force complete reconnect future. */
     private static final Object STOP_RECONNECT = new Object();
@@ -336,6 +336,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** Default long operations dump timeout. */
     public static final long DFLT_LONG_OPERATIONS_DUMP_TIMEOUT = 60_000L;
+
+    /** @see IgniteSystemProperties#IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED */
+    public static final boolean DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = false;
+
+    /** @see IgniteSystemProperties#IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP */
+    public static final boolean DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP = true;
 
     /** Long jvm pause detector. */
     private LongJVMPauseDetector longJVMPauseDetector;
@@ -865,7 +871,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void ackClassPathContent() {
         assert log != null;
 
-        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, true);
+        boolean enabled = IgniteSystemProperties.getBoolean(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP,
+            DFLT_LOG_CLASSPATH_CONTENT_ON_STARTUP);
 
         if (enabled) {
             String clsPath = System.getProperty("java.class.path", ".");
@@ -893,23 +900,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * @param cfg Configuration to use.
-     * @param utilityCachePool Utility cache pool.
-     * @param execSvc Executor service.
-     * @param sysExecSvc System executor service.
-     * @param stripedExecSvc Striped executor.
-     * @param p2pExecSvc P2P executor service.
-     * @param mgmtExecSvc Management executor service.
-     * @param dataStreamExecSvc data stream executor service.
-     * @param restExecSvc Reset executor service.
-     * @param affExecSvc Affinity executor service.
-     * @param idxExecSvc Indexing executor service.
-     * @param buildIdxExecSvc Create/rebuild indexes executor service.
-     * @param callbackExecSvc Callback executor service.
-     * @param qryExecSvc Query executor service.
-     * @param schemaExecSvc Schema executor service.
-     * @param rebalanceExecSvc Rebalance excutor service.
-     * @param customExecSvcs Custom named executors.
+     * @param cfg Ignite configuration to use.
      * @param errHnd Error handler to use for notification about startup problems.
      * @param workerRegistry Worker registry.
      * @param hnd Default uncaught exception handler used by thread pools.
@@ -917,23 +908,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      */
     public void start(
         final IgniteConfiguration cfg,
-        ExecutorService utilityCachePool,
-        final ExecutorService execSvc,
-        final ExecutorService svcExecSvc,
-        final ExecutorService sysExecSvc,
-        final StripedExecutor stripedExecSvc,
-        ExecutorService p2pExecSvc,
-        ExecutorService mgmtExecSvc,
-        StripedExecutor dataStreamExecSvc,
-        ExecutorService restExecSvc,
-        ExecutorService affExecSvc,
-        @Nullable ExecutorService idxExecSvc,
-        @Nullable ExecutorService buildIdxExecSvc,
-        IgniteStripedThreadPoolExecutor callbackExecSvc,
-        ExecutorService qryExecSvc,
-        ExecutorService schemaExecSvc,
-        ExecutorService rebalanceExecSvc,
-        @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
         Thread.UncaughtExceptionHandler hnd,
@@ -1011,9 +985,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         ackP2pConfiguration();
         ackRebalanceConfiguration();
         ackIPv4StackFlagIsSet();
-
-        // Run background network diagnostics.
-        GridDiagnostic.runBackgroundCheck(igniteInstanceName, execSvc, log);
+        ackWaitForBackupsOnShutdownPropertyIsUsed();
 
         // Ack 3-rd party licenses location.
         if (log.isInfoEnabled() && cfg.getIgniteHome() != null)
@@ -1042,23 +1014,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 this,
                 cfg,
                 gw,
-                utilityCachePool,
-                execSvc,
-                svcExecSvc,
-                sysExecSvc,
-                stripedExecSvc,
-                p2pExecSvc,
-                mgmtExecSvc,
-                dataStreamExecSvc,
-                restExecSvc,
-                affExecSvc,
-                idxExecSvc,
-                buildIdxExecSvc,
-                callbackExecSvc,
-                qryExecSvc,
-                schemaExecSvc,
-                rebalanceExecSvc,
-                customExecSvcs,
                 plugins,
                 MarshallerUtils.classNameFilter(this.getClass().getClassLoader()),
                 workerRegistry,
@@ -1109,6 +1064,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             startProcessor(new FailureProcessor(ctx));
 
             startProcessor(new PoolProcessor(ctx));
+
+            // Run background network diagnostics.
+            GridDiagnostic.runBackgroundCheck(igniteInstanceName, ctx.pools().getExecutorService(), log);
 
             // Closure processor should be started before all others
             // (except for resource processor), as many components can depend on it.
@@ -1330,6 +1288,15 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             startTimer.finishGlobalStage("Await transition");
 
+            ctx.pools().registerMetrics();
+
+            registerMetrics();
+
+            ctx.cluster().registerMetrics();
+
+            // Register MBeans.
+            mBeansMgr.registerMBeansAfterNodeStarted();
+
             boolean recon = false;
 
             // Callbacks.
@@ -1373,19 +1340,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             if (recon)
                 reconnectState.waitFirstReconnect();
 
-            ctx.metric().registerThreadPools(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc,
-                p2pExecSvc, mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc,
-                callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
-
-            registerMetrics();
-
-            // Register MBeans.
-            mBeansMgr.registerMBeansAfterNodeStarted(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
-                mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
-                qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
-
-            ctx.systemView().registerThreadPools(stripedExecSvc, dataStreamExecSvc);
-
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
         }
@@ -1420,7 +1374,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         boolean starveCheck = !isDaemon() && !"0".equals(intervalStr);
 
         if (starveCheck) {
-            final long interval = F.isEmpty(intervalStr) ? PERIODIC_STARVATION_CHECK_FREQ : Long.parseLong(intervalStr);
+            final long interval = F.isEmpty(intervalStr) ? DFLT_PERIODIC_STARVATION_CHECK_FREQ :
+                Long.parseLong(intervalStr);
 
             starveTask = ctx.timeout().schedule(new Runnable() {
                 /** Last completed task count. */
@@ -1433,26 +1388,26 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 private long lastCompletedCntQry;
 
                 @Override public void run() {
-                    if (execSvc instanceof ThreadPoolExecutor) {
-                        ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
+                    if (ctx.pools().getExecutorService() instanceof ThreadPoolExecutor) {
+                        ThreadPoolExecutor exec = (ThreadPoolExecutor)ctx.pools().getExecutorService();
 
                         lastCompletedCntPub = checkPoolStarvation(exec, lastCompletedCntPub, "public");
                     }
 
-                    if (sysExecSvc instanceof ThreadPoolExecutor) {
-                        ThreadPoolExecutor exec = (ThreadPoolExecutor)sysExecSvc;
+                    if (ctx.pools().getSystemExecutorService() instanceof ThreadPoolExecutor) {
+                        ThreadPoolExecutor exec = (ThreadPoolExecutor)ctx.pools().getSystemExecutorService();
 
                         lastCompletedCntSys = checkPoolStarvation(exec, lastCompletedCntSys, "system");
                     }
 
-                    if (qryExecSvc instanceof ThreadPoolExecutor) {
-                        ThreadPoolExecutor exec = (ThreadPoolExecutor)qryExecSvc;
+                    if (ctx.pools().getQueryExecutorService() instanceof ThreadPoolExecutor) {
+                        ThreadPoolExecutor exec = (ThreadPoolExecutor)ctx.pools().getQueryExecutorService();
 
                         lastCompletedCntQry = checkPoolStarvation(exec, lastCompletedCntQry, "query");
                     }
 
-                    if (stripedExecSvc != null)
-                        stripedExecSvc.detectStarvation();
+                    if (ctx.pools().getStripedExecutorService() != null)
+                        ctx.pools().getStripedExecutorService().detectStarvation();
                 }
 
                 /**
@@ -1489,7 +1444,13 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 private final DecimalFormat dblFmt = doubleFormat();
 
                 @Override public void run() {
-                    ackNodeMetrics(dblFmt, execSvc, sysExecSvc, stripedExecSvc, customExecSvcs);
+                    ackNodeMetrics(
+                        dblFmt,
+                        ctx.pools().getExecutorService(),
+                        ctx.pools().getSystemExecutorService(),
+                        ctx.pools().getStripedExecutorService(),
+                        ctx.pools().customExecutors()
+                    );
                 }
             }, metricsLogFreq, metricsLogFreq);
         }
@@ -1565,7 +1526,8 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @return Service processor.
      */
     private GridProcessorAdapter createServiceProcessor() {
-        final boolean srvcProcMode = getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, false);
+        final boolean srvcProcMode = getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED,
+            DFLT_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
 
         if (srvcProcMode)
             return new IgniteServiceProcessor(ctx);
@@ -2297,6 +2259,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             log.info(msg.toString());
 
             ctx.cache().context().database().dumpStatistics(log);
+
+            if (isLocalNodeCoordinator(ctx.discovery()))
+                ctx.cache().context().affinity().printWaitInfo(log);
         }
         catch (IgniteClientDisconnectedException ignore) {
             // No-op.
@@ -2333,7 +2298,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 long offHeapUsed = region.pageMemory().systemPageSize() * pagesCnt;
                 long offHeapInit = regCfg.getInitialSize();
                 long offHeapMax = regCfg.getMaxSize();
-                long offHeapComm = region.memoryMetrics().getOffHeapSize();
+                long offHeapComm = region.metrics().getOffHeapSize();
 
                 long offHeapUsedInMBytes = offHeapUsed / MEGABYTE;
                 long offHeapMaxInMBytes = offHeapMax / MEGABYTE;
@@ -2373,7 +2338,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     .a("%, allocRam=").a(dblFmt.format(offHeapCommInMBytes)).a("MB");
 
                 if (regCfg.isPersistenceEnabled()) {
-                    long pdsUsed = region.memoryMetrics().getTotalAllocatedSize();
+                    long pdsUsed = region.metrics().getTotalAllocatedSize();
                     long pdsUsedInMBytes = pdsUsed / MEGABYTE;
 
                     pdsUsedSummary += pdsUsed;
@@ -2980,6 +2945,16 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             U.quietAndWarn(log, "Please set system property '-Djava.net.preferIPv4Stack=true' " +
                 "to avoid possible problems in mixed environments.");
+        }
+    }
+
+    /**
+     * Prints warning if IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN is used.
+     */
+    private void ackWaitForBackupsOnShutdownPropertyIsUsed() {
+        if (IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN) != null) {
+            log.warning("IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN system property is deprecated and will be removed " +
+                "in a future version. Use ShutdownPolicy instead.");
         }
     }
 

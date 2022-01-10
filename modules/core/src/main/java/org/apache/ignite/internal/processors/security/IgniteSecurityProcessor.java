@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -44,6 +45,8 @@ import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.plugin.security.SecuritySubject;
 import org.apache.ignite.plugin.security.SecuritySubjectType;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,6 +70,13 @@ import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeS
 public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** Internal attribute name constant. */
     public static final String ATTR_GRID_SEC_PROC_CLASS = "grid.security.processor.class";
+
+    /** Enable forcible node kill. */
+    private boolean forcibleNodeKillEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_ENABLE_FORCIBLE_NODE_KILL);
+
+    private boolean checkSenderNodeSubject = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_CHECK_SENDER_NODE_SUBJECT);
 
     /** Grid kernal context. */
     private final GridKernalContext ctx;
@@ -114,14 +124,46 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         return new OperationSecurityContext(this, old);
     }
 
+    @Override public OperationSecurityContext withContext(UUID nodeId) {
+        return withContext(nodeId, nodeId);
+    }
+
     /** {@inheritDoc} */
-    @Override public OperationSecurityContext withContext(UUID subjId) {
+    @Override public OperationSecurityContext withContext(UUID senderNodeId, UUID subjId) {
         ClusterNode node = Optional.ofNullable(ctx.discovery().node(subjId))
             .orElseGet(() -> ctx.discovery().historicalNode(subjId));
 
-        SecurityContext res = node != null ? secCtxs.computeIfAbsent(subjId,
-            uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
-            : secPrc.securityContext(subjId);
+        SecurityContext res = null;
+
+        if (!senderNodeId.equals(subjId)) {
+            ClusterNode senderNode = Optional.ofNullable(ctx.discovery().node(senderNodeId))
+                .orElseGet(() -> ctx.discovery().historicalNode(senderNodeId));
+
+            if (checkSenderNodeSubject && (senderNode == null || senderNode.isClient())) {
+                SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
+
+                log.warning("Switched to the 'deny all' policy because a client node tries to execute a request on behalf of another node " +
+                    "[senderNodeId=" + senderNodeId + ", subjId=" + subjId + ", type=" + type + ']');
+
+                if (forcibleNodeKillEnabled && senderNode != null && ctx.config().getCommunicationSpi() instanceof TcpCommunicationSpi) {
+                    TcpCommunicationSpi tcpCommSpi = (TcpCommunicationSpi)ctx.config().getCommunicationSpi();
+
+                    SecurityException ex = new SecurityException("Client node tried to execute a request on behalf of another node.");
+
+                    CommunicationTcpUtils.failNode(senderNode, tcpCommSpi.getSpiContext(), ex, log);
+
+                    log.warning("The client will be excluded of the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']');
+                }
+
+                res = new DenyAllSecurityContext(senderNodeId, type);
+            }
+        }
+
+        if (res == null) {
+            res = node != null ? secCtxs.computeIfAbsent(subjId,
+                uuid -> nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node))
+                : secPrc.securityContext(subjId);
+        }
 
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;

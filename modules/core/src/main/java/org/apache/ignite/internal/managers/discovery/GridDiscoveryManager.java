@@ -188,8 +188,11 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     /** */
     public static final String NODES_SYS_VIEW_DESC = "Cluster nodes";
 
+    /** @see IgniteSystemProperties#IGNITE_DISCOVERY_HISTORY_SIZE */
+    public static final int DFLT_DISCOVERY_HISTORY_SIZE = 500;
+
     /** Discovery cached history size. */
-    private final int DISCOVERY_HISTORY_SIZE = getInteger(IGNITE_DISCOVERY_HISTORY_SIZE, 500);
+    private final int DISCOVERY_HISTORY_SIZE = getInteger(IGNITE_DISCOVERY_HISTORY_SIZE, DFLT_DISCOVERY_HISTORY_SIZE);
 
     /** Predicate filtering out daemon nodes. */
     private static final IgnitePredicate<ClusterNode> FILTER_NOT_DAEMON = new P1<ClusterNode>() {
@@ -1071,7 +1074,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
         return new DiscoveryMetricsProvider() {
             /** Disable cache metrics update. */
             private final boolean disableCacheMetricsUpdate = IgniteSystemProperties.getBoolean(
-                IgniteSystemProperties.IGNITE_DISCOVERY_DISABLE_CACHE_METRICS_UPDATE, false);
+                IgniteSystemProperties.IGNITE_DISCOVERY_DISABLE_CACHE_METRICS_UPDATE);
 
             /** */
             private final long startTime = U.currentTimeMillis();
@@ -1587,7 +1590,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
             for (ClusterNode clusterNode : discoCache.allNodes())
                 if (discoCache.alive(clusterNode.id()))
-                    summary.a(clusterNode.toString()).a(", ");
+                    summary.a(nodeDescription(clusterNode)).a(", ");
 
             summary.setLength(summary.length() - 2);
 
@@ -1598,10 +1601,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         clo.apply(summary.toString());
 
-        ClusterNode currCrd = discoCache.coordinator();
+        ClusterNode currCrd = discoCache.oldestAliveServerNode();
 
         if ((evtType == EventType.EVT_NODE_FAILED || evtType == EventType.EVT_NODE_LEFT) &&
-                !evtNode.isClient() && currCrd != null && currCrd.order() > evtNode.order())
+                currCrd != null && currCrd.order() > evtNode.order() && !evtNode.isClient() && !evtNode.isDaemon())
             clo.apply("Coordinator changed [prev=" + evtNode + ", cur=" + currCrd + "]");
 
         BaselineTopology blt = state.baselineTopology();
@@ -1638,6 +1641,20 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     clo.apply("  ^-- " + bltOffline + " nodes left for auto-activation" + offlineConsistentIds);
             }
         }
+    }
+
+    /**
+     * Provides text descrition of a cluster node.
+     *
+     * @param node Node.
+     */
+    private static String nodeDescription(ClusterNode node) {
+        return new SB(node.getClass().getSimpleName())
+            .a(" [id=").a(node.id())
+            .a(", consistentId=").a(node.consistentId())
+            .a(", isClient=").a(node.isClient())
+            .a(", ver=").a(node.version()).a("]")
+            .toString();
     }
 
     /** {@inheritDoc} */

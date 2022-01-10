@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,10 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class RootPage {
     /** */
     @GridToStringInclude
-    private FullPageId pageId;
+    private final FullPageId pageId;
 
     /** */
-    private boolean allocated;
+    private final boolean allocated;
 
     /**
      * @param pageId Page ID.

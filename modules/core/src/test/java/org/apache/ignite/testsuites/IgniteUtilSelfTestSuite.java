@@ -25,8 +25,10 @@ import org.apache.ignite.internal.util.HostAndPortRangeTest;
 import org.apache.ignite.internal.util.IgniteDevOnlyLogTest;
 import org.apache.ignite.internal.util.IgniteExceptionRegistrySelfTest;
 import org.apache.ignite.internal.util.IgniteUtilsSelfTest;
+import org.apache.ignite.internal.util.IgniteUtilsUnitTest;
 import org.apache.ignite.internal.util.nio.GridNioDelimitedBufferSelfTest;
 import org.apache.ignite.internal.util.nio.GridNioSelfTest;
+import org.apache.ignite.internal.util.nio.GridNioServerTest;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKeySelfTest;
 import org.apache.ignite.internal.util.nio.GridNioSslSelfTest;
 import org.apache.ignite.internal.util.nio.impl.GridNioFilterChainSelfTest;
@@ -72,6 +74,7 @@ import org.junit.runners.Suite;
     GridThreadPoolExecutorServiceSelfTest.class,
     IgniteThreadPoolSizeTest.class,
     IgniteUtilsSelfTest.class,
+    IgniteUtilsUnitTest.class,
     IgniteVersionUtilsSelfTest.class,
     GridSpinReadWriteLockSelfTest.class,
     GridQueueSelfTest.class,
@@ -113,6 +116,7 @@ import org.junit.runners.Suite;
     // NIO.
     GridNioSessionMetaKeySelfTest.class,
     GridNioSelfTest.class,
+    GridNioServerTest.class,
     GridNioFilterChainSelfTest.class,
     GridNioSslSelfTest.class,
     GridNioDelimitedBufferSelfTest.class,

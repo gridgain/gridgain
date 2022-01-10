@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions.GG_VERSION_OFFSET;
@@ -57,8 +58,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     );
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setSize(pageAddr, 0);
         setUpdateCounter(pageAddr, 0);
@@ -89,6 +90,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setSize(long pageAddr, long size) {
+        assertPageType(pageAddr);
+
         if (getSize(pageAddr) == size)
             return false;
 
@@ -112,6 +115,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setUpdateCounter(long pageAddr, long cntr) {
+        assertPageType(pageAddr);
+
         if (getUpdateCounter(pageAddr) == cntr)
             return false;
 
@@ -135,6 +140,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setGlobalRemoveId(long pageAddr, long rmvId) {
+        assertPageType(pageAddr);
+
         if (getGlobalRemoveId(pageAddr) == rmvId)
             return false;
 
@@ -157,6 +164,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setPartitionState(long pageAddr, byte state) {
+        assertPageType(pageAddr);
+
         if (getPartitionState(pageAddr) == state)
             return false;
 
@@ -182,6 +191,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @param cntrsPageId New cache sizes page ID.
      */
     public void setCacheSizesPageId(long pageAddr, long cntrsPageId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, NEXT_PART_META_PAGE_OFF, cntrsPageId);
     }
 

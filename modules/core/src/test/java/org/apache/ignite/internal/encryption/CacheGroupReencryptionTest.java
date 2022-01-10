@@ -42,6 +42,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
@@ -61,6 +62,7 @@ import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.managers.encryption.GridEncryptionManager.INITIAL_KEY_ID;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Cache re-encryption tests.
@@ -388,7 +390,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     @Test
     public void testPartitionFileDestroy() throws Exception {
         backups = 1;
-        pageScanRate = 1;
+        pageScanRate = 0.2;
         pageScanBatchSize = 10;
 
         T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
@@ -411,6 +413,10 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         forceCheckpoint();
 
         assertTrue(isReencryptionInProgress(Collections.singleton(cacheName())));
+
+        // Set unlimited re-encryption rate.
+        nodes.get1().context().encryption().setReencryptionRate(0);
+        nodes.get2().context().encryption().setReencryptionRate(0);
 
         checkGroupKey(CU.cacheId(cacheName()), INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
     }
@@ -626,6 +632,46 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testDeactivation() throws Exception {
+        pageScanRate = 1;
+
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
+
+        createEncryptedCache(node0, node1, cacheName(), null);
+
+        loadData(100_000);
+
+        node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
+
+        int grpId = CU.cacheId(cacheName());
+
+        assertFalse("Re-encryption must be started.", node0.context().encryption().reencryptionFuture(grpId).isDone());
+        assertFalse("Re-encryption must be started.", node1.context().encryption().reencryptionFuture(grpId).isDone());
+
+        node0.cluster().state(ClusterState.INACTIVE);
+
+        // Check node join to inactive cluster.
+        stopGrid(GRID_1);
+        node1 = startGrid(GRID_1);
+
+        assertTrue("Re-encryption should not start ", node0.context().encryption().reencryptionFuture(grpId).isDone());
+        assertTrue("Re-encryption should not start ", node1.context().encryption().reencryptionFuture(grpId).isDone());
+
+        node0.context().encryption().setReencryptionRate(DFLT_REENCRYPTION_RATE_MBPS);
+        node1.context().encryption().setReencryptionRate(DFLT_REENCRYPTION_RATE_MBPS);
+
+        node0.cluster().state(ClusterState.ACTIVE);
+
+        checkGroupKey(CU.cacheId(cacheName()), INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testChangeBaseline() throws Exception {
         backups = 1;
         pageScanRate = 2;
@@ -759,16 +805,16 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      * @param node Grid.
      * @param finished Expected reencryption status.
      */
-    private void validateMetrics(IgniteEx node, boolean finished) {
+    private void validateMetrics(IgniteEx node, boolean finished) throws IgniteInterruptedCheckedException {
         MetricRegistry registry =
             node.context().metric().registry(metricName(CacheGroupMetricsImpl.CACHE_GROUP_METRICS_PREFIX, cacheName()));
 
-        LongMetric pagesLeft = registry.findMetric("ReencryptionPagesLeft");
+        LongMetric bytesLeft = registry.findMetric("ReencryptionBytesLeft");
 
         if (finished)
-            assertEquals(0, pagesLeft.value());
+            assertEquals(0, bytesLeft.value());
         else
-            assertTrue(pagesLeft.value() > 0);
+            assertTrue(waitForCondition(() -> bytesLeft.value() > 0, MAX_AWAIT_MILLIS));
 
         BooleanMetric reencryptionFinished = registry.findMetric("ReencryptionFinished");
 

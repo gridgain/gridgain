@@ -27,6 +27,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -87,18 +89,43 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
      * @throws Exception If fails.
      */
     @Test
-    public void testWrongSqlMemoryPoolSize() throws Exception {
+    public void testWrongSqlMemoryPoolSize() {
         GridTestUtils.assertThrows(log, () -> {
             IgniteConfiguration cfg = getConfiguration("node1");
 
             final long maxMem = Runtime.getRuntime().maxMemory();
 
+            long memCompare = maxMem + 1;
+
+            log.info("maxMem detected: " + maxMem + ", mem will compare with: " + memCompare);
+
             cfg.setSqlConfiguration(new SqlConfiguration()
-                .setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1))
+                .setSqlGlobalMemoryQuota(String.valueOf(memCompare))
             );
 
             startGrid(cfg);
         }, IgniteException.class, "Ouch! Argument is invalid: Sql global memory quota can't be more than heap size");
+    }
+
+    /**
+     * @throws Exception If fails.
+     */
+    @Test
+    public void testOffLoadingEnabledLogStmnt() throws Exception {
+        ListeningTestLogger listeningLog = new ListeningTestLogger(log);
+        IgniteConfiguration cfg = getConfiguration("node1");
+        cfg.setSqlConfiguration(new SqlConfiguration()
+            .setSqlOffloadingEnabled(true));
+        cfg.setGridLogger(listeningLog);
+
+        LogListener logListener = LogListener.matches(
+            "offloadingEnabled=true]").build();
+
+        listeningLog.registerListener(logListener);
+
+        startGrid(cfg);
+
+        assertTrue(logListener.check());
     }
 
     /**

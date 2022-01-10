@@ -145,6 +145,13 @@ public class GridCacheContext<K, V> implements Externalizable {
     /** Empty cache version array. */
     private static final GridCacheVersion[] EMPTY_VERSION = new GridCacheVersion[0];
 
+    /** @see IgniteSystemProperties#IGNITE_READ_LOAD_BALANCING */
+    public static final boolean DFLT_READ_LOAD_BALANCING = true;
+
+    /** The flag indicates the security enabled for system caches. */
+    private boolean securityForSysCacheEnabled = IgniteSystemProperties
+        .getBoolean(IgniteSystemProperties.IGNITE_SECURITY_FOR_SYS_CACHE_ENABLED);
+
     /** Kernal context. */
     private GridKernalContext ctx;
 
@@ -269,7 +276,8 @@ public class GridCacheContext<K, V> implements Externalizable {
     private volatile boolean statisticsEnabled;
 
     /** Whether to enable read load balancing. */
-    private final boolean readLoadBalancingEnabled = IgniteSystemProperties.getBoolean(IGNITE_READ_LOAD_BALANCING, true);
+    private final boolean readLoadBalancingEnabled = IgniteSystemProperties.getBoolean(IGNITE_READ_LOAD_BALANCING,
+        DFLT_READ_LOAD_BALANCING);
 
     /** Flag indicating whether data can be read from backup. */
     private boolean readFromBackup = CacheConfiguration.DFLT_READ_FROM_BACKUP;
@@ -813,7 +821,7 @@ public class GridCacheContext<K, V> implements Externalizable {
      * @throws SecurityException If security check failed.
      */
     public void checkSecurity(SecurityPermission op) throws SecurityException {
-        if (CU.isSystemCache(name()))
+        if (CU.isSystemCache(name()) && (!securityForSysCacheEnabled || !ctx.clientNode()))
             return;
 
         ctx.security().authorize(name(), op);
