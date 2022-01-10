@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobSibling;
 import org.apache.ignite.compute.ComputeTaskSessionAttributeListener;
+import org.apache.ignite.compute.ComputeTaskSessionFullSupport;
 import org.apache.ignite.compute.ComputeTaskSessionScope;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -104,7 +105,7 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
     /** */
     private final AtomicInteger usage = new AtomicInteger(1);
 
-    /** */
+    /** Task supports session attributes and checkpoints (there is {@link ComputeTaskSessionFullSupport}). */
     private final boolean fullSup;
 
     /** */
@@ -221,13 +222,17 @@ public class GridTaskSessionImpl implements GridTaskSessionInternal {
     }
 
     /**
+     * Checks that the task supports session attributes and checkpoints
+     * (there is {@link ComputeTaskSessionFullSupport}).
      *
+     * @throws IllegalStateException If not supported.
      */
     protected void checkFullSupport() {
-        if (!fullSup)
+        if (!fullSup) {
             throw new IllegalStateException("Sessions attributes and checkpoints are disabled by default " +
                 "for better performance (to enable, annotate task class with " +
-                "@ComputeTaskSessionFullSupport annotation).");
+                "@" + ComputeTaskSessionFullSupport.class.getSimpleName() + " annotation).");
+        }
     }
 
     /**
