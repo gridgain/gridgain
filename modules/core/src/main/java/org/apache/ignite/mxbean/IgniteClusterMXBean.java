@@ -17,7 +17,6 @@
 package org.apache.ignite.mxbean;
 
 import java.util.UUID;
-import javax.management.JMException;
 
 /**
  * MX Bean allows to access information about cluster ID and tag and change tag.

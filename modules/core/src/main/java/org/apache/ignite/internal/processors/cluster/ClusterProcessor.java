@@ -202,8 +202,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         if (clusterIdAndTagSupport) {
             ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(new DistributedConfigurationLifecycleListener() {
-                @Override
-                public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
+                @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
                     String logMsgFmt = "Cluster ID and tag changed [property=%s, oldVal=%s, newVal=%s]";
 
                     clusterIdAndTagProperty.addListener(makeUpdateListener(logMsgFmt, log));
@@ -252,8 +251,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                     dispatcher.registerProperty(clusterIdAndTagProperty);
                 }
 
-                @Override
-                public void onReadyToWrite() {
+                @Override public void onReadyToWrite() {
                     if (!compatibilityMode) {
                         initializeClusterIdAndTagIfNeeded();
                     }
@@ -361,8 +359,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             IgniteFeatures.CLUSTER_ID_AND_TAG);
 
         DiscoveryEventListener discoveryEventListener = new DiscoveryEventListener() {
-            @Override
-            public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+            @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
                 // Initialize cluster ID and tag if all old servers have left.
                 if (compatibilityMode
                     && IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
