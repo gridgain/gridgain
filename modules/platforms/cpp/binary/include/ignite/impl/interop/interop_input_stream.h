@@ -35,7 +35,15 @@ namespace ignite
                  *
                  * @param mem Memory.
                  */
-                explicit InteropInputStream(InteropMemory* mem);
+                explicit InteropInputStream(const InteropMemory* mem);
+
+                /**
+                 * Constructor.
+                 *
+                 * @param mem Memory.
+                 * @param len Length. Should be <= mem->Length().
+                 */
+                explicit InteropInputStream(const InteropMemory* mem, int32_t len);
 
                 /**
                  * Read signed 8-byte int.
@@ -218,17 +226,17 @@ namespace ignite
                  * Get memory.
                  * @return Underlying memory.
                  */
-                InteropMemory* GetMemory()
+                const InteropMemory* GetMemory()
                 {
                     return mem;
                 }
 
             private:
                 /** Memory. */
-                InteropMemory* mem; 
+                const InteropMemory* mem;
 
                 /** Pointer to data. */
-                int8_t* data;
+                const int8_t* data;
 
                 /** Length. */
                 int len;

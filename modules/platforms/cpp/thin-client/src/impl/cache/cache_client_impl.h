@@ -307,7 +307,7 @@ namespace ignite
                      * @throw IgniteError on error.
                      */
                     template<typename ReqT, typename RspT>
-                    void SyncCacheKeyMessage(const WritableKey& key, const ReqT& req, RspT& rsp);
+                    void SyncCacheKeyMessage(const WritableKey& key, ReqT& req, RspT& rsp);
 
                     /**
                      * Synchronously send message and receive response.
@@ -318,7 +318,7 @@ namespace ignite
                      * @throw IgniteError on error.
                      */
                     template<typename ReqT, typename RspT>
-                    SP_DataChannel SyncMessage(const ReqT& req, RspT& rsp);
+                    SP_DataChannel SyncMessage(ReqT& req, RspT& rsp);
 
                     /**
                      * Synchronously send message and receive response.
@@ -330,7 +330,7 @@ namespace ignite
                      * @throw IgniteError on error.
                      */
                     template<typename ReqT, typename RspT>
-                    SP_DataChannel SyncMessageSql(const ReqT& req, RspT& rsp);
+                    SP_DataChannel SyncMessageSql(ReqT& req, RspT& rsp);
 
                     /**
                      * Synchronously send request message and receive response taking in account that it can be

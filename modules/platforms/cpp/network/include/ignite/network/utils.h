@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include <ignite/common/common.h>
+#include <ignite/ignite_error.h>
 
 namespace ignite
 {
@@ -36,6 +37,16 @@ namespace ignite
              * @param addrs Addresses set.
              */
             void IGNITE_IMPORT_EXPORT GetLocalAddresses(std::set<std::string>& addrs);
+
+            /**
+             * Throw connection error.
+             *
+             * @param err Error message.
+             */
+            inline void ThrowNetworkError(const std::string& err)
+            {
+                throw IgniteError(IgniteError::IGNITE_ERR_NETWORK_FAILURE, err.c_str());
+            }
         }
     }
 }

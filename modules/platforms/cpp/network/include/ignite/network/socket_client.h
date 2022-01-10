@@ -17,9 +17,8 @@
 #ifndef _IGNITE_NETWORK_SOCKET_CLIENT
 #define _IGNITE_NETWORK_SOCKET_CLIENT
 
+#include <stddef.h>
 #include <stdint.h>
-
-#include <ignite/ignite_error.h>
 
 namespace ignite
 {
@@ -96,17 +95,6 @@ namespace ignite
              * @return @c true if the socket is blocking and false otherwise.
              */
             virtual bool IsBlocking() const = 0;
-
-        protected:
-            /**
-             * Throw connection error.
-             *
-             * @param err Error message.
-             */
-            static void ThrowNetworkError(const std::string& err)
-            {
-                throw IgniteError(IgniteError::IGNITE_ERR_NETWORK_FAILURE, err.c_str());
-            }
         };
     }
 }
