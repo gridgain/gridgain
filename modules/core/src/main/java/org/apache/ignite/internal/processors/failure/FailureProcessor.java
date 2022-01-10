@@ -43,6 +43,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FA
  * General failure processing API
  */
 public class FailureProcessor extends GridProcessorAdapter {
+    /** @see IgniteSystemProperties#IGNITE_FAILURE_HANDLER_RESERVE_BUFFER_SIZE */
+    public static final int DFLT_FAILURE_HANDLER_RESERVE_BUFFER_SIZE = 64 * 1024;
+
     /** Value of the system property that enables threads dumping on failure. */
     private final boolean igniteDumpThreadsOnFailure =
         IgniteSystemProperties.getBoolean(IGNITE_DUMP_THREADS_ON_FAILURE, true);
@@ -108,7 +111,7 @@ public class FailureProcessor extends GridProcessorAdapter {
             hnd = getDefaultFailureHandler();
 
         reserveBuf = new byte[IgniteSystemProperties.getInteger(
-            IgniteSystemProperties.IGNITE_FAILURE_HANDLER_RESERVE_BUFFER_SIZE, 64 * 1024)];
+            IgniteSystemProperties.IGNITE_FAILURE_HANDLER_RESERVE_BUFFER_SIZE, DFLT_FAILURE_HANDLER_RESERVE_BUFFER_SIZE)];
 
         assert hnd != null;
 

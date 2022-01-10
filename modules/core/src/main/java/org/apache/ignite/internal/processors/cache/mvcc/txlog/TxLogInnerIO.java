@@ -36,6 +36,8 @@ public class TxLogInnerIO extends BPlusInnerIO<TxKey> implements TxLogIO {
 
     /** {@inheritDoc} */
     @Override public void storeByOffset(long pageAddr, int off, TxKey row) {
+        assertPageType(pageAddr);
+
         TxRow row0 = (TxRow)row;
 
         setMajor(pageAddr, off, row0.major());
@@ -45,6 +47,8 @@ public class TxLogInnerIO extends BPlusInnerIO<TxKey> implements TxLogIO {
 
     /** {@inheritDoc} */
     @Override public void store(long dstPageAddr, int dstIdx, BPlusIO<TxKey> srcIo, long srcPageAddr, int srcIdx) {
+        assertPageType(dstPageAddr);
+
         TxLogIO srcIo0 = (TxLogIO)srcIo;
 
         int srcOff = srcIo.offset(srcIdx);
@@ -79,6 +83,8 @@ public class TxLogInnerIO extends BPlusInnerIO<TxKey> implements TxLogIO {
 
     /** {@inheritDoc} */
     @Override public void setMajor(long pageAddr, int off, long major) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, off, major);
     }
 
@@ -89,6 +95,8 @@ public class TxLogInnerIO extends BPlusInnerIO<TxKey> implements TxLogIO {
 
     /** {@inheritDoc} */
     @Override public void setMinor(long pageAddr, int off, long minor) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, off + 8, minor);
     }
 
@@ -99,6 +107,8 @@ public class TxLogInnerIO extends BPlusInnerIO<TxKey> implements TxLogIO {
 
     /** {@inheritDoc} */
     @Override public void setState(long pageAddr, int off, byte state) {
+        assertPageType(pageAddr);
+
         PageUtils.putByte(pageAddr, off + 16, state);
     }
 }

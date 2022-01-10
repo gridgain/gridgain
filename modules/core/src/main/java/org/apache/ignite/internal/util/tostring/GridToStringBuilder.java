@@ -97,6 +97,15 @@ import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.Sensi
  * </ul>
  */
 public class GridToStringBuilder {
+    /** @see IgniteSystemProperties#IGNITE_TO_STRING_MAX_LENGTH */
+    public static final int DFLT_TO_STRING_MAX_LENGTH = 10_000;
+
+    /** @see IgniteSystemProperties#IGNITE_SENSITIVE_DATA_LOGGING */
+    public static final String DFLT_SENSITIVE_DATA_LOGGING = "hash";
+
+    /** @see IgniteSystemProperties#IGNITE_TO_STRING_COLLECTION_LIMIT */
+    public static final int DFLT_TO_STRING_COLLECTION_LIMIT = 100;
+
     /** */
     private static final Object[] EMPTY_ARRAY = new Object[0];
 
@@ -114,8 +123,10 @@ public class GridToStringBuilder {
 
                 if (sysStrToStringIncludeSensitive != null)
                     sensitiveDataLogging = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE) ? PLAIN : NONE;
-                else
-                    sensitiveDataLogging = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING, "hash"));
+                else {
+                    sensitiveDataLogging = convertSensitiveDataLogging(getString(IGNITE_SENSITIVE_DATA_LOGGING,
+                        DFLT_SENSITIVE_DATA_LOGGING));
+                }
             }
 
             /** {@inheritDoc} */
@@ -126,7 +137,7 @@ public class GridToStringBuilder {
 
     /** */
     private static final int COLLECTION_LIMIT =
-        IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, 100);
+        IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, DFLT_TO_STRING_COLLECTION_LIMIT);
 
     /** */
     private static final boolean THROW_RUNTIME_EXCEPTION =

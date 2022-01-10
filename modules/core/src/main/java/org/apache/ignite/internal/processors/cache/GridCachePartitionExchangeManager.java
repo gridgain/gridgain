@@ -192,19 +192,29 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FU
  * Partition exchange manager.
  */
 public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedManagerAdapter<K, V> {
+    /** @see IgniteSystemProperties#IGNITE_EXCHANGE_HISTORY_SIZE */
+    public static final int DFLT_EXCHANGE_HISTORY_SIZE = 1_000;
+
+    /** @see IgniteSystemProperties#IGNITE_EXCHANGE_MERGE_DELAY */
+    public static final int DFLT_EXCHANGE_MERGE_DELAY = 0;
+
+    /** @see IgniteSystemProperties#IGNITE_DIAGNOSTIC_WARN_LIMIT */
+    public static final int DFLT_DIAGNOSTIC_WARN_LIMIT = 10;
+
     /** Prefix of error message for dumping long running operations. */
     public static final String FAILED_DUMP_MSG = "Failed to dump debug information: ";
 
     /** Exchange history size. */
-    private final int EXCHANGE_HISTORY_SIZE =
-        IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, 1_000);
+    private final int EXCHANGE_HISTORY_SIZE = IgniteSystemProperties.getInteger(
+        IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE, DFLT_EXCHANGE_HISTORY_SIZE);
 
     /** */
-    private final long IGNITE_EXCHANGE_MERGE_DELAY =
-        IgniteSystemProperties.getLong(IgniteSystemProperties.IGNITE_EXCHANGE_MERGE_DELAY, 0);
+    private final long IGNITE_EXCHANGE_MERGE_DELAY = IgniteSystemProperties.getLong(
+        IgniteSystemProperties.IGNITE_EXCHANGE_MERGE_DELAY, DFLT_EXCHANGE_MERGE_DELAY);
 
     /** */
-    private final int DIAGNOSTIC_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT, 10);
+    private final int DIAGNOSTIC_WARN_LIMIT = IgniteSystemProperties.getInteger(IGNITE_DIAGNOSTIC_WARN_LIMIT,
+        DFLT_DIAGNOSTIC_WARN_LIMIT);
 
     /** */
     private final int IGNITE_KEEP_UNCLEARED_EXCHANGE_FUTURES_LIMIT =
@@ -3334,15 +3344,11 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             if (fut.topologyVersion().equals(lastAffChangedVer))
                                 exchFut = fut;
                             else if (lastAffChangedVer.after(exchId.topologyVersion())) {
-                                // There is a new exchange which should trigger rebalancing.
-                                // This reassignment request can be skipped.
-                                if (log.isInfoEnabled()) {
-                                    log.info("Partitions reassignment request skipped due to affinity was already changed" +
-                                        " [reassignTopVer=" + exchId.topologyVersion() +
-                                        ", lastAffChangedTopVer=" + lastAffChangedVer + ']');
-                                }
+                                exchId = lastFut.exchangeId();
 
-                                continue;
+                                exchFut = lastFut;
+
+                                exchFut.copyInapplicableNodesFrom(fut);
                             }
                         }
                     }
@@ -3541,13 +3547,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             long rebId = cnt;
 
+                            final GridDhtPartitionExchangeId finalExchId = exchId;
                             rebFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
                                 @Override public void apply(IgniteInternalFuture<Boolean> f) {
                                     U.log(log, "Rebalancing scheduled [order=" + rebList +
                                         ", top=" + finalR.topologyVersion() +
                                         ", rebalanceId=" + rebId +
-                                        ", evt=" + exchId.discoveryEventName() +
-                                        ", node=" + exchId.nodeId() + ']');
+                                        ", evt=" + finalExchId.discoveryEventName() +
+                                        ", node=" + finalExchId.nodeId() + ']');
 
                                     finalR.requestPartitions();
                                 }

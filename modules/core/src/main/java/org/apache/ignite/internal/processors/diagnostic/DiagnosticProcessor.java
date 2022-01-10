@@ -48,9 +48,12 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersi
  * Processor which contained helper methods for different diagnostic cases.
  */
 public class DiagnosticProcessor extends GridProcessorAdapter {
+    /** @see IgniteSystemProperties#IGNITE_DUMP_PAGE_LOCK_ON_FAILURE */
+    public static final boolean DFLT_DUMP_PAGE_LOCK_ON_FAILURE = true;
+
     /** Value of the system property that enables page locks dumping on failure. */
-    private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DUMP_PAGE_LOCK_ON_FAILURE, true);
+    private static final boolean IGNITE_DUMP_PAGE_LOCK_ON_FAILURE = IgniteSystemProperties.getBoolean(
+        IgniteSystemProperties.IGNITE_DUMP_PAGE_LOCK_ON_FAILURE, DFLT_DUMP_PAGE_LOCK_ON_FAILURE);
 
     /** Time formatter for dump file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'_'HH-mm-ss_SSS");

@@ -48,6 +48,9 @@ public class SharedPageLockTracker {
     /** */
     private static final long OVERHEAD_SIZE = 16 + (8 * 8) + (4 * 3);
 
+    /** @see IgniteSystemProperties#IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL */
+    public static final int DFLT_PAGE_LOCK_TRACKER_CHECK_INTERVAL = 60_000;
+
     /** */
     private final MemoryCalculator memCalc;
 
@@ -87,7 +90,7 @@ public class SharedPageLockTracker {
     public SharedPageLockTracker(Consumer<Set<PageLockThreadState>> hangThreadsCallBack, MemoryCalculator memCalc) {
         this(
             1000,
-            getInteger(IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL, 60_000),
+            getInteger(IGNITE_PAGE_LOCK_TRACKER_CHECK_INTERVAL, DFLT_PAGE_LOCK_TRACKER_CHECK_INTERVAL),
             hangThreadsCallBack,
             memCalc
         );
