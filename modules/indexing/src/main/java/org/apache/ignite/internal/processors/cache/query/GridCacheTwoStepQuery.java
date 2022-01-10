@@ -85,6 +85,7 @@ public class GridCacheTwoStepQuery {
      * @param cacheIds Cache ids.
      * @param mvccEnabled Mvcc flag.
      * @param locSplit Local split flag.
+     * @param treatReplicatedAsPartitioned Treat replicated as partitioned flag.
      */
     public GridCacheTwoStepQuery(
         String originalSql,
@@ -237,7 +238,7 @@ public class GridCacheTwoStepQuery {
     }
 
     /**
-     * @return {@code true} if need to treat replicated as partitioned (for outer joins).
+     * @return {@code true} if need to treat replicated as partitioned (for outer joins or for subqueries).
      */
     public boolean treatReplicatedAsPartitioned() {
         return treatReplicatedAsPartitioned;
