@@ -81,7 +81,7 @@ public class GridCacheSqlQuery implements Message {
     /** Flag indicating that the query contains an OUTER JOIN from REPLICATED to PARTITIONED. */
     @GridToStringInclude
     @GridDirectTransient
-    private transient boolean trearPartitionedAsReplicated;
+    private transient boolean treatPartitionedAsReplicated;
 
     /**
      * For {@link Message}.
@@ -378,7 +378,7 @@ public class GridCacheSqlQuery implements Message {
      * outer query over REPLICATED cache has a subquery over PARTIITIONED.
      */
     public boolean treatReplicatedAsPartitioned() {
-        return trearPartitionedAsReplicated;
+        return treatPartitionedAsReplicated;
     }
 
     /**
@@ -390,7 +390,7 @@ public class GridCacheSqlQuery implements Message {
      * @return {@code this}.
      */
     public GridCacheSqlQuery treatReplicatedAsPartitioned(boolean trearPartitionedAsReplicated) {
-        this.trearPartitionedAsReplicated = trearPartitionedAsReplicated;
+        this.treatPartitionedAsReplicated = trearPartitionedAsReplicated;
 
         return this;
     }
