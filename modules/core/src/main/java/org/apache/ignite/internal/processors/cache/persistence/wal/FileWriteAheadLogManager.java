@@ -202,20 +202,35 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Buffer size. */
     private static final int BUF_SIZE = 1024 * 1024;
 
+    /** @see IgniteSystemProperties#IGNITE_WAL_MMAP */
+    public static final boolean DFLT_WAL_MMAP = true;
+
+    /** @see IgniteSystemProperties#IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT */
+    public static final int DFLT_WAL_COMPRESSOR_WORKER_THREAD_CNT = 4;
+
+    /** @see IgniteSystemProperties#IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE */
+    public static final double DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE = 0.25;
+
+    /** @see IgniteSystemProperties#IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE */
+    public static final double DFLT_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE = 0.5;
+
+    /** @see IgniteSystemProperties#IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT */
+    public static final long DFLT_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = 1000L;
+
     /** Use mapped byte buffer. */
-    private final boolean mmap = IgniteSystemProperties.getBoolean(IGNITE_WAL_MMAP, true);
+    private final boolean mmap = IgniteSystemProperties.getBoolean(IGNITE_WAL_MMAP, DFLT_WAL_MMAP);
 
     /**
      * Number of WAL compressor worker threads.
      */
-    private final int WAL_COMPRESSOR_WORKER_THREAD_CNT =
-            IgniteSystemProperties.getInteger(IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT, 4);
+    private final int WAL_COMPRESSOR_WORKER_THREAD_CNT = IgniteSystemProperties.getInteger(
+        IGNITE_WAL_COMPRESSOR_WORKER_THREAD_CNT, DFLT_WAL_COMPRESSOR_WORKER_THREAD_CNT);
 
     /**
      * Threshold time to print warning to log if awaiting for next wal segment took too long (exceeded this threshold).
      */
-    private static final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT =
-        IgniteSystemProperties.getLong(IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, 1000L);
+    private static final long THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT = IgniteSystemProperties.getLong(
+        IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT, DFLT_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT);
 
     /** */
     private final boolean alwaysWriteFullPages;
@@ -403,7 +418,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         fileHandleManagerFactory = new FileHandleManagerFactory(dsCfg);
 
         double cpTriggerArchiveSizePercentage = getDouble(
-            IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, 0.25);
+            IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE);
 
         maxSegCountWithoutCheckpoint = (long)((U.adjustedWalHistorySize(dsCfg, log) * cpTriggerArchiveSizePercentage)
             / dsCfg.getWalSegmentSize());

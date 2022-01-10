@@ -52,6 +52,9 @@ import static java.util.stream.IntStream.range;
  * Striped executor.
  */
 public class StripedExecutor implements ExecutorService {
+    /** @see IgniteSystemProperties#IGNITE_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD */
+    public static final int DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD = 4;
+
     /** Stripes. */
     private final Stripe[] stripes;
 
@@ -637,7 +640,8 @@ public class StripedExecutor implements ExecutorService {
         /** */
         private static final int IGNITE_TASKS_STEALING_THRESHOLD =
             IgniteSystemProperties.getInteger(
-                IgniteSystemProperties.IGNITE_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD, 4);
+                IgniteSystemProperties.IGNITE_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD,
+                DFLT_DATA_STREAMING_EXECUTOR_SERVICE_TASKS_STEALING_THRESHOLD);
 
         /** Queue. */
         private final Queue<Runnable> queue;

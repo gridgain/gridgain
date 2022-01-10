@@ -36,6 +36,7 @@ import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.UriSpec;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -128,7 +129,7 @@ public class TcpDiscoveryZookeeperIpFinder extends TcpDiscoveryIpFinderAdapter {
         if (!initGuard.compareAndSet(false, true))
             return;
 
-        String sysPropZkConnString = System.getProperty(PROP_ZK_CONNECTION_STRING);
+        String sysPropZkConnString = IgniteSystemProperties.getString(PROP_ZK_CONNECTION_STRING);
 
         if (sysPropZkConnString != null && !sysPropZkConnString.trim().isEmpty())
             zkConnectionString = sysPropZkConnString;

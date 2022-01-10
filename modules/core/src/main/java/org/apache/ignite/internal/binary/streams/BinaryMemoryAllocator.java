@@ -18,6 +18,8 @@ package org.apache.ignite.internal.binary.streams;
 
 import java.util.ArrayDeque;
 import java.util.Arrays;
+
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE;
@@ -27,11 +29,18 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_MARSHAL_BUFFERS_RE
  * On-heap memory allocator.
  */
 public abstract class BinaryMemoryAllocator {
+    /** @see IgniteSystemProperties#IGNITE_MARSHAL_BUFFERS_RECHECK */
+    public static final int DFLT_MARSHAL_BUFFERS_RECHECK = 10000;
+
+    /** @see IgniteSystemProperties#IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE */
+    public static final int DFLT_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE = 32;
+
     /** Buffer size re-check frequency. */
-    private static final Long CHECK_FREQ = Long.getLong(IGNITE_MARSHAL_BUFFERS_RECHECK, 10000);
+    private static final Long CHECK_FREQ = Long.getLong(IGNITE_MARSHAL_BUFFERS_RECHECK, DFLT_MARSHAL_BUFFERS_RECHECK);
 
     /** */
-    private static final int POOL_SIZE = Integer.getInteger(IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE, 32);
+    private static final int POOL_SIZE = Integer.getInteger(IGNITE_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE,
+        DFLT_MARSHAL_BUFFERS_PER_THREAD_POOL_SIZE);
 
     /** Thread local allocator instance. */
     public static final BinaryMemoryAllocator THREAD_LOCAL = new ThreadLocalAllocator();
