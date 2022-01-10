@@ -195,7 +195,7 @@
             <directory>${basedir}/../control-center-agent/modules/control-center-agent/target</directory>
             <outputDirectory>optional/control-center-agent</outputDirectory>
             <includes>
-                <include>control-center-agent*.jar</include>
+                <include>*.jar</include>
             </includes>
             <excludes>
                 <exclude>*-tests.jar</exclude>
@@ -205,9 +205,6 @@
         </fileSet>
         <fileSet>
             <directory>${basedir}/../control-center-agent/modules/control-center-agent/target/libs</directory>
-            <includes>
-                <include>commons-logging*.jar</include>
-            </includes>
             <outputDirectory>optional/control-center-agent</outputDirectory>
         </fileSet>
         <fileSet>

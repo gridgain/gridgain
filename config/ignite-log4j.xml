@@ -104,12 +104,6 @@
     <category name="org.gridgain.control.springframework">
         <level value="WARN"/>
     </category>
-    <category name="org.gridgain.control.glassfish.grizzly">
-        <level value="WARN"/>
-    </category>
-    <category name="org.gridgain.control.jackson">
-        <level value="ERROR"/>
-    </category>
 
     <!--
         Avoid warnings about failed bind attempt when multiple nodes running on the same host.
