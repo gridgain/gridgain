@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -31,6 +32,8 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThread;
 import org.junit.Test;
@@ -40,13 +43,20 @@ import org.junit.Test;
  */
 public class GridCacheRebalancingUnmarshallingFailedSelfTest extends GridCommonAbstractTest {
     /** partitioned cache name. */
-    protected static String CACHE = "cache";
+    protected static final String CACHE = "cache";
 
     /** Allows to change behavior of readExternal method. */
     protected static AtomicInteger readCnt = new AtomicInteger();
 
     /** */
     private volatile Marshaller marshaller;
+
+    /** */
+    private ListeningTestLogger customLog;
+
+    /** */
+    private static final Pattern UNMARSHALING_ERROR_PATTERN = Pattern.compile(".*Rebalancing routine has failed" +
+        ".*unavailablePartitions=\\[.*].*");
 
     /** Test key 1. */
     private static class TestKey implements Externalizable {
@@ -114,6 +124,7 @@ public class GridCacheRebalancingUnmarshallingFailedSelfTest extends GridCommonA
 
         iCfg.setCacheConfiguration(cfg);
         iCfg.setMarshaller(marshaller);
+        iCfg.setGridLogger(customLog);
 
         return iCfg;
     }
@@ -127,7 +138,6 @@ public class GridCacheRebalancingUnmarshallingFailedSelfTest extends GridCommonA
 
         runTest();
     }
-
 
     /**
      * @throws Exception e.
@@ -153,6 +163,12 @@ public class GridCacheRebalancingUnmarshallingFailedSelfTest extends GridCommonA
      * @throws Exception e.
      */
     private void runTest() throws Exception {
+        customLog = new ListeningTestLogger(log);
+
+        LogListener unmarshalErrorLogListener = LogListener.matches(UNMARSHALING_ERROR_PATTERN).atLeast(1).build();
+
+        customLog.registerListener(unmarshalErrorLogListener);
+
         assert marshaller != null;
 
         readCnt.set(Integer.MAX_VALUE);
@@ -175,6 +191,8 @@ public class GridCacheRebalancingUnmarshallingFailedSelfTest extends GridCommonA
 
         for (int i = 50; i < 100; i++)
             assertNull(grid(1).cache(CACHE).get(new TestKey(String.valueOf(i))));
+
+        assertTrue("Unmarshal log error message is not valid.", unmarshalErrorLogListener.check());
     }
 
     /** {@inheritDoc} */

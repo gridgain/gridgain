@@ -47,8 +47,12 @@ public final class PageLockTrackerFactory {
     /** */
     public static final int OFF_HEAP_LOG = 4;
 
+    /** @see IgniteSystemProperties#IGNITE_PAGE_LOCK_TRACKER_CAPACITY */
+    public static final int DFLT_PAGE_LOCK_TRACKER_CAPACITY = 512;
+
     /** */
-    public static volatile int DEFAULT_CAPACITY = getInteger(IGNITE_PAGE_LOCK_TRACKER_CAPACITY, 512);
+    public static volatile int DEFAULT_CAPACITY = getInteger(IGNITE_PAGE_LOCK_TRACKER_CAPACITY,
+        DFLT_PAGE_LOCK_TRACKER_CAPACITY);
 
     /** */
     public static volatile int DEFAULT_TYPE = getInteger(IGNITE_PAGE_LOCK_TRACKER_TYPE, HEAP_LOG);

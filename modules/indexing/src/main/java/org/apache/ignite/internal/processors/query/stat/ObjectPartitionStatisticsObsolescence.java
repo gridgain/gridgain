@@ -45,7 +45,7 @@ public class ObjectPartitionStatisticsObsolescence implements Externalizable {
     /**
      * @param key Save specified key in modified keys counter.
      */
-    public synchronized void modify(byte[] key) {
+    public synchronized void onModified(byte[] key) {
         Hasher h = new Hasher();
 
         modified.addRaw(h.fastHash(key));

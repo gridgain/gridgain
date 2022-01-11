@@ -13,16 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.stat;
 
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cluster.ClusterState;
-import org.junit.Test;
+package org.apache.ignite.internal.processors.query.stat;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.Test;
 
 /**
  * Tests for statistics related views.
@@ -48,9 +52,9 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testConfigurationView() throws Exception {
         List<List<Object>> config = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", (byte)15, 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", (byte)15, 1L),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", (byte)15, 1L)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", (byte)15, null, null, null, null, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", (byte)15, null, null, null, null, 1L),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", (byte)15, null, null, null, null, 1L)
         );
 
         checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION", null, config::equals);
@@ -79,9 +83,9 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
 
         // 3) Check statistics configuration presence.
         List<List<Object>> config = new ArrayList<>();
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "A", (byte)15, 1L));
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "B", (byte)15, 1L));
-        config.add(Arrays.asList(SCHEMA, "TABLE", name, "C", (byte)15, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "A", (byte)15, null, null, null, null, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "B", (byte)15, null, null, null, null, 1L));
+        config.add(Arrays.asList(SCHEMA, "TABLE", name, "C", (byte)15, null, null, null, null, 1L));
 
         checkSqlResult("select * from SYS.STATISTICS_CONFIGURATION where NAME = '" + name + "'", null, config::equals);
 
@@ -106,7 +110,7 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
     @Test
     public void testPartitionDataView() throws Exception {
         List<List<Object>> partLines = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0, null, null, 1L, null)
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 0, null, null, null, 0L, null, null, null, null)
         );
 
         checkSqlResult("select * from SYS.STATISTICS_PARTITION_DATA where PARTITION < 10", null, act -> {
@@ -191,11 +195,60 @@ public abstract class StatisticsViewsTest extends StatisticsAbstractTest {
         Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
 
         List<List<Object>> localData = Arrays.asList(
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0, size, 4, 1L, tsA.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0, size, 4, 1L, tsB.toString()),
-            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0, size, 4, 1L, tsC.toString())
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", size, size, 0L, size, 4, 1L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", size, size, 0L, size, 4, 1L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", size, 10L, 0L, size, 4, 1L, tsC.toString())
         );
 
         checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA", null, localData::equals);
+    }
+
+    /**
+     * Check statistics rowCount=size, analyze with overridden values and check values.
+     *
+     * @throws Exception in case of error.
+     */
+    @Test
+    public void testEnforceStatisticValues() throws Exception {
+        long size = SMALL_SIZE;
+
+        Logger.getLogger(StatisticsProcessor.class).setLevel(Level.TRACE);
+        ObjectStatisticsImpl smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+
+        assertNotNull(smallStat);
+        assertEquals(size, smallStat.rowCount());
+
+        sql("DROP STATISTICS SMALL");
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            list -> list.isEmpty());
+
+        sql("ANALYZE SMALL (A) WITH \"DISTINCT=5,NULLS=6,TOTAL=7,SIZE=8\"");
+        sql("ANALYZE SMALL (B) WITH \"DISTINCT=6,NULLS=7,TOTAL=8\"");
+        sql("ANALYZE SMALL (C)");
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL' and COLUMN = 'C'", null,
+            list -> !list.isEmpty());
+
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            ObjectStatisticsImpl stat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+
+            return stat != null && stat.rowCount() == 8;
+        }, TIMEOUT));
+
+        smallStat = (ObjectStatisticsImpl)statisticsMgr(0).getLocalStatistics(SMALL_KEY);
+
+        Timestamp tsA = new Timestamp(smallStat.columnStatistics("A").createdAt());
+        Timestamp tsB = new Timestamp(smallStat.columnStatistics("B").createdAt());
+        Timestamp tsC = new Timestamp(smallStat.columnStatistics("C").createdAt());
+
+        List<List<Object>> localData = Arrays.asList(
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "A", 8L, 5L, 6L, 7L, 8, 3L, tsA.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "B", 8L, 6L, 7L, 8L, 4, 3L, tsB.toString()),
+            Arrays.asList(SCHEMA, "TABLE", "SMALL", "C", 8L, 10L, 0L, size, 4, 3L, tsC.toString())
+        );
+
+        checkSqlResult("select * from SYS.STATISTICS_LOCAL_DATA where NAME = 'SMALL'", null,
+            localData::equals);
     }
 }

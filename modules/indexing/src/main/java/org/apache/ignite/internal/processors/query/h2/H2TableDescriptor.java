@@ -241,7 +241,8 @@ public class H2TableDescriptor {
 
         idxs.add(pkIdx);
 
-        if (type().valueClass() == String.class) {
+        if (type().valueClass() == String.class
+            && !idx.distributedConfiguration().isDisableCreateLuceneIndexForStringValueType()) {
             try {
                 luceneIdx = new GridLuceneIndex(idx.kernalContext(), tbl.cacheName(), type);
             }

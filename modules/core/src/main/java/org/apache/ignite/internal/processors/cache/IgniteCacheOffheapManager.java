@@ -98,40 +98,28 @@ public interface IgniteCacheOffheapManager {
     public void stop();
 
     /**
+     * Pre-create single partition that resides in page memory or WAL and restores their state.
+     *
+     * @param p Partition id.
+     * @param recoveryState Partition recovery state.
+     * @return Processing time in millis.
+     * @throws IgniteCheckedException If failed.
+     */
+    long restoreStateOfPartition(int p, @Nullable Integer recoveryState) throws IgniteCheckedException;
+
+    /**
      * Pre-create partitions that resides in page memory or WAL and restores their state.
      *
      * @param partRecoveryStates Partition recovery states.
-     * @return Processed partitions: partition id -> processing time in millis.
      * @throws IgniteCheckedException If failed.
      */
-    Map<Integer, Long> restorePartitionStates(
-        Map<GroupPartitionId, Integer> partRecoveryStates
-    ) throws IgniteCheckedException;
+    void restorePartitionStates(Map<GroupPartitionId, Integer> partRecoveryStates) throws IgniteCheckedException;
 
     /**
-     * Partition counter update callback. May be overridden by plugin-provided subclasses.
-     *
-     * @param part Partition.
-     * @param cntr Partition counter.
+     * Confirm that partition states are restored. This method should be called after restoring state of all partitions
+     * in group using {@link #restoreStateOfPartition(int, Integer)}.
      */
-    public void onPartitionCounterUpdated(int part, long cntr);
-
-    /**
-     * Initial counter will be updated on state restore only
-     *
-     * @param part Partition
-     * @param start Start.
-     * @param delta Delta.
-     */
-    public void onPartitionInitialCounterUpdated(int part, long start, long delta);
-
-    /**
-     * Partition counter provider. May be overridden by plugin-provided subclasses.
-     *
-     * @param part Partition ID.
-     * @return Last updated counter.
-     */
-    public long lastUpdatedPartitionCounter(int part);
+    void confirmPartitionStatesRestored();
 
     /**
      * @param entry Cache entry.
@@ -164,7 +152,7 @@ public interface IgniteCacheOffheapManager {
      * @param part Partition.
      * @return Data store.
      */
-    public CacheDataStore dataStore(GridDhtLocalPartition part);
+    public CacheDataStore dataStore(@Nullable GridDhtLocalPartition part);
 
     /**
      * @param store Data store.
@@ -600,11 +588,32 @@ public interface IgniteCacheOffheapManager {
     public @Nullable RootPage findRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
 
     /**
+     * Dropping the root page of the index tree.
+     *
      * @param cacheId Cache ID.
      * @param idxName Index name.
+     * @param segment Segment index.
+     * @return Dropped root page of the index tree.
      * @throws IgniteCheckedException If failed.
      */
-    public void dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+    @Nullable RootPage dropRootPageForIndex(int cacheId, String idxName, int segment) throws IgniteCheckedException;
+
+    /**
+     * Renaming the root page of the index tree.
+     *
+     * @param cacheId Cache id.
+     * @param oldIdxName Old name of the index tree.
+     * @param newIdxName New name of the index tree.
+     * @param segment Segment index.
+     * @return Renamed root page of the index tree.
+     * @throws IgniteCheckedException If failed.
+     */
+    @Nullable RootPage renameRootPageForIndex(
+        int cacheId,
+        String oldIdxName,
+        String newIdxName,
+        int segment
+    ) throws IgniteCheckedException;
 
     /**
      * @param idxName Index name.
@@ -618,12 +627,6 @@ public interface IgniteCacheOffheapManager {
      * @return Number of entries.
      */
     public long cacheEntriesCount(int cacheId);
-
-    /**
-     * @param part Partition.
-     * @return Number of entries.
-     */
-    public long totalPartitionEntriesCount(int part);
 
     /**
      * @return Total tombstones count for all partitions.
@@ -1129,6 +1132,11 @@ public interface IgniteCacheOffheapManager {
          * Mark store as destroyed.
          */
         public void markDestroyed() throws IgniteCheckedException;
+
+        /**
+         * @return {@code true} If marked as destroyed.
+         */
+        public boolean destroyed();
 
         /**
          * Clears all the records associated with logical cache with given ID.

@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendi
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTaskResult;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
+import org.apache.ignite.internal.util.GridBusyLock;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -62,7 +63,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     private final Object metaStorageMux = new Object();
 
     /** Current tasks. Mapping: {@link DurableBackgroundTask#name task name} -> task state. */
-    private final ConcurrentMap<String, DurableBackgroundTaskState> tasks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DurableBackgroundTaskState<?>> tasks = new ConcurrentHashMap<>();
 
     /** Lock for canceling tasks. */
     private final ReadWriteLock cancelLock = new ReentrantReadWriteLock(true);
@@ -71,10 +72,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * Tasks to be removed from the MetaStorage after the end of a checkpoint.
      * Mapping: {@link DurableBackgroundTask#name task name} -> task.
      */
-    private final ConcurrentMap<String, DurableBackgroundTask> toRmv = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DurableBackgroundTask<?>> toRmv = new ConcurrentHashMap<>();
 
-    /** Prohibiting the execution of tasks. */
-    private volatile boolean prohibitionExecTasks = true;
+    /** Prohibiting the execution of tasks. Guarded by {@link #cancelLock}. */
+    private boolean prohibitionExecTasks = true;
+
+    /** Node stop lock. */
+    private final GridBusyLock stopLock = new GridBusyLock();
 
     /**
      * Constructor.
@@ -93,28 +97,83 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         cancelTasks();
+
+        stopLock.block();
     }
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
-        metaStorageOperation(metaStorage -> {
-            assert metaStorage != null;
+        if (!stopLock.enterBusy())
+            return;
 
-            metaStorage.iterate(
-                TASK_PREFIX,
-                (k, v) -> {
-                    DurableBackgroundTask t = (DurableBackgroundTask)v;
+        try {
+            metaStorageOperation(metaStorage -> {
+                assert metaStorage != null;
 
-                    tasks.put(t.name(), new DurableBackgroundTaskState(t, null, true));
-                },
-                true
-            );
-        });
+                metaStorage.iterate(
+                    TASK_PREFIX,
+                    (k, v) -> {
+                        DurableBackgroundTask task = ((DurableBackgroundTask<?>)v);
+                        DurableBackgroundTask convertedTask = task.convertAfterRestoreIfNeeded();
+
+                        boolean converted = false;
+
+                        if (task != convertedTask) {
+                            assert !task.name().equals(convertedTask.name()) :
+                                "Duplicate task names [original=" + task.name() +
+                                    ", converted=" + convertedTask.name() + ']';
+
+                            GridFutureAdapter<?> outFut = new GridFutureAdapter<>();
+                            outFut.onDone();
+
+                            DurableBackgroundTaskState<?> state =
+                                new DurableBackgroundTaskState<>(task, outFut, true, false);
+
+                            state.state(COMPLETED);
+
+                            tasks.put(task.name(), state);
+
+                            task = convertedTask;
+                            converted = true;
+                        }
+
+                        tasks.put(
+                            task.name(),
+                            new DurableBackgroundTaskState<>(task, new GridFutureAdapter<>(), true, converted)
+                        );
+                    },
+                    true
+                );
+            });
+        }
+        finally {
+            stopLock.leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
-        ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).addCheckpointListener(this);
+        if (!stopLock.enterBusy())
+            return;
+
+        try {
+            for (DurableBackgroundTaskState<?> state : tasks.values()) {
+                if (state.converted()) {
+                    metaStorageOperation(metaStorage -> {
+                        assert metaStorage != null;
+
+                        DurableBackgroundTask<?> task = state.task();
+
+                        metaStorage.write(metaStorageKey(state.task()), task);
+                    });
+                }
+            }
+
+            ((GridCacheDatabaseSharedManager)ctx.cache().context().database()).addCheckpointListener(this);
+        }
+        finally {
+            stopLock.leaveBusy();
+        }
     }
 
     /** {@inheritDoc} */
@@ -124,13 +183,13 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void onMarkCheckpointBegin(Context ctx) {
-        for (Iterator<DurableBackgroundTaskState> it = tasks.values().iterator(); it.hasNext(); ) {
-            DurableBackgroundTaskState taskState = it.next();
+        for (Iterator<DurableBackgroundTaskState<?>> it = tasks.values().iterator(); it.hasNext(); ) {
+            DurableBackgroundTaskState<?> taskState = it.next();
 
             if (taskState.state() == COMPLETED) {
                 assert taskState.saved();
 
-                DurableBackgroundTask t = taskState.task();
+                DurableBackgroundTask<?> t = taskState.task();
 
                 toRmv.put(t.name(), t);
 
@@ -146,15 +205,25 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
 
     /** {@inheritDoc} */
     @Override public void afterCheckpointEnd(Context ctx) {
-        for (Iterator<DurableBackgroundTask> it = toRmv.values().iterator(); it.hasNext(); ) {
-            DurableBackgroundTask t = it.next();
+        if (!stopLock.enterBusy())
+            return;
 
-            metaStorageOperation(metaStorage -> {
-                if (metaStorage != null && toRmv.containsKey(t.name()))
-                    metaStorage.remove(metaStorageKey(t));
-            });
+        try {
+            for (Iterator<DurableBackgroundTask<?>> it = toRmv.values().iterator(); it.hasNext(); ) {
+                DurableBackgroundTask<?> t = it.next();
 
-            it.remove();
+                metaStorageOperation(metaStorage -> {
+                    if (metaStorage != null) {
+                        if (!tasks.containsKey(t.name()))
+                            metaStorage.remove(metaStorageKey(t));
+
+                        it.remove();
+                    }
+                });
+            }
+        }
+        finally {
+            stopLock.leaveBusy();
         }
     }
 
@@ -175,13 +244,18 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
         if (msg.state() != ClusterState.INACTIVE) {
-            prohibitionExecTasks = false;
+            cancelLock.writeLock().lock();
 
-            if (executeTasksOnNodeStartOrActivate()) {
-                for (DurableBackgroundTaskState taskState : tasks.values()) {
-                    if (!prohibitionExecTasks)
+            try {
+                prohibitionExecTasks = false;
+
+                if (executeTasksOnNodeStartOrActivate()) {
+                    for (DurableBackgroundTaskState<?> taskState : tasks.values())
                         executeAsync0(taskState.task());
                 }
+            }
+            finally {
+                cancelLock.writeLock().unlock();
             }
         }
     }
@@ -203,28 +277,36 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param save Save task to MetaStorage.
      * @return Futures that will complete when the task is completed.
      */
-    public IgniteInternalFuture<Void> executeAsync(DurableBackgroundTask task, boolean save) {
-        DurableBackgroundTaskState taskState = tasks.compute(task.name(), (taskName, prev) -> {
-            if (prev != null && prev.state() != COMPLETED)
-                throw new IllegalArgumentException("Task is already present and has not been completed: " + taskName);
+    public <R> IgniteInternalFuture<R> executeAsync(DurableBackgroundTask<R> task, boolean save) {
+        if (!stopLock.enterBusy())
+            throw new IgniteException("Node is stopping.");
 
-            if (save)
-                toRmv.remove(taskName);
+        try {
+            DurableBackgroundTaskState<?> taskState = tasks.compute(
+                task.name(),
+                (taskName, prev) -> {
+                    if (prev != null && prev.state() != COMPLETED) {
+                        throw new IllegalArgumentException("Task is already present and has not been completed: " +
+                            taskName);
+                    }
 
-            return new DurableBackgroundTaskState(task, new GridFutureAdapter<>(), save);
-        });
+                    return new DurableBackgroundTaskState<>(task, new GridFutureAdapter<>(), save, false);
+                });
 
-        if (save) {
-            metaStorageOperation(metaStorage -> {
-                if (metaStorage != null)
-                    metaStorage.write(metaStorageKey(task), task);
-            });
-        }
+            if (save) {
+                metaStorageOperation(metaStorage -> {
+                    if (metaStorage != null)
+                        metaStorage.write(metaStorageKey(task), task);
+                });
+            }
 
-        if (!prohibitionExecTasks)
             executeAsync0(task);
 
-        return taskState.outFuture();
+            return (IgniteInternalFuture<R>)taskState.outFuture();
+        }
+        finally {
+            stopLock.leaveBusy();
+        }
     }
 
     /**
@@ -235,7 +317,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param cacheCfg Cache configuration.
      * @return Futures that will complete when the task is completed.
      */
-    public IgniteInternalFuture<Void> executeAsync(DurableBackgroundTask t, CacheConfiguration cacheCfg) {
+    public <R> IgniteInternalFuture<R> executeAsync(DurableBackgroundTask<R> t, CacheConfiguration cacheCfg) {
         return executeAsync(t, CU.isPersistentCache(cacheCfg, ctx.config().getDataStorageConfiguration()));
     }
 
@@ -244,56 +326,56 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      *
      * @param t Durable background task.
      */
-    private void executeAsync0(DurableBackgroundTask t) {
+    private void executeAsync0(DurableBackgroundTask<?> t) {
         cancelLock.readLock().lock();
 
         try {
-            DurableBackgroundTaskState taskState = tasks.get(t.name());
+            if (!prohibitionExecTasks) {
+                DurableBackgroundTaskState<?> taskState = tasks.get(t.name());
 
-            if (taskState != null && taskState.state(INIT, PREPARE)) {
-                if (log.isInfoEnabled())
-                    log.info("Executing durable background task: " + t.name());
+                if (taskState != null && taskState.state(INIT, PREPARE)) {
+                    if (log.isInfoEnabled())
+                        log.info("Executing durable background task: " + t.name());
 
-                t.executeAsync(ctx).listen(f -> {
-                    DurableBackgroundTaskResult res = null;
+                    t.executeAsync(ctx).listen(f -> {
+                        DurableBackgroundTaskResult<?> res = null;
 
-                    try {
-                        res = f.get();
-                    }
-                    catch (Throwable e) {
-                        log.error("Task completed with an error: " + t.name(), e);
-                    }
+                        try {
+                            res = f.get();
+                        }
+                        catch (Throwable e) {
+                            log.error("Task completed with an error: " + t.name(), e);
+                        }
 
-                    assert res != null;
+                        assert res != null;
 
-                    if (res.error() != null)
-                        log.error("Could not execute durable background task: " + t.name(), res.error());
+                        if (res.error() != null)
+                            log.error("Could not execute durable background task: " + t.name(), res.error());
 
-                    if (res.completed()) {
-                        if (res.error() == null && log.isInfoEnabled())
-                            log.info("Execution of durable background task completed: " + t.name());
+                        if (res.completed()) {
+                            if (res.error() == null && log.isInfoEnabled())
+                                log.info("Execution of durable background task completed: " + t.name());
 
-                        if (taskState.saved())
-                            taskState.state(COMPLETED);
-                        else
-                            tasks.remove(t.name());
+                            if (taskState.saved())
+                                taskState.state(COMPLETED);
+                            else
+                                tasks.remove(t.name());
 
-                        GridFutureAdapter<Void> outFut = taskState.outFuture();
+                            GridFutureAdapter<Object> outFut = (GridFutureAdapter<Object>)taskState.outFuture();
+                            outFut.onDone(res.result(), res.error());
+                        }
+                        else {
+                            assert res.restart();
 
-                        if (outFut != null)
-                            outFut.onDone(res.error());
-                    }
-                    else {
-                        assert res.restart();
+                            if (log.isInfoEnabled())
+                                log.info("Execution of durable background task will be restarted: " + t.name());
 
-                        if (log.isInfoEnabled())
-                            log.info("Execution of durable background task will be restarted: " + t.name());
+                            taskState.state(INIT);
+                        }
+                    });
 
-                        taskState.state(INIT);
-                    }
-                });
-
-                taskState.state(PREPARE, STARTED);
+                    taskState.state(PREPARE, STARTED);
+                }
             }
         }
         finally {
@@ -302,19 +384,17 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
     }
 
     /**
-     * Canceling tasks that are currently being executed.
+     * Canceling tasks.
      * Prohibiting the execution of tasks.
      */
     private void cancelTasks() {
-        prohibitionExecTasks = true;
-
         cancelLock.writeLock().lock();
 
         try {
-            for (DurableBackgroundTaskState taskState : tasks.values()) {
-                if (taskState.state() == STARTED)
-                    taskState.task().cancel();
-            }
+            prohibitionExecTasks = true;
+
+            for (DurableBackgroundTaskState<?> taskState : tasks.values())
+                taskState.task().cancel();
         }
         finally {
             cancelLock.writeLock().unlock();
@@ -354,7 +434,7 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param t Durable background task.
      * @return MetaStorage {@code t} key.
      */
-    static String metaStorageKey(DurableBackgroundTask t) {
+    static String metaStorageKey(DurableBackgroundTask<?> t) {
         return TASK_PREFIX + t.name();
     }
 

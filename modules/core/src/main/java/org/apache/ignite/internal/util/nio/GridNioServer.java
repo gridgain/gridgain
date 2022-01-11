@@ -72,6 +72,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -143,6 +144,9 @@ public class GridNioServer<T> {
     private static final boolean DISABLE_KEYSET_OPTIMIZATION =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_NO_SELECTOR_OPTS);
 
+    /** @see IgniteSystemProperties#IGNITE_IO_BALANCE_PERIOD */
+    public static final int DFLT_IO_BALANCE_PERIOD = 5000;
+
     /** */
     public static final String OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME = "outboundMessagesQueueSize";
 
@@ -160,6 +164,12 @@ public class GridNioServer<T> {
 
     /** */
     public static final String SENT_BYTES_METRIC_DESC = "Total number of bytes sent by current node";
+
+    /** The name of the metric that indicates whether SSL is enabled for the connector. */
+    public static final String SSL_ENABLED_METRIC_NAME = "SslEnabled";
+
+    /** The name of the metric that provides the active TCP sessions count. */
+    public static final String SESSIONS_CNT_METRIC_NAME = "ActiveSessionsCount";
 
     /** Defines how many times selector should do {@code selectNow()} before doing {@code select(long)}. */
     private long selectorSpins;
@@ -418,7 +428,8 @@ public class GridNioServer<T> {
 
         this.skipRecoveryPred = skipRecoveryPred != null ? skipRecoveryPred : F.<Message>alwaysFalse();
 
-        long balancePeriod = IgniteSystemProperties.getLong(IgniteSystemProperties.IGNITE_IO_BALANCE_PERIOD, 5000);
+        long balancePeriod = IgniteSystemProperties.getLong(IgniteSystemProperties.IGNITE_IO_BALANCE_PERIOD,
+            DFLT_IO_BALANCE_PERIOD);
 
         IgniteRunnable balancer0 = null;
 
@@ -448,6 +459,14 @@ public class GridNioServer<T> {
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
         );
+
+        if (mreg != null) {
+            mreg.register(SESSIONS_CNT_METRIC_NAME, sessions::size, "Active TCP sessions count.");
+
+            boolean sslEnabled = Arrays.stream(filters).anyMatch(filter -> filter instanceof GridNioSslFilter);
+
+            mreg.register(SSL_ENABLED_METRIC_NAME, () -> sslEnabled, "Whether SSL is enabled.");
+        }
     }
 
     /**
@@ -2510,19 +2529,9 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
+                    processKeysSelectionError(e, attach);
 
                     GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
 
                     // Can be null if async connect failed.
                     if (ses != null)
@@ -2577,21 +2586,33 @@ public class GridNioServer<T> {
                     throw e;
                 }
                 catch (Exception | Error e) { // TODO IGNITE-2659.
-                    try {
-                        U.sleep(1000);
-                    }
-                    catch (IgniteInterruptedCheckedException ignore) {
-                        // No-op.
-                    }
-
-                    GridSelectorNioSessionImpl ses = attach.session();
-
-                    if (!closed)
-                        U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
-                    else if (log.isDebugEnabled())
-                        log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
+                    processKeysSelectionError(e, attach);
                 }
             }
+        }
+
+        /**
+         * Processes errors occured while processing selector keys.
+         *
+         * @param e Exception or error which occured.
+         * @param attach GridNioKeyAttachment.
+         */
+        private void processKeysSelectionError(Throwable e, GridNioKeyAttachment attach) {
+            if (X.hasCause(e, Error.class)) { // TODO IGNITE-2659.
+                try {
+                    U.sleep(1000);
+                }
+                catch (IgniteInterruptedCheckedException ignore) {
+                    // No-op.
+                }
+            }
+
+            GridSelectorNioSessionImpl ses = attach.session();
+
+            if (!closed)
+                U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
+            else if (log.isDebugEnabled())
+                log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
         }
 
         /**

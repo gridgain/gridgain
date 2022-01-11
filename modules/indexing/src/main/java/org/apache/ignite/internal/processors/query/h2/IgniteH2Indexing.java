@@ -55,6 +55,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.managers.IgniteMBeansManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -91,7 +92,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
-import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
@@ -165,10 +165,10 @@ import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheFuture
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
-import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationException;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManager;
+import org.apache.ignite.internal.processors.query.stat.IgniteStatisticsManagerImpl;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -622,9 +622,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         PreparedStatement stmt = conn.prepareStatement(qry, H2StatementCache.queryFlags(qryDesc));
 
-                        H2Utils.bindParameters(stmt, args);
+                        // Convert parameters into BinaryObjects.
+                        Marshaller m = ctx.config().getMarshaller();
+                        byte[] paramsBytes = U.marshal(m, args.toArray(new Object[0]));
+                        final ClassLoader ldr = U.resolveClassLoader(ctx.config());
+                        Object[] params = ((BinaryMarshaller)m).binaryMarshaller().unmarshal(paramsBytes, ldr);
 
-                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, qryId);
+                        H2Utils.bindParameters(stmt, F.asList(params));
+
+                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry, ctx.discovery().localNode(), qryId);
 
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
@@ -1036,14 +1042,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (qryInfo.runningQueryId() != null)
             runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
 
-        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
-            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
-            return;
-
         H2MemoryTracker tracker = null;
 
-        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
-            tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+        if (runningQryInfo != null && runningQryInfo.nodeId().equals(qryInfo.node()) &&
+            runningQryInfo.memoryMetricProvider() != null) {
+
+            if (runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
+                tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
+            else
+                return;
+        }
 
         if (tracker == null)
             tracker = (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
@@ -2181,6 +2189,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Check that the previous rebuild is completed.
         assert prevIntRebFut == null;
 
+        cctx.kernalContext().query().onStartRebuildIndexes(cctx);
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2195,6 +2205,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (err != null)
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+            else
+                cctx.kernalContext().query().onFinishRebuildIndexes(cctx);
 
             idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
             intRebFut.onDone(err);
@@ -2639,11 +2651,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String grpName = ctx.cache().cacheGroup(grpId).cacheOrGroupName();
 
-        PageLockListener lockLsnr = ctx.cache().context().diagnostic()
-            .pageLockTracker().createPageLockTracker(grpName + "IndexTree##" + indexName);
-
         BPlusTree<H2Row, H2Row> tree = new BPlusTree<H2Row, H2Row>(
-            indexName,
+            grpName + "IndexTree##" + indexName,
             grpId,
             grpName,
             pageMemory,
@@ -2655,13 +2664,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             H2ExtrasLeafIO.getVersions(inlineSize, mvccEnabled),
             PageIdAllocator.FLAG_IDX,
             ctx.failure(),
-            lockLsnr
+            ctx.cache().context().diagnostic().pageLockTracker()
         ) {
-            @Override protected int compare(BPlusIO io, long pageAddr, int idx, H2Row row) {
+            @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx, H2Row row) {
                 throw new AssertionError();
             }
 
-            @Override public H2Row getRow(BPlusIO io, long pageAddr, int idx, Object x) {
+            @Override public H2Row getRow(BPlusIO<H2Row> io, long pageAddr, int idx, Object x) {
                 throw new AssertionError();
             }
         };

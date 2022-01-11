@@ -32,6 +32,8 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.ServerSocket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -49,6 +51,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -63,6 +66,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -119,6 +126,7 @@ import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Assert;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
@@ -362,16 +370,6 @@ public final class GridTestUtils {
         }
     }
 
-//    static {
-//        new Thread(new Runnable() {
-//            @Override public void run() {
-//                JOptionPane.showMessageDialog(null, "Close this to dump messages.");
-//
-//                dumpMessages();
-//            }
-//        }).start();
-//    }
-
     /**
      * Checks that string {@param str} matches given regular expression {@param regexp}. Logs both strings
      * and throws {@link java.lang.AssertionError}, if not.
@@ -389,6 +387,37 @@ public final class GridTestUtils {
             U.warn(log, str);
 
             throw e;
+        }
+    }
+
+    /**
+     * Checks that file contains line {@param str} matches given regular expression {@param regexp}. Logs both strings
+     * and throws {@link java.lang.AssertionError}, if not.
+     *
+     * @param log Logger (optional).
+     * @param filePath Absolute path to file.
+     * @param charset File charset.
+     * @param regexp Regular expression pattern.
+     */
+    public static void assertMatchesLine(@Nullable IgniteLogger log, String filePath, String charset, Pattern regexp) throws IOException {
+        try (Scanner input = new Scanner(new FileInputStream(filePath), charset)) {
+            input.useDelimiter("[\\s]*\\n[\\s]*");
+
+            boolean found = false;
+
+            while (input.hasNext()) {
+                if (found = input.hasNext(regexp))
+                    break;
+                else
+                    input.nextLine();
+            }
+
+            if (!found) {
+                U.warn(log, String.format("File doesn't contain a line matching regexp: '%s'", regexp));
+                U.warn(log, String.format("File name: '%s'", filePath));
+
+                Assert.fail("File doesn't contain a line matching regexp");
+            }
         }
     }
 
@@ -1171,7 +1200,31 @@ public final class GridTestUtils {
      * @param task Runnable.
      * @return Future with task result.
      */
+    public static IgniteInternalFuture runAsync(final RunnableX task) {
+        return runAsync(task,"async-runnable-runner");
+    }
+
+    /**
+     * Runs runnable task asyncronously.
+     *
+     * @param task Runnable.
+     * @return Future with task result.
+     */
     public static IgniteInternalFuture runAsync(final Runnable task, String threadName) {
+        return runAsync(() -> {
+            task.run();
+
+            return null;
+        }, threadName);
+    }
+
+    /**
+     * Runs runnable task asyncronously.
+     *
+     * @param task Runnable.
+     * @return Future with task result.
+     */
+    public static IgniteInternalFuture runAsync(final RunnableX task, String threadName) {
         return runAsync(() -> {
             task.run();
 
@@ -1911,6 +1964,15 @@ public final class GridTestUtils {
     }
 
     /**
+     * Clear file without deletion.
+     *
+     * @param path to file.
+     */
+    public static void clearFile(Path path) throws IOException {
+        Files.newOutputStream(path).close();
+    }
+
+    /**
      * Reads resource into byte array.
      *
      * @param classLoader Classloader.
@@ -2061,13 +2123,41 @@ public final class GridTestUtils {
      * @param trustStore Trust store name.
      * @return SSL context factory used in test.
      */
-    public static Factory<SSLContext> sslTrustedFactory(String keyStore, String trustStore) {
+    public static SslContextFactory sslTrustedFactory(String keyStore, String trustStore) {
         SslContextFactory factory = new SslContextFactory();
 
-        factory.setKeyStoreFilePath(keyStorePath(keyStore));
-        factory.setKeyStorePassword(keyStorePassword().toCharArray());
-        factory.setTrustStoreFilePath(keyStorePath(trustStore));
-        factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
+
+        return factory;
+    }
+
+    /**
+     * Creates test-purposed SSL context factory from specified key store and trust store.
+     *
+     * @param keyStore Key store name.
+     * @param trustStore Trust store name.
+     * @return SSL context factory used in test.
+     */
+    public static GridSslBasicContextFactory gridSslTrustedFactory(String keyStore, String trustStore) {
+        GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
+
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
 
         return factory;
     }
@@ -2248,6 +2338,23 @@ public final class GridTestUtils {
         for (File grp : new File(workDir, U.maskForFileName(igniteInstanceName)).listFiles()) {
             new File(grp, "index.bin").delete();
         }
+    }
+
+    /**
+     * Removing the directory cache groups.
+     * Deletes all directory satisfy the {@code cacheGrpFilter}.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param cacheGrpFilter Filter cache groups.
+     * @throws Exception If failed.
+     */
+    public static void deleteCacheGrpDir(String igniteInstanceName, FilenameFilter cacheGrpFilter) throws Exception {
+        File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
+        String nodeDirName = U.maskForFileName(igniteInstanceName);
+
+        for (File cacheGrpDir : new File(workDir, nodeDirName).listFiles(cacheGrpFilter))
+            U.delete(cacheGrpDir);
     }
 
     /**
@@ -2596,5 +2703,35 @@ public final class GridTestUtils {
      */
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
+    }
+
+    /**
+     * Repeats messages which were sent to the logger into the alternative consumer.
+     * Useful for the intercepting of logs without breaking usual output to stdout.
+     * (It is painful to see failed tests at TC without actual logs).
+     *
+     * @param logger j.u.l.Logger.
+     * @param printer Alternative log consumer.
+     */
+    public static void echoLogOutput(@NotNull Logger logger, Consumer<String> printer) {
+        logger.addHandler(
+            new Handler() {
+                /** {@inheritDoc} */
+                @Override public void publish(LogRecord record) {
+                    printer.accept(record.getMessage());
+                    printer.accept(U.nl());
+                }
+
+                /** {@inheritDoc} */
+                @Override public void flush() {
+                    // No-op.
+                }
+
+                /** {@inheritDoc} */
+                @Override public void close() {
+                    // No-op.
+                }
+            }
+        );
     }
 }

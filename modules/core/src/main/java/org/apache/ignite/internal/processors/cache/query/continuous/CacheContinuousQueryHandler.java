@@ -40,6 +40,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.query.ContinuousQueryWithTransformer.EventListener;
 import org.apache.ignite.cluster.ClusterNode;
@@ -91,17 +92,36 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** */
-    static final int ACK_THRESHOLD =
-        IgniteSystemProperties.getInteger("IGNITE_CONTINUOUS_QUERY_ACK_THRESHOLD", 100);
+    /** @see #IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD */
+    public static final int DFLT_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD = 100;
+
+    /** @see #IGNITE_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE */
+    public static final int DFLT_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE = 10_000;
 
     /** */
-    static final int BACKUP_ACK_THRESHOLD =
-        IgniteSystemProperties.getInteger("IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD", 100);
+    @SystemProperty(value = "The size of the buffer with acknowledgment events that are sent to backup nodes",
+        type = Long.class, defaults = "" + DFLT_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD)
+    public static final String IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD =
+        "IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD";
 
     /** */
-    static final int LSNR_MAX_BUF_SIZE =
-        IgniteSystemProperties.getInteger("IGNITE_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE", 10_000);
+    @SystemProperty(value = "The maximum size of the continuous query listener buffer. " +
+        "10% of events are dropped once the buffer is full", type = Long.class,
+        defaults = "" + DFLT_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE)
+    public static final String IGNITE_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE =
+        "IGNITE_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE";
+
+    /** */
+    static final int ACK_THRESHOLD = IgniteSystemProperties.getInteger(
+        IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD, DFLT_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD);
+
+    /** */
+    static final int BACKUP_ACK_THRESHOLD = IgniteSystemProperties.getInteger(
+        IGNITE_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD, DFLT_CONTINUOUS_QUERY_BACKUP_ACK_THRESHOLD);
+
+    /** */
+    static final int LSNR_MAX_BUF_SIZE = IgniteSystemProperties.getInteger(
+        IGNITE_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE, DFLT_CONTINUOUS_QUERY_LISTENER_MAX_BUFFER_SIZE);
 
     /**
      * Transformer implementation for processing received remote events.
@@ -460,7 +480,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                         recordIgniteEvt,
                         fut);
 
-                    ctx.asyncCallbackPool().execute(clsr, evt.partitionId());
+                    ctx.pools().asyncCallbackPool().execute(clsr, evt.partitionId());
                 }
                 else {
                     final boolean notify = filter(evt);
@@ -570,7 +590,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
 
                     if (!evts.isEmpty()) {
                         if (asyncCb) {
-                            ctx.asyncCallbackPool().execute(new Runnable() {
+                            ctx.pools().asyncCallbackPool().execute(new Runnable() {
                                 @Override public void run() {
                                     try {
                                         notifyLocalListener(evts, getTransformer());
@@ -890,7 +910,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
         if (asyncCb) {
             final List<CacheContinuousQueryEntry> entries = objs instanceof List ? (List)objs : new ArrayList(objs);
 
-            IgniteStripedThreadPoolExecutor asyncPool = ctx.asyncCallbackPool();
+            IgniteStripedThreadPoolExecutor asyncPool = ctx.pools().asyncCallbackPool();
 
             int threadId = asyncPool.threadId(entries.get(0).partition());
 
@@ -1583,7 +1603,7 @@ public class CacheContinuousQueryHandler<K, V> implements GridContinuousHandler 
                             if (f.error() != null)
                                 evt.entry().markFiltered();
 
-                            ctx.asyncCallbackPool().execute(new Runnable() {
+                            ctx.pools().asyncCallbackPool().execute(new Runnable() {
                                 @Override public void run() {
                                     onEntryUpdate(evt, notify, nodeId.equals(ctx.localNodeId()), recordIgniteEvt);
                                 }

@@ -78,6 +78,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
     /** History size for to track stale messages. */
     private static final int HIST_SIZE = 1000;
 
+    /** @see IgniteSystemProperties#IGNITE_DISABLE_WAL_DURING_REBALANCING */
+    public static final boolean DFLT_DISABLE_WAL_DURING_REBALANCING = true;
+
     /** ID history for discovery messages. */
     private final GridBoundedConcurrentLinkedHashSet<T2<UUID, Boolean>> discoMsgIdHist =
         new GridBoundedConcurrentLinkedHashSet<>(HIST_SIZE);
@@ -418,7 +421,8 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
     public void disableGroupDurabilityForPreloading(GridDhtPartitionsExchangeFuture fut) {
         if (fut.changedBaseline()
             && cctx.tm().pendingTxsTracker().enabled()
-            || !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, true))
+            || !IgniteSystemProperties.getBoolean(
+                IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, DFLT_DISABLE_WAL_DURING_REBALANCING))
             return;
 
         Collection<CacheGroupContext> grpContexts = cctx.cache().cacheGroups();

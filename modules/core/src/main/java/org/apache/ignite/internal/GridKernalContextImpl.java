@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 
 import org.apache.ignite.IgniteCheckedException;
@@ -103,7 +102,6 @@ import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
-import org.apache.ignite.internal.util.StripedExecutor;
 import org.apache.ignite.internal.util.spring.IgniteSpringHelper;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -115,7 +113,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.plugin.PluginNotFoundException;
 import org.apache.ignite.plugin.PluginProvider;
-import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
@@ -354,70 +351,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    protected ExecutorService execSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService svcExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService sysExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected StripedExecutor stripedExecSvc;
-
-    /** */
-    @GridToStringExclude
-    private ExecutorService p2pExecSvc;
-
-    /** */
-    @GridToStringExclude
-    private ExecutorService mgmtExecSvc;
-
-    /** */
-    @GridToStringExclude
-    private StripedExecutor dataStreamExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService restExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService affExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService idxExecSvc;
-
-    /** Thread pool for create/rebuild indexes. */
-    @GridToStringExclude
-    private ExecutorService buildIdxExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected IgniteStripedThreadPoolExecutor callbackExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService qryExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService schemaExecSvc;
-
-    /** */
-    @GridToStringExclude
-    protected ExecutorService rebalanceExecSvc;
-
-    /** */
-    @GridToStringExclude
-    private Map<String, ? extends ExecutorService> customExecSvcs;
-
-    /** */
-    @GridToStringExclude
     private Map<String, Object> attrs = new HashMap<>();
 
     /** */
@@ -437,9 +370,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     private IgniteEx grid;
-
-    /** */
-    private ExecutorService utilityCachePool;
 
     /** */
     private IgniteConfiguration cfg;
@@ -491,24 +421,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
      * @param grid Grid instance managed by kernal.
      * @param cfg Grid configuration.
      * @param gw Kernal gateway.
-     * @param utilityCachePool Utility cache pool.
-     * @param execSvc Public executor service.
-     * @param sysExecSvc System executor service.
-     * @param stripedExecSvc Striped executor.
-     * @param p2pExecSvc P2P executor service.
-     * @param mgmtExecSvc Management executor service.
-     * @param dataStreamExecSvc data stream executor service.
-     * @param restExecSvc REST executor service.
-     * @param affExecSvc Affinity executor service.
-     * @param idxExecSvc Indexing executor service.
-     * @param buildIdxExecSvc Create/rebuild indexes executor service.
-     * @param callbackExecSvc Callback executor service.
-     * @param qryExecSvc Query executor service.
-     * @param schemaExecSvc Schema executor service.
-     * @param rebalanceExecSvc Rebalance executor service.
-     * @param customExecSvcs Custom named executors.
      * @param plugins Plugin providers.
-     * @param workerRegistry Worker registry.
      * @param hnd Default uncaught exception handler used by thread pools.
      * @param pauseDetector Long JVM pause detector.
      */
@@ -518,23 +431,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         IgniteEx grid,
         IgniteConfiguration cfg,
         GridKernalGateway gw,
-        ExecutorService utilityCachePool,
-        ExecutorService execSvc,
-        ExecutorService svcExecSvc,
-        ExecutorService sysExecSvc,
-        StripedExecutor stripedExecSvc,
-        ExecutorService p2pExecSvc,
-        ExecutorService mgmtExecSvc,
-        StripedExecutor dataStreamExecSvc,
-        ExecutorService restExecSvc,
-        ExecutorService affExecSvc,
-        @Nullable ExecutorService idxExecSvc,
-        @Nullable ExecutorService buildIdxExecSvc,
-        IgniteStripedThreadPoolExecutor callbackExecSvc,
-        ExecutorService qryExecSvc,
-        ExecutorService schemaExecSvc,
-        ExecutorService rebalanceExecSvc,
-        @Nullable Map<String, ? extends ExecutorService> customExecSvcs,
         List<PluginProvider> plugins,
         IgnitePredicate<String> clsFilter,
         WorkersRegistry workerRegistry,
@@ -548,23 +444,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         this.grid = grid;
         this.cfg = cfg;
         this.gw = gw;
-        this.utilityCachePool = utilityCachePool;
-        this.execSvc = execSvc;
-        this.svcExecSvc = svcExecSvc;
-        this.sysExecSvc = sysExecSvc;
-        this.stripedExecSvc = stripedExecSvc;
-        this.p2pExecSvc = p2pExecSvc;
-        this.mgmtExecSvc = mgmtExecSvc;
-        this.dataStreamExecSvc = dataStreamExecSvc;
-        this.restExecSvc = restExecSvc;
-        this.affExecSvc = affExecSvc;
-        this.idxExecSvc = idxExecSvc;
-        this.buildIdxExecSvc = buildIdxExecSvc;
-        this.callbackExecSvc = callbackExecSvc;
-        this.qryExecSvc = qryExecSvc;
-        this.schemaExecSvc = schemaExecSvc;
-        this.rebalanceExecSvc = rebalanceExecSvc;
-        this.customExecSvcs = customExecSvcs;
         this.workersRegistry = workerRegistry;
         this.hnd = hnd;
         this.pauseDetector = pauseDetector;
@@ -982,16 +861,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public ExecutorService utilityCachePool() {
-        return utilityCachePool;
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteStripedThreadPoolExecutor asyncCallbackPool() {
-        return callbackExecSvc;
-    }
-
-    /** {@inheritDoc} */
     @Override public IgniteCacheObjectProcessor cacheObjects() {
         return cacheObjProc;
     }
@@ -1130,76 +999,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public ExecutorService getExecutorService() {
-        return execSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getServiceExecutorService() {
-        return svcExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getSystemExecutorService() {
-        return sysExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public StripedExecutor getStripedExecutorService() {
-        return stripedExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getManagementExecutorService() {
-        return mgmtExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getPeerClassLoadingExecutorService() {
-        return p2pExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public StripedExecutor getDataStreamerExecutorService() {
-        return dataStreamExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getRestExecutorService() {
-        return restExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getAffinityExecutorService() {
-        return affExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override @Nullable public ExecutorService getIndexingExecutorService() {
-        return idxExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getQueryExecutorService() {
-        return qryExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getSchemaExecutorService() {
-        return schemaExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService getRebalanceExecutorService() {
-        return rebalanceExecSvc;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Map<String, ? extends ExecutorService> customExecutors() {
-        return customExecSvcs;
-    }
-
-    /** {@inheritDoc} */
     @Override public IgniteExceptionRegistry exceptionRegistry() {
         return IgniteExceptionRegistry.get();
     }
@@ -1324,13 +1123,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTask() {
         return durableBackgroundTasksProcessor;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService buildIndexExecutorService() {
-        return buildIdxExecSvc;
     }
 
     /** {@inheritDoc} */

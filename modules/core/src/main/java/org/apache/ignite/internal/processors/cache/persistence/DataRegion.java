@@ -30,7 +30,7 @@ public class DataRegion {
     @Nullable private final PageMemory pageMem;
 
     /** */
-    @Nullable private final DataRegionMetricsImpl memMetrics;
+    private final DataRegionMetricsImpl metrics;
 
     /** */
     @Nullable private final DataRegionConfiguration cfg;
@@ -43,18 +43,18 @@ public class DataRegion {
 
     /**
      * @param pageMem PageMemory instance.
-     * @param memMetrics DataRegionMetrics instance.
+     * @param metrics DataRegionMetrics instance.
      * @param cfg Configuration of given DataRegion.
      * @param evictionTracker Eviction tracker.
      */
     public DataRegion(
         @Nullable PageMemory pageMem,
         @Nullable DataRegionConfiguration cfg,
-        @Nullable DataRegionMetricsImpl memMetrics,
+        @Nullable DataRegionMetricsImpl metrics,
         @Nullable PageEvictionTracker evictionTracker
     ) {
         this.pageMem = pageMem;
-        this.memMetrics = memMetrics;
+        this.metrics = metrics;
         this.cfg = cfg;
         this.evictionTracker = evictionTracker;
         this.emptyPagesPoolSize = cfg == null ? DFLT_EMPTY_PAGES_POOL_SIZE : cfg.getEmptyPagesPoolSize();
@@ -77,8 +77,8 @@ public class DataRegion {
     /**
      * @return Memory Metrics.
      */
-    public DataRegionMetricsImpl memoryMetrics() {
-        return memMetrics;
+    public DataRegionMetricsImpl metrics() {
+        return metrics;
     }
 
     /**

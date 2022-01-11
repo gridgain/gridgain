@@ -171,6 +171,9 @@ public class GridH2ValueCacheObject extends Value {
             if (o1.equals(o2))
                 return 0;
 
+            if (o1.getClass().equals(BinaryObjectImpl.class))
+                return BinaryObjectImpl.compare(o1, o2);
+
             return Bits.compareNotNullSigned(getBytesNoCopy(), v.getBytesNoCopy());
         }
 

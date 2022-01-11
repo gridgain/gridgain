@@ -96,6 +96,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpConfiguration;
 import org.apache.ignite.internal.processors.cache.warmup.BlockedWarmUpStrategy;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpTestPluginProvider;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.lang.GridFunc;
@@ -931,10 +932,14 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /** */
-    private void setState(Ignite ignite, ClusterState state, String strState, String... cacheNames) {
+    private void setState(Ignite ignite, ClusterState state, String strState, String... cacheNames) throws Exception {
         log.info(ignite.cluster().state() + " -> " + state);
 
+        CountDownLatch latch = getNewStateLatch(ignite.cluster().state(), state);
+
         assertEquals(EXIT_CODE_OK, execute("--set-state", strState));
+
+        latch.await(getTestTimeout(), TimeUnit.MILLISECONDS);
 
         assertEquals(state, ignite.cluster().state());
 
@@ -951,6 +956,22 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
                 grid(0).cache(cacheName).clear();
         }
     }
+
+   /** */
+   private CountDownLatch getNewStateLatch(ClusterState oldState, ClusterState newState) {
+        if (oldState != newState) {
+            CountDownLatch latch = new CountDownLatch(G.allGrids().size());
+
+            for (Ignite grid : G.allGrids()) {
+                ((IgniteEx)grid).context().discovery().setCustomEventListener(ChangeGlobalStateFinishMessage.class,
+                    ((topVer, snd, msg) -> latch.countDown()));
+            }
+
+            return latch;
+        }
+        else
+            return new CountDownLatch(0);
+   }
 
     /**
      * Test baseline collect works via control.sh
@@ -2379,8 +2400,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         if (fileNameMatcher.find()) {
             String dumpWithConflicts = new String(Files.readAllBytes(Paths.get(fileNameMatcher.group(1))));
 
-            assertContains(log, dumpWithConflicts, "found 1 conflict partitions: [counterConflicts=0, " +
-                "hashConflicts=1]");
+            assertContains(
+                log,
+                dumpWithConflicts,
+                "found 2 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=1]"
+            );
         }
         else
             fail("Should be found dump with conflicts");

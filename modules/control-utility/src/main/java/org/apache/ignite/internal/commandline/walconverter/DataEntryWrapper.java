@@ -66,7 +66,8 @@ class DataEntryWrapper extends DataEntry {
             dataEntry.writeVersion(),
             dataEntry.expireTime(),
             dataEntry.partitionId(),
-            dataEntry.partitionCounter()
+            dataEntry.partitionCounter(),
+            dataEntry.flags()
         );
 
         this.source = dataEntry;

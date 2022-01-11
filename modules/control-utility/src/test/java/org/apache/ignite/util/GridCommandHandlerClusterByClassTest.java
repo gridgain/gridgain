@@ -62,6 +62,8 @@ import org.apache.ignite.internal.commandline.cache.CacheCommandList;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -85,7 +87,6 @@ import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
@@ -382,8 +383,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      */
     @Test
     public void testCorrectCacheCmdOptionsNaming() {
-        Pattern cmdNamePtrn = compile("([a-z]+(_)?)+");
-        Pattern opNamePtrn = compile("^--([a-z]+(-)?)+([a-z]+)");
+        Pattern cmdNamePtrn = Pattern.compile("([a-z]+(_)?)+");
+        Pattern opNamePtrn = Pattern.compile("^--([a-z]+(-)?)+([a-z]+)");
 
         for (CacheSubcommands cmd : CacheSubcommands.values()) {
             String cmdName = cmd.toString();
@@ -512,9 +513,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, testOut.toString(), "conflict partitions");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheIdleVerifyNodeFilter() {
         IgniteEx ignite = crd;
@@ -626,7 +625,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     public void testCacheIdleVerifyDump() throws Exception {
         IgniteEx ignite = crd;
 
-        int keysCount = 20;//less than parts number for ability to check skipZeros flag.
+        int keysCount = 20; //less than parts number for ability to check skipZeros flag.
 
         createCacheAndPreload(ignite, keysCount);
 
@@ -648,7 +647,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             assertContains(log, dumpWithZeros, "idle_verify check has finished, found " + parts + " partitions");
             assertContains(log, dumpWithZeros, "Partition: PartitionKeyV2 [grpId=1544803905, grpName=default, partId=0]");
-            assertContains(log, dumpWithZeros, "updateCntr=0, partitionState=OWNING, size=0, partHash=0");
+            assertContains(log, dumpWithZeros, "updateCntr=0, reserveCntr=0, partitionState=OWNING, size=0, partHash=0");
             assertContains(log, dumpWithZeros, "no conflicts have been found");
 
             assertSort(parts, dumpWithZeros);
@@ -680,30 +679,30 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      */
     @Test
     public void testCacheIdleVerifyMultipleCacheFilterOptions()
-        throws Exception {
+            throws Exception {
         IgniteEx ignite = crd;
 
         ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setGroupName("shared_grp")
-            .setBackups(1)
-            .setName(DEFAULT_CACHE_NAME));
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
+                .setGroupName("shared_grp")
+                .setBackups(1)
+                .setName(DEFAULT_CACHE_NAME));
 
         ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
-            .setGroupName("shared_grp")
-            .setBackups(1)
-            .setName(DEFAULT_CACHE_NAME + "_second"));
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
+                .setGroupName("shared_grp")
+                .setBackups(1)
+                .setName(DEFAULT_CACHE_NAME + "_second"));
 
         ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 64))
-            .setBackups(1)
-            .setName(DEFAULT_CACHE_NAME + "_third"));
+                .setAffinity(new RendezvousAffinityFunction(false, 64))
+                .setBackups(1)
+                .setName(DEFAULT_CACHE_NAME + "_third"));
 
         ignite.createCache(new CacheConfiguration<>()
-            .setAffinity(new RendezvousAffinityFunction(false, 128))
-            .setBackups(1)
-            .setName("wrong_cache"));
+                .setAffinity(new RendezvousAffinityFunction(false, 128))
+                .setBackups(1)
+                .setName("wrong_cache"));
 
         injectTestSystemOut();
 
@@ -818,8 +817,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
                 assertContains(log, testOut.toString(), outputExp);
             }
-        }
-        else
+        } else
             assertContains(log, testOut.toString(), outputExp);
     }
 
@@ -830,8 +828,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * @param output Output.
      */
     private void assertSort(int expectedPartsCount, String output) {
-        Pattern partIdPattern = compile(".*partId=([0-9]*)");
-        Pattern primaryPattern = compile("Partition instances: \\[PartitionHashRecordV2 \\[isPrimary=true");
+        Pattern partIdPattern = Pattern.compile(".*partId=([0-9]*)");
+        Pattern primaryPattern = Pattern.compile("Partition instances: \\[PartitionHashRecordV2 \\[isPrimary=true");
 
         Matcher partIdMatcher = partIdPattern.matcher(output);
         Matcher primaryMatcher = primaryPattern.matcher(output);
@@ -840,7 +838,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         while (partIdMatcher.find()) {
             assertEquals(i++, Integer.parseInt(partIdMatcher.group(1)));
-            assertTrue(primaryMatcher.find());//primary node should be first in every line
+            assertTrue(primaryMatcher.find()); //primary node should be first in every line
         }
 
         assertEquals(expectedPartsCount, i);
@@ -879,11 +877,104 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
+     * Checks that breaking LWM/HWM invariant on primary partition is detected by idle_verify utility.
+     */
+    @Test
+    public void testIdleVerifyShouldFindReserveCounterConflictsOnPrimary() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
+
+        breakReserveCounterInvariant(cache, true);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "found 1 conflict partitions: [updateCounterConflicts=0, reserveCounterConflicts=1, hashConflicts=0]"
+        );
+
+    }
+
+    /**
+     * Checks that breaking LWM/HWM invariant on backup partition is <b>ignored</b> by idle_verify utility.
+     * Ignoring on backup partition is necessary due to on the backup partition hwm is not increased during prepare,
+     *     else utility will give false-positive results.
+     */
+    @Test
+    public void testIdleVerifyShouldNotFindReserveCounterConflictsOnBackup() {
+        CacheConfiguration<String, String> cfg = new CacheConfiguration<String, String>(DEFAULT_CACHE_NAME)
+            .setAtomicityMode(TRANSACTIONAL)
+            .setBackups(1);
+
+        injectTestSystemOut();
+
+        IgniteCache<String, String> cache = crd.getOrCreateCache(cfg);
+
+        breakReserveCounterInvariant(cache, false);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", cache.getName()));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "idle_verify check has finished, no conflicts have been found."
+        );
+    }
+
+    /**
+     * Breaks reserve counter invariant (HWM >= LWM) on some partition for given cache.
+     *
+     * @param cache Ignite cache.
+     * @param usePrimaryPartition If {@code true} breaks on primary partition, else on backup.
+     */
+    public void breakReserveCounterInvariant(IgniteCache<String, String> cache, boolean usePrimaryPartition) {
+        String key = "foo";
+
+        cache.put(key, "bar");
+
+        int partNum = crd.affinity(cache.getName()).partition(key);
+
+        IgniteEx node = (IgniteEx) (usePrimaryPartition
+            ? primaryNode(key, cache.getName())
+            : backupNode(key, cache.getName()));
+
+        GridDhtLocalPartition part = node.context()
+            .cache()
+            .cache(cache.getName())
+            .context()
+            .topology()
+            .localPartition(partNum);
+
+        PartitionUpdateCounter counter = part.dataStore().partUpdateCounter();
+
+        assert counter != null;
+
+        if (!usePrimaryPartition)// HWM on backup may lag LWM.
+            counter.finalizeUpdateCounters();
+
+        counter.reserve(-1);
+
+        assertTrue("HWM should not be negative.", counter.reserved() >= 0);
+
+        assertTrue("HWM/LWM invariant should be broken.", counter.get() > counter.reserved());
+    }
+
+    /**
      * @param ignite Ignite.
      * @param cacheFilter cacheFilter.
      * @param dump Whether idle_verify should be launched with dump option or not.
      */
-    private void corruptingAndCheckDefaultCache(IgniteEx ignite, String cacheFilter, boolean dump) throws IOException {
+    private void corruptingAndCheckDefaultCache(
+        IgniteEx ignite,
+        String cacheFilter,
+        boolean dump
+    ) throws IOException {
         injectTestSystemOut();
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
@@ -913,7 +1004,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             resReport = testOut.toString();
         }
 
-        assertContains(log, resReport, "found 2 conflict partitions: [counterConflicts=1, hashConflicts=1]");
+        assertContains(
+            log,
+            resReport,
+            "found 2 conflict partitions: [updateCounterConflicts=1, reserveCounterConflicts=0, hashConflicts=1]"
+        );
     }
 
     /**
@@ -974,8 +1069,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             U.log(log, dumpWithConflicts);
 
             // Non-persistent caches do not have counter conflicts
-            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
-                "hashConflicts=2]");
+            assertContains(
+                log,
+                dumpWithConflicts,
+                "found 4 conflict partitions: [updateCounterConflicts=2, reserveCounterConflicts=0, hashConflicts=2]"
+            );
         }
         else
             fail("Should be found dump with conflicts");
@@ -1083,7 +1181,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * @return Build matcher for dump file name.
      */
     @NotNull private Matcher dumpFileNameMatcher() {
-        Pattern fileNamePattern = compile(".*VisorIdleVerifyDumpTask successfully written output to '(.*)'");
+        Pattern fileNamePattern = Pattern.compile(".*VisorIdleVerifyDumpTask successfully written output to '(.*)'");
 
         return fileNamePattern.matcher(testOut.toString());
     }
@@ -1514,7 +1612,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
                         doSleep(3000);
 
-                        try (Transaction tx = grid(0).transactions().withLabel("label1").txStart(PESSIMISTIC, READ_COMMITTED, Integer.MAX_VALUE, 0)) {
+                        try (Transaction tx =
+                                 grid(0).transactions().withLabel("label1").txStart(PESSIMISTIC, READ_COMMITTED, Integer.MAX_VALUE, 0)) {
                             grid(0).cache(DEFAULT_CACHE_NAME).putAll(generate(200, 110));
 
                             grid(0).cache(DEFAULT_CACHE_NAME).put(0, 0);
@@ -1547,8 +1646,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test is that when the --help control.sh command is executed, output will contain non-experimental commands. In
-     * case system property {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = {@code true}.
+     * Test is that when the --help control.sh command is executed, output
+     * will contain non-experimental commands. In case system property
+     * {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} =
+     * {@code true}.
      */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
@@ -1558,8 +1659,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test is that when the --help control.sh command is executed, output will contain non-experimental commands. In
-     * case system property {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = {@code false}.
+     * Test is that when the --help control.sh command is executed, output
+     * will contain non-experimental commands. In case system property
+     * {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} =
+     * {@code false}.
      */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
@@ -1569,7 +1672,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test for contains of experimental commands in output of the --help control.sh command.
+     * Test for contains of experimental commands in output of the --help
+     * control.sh command.
      */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")
@@ -1578,7 +1682,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test for not contains of experimental commands in output of the --help control.sh command.
+     * Test for not contains of experimental commands in output of the --help
+     * control.sh command.
      */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
@@ -1587,9 +1692,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test to verify that the experimental command will not be executed if {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND}
-     * = {@code false}, a warning will be displayed instead.
-     */
+     * Test to verify that the experimental command will not be executed if
+     * {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} =
+     * {@code false}, a warning will be displayed instead.
+     * */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "false")
     public void testContainsWarnInsteadExecExperimentalCmdWhenEnableExperimentalFalse() {
@@ -1719,7 +1825,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Checking for contains or not of experimental commands in output of the --help control.sh command.
+     * Checking for contains or not of experimental commands in output of the
+     * --help control.sh command.
      *
      * @param contains Check contains or not.
      */
@@ -1736,7 +1843,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Check that when executing the "--help" control.sh command, the output will contain non-experimental commands.
+     * Check that when executing the "--help" control.sh command, the output
+     * will contain non-experimental commands.
      */
     private void checkContainsNotExperimentalCmdInHelpOutput() {
         execHelpCmd(helpOut -> {
@@ -1746,7 +1854,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Executing the command "--help" control.sh with transfer of output to consumer.
+     * Executing the command "--help" control.sh with transfer of output to
+     * consumer.
      *
      * @param consumer Consumer.
      */

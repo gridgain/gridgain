@@ -252,8 +252,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      *
      * @param sql Statement to execute.
      */
-    protected void sql(String sql) {
-        grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
+    protected List<List<?>> sql(String sql) {
+        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(sql), false).getAll();
     }
 
     /**
@@ -458,10 +458,23 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         );
     }
 
+    /**
+     * Get object statistics.
+     *
+     * @return Object statistics.
+     */
+    protected ObjectStatisticsImpl getStatistics() {
+        ColumnStatistics colStatistics = new ColumnStatistics(null, null, 100, 0,
+            100, 0, new byte[0], 0, U.currentTimeMillis());
+
+        return new ObjectStatisticsImpl(0, Collections.singletonMap("col1", colStatistics)
+        );
+    }
+
     /** Check that all statistics collections related tasks is empty in specified node. */
     protected void checkStatisticTasksEmpty(IgniteEx ign) {
         Map<StatisticsKey, LocalStatisticsGatheringContext> currColls = GridTestUtils.getFieldValue(
-            statisticsMgr(ign), "gatherer", "gatheringInProgress"
+            statisticsMgr(ign), "statProc", "gatheringInProgress"
         );
 
         assertTrue(currColls.toString(), currColls.isEmpty());
@@ -506,6 +519,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
         while (true) {
             try {
                 checkStatisticTasksEmpty(ign);
+
                 for (Map.Entry<StatisticsTarget, Long> targetVersionEntry : expectedVersions.entrySet()) {
                     StatisticsTarget target = targetVersionEntry.getKey();
                     Long ver = targetVersionEntry.getValue();
@@ -516,6 +530,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     long minVer = Long.MAX_VALUE;
 
                     Set<String> cols;
+
                     if (F.isEmpty(target.columns()))
                         cols = s.columnsStatistics().keySet();
                     else
@@ -529,7 +544,8 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                     if (minVer == Long.MAX_VALUE)
                         minVer = -1;
 
-                    assertEquals((long)ver, minVer);
+                    assertEquals(String.format("Expected minimum statistics version %d but found %d", ver, minVer),
+                        (long)ver, minVer);
                 }
 
                 return;
@@ -661,7 +677,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
      * @param vals Values to populate into the set.
      * @return Set of specified values.
      */
-    public <T> Set<T> setOf(T... vals) {
+    public static <T> Set<T> setOf(T... vals) {
         if (F.isEmpty(vals))
             return Collections.emptySet();
 
@@ -698,7 +714,7 @@ public abstract class StatisticsAbstractTest extends GridCommonAbstractTest {
                 List<List<?>> res = ign.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(sql)).getAll();
 
                 return checker.test(res);
-            }, 1000));
+            }, TIMEOUT));
         }
     }
 }

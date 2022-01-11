@@ -85,8 +85,12 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
     /** Maxim number of atomic IDs for thread. Must be power of two! */
     protected static final int THREAD_RESERVE_SIZE = 0x4000;
 
+    /** @see IgniteSystemProperties#IGNITE_MAX_NESTED_LISTENER_CALLS */
+    public static final int DFLT_MAX_NESTED_LISTENER_CALLS = 5;
+
     /** */
-    private static final int MAX_NESTED_LSNR_CALLS = getInteger(IGNITE_MAX_NESTED_LISTENER_CALLS, 5);
+    private static final int MAX_NESTED_LSNR_CALLS = getInteger(IGNITE_MAX_NESTED_LISTENER_CALLS,
+        DFLT_MAX_NESTED_LISTENER_CALLS);
 
     /** Pending locks per thread. */
     private final ThreadLocal<Deque<GridCacheMvccCandidate>> pending = new ThreadLocal<>();
@@ -96,7 +100,8 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
 
     /** Set of removed lock versions. */
     private GridBoundedConcurrentLinkedHashSet<GridCacheVersion> rmvLocks =
-        new GridBoundedConcurrentLinkedHashSet<>(MAX_REMOVED_LOCKS, MAX_REMOVED_LOCKS, 0.75f, 16, PER_SEGMENT_Q);
+        new GridBoundedConcurrentLinkedHashSet<>(MAX_REMOVED_LOCKS, MAX_REMOVED_LOCKS, 0.75f, 16,
+            PER_SEGMENT_Q);
 
     /** Locked keys. */
     @GridToStringExclude

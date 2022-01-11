@@ -86,10 +86,30 @@ public class StatisticsColumnConfigurationView {
         return objCfg.maxPartitionObsolescencePercent();
     }
 
+    @Order(5)
+    public Long manualNulls() {
+        return (colCfg.overrides() == null) ? null : colCfg.overrides().nulls();
+    }
+
+    @Order(6)
+    public Long manualDistinct() {
+        return (colCfg.overrides() == null) ? null : colCfg.overrides().distinct();
+    }
+
+    @Order(7)
+    public Long manualTotal() {
+        return (colCfg.overrides() == null) ? null : colCfg.overrides().total();
+    }
+
+    @Order(8)
+    public Integer manualSize() {
+        return (colCfg.overrides() == null) ? null : colCfg.overrides().size();
+    }
+
     /**
      * @return Configuration version.
      */
-    @Order(5)
+    @Order(9)
     public long version() {
         return colCfg.version();
     }

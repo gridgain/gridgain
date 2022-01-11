@@ -130,7 +130,10 @@ BOOST_AUTO_TEST_CASE(TestConnectionSslReject)
     BOOST_REQUIRE_EQUAL(ret, SQL_ERROR);
 
     // Checking that error is the connection error.
-    BOOST_CHECK_EQUAL(std::string("08001"), GetOdbcErrorState(SQL_HANDLE_DBC, dbc));
+    std::string state = GetOdbcErrorState(SQL_HANDLE_DBC, dbc);
+
+    // Error state can be different depending on the version of OpenSSL
+    BOOST_CHECK(state == "08001" || state == "08S01" );
 }
 
 BOOST_AUTO_TEST_CASE(TestLoginTimeout)

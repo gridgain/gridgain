@@ -37,7 +37,7 @@ public class PageLockTrackerMXBeanImpl implements PageLockTrackerMXBean {
 
     /** {@inheritDoc} */
     @Override public String dumpLocks() {
-        return mgr.dumpLocks();
+        return mgr.dumpLocksToString();
     }
 
     /** {@inheritDoc} */

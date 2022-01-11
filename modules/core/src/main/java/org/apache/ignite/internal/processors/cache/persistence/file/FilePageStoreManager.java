@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.LongConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -69,16 +68,15 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.StoredCacheData;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderSettings;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageReadWriteManagerImpl;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.GridStripedReadWriteLock;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -105,10 +103,19 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     /** File suffix. */
     public static final String FILE_SUFFIX = ".bin";
 
-    /** Suffix for zip files */
+    /** Suffix for zip files. */
     public static final String ZIP_SUFFIX = ".zip";
 
-    /** Suffix for tmp files */
+    /** Suffix for ZSTD compressed files. */
+    public static final String ZSTD_SUFFIX = ".zst";
+
+    /** Suffix for LZ4 compressed files. */
+    public static final String LZ4_SUFFIX = ".lz4";
+
+    /** Suffix for SNAPPY compressed files. */
+    public static final String SNAPPY_SUFFIX = ".snappy";
+
+    /** Suffix for tmp files. */
     public static final String TMP_SUFFIX = ".tmp";
 
     /** Partition file prefix. */
@@ -224,7 +231,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         final PdsFolderSettings folderSettings = ctx.pdsFolderResolver().resolveFolders();
 
-        storeWorkDir = new File(folderSettings.persistentStoreRootPath(), folderSettings.folderName());
+        storeWorkDir = folderSettings.persistentStoreNodePath();
 
         U.ensureDirectory(storeWorkDir, "page store work directory", log);
 
@@ -442,7 +449,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void initialize(int cacheId, int partitions, String workingDir, LongConsumer tracker)
+    @Override public void initialize(int cacheId, int partitions, String workingDir, PageMetrics pageMetrics)
         throws IgniteCheckedException {
         assert storeWorkDir != null;
 
@@ -451,7 +458,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                 new File(storeWorkDir, workingDir),
                 cacheId,
                 partitions,
-                tracker,
+                pageMetrics,
                 cctx.cacheContext(cacheId) != null && cctx.cacheContext(cacheId).config().isEncryptionEnabled()
             );
 
@@ -484,12 +491,13 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         if (!idxCacheStores.containsKey(grpId)) {
             DataRegion dataRegion = cctx.database().dataRegion(GridCacheDatabaseSharedManager.METASTORE_DATA_REGION_NAME);
+            PageMetrics pageMetrics = dataRegion.metrics().cacheGrpPageMetrics(grpId);
 
             CacheStoreHolder holder = initDir(
                 new File(storeWorkDir, META_STORAGE_NAME),
                 grpId,
                 PageIdAllocator.METASTORE_PARTITION + 1,
-                dataRegion.memoryMetrics().totalAllocatedPages()::add,
+                pageMetrics,
                 false);
 
             CacheStoreHolder old = idxCacheStores.put(grpId, holder);
@@ -556,12 +564,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void onPartitionCreated(int grpId, int partId) {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionDestroyed(int grpId, int partId, int tag) throws IgniteCheckedException {
+    @Override public void truncate(int grpId, int partId, int tag) throws IgniteCheckedException {
         assert partId <= PageIdAllocator.MAX_PARTITION_ID;
 
         PageStore store = getStore(grpId, partId);
@@ -626,17 +629,14 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         File cacheWorkDir = cacheWorkDir(ccfg);
 
         String dataRegionName = grpDesc.config().getDataRegionName();
-
-        DataRegionMetricsImpl regionMetrics = cctx.database().dataRegion(dataRegionName).memoryMetrics();
-
-        LongAdderMetric allocatedTracker =
-            regionMetrics.getOrAllocateGroupPageAllocationTracker(grpDesc.cacheOrGroupName());
+        DataRegion dataRegion = cctx.database().dataRegion(dataRegionName);
+        PageMetrics pageMetrics = dataRegion.metrics().cacheGrpPageMetrics(grpDesc.groupId());
 
         return initDir(
             cacheWorkDir,
             grpDesc.groupId(),
             grpDesc.config().getAffinity().partitions(),
-            allocatedTracker::add,
+            pageMetrics,
             ccfg.isEncryptionEnabled()
         );
     }
@@ -686,7 +686,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @param cacheWorkDir Work directory.
      * @param grpId Group ID.
      * @param partitions Number of partitions.
-     * @param allocatedTracker Metrics updater.
+     * @param pageMetrics Page metrics.
      * @param encrypted {@code True} if this cache encrypted.
      * @return Cache store holder.
      * @throws IgniteCheckedException If failed.
@@ -694,7 +694,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     private CacheStoreHolder initDir(File cacheWorkDir,
         int grpId,
         int partitions,
-        LongConsumer allocatedTracker,
+        PageMetrics pageMetrics,
         boolean encrypted) throws IgniteCheckedException {
         try {
             boolean dirExisted = checkAndInitCacheWorkDir(cacheWorkDir);
@@ -746,7 +746,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             PageStore idxStore = pageStoreFactory.createPageStore(
                 PageStore.TYPE_IDX,
                 idxFile,
-                allocatedTracker
+                pageMetrics.totalPages()::add
             );
 
             PageStore[] partStores = new PageStore[partitions];
@@ -758,7 +758,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                     pageStoreFactory.createPageStore(
                         PageStore.TYPE_DATA,
                         () -> getPartitionFilePath(cacheWorkDir, p),
-                        allocatedTracker);
+                        pageMetrics.totalPages()::add);
 
                     partStores[partId] = partStore;
             }

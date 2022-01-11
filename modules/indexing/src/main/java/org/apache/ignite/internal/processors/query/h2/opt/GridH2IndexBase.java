@@ -174,11 +174,20 @@ public abstract class GridH2IndexBase extends H2IndexCostedBase {
     public abstract int segmentsCount();
 
     /**
-     * @param partition Partition idx.
-     * @return Segment ID for given key
+     * @param part Partition idx.
+     * @return Segment ID for given key.
      */
-    public int segmentForPartition(int partition) {
-        return segmentsCount() == 1 ? 0 : (partition % segmentsCount());
+    public int segmentForPartition(int part) {
+        return calculateSegment(segmentsCount(), part);
+    }
+
+    /**
+     * @param segmentCnt Сount of segments in cache.
+     * @param part Partition.
+     * @return Segment ID for given segment count and partition.
+     */
+    public static int calculateSegment(int segmentCnt, int part) {
+        return segmentCnt == 1 ? 0 : (part % segmentCnt);
     }
 
     /**

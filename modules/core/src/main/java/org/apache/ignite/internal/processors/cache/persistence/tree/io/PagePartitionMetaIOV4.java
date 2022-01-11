@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.util.GridStringBuilder;
 
 /**
@@ -34,8 +35,8 @@ public class PagePartitionMetaIOV4 extends PagePartitionMetaIOV3 {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setTombstonesCount(pageAddr, 0);
     }
@@ -47,6 +48,8 @@ public class PagePartitionMetaIOV4 extends PagePartitionMetaIOV3 {
 
     /** {@inheritDoc} */
     @Override public boolean setTombstonesCount(long pageAddr, long tombstonesCnt) {
+        assertPageType(pageAddr);
+
         if (getTombstonesCount(pageAddr) == tombstonesCnt)
             return false;
 

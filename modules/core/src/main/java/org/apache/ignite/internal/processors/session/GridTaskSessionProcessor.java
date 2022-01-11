@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,6 +64,8 @@ public class GridTaskSessionProcessor extends GridProcessorAdapter {
     }
 
     /**
+     * Creates task session.
+     *
      * @param sesId Session ID.
      * @param taskNodeId Task node ID.
      * @param taskName Task name.
@@ -79,6 +81,7 @@ public class GridTaskSessionProcessor extends GridProcessorAdapter {
      * @param internal {@code True} in case of internal task.
      * @param subjId Subject ID.
      * @param execName Custom executor name.
+     * @param login User who created the session, {@code null} if security is not enabled.
      * @return New session if one did not exist, or existing one.
      */
     public GridTaskSessionImpl createTaskSession(
@@ -96,7 +99,9 @@ public class GridTaskSessionProcessor extends GridProcessorAdapter {
         boolean fullSup,
         boolean internal,
         UUID subjId,
-        @Nullable String execName) {
+        @Nullable String execName,
+        @Nullable Object login
+    ) {
         if (!fullSup) {
             return new GridTaskSessionImpl(
                 taskNodeId,
@@ -114,7 +119,9 @@ public class GridTaskSessionProcessor extends GridProcessorAdapter {
                 false,
                 internal,
                 subjId,
-                execName);
+                execName,
+                login
+            );
         }
 
         while (true) {
@@ -139,7 +146,10 @@ public class GridTaskSessionProcessor extends GridProcessorAdapter {
                         true,
                         internal,
                         subjId,
-                        execName));
+                        execName,
+                        login
+                    )
+                );
 
                 if (old != null)
                     ses = old;

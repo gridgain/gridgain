@@ -79,7 +79,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OPTIMIZED_MARSHALL
  * &lt;/bean&gt;
  * </pre>
  * <p>
- * <img src="http://ignite.apache.org/images/spring-small.png">
+ * <img src="https://www.gridgain.com/images/spring-small.png">
  * <br>
  * For information about Spring framework visit <a href="http://www.springframework.org/">www.springframework.org</a>
  */
@@ -337,6 +337,15 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
         }
 
         U.clearClassCache(ldr);
+    }
+
+    /**
+     * Clears the optimized class descriptors cache. This is essential for the clients
+     * on disconnect in order to make them register their user types again (server nodes may
+     * lose previously registered types).
+     */
+    public void clearClassDescriptorsCache() {
+        clsMap.clear();
     }
 
     /** {@inheritDoc} */

@@ -153,13 +153,19 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** @see IgniteSystemProperties#IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE */
+    public static final int DFLT_ATOMIC_DEFERRED_ACK_BUFFER_SIZE = 256;
+
+    /** @see IgniteSystemProperties#IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT */
+    public static final int DFLT_ATOMIC_DEFERRED_ACK_TIMEOUT = 500;
+
     /** Deferred update response buffer size. */
     private static final int DEFERRED_UPDATE_RESPONSE_BUFFER_SIZE =
-        Integer.getInteger(IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE, 256);
+        Integer.getInteger(IGNITE_ATOMIC_DEFERRED_ACK_BUFFER_SIZE, DFLT_ATOMIC_DEFERRED_ACK_BUFFER_SIZE);
 
     /** Deferred update response timeout. */
     private static final int DEFERRED_UPDATE_RESPONSE_TIMEOUT =
-        Integer.getInteger(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, 500);
+        Integer.getInteger(IGNITE_ATOMIC_DEFERRED_ACK_TIMEOUT, DFLT_ATOMIC_DEFERRED_ACK_TIMEOUT);
 
     /** */
     private final ThreadLocal<Map<UUID, GridDhtAtomicDeferredUpdateResponse>> defRes =
@@ -3737,7 +3743,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         /** {@inheritDoc} */
         @Override public void onTimeout() {
-            ctx.kernalContext().getStripedExecutorService().execute(part, this);
+            ctx.kernalContext().pools().getStripedExecutorService().execute(part, this);
         }
     }
 }

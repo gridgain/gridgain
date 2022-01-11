@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.IndexPagesMetricsInMemoryTest;
 import org.apache.ignite.internal.processors.cache.BinaryTypeMismatchLoggingTest;
 import org.apache.ignite.internal.processors.cache.BinaryTypeRegistrationTest;
 import org.apache.ignite.internal.processors.cache.CacheBinaryKeyConcurrentQueryTest;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.CacheRegisterMetadataLocallyT
 import org.apache.ignite.internal.processors.cache.ClientReconnectAfterClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeDoesNotBreakSqlSelectTest;
 import org.apache.ignite.internal.processors.cache.ClusterReadOnlyModeSqlTest;
+import org.apache.ignite.internal.processors.cache.EnumClassImplementingIndexedInterfaceTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffHeapSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexEntryEvictTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOffheapIndexGetSelfTest;
@@ -116,7 +118,11 @@ import org.junit.runners.Suite;
 
     VisorQueryTaskSelfTest.class,
 
-    WrongIndexedTypesTest.class
+    WrongIndexedTypesTest.class,
+
+    IndexPagesMetricsInMemoryTest.class,
+
+    EnumClassImplementingIndexedInterfaceTest.class
 })
 public class IgniteCacheWithIndexingTestSuite {
 }

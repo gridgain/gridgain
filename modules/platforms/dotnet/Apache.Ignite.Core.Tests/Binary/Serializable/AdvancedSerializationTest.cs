@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
     using System;
     using System.Collections.Generic;
     using System.Data;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
 #if !NETCOREAPP  // AppDomains are not supported in .NET Core
     using System.Reflection;
@@ -184,6 +185,7 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
 
     [Serializable]
     [DataContract]
+    [SuppressMessage("Microsoft.Design", "CA1058:TypesShouldNotExtendCertainBaseTypes")]
     public sealed class SerializableXmlDoc : XmlDocument, ISerializable
     {
         /// <summary>

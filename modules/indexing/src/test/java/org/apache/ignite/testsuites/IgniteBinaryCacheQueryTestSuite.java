@@ -98,6 +98,7 @@ import org.apache.ignite.internal.processors.cache.IgniteErrorOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IncorrectQueryEntityTest;
 import org.apache.ignite.internal.processors.cache.IndexingCachePartitionLossPolicySelfTest;
 import org.apache.ignite.internal.processors.cache.QueryEntityCaseMismatchTest;
+import org.apache.ignite.internal.processors.cache.ReservationsOnDoneAfterTopologyUnlockFailTest;
 import org.apache.ignite.internal.processors.cache.SqlFieldsQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.authentication.SqlUserCommandSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheAtomicFieldsQuerySelfTest;
@@ -167,6 +168,7 @@ import org.apache.ignite.internal.processors.cache.index.IgniteDecimalSelfTest;
 import org.apache.ignite.internal.processors.cache.index.IndexMetricsTest;
 import org.apache.ignite.internal.processors.cache.index.LongIndexNameTest;
 import org.apache.ignite.internal.processors.cache.index.OptimizedMarshallerIndexNameTest;
+import org.apache.ignite.internal.processors.cache.index.PojoIndexLocalQueryTest;
 import org.apache.ignite.internal.processors.cache.index.QueryEntityValidationSelfTest;
 import org.apache.ignite.internal.processors.cache.index.SchemaExchangeSelfTest;
 import org.apache.ignite.internal.processors.cache.index.SqlPartitionEvictionTest;
@@ -241,6 +243,7 @@ import org.apache.ignite.internal.processors.query.SqlQuerySystemViewsSelfTest;
 import org.apache.ignite.internal.processors.query.SqlResultSetMetaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSchemaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSystemViewsSelfTest;
+import org.apache.ignite.internal.processors.query.WrongQueryEntityFieldTypeTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildSelfTest;
 import org.apache.ignite.internal.processors.query.h2.GridIndexRebuildTest;
 import org.apache.ignite.internal.processors.query.h2.GridSubqueryJoinOptimizerSelfTest;
@@ -283,6 +286,7 @@ import org.apache.ignite.internal.sql.SqlParserSetStreamingSelfTest;
 import org.apache.ignite.internal.sql.SqlParserTransactionalKeywordsSelfTest;
 import org.apache.ignite.internal.sql.SqlParserUserSelfTest;
 import org.apache.ignite.spi.communication.tcp.GridOrderedMessageCancelSelfTest;
+import org.apache.ignite.sqltests.CheckWarnJoinPartitionedTables;
 import org.apache.ignite.sqltests.PartitionedSqlTest;
 import org.apache.ignite.sqltests.ReplicatedSqlCustomPartitionsTest;
 import org.apache.ignite.sqltests.ReplicatedSqlTest;
@@ -304,6 +308,7 @@ import org.junit.runners.Suite;
     PartitionedSqlTest.class,
     ReplicatedSqlTest.class,
     ReplicatedSqlCustomPartitionsTest.class,
+    CheckWarnJoinPartitionedTables.class,
 
     SqlParserCreateIndexSelfTest.class,
     SqlParserDropIndexSelfTest.class,
@@ -562,6 +567,7 @@ import org.junit.runners.Suite;
     SqlMetricsOnWebConsoleSelfTest.class,
     ScanQueryConcurrentUpdatesTest.class,
     ScanQueryConcurrentSqlUpdatesTest.class,
+    ReservationsOnDoneAfterTopologyUnlockFailTest.class,
 
     GridIndexRebuildSelfTest.class,
     GridIndexRebuildTest.class,
@@ -588,6 +594,8 @@ import org.junit.runners.Suite;
     IgniteCacheReplicatedAtomicColumnConstraintsTest.class,
     IgniteCacheReplicatedTransactionalColumnConstraintsTest.class,
     IgniteCacheReplicatedTransactionalSnapshotColumnConstraintTest.class,
+
+    WrongQueryEntityFieldTypeTest.class,
 
     // H2 Rows on-heap cache
     H2RowCacheSelfTest.class,
@@ -643,6 +651,7 @@ import org.junit.runners.Suite;
 
     BasicSqlTypesIndexTest.class,
     BasicJavaTypesIndexTest.class,
+    PojoIndexLocalQueryTest.class,
 
     //Cancellation of queries.
     KillQueryTest.class,

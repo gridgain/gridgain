@@ -437,7 +437,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
             if (pessimistic() || isSystemInvalidate())
                 state(PREPARED);
         }
-        catch (IgniteCheckedException e) {
+        catch (IgniteCheckedException | IgniteException e) {
             setRollbackOnly();
 
             throw e;
@@ -651,7 +651,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                                     writeVersion(),
                                                     0,
                                                     txEntry.key().partition(),
-                                                    txEntry.updateCounter()
+                                                    txEntry.updateCounter(),
+                                                    DataEntry.flags(CU.txOnPrimary(this))
                                                 ),
                                                 txEntry
                                             )
@@ -847,7 +848,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                             }
                         }
 
-                        if (ptr != null && !cctx.tm().logTxRecords())
+                        if (ptr != null)
                             cctx.wal().flush(ptr, false);
                     }
                     catch (Throwable ex) {

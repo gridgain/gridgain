@@ -93,7 +93,7 @@ public class FilePageStore implements PageStore {
     private volatile int tag;
 
     /** */
-    private boolean skipCrc = IgniteSystemProperties.getBoolean(IGNITE_PDS_SKIP_CRC, false);
+    private boolean skipCrc = IgniteSystemProperties.getBoolean(IGNITE_PDS_SKIP_CRC);
 
     /** */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();

@@ -92,7 +92,6 @@ import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.MutableSingletonList;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridMapEntry;
@@ -130,6 +129,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     /** Immutable classes. */
     private static final Collection<Class<?>> IMMUTABLE_CLS = new HashSet<>();
 
+    /** @see IgniteSystemProperties#IGNITE_WAIT_SCHEMA_UPDATE */
+    public static final int DFLT_WAIT_SCHEMA_UPDATE = 30_000;
+
     /** */
     private volatile boolean discoveryStarted;
 
@@ -156,7 +158,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
     @Nullable private File binaryMetadataFileStoreDir;
 
     /** How long to wait for schema if no updates in progress. */
-    private long waitSchemaTimeout = IgniteSystemProperties.getLong(IGNITE_WAIT_SCHEMA_UPDATE, 30_000);
+    private long waitSchemaTimeout = IgniteSystemProperties.getLong(IGNITE_WAIT_SCHEMA_UPDATE, DFLT_WAIT_SCHEMA_UPDATE);
 
     /** For tests. */
     @SuppressWarnings("PublicField")
@@ -269,7 +271,7 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             transport = new BinaryMetadataTransport(metadataLocCache, metadataFileStore, binaryCtx, ctx, log);
 
-            IgniteUtils.invoke(BinaryMarshaller.class, bMarsh0, "setBinaryContext", binaryCtx, ctx.config());
+            bMarsh0.setBinaryContext(binaryCtx, ctx.config());
 
             binaryMarsh = new GridBinaryMarshaller(binaryCtx);
 

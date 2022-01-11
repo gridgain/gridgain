@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.odbc.odbc.OdbcConnectionContext;
+import org.apache.ignite.internal.ssl.SSLContextClientAuthWrapper;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.nio.GridNioAsyncNotifyFilter;
@@ -60,6 +61,7 @@ import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLIENT_CONNECTOR_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_META_KEY;
 
@@ -140,7 +142,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     cliConnCfg.getThreadPoolSize(),
                     cliConnCfg.getThreadPoolSize(),
                     0,
-                    new LinkedBlockingQueue<Runnable>(),
+                    new LinkedBlockingQueue<>(),
                     GridIoPolicy.UNDEFINED,
                     new OomExceptionHandler(ctx));
 
@@ -176,6 +178,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                             .directMode(true)
                             .writerFactory(ses -> new DirectMessageWriter((byte)1))
                             .idleTimeout(idleTimeout > 0 ? idleTimeout : Long.MAX_VALUE)
+                            .metricRegistry(ctx.metric().registry(CLIENT_CONNECTOR_METRICS))
                             .build();
 
                         ctx.ports().registerPort(port, IgnitePortProtocol.TCP, getClass());
@@ -332,15 +335,11 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                 throw new IgniteCheckedException("Failed to create client listener " +
                     "(SSL is enabled but factory is null). Check the ClientConnectorConfiguration");
 
-            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxFactory.create(),
-                true, ByteOrder.nativeOrder(), log);
+            SSLContext sslCtxBase = sslCtxFactory.create();
+            SSLContext sslCtx = new SSLContextClientAuthWrapper(sslCtxBase, cliConnCfg.isSslClientAuth());
+            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log, ctx.metric().registry(CLIENT_CONNECTOR_METRICS));
 
             sslFilter.directMode(true);
-
-            boolean auth = cliConnCfg.isSslClientAuth();
-
-            sslFilter.wantClientAuth(auth);
-            sslFilter.needClientAuth(auth);
 
             return new GridNioFilter[] {
                 openSesFilter,

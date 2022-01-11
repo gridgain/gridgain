@@ -39,6 +39,7 @@ import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.processors.rest.GridRestProtocolHandler;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientMessage;
 import org.apache.ignite.internal.processors.rest.protocols.GridRestProtocolAdapter;
+import org.apache.ignite.internal.ssl.SSLContextClientAuthWrapper;
 import org.apache.ignite.internal.util.nio.GridNioCodecFilter;
 import org.apache.ignite.internal.util.nio.GridNioFilter;
 import org.apache.ignite.internal.util.nio.GridNioParser;
@@ -52,6 +53,8 @@ import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.IgnitePortProtocol;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+
 /**
  * TCP binary protocol implementation.
  */
@@ -61,6 +64,9 @@ public class GridTcpRestProtocol extends GridRestProtocolAdapter {
 
     /** NIO server listener. */
     private GridTcpRestNioListener lsnr;
+
+    /** The name of the metric registry associated with the REST TCP connector. */
+    public static final String REST_CONNECTOR_METRIC_REGISTRY_NAME = metricName("rest", "client");
 
     /** @param ctx Context. */
     public GridTcpRestProtocol(GridKernalContext ctx) {
@@ -209,16 +215,14 @@ public class GridTcpRestProtocol extends GridRestProtocolAdapter {
             GridNioFilter[] filters;
 
             if (sslCtx != null) {
-                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx,
-                    cfg.isDirectBuffer(), ByteOrder.nativeOrder(), log);
+                SSLContext sslCtxWithClientAuth = new SSLContextClientAuthWrapper(sslCtx, cfg.isSslClientAuth());
+
+                GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtxWithClientAuth, false,
+                    ByteOrder.nativeOrder(),
+                    log,
+                    ctx.metric().registry(REST_CONNECTOR_METRIC_REGISTRY_NAME));
 
                 sslFilter.directMode(false);
-
-                boolean auth = cfg.isSslClientAuth();
-
-                sslFilter.wantClientAuth(auth);
-
-                sslFilter.needClientAuth(auth);
 
                 filters = new GridNioFilter[] {
                     codec,
@@ -244,6 +248,7 @@ public class GridTcpRestProtocol extends GridRestProtocolAdapter {
                 .sendQueueLimit(cfg.getSendQueueLimit())
                 .filters(filters)
                 .directMode(false)
+                .metricRegistry(ctx.metric().registry(REST_CONNECTOR_METRIC_REGISTRY_NAME))
                 .build();
 
             srv.idleTimeout(cfg.getIdleTimeout());

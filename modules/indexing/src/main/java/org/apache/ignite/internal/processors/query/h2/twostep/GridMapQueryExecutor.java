@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
@@ -84,6 +83,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.QUERY_POOL;
+import static org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase.calculateSegment;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest.isDataPageScanEnabled;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory.toMessages;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
@@ -218,10 +218,14 @@ public class GridMapQueryExecutor {
 
             final List<Integer> cacheIds = req.caches();
 
-            int segments = explain || replicated || F.isEmpty(cacheIds) ? 1 :
+            final Object[] params = req.parameters();
+
+            final boolean singlePart = parts != null && parts.length == 1;
+            final int parallelism = explain || replicated || F.isEmpty(cacheIds) ? 1 :
                 CU.firstPartitioned(ctx.cache().context(), cacheIds).config().getQueryParallelism();
 
-            final Object[] params = req.parameters();
+            final int segments = explain || replicated || singlePart ? 1 : parallelism;
+            final int singleSegment = singlePart ? calculateSegment(parallelism, parts[0]) : 0;
 
             final int timeout = req.timeout() > 0 || req.explicitTimeout()
                 ? req.timeout()
@@ -234,8 +238,8 @@ public class GridMapQueryExecutor {
 
                 Span span = MTC.span();
 
-                ctx.closure().callLocal(
-                    (Callable<Void>)() -> {
+                ctx.closure().runLocal(
+                    () -> {
                         try (TraceSurroundings ignored = MTC.supportContinual(span)) {
                             onQueryRequest0(
                                 node,
@@ -260,7 +264,9 @@ public class GridMapQueryExecutor {
                                 req.runningQryId(),
                                 treatReplicatedAsPartitioned
                             );
-                            return null;
+                        }
+                        catch (Throwable e) {
+                            sendError(node, req.requestId(), e);
                         }
                     },
                     QUERY_POOL);
@@ -269,7 +275,7 @@ public class GridMapQueryExecutor {
             onQueryRequest0(
                 node,
                 req.requestId(),
-                0,
+                singleSegment,
                 req.schemaName(),
                 req.queries(),
                 cacheIds,
@@ -561,12 +567,15 @@ public class GridMapQueryExecutor {
                         if (qryRetryErr != null)
                             sendError(node, reqId, qryRetryErr);
                         else {
-                            U.error(log, "Failed to execute local query.", e);
+                            if (e instanceof Error) {
+                                U.error(log, "Failed to execute local query.", e);
+
+                                throw (Error)e;
+                            }
+
+                            U.warn(log, "Failed to execute local query.", e);
 
                             sendError(node, reqId, e);
-
-                            if (e instanceof Error)
-                                throw (Error)e;
                         }
                     }
                 }

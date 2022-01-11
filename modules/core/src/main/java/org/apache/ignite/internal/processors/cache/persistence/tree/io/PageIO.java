@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.io.Pages
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageBPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastoreDataPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLockListener;
 import org.apache.ignite.internal.processors.cache.tree.CacheIdAwareDataInnerIO;
@@ -54,6 +55,7 @@ import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogInner
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogLeafIO;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.spi.encryption.EncryptionSpi;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Base format for all the page types.
@@ -66,7 +68,7 @@ import org.apache.ignite.spi.encryption.EncryptionSpi;
  *    static methods (like {@code {@link #getPageId(long)}}) intentionally:
  *    this base format can not be changed between versions.
  *
- * 2. IO must correctly override {@link #initNewPage(long, long, int)} method and call super.
+ * 2. IO must correctly override {@link #initNewPage(long, long, int, PageMetrics)} method and call super.
  *    We have logic that relies on this behavior.
  *
  * 3. Page IO type ID constant must be declared in this class to have a list of all the
@@ -625,10 +627,11 @@ public abstract class PageIO {
      * @param pageAddr Page address.
      * @param pageId Page ID.
      * @param pageSize Page size.
+     * @param metrics Page metrics for tracking page allocation. Can be {@code null} if no tracking is required.
      *
      * @see EncryptionSpi#encryptedSize(int)
      */
-    public void initNewPage(long pageAddr, long pageId, int pageSize) {
+    public void initNewPage(long pageAddr, long pageId, int pageSize, @Nullable PageMetrics metrics) {
         setType(pageAddr, getType());
         setVersion(pageAddr, getVersion());
         setPageId(pageAddr, pageId);
@@ -638,6 +641,28 @@ public abstract class PageIO {
         PageUtils.putLong(pageAddr, ROTATED_ID_PART_OFF, 0L);
         PageUtils.putLong(pageAddr, RESERVED_2_OFF, 0L);
         PageUtils.putLong(pageAddr, RESERVED_3_OFF, 0L);
+
+        if (metrics != null && isIndexPage(getType()))
+            metrics.indexPages().increment();
+    }
+
+    /**
+     * Returns {@code true} if the given page type is related to SQL index data pages.
+     *
+     * @param pageType Page type (can be obtained by {@link #getType(long)} or {@link #getType(ByteBuffer)} methods).
+     */
+    public static boolean isIndexPage(int pageType) {
+        if ((T_H2_EX_REF_LEAF_START <= pageType && pageType <= T_H2_EX_REF_LEAF_END) ||
+            (T_H2_EX_REF_MVCC_LEAF_START <= pageType && pageType <= T_H2_EX_REF_MVCC_LEAF_END)
+        )
+            return true;
+
+        if ((T_H2_EX_REF_INNER_START <= pageType && pageType <= T_H2_EX_REF_INNER_END) ||
+            (T_H2_EX_REF_MVCC_INNER_START <= pageType && pageType <= T_H2_EX_REF_MVCC_INNER_END)
+        )
+            return true;
+
+        return false;
     }
 
     /** {@inheritDoc} */
@@ -672,7 +697,6 @@ public abstract class PageIO {
      * @return Page IO.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     public static <Q extends PageIO> Q getPageIO(int type, int ver) throws IgniteCheckedException {
         switch (type) {
             case T_DATA:
@@ -736,7 +760,6 @@ public abstract class PageIO {
      * @return IO for either inner or leaf B+Tree page.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     public static <Q extends BPlusIO<?>> Q getBPlusIO(int type, int ver) throws IgniteCheckedException {
         assert type > 0 && type <= 65535 : type;
 
@@ -870,30 +893,30 @@ public abstract class PageIO {
     public static IndexPageType deriveIndexPageType(long pageAddr) {
         int pageIoType = PageIO.getType(pageAddr);
         switch (pageIoType) {
-            case PageIO.T_DATA_REF_INNER:
-            case PageIO.T_DATA_REF_MVCC_INNER:
-            case PageIO.T_H2_REF_INNER:
-            case PageIO.T_H2_MVCC_REF_INNER:
-            case PageIO.T_CACHE_ID_AWARE_DATA_REF_INNER:
-            case PageIO.T_CACHE_ID_DATA_REF_MVCC_INNER:
+            case T_DATA_REF_INNER:
+            case T_DATA_REF_MVCC_INNER:
+            case T_H2_REF_INNER:
+            case T_H2_MVCC_REF_INNER:
+            case T_CACHE_ID_AWARE_DATA_REF_INNER:
+            case T_CACHE_ID_DATA_REF_MVCC_INNER:
                 return IndexPageType.INNER;
 
-            case PageIO.T_DATA_REF_LEAF:
-            case PageIO.T_DATA_REF_MVCC_LEAF:
-            case PageIO.T_H2_REF_LEAF:
-            case PageIO.T_H2_MVCC_REF_LEAF:
-            case PageIO.T_CACHE_ID_AWARE_DATA_REF_LEAF:
-            case PageIO.T_CACHE_ID_DATA_REF_MVCC_LEAF:
+            case T_DATA_REF_LEAF:
+            case T_DATA_REF_MVCC_LEAF:
+            case T_H2_REF_LEAF:
+            case T_H2_MVCC_REF_LEAF:
+            case T_CACHE_ID_AWARE_DATA_REF_LEAF:
+            case T_CACHE_ID_DATA_REF_MVCC_LEAF:
                 return IndexPageType.LEAF;
 
             default:
-                if ((PageIO.T_H2_EX_REF_LEAF_START <= pageIoType && pageIoType <= PageIO.T_H2_EX_REF_LEAF_END) ||
-                    (PageIO.T_H2_EX_REF_MVCC_LEAF_START <= pageIoType && pageIoType <= PageIO.T_H2_EX_REF_MVCC_LEAF_END)
+                if ((T_H2_EX_REF_LEAF_START <= pageIoType && pageIoType <= T_H2_EX_REF_LEAF_END) ||
+                    (T_H2_EX_REF_MVCC_LEAF_START <= pageIoType && pageIoType <= T_H2_EX_REF_MVCC_LEAF_END)
                 )
                     return IndexPageType.LEAF;
 
-                if ((PageIO.T_H2_EX_REF_INNER_START <= pageIoType && pageIoType <= PageIO.T_H2_EX_REF_INNER_END) ||
-                    (PageIO.T_H2_EX_REF_MVCC_INNER_START <= pageIoType && pageIoType <= PageIO.T_H2_EX_REF_MVCC_INNER_END)
+                if ((T_H2_EX_REF_INNER_START <= pageIoType && pageIoType <= T_H2_EX_REF_INNER_END) ||
+                    (T_H2_EX_REF_MVCC_INNER_START <= pageIoType && pageIoType <= T_H2_EX_REF_MVCC_INNER_END)
                 )
                     return IndexPageType.INNER;
         }
@@ -958,5 +981,23 @@ public abstract class PageIO {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Asserts that page type of the page stored at pageAddr matches page type of this PageIO.
+     *
+     * @param pageAddr address of a page to use for assertion
+     */
+    protected final void assertPageType(long pageAddr) {
+        assert getType(pageAddr) == getType() : "Expected type " + getType() + ", but got " + getType(pageAddr);
+    }
+
+    /**
+     * Asserts that page type of the page stored in the given buffer matches page type of this PageIO.
+     *
+     * @param buf   buffer where the page for assertion is stored
+     */
+    protected final void assertPageType(ByteBuffer buf) {
+        assert getType(buf) == getType() : "Expected type " + getType() + ", but got " + getType(buf);
     }
 }

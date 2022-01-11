@@ -48,7 +48,7 @@ class VisorConsole {
     protected def copyright() = COPYRIGHT
 
     /** Release date. */
-    protected def releaseDate() = new SimpleDateFormat("ddMMyyyy").parse(RELEASE_DATE_STR)
+    protected def releaseDate() = RELEASE_DATE
 
     /** Program name. */
     protected val progName = sys.props.getOrElse(IGNITE_PROG_NAME, "ignitevisorcmd")

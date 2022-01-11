@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.stream.LongStream;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
@@ -35,6 +36,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static java.nio.charset.Charset.defaultCharset;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.parse;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.parsePageId;
 import static org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArguments.parsePageIds;
@@ -357,7 +359,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             "--binary-metadata-dir", binaryMetadataDir.getAbsolutePath(),
             "--marshaller-mapping-dir", marshallerDir.getAbsolutePath(),
             "--unwrap-binary",
-            "--record-types", "DATA_RECORD,TX_RECORD",
+            "--record-types", "DATA_RECORD_V2,TX_RECORD",
             "--wal-time-from-millis", "1575158400000",
             "--wal-time-to-millis", "1577836740999",
             "--has-text", "search string",
@@ -372,7 +374,7 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         Assert.assertEquals(binaryMetadataDir, parseArgs.getBinaryMetadataDir());
         Assert.assertEquals(marshallerDir, parseArgs.getMarshallerMappingDir());
         Assert.assertTrue(parseArgs.isUnwrapBinary());
-        Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD));
+        Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.DATA_RECORD_V2));
         Assert.assertTrue(parseArgs.getRecordTypes().contains(WALRecord.RecordType.TX_RECORD));
         Assert.assertEquals(1575158400000L, (long)parseArgs.getFromTime());
         Assert.assertEquals(1577836740999L, (long)parseArgs.getToTime());
@@ -512,9 +514,11 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         File tmpDir = new File(System.getProperty("java.io.tmpdir"), getName());
 
         try {
-            T2<Integer, Long>[] pages = new T2[] {new T2<>(10, 20L), new T2(30, 40L)};
+            int grpId = 10;
+            long[] pageIds = {20, 40};
 
-            File f = corruptedPagesFile(tmpDir.toPath(), new RandomAccessFileIOFactory(), pages);
+            File f = corruptedPagesFile(tmpDir.toPath(), new RandomAccessFileIOFactory(), grpId, pageIds);
+
             assertTrue(f.exists());
             assertTrue(f.isFile());
             assertTrue(f.length() > 0);
@@ -526,7 +530,11 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
                 parse(ps, "--wal-dir", tmpDir.getAbsolutePath(), "--pages", f.getAbsolutePath());
 
             assertNotNull(args.getPages());
-            assertEqualsCollections(F.asList(pages), args.getPages());
+
+            assertEqualsCollections(
+                LongStream.of(pageIds).mapToObj(pageId -> new T2<>(grpId, pageId)).collect(toList()),
+                args.getPages()
+            );
         }
         finally {
             if (tmpDir.exists())

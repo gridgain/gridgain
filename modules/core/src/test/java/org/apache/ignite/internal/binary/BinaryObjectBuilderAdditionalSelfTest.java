@@ -1784,7 +1784,34 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
         builder.setField("f1", "val2");
         assertEquals("val2", builder.build().field("f1"));
     }
-
+    
+    /**
+     * @throws Exception If fails
+     */
+    @Test
+    public void testGetNotAssignedFieldInEmptyBuilder() {
+        BinaryObjectBuilder builder = binaries().builder("SomeType")
+                .setField("w", "wewe");
+        
+        assertNull(builder.getField("field"));
+        assertEquals("wewe", builder.getField("w"));
+    }
+    
+    /**
+     * @throws Exception If fails
+     */
+    @Test
+    public void testGetNotAssignedFieldInBuilder() {
+        GridBinaryTestClasses.TestObjectContainer testObjectContainer = new GridBinaryTestClasses.TestObjectContainer();
+        testObjectContainer.foo = "binaryCachedValue";
+        BinaryObjectBuilderImpl builder = wrap(testObjectContainer);
+        builder.setField("w", "wewe");
+        
+        assertNull(builder.getField("field"));
+        assertEquals("wewe", builder.getField("w"));
+        assertEquals("binaryCachedValue", builder.getField("foo"));
+    }
+    
     /**
      *
      */

@@ -64,8 +64,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -73,6 +75,7 @@ import java.net.URLClassLoader;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileLock;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -96,13 +99,14 @@ import java.security.ProtectionDomain;
 import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -196,7 +200,6 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteFutureCancelledCheckedException;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -229,6 +232,7 @@ import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
+import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.io.GridFilenameUtils;
 import org.apache.ignite.internal.util.ipc.shmem.IpcSharedMemoryNativeLoader;
@@ -249,11 +253,13 @@ import org.apache.ignite.internal.util.typedef.T5;
 import org.apache.ignite.internal.util.typedef.T6;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteFutureCancelledException;
 import org.apache.ignite.lang.IgniteFutureTimeoutException;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -262,6 +268,9 @@ import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
+import org.apache.ignite.logger.LoggerNodeIdAndApplicationAware;
+import org.apache.ignite.logger.LoggerNodeIdAware;
+import org.apache.ignite.logger.java.JavaLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -311,7 +320,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.staticFieldOffset;
 /**
  * Collection of utility methods used throughout the system.
  */
-@SuppressWarnings("UnusedReturnValue")
+@SuppressWarnings({"UnusedReturnValue"})
 public abstract class IgniteUtils {
     /** */
     public static final long KB = 1024L;
@@ -333,6 +342,12 @@ public abstract class IgniteUtils {
 
     /** Default minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MAX_CHECKPOINTING_PAGE_BUFFER_SIZE = 2 * GB;
+
+    /** @see IgniteSystemProperties#IGNITE_MBEAN_APPEND_CLASS_LOADER_ID */
+    public static final boolean DFLT_MBEAN_APPEND_CLASS_LOADER_ID = true;
+
+    /** Fallback local address. */
+    public static final String LOCALHOST = "localhost";
 
     /** {@code True} if {@code unsafe} should be used for array copy. */
     private static final boolean UNSAFE_BYTE_ARR_CP = unsafeByteArrayCopyAvailable();
@@ -383,17 +398,17 @@ public abstract class IgniteUtils {
     /** Thread dump message. */
     public static final String THREAD_DUMP_MSG = "Thread dump at ";
 
-    /** Correct Mbean cache name pattern. */
-    private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
+    /** Alphanumeric with underscore regexp pattern. */
+    private static final Pattern ALPHANUMERIC_UNDERSCORE_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
 
     /** Project home directory. */
     private static volatile GridTuple<String> ggHome;
 
     /** OS JDK string. */
-    private static String osJdkStr;
+    private static final String osJdkStr;
 
     /** OS string. */
-    private static String osStr;
+    private static final String osStr;
 
     /** JDK string. */
     private static String jdkStr;
@@ -450,13 +465,16 @@ public abstract class IgniteUtils {
     private static boolean mac;
 
     /** Indicates whether current OS is of RedHat family. */
-    private static boolean redHat;
+    private static final boolean redHat;
 
-    /** Indicates whether current OS architecture is Sun Sparc. */
+    /** Indicates whether current CPU architecture is Sun Sparc. */
     private static boolean sparc;
 
-    /** Indicates whether current OS architecture is Intel X86. */
+    /** Indicates whether current CPU architecture is Intel X86. */
     private static boolean x86;
+
+    /** Indicates whether current CPU architecture is AMD64. */
+    private static boolean amd64;
 
     /** Name of the underlying OS. */
     private static String osName;
@@ -495,7 +513,7 @@ public abstract class IgniteUtils {
     private static String jvmImplName;
 
     /** Will be set to {@code true} if detected a 32-bit JVM. */
-    private static boolean jvm32Bit;
+    private static final boolean jvm32Bit;
 
     /** JMX domain as 'xxx.apache.ignite'. */
     public static final String JMX_DOMAIN = IgniteUtils.class.getName().substring(0, IgniteUtils.class.getName().
@@ -511,17 +529,24 @@ public abstract class IgniteUtils {
     private static final int MASK = 0xf;
 
     /** Long date format pattern for log messages. */
-    private static final SimpleDateFormat LONG_DATE_FMT = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+    public static final DateTimeFormatter LONG_DATE_FMT =
+        DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss").withZone(ZoneId.systemDefault());
 
     /**
      * Short date format pattern for log messages in "quiet" mode.
      * Only time is included since we don't expect "quiet" mode to be used
      * for longer runs.
      */
-    private static final SimpleDateFormat SHORT_DATE_FMT = new SimpleDateFormat("HH:mm:ss");
+    public static final DateTimeFormatter SHORT_DATE_FMT =
+        DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
 
     /** Debug date format. */
-    private static final SimpleDateFormat DEBUG_DATE_FMT = new SimpleDateFormat("HH:mm:ss,SSS");
+    public static final DateTimeFormatter DEBUG_DATE_FMT =
+        DateTimeFormatter.ofPattern("HH:mm:ss,SSS").withZone(ZoneId.systemDefault());
+
+    /** Date format for thread dumps. */
+    private static final DateTimeFormatter THREAD_DUMP_FMT =
+        DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss z").withZone(ZoneId.systemDefault());
 
     /** Cached local host address to make sure that every time the same local host is returned. */
     private static InetAddress locHost;
@@ -603,6 +628,10 @@ public abstract class IgniteUtils {
     public static boolean IGNITE_MBEANS_DISABLED =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_MBEANS_DISABLED);
 
+    /** Ignite test features enabled flag. */
+    public static boolean IGNITE_TEST_FEATURES_ENABLED =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_TEST_FEATURES_ENABLED);
+
     /** */
     private static final boolean assertionsEnabled;
 
@@ -622,7 +651,7 @@ public abstract class IgniteUtils {
     private static final Field urlClsLdrField = urlClassLoaderField();
 
     /** Dev only logging disabled. */
-    private static boolean devOnlyLogDisabled =
+    private static final boolean devOnlyLogDisabled =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DEV_ONLY_LOGGING_DISABLED);
 
     /** JDK9: jdk.internal.loader.URLClassPath. */
@@ -632,7 +661,7 @@ public abstract class IgniteUtils {
     private static Method mthdURLClassPathGetUrls;
 
     /** Byte count prefixes. */
-    private static String BYTE_CNT_PREFIXES = " KMGTPE";
+    private static final String BYTE_CNT_PREFIXES = " KMGTPE";
 
     /*
      * Initializes enterprise check.
@@ -714,6 +743,8 @@ public abstract class IgniteUtils {
             x86 = true;
         else if (archStr.contains("sparc"))
             sparc = true;
+        else if (archStr.contains("amd64"))
+            amd64 = true;
 
         String javaRtName = System.getProperty("java.runtime.name");
         String javaRtVer = System.getProperty("java.runtime.version");
@@ -1336,7 +1367,7 @@ public abstract class IgniteUtils {
      * @return Common prefix for debug messages.
      */
     private static String debugPrefix() {
-        return '<' + DEBUG_DATE_FMT.format(new Date(System.currentTimeMillis())) + "><DEBUG><" +
+        return '<' + DEBUG_DATE_FMT.format(Instant.now()) + "><DEBUG><" +
             Thread.currentThread().getName() + '>' + ' ';
     }
 
@@ -1348,7 +1379,7 @@ public abstract class IgniteUtils {
 
         Runtime runtime = Runtime.getRuntime();
 
-        X.println('<' + DEBUG_DATE_FMT.format(new Date(System.currentTimeMillis())) + "><DEBUG><" +
+        X.println('<' + DEBUG_DATE_FMT.format(Instant.now()) + "><DEBUG><" +
             Thread.currentThread().getName() + "> Heap stats [free=" + runtime.freeMemory() / (1024 * 1024) +
             "M, total=" + runtime.totalMemory() / (1024 * 1024) + "M]");
     }
@@ -1480,7 +1511,7 @@ public abstract class IgniteUtils {
             mxBean.dumpAllThreads(mxBean.isObjectMonitorUsageSupported(), mxBean.isSynchronizerUsageSupported());
 
         GridStringBuilder sb = new GridStringBuilder(THREAD_DUMP_MSG)
-            .a(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z").format(new Date(U.currentTimeMillis()))).a(NL);
+            .a(THREAD_DUMP_FMT.format(Instant.ofEpochMilli(U.currentTimeMillis()))).a(NL);
 
         for (ThreadInfo info : threadInfos) {
             printThreadInfo(info, sb, deadlockedThreadsIds);
@@ -1672,7 +1703,8 @@ public abstract class IgniteUtils {
      *
      * @param cls Class.
      * @param dflt Default class to return.
-     * @param includePrimitiveTypes Whether class resolution should include primitive types (i.e. "int" will resolve to int.class if flag is set)
+     * @param includePrimitiveTypes Whether class resolution should include primitive types
+     *                              (i.e. "int" will resolve to int.class if flag is set)
      * @return Class or default given class if it can't be found.
      */
     @Nullable public static Class<?> classForName(
@@ -1850,12 +1882,12 @@ public abstract class IgniteUtils {
      * Gets 8-character substring of {@link org.apache.ignite.lang.IgniteUuid} (for terse logging).
      * The ID8 will be constructed as follows:
      * <ul>
-     * <li>Take first 4 digits for global ID, i.e. {@code GridUuid.globalId()}.</li>
-     * <li>Take last 4 digits for local ID, i.e. {@code GridUuid.localId()}.</li>
+     * <li>Take first 4 digits for global ID, i.e. {@link IgniteUuid#globalId()}.</li>
+     * <li>Take last 4 digits for local ID, i.e. {@link IgniteUuid#localId()}.</li>
      * </ul>
      *
      * @param id Input ID.
-     * @return 8-character representation of {@code GridUuid}.
+     * @return 8-character representation of {@link IgniteUuid}.
      */
     public static String id8(IgniteUuid id) {
         String s = id.toString();
@@ -2222,6 +2254,19 @@ public abstract class IgniteUtils {
                         if (!addr.isLinkLocalAddress())
                             locAddrs.add(addr);
                     }
+                }
+
+                /* On z/OS NetworkInterface::getNetworkInterfaces returns external interfaces
+                    and IPv6 loopback but not IPv4 loopback.
+                    Trying to additionally resolve "localhost" to find the IPv4 loopback address. */
+                try {
+                    InetAddress localHost = InetAddress.getByName(LOCALHOST);
+
+                    if (!locAddrs.contains(localHost))
+                        locAddrs.add(localHost);
+                }
+                catch (Exception ex) {
+                    // Ignore.
                 }
 
                 locAddrs = filterReachable(locAddrs);
@@ -3410,7 +3455,7 @@ public abstract class IgniteUtils {
      * @return Formatted time string.
      */
     public static String format(long sysTime) {
-        return LONG_DATE_FMT.format(new java.util.Date(sysTime));
+        return LONG_DATE_FMT.format(Instant.ofEpochMilli(sysTime));
     }
 
     /**
@@ -4293,6 +4338,42 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Closes given socket logging possible checked exception.
+     *
+     * @param sock Socket to close. If it's {@code null} - it's no-op.
+     * @param log Logger to log possible checked exception with (optional).
+     */
+    public static void close(@Nullable Socket sock, @Nullable IgniteLogger log) {
+        if (sock == null)
+            return;
+
+        try {
+            // Closing output and input first to avoid tls 1.3 incompatibility
+            // https://bugs.openjdk.java.net/browse/JDK-8208526
+            if (!sock.isOutputShutdown())
+                sock.shutdownOutput();
+            if (!sock.isInputShutdown())
+                sock.shutdownInput();
+        }
+        catch (ClosedChannelException | SocketException ex) {
+            LT.warn(log, "Failed to shutdown socket", ex);
+        }
+        catch (Exception e) {
+            warn(log, "Failed to shutdown socket: " + e.getMessage(), e);
+        }
+
+        try {
+            sock.close();
+        }
+        catch (ClosedChannelException | SocketException ex) {
+            LT.warn(log, "Failed to close socket", ex);
+        }
+        catch (Exception e) {
+            warn(log, "Failed to close socket: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Closes given resource suppressing possible checked exception.
      *
      * @param rsrc Resource to close. If it's {@code null} - it's no-op.
@@ -4528,7 +4609,7 @@ public abstract class IgniteUtils {
         if (log != null)
             log.getLogger(IgniteConfiguration.COURTESY_LOGGER_NAME).warning(compact(longMsg.toString()));
         else
-            X.println("[" + SHORT_DATE_FMT.format(new java.util.Date()) + "] (courtesy) " +
+            X.println("[" + SHORT_DATE_FMT.format(Instant.now()) + "] (courtesy) " +
                 compact(shortMsg.toString()));
     }
 
@@ -4624,7 +4705,7 @@ public abstract class IgniteUtils {
         if (log != null)
             log.warning(compact(msg.toString()), e);
         else {
-            X.println("[" + SHORT_DATE_FMT.format(new java.util.Date()) + "] (wrn) " +
+            X.println("[" + SHORT_DATE_FMT.format(Instant.now()) + "] (wrn) " +
                     compact(msg.toString()));
 
             if (e != null)
@@ -4654,7 +4735,7 @@ public abstract class IgniteUtils {
         if (log != null)
             log.warning(IgniteLogger.DEV_ONLY, compact(msg.toString()), null);
         else
-            X.println("[" + SHORT_DATE_FMT.format(new java.util.Date()) + "] (wrn) " +
+            X.println("[" + SHORT_DATE_FMT.format(Instant.now()) + "] (wrn) " +
                 compact(msg.toString()));
     }
 
@@ -4682,6 +4763,130 @@ public abstract class IgniteUtils {
         }
         else
             quiet(false, shortMsg);
+    }
+
+    /**
+     * Resolves work directory.
+     * @param cfg Ignite configuration.
+     */
+    public static void initWorkDir(IgniteConfiguration cfg) throws IgniteCheckedException {
+        String igniteHome = cfg.getIgniteHome();
+
+        // Set Ignite home.
+        if (igniteHome == null)
+            igniteHome = U.getIgniteHome();
+
+        String userProvidedWorkDir = cfg.getWorkDirectory();
+
+        // Correctly resolve work directory and set it back to configuration.
+        cfg.setWorkDirectory(U.workDirectory(userProvidedWorkDir, igniteHome));
+    }
+
+    /**
+     * @param cfg Ignite configuration.
+     * @param app Application name.
+     * @return Initialized logger.
+     * @throws IgniteCheckedException If failed.
+     */
+    public static IgniteLogger initLogger(IgniteConfiguration cfg, String app) throws IgniteCheckedException {
+        return initLogger(
+            cfg.getGridLogger(),
+            app,
+            cfg.getNodeId() != null ? cfg.getNodeId() : UUID.randomUUID(),
+            cfg.getWorkDirectory()
+        );
+    }
+
+    /**
+     * @param cfgLog Configured logger.
+     * @param app Application name.
+     * @param workDir Work directory.
+     * @return Initialized logger.
+     * @throws IgniteCheckedException If failed.
+     */
+    @SuppressWarnings("ErrorNotRethrown")
+    public static IgniteLogger initLogger(
+        @Nullable IgniteLogger cfgLog,
+        @Nullable String app,
+        UUID nodeId,
+        String workDir
+    ) throws IgniteCheckedException {
+        try {
+            Exception log4jInitErr = null;
+
+            if (cfgLog == null) {
+                Class<?> log4jCls;
+
+                try {
+                    log4jCls = Class.forName("org.apache.ignite.logger.log4j.Log4JLogger");
+                }
+                catch (ClassNotFoundException | NoClassDefFoundError ignored) {
+                    log4jCls = null;
+                }
+
+                if (log4jCls != null) {
+                    try {
+                        URL url = U.resolveIgniteUrl("config/ignite-log4j.xml");
+
+                        if (url == null) {
+                            File cfgFile = new File("config/ignite-log4j.xml");
+
+                            if (!cfgFile.exists())
+                                cfgFile = new File("../config/ignite-log4j.xml");
+
+                            if (cfgFile.exists()) {
+                                try {
+                                    url = cfgFile.toURI().toURL();
+                                }
+                                catch (MalformedURLException ignore) {
+                                    // No-op.
+                                }
+                            }
+                        }
+
+                        if (url != null) {
+                            boolean configured = (Boolean)log4jCls.getMethod("isConfigured").invoke(null);
+
+                            if (configured)
+                                url = null;
+                        }
+
+                        if (url != null) {
+                            Constructor<?> ctor = log4jCls.getConstructor(URL.class);
+
+                            cfgLog = (IgniteLogger)ctor.newInstance(url);
+                        }
+                        else
+                            cfgLog = (IgniteLogger)log4jCls.newInstance();
+                    }
+                    catch (Exception e) {
+                        log4jInitErr = e;
+                    }
+                }
+
+                if (log4jCls == null || log4jInitErr != null)
+                    cfgLog = new JavaLogger();
+            }
+
+            // Special handling for Java logger which requires work directory.
+            if (cfgLog instanceof JavaLogger)
+                ((JavaLogger)cfgLog).setWorkDirectory(workDir);
+
+            // Set node IDs for all file appenders.
+            if (cfgLog instanceof LoggerNodeIdAndApplicationAware)
+                ((LoggerNodeIdAndApplicationAware)cfgLog).setApplicationAndNode(app, nodeId);
+            else if (cfgLog instanceof LoggerNodeIdAware)
+                ((LoggerNodeIdAware)cfgLog).setNodeId(nodeId);
+
+            if (log4jInitErr != null)
+                U.warn(cfgLog, "Failed to initialize Log4JLogger (falling back to standard java logging): "
+                    + log4jInitErr.getCause());
+
+            return cfgLog;
+        }
+        catch (Exception e) {
+            throw new IgniteCheckedException("Failed to create logger.", e);
+        }
     }
 
     /**
@@ -4726,7 +4931,7 @@ public abstract class IgniteUtils {
                 log.error(compact(longMsg.toString()), e);
         }
         else {
-            X.printerr("[" + SHORT_DATE_FMT.format(new java.util.Date()) + "] (err) " +
+            X.printerr("[" + SHORT_DATE_FMT.format(Instant.now()) + "] (err) " +
                 compact(shortMsg.toString()));
 
             if (e != null)
@@ -4759,7 +4964,7 @@ public abstract class IgniteUtils {
     public static void quiet(boolean err, Object... objs) {
         assert objs != null;
 
-        String time = SHORT_DATE_FMT.format(new java.util.Date());
+        String time = SHORT_DATE_FMT.format(Instant.now());
 
         SB sb = new SB();
 
@@ -4844,7 +5049,7 @@ public abstract class IgniteUtils {
      * @param sb Sb.
      */
     private static void appendClassLoaderHash(SB sb) {
-        if (getBoolean(IGNITE_MBEAN_APPEND_CLASS_LOADER_ID, true)) {
+        if (getBoolean(IGNITE_MBEAN_APPEND_CLASS_LOADER_ID, DFLT_MBEAN_APPEND_CLASS_LOADER_ID)) {
             String clsLdrHash = Integer.toHexString(Ignite.class.getClassLoader().hashCode());
 
             sb.a("clsLdr=").a(clsLdrHash).a(',');
@@ -4879,10 +5084,18 @@ public abstract class IgniteUtils {
      * @return An escaped string.
      */
     private static String escapeObjectNameValue(String s) {
-        if (MBEAN_CACHE_NAME_PATTERN.matcher(s).matches())
+        if (alphanumericUnderscore(s))
             return s;
 
         return '\"' + s.replaceAll("[\\\\\"?*]", "\\\\$0") + '\"';
+    }
+
+    /**
+     * @param s String to check.
+     * @return {@code true} if given string contains only alphanumeric and underscore symbols.
+     */
+    public static boolean alphanumericUnderscore(String s) {
+        return ALPHANUMERIC_UNDERSCORE_PATTERN.matcher(s).matches();
     }
 
     /**
@@ -5183,11 +5396,11 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Writes Grid UUIDs to output stream. This method is meant to be used by
+     * Writes Ignite UUIDs to output stream. This method is meant to be used by
      * implementations of {@link Externalizable} interface.
      *
      * @param out Output stream.
-     * @param col Grid UUIDs to write.
+     * @param col Ignite UUIDs to write.
      * @throws IOException If write failed.
      */
     public static void writeGridUuids(DataOutput out, @Nullable Collection<IgniteUuid> col) throws IOException {
@@ -5204,11 +5417,11 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Reads Grid UUIDs from input stream. This method is meant to be used by
+     * Reads Ignite UUIDs from input stream. This method is meant to be used by
      * implementations of {@link Externalizable} interface.
      *
      * @param in Input stream.
-     * @return Read Grid UUIDs.
+     * @return Read Ignite UUIDs.
      * @throws IOException If read failed.
      */
     @Nullable public static List<IgniteUuid> readGridUuids(DataInput in) throws IOException {
@@ -5348,9 +5561,9 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Converts GridUuid to bytes.
+     * Converts {@link IgniteUuid} to bytes.
      *
-     * @param uuid GridUuid to convert.
+     * @param uuid {@link IgniteUuid} to convert.
      * @return Bytes.
      */
     public static byte[] igniteUuidToBytes(IgniteUuid uuid) {
@@ -5364,9 +5577,9 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Converts GridUuid to bytes.
+     * Converts {@link IgniteUuid} to bytes.
      *
-     * @param uuid GridUuid to convert.
+     * @param uuid {@link IgniteUuid} to convert.
      * @param out Output array to write to.
      * @param off Offset from which to write.
      */
@@ -5379,11 +5592,11 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Converts bytes to GridUuid.
+     * Converts bytes to {@link IgniteUuid}.
      *
      * @param in Input byte array.
      * @param off Offset from which start reading.
-     * @return GridUuid instance.
+     * @return {@link IgniteUuid} instance.
      */
     public static IgniteUuid bytesToIgniteUuid(byte[] in, int off) {
         long most = bytesToLong(in, off);
@@ -5430,6 +5643,24 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Writes long array to output stream.
+     *
+     * @param out Output stream to write to.
+     * @param arr Array to write.
+     * @throws IOException If write failed.
+     */
+    public static void writeLongArray(DataOutput out, @Nullable long[] arr) throws IOException {
+        if (arr == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(arr.length);
+
+            for (long b : arr)
+                out.writeLong(b);
+        }
+    }
+
+    /**
      * Reads boolean array from input stream accounting for <tt>null</tt> values.
      *
      * @param in Stream to read from.
@@ -5467,6 +5698,27 @@ public abstract class IgniteUtils {
 
         for (int i = 0; i < len; i++)
             res[i] = in.readInt();
+
+        return res;
+    }
+
+    /**
+     * Reads long array from input stream.
+     *
+     * @param in Stream to read from.
+     * @return Read long array, possibly <tt>null</tt>.
+     * @throws IOException If read failed.
+     */
+    @Nullable public static long[] readLongArray(DataInput in) throws IOException {
+        int len = in.readInt();
+
+        if (len == -1)
+            return null; // Value "-1" indicates null.
+
+        long[] res = new long[len];
+
+        for (int i = 0; i < len; i++)
+            res[i] = in.readLong();
 
         return res;
     }
@@ -6066,7 +6318,7 @@ public abstract class IgniteUtils {
 
     /**
      * Gets resource name.
-     * Returns a task name {@see getTaskName} if it is a Compute task or a class name otherwise.
+     * Returns a task name if it is a Compute task or a class name otherwise.
      *
      * @param rscCls Class of resource.
      * @return Name of resource.
@@ -6859,6 +7111,24 @@ public abstract class IgniteUtils {
      */
     public static boolean isSolarisX86() {
         return solaris && x86;
+    }
+
+    /**
+     * Indicates whether current architecture is Intel x86.
+     *
+     * @return {@code true} if current architecture is Intel x86 - {@code false} otherwise.
+     */
+    public static boolean isX86() {
+        return x86;
+    }
+
+    /**
+     * Indicates whether current architecture is AMD64.
+     *
+     * @return {@code true} if current architecture is AMD64 - {@code false} otherwise.
+     */
+    public static boolean isAmd64() {
+        return amd64;
     }
 
     /**
@@ -7863,19 +8133,6 @@ public abstract class IgniteUtils {
                 }
             }
         }
-    }
-
-    /**
-     * Formats passed date with specified pattern.
-     *
-     * @param date Date to format.
-     * @param ptrn Pattern.
-     * @return Formatted date.
-     */
-    public static String format(Date date, String ptrn) {
-        java.text.DateFormat format = new java.text.SimpleDateFormat(ptrn);
-
-        return format.format(date);
     }
 
     /**
@@ -9177,7 +9434,11 @@ public abstract class IgniteUtils {
      * @return Class.
      * @throws ClassNotFoundException If class not found.
      */
-    public static Class<?> forName(String clsName, @Nullable ClassLoader ldr, IgnitePredicate<String> clsFilter) throws ClassNotFoundException {
+    public static Class<?> forName(
+        String clsName,
+        @Nullable ClassLoader ldr,
+        IgnitePredicate<String> clsFilter
+    ) throws ClassNotFoundException {
         return forName(clsName, ldr, clsFilter, GridBinaryMarshaller.USE_CACHE.get());
     }
 
@@ -9186,11 +9447,16 @@ public abstract class IgniteUtils {
      *
      * @param clsName Class name.
      * @param ldr Class loader.
-    * @param useCache If true class loader and result should be cached internally, false otherwise.
+     * @param useCache If true class loader and result should be cached internally, false otherwise.
      * @return Class.
      * @throws ClassNotFoundException If class not found.
      */
-    public static Class<?> forName(String clsName, @Nullable ClassLoader ldr, IgnitePredicate<String> clsFilter, boolean useCache) throws ClassNotFoundException {
+    public static Class<?> forName(
+        String clsName,
+        @Nullable ClassLoader ldr,
+        IgnitePredicate<String> clsFilter,
+        boolean useCache
+    ) throws ClassNotFoundException {
         assert clsName != null;
 
         Class<?> cls = primitiveMap.get(clsName);
@@ -9515,8 +9781,8 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * For each object provided by the given {@link Iterable} checks if it implements
-     * {@link org.apache.ignite.lifecycle.LifecycleAware} interface and executes {@link org.apache.ignite.lifecycle.LifecycleAware#stop} method.
+     * For each object provided by the given {@link Iterable} checks if it implements {@link org.apache.ignite.lifecycle.LifecycleAware}
+     * interface and executes {@link org.apache.ignite.lifecycle.LifecycleAware#stop} method.
      *
      * @param log Logger used to log error message in case of stop failure.
      * @param objs Object passed to Ignite configuration.
@@ -9841,7 +10107,7 @@ public abstract class IgniteUtils {
                         "    <property name=\"workingDirectory\" value=\"location\"/> in IgniteConfiguration <bean>.\n");
                 }
             }
-            catch (Exception e) {
+            catch (Exception ignore) {
                 // Ignore.
             }
 
@@ -11102,7 +11368,7 @@ public abstract class IgniteUtils {
             if (log != null)
                 U.quietAndInfo(log, "Automatically adjusted max WAL archive size to " +
                     U.readableSize(adjustedWalArchiveSize, false) +
-                    " (to override, use DataStorageConfiguration.setMaxWalArhiveSize)");
+                    " (to override, use DataStorageConfiguration.setMaxWalArchiveSize)");
 
             return adjustedWalArchiveSize;
         }
@@ -11687,7 +11953,7 @@ public abstract class IgniteUtils {
     /**
      * The batch of tasks with a batch index in global array.
      */
-    private static class Batch<T,R> {
+    private static class Batch<T, R> {
         /** List tasks. */
         private final List<T> tasks;
 
@@ -11978,107 +12244,23 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Reads string-to-string map written by {@link #writeStringMap(DataOutput, Map)}.
+     * Notifies provided {@code lsnrs} with the value {@code t}.
      *
-     * @param in Data input.
-     * @throws IOException If write failed.
-     * @return Read result.
+     * @param t Consumed object.
+     * @param lsnrs Listeners.
+     * @param <T> Type of consumed object.
      */
-    public static Map<String, String> readStringMap(DataInput in) throws IOException {
-        int size = in.readInt();
+    public static <T> void notifyListeners(T t, Collection<Consumer<T>> lsnrs, IgniteLogger log) {
+        if (lsnrs == null)
+            return;
 
-        if (size == -1)
-            return null;
-        else {
-            Map<String, String> map = U.newHashMap(size);
-
-            for (int i = 0; i < size; i++)
-                map.put(readUTF(in), readUTF(in));
-
-            return map;
-        }
-    }
-
-    /**
-     * Writes string-to-string map to given data output.
-     *
-     * @param out Data output.
-     * @param map Map.
-     * @throws IOException If write failed.
-     */
-    public static void writeStringMap(DataOutput out, @Nullable Map<String, String> map) throws IOException {
-        if (map != null) {
-            out.writeInt(map.size());
-
-            for (Map.Entry<String, String> e : map.entrySet()) {
-                writeUTF(out, e.getKey());
-                writeUTF(out, e.getValue());
+        for (Consumer<T> lsnr : lsnrs) {
+            try {
+                lsnr.accept(t);
             }
-        }
-        else
-            out.writeInt(-1);
-    }
-
-    /** Maximum string length to be written at once. */
-    private static final int MAX_STR_LEN = 0xFFFF / 4;
-
-    /**
-     * Write UTF string which can be {@code null}.
-     *
-     * @param out Output stream.
-     * @param val Value.
-     * @throws IOException If failed.
-     */
-    public static void writeUTF(DataOutput out, @Nullable String val) throws IOException {
-        if (val == null)
-            out.writeInt(-1);
-        else {
-            out.writeInt(val.length());
-
-            if (val.length() <= MAX_STR_LEN)
-                out.writeUTF(val); // Optimized write in 1 chunk.
-            else {
-                int written = 0;
-
-                while (written < val.length()) {
-                    int partLen = Math.min(val.length() - written, MAX_STR_LEN);
-
-                    String part = val.substring(written, written + partLen);
-
-                    out.writeUTF(part);
-
-                    written += partLen;
-                }
+            catch (Exception e) {
+                U.warn(log, "Listener error", e);
             }
-        }
-    }
-
-    /**
-     * Read UTF string which can be {@code null}.
-     *
-     * @param in Input stream.
-     * @return Value.
-     * @throws IOException If failed.
-     */
-    public static String readUTF(DataInput in) throws IOException {
-        int len = in.readInt(); // May be zero.
-
-        if (len < 0)
-            return null;
-        else {
-            if (len <= MAX_STR_LEN)
-                return in.readUTF();
-
-            StringBuilder sb = new StringBuilder(len);
-
-            do {
-                sb.append(in.readUTF());
-            }
-            while (sb.length() < len);
-
-            assert sb.length() == len;
-
-            return sb.toString();
         }
     }
 
@@ -12313,50 +12495,144 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Notifies provided {@code lsnrs} with the value {@code t}.
-     *
-     * @param t Consumed object.
-     * @param lsnrs Listeners.
-     * @param <T> Type of consumed object.
-     */
-    public static <T> void notifyListeners(T t, Collection<Consumer<T>> lsnrs, IgniteLogger log) {
-        if (lsnrs == null)
-            return;
-
-        for (Consumer<T> lsnr : lsnrs) {
-            try {
-                lsnr.accept(t);
-            }
-            catch (Exception e) {
-                U.warn(log, "Listener error", e);
-            }
-        }
-    }
-
-    /**
-     * Broadcasts given job to nodes that support ignite feature.
+     * Broadcasts given job to nodes that match filter.
      *
      * @param kctx Kernal context.
      * @param job Ignite job.
      * @param srvrsOnly Broadcast only on server nodes.
-     * @param feature Ignite feature.
+     * @param nodeFilter Node filter.
      */
-    public static void broadcastToNodesSupportingFeature(
+    public static IgniteFuture<Void> broadcastToNodesWithFilterAsync(
         GridKernalContext kctx,
         IgniteRunnable job,
         boolean srvrsOnly,
-        IgniteFeatures feature
+        IgnitePredicate<ClusterNode> nodeFilter
     ) {
         ClusterGroup cl = kctx.grid().cluster();
 
         if (srvrsOnly)
             cl = cl.forServers();
 
-        ClusterGroup grp = cl.forPredicate(node -> IgniteFeatures.nodeSupports(kctx, node, feature));
+        ClusterGroup grp = nodeFilter != null ? cl.forPredicate(nodeFilter) : cl;
+
+        if (grp.nodes().isEmpty())
+            return new IgniteFinishedFutureImpl<>();
 
         IgniteCompute compute = kctx.grid().compute(grp);
 
-        compute.broadcast(job);
+        return compute.broadcastAsync(job);
+    }
+
+    /**
+     * Reads string-to-string map written by {@link #writeStringMap(DataOutput, Map)}.
+     *
+     * @param in Data input.
+     * @throws IOException If write failed.
+     * @return Read result.
+     */
+    public static Map<String, String> readStringMap(DataInput in) throws IOException {
+        int size = in.readInt();
+
+        if (size == -1)
+            return null;
+        else {
+            Map<String, String> map = U.newHashMap(size);
+
+            for (int i = 0; i < size; i++)
+                map.put(readUTF(in), readUTF(in));
+
+            return map;
+        }
+    }
+
+    /**
+     * Writes string-to-string map to given data output.
+     *
+     * @param out Data output.
+     * @param map Map.
+     * @throws IOException If write failed.
+     */
+    public static void writeStringMap(DataOutput out, @Nullable Map<String, String> map) throws IOException {
+        if (map != null) {
+            out.writeInt(map.size());
+
+            for (Map.Entry<String, String> e : map.entrySet()) {
+                writeUTF(out, e.getKey());
+                writeUTF(out, e.getValue());
+            }
+        }
+        else
+            out.writeInt(-1);
+    }
+
+    /** Maximum string length to be written at once. */
+    private static final int MAX_STR_LEN = 0xFFFF / 4;
+
+    /**
+     * Write UTF string which can be {@code null}.
+     *
+     * @param out Output stream.
+     * @param val Value.
+     * @throws IOException If failed.
+     */
+    public static void writeUTF(DataOutput out, @Nullable String val) throws IOException {
+        if (val == null)
+            out.writeInt(-1);
+        else {
+            out.writeInt(val.length());
+
+            if (val.length() <= MAX_STR_LEN)
+                out.writeUTF(val); // Optimized write in 1 chunk.
+            else {
+                int written = 0;
+
+                while (written < val.length()) {
+                    int partLen = Math.min(val.length() - written, MAX_STR_LEN);
+
+                    String part = val.substring(written, written + partLen);
+
+                    out.writeUTF(part);
+
+                    written += partLen;
+                }
+            }
+        }
+    }
+
+    /**
+     * Read UTF string which can be {@code null}.
+     *
+     * @param in Input stream.
+     * @return Value.
+     * @throws IOException If failed.
+     */
+    public static String readUTF(DataInput in) throws IOException {
+        int len = in.readInt(); // May be zero.
+
+        if (len < 0)
+            return null;
+        else {
+            if (len <= MAX_STR_LEN)
+                return in.readUTF();
+
+            StringBuilder sb = new StringBuilder(len);
+
+            do {
+                sb.append(in.readUTF());
+            }
+            while (sb.length() < len);
+
+            assert sb.length() == len;
+
+            return sb.toString();
+        }
+    }
+
+    /** Explicit class for {@code Supplier<Enumeration<NetworkInterface>>}. */
+    @FunctionalInterface
+    public interface InterfaceSupplier {
+        /** Return collection of local network interfaces. */
+        Enumeration<NetworkInterface> getInterfaces() throws SocketException;
     }
 
     /**
@@ -12450,13 +12726,6 @@ public abstract class IgniteUtils {
         return sb.toString();
     }
 
-    /** Explicit class for {@code Supplier<Enumeration<NetworkInterface>>}. */
-    @FunctionalInterface
-    public interface InterfaceSupplier {
-        /** Return collection of local network interfaces. */
-        Enumeration<NetworkInterface> getInterfaces() throws SocketException;
-    }
-
     /**
      * @param ctx Kernel context.
      * @param depInfo Deployment info.
@@ -12495,6 +12764,38 @@ public abstract class IgniteUtils {
      */
     public static String enabledString(boolean enabled) {
         return enabled ? "enabled" : "disabled";
+    }
+
+    /**
+     * Maps object hash to some index between 0 and specified size via modulo operation.
+     *
+     * @param hash Object hash.
+     * @param size Size greater than 0.
+     * @return Calculated index in range [0..size).
+     */
+    public static int hashToIndex(int hash, int size) {
+        return safeAbs(hash % size);
+    }
+
+    /**
+     * Invokes {@link ServerSocket#accept()} method on the passed server socked, working around the
+     * https://bugs.openjdk.java.net/browse/JDK-8247750 in the process.
+     *
+     * @param srvrSock Server socket.
+     * @return New socket.
+     * @throws IOException If an I/O error occurs when waiting for a connection.
+     * @see ServerSocket#accept()
+     */
+    public static Socket acceptServerSocket(ServerSocket srvrSock) throws IOException {
+        while (true) {
+            try {
+                return srvrSock.accept();
+            }
+            catch (SocketTimeoutException e) {
+                if (srvrSock.getSoTimeout() > 0)
+                    throw e;
+            }
+        }
     }
 
     /**

@@ -843,6 +843,17 @@ public class GridCacheUtils {
     }
 
     /**
+     * @param tx Transaction.
+     * @return {@code True} if transaction is on primary node.
+     */
+    public static boolean txOnPrimary(IgniteInternalTx tx) {
+        if (tx.near() && tx.local() && ((GridNearTxLocal)tx).colocatedLocallyMapped())
+            return true;
+
+        return tx.dht() && tx.local();
+    }
+
+    /**
      * Alias for {@link #txString(IgniteInternalTx)}.
      */
     public static String txDump(@Nullable IgniteInternalTx tx) {
@@ -1777,7 +1788,8 @@ public class GridCacheUtils {
         Collection<QueryEntity> entities = cfg.getQueryEntities();
 
         if (!F.isEmpty(entities))
-            cfg.clearQueryEntities().setQueryEntities(QueryUtils.normalizeQueryEntities(entities, cfg));
+            cfg.clearQueryEntities().setQueryEntities(QueryUtils.normalizeQueryEntities(cacheObjCtx.kernalContext(),
+                    entities, cfg));
     }
 
     /**
@@ -1832,7 +1844,8 @@ public class GridCacheUtils {
                             true,
                             topVer,
                             GridDrType.DR_BACKUP,
-                            true);
+                            true,
+                            false);
 
                         break;
                     }

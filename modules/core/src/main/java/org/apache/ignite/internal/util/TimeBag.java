@@ -31,9 +31,6 @@ import org.jetbrains.annotations.NotNull;
  * Utility class to measure and collect timings of some execution workflow.
  */
 public class TimeBag {
-    /** Initial global stage. */
-    private final CompositeStage INITIAL_STAGE = new CompositeStage("", 0, new HashMap<>());
-
     /** Lock. */
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -50,7 +47,7 @@ public class TimeBag {
     private Map<String, List<Stage>> localStages;
 
     /** Last seen global stage by thread. */
-    private final ThreadLocal<CompositeStage> tlLastSeenStage = ThreadLocal.withInitial(() -> INITIAL_STAGE);
+    private final ThreadLocal<CompositeStage> tlLastSeenStage = new ThreadLocal<>();
 
     /** Thread-local stopwatch. */
     private final ThreadLocal<IgniteStopwatch> tlStopwatch = ThreadLocal.withInitial(IgniteStopwatch::createUnstarted);
@@ -70,7 +67,11 @@ public class TimeBag {
         this.localStages = new ConcurrentHashMap<>();
         this.measurementUnit = measurementUnit;
 
-        this.stages.add(INITIAL_STAGE);
+        CompositeStage initStage = new CompositeStage("", 0, new HashMap<>(), measurementUnit);
+
+        this.stages.add(initStage);
+
+        tlLastSeenStage.set(initStage);
     }
 
     /**
@@ -90,7 +91,12 @@ public class TimeBag {
 
         try {
             stages.add(
-                new CompositeStage(description, globalStopwatch.elapsed(measurementUnit), Collections.unmodifiableMap(localStages))
+                new CompositeStage(
+                    description,
+                    globalStopwatch.elapsed(measurementUnit),
+                    Collections.unmodifiableMap(localStages),
+                    measurementUnit
+                )
             );
 
             localStages = new ConcurrentHashMap<>();
@@ -117,12 +123,12 @@ public class TimeBag {
 
             // We see this stage first time, get elapsed time from last completed global stage and start tracking local.
             if (lastSeen != lastCompleted) {
-                stage = new Stage(description, globalStopwatch.elapsed(measurementUnit));
+                stage = new Stage(description, globalStopwatch.elapsed(measurementUnit), measurementUnit);
 
                 tlLastSeenStage.set(lastCompleted);
             }
             else
-                stage = new Stage(description, localStopWatch.elapsed(measurementUnit));
+                stage = new Stage(description, localStopWatch.elapsed(measurementUnit), measurementUnit);
 
             localStopWatch.reset().start();
 
@@ -139,7 +145,7 @@ public class TimeBag {
     /**
      * @return Short name of desired measurement unit.
      */
-    private String measurementUnitShort() {
+    private static String measurementUnitShort(TimeUnit measurementUnit) {
         switch (measurementUnit) {
             case MILLISECONDS:
                 return "ms";
@@ -181,7 +187,7 @@ public class TimeBag {
             }
 
             // Add last stage with summary time of all global stages.
-            timings.add(new Stage("Total time", totalTime).toString());
+            timings.add(new Stage("Total time", totalTime, measurementUnit).toString());
 
             return timings;
         }
@@ -232,7 +238,7 @@ public class TimeBag {
     /**
      *
      */
-    private class CompositeStage extends Stage {
+    private static class CompositeStage extends Stage {
         /** Local stages. */
         private final Map<String, List<Stage>> localStages;
 
@@ -241,8 +247,8 @@ public class TimeBag {
          * @param time Time.
          * @param localStages Local stages.
          */
-        public CompositeStage(String description, long time, Map<String, List<Stage>> localStages) {
-            super(description, time);
+        public CompositeStage(String description, long time, Map<String, List<Stage>> localStages, TimeUnit measurementUnit) {
+            super(description, time, measurementUnit);
 
             this.localStages = localStages;
         }
@@ -258,20 +264,24 @@ public class TimeBag {
     /**
      *
      */
-    private class Stage implements Comparable<Stage> {
+    private static class Stage implements Comparable<Stage> {
         /** Description. */
         private final String description;
 
         /** Time. */
         private final long time;
 
+        /** Measurement unit. */
+        private final TimeUnit measurementUnit;
+
         /**
          * @param description Description.
          * @param time Time.
          */
-        public Stage(String description, long time) {
+        public Stage(String description, long time, TimeUnit measurementUnit) {
             this.description = description;
             this.time = time;
+            this.measurementUnit = measurementUnit;
         }
 
         /**
@@ -293,7 +303,7 @@ public class TimeBag {
             StringBuilder sb = new StringBuilder();
 
             sb.append("stage=").append('"').append(description()).append('"');
-            sb.append(' ').append('(').append(time()).append(' ').append(measurementUnitShort()).append(')');
+            sb.append(' ').append('(').append(time()).append(' ').append(measurementUnitShort(measurementUnit)).append(')');
 
             return sb.toString();
         }

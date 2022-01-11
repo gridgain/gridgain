@@ -52,6 +52,7 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
 
 /**
@@ -71,6 +72,13 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).setBackups(2));
 
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -189,6 +197,40 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
+     * Check that utility works with system caches only if that cache type is specified.
+     */
+    @Test
+    public void testWorkWithInternalCaches() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "ignite-sys-cache, ignite-sys-atomic-cache@default-ds-group");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
+        assertEquals(2, usedCaches.size());
+    }
+
+    /**
+     * Check that utility works with system caches if regexp specified.
+     */
+    @Test
+    public void testWorkWithSystemCachesByRegexp() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "ignite-sys.*");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
+        assertEquals(2, usedCaches.size());
+    }
+
+    /**
+     * Check that utility works with all caches if caches argument is not specified.
+     */
+    @Test
+    public void testWorkWithAllCaches() throws Exception {
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation");
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache",
+            "ignite-sys-atomic-cache@default-ds-group", "default", "default1", "default2", "default3")));
+        assertEquals(6, usedCaches.size());
+    }
+
+    /**
      * Tests that utility will started with all available user caches.
      */
     @Test
@@ -204,6 +246,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         List<String> setOfCaches = new ArrayList<>();
         setOfCaches.add(DEFAULT_CACHE_NAME);
+        setOfCaches.add(UTILITY_CACHE_NAME);
 
         for (int i = 1; i <= 3; i++)
             setOfCaches.add(ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i).getName());
@@ -214,6 +257,33 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertTrue(usedCaches.containsAll(setOfCaches));
         assertEquals(usedCaches.size(), setOfCaches.size());
+    }
+
+    /**
+     * Creates internal and custom caches and runs reconciliation cmd with args.
+     */
+    private Set<String> getUsedCachesForArgs(String... args) throws Exception {
+        Set<String> usedCaches = new HashSet<>();
+        LogListener lsnr = fillCacheNames(usedCaches);
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        for (int i = 1; i <= 3; i++) {
+            ignite.atomicLong(DEFAULT_CACHE_NAME + i, 0, true);
+            ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
+        }
+
+        assertEquals(EXIT_CODE_OK, execute(args));
+
+        assertTrue(lsnr.check(10_000));
+
+        log.unregisterListener(lsnr);
+
+        return usedCaches;
     }
 
     /**
@@ -314,7 +384,8 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
                 new GridCacheVersion(),
                 0L,
                 partId,
-                updateCntr
+                updateCntr,
+                DataEntry.EMPTY_FLAGS
             );
 
             GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();

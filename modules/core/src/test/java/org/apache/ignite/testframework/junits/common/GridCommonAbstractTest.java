@@ -117,6 +117,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCach
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
@@ -125,6 +126,7 @@ import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
@@ -1473,10 +1475,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param cnt Keys count.
      * @param startFrom Start value for keys search.
      * @return Collection of keys for which given cache is neither primary nor backup.
-     * @throws IgniteCheckedException If failed.
      */
-    protected List<Integer> nearKeys(IgniteCache<?, ?> cache, int cnt, int startFrom)
-        throws IgniteCheckedException {
+    protected List<Integer> nearKeys(IgniteCache<?, ?> cache, int cnt, int startFrom) {
         return findKeys(cache, cnt, startFrom, 2);
     }
 
@@ -1663,10 +1663,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     /**
      * @param cache Cache.
      * @return Key for which given cache is neither primary nor backup.
-     * @throws IgniteCheckedException If failed.
      */
-    protected Integer nearKey(IgniteCache<?, ?> cache)
-        throws IgniteCheckedException {
+    protected Integer nearKey(IgniteCache<?, ?> cache) {
         return nearKeys(cache, 1, 1).get(0);
     }
 
@@ -1988,6 +1986,22 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 fail("Collections are not equal (position " + idx + "):\nExpected: " + exp + "\nActual:   " + act);
 
             idx++;
+        }
+    }
+
+    /**
+     * @param exp Expected.
+     * @param act Actual.
+     */
+    protected static void assertEqualsMaps(Map<?, ?> exp, Map<?, ?> act) {
+        if (exp.size() != act.size())
+            fail("Maps are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
+
+        for (Map.Entry<?, ?> e : exp.entrySet()) {
+            if (!act.containsKey(e.getKey()))
+                fail("Maps are not equal (missing key " + e.getKey() + "):\nExpected:\t" + exp + "\nActual:\t" + act);
+            else if (!F.eq(e.getValue(), act.get(e.getKey())))
+                fail("Maps are not equal (key " + e.getKey() + "):\nExpected:\t" + exp + "\nActual:\t" + act);
         }
     }
 
@@ -2315,14 +2329,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @throws IgniteCheckedException If checkpoint was failed.
      */
     protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
+        forceCheckpoint(nodes, "test");
+    }
+
+    /**
+     * Forces checkpoint on all specified nodes.
+     *
+     * @param nodes Nodes to force checkpoint on them.
+     * @param reason Reason for checkpoint wakeup if it would be required.
+     * @throws IgniteCheckedException If checkpoint was failed.
+     */
+    protected void forceCheckpoint(Collection<Ignite> nodes, String reason) throws IgniteCheckedException {
         for (Ignite ignite : nodes) {
-            if (ignite.cluster().localNode().isClient())
-                continue;
-
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                    .cache().context().database();
-
-            dbMgr.waitForCheckpoint("test");
+            if (!ignite.cluster().localNode().isClient())
+                dbMgr((IgniteEx)ignite).waitForCheckpoint(reason);
         }
     }
 
@@ -2924,5 +2944,29 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     protected GridCacheDatabaseSharedManager dbMgr(IgniteEx n) {
         return (GridCacheDatabaseSharedManager)n.context().cache().context().database();
+    }
+
+    /**
+     * Performing an operation on a MetaStorage.
+     *
+     * @param n Node.
+     * @param fun Function for working with MetaStorage, the argument can be {@code null}.
+     * @return The function result.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected <R> R metaStorageOperation(
+        IgniteEx n,
+        IgniteThrowableFunction<MetaStorage, R> fun
+    ) throws IgniteCheckedException {
+        GridCacheDatabaseSharedManager dbMgr = dbMgr(n);
+
+        dbMgr.checkpointReadLock();
+
+        try {
+            return fun.apply(dbMgr.metaStorage());
+        }
+        finally {
+            dbMgr.checkpointReadUnlock();
+        }
     }
 }

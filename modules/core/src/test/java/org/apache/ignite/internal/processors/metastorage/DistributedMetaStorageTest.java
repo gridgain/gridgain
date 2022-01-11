@@ -79,6 +79,8 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         cfg.setConsistentId(igniteInstanceName);
 
+        cfg.setLocalHost("127.0.0.1");
+
         cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                 .setPersistenceEnabled(isPersistent())
@@ -195,7 +197,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             try {
                 IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
 
-                return clientGrid != null && clientGrid.context().distributedMetastorage() != null;
+                return clientGrid != null
+                    && clientGrid.context().distributedMetastorage() != null
+                    && clientGrid.context().discovery().localNode() != null;
             }
             catch (Exception ignored) {
                 return false;

@@ -425,10 +425,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
 
-            doSleep(100);
-
-            ctx0.shared().evict().processEvictions(true).get();
-            ctx1.shared().evict().processEvictions(true).get();
+            assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+            assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
@@ -504,10 +502,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
 
-            doSleep(100);
-
-            ctx0.shared().evict().processEvictions(true).get();
-            ctx1.shared().evict().processEvictions(true).get();
+            assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+            assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
             ctx0.ttl().expire(1);
             ctx1.ttl().expire(1);
@@ -662,8 +658,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         doSleep(700);
 
-        grpCtx0.shared().evict().processEvictions(true).get();
-        grpCtx1.shared().evict().processEvictions(true).get();
+        assertTrue(GridTestUtils.waitForCondition(() -> !grpCtx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> !grpCtx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
         grpCtx0.singleCacheContext().ttl().expire(1);
         grpCtx1.singleCacheContext().ttl().expire(1);
@@ -732,7 +728,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         assertTrue(tree.findFirst().expireTime < now);
 
-        crd.context().cache().context().evict().processEvictions(false).get();
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !crd.context().cache().context().evict().evictQueue(false).isEmptyx(), 1_000));
 
         CU.unwindEvicts(ctx);
 
@@ -1554,7 +1551,6 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "500") // Reduce tombstone TTL
     @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "1")
-    @WithSystemProperty(key = "REBALANCE_DELAY", value = "1000") // Wait one second before generating assignments.
     public void testOutdatedTombstoneNotExpired() throws Exception {
         assumeTrue(persistence);
 
@@ -1680,8 +1676,10 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         assertEquals(keys.size(), tree.size());
 
-        crd.context().cache().context().evict().processEvictions(true).get();
-        crd.context().cache().context().evict().processEvictions(false).get();
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !crd.context().cache().context().evict().evictQueue(true).isEmptyx(), 1_000));
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !crd.context().cache().context().evict().evictQueue(false).isEmptyx(), 1_000));
 
         assertTrue(ttl.expire(4));
 
@@ -1796,7 +1794,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         PartitionsEvictManager evict = crd.context().cache().context().evict();
 
-        evict.processEvictions(false).get(); // Ensure all available entries will be processed.
+        assertTrue(GridTestUtils.waitForCondition(() -> !evict.evictQueue(false).isEmptyx(), 1_000));
 
         Deque<PendingRow> ttlQueue = evict.evictQueue(false);
         Deque<PendingRow> tsQueue = evict.evictQueue(true);

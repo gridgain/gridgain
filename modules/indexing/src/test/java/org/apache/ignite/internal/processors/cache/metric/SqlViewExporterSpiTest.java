@@ -144,10 +144,21 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
 
         Set<String> names = new HashSet<>();
 
-        for (List<?> row : res) {
-            names.add((String)row.get(0));
+        DataRegionConfiguration cfg =
+            ignite0.configuration().getDataStorageConfiguration().getDefaultDataRegionConfiguration();
 
-            assertNotNull(row.get(1));
+        for (List<?> row : res) {
+            String name = (String)row.get(0);
+            String val = (String)row.get(1);
+
+            names.add(name);
+
+            if ("InitialSize".equals(name))
+                assertEquals(Long.toString(cfg.getInitialSize()), val);
+            else if ("MaxSize".equals(name))
+                assertEquals(Long.toString(cfg.getMaxSize()), val);
+
+            assertNotNull("Metric value must be not null [name=" + name + ']', val);
         }
 
         for (String attr : EXPECTED_ATTRIBUTES)
@@ -770,7 +781,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testStripedExecutor() throws Exception {
-        checkStripeExecutorView(ignite0.context().getStripedExecutorService(),
+        checkStripeExecutorView(ignite0.context().pools().getStripedExecutorService(),
             "STRIPED_THREADPOOL_QUEUE",
             "sys");
     }
@@ -778,7 +789,7 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testStreamerExecutor() throws Exception {
-        checkStripeExecutorView(ignite0.context().getDataStreamerExecutorService(),
+        checkStripeExecutorView(ignite0.context().pools().getDataStreamerExecutorService(),
             "DATASTREAM_THREADPOOL_QUEUE",
             "data-streamer");
     }

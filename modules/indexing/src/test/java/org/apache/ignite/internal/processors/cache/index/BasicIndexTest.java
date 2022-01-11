@@ -37,8 +37,10 @@ import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -52,7 +54,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -1036,6 +1040,52 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Tests that it's forbidden to create index with duplicated columns from SQL.
+     */
+    @Test
+    public void testFailToCreateSqlIndexWithDuplicatedColumn() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 1, "ID", "NAME");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME, NAME)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME ASC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME ASC, NAME DESC)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME ASC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(NAME DESC, ID, NAME)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: NAME DESC");
+
+        GridTestUtils.assertThrows(log, () -> {
+            String sqlIdx1 = String.format("create index \"idx1\" on %s(ID, id)", TEST_TBL_NAME);
+
+            qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+            return null;
+        }, IgniteSQLException.class, "Already defined column in index: ID");
+    }
+
+    /**
      * Check IDX usage for different cases.
      *
      * @param qryProc Query processor.
@@ -1816,6 +1866,74 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /** */
+    @Test
+    public void testCreateLuceneIndex() throws Exception {
+        inlineSize = 10;
+
+        startGrid();
+
+        sql("create table test0(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        IgniteH2Indexing idx = ((IgniteH2Indexing)grid().context().query().getIndexing());
+
+        H2TableDescriptor tblDesc0 = idx.schemaManager().dataTable("PUBLIC", "TEST0")
+            .rowDescriptor().tableDescriptor();
+
+        assertNotNull(GridTestUtils.getFieldValue(tblDesc0, "luceneIdx"));
+
+        idx.distributedConfiguration().disableCreateLuceneIndexForStringValueType(true).get();
+
+        sql("create table test1(id1 int primary key, val varchar) " +
+            "WITH \"WRAP_VALUE=false\"");
+
+        H2TableDescriptor tblDesc1 = idx.schemaManager().dataTable("PUBLIC", "TEST1")
+            .rowDescriptor().tableDescriptor();
+
+        assertNull(GridTestUtils.getFieldValue(tblDesc1, "luceneIdx"));
+    }
+
+    /**
+     * Checks that part of the composite key assembled in BinaryObjectBuilder can pass the validation correctly
+     if you specify Object type when creating the index.
+     */
+    @Test
+    public void testCacheSecondaryCompositeIndex() throws Exception {
+        inlineSize = 70;
+
+        startGrid();
+
+        String cacheName = "TEST";
+
+        grid().createCache(new CacheConfiguration<>()
+                .setName(cacheName)
+                .setSqlSchema(cacheName)
+                .setAffinity(new RendezvousAffinityFunction(false, 4))
+                .setQueryEntities(Collections.singleton(new QueryEntity()
+                        .setTableName(cacheName)
+                        .setKeyType(Integer.class.getName())
+                        .setKeyFieldName("id")
+                        .setValueType("TEST_VAL_SECONDARY_COMPOSITE")
+                        .addQueryField("id", Integer.class.getName(), null)
+                        .addQueryField("val_obj", Object.class.getName(), null)
+                        .setIndexes(Arrays.asList(
+                                        new QueryIndex(Arrays.asList("val_obj"), QueryIndexType.SORTED)
+                                                .setInlineSize(inlineSize)
+                                )
+                        ))));
+
+        BinaryObjectBuilder bob = grid().binary().builder("TEST_VAL_SECONDARY_COMPOSITE");
+        BinaryObjectBuilder bobInner = grid().binary().builder("inner");
+
+        bobInner.setField("inner_k", 0);
+        bobInner.setField("inner_uuid", UUID.randomUUID());
+
+        bob.setField("val_obj", bobInner.build());
+
+        grid().cache(cacheName).put(0, bob.build());
     }
 
     /** */

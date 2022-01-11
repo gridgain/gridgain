@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
@@ -57,8 +58,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
     }
 
     /** {@inheritDoc} */
-    @Override public void initNewPage(long pageAddr, long pageId, int pageSize) {
-        super.initNewPage(pageAddr, pageId, pageSize);
+    @Override public void initNewPage(long pageAddr, long pageId, int pageSize, PageMetrics metrics) {
+        super.initNewPage(pageAddr, pageId, pageSize, metrics);
 
         setEmpty(pageAddr);
 
@@ -86,6 +87,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      * @param nextId Next page ID.
      */
     public void setNextId(long pageAddr, long nextId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, NEXT_PAGE_ID_OFF, nextId);
     }
 
@@ -102,6 +105,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      * @param prevId Previous  page ID.
      */
     public void setPreviousId(long pageAddr, long prevId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, PREV_PAGE_ID_OFF, prevId);
     }
 
@@ -123,6 +128,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      */
     private void setCount(long pageAddr, int cnt) {
         assert cnt >= 0 && cnt <= Short.MAX_VALUE : cnt;
+        assertPageType(pageAddr);
 
         PageUtils.putShort(pageAddr, CNT_OFF, (short)cnt);
     }
@@ -160,6 +166,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      * @param pageId Item value to write.
      */
     private void setAt(long pageAddr, int idx, long pageId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, offset(idx), pageId);
     }
 
@@ -172,6 +180,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      * @return Total number of items in this page.
      */
     public int addPage(long pageAddr, long pageId, int pageSize) {
+        assertPageType(pageAddr);
+
         int cnt = getCount(pageAddr);
 
         if (cnt == getCapacity(pageSize))
@@ -190,6 +200,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      * @return Removed page ID.
      */
     public long takeAnyPage(long pageAddr) {
+        assertPageType(pageAddr);
+
         int cnt = getCount(pageAddr);
 
         if (cnt == 0)
@@ -209,6 +221,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
      */
     public boolean removePage(long pageAddr, long dataPageId) {
         assert dataPageId != 0;
+        assertPageType(pageAddr);
 
         int cnt = getCount(pageAddr);
 
@@ -236,6 +249,8 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
 
     /** {@inheritDoc} */
     @Override public void compactPage(ByteBuffer page, ByteBuffer out, int pageSize) {
+        assertPageType(page);
+
         copyPage(page, out, pageSize);
 
         long pageAddr = GridUnsafe.bufferAddress(out);
@@ -249,6 +264,7 @@ public class PagesListNodeIO extends PageIO implements CompactablePageIO {
         assert compactPage.isDirect();
         assert compactPage.position() == 0;
         assert compactPage.limit() <= pageSize;
+        assertPageType(compactPage);
 
         compactPage.limit(pageSize); // Just add garbage to the end.
     }

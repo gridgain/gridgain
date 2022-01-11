@@ -15,18 +15,18 @@
  */
 package org.apache.ignite.internal.processors.query.stat;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.collection.IntHashMap;
 import org.apache.ignite.internal.util.collection.IntMap;
 import org.apache.ignite.internal.util.typedef.F;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 
 /**
  * Sql statistics storage in metastore.
@@ -66,7 +66,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
 
         for (StatisticsKey key : partsStats.keySet()) {
             partsStats.computeIfPresent(key, (k, v) -> {
-                res.put(k, Arrays.asList(v.values()));
+                res.put(k, v.values());
                 return v;
             });
         }
@@ -87,7 +87,7 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
         Collection<ObjectPartitionStatisticsImpl>[] res = new Collection[1];
         partsStats.computeIfPresent(key, (k, v) -> {
             // Need to make a copy under the lock.
-            res[0] = Arrays.asList(v.values());
+            res[0] = new ArrayList<>(v.values());
 
             return v;
         });
@@ -131,6 +131,22 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     }
 
     /** {@inheritDoc} */
+    @Override public void saveObsolescenceInfo(
+        StatisticsKey key,
+        int partId,
+        ObjectPartitionStatisticsObsolescence partObs
+    ) {
+        obsStats.compute(key, (k, v) -> {
+            if (v == null)
+                v = new IntHashMap<>();
+
+            v.put(partId, partObs);
+
+            return v;
+        });
+    }
+
+    /** {@inheritDoc} */
     @Override public void clearObsolescenceInfo(StatisticsKey key, Collection<Integer> partIds) {
         if (F.isEmpty(partIds))
             obsStats.remove(key);
@@ -162,12 +178,14 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
     /** {@inheritDoc} */
     @Override public ObjectPartitionStatisticsImpl getLocalPartitionStatistics(StatisticsKey key, int partId) {
         ObjectPartitionStatisticsImpl[] res = new ObjectPartitionStatisticsImpl[1];
+
         partsStats.computeIfPresent(key, (k, v) -> {
             // Need to access the map under the lock.
             res[0] = v.get(partId);
 
             return v;
         });
+
         return res[0];
     }
 
@@ -202,11 +220,27 @@ public class IgniteStatisticsInMemoryStoreImpl implements IgniteStatisticsStore 
         Collection<ObjectPartitionStatisticsImpl> statistics
     ) {
         IntMap<ObjectPartitionStatisticsImpl> statisticsMap = new IntHashMap<ObjectPartitionStatisticsImpl>();
+
         for (ObjectPartitionStatisticsImpl s : statistics) {
             if (statisticsMap.put(s.partId(), s) != null)
                 log.warning(String.format("Trying to save more than one %s.%s partition statistics for partition %d",
                         key.schema(), key.obj(), s.partId()));
         }
+
         return statisticsMap;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Collection<Integer> loadLocalPartitionMap(StatisticsKey key) {
+        List<Integer> res = new ArrayList<>();
+
+        partsStats.computeIfPresent(key, (k, v) -> {
+            for (Integer partId : v.keys())
+                res.add(partId);
+
+            return v;
+        });
+
+        return res;
     }
 }
