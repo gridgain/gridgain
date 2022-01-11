@@ -283,8 +283,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @return Returns cluster ID.
      */
     public UUID getId() {
+        // For compatibility, we avoid throwing exception on read and return null instead.
+        // Prior to GG-33727, this used to return an actual non-null value propagated using a complex algorithm.
+        // It was abandoned in favor of simple metastore property.
         if (compatibilityMode)
-            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
+            return null;
 
         ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
         return clusterIdAndTag != null ? clusterIdAndTag.id() : null;
@@ -311,8 +314,11 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * @return Returns cluster tag.
      */
     public String getTag() {
+        // For compatibility, we avoid throwing exception on read and return null instead.
+        // Prior to GG-33727, this used to return an actual non-null value propagated using a complex algorithm.
+        // It was abandoned in favor of simple metastore property.
         if (compatibilityMode)
-            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
+            return null;
 
         ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
         return clusterIdAndTag != null ? clusterIdAndTag.tag() : null;
