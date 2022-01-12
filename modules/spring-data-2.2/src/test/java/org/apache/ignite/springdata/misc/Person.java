@@ -19,6 +19,12 @@ package org.apache.ignite.springdata.misc;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QueryTextField;
 
+import java.util.Date;
+import java.util.Objects;
+
+/**
+ * DTO class.
+ */
 public class Person {
     /** First name. */
     @QuerySqlField(index = true)
@@ -29,6 +35,10 @@ public class Person {
     @QuerySqlField(index = true)
     private String secondName;
 
+    /** Birthday. */
+    @QuerySqlField
+    private Date birthday;
+
     /**
      * @param firstName First name.
      * @param secondName Second name.
@@ -36,6 +46,7 @@ public class Person {
     public Person(String firstName, String secondName) {
         this.firstName = firstName;
         this.secondName = secondName;
+        birthday = new Date();
     }
 
     /**
@@ -71,6 +82,7 @@ public class Person {
         return "Person{" +
             "firstName='" + firstName + '\'' +
             ", secondName='" + secondName + '\'' +
+            ", birthday='" + birthday + '\'' +
             '}';
     }
 
@@ -78,22 +90,19 @@ public class Person {
     @Override public boolean equals(Object o) {
         if (this == o)
             return true;
+
         if (o == null || getClass() != o.getClass())
             return false;
 
         Person person = (Person)o;
 
-        if (firstName != null ? !firstName.equals(person.firstName) : person.firstName != null)
-            return false;
-
-        return secondName != null ? secondName.equals(person.secondName) : person.secondName == null;
-
+        return Objects.equals(firstName, person.firstName) &&
+            Objects.equals(secondName, person.secondName) &&
+            Objects.equals(birthday, person.birthday);
     }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = firstName != null ? firstName.hashCode() : 0;
-        result = 31 * result + (secondName != null ? secondName.hashCode() : 0);
-        return result;
+        return Objects.hash(firstName, secondName, birthday);
     }
 }

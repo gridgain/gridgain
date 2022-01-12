@@ -16,6 +16,9 @@
 
 package org.apache.ignite.springdata22.repository.query;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -31,28 +34,22 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.Cache;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.binary.BinaryObjectBuilder;
-import org.apache.ignite.binary.BinaryType;
+import org.apache.commons.lang.reflect.FieldUtils;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cache.query.TextQuery;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.binary.BinaryUtils;
-import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
-import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
-import org.apache.ignite.internal.processors.cache.binary.IgniteBinaryImpl;
-import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
-import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
-import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.springdata.proxy.IgniteCacheClientProxy;
+import org.apache.ignite.springdata.proxy.IgniteCacheProxy;
 import org.apache.ignite.springdata22.repository.config.DynamicQueryConfig;
 import org.apache.ignite.springdata22.repository.query.StringQuery.ParameterBinding;
 import org.jetbrains.annotations.Nullable;
@@ -74,6 +71,8 @@ import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.util.StringUtils;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
+import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 import static org.apache.ignite.springdata22.repository.support.IgniteRepositoryFactory.isFieldQuery;
 
 /**
@@ -159,9 +158,6 @@ import static org.apache.ignite.springdata22.repository.support.IgniteRepository
  */
 @SuppressWarnings("unchecked")
 public class IgniteRepositoryQuery implements RepositoryQuery {
-    /** */
-    private static final TreeMap<String, Class<?>> binaryFieldClass = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-
     /**
      * Defines the way how to process query result
      */
@@ -200,20 +196,14 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
     /** */
     private final Class<?> type;
 
+    /** Domain entitiy field descriptors mapped to their names in lower case. */
+    private final Map<String, Field> domainEntitiyFields;
+
     /** */
     private final IgniteQuery staticQuery;
 
     /** */
-    private final IgniteCache cache;
-
-    /** */
-    private final Ignite ignite;
-
-    /** Required by qryStr field query type for binary manipulation */
-    private IgniteBinaryImpl igniteBinary;
-
-    /** */
-    private BinaryType igniteBinType;
+    private final IgniteCacheProxy<?, ?> cache;
 
     /** */
     private final Method mtd;
@@ -257,7 +247,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
     /**
      * Instantiates a new Ignite repository query.
      *
-     * @param ignite                               the ignite
      * @param metadata                             Metadata.
      * @param staticQuery                          Query.
      * @param mtd                                  Method.
@@ -266,12 +255,12 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
      * @param staticQueryConfiguration             the query configuration
      * @param queryMethodEvaluationContextProvider the query method evaluation context provider
      */
-    public IgniteRepositoryQuery(Ignite ignite,
+    public IgniteRepositoryQuery(
         RepositoryMetadata metadata,
         @Nullable IgniteQuery staticQuery,
         Method mtd,
         ProjectionFactory factory,
-        IgniteCache cache,
+        IgniteCacheProxy<?, ?> cache,
         @Nullable DynamicQueryConfig staticQueryConfiguration,
         QueryMethodEvaluationContextProvider queryMethodEvaluationContextProvider) {
         this.metadata = metadata;
@@ -279,8 +268,10 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         this.factory = factory;
         type = metadata.getDomainType();
 
+        domainEntitiyFields = Arrays.stream(type.getDeclaredFields())
+            .collect(Collectors.toMap(field -> field.getName().toLowerCase(), field -> field));
+
         this.cache = cache;
-        this.ignite = ignite;
 
         this.staticQueryConfiguration = staticQueryConfiguration;
         this.staticQuery = staticQuery;
@@ -312,8 +303,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                 "When passing dynamicQuery = true via org.apache.ignite.springdata.repository.config.Query "
                     + "annotation, you must provide a non null method parameter of type DynamicQueryConfig");
         }
-        // ensure domain class is registered on marshaller to transform row to entity
-        registerClassOnMarshaller(((IgniteEx)ignite).context(), type);
     }
 
     /**
@@ -350,7 +339,20 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
 
         Query iQry = prepareQuery(qry, config, returnStgy, parameters);
 
-        QueryCursor qryCursor = cache.query(iQry);
+        QueryCursor qryCursor;
+
+        try {
+            qryCursor = cache.query(iQry);
+        }
+        catch (IllegalArgumentException e) {
+            if (cache instanceof IgniteCacheClientProxy) {
+                throw new IllegalStateException(String.format("Query of type %s is not supported by thin client." +
+                    " Check %s#%s method configuration or use Ignite node instance to connect to the Ignite cluster.",
+                    iQry.getClass().getSimpleName(), mtd.getDeclaringClass().getName(), mtd.getName()), e);
+            }
+
+            throw e;
+        }
 
         return transformQueryCursor(qry, returnStgy, parameters, qryCursor);
     }
@@ -381,22 +383,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             i++;
         }
         return index;
-    }
-
-    /** */
-    private synchronized IgniteBinaryImpl binary() {
-        if (igniteBinary == null)
-            igniteBinary = (IgniteBinaryImpl)ignite.binary();
-
-        return igniteBinary;
-    }
-
-    /** */
-    private synchronized BinaryType binType() {
-        if (igniteBinType == null)
-            igniteBinType = binary().type(type);
-
-        return igniteBinType;
     }
 
     /**
@@ -560,15 +546,12 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             // take control over single primite result from queries, i.e. DELETE, SELECT COUNT, UPDATE ...
             boolean singlePrimitiveResult = isPrimitiveOrWrapper(returnClass);
 
-            final List<GridQueryFieldMetadata> meta = ((QueryCursorEx)qryCursor).fieldsMeta();
+            FieldsQueryCursor<?> fieldQryCur = (FieldsQueryCursor<?>)qryCursor;
 
             Function<List<?>, ?> cWrapperTransformFunction = null;
 
-            if (type.equals(returnClass)) {
-                IgniteBinaryImpl binary = binary();
-                BinaryType binType = binType();
-                cWrapperTransformFunction = row -> rowToEntity(binary, binType, row, meta);
-            }
+            if (type.equals(returnClass))
+                cWrapperTransformFunction = row -> rowToEntity(row, fieldQryCur);
             else {
                 if (hasProjection || singlePrimitiveResult) {
                     if (singlePrimitiveResult)
@@ -576,11 +559,11 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                     else {
                         // Map row -> projection class
                         cWrapperTransformFunction = row -> factory
-                            .createProjection(returnClass, rowToMap(row, meta));
+                            .createProjection(returnClass, rowToMap(row, fieldQryCur));
                     }
                 }
                 else
-                    cWrapperTransformFunction = row -> rowToMap(row, meta);
+                    cWrapperTransformFunction = row -> rowToMap(row, fieldQryCur);
             }
 
             QueryCursorWrapper<?, ?> cWrapper = new QueryCursorWrapper<>((QueryCursor<List<?>>)qryCursor,
@@ -612,17 +595,15 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             }
         }
         else {
-            Iterable<CacheEntryImpl> qryIter = (Iterable<CacheEntryImpl>)qryCursor;
-
-            Function<CacheEntryImpl, ?> cWrapperTransformFunction;
+            Function<Cache.Entry<?, ?>, ?> cWrapperTransformFunction;
 
             if (hasProjection && !type.equals(returnClass))
                 cWrapperTransformFunction = row -> factory.createProjection(returnClass, row.getValue());
             else
-                cWrapperTransformFunction = row -> row.getValue();
+                cWrapperTransformFunction = Cache.Entry::getValue;
 
-            QueryCursorWrapper<?, ?> cWrapper = new QueryCursorWrapper<>((QueryCursor<CacheEntryImpl>)qryCursor,
-                cWrapperTransformFunction);
+            QueryCursorWrapper<Cache.Entry<?, ?>, ?> cWrapper = new QueryCursorWrapper<>(
+                (QueryCursor<Cache.Entry<?, ?>>)qryCursor, cWrapperTransformFunction);
 
             switch (returnStgy) {
                 case PAGE_OF_VALUES:
@@ -640,7 +621,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
                     }
                     return null;
                 case CACHE_ENTRY:
-                    Iterator<?> iter2 = qryIter.iterator();
+                    Iterator<?> iter2 = qryCursor.iterator();
                     if (iter2.hasNext()) {
                         Object resp2 = iter2.next();
                         U.closeQuiet(qryCursor);
@@ -837,98 +818,59 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         return query;
     }
 
-    /** */
-    private static Map<String, Object> rowToMap(final List<?> row, final List<GridQueryFieldMetadata> meta) {
+    /**
+     * @param row SQL result row.
+     * @param cursor SQL query result cursor through which {@param row} was obtained.
+     * @return SQL result row values mapped to corresponding column names.
+     */
+    private static Map<String, Object> rowToMap(final List<?> row, FieldsQueryCursor<?> cursor) {
         // use treemap with case insensitive property name
         final TreeMap<String, Object> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (int i = 0; i < meta.size(); i++) {
+
+        for (int i = 0; i < row.size(); i++) {
             // don't want key or val columns
-            final String metaField = meta.get(i).fieldName().toLowerCase();
-            if (!metaField.equalsIgnoreCase(QueryUtils.KEY_FIELD_NAME) && !metaField.equalsIgnoreCase(
-                QueryUtils.VAL_FIELD_NAME))
-                map.put(metaField, row.get(i));
+            final String fieldName = cursor.getFieldName(i).toLowerCase();
+
+            if (!KEY_FIELD_NAME.equalsIgnoreCase(fieldName) && !VAL_FIELD_NAME.equalsIgnoreCase(fieldName))
+                map.put(fieldName, row.get(i));
         }
+
         return map;
     }
 
     /**
      * convert row ( with list of field values) into domain entity
+     *
+     * @param row SQL query result row.
+     * @param cursor SQL query result cursor through which {@param row} was obtained.
+     * @return Entitiy instance.
      */
-    private <V> V rowToEntity(final IgniteBinaryImpl binary,
-        final BinaryType binType,
-        final List<?> row,
-        final List<GridQueryFieldMetadata> meta) {
-        // additional data returned by query not present on domain object type
-        final TreeMap<String, Object> metadata = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        final BinaryObjectBuilder bldr = binary.builder(binType.typeName());
+    private <V> V rowToEntity(List<?> row, FieldsQueryCursor<?> cursor) {
+        Constructor<?> ctor;
 
-        for (int i = 0; i < row.size(); i++) {
-            final GridQueryFieldMetadata fMeta = meta.get(i);
-            final String metaField = fMeta.fieldName();
-            // add existing entity fields to binary object
-            if (binType.field(fMeta.fieldName()) != null && !metaField.equalsIgnoreCase(QueryUtils.KEY_FIELD_NAME)
-                && !metaField.equalsIgnoreCase(QueryUtils.VAL_FIELD_NAME)) {
-                final Object fieldValue = row.get(i);
-                if (fieldValue != null) {
-                    final Class<?> clazz = getClassForBinaryField(binary, binType, fMeta);
-                    // null values must not be set into binary objects
-                    bldr.setField(metaField, fixExpectedType(fieldValue, clazz));
-                }
-            }
-            else {
-                // don't want key or val column... but wants null values
-                if (!metaField.equalsIgnoreCase(QueryUtils.KEY_FIELD_NAME) && !metaField.equalsIgnoreCase(
-                    QueryUtils.VAL_FIELD_NAME))
-                    metadata.put(metaField, row.get(i));
-            }
-        }
-        return bldr.build().deserialize();
-    }
-
-    /**
-     * Obtains real field class from resultset metadata field whether it's available
-     */
-    private Class<?> getClassForBinaryField(final IgniteBinaryImpl binary,
-        final BinaryType binType,
-        final GridQueryFieldMetadata fieldMeta) {
         try {
-            final String fieldId = fieldMeta.schemaName() + "." + fieldMeta.typeName() + "." + fieldMeta.fieldName();
+            ctor = type.getDeclaredConstructor();
 
-            if (binaryFieldClass.containsKey(fieldId))
-                return binaryFieldClass.get(fieldId);
+            ctor.setAccessible(true);
+        }
+        catch (NoSuchMethodException | SecurityException ignored) {
+            ctor = null;
+        }
 
-            Class<?> clazz = null;
+        try {
+            Object res = ctor == null ? GridUnsafe.allocateInstance(type) : ctor.newInstance();
 
-            synchronized (binaryFieldClass) {
+            for (int i = 0; i < row.size(); i++) {
+                Field entityField = domainEntitiyFields.get(cursor.getFieldName(i).toLowerCase());
 
-                if (binaryFieldClass.containsKey(fieldId))
-                    return binaryFieldClass.get(fieldId);
-
-                String fieldName = null;
-
-                // search field name on binary type (query returns case insensitive
-                // field name) but BinaryType is not case insensitive
-                for (final String fname : binType.fieldNames()) {
-                    if (fname.equalsIgnoreCase(fieldMeta.fieldName())) {
-                        fieldName = fname;
-                        break;
-                    }
-                }
-
-                final CacheObjectBinaryProcessorImpl proc = (CacheObjectBinaryProcessorImpl)binary.processor();
-
-                // search for class by typeId, if not found use
-                // fieldMeta.fieldTypeName() class
-                clazz = BinaryUtils.resolveClass(proc.binaryContext(), binary.typeId(binType.fieldTypeName(fieldName)),
-                    fieldMeta.fieldTypeName(), ignite.configuration().getClassLoader(), true);
-
-                binaryFieldClass.put(fieldId, clazz);
+                if (entityField != null)
+                    FieldUtils.writeField(entityField, res, fixExpectedType(row.get(i), entityField.getType()), true);
             }
 
-            return clazz;
+            return (V)res;
         }
-        catch (final Exception e) {
-            return null;
+        catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            throw new IgniteException("Unable to allocate instance of domain entity class " + type.getName(), e);
         }
     }
 
@@ -949,21 +891,6 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         catch (NullPointerException | IndexOutOfBoundsException | ClassCastException e) {
             throw new IllegalStateException(
                 "For " + returnStgy.name() + " you must provide on last method parameter a non null Pageable instance");
-        }
-    }
-
-    /**
-     * @param ctx   Context.
-     * @param clazz Clazz.
-     */
-    private static void registerClassOnMarshaller(final GridKernalContext ctx, final Class<?> clazz) {
-        try {
-            // ensure class registration for marshaller on cluster...
-            if (!U.isJdk(clazz))
-                U.marshal(ctx, clazz.newInstance());
-        }
-        catch (final Exception ignored) {
-            // silent
         }
     }
 

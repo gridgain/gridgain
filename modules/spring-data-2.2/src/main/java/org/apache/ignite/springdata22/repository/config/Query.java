@@ -21,6 +21,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.client.IgniteClient;
 
 /**
  * Annotation to provide a user defined query for a method.
@@ -36,7 +38,10 @@ public @interface Query {
     String value() default "";
 
     /**
-     * Whether annotated repository method must use TextQuery search.
+     * Whether annotated repository method must use TextQuery search. Note that text queries are not supported if
+     * {@link IgniteClient} is used for accessing the Ignite cluster, use {@link Ignite} node instance instead.
+     *
+     * @see RepositoryConfig#igniteInstance()
      */
     boolean textQuery() default false;
 
