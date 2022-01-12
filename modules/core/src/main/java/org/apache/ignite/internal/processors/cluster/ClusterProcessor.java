@@ -375,7 +375,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
                     ClusterProcessor.this.initializeClusterIdAndTagIfNeeded();
                 }
 
-                ctx.event().removeDiscoveryEventListener(this);
+                if (!compatibilityMode)
+                    ctx.event().removeDiscoveryEventListener(this);
             }
         };
         ctx.event().addDiscoveryEventListener(discoveryEventListener, EVT_NODE_LEFT, EVT_NODE_FAILED);
