@@ -342,7 +342,7 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
 
             memory.checkpointWritePage(cpPage, buf, pageStoreWriter, null);
 
-            while (memory.shouldThrottle()) {
+            while (memory.isCpBufferOverflowThresholdExceeded()) {
                 FullPageId cpPageId = memory.pullPageFromCpBuffer();
 
                 if (cpPageId.equals(FullPageId.NULL_PAGE))

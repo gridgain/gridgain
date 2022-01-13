@@ -79,6 +79,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConne
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictPartitionInLogTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionEvictionOrderTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.ClockPageReplacementFlagsTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.ExponentialBackoffTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagePoolTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.SegmentedLruPageListTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
@@ -320,7 +321,8 @@ import org.junit.runners.Suite;
     // Other tests
     CacheLockCandidatesThreadTest.class,
     RemoveAllDeadlockTest.class,
-    JvmConfigurationSuggestionsTest.class
+    JvmConfigurationSuggestionsTest.class,
+    ExponentialBackoffTest.class
 })
 public class IgniteBasicTestSuite {
 }
