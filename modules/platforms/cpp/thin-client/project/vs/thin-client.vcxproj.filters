@@ -120,6 +120,9 @@
     <ClInclude Include="..\..\include\ignite\impl\thin\writable_key.h">
       <Filter>Code\impl</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\impl\channel_state_handler.h">
+      <Filter>Code\impl</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\impl\data_channel.h">
       <Filter>Code\impl</Filter>
     </ClInclude>
@@ -130,6 +133,9 @@
       <Filter>Code\impl</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\impl\message.h">
+      <Filter>Code\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\impl\notification_handler.h">
       <Filter>Code\impl</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\impl\protocol_version.h">

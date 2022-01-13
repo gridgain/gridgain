@@ -58,11 +58,11 @@ namespace ignite_test
         return path.str();
     }
 
-    void InitConfig(ignite::IgniteConfiguration& cfg, const char* cfgFile)
+    void InitConfig(ignite::IgniteConfiguration& cfg, const std::string& cfgFile)
     {
         using namespace ignite;
 
-        assert(cfgFile != 0);
+        assert(!cfgFile.empty());
 
         cfg.jvmOpts.push_back("-Xdebug");
         cfg.jvmOpts.push_back("-Xnoagent");
@@ -100,11 +100,11 @@ namespace ignite_test
         cfg.springCfgPath = path.str();
     }
 
-    ignite::Ignite StartServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
+    ignite::Ignite StartServerNode(const std::string& cfgFile, const std::string& name, ignite::impl::Logger* logger)
     {
         using namespace ignite;
 
-        assert(name != 0);
+        assert(!name.empty());
 
         IgniteConfiguration cfg;
 
@@ -112,14 +112,14 @@ namespace ignite_test
 
         IgniteError err;
 
-        Ignite node = ignite::StartIgnite(cfg, name, err, logger);
+        Ignite node = ignite::StartIgnite(cfg, name.c_str(), err, logger);
 
         IgniteError::ThrowIfNeeded(err);
 
         return node;
     }
 
-    ignite::Ignite StartCrossPlatformServerNode(const char* cfgFile, const char* name, ignite::impl::Logger* logger)
+    ignite::Ignite StartCrossPlatformServerNode(const std::string& cfgFile, const std::string& name, ignite::impl::Logger* logger)
     {
         std::string config(cfgFile);
 

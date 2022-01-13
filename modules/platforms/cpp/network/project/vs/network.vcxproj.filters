@@ -12,9 +12,39 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h">
+      <Filter>Code\network\ssl</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\async_client_pool.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\async_handler.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\codec.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\codec_data_filter.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\data_buffer.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\data_filter.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\data_filter_adapter.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\data_sink.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
     <ClInclude Include="..\..\include\ignite\network\end_point.h">
       <Filter>Code\network</Filter>
-    </ClInclude>
+	</ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\length_prefix_codec.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
     <ClInclude Include="..\..\include\ignite\network\socket_client.h">
       <Filter>Code\network</Filter>
     </ClInclude>
@@ -42,8 +72,44 @@
     <ClInclude Include="..\..\os\win\src\network\sockets.h">
       <Filter>Code\network</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\os\win\src\network\win_async_client.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\os\win\src\network\win_async_client_pool.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\os\win\src\network\win_async_connecting_thread.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\os\win\src\network\win_async_worker_thread.h">
+      <Filter>Code\network</Filter>
+	</ClInclude>
+    <ClInclude Include="..\..\src\network\async_client_pool_adapter.h">
+      <Filter>Code\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\network\error_handling_filter.h">
+      <Filter>Code\network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\network\async_client_pool_adapter.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\codec_data_filter.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\data_buffer.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\error_handling_filter.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\length_prefix_codec.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\ssl\secure_data_filter.cpp" />
+      <Filter>Code\network\ssl</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\network\ssl\secure_socket_client.cpp">
       <Filter>Code\network\ssl</Filter>
     </ClCompile>
@@ -60,6 +126,18 @@
       <Filter>Code\network</Filter>
     </ClCompile>
     <ClCompile Include="..\..\os\win\src\network\sockets.cpp">
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\os\win\src\network\win_async_client.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\os\win\src\network\win_async_client_pool.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\os\win\src\network\win_async_connecting_thread.cpp" />
+      <Filter>Code\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\os\win\src\network\win_async_worker_thread.cpp" />
       <Filter>Code\network</Filter>
     </ClCompile>
   </ItemGroup>

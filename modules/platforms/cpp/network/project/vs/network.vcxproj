@@ -182,22 +182,48 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\async_client_pool.h" />
+    <ClInclude Include="..\..\include\ignite\network\async_handler.h" />
+    <ClInclude Include="..\..\include\ignite\network\codec.h" />
+    <ClInclude Include="..\..\include\ignite\network\codec_data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_buffer.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_filter_adapter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_sink.h" />
     <ClInclude Include="..\..\include\ignite\network\end_point.h" />
+    <ClInclude Include="..\..\include\ignite\network\length_prefix_codec.h" />
     <ClInclude Include="..\..\include\ignite\network\network.h" />
     <ClInclude Include="..\..\include\ignite\network\utils.h" />
     <ClInclude Include="..\..\include\ignite\network\socket_client.h" />
     <ClInclude Include="..\..\include\ignite\network\tcp_range.h" />
     <ClInclude Include="..\..\os\win\src\network\sockets.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_client.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_client_pool.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_connecting_thread.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_worker_thread.h" />
     <ClInclude Include="..\..\src\network\ssl\secure_socket_client.h" />
     <ClInclude Include="..\..\src\network\ssl\ssl_gateway.h" />
+    <ClInclude Include="..\..\src\network\async_client_pool_adapter.h" />
+    <ClInclude Include="..\..\src\network\error_handling_filter.h" />
     <ClInclude Include="..\..\src\network\tcp_socket_client.h" />
     <ClInclude Include="..\..\src\network\internal_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\os\win\src\network\sockets.cpp" />
     <ClCompile Include="..\..\os\win\src\network\tcp_socket_client.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_client.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_client_pool.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_connecting_thread.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_worker_thread.cpp" />
     <ClCompile Include="..\..\os\win\src\network\utils.cpp" />
+    <ClCompile Include="..\..\src\network\async_client_pool_adapter.cpp" />
+    <ClCompile Include="..\..\src\network\codec_data_filter.cpp" />
+    <ClCompile Include="..\..\src\network\data_buffer.cpp" />
+    <ClCompile Include="..\..\src\network\error_handling_filter.cpp" />
+    <ClCompile Include="..\..\src\network\length_prefix_codec.cpp" />
     <ClCompile Include="..\..\src\network\network.cpp" />
+    <ClCompile Include="..\..\src\network\ssl\secure_data_filter.cpp" />
     <ClCompile Include="..\..\src\network\ssl\secure_socket_client.cpp" />
     <ClCompile Include="..\..\src\network\ssl\ssl_gateway.cpp" />
   </ItemGroup>
