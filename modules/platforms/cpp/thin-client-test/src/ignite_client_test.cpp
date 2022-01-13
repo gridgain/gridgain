@@ -32,7 +32,8 @@ using namespace ignite_test;
 class IgniteClientTestSuiteFixture
 {
 public:
-    IgniteClientTestSuiteFixture()
+    IgniteClientTestSuiteFixture() :
+        logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected")
     {
         // No-op.
     }
@@ -122,14 +123,16 @@ public:
     {
         return ignite_test::StartCrossPlatformServerNode("cache.xml", "ServerNode" + name, logger);
     }
+
+protected:
+    /** Logger. */
+    VectorLogger logger;
 };
 
 BOOST_FIXTURE_TEST_SUITE(IgniteClientTestSuite, IgniteClientTestSuiteFixture)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnection)
 {
-    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
-
     ignite::Ignite serverNode = StartNodeWithLog("0", &logger);
 
     IgniteClientConfiguration cfg;
@@ -144,8 +147,6 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnection)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionFailover)
 {
-    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
-
     ignite::Ignite serverNode = StartNodeWithLog("0", &logger);
 
     IgniteClientConfiguration cfg;
@@ -160,8 +161,6 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionFailover)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 {
-    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
-
     ignite::Ignite serverNode0 = StartNodeWithLog("0", &logger);
     ignite::Ignite serverNode1 = StartNodeWithLog("1", &logger);
     ignite::Ignite serverNode2 = StartNodeWithLog("2", &logger);
@@ -182,8 +181,6 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 
 BOOST_AUTO_TEST_CASE(IgniteClientReconnect)
 {
-    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
-
     ignite::Ignite serverNode0 = StartNodeWithLog("0", &logger);
     ignite::Ignite serverNode1 = StartNodeWithLog("1", &logger);
 
