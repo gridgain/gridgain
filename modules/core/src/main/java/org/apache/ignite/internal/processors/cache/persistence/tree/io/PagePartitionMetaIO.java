@@ -82,6 +82,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setSize(long pageAddr, long size) {
+        assertPageType(pageAddr);
+
         if (getSize(pageAddr) == size)
             return false;
 
@@ -105,6 +107,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setUpdateCounter(long pageAddr, long cntr) {
+        assertPageType(pageAddr);
+
         if (getUpdateCounter(pageAddr) == cntr)
             return false;
 
@@ -128,6 +132,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setGlobalRemoveId(long pageAddr, long rmvId) {
+        assertPageType(pageAddr);
+
         if (getGlobalRemoveId(pageAddr) == rmvId)
             return false;
 
@@ -150,6 +156,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setPartitionState(long pageAddr, byte state) {
+        assertPageType(pageAddr);
+
         if (getPartitionState(pageAddr) == state)
             return false;
 
@@ -175,6 +183,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
      * @param cntrsPageId New cache sizes page ID.
      */
     public void setCountersPageId(long pageAddr, long cntrsPageId) {
+        assertPageType(pageAddr);
+
         PageUtils.putLong(pageAddr, NEXT_PART_META_PAGE_OFF, cntrsPageId);
     }
 

@@ -884,20 +884,20 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
     }
 
     /**
-     * Compare two objects for DML operation.
+     * Compare two objects.
      *
      * @param first First.
      * @param second Second.
      * @return Comparison result.
      */
     @SuppressWarnings("unchecked")
-    public static int compareForDml(Object first, Object second) {
+    public static int compare(Object first, Object second) {
         boolean firstBinary = first instanceof BinaryObjectImpl;
         boolean secondBinary = second instanceof BinaryObjectImpl;
 
         if (firstBinary) {
             if (secondBinary)
-                return compareForDml0((BinaryObjectImpl)first, (BinaryObjectImpl)second);
+                return compare0((BinaryObjectImpl)first, (BinaryObjectImpl)second);
             else
                 return 1; // Go to the right part.
         }
@@ -916,7 +916,7 @@ public final class BinaryObjectImpl extends BinaryObjectExImpl implements Extern
      * @param second Second item.
      * @return Comparison result.
      */
-    private static int compareForDml0(BinaryObjectImpl first, BinaryObjectImpl second) {
+    private static int compare0(BinaryObjectImpl first, BinaryObjectImpl second) {
         int res = Integer.compare(first.typeId(), second.typeId());
 
         if (res == 0) {

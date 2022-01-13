@@ -85,7 +85,10 @@ public final class UpdatePlan {
 
     /** Number of rows in rows based MERGE or INSERT. */
     private final int rowsNum;
-
+    
+    /** Whether absent PK parts should be filled with defaults or not. */
+    private boolean fillAbsentPKsWithDefaults;
+    
     /** Arguments for fast UPDATE or DELETE. */
     private final FastUpdate fastUpdate;
 
@@ -112,6 +115,7 @@ public final class UpdatePlan {
      * @param rowsNum Rows number.
      * @param fastUpdate Fast update (if any).
      * @param distributed Distributed plan (if any)
+     * @param fillAbsentPKsWithDefaults Fills absent PKs with nulls or defaults setting.
      */
     public UpdatePlan(
         UpdateMode mode,
@@ -128,13 +132,15 @@ public final class UpdatePlan {
         int rowsNum,
         @Nullable FastUpdate fastUpdate,
         @Nullable DmlDistributedPlanInfo distributed,
-        boolean canSelectBeLazy
+        boolean canSelectBeLazy,
+        boolean fillAbsentPKsWithDefaults
     ) {
         this.colNames = colNames;
         this.colTypes = colTypes;
         this.rows = rows;
         this.rowsNum = rowsNum;
-
+        this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;
+    
         assert mode != null;
         assert tbl != null;
 
@@ -182,7 +188,8 @@ public final class UpdatePlan {
             0,
             fastUpdate,
             distributed,
-            true
+            true,
+            false
         );
     }
 
@@ -469,8 +476,12 @@ public final class UpdatePlan {
             List<Object> resRow = new ArrayList<>();
 
             for (int j = 0; j < colNames.length; j++) {
-                Object colVal = row.size() > j ? row.get(j).get(args) : null;
-
+                Object colVal;
+                if (fillAbsentPKsWithDefaults)
+                     colVal = row.size() > j ? row.get(j).get(args) : null;
+                else
+                     colVal = row.get(j).get(args);
+    
                 if (j == keyColIdx || j == valColIdx) {
                     Class<?> colCls = j == keyColIdx ? desc.type().keyClass() : desc.type().valueClass();
 

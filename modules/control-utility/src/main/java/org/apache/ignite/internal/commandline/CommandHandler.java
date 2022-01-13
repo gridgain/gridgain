@@ -452,6 +452,14 @@ public class CommandHandler {
     }
 
     /**
+     * @param arg To check.
+     * @return True if provided argument is among sensitive one and not should be displayed.
+     */
+    protected boolean isSensitiveArgument(String arg) {
+        return CommonArgParser.isSensitiveArgument(arg);
+    }
+
+    /**
      * @param rawArgs Arguments which user has provided.
      * @return String which could be shown in console and pritned to log.
      */
@@ -473,7 +481,7 @@ public class CommandHandler {
 
             sb.a(arg).a(' ');
 
-            hide = CommonArgParser.isSensitiveArgument(arg);
+            hide = isSensitiveArgument(arg);
         }
 
         return sb.toString();

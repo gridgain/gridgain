@@ -809,6 +809,13 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
+    /**
+     * Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot.
+     * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
+     * Default is {@code 5}.
+     */
+    public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
+
     /** Ignite page memory concurrency level. */
     public static final String IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL = "IGNITE_OFFHEAP_LOCK_CONCURRENCY_LEVEL";
 
@@ -1254,6 +1261,11 @@ public final class IgniteSystemProperties {
      * Allow use composite _key, _val columns at the INSERT/UPDATE/MERGE statements.
      */
     public static final String IGNITE_SQL_ALLOW_KEY_VAL_UPDATES = "IGNITE_SQL_ALLOW_KEY_VAL_UPDATES";
+    
+    /**
+     * Forcibly fills missing columns belonging to the primary key with nulls or default values if those have been specified.
+     */
+    public static final String IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS = "IGNITE_SQL_FILL_ABSENT_PK_WITH_DEFAULTS";
 
     /**
      * Interval between logging of time of next auto-adjust.
@@ -1406,7 +1418,9 @@ public final class IgniteSystemProperties {
      * When enabled, node will wait until all of its data is backed up before shutting down.
      * Please note that it will completely prevent last node in cluster from shutting down if any caches exist
      * that have backups configured.
+     * @deprecated Use {@link ShutdownPolicy} instead.
      */
+    @Deprecated
     @IgniteExperimental
     public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
 

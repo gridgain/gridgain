@@ -1777,7 +1777,8 @@ public class GridCacheUtils {
         Collection<QueryEntity> entities = cfg.getQueryEntities();
 
         if (!F.isEmpty(entities))
-            cfg.clearQueryEntities().setQueryEntities(QueryUtils.normalizeQueryEntities(entities, cfg));
+            cfg.clearQueryEntities().setQueryEntities(QueryUtils.normalizeQueryEntities(cacheObjCtx.kernalContext(),
+                    entities, cfg));
     }
 
     /**

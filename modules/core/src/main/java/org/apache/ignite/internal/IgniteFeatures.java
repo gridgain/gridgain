@@ -184,6 +184,9 @@ public enum IgniteFeatures {
     /** Possibility to safe deactivation, take into account pure in memory caches with possible data loss.*/
     SAFE_CLUSTER_DEACTIVATION(51),
 
+    /** Transaction distributed configuration. */
+    TRANSACTION_DISTRIBUTED_PROPERTIES(52),
+
     /** Custom snapshot operations. */
     CUSTOM_SNAPSHOT_OPERATIONS(53),
 
@@ -197,7 +200,19 @@ public enum IgniteFeatures {
      * The feature allows authenticating a node remotely.
      * It is need when the one node which does not have an authentication required to authorize itself or another one.
      */
-    REMOTE_AUTH(61);
+    REMOTE_AUTH(61),
+
+    /**
+     * Snapshot operation can handle {@code -exclude_caches} parameter
+     * and cache groups in {@code -caches} and {@code -excluded_caches} parameters.
+     */
+    SNAPSHOT_OPERATION_WITH_EXCLUDE_AND_GROUPS_FILTER(62),
+
+    /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
+    SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
+    
+    /** Whether the absent PK parts should be filled with defaults or not. */
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
 
     /**
      * Unique feature identifier.

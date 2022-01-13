@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence;
+package org.apache.ignite.tests.p2p.cache;
 
-import org.apache.ignite.internal.util.typedef.T2;
+/** */
+public class Container {
+    /** */
+    private Object field;
 
-/**
- * Interface to distinguish exceptions that were caused by broken persistence datastructures invariants.
- */
-public interface CorruptedPersistenceException {
-    /**
-     * @return (groupId, pageId) pairs for pages that might be corrupted.
-     */
-    public T2<Integer, Long>[] pages();
+    /** */
+    public Container(Object field) {
+        this.field = field;
+    }
 }

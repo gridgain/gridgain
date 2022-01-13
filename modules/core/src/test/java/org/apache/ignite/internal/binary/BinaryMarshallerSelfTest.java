@@ -1083,6 +1083,60 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
+    @Test
+    public void rebuildWithHandleToCollection() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        HandleToCollections obj = new HandleToCollections();
+
+        BinaryObjectImpl bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            bob.setField("a", i);
+
+            bo = (BinaryObjectImpl)bob.build();
+
+            // Check unmarshal is OK.
+            HandleToCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst, modified.lst);
+            assertEquals(obj.hndLst, modified.hndLst);
+            assertEquals(obj.linkedLst, modified.linkedLst);
+            assertEquals(obj.hndLinkedLst, modified.hndLinkedLst);
+            assertEquals(obj.map, modified.map);
+            assertEquals(obj.hndMap, modified.hndMap);
+        }
+    }
+
+    /** */
+    @Test
+    public void rebuildObjectWithCollections() throws Exception {
+        BinaryMarshaller m = binaryMarshaller();
+
+        TwoCollections obj = new TwoCollections();
+
+        BinaryObjectImpl bo = marshal(obj, m);
+
+        for (int i = 0; i < 10; ++i) {
+            BinaryObjectBuilder bob = bo.toBuilder();
+
+            bob.setField("a", i);
+
+            bo = (BinaryObjectImpl)bob.build();
+
+            // Check unmarshal is OK.
+            TwoCollections modified = unmarshal(bo, m);
+
+            assertEquals(i, modified.a);
+            assertEquals(obj.lst0, modified.lst0);
+            assertEquals(obj.lst1, modified.lst1);
+        }
+    }
+
     /**
      *
      */
@@ -3917,6 +3971,15 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param bo Binary object to deserialize.
+     * @param marsh Marshaller.
+     * @return Result object.
+     */
+    private <T> T unmarshal(BinaryObjectImpl bo, BinaryMarshaller marsh) throws IgniteCheckedException {
+        return marsh.unmarshal(bo.array(), null);
+    }
+
+    /**
      * @param obj Object.
      * @param marsh Marshaller.
      * @return Binary object.
@@ -5878,6 +5941,9 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
     /** */
     public static class HandleToCollections {
         /** */
+        int a;
+
+        /** */
         List<Value> lst;
 
         /** */
@@ -5916,6 +5982,31 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
             linkedMap = IntStream.range(0, 1).boxed()
                 .collect(Collectors.toMap(Function.identity(), Value::new, (a, b) -> a, LinkedHashMap::new));
             hndLinkedMap = linkedMap;
+        }
+    }
+
+    /** */
+    public static class TwoCollections {
+        /** */
+        int a;
+
+        /** */
+        List<String> lst0;
+
+        /** */
+        List<String> lst1;
+
+        /** */
+        Value v;
+
+        /** */
+        public TwoCollections() {
+            a = 0;
+
+            lst0 = new ArrayList<>(Arrays.asList("a", "b"));
+            lst1 = new ArrayList<>(Arrays.asList("c", "d"));;
+
+            v = new Value(127);
         }
     }
 }
