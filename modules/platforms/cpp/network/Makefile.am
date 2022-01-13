@@ -47,10 +47,20 @@ libignite_network_la_DEPENDENCIES = \
 	@top_srcdir@/common/libignite-common.la
 
 libignite_network_la_SOURCES = \
+	os/linux/src/network/connecting_context.cpp \
+	os/linux/src/network/linux_async_client.cpp \
+	os/linux/src/network/linux_async_client_pool.cpp \
+	os/linux/src/network/linux_async_worker_thread.cpp \
 	os/linux/src/network/utils.cpp \
 	os/linux/src/network/tcp_socket_client.cpp \
 	os/linux/src/network/sockets.cpp \
+	src/network/async_client_pool_adapter.cpp \
+	src/network/codec_data_filter.cpp \
+	src/network/data_buffer.cpp \
+	src/network/error_handling_filter.cpp \
+	src/network/length_prefix_codec.cpp \
 	src/network/network.cpp \
+	src/network/ssl/secure_data_filter.cpp \
 	src/network/ssl/secure_socket_client.cpp \
 	src/network/ssl/ssl_gateway.cpp
 
