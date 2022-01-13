@@ -386,7 +386,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * Initialize cluster ID and tag in the metastore if not present.
      */
     private void initializeClusterIdAndTagIfNeeded() {
-        // We can't write the valu to metastore before all nodes are upgraded
+        // We can't write the value to metastore before all nodes are upgraded
         // to avoid NoClassDefFoundError on metastore scan.
         if (compatibilityMode)
             return;
