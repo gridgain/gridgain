@@ -272,10 +272,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (ctx.isDaemon())
             return;
 
-        GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
-
-        isp.registerDistributedMetastorageListener(this);
-
         cluster.start();
     }
 
