@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <sys/sysinfo.h>
+
 #include "ignite/common/concurrent_os.h"
 
 namespace ignite
@@ -234,6 +236,13 @@ namespace ignite
             void Thread::Join()
             {
                 pthread_join(thread, 0);
+            }
+
+            uint32_t GetNumberOfProcessors()
+            {
+                int res = get_nprocs();
+
+                return static_cast<uint32_t>(res < 0 ? 0 : res);
             }
         }
     }

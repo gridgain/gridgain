@@ -632,6 +632,8 @@ namespace ignite
                 virtual void Join();
 
             private:
+                IGNITE_NO_COPY_ASSIGNMENT(Thread);
+
                 /**
                  * Routine.
                  * @param lpParam Param.
@@ -642,6 +644,13 @@ namespace ignite
                 /** Thread handle. */
                 HANDLE handle;
             };
+
+            /**
+             * Get number of logical processors in system.
+             *
+             * @return Number of logical processors.
+             */
+            IGNITE_IMPORT_EXPORT uint32_t GetNumberOfProcessors();
         }
     }
 }

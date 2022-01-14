@@ -50,7 +50,7 @@ namespace
             // No-op.
         }
 
-        virtual bool OnNotification(const network::DataBuffer& msg)
+        virtual void OnNotification(const network::DataBuffer& msg)
         {
             ComputeTaskFinishedNotification notification(res);
             channel.DeserializeMessage(msg, notification);
@@ -58,12 +58,15 @@ namespace
             if (notification.IsFailure())
             {
                 promise.SetError(IgniteError(IgniteError::IGNITE_ERR_COMPUTE_EXECUTION_REJECTED,
-                    notification.GetErrorMessage().c_str()));
+                    notification.GetError().c_str()));
             }
             else
                 promise.SetValue();
+        }
 
-            return true;
+        virtual void OnDisconnected()
+        {
+            promise.SetError(IgniteError(IgniteError::IGNITE_ERR_NETWORK_FAILURE, "Connection closed"));
         }
 
         /**
@@ -110,6 +113,8 @@ namespace ignite
                     channel.Get()->RegisterNotificationHandler(rsp.GetNotificationId(), handler);
 
                     handler.Get()->GetFuture().GetValue();
+
+                    channel.Get()->DeregisterNotificationHandler(rsp.GetNotificationId());
                 }
             }
         }

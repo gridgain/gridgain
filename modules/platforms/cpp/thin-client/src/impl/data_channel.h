@@ -25,6 +25,7 @@
 #include <ignite/thin/ignite_client_configuration.h>
 
 #include <ignite/common/concurrent.h>
+#include <ignite/common/thread_pool.h>
 #include <ignite/network/socket_client.h>
 #include <ignite/network/async_client_pool.h>
 
@@ -106,13 +107,15 @@ namespace ignite
                  * @param cfg Configuration.
                  * @param typeMgr Type manager.
                  * @param stateHandler State handler.
+                 * @param userThreadPool Thread pool to use to dispatch tasks that can run user code.
                  */
                 DataChannel(uint64_t id,
                     const network::EndPoint& addr,
                     const ignite::network::SP_AsyncClientPool& asyncPool,
                     const ignite::thin::IgniteClientConfiguration& cfg,
                     binary::BinaryTypeManager& typeMgr,
-                    ChannelStateHandler& stateHandler);
+                    ChannelStateHandler& stateHandler,
+                    common::ThreadPool& userThreadPool);
 
                 /**
                  * Destructor.
@@ -128,8 +131,10 @@ namespace ignite
 
                 /**
                  * Close connection.
+                 *
+                 * @param err Error.
                  */
-                void Close();
+                void Close(const IgniteError* err);
 
                 /**
                  * Synchronously send request message and receive response. Uses provided timeout.
@@ -150,10 +155,18 @@ namespace ignite
 
                 /**
                  * Register handler for the notification.
+                 *
                  * @param notId Notification ID.
                  * @param handler Handler.
                  */
                 void RegisterNotificationHandler(int64_t notId, const SP_NotificationHandler& handler);
+
+                /**
+                 * Deregister handler for the notification.
+                 *
+                 * @param notId Notification ID.
+                 */
+                void DeregisterNotificationHandler(int64_t notId);
 
                 /**
                  * Get remote node.
@@ -175,22 +188,10 @@ namespace ignite
 
                 /**
                  * Deserialize message received by this channel.
-                 * @tparam T Message type.
                  * @param data Data.
                  * @param msg Message.
                  */
-                template<typename T>
-                void DeserializeMessage(const network::DataBuffer& data, T& msg)
-                {
-                    interop::InteropInputStream inStream(data.GetInputStream());
-
-                    // Skipping size (4 bytes) and reqId (8 bytes)
-                    inStream.Ignore(12);
-
-                    binary::BinaryReaderImpl reader(&inStream);
-
-                    msg.Read(reader, currentVersion);
-                }
+                void DeserializeMessage(const network::DataBuffer& data, Response& msg);
 
                 /**
                  * Fail all pending requests.
@@ -198,6 +199,13 @@ namespace ignite
                  * @param err Error.
                  */
                 void FailPendingRequests(const IgniteError* err);
+
+                /**
+                 * Close remote resource.
+                 *
+                 * @param resourceId Resource ID.
+                 */
+                void CloseResource(int64_t resourceId);
 
             private:
                 IGNITE_NO_COPY_ASSIGNMENT(DataChannel);
@@ -305,6 +313,9 @@ namespace ignite
 
                 /** Notification handlers. */
                 NotificationHandlerMap handlerMap;
+
+                /** Thread pool to dispatch user code execution. */
+                common::ThreadPool& userThreadPool;
             };
 
             /** Shared pointer type. */

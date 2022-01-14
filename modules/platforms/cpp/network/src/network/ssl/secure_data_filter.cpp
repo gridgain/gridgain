@@ -222,15 +222,7 @@ namespace ignite
                     bool connectionHappened = context0.ProcessData(in);
 
                     if (connectionHappened)
-                    {
-                        // WO for https://issues.apache.org/jira/browse/IGNITE-15337
-                        common::concurrent::CriticalSection cs;
-                        common::concurrent::ConditionVariable cv;
-                        common::concurrent::CsLockGuard guard(cs);
-                        cv.WaitFor(cs, 300);
-
                         DataFilterAdapter::OnConnectionSuccess(context0.GetAddress(), id);
-                    }
 
                     if (context0.IsConnected())
                     {
