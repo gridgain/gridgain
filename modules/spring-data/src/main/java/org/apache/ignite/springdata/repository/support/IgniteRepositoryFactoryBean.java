@@ -19,6 +19,8 @@ package org.apache.ignite.springdata.repository.support;
 import java.io.Serializable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.springdata.repository.IgniteRepository;
 import org.springframework.beans.BeansException;
@@ -34,8 +36,8 @@ import org.springframework.data.repository.core.support.RepositoryFactorySupport
  * The repository requires to define one of the parameters below in your Spring application configuration in order
  * to get an access to Apache Ignite cluster:
  * <ul>
- * <li>{@link Ignite} instance bean named "igniteInstance"</li>
- * <li>{@link IgniteConfiguration} bean named "igniteCfg"</li>
+ * <li>{@link Ignite} or {@link IgniteClient} instance bean named "igniteInstance"</li>
+ * <li>{@link IgniteConfiguration} or {@link ClientConfiguration} bean named "igniteCfg"</li>
  * <li>A path to Ignite's Spring XML configuration named "igniteSpringCfgPath"</li>
  * <ul/>
  *
@@ -63,15 +65,29 @@ public class IgniteRepositoryFactoryBean<T extends Repository<S, ID>, S, ID exte
     /** {@inheritDoc} */
     @Override protected RepositoryFactorySupport createRepositoryFactory() {
         try {
-            Ignite ignite = (Ignite)ctx.getBean("igniteInstance");
+            Object igniteInstanceBean = ctx.getBean("igniteInstance");
 
-            return new IgniteRepositoryFactory(ignite);
+            if (igniteInstanceBean instanceof Ignite)
+                return new IgniteRepositoryFactory((Ignite)igniteInstanceBean);
+            else if (igniteInstanceBean instanceof IgniteClient)
+                return new IgniteRepositoryFactory((IgniteClient)igniteInstanceBean);
+
+            throw new IllegalStateException("Invalid repository configuration. The Spring Bean corresponding to the" +
+                " \"igniteInstance\" property of repository configuration must be one of the following types: " +
+                Ignite.class.getName() + ", " + IgniteClient.class.getName());
         }
         catch (BeansException ex) {
             try {
-                IgniteConfiguration cfg = (IgniteConfiguration)ctx.getBean("igniteCfg");
+                Object igniteCfgBean = ctx.getBean("igniteCfg");
 
-                return new IgniteRepositoryFactory(cfg);
+                if (igniteCfgBean instanceof IgniteConfiguration)
+                    return new IgniteRepositoryFactory((IgniteConfiguration)igniteCfgBean);
+                else if (igniteCfgBean instanceof ClientConfiguration)
+                    return new IgniteRepositoryFactory((ClientConfiguration)igniteCfgBean);
+
+                throw new IllegalStateException("Invalid repository configuration. The Spring Bean corresponding to" +
+                    " the \"igniteCfg\" property of repository configuration must be one of the following types: [" +
+                    IgniteConfiguration.class.getName() + ", " + ClientConfiguration.class.getName() + ']');
             }
             catch (BeansException ex2) {
                 try {
@@ -80,9 +96,9 @@ public class IgniteRepositoryFactoryBean<T extends Repository<S, ID>, S, ID exte
                     return new IgniteRepositoryFactory(path);
                 }
                 catch (BeansException ex3) {
-                    throw new IgniteException("Failed to initialize Ignite repository factory. Ignite instance or" +
-                        " IgniteConfiguration or a path to Ignite's spring XML configuration must be defined in the" +
-                        " application configuration");
+                    throw new IgniteException("Failed to initialize Ignite repository factory. One of the following" +
+                        " beans must be defined in application configuration: \"igniteInstance\", \"igniteCfg\"," +
+                        " \"igniteSpringCfgPath\".");
                 }
             }
         }

@@ -21,7 +21,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.springdata.proxy.IgniteClientProxy;
+import org.apache.ignite.springdata.proxy.IgniteProxy;
+import org.apache.ignite.springdata.proxy.IgniteProxyImpl;
 import org.apache.ignite.springdata.repository.IgniteRepository;
 import org.apache.ignite.springdata.repository.config.Query;
 import org.apache.ignite.springdata.repository.config.RepositoryConfig;
@@ -46,7 +51,7 @@ import org.springframework.util.StringUtils;
  */
 public class IgniteRepositoryFactory extends RepositoryFactorySupport {
     /** Ignite instance */
-    private Ignite ignite;
+    private IgniteProxy ignite;
 
     /** Mapping of a repository to a cache. */
     private final Map<Class<?>, String> repoToCache = new HashMap<>();
@@ -57,7 +62,12 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @param ignite
      */
     public IgniteRepositoryFactory(Ignite ignite) {
-        this.ignite = ignite;
+        this.ignite = new IgniteProxyImpl(ignite);
+    }
+
+    /** Creates the factory with initialized {@link IgniteClient} instance. */
+    public IgniteRepositoryFactory(IgniteClient cli) {
+        ignite = new IgniteClientProxy(cli);
     }
 
     /**
@@ -67,7 +77,15 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @param cfg Ignite configuration.
      */
     public IgniteRepositoryFactory(IgniteConfiguration cfg) {
-        this.ignite = Ignition.start(cfg);
+        this.ignite = new IgniteProxyImpl(Ignition.start(cfg));
+    }
+
+    /**
+     * Initializes the factory with provided {@link ClientConfiguration} that is used to start up an underlying
+     * {@link IgniteClient} instance.
+     */
+    public IgniteRepositoryFactory(ClientConfiguration cfg) {
+        this.ignite = new IgniteClientProxy(Ignition.startClient(cfg));
     }
 
     /**
@@ -77,7 +95,7 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @param springCfgPath A path to Ignite configuration.
      */
     public IgniteRepositoryFactory(String springCfgPath) {
-        this.ignite = Ignition.start(springCfgPath);
+        this.ignite = new IgniteProxyImpl(Ignition.start(springCfgPath));
     }
 
     /** {@inheritDoc} */
