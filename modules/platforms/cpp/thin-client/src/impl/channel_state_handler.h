@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+#include <ignite/ignite_error.h>
+
 namespace ignite
 {
     namespace impl
