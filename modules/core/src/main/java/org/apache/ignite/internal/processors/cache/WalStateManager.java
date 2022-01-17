@@ -419,9 +419,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
      * @param fut Exchange future.
      */
     public void disableGroupDurabilityForPreloading(GridDhtPartitionsExchangeFuture fut) {
-        if (fut.changedBaseline()
+        if (/*fut.changedBaseline()
             && cctx.tm().pendingTxsTracker().enabled()
-            || !IgniteSystemProperties.getBoolean(
+            ||*/ !IgniteSystemProperties.getBoolean(
                 IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, DFLT_DISABLE_WAL_DURING_REBALANCING))
             return;
 
