@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -29,7 +28,6 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -87,64 +85,18 @@ public class IgniteCacheGroupsSqlTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-
-
     /**
      * @throws Exception If failed.
      */
     @Test
     public void testSqlQuery() throws Exception {
         Ignite node = ignite(0);
+
         IgniteCache c1 = node.createCache(personCacheConfiguration(GROUP1, "c1"));
-
-//        c1.query(new SqlFieldsQuery("CREATE TABLE City (\n" +
-//            "  name varchar primary key,\n" +
-//            "  code int\n" +
-//            ") WITH \"wrap_key=true,value_type=City\"")).getAll();
-
-        c1.query(new SqlFieldsQuery("CREATE TABLE City (\n" +
-            "  namePK varchar primary key,\n" +
-            "  name varchar,\n" +
-            "  code int\n" +
-            ") WITH \"wrap_key=true,value_type=org.apache.ignite.internal.processors.cache.City\"")).getAll();
-
-        //c1.query(new SqlFieldsQuery("insert into City (namePK, name, code) values('a', 'cityA', 1)")).getAll();
-//
-//        c1.query(new SqlFieldsQuery("analyze City")).getAll();
-//        Thread.sleep(3000);
-//        List<List<?>> resS = c1.query(new SqlFieldsQuery("SELECT * FROM SYS.STATISTICS_LOCAL_DATA ")).getAll();
-//        for (List<?> rowS : resS) {
-//            for(Object a : rowS) {
-//                System.out.print(a);
-//                System.out.print(", ");
-//            }
-//            System.out.println();
-//        }
-//        System.out.println("res.size() = " + resS.size());
-
-
-
-        IgniteCache<String, City> cityCache = node.cache("SQL_c1_CITY");
-        City c123 = new City("city123");
-        cityCache.put("123", c123);
-
-        City rc123 = cityCache.get("123");
-
-        assertEquals(c123, cityCache.get("123"));
-        //node.cache("City")
-        List res = c1.query(new SqlFieldsQuery("select * from City")).getAll();
-        System.out.println("res.size() = " + res.size());
-
-
-
         IgniteCache c2 = node.createCache(personCacheConfiguration(GROUP1, "c2"));
 
         SqlFieldsQuery qry = new SqlFieldsQuery("select name from Person where name=?");
         qry.setArgs("p1");
-
-
-
-
 
         assertEquals(0, c1.query(qry).getAll().size());
         assertEquals(0, c2.query(qry).getAll().size());
