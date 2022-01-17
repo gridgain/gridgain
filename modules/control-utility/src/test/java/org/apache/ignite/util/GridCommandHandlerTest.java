@@ -187,7 +187,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setGridLogger(new ListeningTestLogger());
+        cfg.setGridLogger(new ListeningTestLogger(log));
 
         return cfg;
     }
@@ -293,23 +293,12 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
-    })
     public void testClusterChangeTag() throws Exception {
         final String newTag = "new_tag";
 
         IgniteEx cl = startGrid(0);
 
         injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
-
-        //because cluster is inactive
-        assertContains(log, testOut.toString(), "Error has occurred during tag update:");
-
-        cl.cluster().active(true);
 
         //because new tag should be non-empty string
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-tag", ""));
@@ -318,6 +307,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> newTag.equals(cl.cluster().tag()), 10_000);
         assertTrue("Tag has not been updated in 10 seconds", tagUpdated);
+    }
+
+    /**
+     * Verifies that update-tag action obeys its specification: doesn't allow updating tag on inactive cluster,
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClusterChangeId() throws Exception {
+        final String newId = "11111111-1111-1111-1111-111111111111";
+
+        IgniteEx cl = startGrid(0);
+
+        injectTestSystemOut();
+
+        //because new ID should be a valid UUID
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-id", ""));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-id", "123123"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--change-id", "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"));
+
+        assertEquals(EXIT_CODE_OK, execute("--verbose", "--change-id", newId));
+
+        boolean idUpdated = GridTestUtils.waitForCondition(() -> UUID.fromString(newId).equals(cl.cluster().id()), 10_000);
+        assertTrue("ID has not been updated in 10 seconds", idUpdated);
     }
 
     /**
@@ -431,7 +444,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState() throws Exception {
         final String newTag = "new_tag";
 
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         assertFalse(ignite.cluster().active());
 
@@ -457,12 +470,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(log, testOut.toString(), "Cluster is active");
 
         boolean tagUpdated = GridTestUtils.waitForCondition(() -> {
-            try {
-                ignite.cluster().tag(newTag);
-            }
-            catch (IgniteCheckedException e) {
-                return false;
-            }
+            ignite.cluster().tag(newTag);
 
             return true;
         }, 10_000);

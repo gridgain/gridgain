@@ -16,8 +16,8 @@
 
 package org.apache.ignite.mxbean;
 
-import java.util.UUID;
 import javax.management.JMException;
+import java.util.UUID;
 
 /**
  * MX Bean allows to access information about cluster ID and tag and change tag.
@@ -33,6 +33,18 @@ public interface IgniteClusterMXBean {
     public UUID getId();
 
     /**
+     * Changes cluster ID to provided value.
+     *
+     * @param newId New value to be set as cluster ID.
+     */
+    @MXBeanDescription("Set new cluster ID value.")
+    @MXBeanParametersNames("newId")
+    @MXBeanParametersDescriptions(
+        "New ID value to be set."
+    )
+    public void id(UUID newId);
+
+    /**
      * Gets current cluster tag.
      *
      * @return Current cluster tag.
@@ -44,7 +56,7 @@ public interface IgniteClusterMXBean {
      * Changes cluster tag to provided value.
      *
      * @param newTag New value to be set as cluster tag.
-     * @throws JMException If provided value failed validation or concurrent change tag operation succeeded.
+     * @throws JMException This exception is never thrown. The declaration is kept for source compatibility.
      */
     @MXBeanDescription("Set new cluster tag value.")
     @MXBeanParametersNames("newTag")

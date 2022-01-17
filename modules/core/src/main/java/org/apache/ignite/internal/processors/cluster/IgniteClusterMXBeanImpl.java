@@ -17,10 +17,7 @@
 package org.apache.ignite.internal.processors.cluster;
 
 import java.util.UUID;
-import javax.management.JMException;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
 
 /**
@@ -45,17 +42,17 @@ public class IgniteClusterMXBeanImpl implements IgniteClusterMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public void id(UUID newId) {
+        cluster.id(newId);
+    }
+
+    /** {@inheritDoc} */
     @Override public String getTag() {
         return cluster.tag();
     }
 
     /** {@inheritDoc} */
-    @Override public void tag(String newTag) throws JMException {
-        try {
-            cluster.tag(newTag);
-        }
-        catch (IgniteCheckedException e) {
-            throw U.jmException(e);
-        }
+    @Override public void tag(String newTag) {
+        cluster.tag(newTag);
     }
 }

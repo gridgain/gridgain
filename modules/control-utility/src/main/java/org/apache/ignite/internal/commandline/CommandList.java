@@ -61,6 +61,9 @@ public enum CommandList {
     CLUSTER_CHANGE_TAG("--change-tag", new ClusterChangeTagCommand()),
 
     /** */
+    CLUSTER_CHANGE_ID("--change-id", new ClusterChangeIdCommand()),
+
+    /** */
     DATA_CENTER_REPLICATION("--dr", new DrCommand()),
 
     /** */

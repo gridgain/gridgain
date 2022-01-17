@@ -22,5 +22,10 @@ import org.apache.ignite.IgniteCluster;
  *
  */
 public interface IgniteClusterEx extends IgniteCluster, ClusterGroupEx {
-    // No-op.
+    /**
+     * {@inheritDoc}
+     *
+     * This method is overridden to remove {@code IgniteCheckedException} from the declaration.
+     */
+    @Override void tag(String tag);
 }

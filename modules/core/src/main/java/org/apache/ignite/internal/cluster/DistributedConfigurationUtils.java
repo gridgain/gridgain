@@ -43,8 +43,10 @@ public final class DistributedConfigurationUtils {
      * @param value Default value.
      * @param log Logger.
      * @param <T> Property type.
+     * @return True if the property will be asynchronously set to the provided value;
+     * false if the property was already initialized.
      */
-    public static <T extends Serializable> void setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
+    public static <T extends Serializable> boolean setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
         if (property.get() == null) {
             try {
                 property.propagateAsync(null, value)
@@ -52,11 +54,15 @@ public final class DistributedConfigurationUtils {
                         if (future.error() != null)
                             log.error("Cannot set default value of '" + property.getName() + '\'', future.error());
                     });
+
+                return true;
             }
             catch (IgniteCheckedException e) {
                 log.error("Cannot initiate setting default value of '" + property.getName() + '\'', e);
             }
         }
+
+        return false;
     }
 
     /**
