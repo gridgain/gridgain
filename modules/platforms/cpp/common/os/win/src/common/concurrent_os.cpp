@@ -215,7 +215,8 @@ namespace ignite
 
             Thread::~Thread()
             {
-                CloseHandle(handle);
+                if (handle)
+                    CloseHandle(handle);
             }
 
             DWORD Thread::ThreadRoutine(LPVOID lpParam)
@@ -237,6 +238,14 @@ namespace ignite
             void Thread::Join()
             {
                 WaitForSingleObject(handle, INFINITE);
+            }
+
+            uint32_t GetNumberOfProcessors()
+            {
+                SYSTEM_INFO info;
+                GetSystemInfo(&info);
+
+                return static_cast<uint32_t>(info.dwNumberOfProcessors < 0 ? 0 : info.dwNumberOfProcessors);
             }
         }
     }

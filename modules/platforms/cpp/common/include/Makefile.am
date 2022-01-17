@@ -32,6 +32,7 @@ nobase_include_HEADERS = \
 	ignite/common/platform_utils.h \
 	ignite/common/shared_state.h \
 	ignite/common/promise.h \
+	ignite/common/thread_pool.h \
 	ignite/date.h \
 	ignite/guid.h \
 	ignite/ignite_error.h \
