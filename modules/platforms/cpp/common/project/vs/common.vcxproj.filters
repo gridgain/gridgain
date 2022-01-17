@@ -88,6 +88,9 @@
     <ClInclude Include="..\..\include\ignite\common\expected.h">
       <Filter>Code\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\common\thread_pool.h">
+      <Filter>Code\common</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\ignite_predicate.h">
       <Filter>Code</Filter>
     </ClInclude>
@@ -127,6 +130,9 @@
       <Filter>Code\common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\common\utils.cpp">
+      <Filter>Code\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\common\thread_pool.cpp">
       <Filter>Code\common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\time.cpp">

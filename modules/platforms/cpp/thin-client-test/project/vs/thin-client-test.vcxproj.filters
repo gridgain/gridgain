@@ -44,6 +44,9 @@
     <ClCompile Include="..\..\src\compute_client_test.cpp">
       <Filter>Code</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\continuous_query_test.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\interop_test.cpp">
       <Filter>Code</Filter>
     </ClCompile>
@@ -73,6 +76,15 @@
       <Filter>Configs</Filter>
     </Xml>
     <Xml Include="..\..\config\cache-default.xml">
+      <Filter>Configs</Filter>
+    </Xml>
+    <Xml Include="..\..\config\cache-query-continuous.xml">
+      <Filter>Configs</Filter>
+    </Xml>
+    <Xml Include="..\..\config\cache-query-continuous-32.xml">
+      <Filter>Configs</Filter>
+    </Xml>
+    <Xml Include="..\..\config\cache-query-continuous-default.xml">
       <Filter>Configs</Filter>
     </Xml>
     <Xml Include="..\..\config\compute.xml">

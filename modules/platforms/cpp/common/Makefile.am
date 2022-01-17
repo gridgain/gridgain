@@ -48,6 +48,7 @@ libignite_common_la_SOURCES = \
 	src/common/concurrent.cpp \
 	src/common/decimal.cpp \
 	src/common/utils.cpp \
+	src/common/thread_pool.cpp \
 	src/date.cpp \
 	src/ignite_error.cpp \
 	src/guid.cpp \

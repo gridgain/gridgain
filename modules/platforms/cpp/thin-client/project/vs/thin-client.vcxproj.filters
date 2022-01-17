@@ -49,6 +49,9 @@
     <ClCompile Include="..\..\src\impl\cache\cache_client_proxy.cpp">
       <Filter>Code\impl\cache</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\impl\cache\query\continuous\continuous_query_notification_handler.cpp">
+      <Filter>Code\impl\cache\query\continuous</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\impl\cache\cache_client_impl.cpp">
       <Filter>Code\impl\cache</Filter>
     </ClCompile>
@@ -96,6 +99,9 @@
     <ClInclude Include="..\..\include\ignite\thin\cache\cache_client.h">
       <Filter>Code\cache</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\thin\cache\cache_entry.h">
+      <Filter>Code\cache</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\impl\thin\writable.h">
       <Filter>Code\impl</Filter>
     </ClInclude>
@@ -111,11 +117,8 @@
     <ClInclude Include="..\..\include\ignite\impl\thin\cache\cache_client_proxy.h">
       <Filter>Code\impl\cache</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\ignite\impl\thin\cache\query\query_fields_cursor_impl.h">
-      <Filter>Code\impl\cache\query</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\ignite\impl\thin\cache\query\query_fields_row_impl.h">
-      <Filter>Code\impl\cache\query</Filter>
+    <ClInclude Include="..\..\include\ignite\impl\thin\cache\continuous\continuous_query_client_holder.h">
+      <Filter>Code\impl\cache\continuous</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\ignite\impl\thin\writable_key.h">
       <Filter>Code\impl</Filter>
@@ -153,6 +156,12 @@
     <ClInclude Include="..\..\src\impl\cache\query\cursor_page.h">
       <Filter>Code\impl\cache\query</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\impl\cache\query\continuous\continuous_query_handle_impl.h">
+      <Filter>Code\impl\cache\query\continuous</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\impl\cache\query\continuous\continuous_query_notification_handler.h">
+      <Filter>Code\impl\cache\query\continuous</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\impl\cache\query\query_fields_cursor_impl.h">
       <Filter>Code\impl\cache\query</Filter>
     </ClInclude>
@@ -164,6 +173,18 @@
     </ClInclude>
     <ClInclude Include="..\..\include\ignite\thin\cache\cache_peek_mode.h">
       <Filter>Code\cache</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\thin\cache\event\cache_entry_event.h">
+      <Filter>Code\cache\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\thin\cache\event\cache_entry_event_listener.h">
+      <Filter>Code\cache\event</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\thin\cache\query\continuous\continuous_query_client.h">
+      <Filter>Code\cache\query\continuous</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\ignite\thin\cache\query\continuous\continuous_query_handle.h">
+      <Filter>Code\cache\query\continuous</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\ignite\thin\cache\query\query_fields_cursor.h">
       <Filter>Code\cache\query</Filter>

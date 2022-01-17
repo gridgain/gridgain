@@ -20,7 +20,12 @@ nobase_include_HEADERS = \
     ignite/thin/ignite_client.h \
     ignite/thin/ignite_client_configuration.h \
     ignite/thin/cache/cache_client.h \
+    ignite/thin/cache/cache_entry.h \
     ignite/thin/cache/cache_peek_mode.h \
+    ignite/thin/cache/event/cache_entry_event.h \
+    ignite/thin/cache/event/cache_entry_event_listener.h \
+    ignite/thin/cache/query/continuous/continuous_query_client.h \
+    ignite/thin/cache/query/continuous/continuous_query_handle.h \
     ignite/thin/cache/query/query_fields_cursor.h \
     ignite/thin/cache/query/query_fields_row.h \
     ignite/thin/cache/query/query_sql_fields.h \
@@ -31,8 +36,7 @@ nobase_include_HEADERS = \
     ignite/impl/thin/readable.h \
     ignite/impl/thin/writable.h \
     ignite/impl/thin/cache/cache_client_proxy.h \
-    ignite/impl/thin/cache/query/query_fields_cursor_impl.h \
-    ignite/impl/thin/cache/query/query_fields_row_impl.h
+    ignite/impl/thin/cache/continuous/continuous_query_client_holder.h
 
 uninstall-hook:
 	if [ -d ${includedir}/ignite ]; then find ${includedir}/ignite -type d -empty -delete; fi
