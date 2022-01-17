@@ -596,8 +596,9 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      *
      * @throws NullPointerException If provided tag is null.
      * @throws IllegalArgumentException If provided tag is empty, or if it's longer than {@link #MAX_TAG_LENGTH}.
+     * @throws IgniteCheckedException This exception is never thrown. The declaration is kept for source compatibility.
      */
-    public void tag(String tag);
+    public void tag(String tag) throws IgniteCheckedException;
 
     /**
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.

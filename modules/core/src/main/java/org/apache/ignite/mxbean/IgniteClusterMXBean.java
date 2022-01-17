@@ -16,6 +16,7 @@
 
 package org.apache.ignite.mxbean;
 
+import javax.management.JMException;
 import java.util.UUID;
 
 /**
@@ -51,7 +52,9 @@ public interface IgniteClusterMXBean {
      * Changes cluster tag to provided value.
      *
      * @param newTag New value to be set as cluster tag.
+     * @throws JMException This exception is never thrown. The declaration is kept for source compatibility.
      */
     @MXBeanDescription("Set new cluster tag value.")
-    public void tag(@MXBeanParameter(name = "newTag", description = "New tag value to be set.") String newTag);
+    public void tag(@MXBeanParameter(name = "newTag", description = "New tag value to be set.") String newTag)
+        throws JMException;
 }

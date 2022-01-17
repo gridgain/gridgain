@@ -820,7 +820,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testState() throws Exception {
         final String newTag = "new_tag";
 
-        Ignite ignite = startGrids(1);
+        IgniteEx ignite = startGrids(1);
 
         assertFalse(ignite.cluster().active());
 
