@@ -23,12 +23,14 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.Person;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.BreakBuildIndexConsumer;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.SlowdownBuildIndexConsumer;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.StopBuildIndexConsumer;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
 import org.apache.ignite.internal.processors.query.QueryIndexKey;
@@ -40,6 +42,8 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEX_REBUILD_BATCH_SIZE;
+import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addIdxCreateCacheRowConsumer;
+import static org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.nodeName;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder.Status.COMPLETE;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder.Status.INIT;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusStorage.KEY_PREFIX;
@@ -56,8 +60,17 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
-                cacheCfg(DEFAULT_CACHE_NAME, null).setAffinity(new RendezvousAffinityFunction(false, 1))
+                cacheConfig(DEFAULT_CACHE_NAME),
+                cacheConfig(DEFAULT_CACHE_NAME + 2)
             );
+    }
+
+    /**
+     * Creates cache configuration.
+     * @param cacheName
+     */
+    private CacheConfiguration<Object, Object> cacheConfig(String cacheName) {
+        return cacheCfg(cacheName, "GRP").setAffinity(new RendezvousAffinityFunction(false, 1));
     }
 
     /**
@@ -324,6 +337,87 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
 
         checkNoStatus(n, cacheName);
         assertEquals(100_000, selectPersonByName(n.cache(cacheName)).size());
+    }
+
+    /**
+     * Checks that if there is no checkpoint after the index is created and the
+     * node is restarted, the indexes will be rebuilt.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testIncompleteIndexDroppedOnCacheDestroy() throws Exception {
+        final String cacheName = DEFAULT_CACHE_NAME;
+        final int cacheSize = 10_000;
+
+        IgniteEx n = prepareNodeToCreateNewIndex(cacheName, cacheSize, false);
+        populate(n.cache(DEFAULT_CACHE_NAME + 2), cacheSize);
+
+        IgniteEx cli = startClientGrid(1);
+
+        String idxName = "IDX0";
+        StopBuildIndexConsumer slowdownIdxCreateConsumer = new BuildIndexConsumer(getTestTimeout(), 1000);
+        addIdxCreateCacheRowConsumer(nodeName(n), idxName, slowdownIdxCreateConsumer);
+
+        IgniteInternalFuture<List<List<?>>> createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
+
+        slowdownIdxCreateConsumer.startBuildIdxFut.get(getTestTimeout());
+        checkInitStatus(n, cacheName, false, 1);
+        slowdownIdxCreateConsumer.finishBuildIdxFut.onDone();
+
+        cli.cache(DEFAULT_CACHE_NAME).destroy();
+        assertTrue(createIdxFut.isDone());
+
+        cli.createCache(cacheConfig(DEFAULT_CACHE_NAME));
+        populate(n.cache(cacheName), cacheSize);
+
+        checkCompletedStatus(n, cacheName);
+
+        StopBuildIndexConsumer stopRebuildIdxConsumer = addSlowdownIdxCreateConsumer(n, idxName, 0);
+        createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
+
+        stopRebuildIdxConsumer.startBuildIdxFut.get(getTestTimeout());
+        checkInitStatus(n, cacheName, false, 1);
+        stopRebuildIdxConsumer.finishBuildIdxFut.onDone();
+
+        createIdxFut.get(getTestTimeout());
+
+        checkCompletedStatus(n, cacheName);
+        assertTrue(allIndexes(n).containsKey(new QueryIndexKey(cacheName, idxName)));
+
+        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
+    }
+
+    /**
+     * Consumer that fails building indexes of cache.
+     */
+    static class BuildIndexConsumer extends StopBuildIndexConsumer {
+        /** Number of rows to add before slowdown. */
+        private final int cnt;
+
+        /**
+         * Constructor.
+         *
+         * @param timeout The maximum time to wait finish future in milliseconds.
+         * @param cnt Amount of rows to be added before failure.
+         */
+        BuildIndexConsumer(long timeout, int cnt) {
+            super(timeout);
+
+            this.cnt = cnt;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void accept(CacheDataRow row) throws IgniteCheckedException {
+            if (visitCnt.incrementAndGet() < cnt)
+                return;
+
+            startBuildIdxFut.onDone();
+
+            finishBuildIdxFut.get();
+
+            throw new IgniteCheckedException("test");
+        }
     }
 
     /**

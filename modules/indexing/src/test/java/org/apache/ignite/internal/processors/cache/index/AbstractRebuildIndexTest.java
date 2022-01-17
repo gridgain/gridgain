@@ -83,6 +83,7 @@ public abstract class AbstractRebuildIndexTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName)
             .setConsistentId(igniteInstanceName)
             .setFailureHandler(new StopNodeFailureHandler())
+            .setBuildIndexThreadPoolSize(2)
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
