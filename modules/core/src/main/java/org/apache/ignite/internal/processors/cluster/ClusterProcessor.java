@@ -200,62 +200,62 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         sndMetrics = !(ctx.config().getDiscoverySpi() instanceof TcpDiscoverySpi);
 
         if (clusterIdAndTagSupport) {
-            ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(new DistributedConfigurationLifecycleListener() {
-                @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
-                    String logMsgFmt = "Cluster ID and tag changed [property=%s, oldVal=%s, newVal=%s]";
+            ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(
+                new DistributedConfigurationLifecycleListener() {
+                    @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
+                        String logMsgFmt = "Cluster ID and tag changed [property=%s, oldVal=%s, newVal=%s]";
 
-                    clusterIdAndTagProperty.addListener(makeUpdateListener(logMsgFmt, log));
-                    clusterIdAndTagProperty.addListener((name, oldVal, newVal) -> {
-                        // User-requested updates always have both old and new val set.
-                        if (oldVal != null && newVal != null) {
-                            // Record ID update event.
-                            if (!Objects.equals(oldVal.id(), newVal.id())
-                                && ctx.event().isRecordable(EVT_CLUSTER_ID_UPDATED)) {
-                                String msg = "ID has been updated to new value: " +
-                                    newVal.id() +
-                                    ", previous value was " +
-                                    oldVal.id();
+                        clusterIdAndTagProperty.addListener(makeUpdateListener(logMsgFmt, log));
+                        clusterIdAndTagProperty.addListener((name, oldVal, newVal) -> {
+                            // User-requested updates always have both old and new val set.
+                            if (oldVal != null && newVal != null) {
+                                // Record ID update event.
+                                if (!Objects.equals(oldVal.id(), newVal.id())
+                                    && ctx.event().isRecordable(EVT_CLUSTER_ID_UPDATED)) {
+                                    String msg = "ID has been updated to new value: " +
+                                        newVal.id() +
+                                        ", previous value was " +
+                                        oldVal.id();
 
-                                ctx.closure().runLocalSafe(() -> ctx.event().record(
-                                    new ClusterIdUpdatedEvent(
-                                        ctx.discovery().localNode(),
-                                        msg,
-                                        oldVal.id(),
-                                        newVal.id()
-                                    )
-                                ));
+                                    ctx.closure().runLocalSafe(() -> ctx.event().record(
+                                        new ClusterIdUpdatedEvent(
+                                            ctx.discovery().localNode(),
+                                            msg,
+                                            oldVal.id(),
+                                            newVal.id()
+                                        )
+                                    ));
+                                }
+
+                                // Record tag update event.
+                                if (!Objects.equals(oldVal.tag(), newVal.tag())
+                                    && ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                                    String msg = "Tag has been updated to new value: " +
+                                        newVal.tag() +
+                                        ", previous value was " +
+                                        oldVal.tag();
+
+                                    ctx.closure().runLocalSafe(() -> ctx.event().record(
+                                        new ClusterTagUpdatedEvent(
+                                            ctx.discovery().localNode(),
+                                            msg,
+                                            oldVal.id(),
+                                            oldVal.tag(),
+                                            newVal.tag()
+                                        )
+                                    ));
+                                }
                             }
+                        });
 
-                            // Record tag update event.
-                            if (!Objects.equals(oldVal.tag(), newVal.tag())
-                                && ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
-                                String msg = "Tag has been updated to new value: " +
-                                    newVal.tag() +
-                                    ", previous value was " +
-                                    oldVal.tag();
-
-                                ctx.closure().runLocalSafe(() -> ctx.event().record(
-                                    new ClusterTagUpdatedEvent(
-                                        ctx.discovery().localNode(),
-                                        msg,
-                                        oldVal.id(),
-                                        oldVal.tag(),
-                                        newVal.tag()
-                                    )
-                                ));
-                            }
-                        }
-                    });
-
-                    dispatcher.registerProperty(clusterIdAndTagProperty);
-                }
-
-                @Override public void onReadyToWrite() {
-                    if (!compatibilityMode) {
-                        initializeClusterIdAndTagIfNeeded();
+                        dispatcher.registerProperty(clusterIdAndTagProperty);
                     }
-                }
-            });
+
+                    @Override public void onReadyToWrite() {
+                        if (!compatibilityMode)
+                            initializeClusterIdAndTagIfNeeded();
+                    }
+                });
         }
     }
 

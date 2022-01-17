@@ -36,7 +36,7 @@ public interface IgniteClusterMXBean {
      *
      * @param newId New value to be set as cluster ID.
      */
-    @MXBeanDescription("Set new cluster tag value.")
+    @MXBeanDescription("Set new cluster ID value.")
     public void id(@MXBeanParameter(name = "newId", description = "New ID value to be set.") UUID newId);
 
     /**

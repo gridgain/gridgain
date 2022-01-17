@@ -378,10 +378,11 @@ public class CommandHandlerParsingTest {
 
             ConnectionAndSslParameters args;
 
+            UUID uuid = UUID.fromString("11111111-1111-1111-1111-111111111111");
             if (cmdL == CLUSTER_CHANGE_TAG)
                 args = parseArgs(asList(cmdL.text(), "test_tag"));
             else if (cmdL == CLUSTER_CHANGE_ID)
-                args = parseArgs(asList(cmdL.text(), "11111111-1111-1111-1111-111111111111"));
+                args = parseArgs(asList(cmdL.text(), uuid.toString()));
             else if (cmdL == SET_STATE)
                 args = parseArgs(asList(cmdL.text(), "ACTIVE"));
             else if (cmdL == ROLLING_UPGRADE)
@@ -452,11 +453,11 @@ public class CommandHandlerParsingTest {
                 }
 
                 case CLUSTER_CHANGE_ID: {
-                    args = parseArgs(asList(cmdL.text(), "11111111-1111-1111-1111-111111111111", "--yes"));
+                    args = parseArgs(asList(cmdL.text(), uuid.toString(), "--yes"));
 
                     checkCommonParametersCorrectlyParsed(cmdL, args, true);
 
-                    assertEquals(UUID.fromString("11111111-1111-1111-1111-111111111111"), ((ClusterChangeIdCommand)args.command()).arg());
+                    assertEquals(uuid, ((ClusterChangeIdCommand)args.command()).arg());
 
                     break;
                 }

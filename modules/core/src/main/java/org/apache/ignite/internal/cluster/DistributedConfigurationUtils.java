@@ -43,6 +43,7 @@ public final class DistributedConfigurationUtils {
      * @param value Default value.
      * @param log Logger.
      * @param <T> Property type.
+     * @return True if the property has been set to the provided default value.
      */
     public static <T extends Serializable> boolean setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
         if (property.get() == null) {
