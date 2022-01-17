@@ -16,27 +16,14 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import javax.management.JMException;
-import javax.management.ObjectName;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.events.ClusterIdUpdatedEvent;
 import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
-import org.apache.ignite.events.Event;
-import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.ClusterMetricsSnapshot;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridKernalGatewayImpl;
@@ -48,19 +35,18 @@ import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
-import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
-import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
+import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridTimerTask;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -83,31 +69,36 @@ import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
-import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.events.EventType.EVT_CLUSTER_TAG_UPDATED;
-import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
-import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import javax.management.JMException;
+import javax.management.ObjectName;
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Timer;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.ignite.IgniteSystemProperties.*;
+import static org.apache.ignite.events.EventType.*;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CLUSTER_PROC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_INTERNAL_DIAGNOSTIC;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLUSTER_METRICS;
 
 /**
  *
  */
 public class ClusterProcessor extends GridProcessorAdapter implements DistributedMetastorageLifecycleListener {
-    /**
-     * Ignite cluster ID system property. If is not set, random UUID will be used.
-     */
-    private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
-
     /** */
     private static final String ATTR_UPDATE_NOTIFIER_STATUS = "UPDATE_NOTIFIER_STATUS";
 
@@ -143,7 +134,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     public static final boolean DFLT_DIAGNOSTIC_ENABLED = true;
 
     /** */
-    private IgniteClusterImpl cluster;
+    private final IgniteClusterImpl cluster;
 
     /** */
     private final AtomicBoolean notifyEnabled = new AtomicBoolean();
@@ -176,16 +167,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     private DiscoveryMetricsProvider metricsProvider;
 
     /** */
-    private boolean sndMetrics;
-
-    /** Cluster ID is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile UUID locClusterId;
-
-    /** Cluster tag is stored in local variable before activation when it goes to distributed metastorage. */
-    private volatile String locClusterTag;
-
-    /** */
-    private volatile DistributedMetaStorage metastorage;
+    private final boolean sndMetrics;
 
     /** Flag is used to detect and manage case when new node (this one) joins old cluster. */
     private volatile boolean compatibilityMode;
@@ -196,62 +178,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
 
-    /**
-     * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
-     */
-    private final DiscoveryEventListener discoLsnr = new DiscoveryEventListener() {
-        @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
-            if (!compatibilityMode)
-                return;
-
-            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
-                IgniteFeatures.CLUSTER_ID_AND_TAG)
-            ) {
-                // Only coordinator initializes ID and tag.
-                if (U.isLocalNodeCoordinator(ctx.discovery())) {
-                    locClusterId = locClusterId == null ? UUID.randomUUID() : locClusterId;
-
-                    locClusterTag = locClusterTag == null ? ClusterTagGenerator.generateTag() : locClusterTag;
-
-                    if (metastorage != null) {
-                        IgniteInternalFuture<?> clusterIdTagFut = null;
-
-                        try {
-                            ClusterIdAndTag idAndTag = new ClusterIdAndTag(locClusterId, locClusterTag);
-
-                            if (log.isInfoEnabled())
-                                log.info(
-                                    "Writing cluster ID and tag to metastorage " +
-                                        "on leaving compatibility mode " +
-                                        idAndTag
-                                );
-
-                            clusterIdTagFut = metastorage.writeAsync(CLUSTER_ID_TAG_KEY,
-                                idAndTag);
-                        }
-                        catch (IgniteCheckedException e) {
-                            ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                        }
-
-                        if (clusterIdTagFut != null) {
-                            clusterIdTagFut.listen(fut -> {
-                                if (fut.error() != null)
-                                    log.error("Write to metastorage failed unexpectedly", fut.error());
-                            });
-                        }
-                    }
-
-                    cluster.setId(locClusterId);
-
-                    cluster.setTag(locClusterTag);
-
-                    compatibilityMode = false;
-                }
-
-                ctx.event().removeDiscoveryEventListener(discoLsnr);
-            }
-        }
-    };
+    private final SimpleDistributedProperty<ClusterIdAndTag> clusterIdAndTagProperty =
+        new SimpleDistributedProperty<>(CLUSTER_ID_TAG_KEY, null);
 
     /** */
     private ObjectName mBean;
@@ -270,6 +198,65 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         cluster = new IgniteClusterImpl(ctx);
 
         sndMetrics = !(ctx.config().getDiscoverySpi() instanceof TcpDiscoverySpi);
+
+        if (clusterIdAndTagSupport) {
+            ctx.internalSubscriptionProcessor().registerDistributedConfigurationListener(
+                new DistributedConfigurationLifecycleListener() {
+                    @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
+                        String logMsgFmt = "Cluster ID and tag changed [property=%s, oldVal=%s, newVal=%s]";
+
+                        clusterIdAndTagProperty.addListener(makeUpdateListener(logMsgFmt, log));
+                        clusterIdAndTagProperty.addListener((name, oldVal, newVal) -> {
+                            // User-requested updates always have both old and new val set.
+                            if (oldVal != null && newVal != null) {
+                                // Record ID update event.
+                                if (!Objects.equals(oldVal.id(), newVal.id())
+                                    && ctx.event().isRecordable(EVT_CLUSTER_ID_UPDATED)) {
+                                    String msg = "ID has been updated to new value: " +
+                                        newVal.id() +
+                                        ", previous value was " +
+                                        oldVal.id();
+
+                                    ctx.closure().runLocalSafe(() -> ctx.event().record(
+                                        new ClusterIdUpdatedEvent(
+                                            ctx.discovery().localNode(),
+                                            msg,
+                                            oldVal.id(),
+                                            newVal.id()
+                                        )
+                                    ));
+                                }
+
+                                // Record tag update event.
+                                if (!Objects.equals(oldVal.tag(), newVal.tag())
+                                    && ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
+                                    String msg = "Tag has been updated to new value: " +
+                                        newVal.tag() +
+                                        ", previous value was " +
+                                        oldVal.tag();
+
+                                    ctx.closure().runLocalSafe(() -> ctx.event().record(
+                                        new ClusterTagUpdatedEvent(
+                                            ctx.discovery().localNode(),
+                                            msg,
+                                            oldVal.id(),
+                                            oldVal.tag(),
+                                            newVal.tag()
+                                        )
+                                    ));
+                                }
+                            }
+                        });
+
+                        dispatcher.registerProperty(clusterIdAndTagProperty);
+                    }
+
+                    @Override public void onReadyToWrite() {
+                        if (!compatibilityMode)
+                            initializeClusterIdAndTagIfNeeded();
+                    }
+                });
+        }
     }
 
     /**
@@ -284,142 +271,52 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (ctx.isDaemon())
             return;
 
-        GridInternalSubscriptionProcessor isp = ctx.internalSubscriptionProcessor();
-
-        isp.registerDistributedMetastorageListener(this);
-
         cluster.start();
     }
 
-    /** {@inheritDoc} */
-    @Override public void onReadyForRead(ReadableDistributedMetaStorage metastorage) {
-        if (!clusterIdAndTagSupport)
-            return;
+    /**
+     * @return Returns cluster ID.
+     */
+    public UUID getId() {
+        // For compatibility, we avoid throwing exception on read and return null instead.
+        // Prior to GG-33727, this used to return an actual non-null value propagated using a complex algorithm.
+        // It was abandoned in favor of simple metastore property.
+        if (compatibilityMode)
+            return null;
 
-        ClusterIdAndTag idAndTag = readKey(metastorage, CLUSTER_ID_TAG_KEY, "Reading cluster ID and tag from metastorage failed, " +
-            "default values will be generated");
-
-        if (log.isInfoEnabled())
-            log.info("Cluster ID and tag has been read from metastorage: " + idAndTag);
-
-        if (idAndTag != null) {
-            locClusterId = idAndTag.id();
-            locClusterTag = idAndTag.tag();
-        }
-
-        metastorage.listen(
-            (k) -> k.equals(CLUSTER_ID_TAG_KEY),
-            (String k, ClusterIdAndTag oldVal, ClusterIdAndTag newVal) -> {
-                if (log.isInfoEnabled())
-                    log.info(
-                        "Cluster tag will be set to new value: " +
-                            newVal != null ? newVal.tag() : "null" +
-                            ", previous value was: " +
-                            oldVal != null ? oldVal.tag() : "null");
-
-                if (oldVal != null && newVal != null) {
-                    if (ctx.event().isRecordable(EVT_CLUSTER_TAG_UPDATED)) {
-                        String msg = "Tag of cluster with id " +
-                            oldVal.id() +
-                            " has been updated to new value: " +
-                            newVal.tag() +
-                            ", previous value was " +
-                            oldVal.tag();
-
-                        ctx.closure().runLocalSafe(() -> ctx.event().record(
-                            new ClusterTagUpdatedEvent(
-                                ctx.discovery().localNode(),
-                                msg,
-                                oldVal.id(),
-                                oldVal.tag(),
-                                newVal.tag()
-                            )
-                        ));
-                    }
-                }
-
-                cluster.setTag(newVal != null ? newVal.tag() : null);
-
-                if (compatibilityMode) {
-                    // In compatibility mode ID and tag
-                    // will be stored to metastorage on coordinator instead of receiving them on join.
-                    assert oldVal == null;
-
-                    if (log.isInfoEnabled())
-                        log.info("Cluster ID will be initialized to the value: " + newVal.id());
-
-                    cluster.setId(newVal.id());
-
-                    compatibilityMode = false;
-                }
-            }
-        );
+        ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
+        return clusterIdAndTag != null ? clusterIdAndTag.id() : null;
     }
 
     /**
-     * @param metastorage Metastorage.
-     * @param key Key.
-     * @param errMsg Err message.
+     * Method is called when user requests updating cluster ID through public API.
+     *
+     * @param newId New ID.
      */
-    private <T extends Serializable> T readKey(ReadableDistributedMetaStorage metastorage, String key, String errMsg) {
-        try {
-            return metastorage.read(key);
-        }
-        catch (IgniteCheckedException e) {
-            U.warn(log, errMsg, e);
+    public void updateId(UUID newId) {
+        if (compatibilityMode)
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
-            return null;
+        ClusterIdAndTag old = clusterIdAndTagProperty.get();
+        try {
+            clusterIdAndTagProperty.propagate(new ClusterIdAndTag(newId, old.tag()));
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException("Unexpectedly failed to update cluster ID and tag", e);
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-        this.metastorage = metastorage;
+    /**
+     * @return Returns cluster tag.
+     */
+    public String getTag() {
+        // For compatibility, we avoid throwing exception on read and return null instead.
+        // Prior to GG-33727, this used to return an actual non-null value propagated using a complex algorithm.
+        // It was abandoned in favor of simple metastore property.
+        if (compatibilityMode)
+            return null;
 
-        // Fast and dirty workaround for tests.
-        if (ctx.clientNode()) {
-            try {
-                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
-
-                if (idAndTag != null) {
-                    locClusterId = idAndTag.id();
-                    locClusterTag = idAndTag.tag();
-
-                    cluster.setId(locClusterId);
-                    cluster.setTag(locClusterTag);
-                }
-            }
-            catch (IgniteCheckedException e) {
-                U.warn(log, e);
-            }
-
-            return;
-        }
-
-        if (!clusterIdAndTagSupport)
-            return;
-
-        //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
-
-        // Should not write to metastorage before exiting compatibility mode.
-        // On coordinator this happens in disco listener, on other nodes in metastorage update listener.
-        if (!compatibilityMode) {
-            ctx.closure().runLocalSafe(
-                () -> {
-                    try {
-                        ClusterIdAndTag idAndTag = new ClusterIdAndTag(cluster.id(), cluster.tag());
-
-                        if (log.isInfoEnabled())
-                            log.info("Writing cluster ID and tag to metastorage on ready for write " + idAndTag);
-
-                        metastorage.writeAsync(CLUSTER_ID_TAG_KEY, idAndTag);
-                    }
-                    catch (IgniteCheckedException e) {
-                        ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-                    }
-                }
-            );
-        }
+        ClusterIdAndTag clusterIdAndTag = clusterIdAndTagProperty.get();
+        return clusterIdAndTag != null ? clusterIdAndTag.tag() : null;
     }
 
     /**
@@ -427,24 +324,16 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      *
      * @param newTag New tag.
      */
-    public void updateTag(String newTag) throws IgniteCheckedException {
+    public void updateTag(String newTag) {
         if (compatibilityMode)
-            throw new IgniteCheckedException("Not all nodes in the cluster support cluster ID and tag.");
+            throw new IllegalStateException("Not all nodes in the cluster support cluster ID and tag.");
 
-        ClusterIdAndTag oldTag = metastorage.read(CLUSTER_ID_TAG_KEY);
-
-        if (oldTag == null)
-            throw new IgniteCheckedException("Cannot change tag as default tag has not been set yet. " +
-                "Please try again later.");
-
-        if (!metastorage.compareAndSet(CLUSTER_ID_TAG_KEY, oldTag, new ClusterIdAndTag(oldTag.id(), newTag))) {
-            ClusterIdAndTag concurrentValue = metastorage.read(CLUSTER_ID_TAG_KEY);
-
-            throw new IgniteCheckedException("Cluster tag has been concurrently updated to different value: " +
-                concurrentValue.tag());
+        ClusterIdAndTag old = clusterIdAndTagProperty.get();
+        try {
+            clusterIdAndTagProperty.propagate(new ClusterIdAndTag(old.id(), newTag));
+        } catch (IgniteCheckedException e) {
+            throw new IgniteException("Unexpectedly failed to update cluster ID and tag", e);
         }
-        else
-            cluster.setTag(newTag);
     }
 
     /**
@@ -464,172 +353,163 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
-            IgniteFeatures.CLUSTER_ID_AND_TAG)
-        ) {
-            compatibilityMode = true;
-
-            ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
-
-            return;
-        }
-
-        if (!ctx.discovery().localNode().isClient()) {
-            cluster.setId(locClusterId != null ? locClusterId :
-                IgniteSystemProperties.getUUID(IGNITE_CLUSTER_ID, UUID.randomUUID()));
-
-            cluster.setTag(locClusterTag != null ? locClusterTag :
-                ClusterTagGenerator.generateTag());
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onDisconnected(IgniteFuture<?> reconnectFut) {
-        if (!clusterIdAndTagSupport)
+        if (ctx.discovery().localNode().isClient() || ctx.discovery().localNode().isDaemon())
             return;
 
-        assert ctx.clientNode();
+        compatibilityMode = !IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+            IgniteFeatures.CLUSTER_ID_AND_TAG);
 
-        locClusterId = null;
-        locClusterTag = null;
+        DiscoveryEventListener discoveryEventListener = new DiscoveryEventListener() {
+            @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
+                // Initialize cluster ID and tag if all old servers have left.
+                if (compatibilityMode
+                    && IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), IgniteDiscoverySpi.SRV_NODES),
+                    IgniteFeatures.CLUSTER_ID_AND_TAG)
+                ) {
+                    compatibilityMode = false;
+                    ClusterProcessor.this.initializeClusterIdAndTagIfNeeded();
+                }
 
-        cluster.setId(null);
-        cluster.setTag(null);
+                if (!compatibilityMode)
+                    ctx.event().removeDiscoveryEventListener(this);
+            }
+        };
+        ctx.event().addDiscoveryEventListener(discoveryEventListener, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
 
-    /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) {
-        if (!clusterIdAndTagSupport)
-            return null;
+    /**
+     * Initialize cluster ID and tag in the metastore if not present.
+     */
+    private void initializeClusterIdAndTagIfNeeded() {
+        // We can't write the value to metastore before all nodes are upgraded
+        // to avoid NoClassDefFoundError on metastore scan.
+        if (compatibilityMode)
+            return;
 
-        assert ctx.clientNode();
-
-        cluster.setId(locClusterId);
-        cluster.setTag(locClusterTag);
-
-        return null;
+        ClusterIdAndTag newIdAndTag = new ClusterIdAndTag(UUID.randomUUID(), ClusterTagGenerator.generateTag());
+        boolean defaultValueWasSet = setDefaultValue(clusterIdAndTagProperty, newIdAndTag, log);
+        if (defaultValueWasSet) {
+            if (log.isInfoEnabled())
+                log.info("New cluster ID and tag have been generated: " + newIdAndTag);
+        }
     }
 
     /**
      * @throws IgniteCheckedException If failed.
      */
     public void initDiagnosticListeners() throws IgniteCheckedException {
-        ctx.event().addLocalEventListener(new GridLocalEventListener() {
-            @Override public void onEvent(Event evt) {
-                assert evt instanceof DiscoveryEvent;
-                assert evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT;
+        ctx.event().addLocalEventListener(evt -> {
+            assert evt instanceof DiscoveryEvent;
+            assert evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT;
 
-                DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
+            DiscoveryEvent discoEvt = (DiscoveryEvent)evt;
 
-                UUID nodeId = discoEvt.eventNode().id();
+            UUID nodeId = discoEvt.eventNode().id();
 
-                ConcurrentHashMap<Long, InternalDiagnosticFuture> futs = diagnosticFutMap.get();
+            ConcurrentHashMap<Long, InternalDiagnosticFuture> futs = diagnosticFutMap.get();
 
-                if (futs != null) {
-                    for (InternalDiagnosticFuture fut : futs.values()) {
-                        if (fut.nodeId.equals(nodeId))
-                            fut.onDone(new IgniteDiagnosticInfo("Target node failed: " + nodeId));
-                    }
+            if (futs != null) {
+                for (InternalDiagnosticFuture fut : futs.values()) {
+                    if (fut.nodeId.equals(nodeId))
+                        fut.onDone(new IgniteDiagnosticInfo("Target node failed: " + nodeId));
                 }
-
-                allNodesMetrics.remove(nodeId);
             }
+
+            allNodesMetrics.remove(nodeId);
         }, EVT_NODE_FAILED, EVT_NODE_LEFT);
 
-        ctx.io().addMessageListener(TOPIC_INTERNAL_DIAGNOSTIC, new GridMessageListener() {
-            @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                if (msg instanceof IgniteDiagnosticMessage) {
-                    IgniteDiagnosticMessage msg0 = (IgniteDiagnosticMessage)msg;
+        ctx.io().addMessageListener(TOPIC_INTERNAL_DIAGNOSTIC, (nodeId, msg, plc) -> {
+            if (msg instanceof IgniteDiagnosticMessage) {
+                IgniteDiagnosticMessage msg0 = (IgniteDiagnosticMessage)msg;
 
-                    if (msg0.request()) {
-                        ClusterNode node = ctx.discovery().node(nodeId);
+                if (msg0.request()) {
+                    ClusterNode node = ctx.discovery().node(nodeId);
 
-                        if (node == null) {
-                            if (diagnosticLog.isDebugEnabled()) {
-                                diagnosticLog.debug("Skip diagnostic request, sender node left " +
-                                    "[node=" + nodeId + ", msg=" + msg + ']');
-                            }
-
-                            return;
+                    if (node == null) {
+                        if (diagnosticLog.isDebugEnabled()) {
+                            diagnosticLog.debug("Skip diagnostic request, sender node left " +
+                                "[node=" + nodeId + ", msg=" + msg + ']');
                         }
 
-                        byte[] diagRes;
+                        return;
+                    }
 
-                        IgniteClosure<GridKernalContext, IgniteDiagnosticInfo> c;
+                    byte[] diagRes;
+
+                    IgniteClosure<GridKernalContext, IgniteDiagnosticInfo> c;
+
+                    try {
+                        c = msg0.unmarshal(marsh);
+
+                        Objects.requireNonNull(c);
+
+                        diagRes = marsh.marshal(c.apply(ctx));
+                    }
+                    catch (Exception e) {
+                        U.error(diagnosticLog, "Failed to run diagnostic closure: " + e, e);
 
                         try {
-                            c = msg0.unmarshal(marsh);
+                            IgniteDiagnosticInfo errInfo =
+                                new IgniteDiagnosticInfo("Failed to run diagnostic closure: " + e);
 
-                            diagRes = marsh.marshal(c.apply(ctx));
+                            diagRes = marsh.marshal(errInfo);
                         }
-                        catch (Exception e) {
-                            U.error(diagnosticLog, "Failed to run diagnostic closure: " + e, e);
+                        catch (Exception e0) {
+                            U.error(diagnosticLog, "Failed to marshal diagnostic closure result: " + e, e);
 
-                            try {
-                                IgniteDiagnosticInfo errInfo =
-                                    new IgniteDiagnosticInfo("Failed to run diagnostic closure: " + e);
-
-                                diagRes = marsh.marshal(errInfo);
-                            }
-                            catch (Exception e0) {
-                                U.error(diagnosticLog, "Failed to marshal diagnostic closure result: " + e, e);
-
-                                diagRes = null;
-                            }
-                        }
-
-                        IgniteDiagnosticMessage res = IgniteDiagnosticMessage.createResponse(diagRes, msg0.futureId());
-
-                        try {
-                            ctx.io().sendToGridTopic(node, TOPIC_INTERNAL_DIAGNOSTIC, res, GridIoPolicy.SYSTEM_POOL);
-                        }
-                        catch (ClusterTopologyCheckedException e) {
-                            if (diagnosticLog.isDebugEnabled()) {
-                                diagnosticLog.debug("Failed to send diagnostic response, node left " +
-                                    "[node=" + nodeId + ", msg=" + msg + ']');
-                            }
-                        }
-                        catch (IgniteCheckedException e) {
-                            U.error(diagnosticLog, "Failed to send diagnostic response [msg=" + msg0 + "]", e);
+                            diagRes = null;
                         }
                     }
-                    else {
-                        InternalDiagnosticFuture fut = diagnosticFuturesMap().get(msg0.futureId());
 
-                        if (fut != null) {
-                            IgniteDiagnosticInfo res;
+                    IgniteDiagnosticMessage res = IgniteDiagnosticMessage.createResponse(diagRes, msg0.futureId());
 
-                            try {
-                                res = msg0.unmarshal(marsh);
-
-                                if (res == null)
-                                    res = new IgniteDiagnosticInfo("Remote node failed to marshal response.");
-                            }
-                            catch (Exception e) {
-                                U.error(diagnosticLog, "Failed to unmarshal diagnostic response: " + e, e);
-
-                                res = new IgniteDiagnosticInfo("Failed to unmarshal diagnostic response: " + e);
-                            }
-
-                            fut.onResponse(res);
+                    try {
+                        ctx.io().sendToGridTopic(node, TOPIC_INTERNAL_DIAGNOSTIC, res, GridIoPolicy.SYSTEM_POOL);
+                    }
+                    catch (ClusterTopologyCheckedException e) {
+                        if (diagnosticLog.isDebugEnabled()) {
+                            diagnosticLog.debug("Failed to send diagnostic response, node left " +
+                                "[node=" + nodeId + ", msg=" + msg + ']');
                         }
-                        else
-                            U.warn(diagnosticLog, "Failed to find diagnostic message future [msg=" + msg0 + ']');
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(diagnosticLog, "Failed to send diagnostic response [msg=" + msg0 + "]", e);
                     }
                 }
-                else
-                    U.warn(diagnosticLog, "Received unexpected message: " + msg);
+                else {
+                    InternalDiagnosticFuture fut = diagnosticFuturesMap().get(msg0.futureId());
+
+                    if (fut != null) {
+                        IgniteDiagnosticInfo res;
+
+                        try {
+                            res = msg0.unmarshal(marsh);
+
+                            if (res == null)
+                                res = new IgniteDiagnosticInfo("Remote node failed to marshal response.");
+                        }
+                        catch (Exception e) {
+                            U.error(diagnosticLog, "Failed to unmarshal diagnostic response: " + e, e);
+
+                            res = new IgniteDiagnosticInfo("Failed to unmarshal diagnostic response: " + e);
+                        }
+
+                        fut.onResponse(res);
+                    }
+                    else
+                        U.warn(diagnosticLog, "Failed to find diagnostic message future [msg=" + msg0 + ']');
+                }
             }
+            else
+                U.warn(diagnosticLog, "Received unexpected message: " + msg);
         });
 
         if (sndMetrics) {
-            ctx.io().addMessageListener(TOPIC_METRICS, new GridMessageListener() {
-                @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
-                    if (msg instanceof ClusterMetricsUpdateMessage)
-                        processMetricsUpdateMessage(nodeId, (ClusterMetricsUpdateMessage)msg);
-                    else
-                        U.warn(log, "Received unexpected message for TOPIC_METRICS: " + msg);
-                }
+            ctx.io().addMessageListener(TOPIC_METRICS, (nodeId, msg, plc) -> {
+                if (msg instanceof ClusterMetricsUpdateMessage)
+                    processMetricsUpdateMessage(nodeId, (ClusterMetricsUpdateMessage)msg);
+                else
+                    U.warn(log, "Received unexpected message for TOPIC_METRICS: " + msg);
             });
         }
     }
@@ -674,8 +554,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
+        // Left for compatibility with old versions that get cluster ID and tag from disco data
+        // instead of from metastore.
         if (!compatibilityMode && !dataBag.isJoiningNodeClient())
-            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
+            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), clusterIdAndTagProperty.get());
     }
 
     /**
@@ -699,31 +581,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (lstFlag != null)
                 notifyEnabled.set(lstFlag);
         }
-
-        if (!clusterIdAndTagSupport)
-            return;
-
-        ClusterIdAndTag commonData = (ClusterIdAndTag)data.commonData();
-
-        if (commonData != null) {
-            Serializable remoteClusterId = commonData.id();
-
-            if (remoteClusterId != null) {
-                if (locClusterId != null && !locClusterId.equals(remoteClusterId)) {
-                    log.warning("Received cluster ID differs from locally stored cluster ID " +
-                        "and will be rewritten. " +
-                        "Received cluster ID: " + remoteClusterId +
-                        ", local cluster ID: " + locClusterId);
-                }
-
-                locClusterId = (UUID)remoteClusterId;
-            }
-
-            String remoteClusterTag = commonData.tag();
-
-            if (remoteClusterTag != null)
-                locClusterTag = remoteClusterTag;
-        }
     }
 
     /**
@@ -734,7 +591,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         for (Serializable ser : vals) {
             if (ser != null) {
-                Map<String, Object> map = (Map<String, Object>)ser;
+                @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>)ser;
 
                 if (map.containsKey(ATTR_UPDATE_NOTIFIER_STATUS))
                     flag = (Boolean)map.get(ATTR_UPDATE_NOTIFIER_STATUS);
@@ -1006,24 +863,10 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     }
 
     /**
-     * Sets updates notifier url.
-     */
-    public void setUpdateNotifierUrl(String url) {
-        updateNotifierUrl.set(url);
-    }
-
-    /**
      * @return Update notifier status.
      */
     public boolean updateNotifierEnabled() {
         return notifyEnabled.get();
-    }
-
-    /**
-     * @return Get update notifier url.
-     */
-    public String updateNotifierUrl() {
-        return updateNotifierUrl.get();
     }
 
     /**
@@ -1068,41 +911,39 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
         final IgniteInternalFuture<IgniteDiagnosticInfo> rmtFut = sendDiagnosticMessage(nodeId, c);
 
-        rmtFut.listen(new CI1<IgniteInternalFuture<IgniteDiagnosticInfo>>() {
-            @Override public void apply(IgniteInternalFuture<IgniteDiagnosticInfo> fut) {
-                String rmtMsg;
+        rmtFut.listen((CI1<IgniteInternalFuture<IgniteDiagnosticInfo>>) fut -> {
+            String rmtMsg;
 
-                try {
-                    rmtMsg = fut.get().message();
-                }
-                catch (Exception e) {
-                    rmtMsg = "Diagnostic processing error: " + e;
-                }
-
-                final String rmtMsg0 = rmtMsg;
-
-                IgniteInternalFuture<String> locFut = IgniteDiagnosticMessage.dumpCommunicationInfo(ctx, nodeId);
-
-                locFut.listen(new CI1<IgniteInternalFuture<String>>() {
-                    @Override public void apply(IgniteInternalFuture<String> locFut) {
-                        String locMsg;
-
-                        try {
-                            locMsg = locFut.get();
-                        }
-                        catch (Exception e) {
-                            locMsg = "Failed to get info for local node: " + e;
-                        }
-
-                        String msg = baseMsg + U.nl() +
-                            "Remote node information:" + U.nl() + rmtMsg0 +
-                            U.nl() + "Local communication statistics:" + U.nl() +
-                            locMsg;
-
-                        infoFut.onDone(msg);
-                    }
-                });
+            try {
+                rmtMsg = fut.get().message();
             }
+            catch (Exception e) {
+                rmtMsg = "Diagnostic processing error: " + e;
+            }
+
+            final String rmtMsg0 = rmtMsg;
+
+            IgniteInternalFuture<String> locFut = IgniteDiagnosticMessage.dumpCommunicationInfo(ctx, nodeId);
+
+            locFut.listen(new CI1<IgniteInternalFuture<String>>() {
+                @Override public void apply(IgniteInternalFuture<String> locFut) {
+                    String locMsg;
+
+                    try {
+                        locMsg = locFut.get();
+                    }
+                    catch (Exception e) {
+                        locMsg = "Failed to get info for local node: " + e;
+                    }
+
+                    String msg = baseMsg + U.nl() +
+                        "Remote node information:" + U.nl() + rmtMsg0 +
+                        U.nl() + "Local communication statistics:" + U.nl() +
+                        locMsg;
+
+                    infoFut.onDone(msg);
+                }
+            });
         });
 
         return infoFut;

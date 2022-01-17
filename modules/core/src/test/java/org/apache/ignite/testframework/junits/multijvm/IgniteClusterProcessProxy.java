@@ -193,6 +193,11 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
+    @Override public void id(UUID id) {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
     @Override public String tag() {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
@@ -203,11 +208,13 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("deprecation")
     @Override public boolean isAsync() {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
     /** {@inheritDoc} */
+    @SuppressWarnings("deprecation")
     @Override public <R> IgniteFuture<R> future() {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }

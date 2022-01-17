@@ -107,6 +107,9 @@ This utility can do the following commands:
   Change cluster tag to new value:
     control.(sh|bat) --change-tag newTagValue [--yes]
 
+  Change cluster ID to new value:
+    control.(sh|bat) --change-id newIdValue [--yes]
+
   Print data center replication command help:
     control.(sh|bat) --dr help
 

@@ -24,12 +24,7 @@ import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -95,12 +90,6 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** Client reconnect future. */
     private IgniteFuture<?> reconnecFut;
-
-    /** Unique ID of cluster. Generated on start, shared by all nodes. */
-    private volatile UUID id;
-
-    /** User-defined human-readable tag. Generated automatically on start, can be changed later. */
-    private volatile String tag;
 
     /** Ignite logger. */
     private IgniteLogger log;
@@ -596,66 +585,48 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public UUID id() {
-        return id;
+        if (ctx.clientDisconnected())
+            return null;
+
+        return ctx.cluster().getId();
     }
 
-    /**
-     * Not part of public API.
-     * Enables ClusterProcessor to set ID in the following cases:
-     * <ol>
-     *     <li>For the first time on node startup.</li>
-     *     <li>Set to null on client disconnect.</li>
-     *     <li>Set to some not-null value on client reconnect.</li>
-     * </ol>
-     *
-     * @param id ID to set.
-     */
-    public void setId(UUID id) {
-        this.id = id;
+    /** {@inheritDoc} */
+    @Override public void id(UUID id) {
+        if (!clusterIdAndTagSupport)
+            return;
+
+        Objects.requireNonNull(id, "ID cannot be null.");
+
+        ctx.cluster().updateId(id);
     }
 
     /** {@inheritDoc} */
     @Override public String tag() {
-        return tag;
+        if (ctx.clientDisconnected())
+            return null;
+
+        return ctx.cluster().getTag();
     }
 
     /** {@inheritDoc} */
-    @Override public void tag(String tag) throws IgniteCheckedException {
+    @Override public void tag(String tag) {
         if (!clusterIdAndTagSupport)
             return;
 
-        if (tag == null)
-            throw new IgniteCheckedException("Tag cannot be null.");
+        Objects.requireNonNull(tag, "Tag cannot be null.");
 
         if (tag.isEmpty())
-            throw new IgniteCheckedException("Tag should not be empty.");
+            throw new IllegalArgumentException("Tag should not be empty.");
 
         if (tag.length() > MAX_TAG_LENGTH)
-            throw new IgniteCheckedException("Maximum tag length is exceeded, max length is " +
+            throw new IllegalArgumentException("Maximum tag length is exceeded, max length is " +
                 MAX_TAG_LENGTH +
                 " symbols, provided value has " +
                 tag.length() +
-                " symbols.");
-
-        if (!ctx.state().publicApiActiveState(true))
-            throw new IgniteCheckedException("Can not change cluster tag on inactive cluster. To activate the cluster call Ignite.active(true).");
+                " symbols. Provided tag: " + tag);
 
         ctx.cluster().updateTag(tag);
-    }
-
-    /**
-     * Not part of public API.
-     * Enables ClusterProcessor to set tag in the following cases:
-     * <ol>
-     *     <li>For the first time on node startup.</li>
-     *     <li>Set to null on client disconnect.</li>
-     *     <li>Set to some not-null value on client reconnect.</li>
-     * </ol>
-     *
-     * @param tag Tag to set.
-     */
-    public void setTag(@Nullable String tag) {
-        this.tag = tag;
     }
 
     /** {@inheritDoc} */
