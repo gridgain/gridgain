@@ -125,6 +125,7 @@
     <Compile Include="Cache\Platform\PlatformCacheTestCreateDestroy.cs" />
     <Compile Include="Cache\Platform\PlatformCacheTopologyChangeTest.cs" />
     <Compile Include="Cache\Platform\PlatformCacheTest.cs" />
+    <Compile Include="Cache\Platform\PlatformCacheWithPersistenceTest.cs" />
     <Compile Include="Cache\Platform\FailingCacheStore.cs" />
     <Compile Include="Cache\Platform\Foo.cs" />
     <Compile Include="Cache\Platform\ScanQueryPlatformCacheFilter.cs" />
