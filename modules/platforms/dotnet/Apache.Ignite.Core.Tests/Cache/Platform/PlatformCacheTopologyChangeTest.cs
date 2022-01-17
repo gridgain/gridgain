@@ -117,7 +117,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             _cache[0][Key3] = new Foo(-1);
             for (var i = 0; i < 2; i++)
             {
-                TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == -1);
+                TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == -1, () => _cache[i][Key3].Bar.ToString());
             }
 
             // New node enters and becomes primary for the key.
