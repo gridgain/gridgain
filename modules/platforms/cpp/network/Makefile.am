@@ -27,6 +27,7 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/os/linux/src \
 	-I@top_srcdir@/common/include \
 	-I@top_srcdir@/common/os/linux/include \
+	-I@top_srcdir@/binary/include \
 	-DIGNITE_IMPL \
 	-D__STDC_LIMIT_MACROS \
 	-D__STDC_CONSTANT_MACROS
@@ -36,7 +37,8 @@ AM_CXXFLAGS = \
 	-std=c++03
 
 libignite_network_la_LIBADD = \
-	@top_srcdir@/common/libignite-common.la
+	@top_srcdir@/common/libignite-common.la \
+	@top_srcdir@/binary/libignite-binary.la
 
 libignite_network_la_LDFLAGS = \
 	-no-undefined \
@@ -44,13 +46,24 @@ libignite_network_la_LDFLAGS = \
 	-release $(PACKAGE_VERSION)
 
 libignite_network_la_DEPENDENCIES = \
-	@top_srcdir@/common/libignite-common.la
+	@top_srcdir@/common/libignite-common.la \
+	@top_srcdir@/binary/libignite-binary.la
 
 libignite_network_la_SOURCES = \
+	os/linux/src/network/connecting_context.cpp \
+	os/linux/src/network/linux_async_client.cpp \
+	os/linux/src/network/linux_async_client_pool.cpp \
+	os/linux/src/network/linux_async_worker_thread.cpp \
 	os/linux/src/network/utils.cpp \
 	os/linux/src/network/tcp_socket_client.cpp \
 	os/linux/src/network/sockets.cpp \
+	src/network/async_client_pool_adapter.cpp \
+	src/network/codec_data_filter.cpp \
+	src/network/data_buffer.cpp \
+	src/network/error_handling_filter.cpp \
+	src/network/length_prefix_codec.cpp \
 	src/network/network.cpp \
+	src/network/ssl/secure_data_filter.cpp \
 	src/network/ssl/secure_socket_client.cpp \
 	src/network/ssl/ssl_gateway.cpp
 

@@ -70,6 +70,9 @@
     <ClInclude Include="..\..\include\ignite\future.h">
       <Filter>Code</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\common\factory.h">
+      <Filter>Code\common</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\common\promise.h">
       <Filter>Code\common</Filter>
     </ClInclude>

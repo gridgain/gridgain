@@ -95,7 +95,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\..\binary\include;$(ProjectDir)\..\..\..\binary\os\win\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME)\include</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
@@ -117,7 +117,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME_X86)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\..\binary\include;$(ProjectDir)\..\..\..\binary\os\win\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME_X86)\include</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
@@ -140,7 +140,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\..\binary\include;$(ProjectDir)\..\..\..\binary\os\win\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME)\include</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
@@ -161,7 +161,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME_X86)\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\..\..\common\include;$(ProjectDir)\..\..\..\common\os\win\include;$(ProjectDir)\..\..\include;$(ProjectDir)\..\..\..\binary\include;$(ProjectDir)\..\..\..\binary\os\win\include;$(ProjectDir)\..\..\src;$(ProjectDir)\..\..\os\win\include;$(ProjectDir)\..\..\os\win\src;$(OPENSSL_HOME_X86)\include</AdditionalIncludeDirectories>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
@@ -180,24 +180,53 @@
     <ProjectReference Include="..\..\..\common\project\vs\common.vcxproj">
       <Project>{b63f2e01-5157-4719-8491-0e1c7cd3b701}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\binary\project\vs\binary.vcxproj">
+      <Project>{4f15669b-92eb-49f0-b774-8f19bae0b960}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\async_client_pool.h" />
+    <ClInclude Include="..\..\include\ignite\network\async_handler.h" />
+    <ClInclude Include="..\..\include\ignite\network\codec.h" />
+    <ClInclude Include="..\..\include\ignite\network\codec_data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_buffer.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_filter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_filter_adapter.h" />
+    <ClInclude Include="..\..\include\ignite\network\data_sink.h" />
     <ClInclude Include="..\..\include\ignite\network\end_point.h" />
+    <ClInclude Include="..\..\include\ignite\network\length_prefix_codec.h" />
     <ClInclude Include="..\..\include\ignite\network\network.h" />
     <ClInclude Include="..\..\include\ignite\network\utils.h" />
     <ClInclude Include="..\..\include\ignite\network\socket_client.h" />
     <ClInclude Include="..\..\include\ignite\network\tcp_range.h" />
     <ClInclude Include="..\..\os\win\src\network\sockets.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_client.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_client_pool.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_connecting_thread.h" />
+    <ClInclude Include="..\..\os\win\src\network\win_async_worker_thread.h" />
     <ClInclude Include="..\..\src\network\ssl\secure_socket_client.h" />
     <ClInclude Include="..\..\src\network\ssl\ssl_gateway.h" />
+    <ClInclude Include="..\..\src\network\async_client_pool_adapter.h" />
+    <ClInclude Include="..\..\src\network\error_handling_filter.h" />
     <ClInclude Include="..\..\src\network\tcp_socket_client.h" />
     <ClInclude Include="..\..\src\network\internal_utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\os\win\src\network\sockets.cpp" />
     <ClCompile Include="..\..\os\win\src\network\tcp_socket_client.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_client.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_client_pool.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_connecting_thread.cpp" />
+    <ClCompile Include="..\..\os\win\src\network\win_async_worker_thread.cpp" />
     <ClCompile Include="..\..\os\win\src\network\utils.cpp" />
+    <ClCompile Include="..\..\src\network\async_client_pool_adapter.cpp" />
+    <ClCompile Include="..\..\src\network\codec_data_filter.cpp" />
+    <ClCompile Include="..\..\src\network\data_buffer.cpp" />
+    <ClCompile Include="..\..\src\network\error_handling_filter.cpp" />
+    <ClCompile Include="..\..\src\network\length_prefix_codec.cpp" />
     <ClCompile Include="..\..\src\network\network.cpp" />
+    <ClCompile Include="..\..\src\network\ssl\secure_data_filter.cpp" />
     <ClCompile Include="..\..\src\network\ssl\secure_socket_client.cpp" />
     <ClCompile Include="..\..\src\network\ssl\ssl_gateway.cpp" />
   </ItemGroup>

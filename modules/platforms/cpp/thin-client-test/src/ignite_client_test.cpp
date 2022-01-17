@@ -32,7 +32,8 @@ using namespace ignite_test;
 class IgniteClientTestSuiteFixture
 {
 public:
-    IgniteClientTestSuiteFixture()
+    IgniteClientTestSuiteFixture() :
+        logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected")
     {
         // No-op.
     }
@@ -120,41 +121,49 @@ public:
      */
     static ignite::Ignite StartNodeWithLog(const std::string& name, VectorLogger* logger)
     {
-        return ignite_test::StartCrossPlatformServerNode("cache.xml", name.c_str(), logger);
+        return ignite_test::StartCrossPlatformServerNode("cache.xml", "ServerNode" + name, logger);
     }
+
+protected:
+    /** Logger. */
+    VectorLogger logger;
 };
 
 BOOST_FIXTURE_TEST_SUITE(IgniteClientTestSuite, IgniteClientTestSuiteFixture)
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnection)
 {
-    ignite::Ignite serverNode = ignite_test::StartCrossPlatformServerNode("cache.xml", "ServerNode");
+    ignite::Ignite serverNode = StartNodeWithLog("0", &logger);
 
     IgniteClientConfiguration cfg;
 
     cfg.SetEndPoints("127.0.0.1:11110");
 
-    IgniteClient::Start(cfg);
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    BOOST_CHECK(WaitForConnections(&logger, 1));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 1);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionFailover)
 {
-    ignite::Ignite serverNode = ignite_test::StartCrossPlatformServerNode("cache.xml", "ServerNode");
+    ignite::Ignite serverNode = StartNodeWithLog("0", &logger);
 
     IgniteClientConfiguration cfg;
 
     cfg.SetEndPoints("127.0.0.1:11109..11111");
 
-    IgniteClient::Start(cfg);
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    BOOST_CHECK(WaitForConnections(&logger, 1));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 1);
 }
 
 BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
 {
-    VectorLogger logger("org.apache.ignite.internal.processors.odbc.ClientListenerNioListener", "connected");
-
-    ignite::Ignite serverNode0 = StartNodeWithLog("Node0", &logger);
-    ignite::Ignite serverNode1 = StartNodeWithLog("Node1", &logger);
-    ignite::Ignite serverNode2 = StartNodeWithLog("Node2", &logger);
+    ignite::Ignite serverNode0 = StartNodeWithLog("0", &logger);
+    ignite::Ignite serverNode1 = StartNodeWithLog("1", &logger);
+    ignite::Ignite serverNode2 = StartNodeWithLog("2", &logger);
 
     IgniteClientConfiguration cfg;
 
@@ -168,6 +177,43 @@ BOOST_AUTO_TEST_CASE(IgniteClientConnectionLimit)
     CheckConnectionsNum(cfg, &logger, 100500, 3);
 
     ignite::Ignition::StopAll(true);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteClientReconnect)
+{
+    ignite::Ignite serverNode0 = StartNodeWithLog("0", &logger);
+    ignite::Ignite serverNode1 = StartNodeWithLog("1", &logger);
+
+    IgniteClientConfiguration cfg;
+
+    cfg.SetEndPoints("127.0.0.1:11110,127.0.0.1:11111,127.0.0.1:11112");
+
+    IgniteClient client = IgniteClient::Start(cfg);
+
+    BOOST_CHECK(WaitForConnections(&logger, 2));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 2);
+
+    ignite::Ignite serverNode2 = StartNodeWithLog("2", &logger);
+
+    BOOST_CHECK(WaitForConnections(&logger, 3));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 3);
+
+    ignite::Ignition::Stop(serverNode1.GetName(), true);
+
+    BOOST_CHECK(WaitForConnections(&logger, 2));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 2);
+
+    serverNode1 = StartNodeWithLog("1", &logger);
+
+    BOOST_CHECK(WaitForConnections(&logger, 3, 20000));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 3);
+
+    ignite::Ignition::StopAll(true);
+
+    BOOST_CHECK(WaitForConnections(&logger, 0));
+    BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 0);
+
+    BOOST_REQUIRE_THROW((client.GetOrCreateCache<int, int>("test")), ignite::IgniteError);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
