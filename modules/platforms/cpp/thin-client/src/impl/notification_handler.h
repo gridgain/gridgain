@@ -26,6 +26,7 @@
 #include <ignite/network/data_buffer.h>
 
 #include <ignite/impl/interop/interop_memory.h>
+#include "impl/channel_state_handler.h"
 
 namespace ignite
 {

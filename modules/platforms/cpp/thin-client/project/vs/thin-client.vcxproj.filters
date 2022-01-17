@@ -17,6 +17,30 @@
     <Filter Include="Code\impl\affinity">
       <UniqueIdentifier>{23850408-24ce-4781-8f30-acfc51ced59f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Code\cache\query">
+      <UniqueIdentifier>{4402a191-52a5-4c37-983d-5c256e8daa2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\impl\cache\query">
+      <UniqueIdentifier>{7f078644-7391-4bde-8f89-ef96feeb2665}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\impl\transactions">
+      <UniqueIdentifier>{982a6688-46a9-4f29-a812-2a72f1be30c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\transactions">
+      <UniqueIdentifier>{b424de0e-b3fa-4dd9-b519-d82ff5aadb3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\cache\event">
+      <UniqueIdentifier>{db0b99be-ec7d-4d4f-b704-320471680e78}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\cache\query\continuous">
+      <UniqueIdentifier>{13e32028-33ad-405d-adee-92dba599b86b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\impl\cache\continuous">
+      <UniqueIdentifier>{9a823495-3bb5-4ca0-ae1c-4dba434701e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Code\impl\cache\query\continuous">
+      <UniqueIdentifier>{aa449a87-fdac-42b6-96a5-4d79492c5f37}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\impl\ignite_client_impl.cpp">
@@ -76,7 +100,7 @@
     <ClCompile Include="..\..\src\impl\affinity\affinity_manager.cpp">
       <Filter>Code\impl\affinity</Filter>
     </ClCompile>
-	<ClCompile Include="..\..\src\impl\transactions\transaction_impl.cpp">
+    <ClCompile Include="..\..\src\impl\transactions\transaction_impl.cpp">
       <Filter>Code\impl\transactions</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\impl\transactions\transactions_impl.cpp">

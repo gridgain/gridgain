@@ -44,10 +44,13 @@
     <ClCompile Include="..\..\src\compute_client_test.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\continuous_query_test.cpp">
+    <ClCompile Include="..\..\src\interop_test.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\interop_test.cpp">
+    <ClCompile Include="..\..\src\continuous_query_test.cpp.cpp">
+      <Filter>Code</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\tx_test.cpp">
       <Filter>Code</Filter>
     </ClCompile>
   </ItemGroup>

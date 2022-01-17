@@ -34,6 +34,8 @@ namespace ignite
     {
         namespace thin
         {
+            class DataChannel;
+
             namespace cache
             {
                 namespace query
