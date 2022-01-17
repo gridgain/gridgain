@@ -170,7 +170,7 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
             "  col varchar(100), " +
             "  PRIMARY KEY(id) ) ");
         assertEquals(18, executeSql(
-            "select INLINE_SIZE from SYS.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
+            "select INLINE_SIZE from IGNITE.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
     }
 
     /**
@@ -184,7 +184,7 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
             "  col varchar(100), " +
             "  PRIMARY KEY(id) )  WITH \"wrap_key=true\"");
         assertEquals(18, executeSql(
-            "select INLINE_SIZE from SYS.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
+            "select INLINE_SIZE from IGNITE.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
     }
 
     /**
@@ -199,7 +199,7 @@ public class ComplexPrimaryKeyUnwrapSelfTest extends AbstractIndexingCommonTest 
             "  col varchar(100), " +
             "  PRIMARY KEY(id, id2) )  WITH \"wrap_key=true\"");
         assertEquals(35, executeSql(
-            "select INLINE_SIZE from SYS.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
+            "select INLINE_SIZE from IGNITE.INDEXES where TABLE_NAME = 'TABLE1' and IS_PK = true").get(0).get(0));
     }
 
     /**
