@@ -35,8 +35,12 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_JOBS_METRICS_CONCU
  */
 @Deprecated
 public class GridJobMetricsProcessor extends GridProcessorAdapter {
+    /** @see IgniteSystemProperties#IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL */
+    public static final int DFLT_JOBS_METRICS_CONCURRENCY_LEVEL = 64;
+
     /** */
-    private static final int CONCURRENCY_LEVEL = Integer.getInteger(IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL, 64);
+    private static final int CONCURRENCY_LEVEL = Integer.getInteger(IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL,
+        DFLT_JOBS_METRICS_CONCURRENCY_LEVEL);
 
     /** Time to live. */
     private final long expireTime;

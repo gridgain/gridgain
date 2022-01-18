@@ -235,7 +235,7 @@ public class TxWithSmallTimeoutAndContentionOneKeyTest extends GridCommonAbstrac
             sb.a("\n");
 
             buildConflicts("Hash conflicts:\n", sb, idleVerifyResult.hashConflicts());
-            buildConflicts("Counters conflicts:\n", sb, idleVerifyResult.counterConflicts());
+            buildConflicts("Counters conflicts:\n", sb, idleVerifyResult.updateCounterConflicts());
 
             System.out.println(sb);
 

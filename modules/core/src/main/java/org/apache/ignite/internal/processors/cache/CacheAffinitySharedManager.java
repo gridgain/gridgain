@@ -92,9 +92,12 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.AFFINITY_CA
  */
 @SuppressWarnings("ForLoopReplaceableByForEach")
 public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdapter<K, V> {
+    /** @see IgniteSystemProperties#IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT */
+    public static final int DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT = 10_000;
+
     /** */
-    private final long clientCacheMsgTimeout =
-        IgniteSystemProperties.getLong(IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT, 10_000);
+    private final long clientCacheMsgTimeout = IgniteSystemProperties.getLong(
+        IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT, DFLT_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT);
 
     /** */
     private static final IgniteClosure<ClusterNode, UUID> NODE_TO_ID = new IgniteClosure<ClusterNode, UUID>() {
@@ -663,12 +666,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     /**
      * @param msg Change request.
      * @param topVer Current topology version.
-     * @param crd Coordinator flag.
      * @return Closed caches IDs.
      */
     private Set<Integer> processCacheCloseRequests(
         ClientCacheChangeDummyDiscoveryMessage msg,
-        boolean crd,
         AffinityTopologyVersion topVer
     ) {
         Set<String> cachesToClose = msg.cachesToClose();
@@ -730,7 +731,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         // Check and close caches via dummy message.
         if (msg.cachesToClose() != null)
-            closedCaches = processCacheCloseRequests(msg, crd, topVer);
+            closedCaches = processCacheCloseRequests(msg, topVer);
 
         // Shedule change message.
         if (startedCaches != null || closedCaches != null)

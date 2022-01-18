@@ -77,6 +77,7 @@ import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteBiInClosure;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.transactions.TransactionDeadlockException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
@@ -374,6 +375,9 @@ public class PlatformCache extends PlatformAbstractTarget {
 
     /** */
     public static final int OP_INVOKE_JAVA = 98;
+
+    /** */
+    public static final int OP_PERSISTENCE_ENABLED = 99;
 
     /** Underlying JCache in binary mode. */
     private final IgniteCacheProxy cache;
@@ -802,14 +806,14 @@ public class PlatformCache extends PlatformAbstractTarget {
                         throw new IgniteDeploymentCheckedException("Unknown CacheEntryProcessor name or failed to " +
                                 "auto-deploy entry processor (was entry processor (re|un)deployed?): " + procName);
 
-                    Class<?> procCls = dep.deployedClass(procName);
+                    IgniteBiTuple<Class<?>, Throwable> procCls = dep.deployedClass(procName);
 
-                    if (procCls == null)
+                    if (procCls.get1() == null)
                         throw new IgniteDeploymentCheckedException("Unknown CacheEntryProcessor name or failed to " +
                                 "auto-deploy entry processor (was entry processor (re|un)deployed?) [procName=" +
-                                procName + ", dep=" + dep + ']');
+                                procName + ", dep=" + dep + ']', procCls.get2());
 
-                    if (!CacheEntryProcessor.class.isAssignableFrom(procCls))
+                    if (!CacheEntryProcessor.class.isAssignableFrom(procCls.get1()))
                         throw new IgniteCheckedException("Failed to auto-deploy entry processor (deployed class is " +
                                 "not an entry processor) [procName=" + procName + ", depCls=" + procCls + ']');
 
@@ -1263,6 +1267,9 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 return FALSE;
             }
+
+            case OP_PERSISTENCE_ENABLED:
+                return cache.context().group().persistenceEnabled() ? TRUE : FALSE;
         }
         return super.processInLongOutLong(type, val);
     }

@@ -1,5 +1,5 @@
 Control utility [ver. <!any!>
-2021 Copyright(C) GridGain Systems, Inc. and Contributors
+2022 Copyright(C) GridGain Systems, Inc. and Contributors
 User: <!any!>
 Time: <!any!>
 Control utility script is used to execute admin commands on cluster or get common cluster info. The command has the following syntax:
@@ -106,6 +106,9 @@ This utility can do the following commands:
 
   Change cluster tag to new value:
     control.(sh|bat) --change-tag newTagValue [--yes]
+
+  Change cluster ID to new value:
+    control.(sh|bat) --change-id newIdValue [--yes]
 
   Print data center replication command help:
     control.(sh|bat) --dr help

@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\src\auth_test.cpp" />
     <ClCompile Include="..\..\src\cache_client_test.cpp" />
     <ClCompile Include="..\..\src\compute_client_test.cpp" />
+    <ClCompile Include="..\..\src\continuous_query_test.cpp" />
     <ClCompile Include="..\..\src\ignite_client_test.cpp" />
     <ClCompile Include="..\..\src\interop_test.cpp" />
     <ClCompile Include="..\..\src\ssl_test.cpp" />
@@ -62,6 +63,9 @@
     <Xml Include="..\..\config\cache-32.xml" />
     <Xml Include="..\..\config\cache-default.xml" />
     <Xml Include="..\..\config\cache.xml" />
+    <Xml Include="..\..\config\cache-query-continuous-32.xml" />
+    <Xml Include="..\..\config\cache-query-continuous-default.xml" />
+    <Xml Include="..\..\config\cache-query-continuous.xml" />
     <Xml Include="..\..\config\compute-32.xml" />
     <Xml Include="..\..\config\compute-default.xml" />
     <Xml Include="..\..\config\compute.xml" />

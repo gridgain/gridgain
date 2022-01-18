@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.configuration.distributed;
 
 import java.io.Serializable;
@@ -76,8 +75,7 @@ public class SimpleDistributedProperty<T extends Serializable> implements Distri
     /**
      * @throws DetachedPropertyException If this property have not been attached to processor yet, please call {@link
      * DistributedConfigurationProcessor#registerProperty(DistributedChangeableProperty)} before this method.
-     * @throws NotWritablePropertyException If this property don't ready to cluster wide update yet, perhaps cluster is
-     * not active yet.
+     * @throws NotWritablePropertyException If this property isn't ready for cluster wide update yet.
      */
     private void ensureClusterWideUpdateIsReady() throws DetachedPropertyException, NotWritablePropertyException {
         if (!attached)

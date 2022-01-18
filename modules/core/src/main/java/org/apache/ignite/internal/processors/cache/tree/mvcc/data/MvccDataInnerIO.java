@@ -40,6 +40,8 @@ public final class MvccDataInnerIO extends AbstractDataInnerIO {
 
     /** {@inheritDoc} */
     @Override public void visit(long pageAddr, IgniteInClosure<CacheSearchRow> c) {
+        assertPageType(pageAddr);
+
         int cnt = getCount(pageAddr);
 
         for (int i = 0; i < cnt; i++)

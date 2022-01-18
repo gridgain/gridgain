@@ -519,6 +519,7 @@ public class CommandProcessor {
             .map(t -> {
                 if (t.key().schema() == null) {
                     StatisticsKey key = new StatisticsKey(cmd.schemaName(), t.key().obj());
+
                     return new StatisticsObjectConfiguration(key, t.columns().values(),
                         t.maxPartitionObsolescencePercent());
                 }
@@ -1186,7 +1187,12 @@ public class CommandProcessor {
 
         if (!F.isEmpty(notNullFields))
             res.setNotNullFields(notNullFields);
-
+        
+        if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
+                IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
+        )
+            res.fillAbsentPKsWithDefaults(true);
+    
         return res;
     }
 

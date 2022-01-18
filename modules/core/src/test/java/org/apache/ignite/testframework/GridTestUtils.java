@@ -66,6 +66,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -1196,7 +1200,31 @@ public final class GridTestUtils {
      * @param task Runnable.
      * @return Future with task result.
      */
+    public static IgniteInternalFuture runAsync(final RunnableX task) {
+        return runAsync(task,"async-runnable-runner");
+    }
+
+    /**
+     * Runs runnable task asyncronously.
+     *
+     * @param task Runnable.
+     * @return Future with task result.
+     */
     public static IgniteInternalFuture runAsync(final Runnable task, String threadName) {
+        return runAsync(() -> {
+            task.run();
+
+            return null;
+        }, threadName);
+    }
+
+    /**
+     * Runs runnable task asyncronously.
+     *
+     * @param task Runnable.
+     * @return Future with task result.
+     */
+    public static IgniteInternalFuture runAsync(final RunnableX task, String threadName) {
         return runAsync(() -> {
             task.run();
 
@@ -2095,13 +2123,41 @@ public final class GridTestUtils {
      * @param trustStore Trust store name.
      * @return SSL context factory used in test.
      */
-    public static Factory<SSLContext> sslTrustedFactory(String keyStore, String trustStore) {
+    public static SslContextFactory sslTrustedFactory(String keyStore, String trustStore) {
         SslContextFactory factory = new SslContextFactory();
 
-        factory.setKeyStoreFilePath(keyStorePath(keyStore));
-        factory.setKeyStorePassword(keyStorePassword().toCharArray());
-        factory.setTrustStoreFilePath(keyStorePath(trustStore));
-        factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
+
+        return factory;
+    }
+
+    /**
+     * Creates test-purposed SSL context factory from specified key store and trust store.
+     *
+     * @param keyStore Key store name.
+     * @param trustStore Trust store name.
+     * @return SSL context factory used in test.
+     */
+    public static GridSslBasicContextFactory gridSslTrustedFactory(String keyStore, String trustStore) {
+        GridSslBasicContextFactory factory = new GridSslBasicContextFactory();
+
+        if (keyStore != null) {
+            factory.setKeyStoreFilePath(keyStorePath(keyStore));
+            factory.setKeyStorePassword(keyStorePassword().toCharArray());
+        }
+
+        if (trustStore != null) {
+            factory.setTrustStoreFilePath(keyStorePath(trustStore));
+            factory.setTrustStorePassword(keyStorePassword().toCharArray());
+        }
 
         return factory;
     }
@@ -2647,5 +2703,35 @@ public final class GridTestUtils {
      */
     public static void suppressException(RunnableX runnableX) {
         runnableX.run();
+    }
+
+    /**
+     * Repeats messages which were sent to the logger into the alternative consumer.
+     * Useful for the intercepting of logs without breaking usual output to stdout.
+     * (It is painful to see failed tests at TC without actual logs).
+     *
+     * @param logger j.u.l.Logger.
+     * @param printer Alternative log consumer.
+     */
+    public static void echoLogOutput(@NotNull Logger logger, Consumer<String> printer) {
+        logger.addHandler(
+            new Handler() {
+                /** {@inheritDoc} */
+                @Override public void publish(LogRecord record) {
+                    printer.accept(record.getMessage());
+                    printer.accept(U.nl());
+                }
+
+                /** {@inheritDoc} */
+                @Override public void flush() {
+                    // No-op.
+                }
+
+                /** {@inheritDoc} */
+                @Override public void close() {
+                    // No-op.
+                }
+            }
+        );
     }
 }

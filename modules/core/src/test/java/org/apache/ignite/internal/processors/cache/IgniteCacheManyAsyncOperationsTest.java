@@ -20,8 +20,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -107,6 +112,35 @@ public class IgniteCacheManyAsyncOperationsTest extends IgniteCacheAbstractTest 
                         log.info("Done: " + (i + 1));
                 }
             }
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInvokeAsyncWithKeepBinary() throws Exception {
+        try (Ignite client = startGrid(gridCount())) {
+            assertTrue(client.configuration().isClientMode());
+
+            IgniteCache<Integer, BinaryObject> cache = client.cache(DEFAULT_CACHE_NAME).withKeepBinary();
+
+            BinaryObject value = client.binary().builder("TEST").build();
+
+            cache.put(1, value);
+
+            List<IgniteFuture<Void>> futs = IntStream.range(0, 1000).parallel().mapToObj(i ->
+                cache.invokeAsync(1, new EntryProcessor<Integer, BinaryObject, Void>() {
+                    @Override public Void process(MutableEntry<Integer, BinaryObject> e, Object... args) {
+                        BinaryObject val = e.getValue();
+
+                        assertNotNull(val);
+
+                        return null;
+                    }
+                })).collect(Collectors.toList());
+
+            futs.forEach(f -> f.get());
         }
     }
 }

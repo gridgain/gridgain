@@ -16,14 +16,14 @@
 
 package org.apache.ignite.internal.visor.id_and_tag;
 
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 /**
  *
@@ -59,8 +59,10 @@ public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChan
         }
 
         /** {@inheritDoc} */
-        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorClusterChangeTagTaskArg arg) throws IgniteException {
-                return update(arg.newTag());
+        @Override protected VisorClusterChangeTagTaskResult run(@Nullable VisorClusterChangeTagTaskArg arg) {
+            Objects.requireNonNull(arg);
+
+            return update(arg.newTag());
         }
 
         /**
@@ -69,21 +71,11 @@ public class VisorClusterChangeTagTask extends VisorOneNodeTask<VisorClusterChan
         private VisorClusterChangeTagTaskResult update(String newTag) {
             IgniteClusterEx cl = ignite.cluster();
 
-            boolean success = false;
-            String errMsg = null;
-
             String oldTag = cl.tag();
 
-            try {
-                cl.tag(newTag);
+            cl.tag(newTag);
 
-                success = true;
-            }
-            catch (IgniteCheckedException e) {
-                errMsg = e.getMessage();
-            }
-
-            return new VisorClusterChangeTagTaskResult(oldTag, Boolean.valueOf(success), errMsg);
+            return new VisorClusterChangeTagTaskResult(oldTag, true, null);
         }
     }
 }

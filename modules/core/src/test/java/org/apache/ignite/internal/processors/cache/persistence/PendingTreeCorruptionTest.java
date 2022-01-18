@@ -104,7 +104,7 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
         int expireCacheId = CU.cacheGroupId(expireCacheName, grpName);
 
         CacheGroupContext grp = ig.context().cache().cacheGroup(CU.cacheId(grpName));
-        IgniteCacheOffheapManager.CacheDataStore store = ((IgniteCacheOffheapManagerImpl)grp.offheap()).dataStore(0);
+        IgniteCacheOffheapManager.CacheDataStore store = ((IgniteCacheOffheapManagerImpl)grp.offheap()).dataStore(0, true);
 
         // Get pending tree of expire cache.
         PendingEntriesTree pendingTree = store.pendingTree();

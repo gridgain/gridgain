@@ -57,6 +57,8 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV3 implements Pa
      * {@inheritDoc}
      */
     @Override public boolean setUpdateTreeRoot(long pageAddr, long link) {
+        assertPageType(pageAddr);
+
         if (getUpdateTreeRoot(pageAddr) == link)
             return false;
 
@@ -78,7 +80,7 @@ public class PagePartitionMetaIOV1GG extends PagePartitionMetaIOV3 implements Pa
      * {@inheritDoc}
      */
     @Override public void upgradePage(long pageAddr) {
-        assert PageIO.getType(pageAddr) == getType();
+        assertPageType(pageAddr);
 
         int from = PageIO.getVersion(pageAddr);
 

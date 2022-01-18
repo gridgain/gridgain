@@ -98,7 +98,7 @@ public class ClusterChangeTagCommand extends AbstractCommand<String> {
         if (!argIter.hasNextSubArg())
             throw new IllegalArgumentException(ERR_NO_NEW_TAG_PROVIDED);
 
-        newTagArg = argIter.nextArg(ERR_NO_NEW_TAG_PROVIDED);
+        newTagArg = argIter.nextArg("cluster tag");
 
         if (newTagArg == null || newTagArg.isEmpty())
             throw new IllegalArgumentException(ERR_EMPTY_TAG_PROVIDED);

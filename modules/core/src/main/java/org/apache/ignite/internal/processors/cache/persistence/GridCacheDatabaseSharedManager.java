@@ -18,14 +18,9 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
-import java.nio.channels.OverlappingFileLockException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,6 +55,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.SystemProperty;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -91,6 +87,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ReencryptionStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
@@ -110,6 +107,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxLog;
 import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
@@ -173,6 +171,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -208,12 +207,15 @@ import static org.apache.ignite.internal.util.IgniteUtils.checkpointBufferSize;
 @SuppressWarnings({"unchecked", "NonPrivateFieldAccessedInSynchronizedContext"})
 public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedManager {
     /** */
+    @SystemProperty(value = "Sets the flag controlling if the I/O sync needs to be skipped on a checkpoint")
     public static final String IGNITE_PDS_CHECKPOINT_TEST_SKIP_SYNC = "IGNITE_PDS_CHECKPOINT_TEST_SKIP_SYNC";
 
     /** Skip checkpoint on node stop flag. */
+    @SystemProperty(value = "Sets the flag controlling of a checkpoint needs to be skipped during a node termination")
     public static final String IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP";
 
     /** Log read lock holders. */
+    @SystemProperty(value = "Enables log checkpoint read lock holders")
     public static final String IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS = "IGNITE_PDS_LOG_CP_READ_LOCK_HOLDERS";
 
     /** MemoryPolicyConfiguration name reserved for meta store. */
@@ -261,7 +263,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final boolean preferWalRebalance = getBoolean(IGNITE_PREFER_WAL_REBALANCE);
 
     /** Value of property for throttling policy override. */
-    private final String throttlingPlcOverride = IgniteSystemProperties.getString(
+    private final String throttlingPolicyOverride = IgniteSystemProperties.getString(
         IgniteSystemProperties.IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED);
 
     /** Defragmentation regions size percentage of configured ones. */
@@ -313,7 +315,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      * Lock holder for compatible folders mode. Null if lock holder was created at start node. <br>
      * In this case lock is held on PDS resover manager and it is not required to manage locking here
      */
-    @Nullable private FileLockHolder fileLockHolder;
+    @Nullable private NodeFileLockHolder fileLockHolder;
 
     /** Lock wait time. */
     private final long lockWaitTime;
@@ -372,10 +374,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     private final SimpleDistributedProperty<Integer> historicalRebalanceThreshold =
         new SimpleDistributedProperty<>(HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY, Integer::parseInt);
 
+    /** */
+    private GridKernalContext ctx;
+
     /**
      * @param ctx Kernal context.
      */
     public GridCacheDatabaseSharedManager(GridKernalContext ctx) {
+        this.ctx = ctx;
+
         IgniteConfiguration cfg = ctx.config();
 
         persistenceCfg = cfg.getDataStorageConfiguration();
@@ -543,10 +550,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
                 kernalCtx.cache(),
-                cpFreqDeviation::get
+                cpFreqDeviation::get,
+                kernalCtx.pools().getSystemExecutorService()
             );
 
-            final FileLockHolder preLocked = kernalCtx.pdsFolderResolver()
+            final NodeFileLockHolder preLocked = kernalCtx.pdsFolderResolver()
                 .resolveFolders()
                 .getLockedFileLockHolder();
 
@@ -730,12 +738,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /**
      * @param preLocked Pre-locked file lock holder.
      */
-    private void acquireFileLock(FileLockHolder preLocked) throws IgniteCheckedException {
+    private void acquireFileLock(NodeFileLockHolder preLocked) throws IgniteCheckedException {
         if (cctx.kernalContext().clientNode())
             return;
 
         fileLockHolder = preLocked == null ?
-            new FileLockHolder(storeMgr.workDir().getPath(), cctx.kernalContext(), log) : preLocked;
+            new NodeFileLockHolder(storeMgr.workDir().getPath(), cctx.kernalContext(), log) : preLocked;
 
         if (!fileLockHolder.isLocked()) {
             if (log.isDebugEnabled())
@@ -1292,13 +1300,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             ? PageMemoryImpl.ThrottlingPolicy.SPEED_BASED
             : PageMemoryImpl.ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
 
-        if (throttlingPlcOverride != null) {
+        if (throttlingPolicyOverride != null) {
             try {
-                plc = PageMemoryImpl.ThrottlingPolicy.valueOf(throttlingPlcOverride.toUpperCase());
+                plc = PageMemoryImpl.ThrottlingPolicy.valueOf(throttlingPolicyOverride.toUpperCase());
             }
             catch (IllegalArgumentException e) {
                 log.error("Incorrect value of IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED property. " +
-                    "The default throttling policy will be used [plc=" + throttlingPlcOverride +
+                    "The default throttling policy will be used [plc=" + throttlingPolicyOverride +
                     ", defaultPlc=" + plc + ']');
             }
         }
@@ -1392,7 +1400,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     cctx.database().checkpointReadLock();
 
                     try {
-                        cacheGroup.offheap().restorePartitionStates(Collections.emptyMap());
+                        cacheGroup.offheap().restorePartitionStates(emptyMap());
 
                         if (cacheGroup.localStartVersion().equals(fut.initialVersion()))
                             cacheGroup.topology().afterStateRestored(fut.initialVersion());
@@ -2580,6 +2588,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             switch (rec.type()) {
                 case MVCC_DATA_RECORD:
                 case DATA_RECORD:
+                case DATA_RECORD_V2:
                     if (entryPred.apply(rec, null)) {
                         checkpointReadLock();
 
@@ -2647,10 +2656,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         if (ctx != null && !ctx.isLocal()) {
                             try {
                                 // Ensure the partition store exists.
-                                ctx.topology().forceCreatePartition(rbRec.partitionId());
+                                GridDhtLocalPartition part = ctx.topology().forceCreatePartition(rbRec.partitionId());
 
-                                ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                    rbRec.range());
+                                ctx.offheap().dataStore(part).updateInitialCounter(rbRec.start(), rbRec.range());
                             }
                             catch (IgniteCheckedException e) {
                                 throw new IgniteException(e);
@@ -2835,18 +2843,19 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         CacheGroupContext ctx = cctx.cache().cacheGroup(rbRec.groupId());
 
                         if (ctx != null && !ctx.isLocal()) {
-                            ctx.topology().forceCreatePartition(rbRec.partitionId());
+                            GridDhtLocalPartition locPart = ctx.topology().forceCreatePartition(rbRec.partitionId());
 
-                            ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                rbRec.range());
+                            ctx.offheap().dataStore(locPart).updateInitialCounter(rbRec.start(), rbRec.range());
                         }
 
                         break;
 
                     case MVCC_DATA_RECORD:
                     case DATA_RECORD:
+                    case DATA_RECORD_V2:
                     case ENCRYPTED_DATA_RECORD:
                     case ENCRYPTED_DATA_RECORD_V2:
+                    case ENCRYPTED_DATA_RECORD_V3:
                         DataRecord dataRec = (DataRecord)rec;
 
                         for (DataEntry dataEntry : dataRec.writeEntries()) {
@@ -2955,6 +2964,47 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         }
 
                         break;
+
+                    case PARTITION_CLEARING_START_RECORD:
+                        PartitionClearingStartRecord rec0 = (PartitionClearingStartRecord) rec;
+
+                        CacheGroupContext grp = this.ctx.cache().cacheGroup(rec0.groupId());
+
+                        if (grp != null) {
+                            GridDhtLocalPartition part;
+
+                            try {
+                                part = grp.topology().forceCreatePartition(rec0.partitionId());
+                            }
+                            catch (IgniteCheckedException e) {
+                                throw new IgniteException("Cannot get or create a partition [groupId=" + rec0.groupId() +
+                                    ", partitionId=" + rec0.partitionId() + "]", e);
+                            }
+
+                            stripedApply(() -> {
+                                try {
+                                    part.updateClearVersion(rec0.clearVersion());
+
+                                    PartitionsEvictManager.PartitionEvictionTask task = grp.
+                                        shared().
+                                        evict().
+                                        scheduleEviction(grp, part, PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY);
+
+                                    if (task.start())
+                                        task.finishFuture().get();
+
+                                    part.updateClearVersion();
+                                }
+                                catch (IgniteCheckedException e) {
+                                    U.error(log, "Failed to apply partition clearing record, " + rec0);
+
+                                    applyError.compareAndSet(null, e);
+                                }
+                            }, rec0.groupId(), rec0.partitionId(), exec, semaphore);
+                        }
+
+                        break;
+
                     default:
                         // Skip other records.
                 }
@@ -3102,51 +3152,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /**
      *
      */
-    public static class FileLockHolder implements AutoCloseable {
-        /** Lock file name. */
-        private static final String lockFileName = "lock";
-
-        /** File. */
-        private final File file;
-
-        /** Channel. */
-        private final RandomAccessFile lockFile;
-
-        /** Lock. */
-        private volatile FileLock lock;
-
+    public static class NodeFileLockHolder extends FileLockHolder {
         /** Kernal context to generate Id of locked node in file. */
         @NotNull private final GridKernalContext ctx;
 
-        /** Logger. */
-        private final IgniteLogger log;
-
         /**
-         * @param path Path.
+         * @param rootDir Root directory for lock file.
+         * @param ctx Kernal context.
+         * @param log Log.
          */
-        public FileLockHolder(String path, @NotNull GridKernalContext ctx, IgniteLogger log) {
-            try {
-                file = Paths.get(path, lockFileName).toFile();
+        public NodeFileLockHolder(String rootDir, @NotNull GridKernalContext ctx, IgniteLogger log) {
+            super(rootDir, log);
 
-                lockFile = new RandomAccessFile(file, "rw");
-
-                this.ctx = ctx;
-                this.log = log;
-            }
-            catch (IOException e) {
-                throw new IgniteException(e);
-            }
+            this.ctx = ctx;
         }
 
-        /**
-         * @param lockWaitTimeMillis During which time thread will try capture file lock.
-         * @throws IgniteCheckedException If failed to capture file lock.
-         */
-        public void tryLock(long lockWaitTimeMillis) throws IgniteCheckedException {
-            assert lockFile != null;
-
-            FileChannel ch = lockFile.getChannel();
-
+        /** {@inheritDoc} */
+        @Override public String lockInfo() {
             SB sb = new SB();
 
             //write node id
@@ -3181,108 +3203,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 sb.a("]");
             }
 
-            String failMsg;
-
-            try {
-                String content = null;
-
-                // Try to get lock, if not available wait 1 sec and re-try.
-                for (int i = 0; i < lockWaitTimeMillis; i += 1000) {
-                    try {
-                        lock = ch.tryLock(0, 1, false);
-
-                        if (lock != null && lock.isValid()) {
-                            writeContent(sb.toString());
-
-                            return;
-                        }
-                    }
-                    catch (OverlappingFileLockException ignore) {
-                        if (content == null)
-                            content = readContent();
-
-                        log.warning("Failed to acquire file lock. Will try again in 1s " +
-                            "[nodeId=" + ctx.localNodeId() + ", holder=" + content +
-                            ", path=" + file.getAbsolutePath() + ']');
-                    }
-
-                    U.sleep(1000);
-                }
-
-                if (content == null)
-                    content = readContent();
-
-                failMsg = "Failed to acquire file lock [holder=" + content + ", time=" + (lockWaitTimeMillis / 1000) +
-                    " sec, path=" + file.getAbsolutePath() + ']';
-            }
-            catch (Exception e) {
-                throw new IgniteCheckedException(e);
-            }
-
-            if (failMsg != null)
-                throw new IgniteCheckedException(failMsg);
+            return sb.toString();
         }
 
-        /**
-         * Write node id (who captured lock) into lock file.
-         *
-         * @param content Node id.
-         * @throws IOException if some fail while write node it.
-         */
-        private void writeContent(String content) throws IOException {
-            FileChannel ch = lockFile.getChannel();
-
-            byte[] bytes = content.getBytes();
-
-            ByteBuffer buf = ByteBuffer.allocate(bytes.length);
-            buf.put(bytes);
-
-            buf.flip();
-
-            ch.write(buf, 1);
-
-            ch.force(false);
-        }
-
-        /**
-         *
-         */
-        private String readContent() throws IOException {
-            FileChannel ch = lockFile.getChannel();
-
-            ByteBuffer buf = ByteBuffer.allocate((int)(ch.size() - 1));
-
-            ch.read(buf, 1);
-
-            String content = new String(buf.array());
-
-            buf.clear();
-
-            return content;
-        }
-
-        /** Locked or not. */
-        public boolean isLocked() {
-            return lock != null && lock.isValid();
-        }
-
-        /** Releases file lock */
-        public void release() {
-            U.releaseQuiet(lock);
-        }
-
-        /** Closes file channel */
-        @Override public void close() {
-            release();
-
-            U.closeQuiet(lockFile);
-        }
-
-        /**
-         * @return Absolute path to lock file.
-         */
-        private String lockPath() {
-            return file.getAbsolutePath();
+        /** {@inheritDoc} */
+        @Override protected String warningMessage(String lockInfo) {
+            return "Failed to acquire file lock. Will try again in 1s " +
+                "[nodeId=" + ctx.localNodeId() + ", holder=" + lockInfo +
+                ", path=" + lockPath() + ']';
         }
     }
 
@@ -3377,7 +3305,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         checkpointReadLock();
 
         try {
-            CheckpointEntry lastCp = checkpointHistory().lastCheckpointMarkingAsInapplicable(grpId);
+            CheckpointEntry lastCp = checkpointManager.checkpointMarkerStorage().removeFromEarliestCheckpoints(grpId);
+
             long lastCpTs = lastCp != null ? lastCp.timestamp() : 0;
 
             if (lastCpTs != 0)

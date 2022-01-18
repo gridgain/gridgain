@@ -176,10 +176,12 @@
     <ClInclude Include="..\..\include\ignite\common\bits.h" />
     <ClInclude Include="..\..\include\ignite\common\lazy.h" />
     <ClInclude Include="..\..\include\ignite\common\platform_utils.h" />
+    <ClInclude Include="..\..\include\ignite\common\factory.h" />
     <ClInclude Include="..\..\include\ignite\common\promise.h" />
     <ClInclude Include="..\..\include\ignite\common\reference_impl.h" />
     <ClInclude Include="..\..\include\ignite\common\shared_state.h" />
     <ClInclude Include="..\..\include\ignite\common\utils.h" />
+    <ClInclude Include="..\..\include\ignite\common\thread_pool.h" />
     <ClInclude Include="..\..\include\ignite\date.h" />
     <ClInclude Include="..\..\include\ignite\future.h" />
     <ClInclude Include="..\..\include\ignite\guid.h" />
@@ -201,6 +203,7 @@
     <ClCompile Include="..\..\src\common\concurrent.cpp" />
     <ClCompile Include="..\..\src\common\decimal.cpp" />
     <ClCompile Include="..\..\src\common\utils.cpp" />
+    <ClCompile Include="..\..\src\common\thread_pool.cpp" />
     <ClCompile Include="..\..\src\date.cpp" />
     <ClCompile Include="..\..\src\guid.cpp" />
     <ClCompile Include="..\..\src\ignite_error.cpp" />

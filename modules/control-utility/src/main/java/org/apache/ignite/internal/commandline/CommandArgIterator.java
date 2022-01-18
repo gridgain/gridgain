@@ -16,10 +16,8 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CommandArgIterator {
     /** */
-    private Iterator<String> argsIt;
+    private final Iterator<String> argsIt;
 
     /** */
     private String peekedArg;
@@ -195,6 +193,21 @@ public class CommandArgIterator {
             namesSet.add(name.trim());
         }
         return namesSet;
+    }
+
+    /**
+     * @param argName Name of the argument to be parsed.
+     * @return UUID value.
+     */
+    public UUID nextUuidArg(String argName) {
+        String str = nextArg("Expecting " + argName);
+
+        try {
+            return UUID.fromString(str);
+        }
+        catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("Invalid value for " + argName + " (must be UUID): " + str);
+        }
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,10 +103,19 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     /** File suffix. */
     public static final String FILE_SUFFIX = ".bin";
 
-    /** Suffix for zip files */
+    /** Suffix for zip files. */
     public static final String ZIP_SUFFIX = ".zip";
 
-    /** Suffix for tmp files */
+    /** Suffix for ZSTD compressed files. */
+    public static final String ZSTD_SUFFIX = ".zst";
+
+    /** Suffix for LZ4 compressed files. */
+    public static final String LZ4_SUFFIX = ".lz4";
+
+    /** Suffix for SNAPPY compressed files. */
+    public static final String SNAPPY_SUFFIX = ".snappy";
+
+    /** Suffix for tmp files. */
     public static final String TMP_SUFFIX = ".tmp";
 
     /** Partition file prefix. */
@@ -222,7 +231,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         final PdsFolderSettings folderSettings = ctx.pdsFolderResolver().resolveFolders();
 
-        storeWorkDir = new File(folderSettings.persistentStoreRootPath(), folderSettings.folderName());
+        storeWorkDir = folderSettings.persistentStoreNodePath();
 
         U.ensureDirectory(storeWorkDir, "page store work directory", log);
 
@@ -555,12 +564,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void onPartitionCreated(int grpId, int partId) {
-        // No-op.
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onPartitionDestroyed(int grpId, int partId, int tag) throws IgniteCheckedException {
+    @Override public void truncate(int grpId, int partId, int tag) throws IgniteCheckedException {
         assert partId <= PageIdAllocator.MAX_PARTITION_ID;
 
         PageStore store = getStore(grpId, partId);

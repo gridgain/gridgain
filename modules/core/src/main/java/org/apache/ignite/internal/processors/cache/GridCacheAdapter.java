@@ -193,15 +193,22 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     /** clearLocally() split threshold. */
     public static final int CLEAR_ALL_SPLIT_THRESHOLD = 10000;
 
+    /** @see IgniteSystemProperties#IGNITE_CACHE_START_SIZE */
+    public static final int DFLT_CACHE_START_SIZE = 4096;
+
     /** Default cache start size. */
     public static final int DFLT_START_CACHE_SIZE = IgniteSystemProperties.getInteger(
-        IgniteSystemProperties.IGNITE_CACHE_START_SIZE, 4096);
+        IgniteSystemProperties.IGNITE_CACHE_START_SIZE, DFLT_CACHE_START_SIZE);
 
     /** Size of keys batch to removeAll. */
     private static final int REMOVE_ALL_KEYS_BATCH = 10000;
 
+    /** @see IgniteSystemProperties#IGNITE_CACHE_RETRIES_COUNT */
+    public static final int DFLT_CACHE_RETRIES_COUNT = 100;
+
     /** Maximum number of retries when topology changes. */
-    public static final int MAX_RETRIES = IgniteSystemProperties.getInteger(IGNITE_CACHE_RETRIES_COUNT, 100);
+    public static final int MAX_RETRIES = IgniteSystemProperties.getInteger(IGNITE_CACHE_RETRIES_COUNT,
+        DFLT_CACHE_RETRIES_COUNT);
 
     /** Minimum version supporting partition preloading. */
     private static final IgniteProductVersion PRELOAD_PARTITION_SINCE = IgniteProductVersion.fromString("2.7.0");
@@ -3331,7 +3338,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 false,
                 topVer,
                 replicate ? DR_LOAD : DR_NONE,
-                true);
+                true,
+                false);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException("Failed to put cache value: " + entry, e);
@@ -4085,6 +4093,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                                 if (ctx.kernalContext().isStopping())
                                     fut0 = new GridFinishedFuture<>(
                                         new IgniteCheckedException("Operation has been cancelled (node is stopping)."));
+                                else if (ctx.gate().isStopped())
+                                    fut0 = new GridFinishedFuture<>(new CacheStoppedException(ctx.name()));
                                 else {
                                     try {
                                         fut0 = op.op(tx0, opCtx).chain(clo);
@@ -4958,7 +4968,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             AffinityTopologyVersion txTopVer = tx.topologyVersionSnapshot();
 
             if (txTopVer != null)
-                return op(tx, (AffinityTopologyVersion)null);
+                return runOp(tx, (AffinityTopologyVersion)null, opCtx);
 
             // Tx needs affinity for entry creation, wait when affinity is ready to avoid blocking inside async operation.
             final AffinityTopologyVersion topVer = ctx.shared().exchange().readyAffinityVersion();
@@ -4966,7 +4976,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             IgniteInternalFuture<?> topFut = ctx.shared().exchange().affinityReadyFuture(topVer);
 
             if (topFut == null || topFut.isDone())
-                return op(tx, topVer);
+                return runOp(tx, topVer, opCtx);
             else
                 return waitTopologyFuture(topFut, topVer, tx, opCtx);
         }

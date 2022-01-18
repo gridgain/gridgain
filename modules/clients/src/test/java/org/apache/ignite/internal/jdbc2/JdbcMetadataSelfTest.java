@@ -348,7 +348,16 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "METRICS",
             "STATISTICS_CONFIGURATION",
             "STATISTICS_PARTITION_DATA",
-            "STATISTICS_LOCAL_DATA"
+            "STATISTICS_LOCAL_DATA",
+            "DS_QUEUES",
+            "DS_SETS",
+            "DS_ATOMICSEQUENCES",
+            "DS_ATOMICLONGS",
+            "DS_ATOMICREFERENCES",
+            "DS_ATOMICSTAMPED",
+            "DS_COUNTDOWNLATCHES",
+            "DS_SEMAPHORES",
+            "DS_REENTRANTLOCKS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))

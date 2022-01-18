@@ -18,6 +18,8 @@ package org.apache.ignite.events;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.compute.ComputeTaskSession;
@@ -879,6 +881,20 @@ public interface EventType {
      * @see IgniteCluster#baselineAutoAdjustTimeout(long)
      */
     public static final int EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED = 148;
+
+    /**
+     * Built-in event type: cluster ID has been changed by user request.
+     * Event includes the following information: old ID, new ID.
+     *
+     * <p>
+     * Fired when new ID is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#id(UUID)
+     */
+    public static final int EVT_CLUSTER_ID_UPDATED = 149;
 
     /**
      * All checkpoint events. This array can be directly passed into

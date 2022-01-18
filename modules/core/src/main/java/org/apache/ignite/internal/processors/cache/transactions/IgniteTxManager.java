@@ -175,10 +175,26 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public static final String TXS_MON_LIST_DESC = "Running transactions";
 
     /** Default maximum number of transactions that have completed. */
-    private static final int DFLT_MAX_COMPLETED_TX_CNT = 262144; // 2^18
+    public static final int DFLT_MAX_COMPLETED_TX_CNT = 262144; // 2^18
+
+    /** @see IgniteSystemProperties#IGNITE_SLOW_TX_WARN_TIMEOUT */
+    public static final int DFLT_SLOW_TX_WARN_TIMEOUT = 0;
+
+    /** @see IgniteSystemProperties#IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS */
+    public static final int DFLT_TX_DEADLOCK_DETECTION_MAX_ITERS = 1000;
+
+    /** @see IgniteSystemProperties#IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT */
+    public static final int DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT = 500;
+
+    /** @see IgniteSystemProperties#IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE */
+    public static final int DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE = 256;
+
+    /** @see IgniteSystemProperties#IGNITE_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT */
+    public static final int DFLT_TRANSACTION_TIME_DUMP_SAMPLES_PER_SECOND_LIMIT = 5;
 
     /** Slow tx warn timeout (initialized to 0). */
-    private static final int SLOW_TX_WARN_TIMEOUT = Integer.getInteger(IGNITE_SLOW_TX_WARN_TIMEOUT, 0);
+    private static final int SLOW_TX_WARN_TIMEOUT = Integer.getInteger(IGNITE_SLOW_TX_WARN_TIMEOUT,
+        DFLT_SLOW_TX_WARN_TIMEOUT);
 
     /** Returns {@code true} if transaction has completed states. */
     public static final Predicate<TxRecord> COMPLETED_TX_STATES = new Predicate<TxRecord>() {
@@ -198,20 +214,26 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private Set<GridCacheVersion> uncommitedTx = new HashSet<>();
 
     /** One phase commit deferred ack request timeout. */
-    public static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT =
-        Integer.getInteger(IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT, 500);
+    public static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT = Integer.getInteger(
+        IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT, DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT);
 
     /** One phase commit deferred ack request buffer size. */
-    private static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE =
-        Integer.getInteger(IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE, 256);
+    private static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE = Integer.getInteger(
+        IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE, DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE);
 
     /** Node left rollback message. */
     static final String NODE_LEFT_ROLLBACK_MSG = "Primary owner [nodeId=%s, consistentId=%s] of an affected partition " +
         "has left the topology. The transaction was rolled back.";
 
+    /** @see IgniteSystemProperties#IGNITE_TX_OWNER_DUMP_REQUESTS_ALLOWED */
+    public static final boolean DFLT_TX_OWNER_DUMP_REQUESTS_ALLOWED = true;
+
+    /** @see IgniteSystemProperties#IGNITE_DUMP_TX_COLLISIONS_INTERVAL */
+    public static final int DFLT_DUMP_TX_COLLISIONS_INTERVAL = 1000;
+
     /** Deadlock detection maximum iterations. */
     static int DEADLOCK_MAX_ITERS =
-        IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
+        IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, DFLT_TX_DEADLOCK_DETECTION_MAX_ITERS);
 
     /** Lower tx collisions queue size threshold. */
     private static final int COLLISIONS_QUEUE_THRESHOLD = 100;
@@ -3220,7 +3242,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                     for (Map.Entry<GridCacheMapEntry, Integer> info : store.entrySet()) {
                         GridCacheAdapter<Object, Object> cacheCtx = info.getKey().context().cache();
 
-                        metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
+                        if (cacheCtx != null)
+                            metricPerCacheStore.computeIfAbsent(cacheCtx, k -> new ArrayList<>()).add(info);
                     }
 
                     store.clear();
@@ -3300,13 +3323,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                                         if (tx.state() == PREPARED)
                                             commitIfPrepared(tx, Collections.singleton(evtNodeId));
                                             // If we could not mark tx as rollback, it means that transaction is being committed.
-                                        else if (tx.setRollbackOnly())
+                                        else if (tx.state() == MARKED_ROLLBACK || tx.setRollbackOnly())
                                             tx.rollbackAsync();
                                     });
                                 }
                                 // If we could not mark tx as rollback, it means that transaction
                                 // is either being committed or already marked as rollback.
-                                else if (tx.setRollbackOnly() || tx.state() == MARKED_ROLLBACK)
+                                else if (tx.state() == MARKED_ROLLBACK || tx.setRollbackOnly())
                                     tx.rollbackAsync();
                             }
                         }

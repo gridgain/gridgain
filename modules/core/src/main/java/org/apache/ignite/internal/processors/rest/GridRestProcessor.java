@@ -96,6 +96,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_ILLEGAL_STATE;
@@ -114,10 +115,10 @@ public class GridRestProcessor extends GridProcessorAdapter {
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
 
     /** Default session timeout, in seconds. */
-    private static final int DFLT_SES_TIMEOUT = 30;
+    public static final int DFLT_SES_TIMEOUT = 30;
 
     /** The default interval used to invalidate sessions, in seconds. */
-    private static final int DFLT_SES_TOKEN_INVALIDATE_INTERVAL = 5 * 60;
+    public static final int DFLT_SES_TOKEN_INVALIDATE_INTERVAL = 5 * 60;
 
     /** Index of task name wrapped by VisorGatewayTask */
     private static final int WRAPPED_TASK_IDX = 1;
@@ -962,6 +963,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case ADD_USER:
             case REMOVE_USER:
             case UPDATE_USER:
+            case PROBE:
                 break;
 
             default:

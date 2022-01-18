@@ -337,7 +337,7 @@ public class GridDhtPartitionSupplier {
                     assert loc != null && loc.state() == GridDhtPartitionState.OWNING
                         : "Partition should be in OWNING state: " + loc;
 
-                    supplyMsg.addEstimatedKeysCount(grp.offheap().totalPartitionEntriesCount(part));
+                    supplyMsg.addEstimatedKeysCount(loc.dataStore().fullSize());
                 }
 
                 for (int i = 0; i < histMap.size(); i++) {

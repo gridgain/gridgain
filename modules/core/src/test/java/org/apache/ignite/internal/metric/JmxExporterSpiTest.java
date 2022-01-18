@@ -90,8 +90,6 @@ import org.junit.Test;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
-import static org.apache.ignite.internal.managers.systemview.GridSystemViewManager.STREAM_POOL_QUEUE_VIEW;
-import static org.apache.ignite.internal.managers.systemview.GridSystemViewManager.SYS_POOL_QUEUE_VIEW;
 import static org.apache.ignite.internal.managers.systemview.ScanQuerySystemView.SCAN_QRY_SYS_VIEW;
 import static org.apache.ignite.internal.managers.systemview.SystemViewMBean.FILTER_OPERATION;
 import static org.apache.ignite.internal.managers.systemview.SystemViewMBean.VIEWS;
@@ -113,6 +111,8 @@ import static org.apache.ignite.internal.processors.metric.GridMetricManager.IGN
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLI_CONN_VIEW;
+import static org.apache.ignite.internal.processors.pool.PoolProcessor.STREAM_POOL_QUEUE_VIEW;
+import static org.apache.ignite.internal.processors.pool.PoolProcessor.SYS_POOL_QUEUE_VIEW;
 import static org.apache.ignite.internal.processors.service.IgniteServiceProcessor.SVCS_VIEW;
 import static org.apache.ignite.internal.processors.task.GridTaskProcessor.TASKS_VIEW;
 import static org.apache.ignite.internal.util.IgniteUtils.toStringSafe;
@@ -221,6 +221,12 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
 
         for (String metricName : res)
             assertNotNull(metricName, dataRegionMBean.getAttribute(metricName));
+
+        DataRegionConfiguration cfg =
+            ignite.configuration().getDataStorageConfiguration().getDefaultDataRegionConfiguration();
+
+        assertEquals(cfg.getInitialSize(), dataRegionMBean.getAttribute("InitialSize"));
+        assertEquals(cfg.getMaxSize(), dataRegionMBean.getAttribute("MaxSize"));
     }
 
     /** */
@@ -777,7 +783,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
         assertEquals(toStringSafe(ignite.context().discovery().topologyVersionEx()), view.get("topology"));
         assertEquals(TEST_TRANSFORMER, view.get("transformer"));
         assertFalse((Boolean)view.get("keepBinary"));
-        assertEquals("null", view.get("subjectId"));
+        assertNull(view.get("subjectId"));
         assertNull(view.get("taskName"));
 
         qryRes1.close();
@@ -929,7 +935,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
             assertEquals(toStringSafe(client1.context().discovery().topologyVersionEx()), view.get("topology"));
             assertEquals(TEST_TRANSFORMER, view.get("transformer"));
             assertFalse((Boolean)view.get("keepBinary"));
-            assertEquals("null", view.get("subjectId"));
+            assertNull(view.get("subjectId"));
             assertNull(view.get("taskName"));
             assertEquals(10, view.get("pageSize"));
         };
@@ -950,7 +956,7 @@ public class JmxExporterSpiTest extends AbstractExporterSpiTest {
             assertEquals(toStringSafe(client2.context().discovery().topologyVersionEx()), view.get("topology"));
             assertNull(view.get("transformer"));
             assertTrue((Boolean)view.get("keepBinary"));
-            assertEquals("null", view.get("subjectId"));
+            assertNull(view.get("subjectId"));
             assertNull(view.get("taskName"));
             assertEquals(20, view.get("pageSize"));
         };

@@ -17,8 +17,7 @@
 package org.apache.ignite.internal.mxbean;
 
 import org.apache.ignite.mxbean.MXBeanDescription;
-import org.apache.ignite.mxbean.MXBeanParametersDescriptions;
-import org.apache.ignite.mxbean.MXBeanParametersNames;
+import org.apache.ignite.mxbean.MXBeanParameter;
 
 /**
  * An MX bean allowing to monitor and tune SQL queries.
@@ -39,9 +38,11 @@ public interface SqlQueryMXBean {
      * @param longQueryWarningTimeout Timeout in milliseconds after which long query warning will be printed.
      */
     @MXBeanDescription("Sets timeout in milliseconds after which long query warning will be printed.")
-    @MXBeanParametersNames("longQueryWarningTimeout")
-    @MXBeanParametersDescriptions("Timeout in milliseconds after which long query warning will be printed.")
-    void setLongQueryWarningTimeout(long longQueryWarningTimeout);
+    void setLongQueryWarningTimeout(
+        @MXBeanParameter(name = "longQueryWarningTimeout",
+            description = "Timeout in milliseconds after which long query warning will be printed.")
+            long longQueryWarningTimeout
+    );
 
     /**
      * @return Long query timeout multiplier.
@@ -64,9 +65,10 @@ public interface SqlQueryMXBean {
     @MXBeanDescription("Sets long query timeout multiplier. The warning will be printed after: timeout, " +
         "timeout * multiplier, timeout * multiplier * multiplier, etc. " +
         "If the multiplier <= 1, the warning message is printed once.")
-    @MXBeanParametersNames("longQueryTimeoutMultiplier")
-    @MXBeanParametersDescriptions("Long query timeout multiplier.")
-    void setLongQueryTimeoutMultiplier(int longQueryTimeoutMultiplier);
+    void setLongQueryTimeoutMultiplier(
+        @MXBeanParameter(name = "longQueryTimeoutMultiplier", description = "Long query timeout multiplier.")
+            int longQueryTimeoutMultiplier
+    );
 
     /**
      * @return Threshold for the number of rows of the result, when count of fetched rows is bigger than the threshold
@@ -85,10 +87,14 @@ public interface SqlQueryMXBean {
      */
     @MXBeanDescription("Sets threshold for the number of rows of the result, when count of fetched rows is bigger than the threshold " +
         "warning will be printed")
-    @MXBeanParametersNames("rsSizeThreshold")
-    @MXBeanParametersDescriptions("Threshold for the number of rows of the result, when count of fetched rows is bigger than the " +
-        "threshold warning will be printed.")
-    void setResultSetSizeThreshold(long rsSizeThreshold);
+    void setResultSetSizeThreshold(
+        @MXBeanParameter(
+            name = "rsSizeThreshold",
+            description = "Threshold for the number of rows of the result, when count of fetched rows " +
+                "is bigger than the threshold warning will be printed."
+        )
+        long rsSizeThreshold
+    );
 
     /**
      * Gets result set size threshold multiplier. The warning will be printed after:
@@ -114,9 +120,13 @@ public interface SqlQueryMXBean {
     @MXBeanDescription("Sets result set size threshold multiplier. The warning will be printed when size " +
         "of result set is bugger than: threshold, threshold * multiplier, threshold * multiplier * multiplier," +
         "etc. If the multiplier <= 1, the warning message is printed once.")
-    @MXBeanParametersNames("rsSizeThresholdMultiplier")
-    @MXBeanParametersDescriptions("TResult set size threshold multiplier.")
-    void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMultiplier);
+    void setResultSetSizeThresholdMultiplier(
+        @MXBeanParameter(
+            name = "rsSizeThresholdMultiplier",
+            description = "TResult set size threshold multiplier."
+        )
+        int rsSizeThresholdMultiplier
+    );
 
     /**
      * Gets global query quota.
@@ -149,11 +159,15 @@ public interface SqlQueryMXBean {
         " an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
         "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
         "heavy analytics query. If you want to control memory quota on per-query basis consider sqlQueryMemoryQuota}")
-    @MXBeanParametersNames("size")
-    @MXBeanParametersDescriptions("Size of global memory pool for SQL queries in bytes. Can be followed by the" +
-        "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
-        "For example:  '1000', '10M', '100k', '1G', '70%'")
-    void setSqlGlobalMemoryQuota(String size);
+    void setSqlGlobalMemoryQuota(
+        @MXBeanParameter(
+            name = "size",
+            description = "Size of global memory pool for SQL queries in bytes. Can be followed by the" +
+                "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of " +
+                "the current heap. For example:  '1000', '10M', '100k', '1G', '70%'"
+        )
+        String size
+    );
 
 
     /**
@@ -197,11 +211,15 @@ public interface SqlQueryMXBean {
         " If disk offloading is disabled, the query caller gets an error that quota was exceeded. </li>\n" +
         " If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>\n" +
         " See SqlOffloadingEnabled for details")
-    @MXBeanParametersNames("size")
-    @MXBeanParametersDescriptions("Size of per-query memory pool for SQL queries in bytes. Can be followed by the" +
-        "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
-        "For example:  '1000', '10M', '100k', '1G', '70%'")
-    void setSqlQueryMemoryQuota(String size);
+    void setSqlQueryMemoryQuota(
+        @MXBeanParameter(
+            name = "size",
+            description = "Size of per-query memory pool for SQL queries in bytes. Can be followed by the" +
+                "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of " +
+                "the current heap. For example:  '1000', '10M', '100k', '1G', '70%'"
+        )
+        String size
+    );
 
     /**
      * Gets offloading flag.
@@ -221,7 +239,8 @@ public interface SqlQueryMXBean {
     @MXBeanDescription("Offloading flag specifies the query execution behavior on either global or query memory " +
         "quota excess. If flag is set to 'true', the query result will be offloaded to disk. If flag is set to 'false', " +
         "an exception will be thrown.")
-    @MXBeanParametersNames("enabled")
-    @MXBeanParametersDescriptions("The value whether offloading flag is enabled.")
-    void setSqlOffloadingEnabled(boolean enabled);
+    void setSqlOffloadingEnabled(
+        @MXBeanParameter(name = "enabled", description = "The value whether offloading flag is enabled.")
+        boolean enabled
+    );
 }

@@ -92,7 +92,6 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntryType;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.CompactablePageIO;
@@ -136,6 +135,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTAN
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_DATA_FILENAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderResolver.genNewStyleSubfolderName;
 
 /**
  *
@@ -783,8 +783,7 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
      * @throws IgniteCheckedException If fail.
      */
     private File cacheDir(final String cacheName, final String consId) throws IgniteCheckedException {
-        final String subfolderName
-            = PdsConsistentIdProcessor.genNewStyleSubfolderName(0, UUID.fromString(consId));
+        final String subfolderName = genNewStyleSubfolderName(0, UUID.fromString(consId));
 
         final File dbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
 
@@ -1530,7 +1529,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
                             int realPageSize = data.length;
 
                             pageIO.compactPage(GridUnsafe.wrapPointer(bufPtr, realPageSize), buf, realPageSize);
-                            pageIO.compactPage(ByteBuffer.wrap(data), bufWal, realPageSize);
+                            pageIO.compactPage(ByteBuffer.wrap(data).order(ByteOrder.nativeOrder()),
+                                bufWal, realPageSize);
 
                             bufPtr = GridUnsafe.bufferAddress(buf);
                             data = new byte[bufWal.limit()];

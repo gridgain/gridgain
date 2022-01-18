@@ -40,6 +40,7 @@ public abstract class AbstractPendingEntryLeafIO extends BPlusLeafIO<PendingRow>
     @Override public void storeByOffset(long pageAddr, int off, PendingRow row) throws IgniteCheckedException {
         assert row.link != 0;
         assert row.expireTime != 0;
+        assertPageType(pageAddr);
 
         long expireTime = row.expireTime;
 
@@ -62,6 +63,8 @@ public abstract class AbstractPendingEntryLeafIO extends BPlusLeafIO<PendingRow>
         BPlusIO<PendingRow> srcIo,
         long srcPageAddr,
         int srcIdx) throws IgniteCheckedException {
+        assertPageType(dstPageAddr);
+
         int dstOff = offset(dstIdx);
 
         long link = ((PendingRowIO)srcIo).getLink(srcPageAddr, srcIdx);

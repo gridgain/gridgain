@@ -39,6 +39,7 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.pagemem.wal.record.PartitionClearingStartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -94,8 +95,12 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** */
     private static final GridCacheMapEntryFactory ENTRY_FACTORY = GridDhtCacheEntry::new;
 
+    /** @see IgniteSystemProperties#IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE */
+    public static final int DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE = 200_000;
+
     /** Maximum size for delete queue. */
-    public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE, 200_000);
+    public static final int MAX_DELETE_QUEUE_SIZE = Integer.getInteger(IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE,
+        DFLT_ATOMIC_CACHE_DELETE_HISTORY_SIZE);
 
     /** ONLY FOR TEST PURPOSES: force test checkpoint on partition eviction. */
     private static boolean forceTestCheckpointOnEviction = IgniteSystemProperties.getBoolean("TEST_CHECKPOINT_ON_EVICTION", false);
@@ -589,6 +594,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
+     * Used to set a version from {@link PartitionClearingStartRecord} when need to repeat a clearing after node restart.
+     * @param clearVer Clear version.
+     */
+    public void updateClearVersion(long clearVer) {
+        this.clearVer = clearVer;
+    }
+
+    /**
      * @return {@code True} if partition state changed.
      */
     public boolean markLost() {
@@ -910,7 +923,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
             clearClo = this::clearSafe;
         }
-        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING) {
+        else if (task.reason() == PartitionsEvictManager.EvictReason.CLEARING ||
+            task.reason() == PartitionsEvictManager.EvictReason.CLEARING_ON_RECOVERY) {
             long order0 = clearVer;
 
             rowFilter = row -> (order0 == 0 /** Inserted by isolated updater. */ || row.version().order() > order0);

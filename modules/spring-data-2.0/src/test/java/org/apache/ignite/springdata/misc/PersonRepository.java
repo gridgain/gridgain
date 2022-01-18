@@ -129,7 +129,7 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     /** Remove Query */
     public List<Person> removeByFirstName(String firstName);
 
-    /** Delete using @Query with keyword in lower-case*/
+    /** Delete using @Query with keyword in lower-case */
     @Query("delete FROM Person WHERE secondName = ?")
     public void deleteBySecondNameLowerCase(String secondName);
 
@@ -137,11 +137,19 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     @Query("DELETE FROM Person WHERE firstName = ? AND ERRORS = 'ERRORS'")
     public void deleteWrongByFirstNameQuery(String firstName);
 
-    /** Update using @Query with keyword in mixed-case*/
+    /** Update using @Query with keyword in mixed-case */
     @Query("upDATE Person SET secondName = ? WHERE firstName = ?")
     public int setFixedSecondNameMixedCase(String secondName, String firstName);
 
     /** Update using @Query but with errors on the query */
     @Query("UPDATE Person SET secondName = ? WHERE firstName = ? AND ERRORS = 'ERRORS'")
     public int setWrongFixedSecondName(String secondName, String firstName);
+
+    /** Produces a list of domain entity classes whose fields are obtained from the query result row. */
+    @Query(value = "SELECT firstName, secondName, birthday, _key, _val, NULL as one FROM Person", forceFieldsQuery = true)
+    public List<Person> queryWithRowToEntityConversion();
+
+    /** Produces a list of domain entity classes whose fields are obtained from the query result row. */
+    @Query(value = "SELECT firstName, birthday FROM Person", forceFieldsQuery = true)
+    public List<Person> queryWithIncompleteRowToEntityConversion();
 }

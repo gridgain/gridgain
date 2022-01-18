@@ -438,13 +438,17 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                         cursor.getAll();
                     }
                     catch (Exception e) {
-                        if (e.getMessage().contains("Failed to find cache")
-                            || e.getMessage().contains("Failed to parse query. Table \"TEST\" not found")
-                            || e.getMessage().contains("Cache not found on local node (was concurrently destroyed?)")
-                            || e.getMessage().contains("Getting affinity for too old topology version that is already out of history")
-                            || e.getMessage().contains("Failed to find partitioned cache")
-                            || e.getMessage().contains("Table \"TEST\" not found")
-                            || e.getMessage().contains("Table PUBLIC.TEST already destroyed")
+                        String msg = e.getMessage();
+
+                        if (msg.contains("Failed to find cache")
+                            || msg.contains("Failed to perform cache operation (cache is stopped)")
+                            || msg.contains("Failed to parse query. Table \"TEST\" not found")
+                            || msg.contains("Cache not found on local node (was concurrently destroyed?)")
+                            || msg.contains("Getting affinity for too old topology version that is already out of history")
+                            || msg.contains("Failed to find partitioned cache")
+                            || msg.contains("Table \"TEST\" not found")
+                            || msg.contains("Table not found")
+                            || msg.contains("Table PUBLIC.TEST already destroyed")
                         ) {
                             // Swallow exception when table is dropped.
                         }
