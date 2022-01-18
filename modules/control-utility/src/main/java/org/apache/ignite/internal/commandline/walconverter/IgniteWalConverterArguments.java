@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ import static org.apache.ignite.internal.commandline.argument.parser.CLIArgument
  */
 public class IgniteWalConverterArguments {
     /** Record pattern for {@link Args#PAGES}. */
-    private static final Pattern PAGE_ID_PATTERN = Pattern.compile("(\\d+):(\\d+)");
+    private static final Pattern PAGE_ID_PATTERN = Pattern.compile("(-?\\d+):(\\d+)");
 
     /** Path to dir with wal files. */
     private final File walDir;
