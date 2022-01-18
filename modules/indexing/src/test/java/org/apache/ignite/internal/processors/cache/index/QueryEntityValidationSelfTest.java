@@ -57,10 +57,13 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
         c1.query(new SqlFieldsQuery("CREATE TABLE TestKeys (\n" +
             "  namePK varchar primary key,\n" +
             "  notUniqueId int\n" +
-            ") WITH \"wrap_key=true,value_type=TestKey\"")).getAll();
+            ") WITH \"wrap_key=true," +
+            "value_type=org.apache.ignite.internal.processors.cache.index.QueryEntityValidationSelfTest$TestKey\""))
+            .getAll();
 
         IgniteCache<String, TestKey> keys = ignite(0).cache("SQL_PUBLIC_TESTKEYS");
         TestKey k1 = new TestKey(1);
+
         keys.put("1", k1);
 
         TestKey rk1 = keys.get("1");
