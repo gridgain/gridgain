@@ -28,6 +28,7 @@ nobase_include_HEADERS = \
 	ignite/network/length_prefix_codec.h \
 	ignite/network/network.h \
 	ignite/network/socket_client.h \
+	ignite/network/ssl/secure_configuration.h \
 	ignite/network/ssl/secure_data_filter.h \
 	ignite/network/tcp_range.h \
 	ignite/network/utils.h

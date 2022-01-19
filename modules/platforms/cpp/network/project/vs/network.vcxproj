@@ -185,6 +185,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_configuration.h" />
     <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h" />
     <ClInclude Include="..\..\include\ignite\network\async_client_pool.h" />
     <ClInclude Include="..\..\include\ignite\network\async_handler.h" />

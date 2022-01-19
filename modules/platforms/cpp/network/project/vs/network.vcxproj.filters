@@ -120,6 +120,9 @@
     <ClInclude Include="..\..\os\win\src\network\win_async_connecting_thread.h">
       <Filter>Code\network</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_configuration.h">
+      <Filter>Code\network\ssl</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h">
       <Filter>Code\network\ssl</Filter>
     </ClInclude>
