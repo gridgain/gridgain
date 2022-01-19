@@ -29,6 +29,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.gridgain.internal.h2.message.DbException;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -91,13 +92,13 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         populateCache(n.cache(cacheName), cacheSize);
 
         // Affinity index shadowed.
-        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNotNull(index(n, n.cache(cacheName), idxName));
 
         // Drop user index.
         dropIdx(n.cache(cacheName), idxName);
 
-        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNull(index(n, n.cache(cacheName), idxName));
 
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
@@ -106,10 +107,12 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         stopGrid(0);
         n = startGrid(0);
 
-        assertNull(index(n, n.cache(cacheName), idxName));
-        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME)); // <-- failed here, due to lost AffinityIndex in config?.
+        IgniteInternalFuture<?> fut = indexRebuildFuture(n, CU.cacheId(cacheName));
+        if (fut != null)
+            fut.get(getTestTimeout());
 
-        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size()); // <-- failed here, due broken tree of AffinityIndex.
+        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
     }
 
     /**
@@ -145,8 +148,7 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
         populateCache(n.cache(cacheName), cacheSize);
 
-        // Affinity index shadowed.
-        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNotNull(index(n, n.cache(cacheName), idxName));
 
         // Recreate cache.
@@ -156,9 +158,9 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         populateCache(n.cache(cacheName), cacheSize);
 
         assertNull(index(n, n.cache(cacheName), idxName));
-        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME)); // <-- failed here, due to lost AffinityIndex in config?.
+        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
 
-        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size()); // <-- failed here, due broken tree of AffinityIndex.
+        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
     }
 
     /**
