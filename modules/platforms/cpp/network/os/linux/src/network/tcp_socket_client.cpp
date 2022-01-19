@@ -28,6 +28,7 @@
 #include <algorithm>
 
 #include <ignite/common/concurrent.h>
+#include <ignite/network/utils.h>
 
 #include <ignite/ignite_error.h>
 
@@ -69,7 +70,7 @@ namespace ignite
             int res = getaddrinfo(hostname, strPort.c_str(), &hints, &result);
 
             if (res != 0)
-                ThrowNetworkError("Can not resolve host: " + std::string(hostname) + ":" + strPort);
+                utils::ThrowNetworkError("Can not resolve host: " + std::string(hostname) + ":" + strPort);
 
             std::vector<addrinfo*> shuffled = internal_utils::ShuffleAddresses(result);
 
@@ -94,7 +95,8 @@ namespace ignite
                     throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, err.c_str());
                 }
 
-                TrySetOptions();
+                sockets::TrySetSocketOptions(socketHandle, BUFFER_SIZE, true, true, true);
+                blocking = !sockets::SetNonBlockingMode(socketHandle, true);
 
                 // Connect to server.
                 res = connect(socketHandle, addr->ai_addr, static_cast<int>(addr->ai_addrlen));
@@ -133,7 +135,7 @@ namespace ignite
                 if (isTimeout)
                     return false;
 
-                ThrowNetworkError(lastErrorMsg);
+                utils::ThrowNetworkError(lastErrorMsg);
             }
 
             return true;
@@ -183,46 +185,6 @@ namespace ignite
         bool TcpSocketClient::IsBlocking() const
         {
             return blocking;
-        }
-
-        void TcpSocketClient::TrySetOptions()
-        {
-            int trueOpt = 1;
-
-            int idleOpt = KEEP_ALIVE_IDLE_TIME;
-            int idleRetryOpt = KEEP_ALIVE_PROBES_PERIOD;
-            int bufSizeOpt = BUFFER_SIZE;
-
-            setsockopt(socketHandle, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&bufSizeOpt), sizeof(bufSizeOpt));
-
-            setsockopt(socketHandle, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char*>(&bufSizeOpt), sizeof(bufSizeOpt));
-
-            setsockopt(socketHandle, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char*>(&trueOpt), sizeof(trueOpt));
-
-            setsockopt(socketHandle, SOL_SOCKET, SO_OOBINLINE, reinterpret_cast<char*>(&trueOpt), sizeof(trueOpt));
-
-            blocking = false;
-
-            int flags;
-            blocking = ((flags = fcntl(socketHandle, F_GETFL, 0)) < 0) ||
-                       (fcntl(socketHandle, F_SETFL, flags | O_NONBLOCK) < 0);
-
-            int res = setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE,
-                reinterpret_cast<char*>(&trueOpt), sizeof(trueOpt));
-
-            if (SOCKET_ERROR == res)
-            {
-                // There is no sense in configuring keep alive params if we faileed to set up keep alive mode.
-                return;
-            }
-#ifdef __APPLE__
-            setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, reinterpret_cast<char*>(&idleOpt), sizeof(idleOpt));
-#else
-            setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, reinterpret_cast<char*>(&idleOpt), sizeof(idleOpt));
-#endif
-
-            setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL,
-                reinterpret_cast<char*>(&idleRetryOpt), sizeof(idleRetryOpt));
         }
 
         int TcpSocketClient::WaitOnSocket(int32_t timeout, bool rd)

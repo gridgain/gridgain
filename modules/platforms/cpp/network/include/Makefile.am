@@ -16,9 +16,19 @@
 ACLOCAL_AMFLAGS =-I m4
 
 nobase_include_HEADERS = \
+	ignite/network/async_client_pool.h \
+	ignite/network/async_handler.h \
+	ignite/network/codec.h \
+	ignite/network/codec_data_filter.h \
+	ignite/network/data_buffer.h \
+	ignite/network/data_filter.h \
+	ignite/network/data_filter_adapter.h \
+	ignite/network/data_sink.h \
 	ignite/network/end_point.h \
+	ignite/network/length_prefix_codec.h \
 	ignite/network/network.h \
 	ignite/network/socket_client.h \
+	ignite/network/ssl/secure_data_filter.h \
 	ignite/network/tcp_range.h \
 	ignite/network/utils.h
 

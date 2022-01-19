@@ -75,8 +75,7 @@ public class SimpleDistributedProperty<T extends Serializable> implements Distri
     /**
      * @throws DetachedPropertyException If this property have not been attached to processor yet, please call {@link
      * DistributedConfigurationProcessor#registerProperty(DistributedChangeableProperty)} before this method.
-     * @throws NotWritablePropertyException If this property don't ready to cluster wide update yet, perhaps cluster is
-     * not active yet.
+     * @throws NotWritablePropertyException If this property isn't ready for cluster wide update yet.
      */
     private void ensureClusterWideUpdateIsReady() throws DetachedPropertyException, NotWritablePropertyException {
         if (!attached)

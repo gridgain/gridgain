@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include <ignite/common/common.h>
+#include <ignite/common/concurrent.h>
 
 namespace ignite 
 {
@@ -204,7 +205,7 @@ namespace ignite
                 /**
                  * Get cross-platform pointer in long form.
                  */
-                int64_t PointerLong();
+                int64_t PointerLong() const;
 
                 /**
                  * Get raw data pointer.
@@ -258,6 +259,9 @@ namespace ignite
                 /** Memory pointer. */
                 int8_t* memPtr; 
             };
+
+            typedef common::concurrent::SharedPointer<interop::InteropMemory> SP_InteropMemory;
+            typedef common::concurrent::SharedPointer<const interop::InteropMemory> SP_ConstInteropMemory;
 
             /**
              * Interop unpooled memory.

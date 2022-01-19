@@ -32,8 +32,7 @@ public interface DistributedProperty<T extends Serializable> {
      * perhaps some concurrent operation was changed this value in same moment.
      * @throws DetachedPropertyException If this property have not been attached to processor yet, please call {@link
      * DistributedConfigurationProcessor#registerProperty(DistributedChangeableProperty)} before this method.
-     * @throws NotWritablePropertyException If this property don't ready to cluster wide update yet, perhaps cluster is
-     * not active yet.
+     * @throws NotWritablePropertyException If this property isn't ready for cluster wide update yet.
      * @throws IgniteCheckedException If failed during cluster wide update.
      */
     boolean propagate(T newVal) throws IgniteCheckedException;
@@ -45,8 +44,7 @@ public interface DistributedProperty<T extends Serializable> {
      * @return Future for update operation.
      * @throws DetachedPropertyException If this property have not been attached to processor yet, please call {@link
      * DistributedConfigurationProcessor#registerProperty(DistributedChangeableProperty)} before this method.
-     * @throws NotWritablePropertyException If this property don't ready to cluster wide update yet, perhaps cluster is
-     * not active yet.
+     * @throws NotWritablePropertyException If this property isn't ready for cluster wide update yet.
      * @throws IgniteCheckedException If failed during cluster wide update.
      */
     GridFutureAdapter<?> propagateAsync(T newVal) throws IgniteCheckedException;
@@ -59,8 +57,7 @@ public interface DistributedProperty<T extends Serializable> {
      * @return Future for update operation.
      * @throws DetachedPropertyException If this property have not been attached to processor yet, please call {@link
      * DistributedConfigurationProcessor#registerProperty(DistributedChangeableProperty)} before this method.
-     * @throws NotWritablePropertyException If this property don't ready to cluster wide update yet, perhaps cluster is
-     * not active yet.
+     * @throws NotWritablePropertyException If this property isn't ready for cluster wide update yet.
      * @throws IgniteCheckedException If failed during cluster wide update.
      */
     GridFutureAdapter<?> propagateAsync(T expectedVal, T newVal) throws IgniteCheckedException;
