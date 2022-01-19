@@ -379,6 +379,8 @@ namespace ignite
                 if (connected)
                     return false;
 
+                std::cout << "------------- SSL::ProcessData sslGateway.SSL_is_init_finished_=" << sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)) << std::endl;
+
                 if (!sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)))
                 {
                     DoConnect();
@@ -386,7 +388,11 @@ namespace ignite
                     SendPendingData();
 
                     if (!sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)))
+                    {
+                        std::cout << "------------- SSL::ProcessData sslGateway.SSL_is_init_finished_=" << sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)) << std::endl;
+
                         return false;
+                    }
                 }
 
                 connected = true;
