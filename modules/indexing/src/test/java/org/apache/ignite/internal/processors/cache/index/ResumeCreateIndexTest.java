@@ -362,8 +362,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
     }
 
     /**
-     * Checks that if there is no checkpoint after the index is created and the
-     * node is restarted, the indexes will be rebuilt.
+     * Checks that incomplete index is destroyed.
      *
      * @throws Exception If failed.
      */
@@ -379,17 +378,17 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
         IgniteEx cli = startClientGrid(1);
 
         String idxName = "IDX0";
-        StopBuildIndexConsumer stopBuildIndexConsumer = new BuildIndexConsumer(getTestTimeout(), 1000);
-        addIdxCreateCacheRowConsumer(nodeName(n), idxName, stopBuildIndexConsumer);
+        StopBuildIndexConsumer failBuildIndexConsumer = new FailBuildIndexConsumer(getTestTimeout(), 1000);
+        addIdxCreateCacheRowConsumer(nodeName(n), idxName, failBuildIndexConsumer);
 
         IgniteInternalFuture<List<List<?>>> createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
 
         GridFutureAdapter<Object> startCleanupFut = new GridFutureAdapter<>();
         DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory = treeFactory(idxName, startCleanupFut);
 
-        stopBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
+        failBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
         checkInitStatus(n, cacheName, false, 1);
-        stopBuildIndexConsumer.finishBuildIdxFut.onDone();
+        failBuildIndexConsumer.finishBuildIdxFut.onDone();
 
         cli.cache(DEFAULT_CACHE_NAME).destroy();
         assertTrue(createIdxFut.isDone());
@@ -415,11 +414,20 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
     }
 
-    private DurableBackgroundCleanupIndexTreeTaskV2.@NotNull H2TreeFactory treeFactory(
-        String indexName, GridFutureAdapter<Object> startFut) {
+    /** */
+    private DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory treeFactory(
+        String indexName,
+        GridFutureAdapter<Object> startFut
+    ) {
         return new DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory() {
-            @Override protected H2Tree create(CacheGroupContext grpCtx, RootPage rootPage, String treeName,
-                String idxName, String cacheName) throws IgniteCheckedException {
+            /** {@inheritDoc} */
+            @Override protected H2Tree create(
+                CacheGroupContext grpCtx,
+                RootPage rootPage,
+                String treeName,
+                String idxName,
+                String cacheName
+            ) throws IgniteCheckedException {
                 if (indexName.equals(idxName))
                     startFut.onDone();
 
@@ -431,7 +439,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
     /**
      * Consumer that fails building indexes of cache.
      */
-    static class BuildIndexConsumer extends StopBuildIndexConsumer {
+    static class FailBuildIndexConsumer extends StopBuildIndexConsumer {
         /** Number of rows to add before slowdown. */
         private final int cnt;
 
@@ -441,7 +449,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
          * @param timeout The maximum time to wait finish future in milliseconds.
          * @param cnt Amount of rows to be added before failure.
          */
-        BuildIndexConsumer(long timeout, int cnt) {
+        FailBuildIndexConsumer(long timeout, int cnt) {
             super(timeout);
 
             this.cnt = cnt;
@@ -454,7 +462,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
 
             startBuildIdxFut.onDone();
 
-            finishBuildIdxFut.get();
+            finishBuildIdxFut.get(timeout);
 
             throw new IgniteCheckedException("test");
         }
