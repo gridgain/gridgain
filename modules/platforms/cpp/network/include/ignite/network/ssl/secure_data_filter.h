@@ -225,9 +225,6 @@ namespace ignite
                  */
                 bool SendInternal(uint64_t id, const DataBuffer& data);
 
-                /** Secure configuration. */
-                const SecureConfiguration cfg;
-
                 /** SSL context. */
                 void* sslContext;
 

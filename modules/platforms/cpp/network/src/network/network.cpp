@@ -40,12 +40,11 @@ namespace ignite
                 SslGateway::GetInstance().LoadAll();
             }
 
-            IGNITE_IMPORT_EXPORT SocketClient* MakeSecureSocketClient(const std::string& certPath,
-                const std::string& keyPath, const std::string& caPath)
+            IGNITE_IMPORT_EXPORT SocketClient* MakeSecureSocketClient(const SecureConfiguration& cfg)
             {
                 EnsureSslLoaded();
 
-                return new SecureSocketClient(certPath, keyPath, caPath);
+                return new SecureSocketClient(cfg);
             }
         }
 

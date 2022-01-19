@@ -49,6 +49,9 @@
     <ClCompile Include="..\..\src\network\ssl\ssl_gateway.cpp">
       <Filter>Code\network\ssl</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\network\ssl\secure_utils.cpp">
+      <Filter>Code\network\ssl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\os\win\src\network\win_async_worker_thread.h">
@@ -130,6 +133,9 @@
       <Filter>Code\network\ssl</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\network\ssl\ssl_gateway.h">
+      <Filter>Code\network\ssl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\network\ssl\secure_utils.h">
       <Filter>Code\network\ssl</Filter>
     </ClInclude>
   </ItemGroup>
