@@ -583,7 +583,7 @@ namespace ignite
                 return fp(ssl);
             }
 
-            int SslGateway::SSL_is_init_finished_(const SSL* ssl)
+            int SslGateway::SSL_get_state_(const SSL* ssl)
             {
                 assert(functions.fpSSL_get_state != 0);
 
@@ -591,6 +591,11 @@ namespace ignite
 
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_get_state);
 
+                return fp(ssl);
+            }
+
+            int SslGateway::SSL_is_init_finished_(const SSL* ssl)
+            {
                 enum {
                     IGNITE_SSL_STATE_OK =
 #ifdef SSL_ST_OK
@@ -600,7 +605,12 @@ namespace ignite
 #endif
                 };
 
-                return fp(ssl) == IGNITE_SSL_STATE_OK ? 1 : 0;
+                int state = SSL_get_state_(ssl);
+
+                std::cout << "------------- SSL::state=" << state << std::endl;
+                std::cout << "------------- SSL::IGNITE_SSL_STATE_OK=" << IGNITE_SSL_STATE_OK << std::endl;
+
+                return state == IGNITE_SSL_STATE_OK ? 1 : 0;
             }
 
             int SslGateway::SSL_get_fd_(const SSL* ssl)

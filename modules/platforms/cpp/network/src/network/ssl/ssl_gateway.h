@@ -175,6 +175,8 @@ namespace ignite
 
                 const char* SSL_get_version_(const SSL* ssl);
 
+                int SSL_get_state_(const SSL* ssl);
+
                 int SSL_is_init_finished_(const SSL* ssl);
 
                 int SSL_get_fd_(const SSL* ssl);
