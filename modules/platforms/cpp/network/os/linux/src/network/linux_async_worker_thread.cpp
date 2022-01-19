@@ -238,7 +238,7 @@ namespace ignite
                     HandleConnectionSuccess(client);
                 }
 
-                if (currentEvent.events & (EPOLLRDHUP | EPOLLERR))
+                if (currentEvent.events & (EPOLLRDHUP | EPOLLERR | EPOLLHUP))
                 {
                     HandleConnectionClosed(client);
 
@@ -297,8 +297,7 @@ namespace ignite
 
             nonConnected.push_back(client->GetRange());
 
-            IgniteError err(IgniteError::IGNITE_ERR_NETWORK_FAILURE, "Connection closed");
-            clientPool.CloseAndRelease(client->GetId(), &err);
+            clientPool.CloseAndRelease(client->GetId(), 0);
         }
 
         void LinuxAsyncWorkerThread::HandleConnectionSuccess(LinuxAsyncClient* client)
