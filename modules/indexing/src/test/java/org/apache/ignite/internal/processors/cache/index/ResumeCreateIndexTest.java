@@ -416,9 +416,8 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
     private DurableBackgroundCleanupIndexTreeTaskV2.@NotNull H2TreeFactory treeFactory(
         String indexName, GridFutureAdapter<Object> startFut) {
         return new DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory() {
-            @Override
-            protected H2Tree create(CacheGroupContext grpCtx, RootPage rootPage, String treeName, String idxName,
-                String cacheName) throws IgniteCheckedException {
+            @Override protected H2Tree create(CacheGroupContext grpCtx, RootPage rootPage, String treeName,
+                String idxName, String cacheName) throws IgniteCheckedException {
                 if (indexName.equals(idxName))
                     startFut.onDone();
 
