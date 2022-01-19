@@ -40,6 +40,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.BaselineConfigurationChangedEvent;
@@ -94,6 +95,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -125,7 +127,6 @@ import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 
 /**
  *
@@ -2184,10 +2185,76 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return Lists in-memory user defined caches.
      */
     private List<String> listInMemoryUserCaches() {
+        IgniteBiPredicate<DynamicCacheDescriptor, DataRegionConfiguration> inMemoryPred = (desc, dataRegionCfg) -> {
+            return !(dataRegionCfg != null && dataRegionCfg.isPersistenceEnabled())
+                && (!desc.cacheConfiguration().isWriteThrough() || !desc.cacheConfiguration().isReadThrough());
+        };
+
+        if (ctx.discovery().localNode().isClient()) {
+            // Need to check cache descriptors using server node storage configurations.
+            // The reason for this is that client node may not be configured with the required data region configuration.
+            List<ClusterNode> srvs = ctx.discovery().discoCache().serverNodes();
+
+            if (F.isEmpty(srvs))
+                return Collections.emptyList();
+
+            return ctx.cache().cacheDescriptors().values().stream()
+                // Filter out system caches
+                .filter(desc -> !CU.isSystemCache(desc.cacheName()))
+                .filter(desc -> {
+                    String dataRegionName = desc.cacheConfiguration().getDataRegionName();
+
+                    // We always should use server data storage configurations instead of client node config,
+                    // because it is not validated when the client node joins the cluster
+                    // and so it cannot be the source of truth.
+                    DataRegionConfiguration dataRegionCfg = null;
+
+                    // Need to find out the first server node that knows about this data region and its configuration.
+                    for (ClusterNode n : srvs) {
+                        dataRegionCfg = CU.findRemoteDataRegionConfiguration(
+                            n,
+                            ctx.marshallerContext().jdkMarshaller(),
+                            U.resolveClassLoader(ctx.config()),
+                            dataRegionName);
+
+                        if (dataRegionCfg != null)
+                            break;
+                    }
+
+                    return inMemoryPred.apply(desc, dataRegionCfg);
+                })
+                .map(DynamicCacheDescriptor::cacheName)
+                .collect(Collectors.toList());
+        }
+
         return ctx.cache().cacheDescriptors().values().stream()
-            .filter(desc -> !isPersistentCache(desc.cacheConfiguration(), ctx.config().getDataStorageConfiguration())
-                && (!desc.cacheConfiguration().isWriteThrough() || !desc.cacheConfiguration().isReadThrough())
-                && !CU.isSystemCache(desc.cacheName())).map(DynamicCacheDescriptor::cacheName).collect(Collectors.toList());
+            .filter(desc -> !CU.isSystemCache(desc.cacheName()))
+            .filter(desc -> {
+                String dataRegionName = desc.cacheConfiguration().getDataRegionName();
+
+                DataRegionConfiguration dataRegionCfg =
+                    CU.findDataRegionConfiguration(ctx.config().getDataStorageConfiguration(), dataRegionName);
+
+                if (dataRegionCfg == null) {
+                    List<ClusterNode> srvs = ctx.discovery().discoCache().serverNodes();
+
+                    // Need to find out the first server node that knows about this data region and its configuration.
+                    for (ClusterNode n : srvs) {
+                        dataRegionCfg = CU.findRemoteDataRegionConfiguration(
+                            n,
+                            ctx.marshallerContext().jdkMarshaller(),
+                            U.resolveClassLoader(ctx.config()),
+                            dataRegionName);
+
+                        if (dataRegionCfg != null)
+                            break;
+                    }
+                }
+
+                return inMemoryPred.apply(desc, dataRegionCfg);
+            })
+            .map(DynamicCacheDescriptor::cacheName)
+            .collect(Collectors.toList());
     }
 
     /**

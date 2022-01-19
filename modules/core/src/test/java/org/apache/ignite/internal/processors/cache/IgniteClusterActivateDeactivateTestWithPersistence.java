@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +34,7 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -47,10 +50,12 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.assertActive;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
@@ -58,6 +63,12 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCaus
  *
  */
 public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteClusterActivateDeactivateTest {
+    /** Indicates that additional data region configuration should be added on server node. */
+    private boolean addAdditionalDataRegion;
+
+    /** Persistent data region name. */
+    private static final String ADDITIONAL_PERSISTENT_DATA_REGION = "additional-persistent-region";
+
     /** {@inheritDoc} */
     @Override protected boolean persistenceEnabled() {
         return true;
@@ -79,7 +90,196 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setAutoActivationEnabled(false);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName).setAutoActivationEnabled(false);
+
+        if (addAdditionalDataRegion) {
+            DataRegionConfiguration[] originRegions = cfg.getDataStorageConfiguration().getDataRegionConfigurations();
+
+            DataRegionConfiguration[] regions = Arrays.copyOf(originRegions, originRegions.length + 1);
+
+            regions[originRegions.length] = new DataRegionConfiguration()
+                .setName(ADDITIONAL_PERSISTENT_DATA_REGION)
+                .setPersistenceEnabled(true);
+
+            cfg.getDataStorageConfiguration().setDataRegionConfigurations(regions);
+        }
+
+        if (cfg.isClientMode())
+            cfg.setDataStorageConfiguration(null);
+
+        return cfg;
+    }
+
+    @Test
+    public void testDeactivateClusterWithoutInMemoryCaches() throws Exception {
+        IgniteEx srv = startGrid(0);
+
+        IgniteEx clientNode = startClientGrid(1);
+
+        clientNode.cluster().state(ACTIVE);
+
+        DataRegionConfiguration dfltDataRegion = srv
+            .configuration()
+            .getDataStorageConfiguration()
+            .getDefaultDataRegionConfiguration();
+
+        assertTrue(
+            "It is assumed that the default data storage region is persistent.",
+            dfltDataRegion.isPersistenceEnabled());
+
+        // Create a new cache that is placed into pesristent data region.
+        clientNode.getOrCreateCache(new CacheConfiguration<>("test-client-cache")
+            .setDataRegionName(dfltDataRegion.getName()));
+
+        // Try to deactivate the cluster without the `force` flag.
+        IgniteInternalFuture<?> deactivateFut = srv
+            .context()
+            .state()
+            .changeGlobalState(INACTIVE, false, Collections.emptyList(), false);
+
+        try {
+            deactivateFut.get(10, SECONDS);
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Failed to deactivate the cluster.", e);
+
+            fail("Failed to deactivate the cluster. [err=" + e.getMessage() + ']');
+        }
+
+        awaitPartitionMapExchange();
+
+        // Let's check that all nodes in the cluster have the same state.
+        for (Ignite node : G.allGrids()) {
+            IgniteEx n = (IgniteEx) node;
+
+            ClusterState state = n.context().state().clusterState().state();
+
+            assertTrue(
+                "Node must be in inactive state. " +
+                    "[node=" + n.configuration().getIgniteInstanceName() + ", actual=" + state + ']',
+                INACTIVE == state
+            );
+        }
+    }
+
+    @Test
+    public void testDeactivateClusterWithInMemoryCaches() throws Exception {
+        IgniteEx srv = startGrid(0);
+
+        IgniteEx clientNode = startClientGrid(1);
+
+        clientNode.cluster().state(ACTIVE);
+
+        DataStorageConfiguration dsCfg = srv.configuration().getDataStorageConfiguration();
+
+        DataRegionConfiguration nonPersistentRegion = Arrays.stream(dsCfg.getDataRegionConfigurations())
+            .filter(region -> NO_PERSISTENCE_REGION.equals(region.getName()))
+            .findFirst()
+            .orElse(null);
+
+        assertTrue(
+            "It is assumed that the '" + NO_PERSISTENCE_REGION + "' data storage region exists and non-persistent.",
+            nonPersistentRegion != null && !nonPersistentRegion.isPersistenceEnabled());
+
+        // Create a new cache that is placed into non persistent data region.
+        clientNode.getOrCreateCache(new CacheConfiguration<>("test-client-cache")
+            .setDataRegionName(nonPersistentRegion.getName()));
+
+        awaitPartitionMapExchange();
+
+        // Try to deactivate the cluster without the `force` flag.
+        IgniteInternalFuture<?> deactivateFut = srv
+            .context()
+            .state()
+            .changeGlobalState(INACTIVE, false, Collections.emptyList(), false);
+
+        assertThrows(
+            log,
+            () -> deactivateFut.get(10, SECONDS),
+            IgniteCheckedException.class,
+            "Expected exception was not thrown. Cluster deactivated!");
+
+        awaitPartitionMapExchange();
+
+        // Let's check that all nodes in the cluster have the same state.
+        for (Ignite node : G.allGrids()) {
+            IgniteEx n = (IgniteEx) node;
+
+            ClusterState state = n.context().state().clusterState().state();
+
+            assertTrue(
+                "Node must be in active state. " +
+                    "[node=" + n.configuration().getIgniteInstanceName() + ", actual=" + state + ']',
+                ACTIVE == state
+            );
+        }
+    }
+
+    @Test
+    public void testDeactivateClusterWithInMemoryCaches2() throws Exception {
+        IgniteEx srv = startGrid(0);
+
+        addAdditionalDataRegion = true;
+
+        IgniteEx srv1 = startGrid(1);
+
+        IgniteEx clientNode = startClientGrid(2);
+
+        clientNode.cluster().state(ACTIVE);
+
+        DataStorageConfiguration dsCfg = srv1.configuration().getDataStorageConfiguration();
+
+        DataRegionConfiguration persistentRegion = Arrays.stream(dsCfg.getDataRegionConfigurations())
+            .filter(region -> ADDITIONAL_PERSISTENT_DATA_REGION.equals(region.getName()))
+            .findFirst()
+            .orElse(null);
+
+        assertTrue(
+            "It is assumed that the '" + ADDITIONAL_PERSISTENT_DATA_REGION + "' data storage region exists and persistent.",
+            persistentRegion != null && persistentRegion.isPersistenceEnabled());
+
+        UUID srv1NodeId = srv1.localNode().id();
+
+        // Create a new cache that is placed into persistent data region.
+        srv.getOrCreateCache(new CacheConfiguration<>("test-client-cache")
+            .setDataRegionName(persistentRegion.getName())
+            .setAffinity(new RendezvousAffinityFunction(false, 1))
+            .setNodeFilter(node -> {
+                System.out.println(">>>>> nodeid=" + node.id() + ", rnodeid=" + srv1NodeId);
+                return node.id().equals(srv1NodeId);
+            }));
+
+        awaitPartitionMapExchange();
+
+        // Try to deactivate the cluster without the `force` flag.
+        IgniteInternalFuture<?> deactivateFut = srv
+            .context()
+            .state()
+            .changeGlobalState(INACTIVE, false, Collections.emptyList(), false);
+
+        try {
+            deactivateFut.get(10, SECONDS);
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Failed to deactivate the cluster.", e);
+
+            fail("Failed to deactivate the cluster. [err=" + e.getMessage() + ']');
+        }
+
+        awaitPartitionMapExchange();
+
+        // Let's check that all nodes in the cluster have the same state.
+        for (Ignite node : G.allGrids()) {
+            IgniteEx n = (IgniteEx) node;
+
+            ClusterState state = n.context().state().clusterState().state();
+
+            assertTrue(
+                "Node must be in inactive state. " +
+                    "[node=" + n.configuration().getIgniteInstanceName() + ", actual=" + state + ']',
+                INACTIVE == state
+            );
+        }
     }
 
     /**
