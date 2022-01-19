@@ -210,7 +210,7 @@ namespace ignite
         void WinAsyncClientPool::Close(uint64_t id, const IgniteError* err)
         {
             SP_WinAsyncClient client = FindClient(id);
-            if (client.IsValid() && client.Get()->IsClosed())
+            if (client.IsValid() && !client.Get()->IsClosed())
                 client.Get()->Shutdown(err);
         }
 

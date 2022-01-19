@@ -18,8 +18,6 @@
 
 #include <ignite/network/utils.h>
 
-#include <ignite/impl/binary/binary_utils.h>
-
 #include "network/sockets.h"
 #include "network/win_async_client.h"
 
@@ -27,7 +25,7 @@ namespace ignite
 {
     namespace network
     {
-        WinAsyncClient::WinAsyncClient(SOCKET socket, const EndPoint &addr, const TcpRange& range, int32_t bufLen) :
+        WinAsyncClient::WinAsyncClient(SOCKET socket, const EndPoint& addr, const TcpRange& range, int32_t bufLen) :
             bufLen(bufLen),
             state(State::CONNECTED),
             socket(socket),
@@ -59,6 +57,7 @@ namespace ignite
             if (State::CONNECTED != state && State::IN_POOL != state)
                 return false;
 
+            std::cout << "------------- Shutdown" << std::endl;
             closeErr = err ? *err : IgniteError(IgniteError::IGNITE_ERR_GENERIC, "Connection closed by application");
 
             shutdown(socket, SD_BOTH);
@@ -73,6 +72,7 @@ namespace ignite
             if (State::CLOSED == state)
                 return false;
 
+            std::cout << "------------- Close" << std::endl;
             closesocket(socket);
 
             sendPackets.clear();

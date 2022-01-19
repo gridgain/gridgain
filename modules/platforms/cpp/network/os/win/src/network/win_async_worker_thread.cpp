@@ -62,6 +62,8 @@ namespace ignite
 
                 BOOL ok = GetQueuedCompletionStatus(iocp, &bytesTransferred, &key, &overlapped, INFINITE);
 
+                std::cout << "------------- Event << bytesTransferred=" << bytesTransferred << std::endl;
+
                 if (stopping)
                     break;
 
@@ -113,7 +115,10 @@ namespace ignite
                             if (!data.IsEmpty())
                                 clientPool->HandleMessageReceived(client->GetId(), data);
 
-                            client->Receive();
+                            bool success = client->Receive();
+
+                            if (!success)
+                                clientPool->CloseAndRelease(client->GetId(), 0);
 
                             break;
                         }
