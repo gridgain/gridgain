@@ -41,6 +41,11 @@ public:
         return ignite_test::StartCrossPlatformServerNode("non-ssl.xml", name.c_str());
     }
 
+    ignite::Ignite StartSslNoClientAuthNode(const std::string& name = "ServerNode")
+    {
+        return ignite_test::StartCrossPlatformServerNode("ssl-no-client-auth.xml", name.c_str());
+    }
+
     SslTestSuiteFixture()
     {
         // No-op.
@@ -197,29 +202,15 @@ BOOST_AUTO_TEST_CASE(SslCacheClientPutGet)
 
 BOOST_AUTO_TEST_CASE(SslConnectionNoCerts)
 {
-    StartSslNode();
+    StartSslNoClientAuthNode();
 
     IgniteClientConfiguration cfg;
     cfg.SetEndPoints("127.0.0.1:11110");
 
     cfg.SetSslMode(SslMode::REQUIRE);
+    cfg.SetSslCaFile(GetConfigFile("ca.pem"));
 
     IgniteClient client = IgniteClient::Start(cfg);
-
-    cache::CacheClient<int32_t, std::string> cache =
-            client.CreateCache<int32_t, std::string>("test");
-
-    enum { OPS_NUM = 100 };
-    for (int32_t j = 0; j < OPS_NUM; ++j)
-    {
-        int32_t key = OPS_NUM + j;
-        std::string value = "value_" + ignite::common::LexicalCast<std::string>(key);
-
-        cache.Put(key, value);
-        std::string retrieved = cache.Get(key);
-
-        BOOST_REQUIRE_EQUAL(value, retrieved);
-    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -136,6 +136,13 @@ namespace ignite
                         throw IgniteError(IgniteError::IGNITE_ERR_SECURE_CONNECTION_FAILURE,
                             "Can not set Certificate Authority path for secure connection");
                 }
+                else
+                {
+                    long res = sslGateway.SSL_CTX_set_default_verify_paths_(sslContext0);
+                    if (res != SSL_OPERATION_SUCCESS)
+                        throw IgniteError(IgniteError::IGNITE_ERR_SECURE_CONNECTION_FAILURE,
+                            "Can not set default Certificate Authority path for secure connection");
+                }
 
                 if (!cfg.certPath.empty())
                 {

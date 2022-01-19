@@ -158,6 +158,7 @@ namespace ignite
                 functions.fpSSL_CTX_free = LoadSslMethod("SSL_CTX_free");
                 functions.fpSSL_CTX_set_verify = LoadSslMethod("SSL_CTX_set_verify");
                 functions.fpSSL_CTX_set_verify_depth = LoadSslMethod("SSL_CTX_set_verify_depth");
+                functions.fpSSL_CTX_set_default_verify_paths = LoadSslMethod("SSL_CTX_set_default_verify_paths");
                 functions.fpSSL_CTX_load_verify_locations = LoadSslMethod("SSL_CTX_load_verify_locations");
                 functions.fpSSL_CTX_use_certificate_chain_file = LoadSslMethod("SSL_CTX_use_certificate_chain_file");
                 functions.fpSSL_CTX_use_RSAPrivateKey_file = LoadSslMethod("SSL_CTX_use_RSAPrivateKey_file");
@@ -178,9 +179,6 @@ namespace ignite
                 functions.fpSSL_read = LoadSslMethod("SSL_read");
                 functions.fpSSL_pending = LoadSslMethod("SSL_pending");
                 functions.fpSSL_get_version = LoadSslMethod("SSL_get_version");
-                functions.fpSSL_get_state = TryLoadSslMethod("SSL_get_state");
-                if (!functions.fpSSL_get_state)
-                    functions.fpSSL_get_state = LoadSslMethod("SSL_state");
 
                 functions.fpSSL_get_fd = LoadSslMethod("SSL_get_fd");
                 functions.fpSSL_new = LoadSslMethod("SSL_new");
@@ -228,7 +226,6 @@ namespace ignite
                 LoadMandatoryMethods();
 
                 functions.fpSSL_CTX_set_options = TryLoadSslMethod("SSL_CTX_set_options");
-                functions.fpERR_print_errors_fp = TryLoadSslMethod("ERR_print_errors_fp");
 
                 IGNITE_UNUSED(SSL_library_init_());
 
@@ -369,6 +366,17 @@ namespace ignite
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_CTX_set_verify_depth);
 
                 fp(ctx, depth);
+            }
+
+            int SslGateway::SSL_CTX_set_default_verify_paths_(SSL_CTX* ctx)
+            {
+                assert(functions.fpSSL_CTX_set_default_verify_paths != 0);
+
+                typedef int (FuncType)(SSL_CTX*);
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_CTX_set_default_verify_paths);
+
+                return fp(ctx);
             }
 
             int SslGateway::SSL_CTX_load_verify_locations_(SSL_CTX* ctx, const char* cAfile, const char* cApath)
@@ -583,36 +591,6 @@ namespace ignite
                 return fp(ssl);
             }
 
-            int SslGateway::SSL_get_state_(const SSL* ssl)
-            {
-                assert(functions.fpSSL_get_state != 0);
-
-                typedef int (FuncType)(const SSL*);
-
-                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_get_state);
-
-                return fp(ssl);
-            }
-
-            int SslGateway::SSL_is_init_finished_(const SSL* ssl)
-            {
-                enum {
-                    IGNITE_SSL_STATE_OK =
-#ifdef SSL_ST_OK
-                    SSL_ST_OK
-#else
-                    TLS_ST_OK
-#endif
-                };
-
-                int state = SSL_get_state_(ssl);
-
-                std::cout << "------------- SSL::state=" << state << std::endl;
-                std::cout << "------------- SSL::IGNITE_SSL_STATE_OK=" << IGNITE_SSL_STATE_OK << std::endl;
-
-                return state == IGNITE_SSL_STATE_OK ? 1 : 0;
-            }
-
             int SslGateway::SSL_get_fd_(const SSL* ssl)
             {
                 assert(functions.fpSSL_get_fd != 0);
@@ -775,11 +753,6 @@ namespace ignite
                 return fp(bp, cmd, larg, parg);
             }
 
-            long SslGateway::BIO_get_fd_(BIO* bp, int* fd)
-            {
-                return BIO_ctrl_(bp, BIO_C_GET_FD, 0, reinterpret_cast<void*>(fd));
-            }
-
             long SslGateway::BIO_get_ssl_(BIO* bp, SSL** ssl)
             {
                 return BIO_ctrl_(bp, BIO_C_GET_SSL, 0, reinterpret_cast<void*>(ssl));
@@ -815,18 +788,6 @@ namespace ignite
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpERR_error_string_n);
 
                 fp(e, buf, len);
-            }
-
-            void SslGateway::ERR_print_errors_fp_(FILE* fd)
-            {
-                if (!functions.fpERR_print_errors_fp)
-                    return;
-
-                typedef void (FuncType)(FILE*);
-
-                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpERR_print_errors_fp);
-
-                fp(fd);
             }
         }
     }
