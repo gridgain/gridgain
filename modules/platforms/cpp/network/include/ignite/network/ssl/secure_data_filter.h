@@ -122,8 +122,10 @@ namespace ignite
 
                     /**
                      * Start connection procedure including handshake.
+                     *
+                     * @return @c true, if connection complete.
                      */
-                    void DoConnect();
+                    bool DoConnect();
 
                     /**
                      * Check whether connection is established.

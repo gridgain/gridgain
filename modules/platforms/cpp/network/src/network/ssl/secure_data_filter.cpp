@@ -317,7 +317,7 @@ namespace ignite
                 }
             }
 
-            void SecureDataFilter::SecureConnectionContext::DoConnect()
+            bool SecureDataFilter::SecureConnectionContext::DoConnect()
             {
                 SslGateway &sslGateway = SslGateway::GetInstance();
 
@@ -338,6 +338,8 @@ namespace ignite
                 }
 
                 SendPendingData();
+
+                return res == SSL_OPERATION_SUCCESS;
             }
 
             bool SecureDataFilter::SecureConnectionContext::SendPendingData()
@@ -379,23 +381,13 @@ namespace ignite
                 if (connected)
                     return false;
 
-                std::cout << "------------- SSL::ProcessData sslGateway.SSL_is_init_finished_=" << sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)) << std::endl;
+                connected = DoConnect();
+                std::cout << "------------- SSL::ProcessData connected=" << connected << std::endl;
 
-                if (!sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)))
-                {
-                    DoConnect();
+                SendPendingData();
 
-                    SendPendingData();
-
-                    if (!sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)))
-                    {
-                        std::cout << "------------- SSL::ProcessData sslGateway.SSL_is_init_finished_=" << sslGateway.SSL_is_init_finished_(static_cast<SSL*>(ssl)) << std::endl;
-
-                        return false;
-                    }
-                }
-
-                connected = true;
+                if (!connected)
+                    return false;
 
                 recvBuffer = impl::interop::SP_InteropMemory(
                     new impl::interop::InteropUnpooledMemory(RECEIVE_BUFFER_SIZE));
