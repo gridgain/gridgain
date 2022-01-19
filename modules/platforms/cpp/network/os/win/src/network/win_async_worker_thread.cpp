@@ -62,8 +62,6 @@ namespace ignite
 
                 BOOL ok = GetQueuedCompletionStatus(iocp, &bytesTransferred, &key, &overlapped, INFINITE);
 
-                std::cout << "------------- Event << bytesTransferred=" << bytesTransferred << std::endl;
-
                 if (stopping)
                     break;
 

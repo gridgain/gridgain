@@ -201,7 +201,6 @@ namespace ignite
 
             void SecureDataFilter::OnConnectionClosed(uint64_t id, const IgniteError *err)
             {
-                std::cout << "------------- SSL::OnConnectionClosed" << std::endl;
                 SP_SecureConnectionContext context = FindContext(id);
                 if (!context.IsValid())
                     return;
@@ -231,7 +230,6 @@ namespace ignite
 
             void SecureDataFilter::OnMessageReceived(uint64_t id, const DataBuffer &msg)
             {
-                std::cout << "------------- SSL::OnMessageReceived msg=" << msg.GetSize() << std::endl;
                 SP_SecureConnectionContext context = FindContext(id);
                 if (!context.IsValid())
                     return;
@@ -272,7 +270,6 @@ namespace ignite
 
             bool SecureDataFilter::SendInternal(uint64_t id, const DataBuffer& data)
             {
-                std::cout << "------------- SSL::SendInternal data=" << data.GetSize() << std::endl;
                 return DataFilterAdapter::Send(id, data);
             }
 
@@ -330,12 +327,10 @@ namespace ignite
 
                 SSL* ssl0 = static_cast<SSL*>(ssl);
                 int res = sslGateway.SSL_connect_(ssl0);
-                std::cout << "------------- SSL::DoConnect res=" << res << std::endl;
 
                 if (res != SSL_OPERATION_SUCCESS)
                 {
                     int sslError = sslGateway.SSL_get_error_(ssl0, res);
-                    std::cout << "------------- SSL::DoConnect sslError=" << sslError << std::endl;
                     if (IsActualError(sslError))
                     {
                         std::string msg = "Can not establish secure connection: " + GetSslError(ssl0, res);
@@ -375,7 +370,6 @@ namespace ignite
 
             bool SecureDataFilter::SecureConnectionContext::ProcessData(DataBuffer& data)
             {
-                std::cout << "------------- SSL::ProcessData data=" << data.GetSize() << std::endl;
                 SslGateway &sslGateway = SslGateway::GetInstance();
                 int res = sslGateway.BIO_write_(static_cast<BIO*>(bioIn), data.GetData(), data.GetSize());
                 if (res <= 0)
@@ -389,7 +383,6 @@ namespace ignite
                     return false;
 
                 connected = DoConnect();
-                std::cout << "------------- SSL::ProcessData connected=" << connected << std::endl;
 
                 SendPendingData();
 
@@ -413,7 +406,6 @@ namespace ignite
                 buf.Get()->Length(available);
 
                 int res = sslGateway.BIO_read_(bio0, buf.Get()->Data(), buf.Get()->Length());
-                std::cout << "------------- SSL::GetPendingData res=" << res << std::endl;
                 if (res <= 0)
                     return DataBuffer();
 

@@ -57,7 +57,6 @@ namespace ignite
             if (State::CONNECTED != state && State::IN_POOL != state)
                 return false;
 
-            std::cout << "------------- Shutdown" << std::endl;
             closeErr = err ? *err : IgniteError(IgniteError::IGNITE_ERR_GENERIC, "Connection closed by application");
 
             shutdown(socket, SD_BOTH);
@@ -72,7 +71,6 @@ namespace ignite
             if (State::CLOSED == state)
                 return false;
 
-            std::cout << "------------- Close" << std::endl;
             closesocket(socket);
 
             sendPackets.clear();
