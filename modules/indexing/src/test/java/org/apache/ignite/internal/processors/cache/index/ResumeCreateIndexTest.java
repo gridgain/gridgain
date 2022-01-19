@@ -85,6 +85,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
                 cacheConfig(DEFAULT_CACHE_NAME),
+                // Add one more cache to keep CacheGroup non-empty when the first cache will be destroyed during test.
                 cacheConfig(DEFAULT_CACHE_NAME + 2)
             );
     }
@@ -366,7 +367,8 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
      *
      * @throws Exception If failed.
      */
-    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod") @Test
+    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod")
+    @Test
     public void testIncompleteIndexDroppedOnCacheDestroy() throws Exception {
         final String cacheName = DEFAULT_CACHE_NAME;
         final int cacheSize = 10_000;
