@@ -403,7 +403,6 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             "1a:1",
             "1:1b",
             "1:1:1",
-            "1:-1",
         };
 
         for (String v : invalidValues)
@@ -411,6 +410,8 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
 
         assertEquals(new T2<>(1, 1L), parsePageId("1:1"));
         assertEquals(new T2<>(-1, 1L), parsePageId("-1:1"));
+        assertEquals(new T2<>(1, -1L), parsePageId("1:-1"));
+        assertEquals(new T2<>(-1, -1L), parsePageId("-1:-1"));
     }
 
     /**
@@ -432,9 +433,6 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             U.writeStringToFile(f, "a:b", defaultCharset().toString(), false);
             assertThrows(log, () -> parsePageIds(f), IllegalArgumentException.class, null);
 
-            U.writeStringToFile(f, "1:-1", defaultCharset().toString(), false);
-            assertThrows(log, () -> parsePageIds(f), IllegalArgumentException.class, null);
-
             U.writeStringToFile(f, "1:1,1:1", defaultCharset().toString(), false);
             assertThrows(log, () -> parsePageIds(f), IllegalArgumentException.class, null);
 
@@ -445,7 +443,13 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
             assertEqualsCollections(F.asList(new T2<>(1, 1L), new T2<>(2, 2L)), parsePageIds(f));
 
             U.writeStringToFile(f, U.nl() + "-1:1", defaultCharset().toString(), true);
-            assertEqualsCollections(F.asList(new T2<>(1, 1L), new T2<>(2, 2L), new T2<>(-1, 1L)), parsePageIds(f));
+            U.writeStringToFile(f, U.nl() + "1:-1", defaultCharset().toString(), true);
+            U.writeStringToFile(f, U.nl() + "-1:-1", defaultCharset().toString(), true);
+
+            assertEqualsCollections(
+                F.asList(new T2<>(1, 1L), new T2<>(2, 2L), new T2<>(-1, 1L), new T2<>(1, -1L), new T2<>(-1, -1L)),
+                parsePageIds(f)
+            );
         }
         finally {
             assertTrue(U.delete(f));
@@ -460,13 +464,13 @@ public class IgniteWalConverterArgumentsTest extends GridCommonAbstractTest {
         assertTrue(parsePageIds().isEmpty());
 
         assertThrows(log, () -> parsePageIds("a:b"), IllegalArgumentException.class, null);
-        assertThrows(log, () -> parsePageIds("1:1", "a:b", "1:-1"), IllegalArgumentException.class, null);
+        assertThrows(log, () -> parsePageIds("1:1", "a:b"), IllegalArgumentException.class, null);
 
         assertEqualsCollections(F.asList(new T2<>(1, 1L)), parsePageIds("1:1"));
 
         assertEqualsCollections(
-            F.asList(new T2<>(1, 1L), new T2<>(2, 2L), new T2<>(-1, 1L)),
-            parsePageIds("1:1", "2:2", "-1:1")
+            F.asList(new T2<>(1, 1L), new T2<>(2, 2L), new T2<>(-1, 1L), new T2<>(1, -1L), new T2<>(-1, -1L)),
+            parsePageIds("1:1", "2:2", "-1:1", "1:-1", "-1:-1")
         );
     }
 
