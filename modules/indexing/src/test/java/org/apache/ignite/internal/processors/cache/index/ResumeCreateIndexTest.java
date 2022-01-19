@@ -65,10 +65,7 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
             );
     }
 
-    /**
-     * Creates cache configuration.
-     * @param cacheName
-     */
+    /** */
     private CacheConfiguration<Object, Object> cacheConfig(String cacheName) {
         return cacheCfg(cacheName, "GRP").setAffinity(new RendezvousAffinityFunction(false, 1));
     }
@@ -351,19 +348,21 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
         final int cacheSize = 10_000;
 
         IgniteEx n = prepareNodeToCreateNewIndex(cacheName, cacheSize, false);
-        populate(n.cache(DEFAULT_CACHE_NAME + 2), cacheSize);
+        populate(n.cache(DEFAULT_CACHE_NAME + 2), 1);
 
         IgniteEx cli = startClientGrid(1);
 
         String idxName = "IDX0";
-        StopBuildIndexConsumer slowdownIdxCreateConsumer = new BuildIndexConsumer(getTestTimeout(), 1000);
-        addIdxCreateCacheRowConsumer(nodeName(n), idxName, slowdownIdxCreateConsumer);
+        StopBuildIndexConsumer stopBuildIndexConsumer = new BuildIndexConsumer(getTestTimeout(), 10);
+        addIdxCreateCacheRowConsumer(nodeName(n), idxName, stopBuildIndexConsumer);
 
         IgniteInternalFuture<List<List<?>>> createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
 
-        slowdownIdxCreateConsumer.startBuildIdxFut.get(getTestTimeout());
+        stopBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
         checkInitStatus(n, cacheName, false, 1);
-        slowdownIdxCreateConsumer.finishBuildIdxFut.onDone();
+        stopBuildIndexConsumer.finishBuildIdxFut.onDone();
+
+
 
         cli.cache(DEFAULT_CACHE_NAME).destroy();
         assertTrue(createIdxFut.isDone());
@@ -373,12 +372,12 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
 
         checkCompletedStatus(n, cacheName);
 
-        StopBuildIndexConsumer stopRebuildIdxConsumer = addSlowdownIdxCreateConsumer(n, idxName, 0);
+        StopBuildIndexConsumer slowdownBuildIndexConsumer = addSlowdownIdxCreateConsumer(n, idxName, 0);
         createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
 
-        stopRebuildIdxConsumer.startBuildIdxFut.get(getTestTimeout());
+        slowdownBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
         checkInitStatus(n, cacheName, false, 1);
-        stopRebuildIdxConsumer.finishBuildIdxFut.onDone();
+        slowdownBuildIndexConsumer.finishBuildIdxFut.onDone();
 
         createIdxFut.get(getTestTimeout());
 
