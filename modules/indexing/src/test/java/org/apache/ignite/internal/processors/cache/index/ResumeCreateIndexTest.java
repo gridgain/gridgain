@@ -383,16 +383,15 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
         IgniteInternalFuture<List<List<?>>> createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
 
         GridFutureAdapter<Object> startCleanupFut = new GridFutureAdapter<>();
-        DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory = treeFactory(startCleanupFut);
+        DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory = treeFactory(idxName, startCleanupFut);
 
         stopBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
         checkInitStatus(n, cacheName, false, 1);
         stopBuildIndexConsumer.finishBuildIdxFut.onDone();
 
-        startCleanupFut.get(getTestTimeout());
-
         cli.cache(DEFAULT_CACHE_NAME).destroy();
         assertTrue(createIdxFut.isDone());
+        startCleanupFut.get(getTestTimeout());
 
         cli.createCache(cacheConfig(DEFAULT_CACHE_NAME));
         populate(n.cache(cacheName), cacheSize);
@@ -415,12 +414,13 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
     }
 
     private DurableBackgroundCleanupIndexTreeTaskV2.@NotNull H2TreeFactory treeFactory(
-        GridFutureAdapter<Object> startFut) {
+        String indexName, GridFutureAdapter<Object> startFut) {
         return new DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory() {
             @Override
             protected H2Tree create(CacheGroupContext grpCtx, RootPage rootPage, String treeName, String idxName,
                 String cacheName) throws IgniteCheckedException {
-                startFut.onDone();
+                if (indexName.equals(idxName))
+                    startFut.onDone();
 
                 return super.create(grpCtx, rootPage, treeName, idxName, cacheName);
             }
