@@ -1999,8 +1999,14 @@ public class GridCacheUtils {
         DataStorageConfiguration dsCfg,
         String name
     ) {
-        if (name == null || dsCfg.getDefaultDataRegionConfiguration().getName().equals(name))
+        if (dsCfg == null || name == null)
+            return null;
+
+        if (dsCfg.getDefaultDataRegionConfiguration().getName().equals(name))
             return dsCfg.getDefaultDataRegionConfiguration();
+
+        if (dsCfg.getDataRegionConfigurations() == null)
+            return null;
 
         return Arrays.stream(dsCfg.getDataRegionConfigurations())
             .filter(d -> d.getName().equals(name))

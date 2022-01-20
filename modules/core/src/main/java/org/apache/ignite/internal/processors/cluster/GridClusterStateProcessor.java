@@ -720,18 +720,19 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             }
         }
         else if (isApplicable(msg, state)) {
-            List<String> inMemCaches = listInMemoryUserCaches();
+            if (msg.state() == INACTIVE && !msg.forceDeactivation() && allNodesSupportSafeDeactivationMode()) {
+                List<String> inMemCaches = listInMemoryUserCaches();
 
-            if (msg.state() == INACTIVE && !msg.forceDeactivation() && !inMemCaches.isEmpty() &&
-                allNodesSupportSafeDeactivationMode()) {
-                GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
+                if (!inMemCaches.isEmpty()) {
+                    GridChangeGlobalStateFuture stateFut = changeStateFuture(msg);
 
-                if (stateFut != null) {
-                    stateFut.onDone(new IgniteException(DATA_LOST_ON_DEACTIVATION_WARNING
-                        + " In memory caches: " + inMemCaches + " .To deactivate cluster pass '--force' flag."));
+                    if (stateFut != null) {
+                        stateFut.onDone(new IgniteException(DATA_LOST_ON_DEACTIVATION_WARNING
+                            + " In memory caches: " + inMemCaches + " .To deactivate cluster pass '--force' flag."));
+                    }
+
+                    return false;
                 }
-
-                return false;
             }
 
             ExchangeActions exchangeActions;
@@ -2198,6 +2199,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (F.isEmpty(srvs))
                 return Collections.emptyList();
 
+            log.warning(">>>>> client configuration = " + ctx.config().getDataStorageConfiguration());
+
             return ctx.cache().cacheDescriptors().values().stream()
                 // Filter out system caches
                 .filter(desc -> !CU.isSystemCache(desc.cacheName()))
@@ -2232,6 +2235,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             .filter(desc -> {
                 String dataRegionName = desc.cacheConfiguration().getDataRegionName();
 
+//                log.warning(">>>>> ctx=" + (ctx!=null));
+//                log.warning(">>>>> ctx.config()=" + (ctx.config()!=null));
+//                log.warning(">>>>> ctx.config().getDataStorageConfiguration()=" + (ctx.config().getDataStorageConfiguration()!=null));
                 DataRegionConfiguration dataRegionCfg =
                     CU.findDataRegionConfiguration(ctx.config().getDataStorageConfiguration(), dataRegionName);
 
