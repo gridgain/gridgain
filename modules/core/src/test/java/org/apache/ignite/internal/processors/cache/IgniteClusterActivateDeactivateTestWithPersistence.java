@@ -110,8 +110,16 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
         return cfg;
     }
 
+    /**
+     * Tests "soft" deactivation (without using the --force flag)
+     * when the client node does not have the configured data storage and the cluster contains persistent caches.
+     *
+     * Expected behavior: the cluster should be deactivated successfully (there is no data loss).
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testDeactivateClusterWithoutInMemoryCaches() throws Exception {
+    public void testDeactivateClusterWithPersistentCache() throws Exception {
         IgniteEx srv = startGrid(0);
 
         IgniteEx clientNode = startClientGrid(1);
@@ -162,6 +170,14 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
         }
     }
 
+    /**
+     * Tests "soft" deactivation (without using the --force flag)
+     * when the client node does not have the configured data storage and the cluster contains in-memory caches.
+     *
+     * Expected behavior: deactivation should fail due to potential data loss.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testDeactivateClusterWithInMemoryCaches() throws Exception {
         IgniteEx srv = startGrid(0);
@@ -185,8 +201,6 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
         clientNode.getOrCreateCache(new CacheConfiguration<>("test-client-cache")
             .setDataRegionName(nonPersistentRegion.getName()));
 
-        awaitPartitionMapExchange();
-
         // Try to deactivate the cluster without the `force` flag.
         IgniteInternalFuture<?> deactivateFut = srv
             .context()
@@ -197,7 +211,7 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
             log,
             () -> deactivateFut.get(10, SECONDS),
             IgniteCheckedException.class,
-            "Expected exception was not thrown. Cluster deactivated!");
+            "Deactivation stopped. Deactivation clears in-memory caches (without persistence) including the system caches.");
 
         awaitPartitionMapExchange();
 
@@ -215,8 +229,16 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
         }
     }
 
+    /**
+     * Tests "soft" deactivation (without using the --force flag)
+     * when the cluster contains in-memory caches and cluster nodes "support" different lists of data regions.
+     *
+     * Expected behavior: deactivation should fail due to potential data loss.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testDeactivateClusterWithInMemoryCaches2() throws Exception {
+    public void testDeactivateClusterWithInMemoryCachesAndDifferentDataRegions() throws Exception {
         IgniteEx srv = startGrid(0);
 
         addAdditionalDataRegion = true;
@@ -238,18 +260,14 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
             "It is assumed that the '" + ADDITIONAL_PERSISTENT_DATA_REGION + "' data storage region exists and persistent.",
             persistentRegion != null && persistentRegion.isPersistenceEnabled());
 
-        UUID srv1NodeId = srv1.localNode().id();
+        final UUID srv1NodeId = srv1.localNode().id();
 
         // Create a new cache that is placed into persistent data region.
         srv.getOrCreateCache(new CacheConfiguration<>("test-client-cache")
             .setDataRegionName(persistentRegion.getName())
             .setAffinity(new RendezvousAffinityFunction(false, 1))
-            .setNodeFilter(node -> {
-                System.out.println(">>>>> nodeid=" + node.id() + ", rnodeid=" + srv1NodeId);
-                return node.id().equals(srv1NodeId);
-            }));
-
-        awaitPartitionMapExchange();
+            // This cache should only be started on srv1 node.
+            .setNodeFilter(node -> node.id().equals(srv1NodeId)));
 
         // Try to deactivate the cluster without the `force` flag.
         IgniteInternalFuture<?> deactivateFut = srv
