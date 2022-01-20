@@ -141,9 +141,9 @@ namespace ignite
             {
                 char errBuf[1024] = { 0 };
 
-                strerror_r(errorCode, errBuf, sizeof(errBuf));
-
-                errorDetails.assign(errBuf);
+                const char* res = strerror_r(errorCode, errBuf, sizeof(errBuf));
+                if (res)
+                    errorDetails.assign(res);
             }
 
             return errorDetails;
