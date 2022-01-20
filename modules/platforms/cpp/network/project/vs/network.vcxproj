@@ -231,7 +231,7 @@
     <ClCompile Include="..\..\src\network\ssl\secure_data_filter.cpp" />
     <ClCompile Include="..\..\src\network\ssl\secure_socket_client.cpp" />
     <ClCompile Include="..\..\src\network\ssl\ssl_gateway.cpp" />
-    <ClCompile Include="..\..\src\network\ssl\ssl_utils.cpp" />
+    <ClCompile Include="..\..\src\network\ssl\secure_utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

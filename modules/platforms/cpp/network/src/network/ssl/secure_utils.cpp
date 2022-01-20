@@ -15,7 +15,10 @@
  */
 
 #include "network/sockets.h"
+
+#ifdef _WIN32
 #include <wincrypt.h>
+#endif
 
 #include <ignite/ignite_error.h>
 
