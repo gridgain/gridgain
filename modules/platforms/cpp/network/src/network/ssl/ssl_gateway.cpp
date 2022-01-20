@@ -158,6 +158,7 @@ namespace ignite
                 functions.fpSSL_CTX_free = LoadSslMethod("SSL_CTX_free");
                 functions.fpSSL_CTX_set_verify = LoadSslMethod("SSL_CTX_set_verify");
                 functions.fpSSL_CTX_set_verify_depth = LoadSslMethod("SSL_CTX_set_verify_depth");
+                functions.fpSSL_CTX_set_cert_store = LoadSslMethod("SSL_CTX_set_cert_store");
                 functions.fpSSL_CTX_set_default_verify_paths = LoadSslMethod("SSL_CTX_set_default_verify_paths");
                 functions.fpSSL_CTX_load_verify_locations = LoadSslMethod("SSL_CTX_load_verify_locations");
                 functions.fpSSL_CTX_use_certificate_chain_file = LoadSslMethod("SSL_CTX_use_certificate_chain_file");
@@ -191,6 +192,9 @@ namespace ignite
 
 
                 functions.fpOPENSSL_config = LoadSslMethod("OPENSSL_config");
+                functions.fpX509_STORE_new = LoadSslMethod("X509_STORE_new");
+                functions.fpX509_STORE_add_cert = LoadSslMethod("X509_STORE_add_cert");
+                functions.fpd2i_X509 = LoadSslMethod("d2i_X509");
                 functions.fpX509_free = LoadSslMethod("X509_free");
 
                 functions.fpBIO_free_all = LoadSslMethod("BIO_free_all");
@@ -366,6 +370,17 @@ namespace ignite
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_CTX_set_verify_depth);
 
                 fp(ctx, depth);
+            }
+
+            void SslGateway::SSL_CTX_set_cert_store_(SSL_CTX* ctx, X509_STORE* store)
+            {
+                assert(functions.fpSSL_CTX_set_cert_store != 0);
+
+                typedef int (FuncType)(SSL_CTX*, X509_STORE*);
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpSSL_CTX_set_cert_store);
+
+                fp(ctx, store);
             }
 
             int SslGateway::SSL_CTX_set_default_verify_paths_(SSL_CTX* ctx)
@@ -660,15 +675,48 @@ namespace ignite
                 fp(configName);
             }
 
-            void SslGateway::X509_free_(X509* a)
+            X509_STORE* SslGateway::X509_STORE_new_()
+            {
+                assert(functions.fpX509_STORE_new != 0);
+
+                typedef X509_STORE*(FuncType)();
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpX509_STORE_new);
+
+                return fp();
+            }
+
+            int SslGateway::X509_STORE_add_cert_(X509_STORE* ctx, X509* cert)
+            {
+                assert(functions.fpX509_STORE_add_cert != 0);
+
+                typedef int(FuncType)(X509_STORE*, X509*);
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpX509_STORE_add_cert);
+
+                return fp(ctx, cert);
+            }
+
+            X509* SslGateway::d2i_X509_(X509** cert, const unsigned char** ppin, long length)
+            {
+                assert(functions.fpd2i_X509 != 0);
+
+                typedef X509*(FuncType)(X509**, const unsigned char**, long);
+
+                FuncType* fp = reinterpret_cast<FuncType*>(functions.fpd2i_X509);
+
+                return fp(cert, ppin, length);
+            }
+
+            void SslGateway::X509_free_(X509* cert)
             {
                 assert(functions.fpX509_free != 0);
 
-                typedef void (FuncType)(X509*);
+                typedef void(FuncType)(X509*);
 
                 FuncType* fp = reinterpret_cast<FuncType*>(functions.fpX509_free);
 
-                fp(a);
+                fp(cert);
             }
 
             BIO* SslGateway::BIO_new_(const BIO_METHOD* method)

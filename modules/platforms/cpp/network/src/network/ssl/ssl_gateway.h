@@ -41,6 +41,7 @@ namespace ignite
                 void *fpSSL_CTX_free;
                 void *fpSSL_CTX_set_verify;
                 void *fpSSL_CTX_set_verify_depth;
+                void *fpSSL_CTX_set_cert_store;
                 void *fpSSL_CTX_set_default_verify_paths;
                 void *fpSSL_CTX_load_verify_locations;
                 void *fpSSL_CTX_use_certificate_chain_file;
@@ -66,6 +67,9 @@ namespace ignite
                 void *fpSSL_new;
                 void *fpSSL_free;
                 void *fpOPENSSL_config;
+                void *fpX509_STORE_new;
+                void *fpX509_STORE_add_cert;
+                void *fpd2i_X509;
                 void *fpX509_free;
                 void *fpBIO_new;
                 void *fpBIO_new_ssl_connect;
@@ -127,6 +131,8 @@ namespace ignite
 
                 void SSL_CTX_set_verify_depth_(SSL_CTX* ctx, int depth);
 
+                void SSL_CTX_set_cert_store_(SSL_CTX* ctx, X509_STORE* store);
+
                 int SSL_CTX_set_default_verify_paths_(SSL_CTX* ctx);
 
                 int SSL_CTX_load_verify_locations_(SSL_CTX* ctx, const char* cAfile, const char* cApath);
@@ -179,7 +185,13 @@ namespace ignite
 
                 void OPENSSL_config_(const char* configName);
 
-                void X509_free_(X509* a);
+                X509_STORE* X509_STORE_new_();
+
+                int X509_STORE_add_cert_(X509_STORE* ctx, X509* cert);
+
+                X509* d2i_X509_(X509** cert, const unsigned char** ppin, long length);
+
+                void X509_free_(X509* cert);
 
                 BIO* BIO_new_(const BIO_METHOD* method);
 

@@ -83,7 +83,7 @@ foreach(_target_lib IN LISTS _target_libs)
     endif()
 
     if (WIN32)
-        target_link_libraries(${_target_lib} wsock32 ws2_32 iphlpapi)
+        target_link_libraries(${_target_lib} wsock32 ws2_32 iphlpapi crypt32)
     endif()
 
     target_include_directories(${_target_lib} INTERFACE include ${OS_INCLUDE})

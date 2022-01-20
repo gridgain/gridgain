@@ -14,12 +14,58 @@
  * limitations under the License.
  */
 
+#include "network/sockets.h"
+#include <wincrypt.h>
+
 #include <ignite/ignite_error.h>
 
 #include <ignite/common/utils.h>
 #include <ignite/network/network.h>
 
 #include "network/ssl/secure_utils.h"
+
+namespace
+{
+    void LoadDefaultCa(SSL_CTX* sslContext)
+    {
+        using namespace ignite::network::ssl;
+
+        assert(sslContext != 0);
+        SslGateway &sslGateway = SslGateway::GetInstance();
+
+#ifndef _WIN32
+        long res = sslGateway.SSL_CTX_set_default_verify_paths_(sslContext);
+        if (res != SSL_OPERATION_SUCCESS)
+            ThrowSecureError("Can not set default Certificate Authority for secure connection. Try setting custom CA");
+#else
+        X509_STORE *sslStore = sslGateway.X509_STORE_new_();
+        if (!sslStore)
+            ThrowSecureError("Can not create X509_STORE certificate store. Try setting custom CA");
+
+        HCERTSTORE sysStore = CertOpenSystemStore(NULL, L"ROOT");
+        if (!sysStore)
+            ThrowSecureError("Can not open System Certificate store for secure connection. Try setting custom CA");
+
+        PCCERT_CONTEXT certIter = CertEnumCertificatesInStore(sysStore, NULL);
+        while (certIter)
+        {
+            const unsigned char *currentCert = certIter->pbCertEncoded;
+            X509* x509 = sslGateway.d2i_X509_(NULL, &currentCert, static_cast<long>(certIter->cbCertEncoded));
+            if (x509)
+            {
+                sslGateway.X509_STORE_add_cert_(sslStore, x509);
+
+                sslGateway.X509_free_(x509);
+            }
+            certIter = CertEnumCertificatesInStore(sysStore, certIter);
+        }
+
+        CertCloseStore(sysStore, 0);
+
+        sslGateway.SSL_CTX_set_cert_store_(sslContext, sslStore);
+#endif
+    }
+}
 
 namespace ignite
 {
@@ -56,11 +102,7 @@ namespace ignite
                         ThrowSecureError("Can not set Certificate Authority path for secure connection");
                 }
                 else
-                {
-                    long res = sslGateway.SSL_CTX_set_default_verify_paths_(sslContext);
-                    if (res != SSL_OPERATION_SUCCESS)
-                        ThrowSecureError("Can not set default Certificate Authority path for secure connection");
-                }
+                    LoadDefaultCa(sslContext);
 
                 if (!cfg.certPath.empty())
                 {

@@ -16,7 +16,7 @@
 
 #include "network/sockets.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #   include "network/win_async_client_pool.h"
 #else // Other. Assume Linux
 #   include "network/linux_async_client_pool.h"
@@ -56,7 +56,7 @@ namespace ignite
         IGNITE_IMPORT_EXPORT SP_AsyncClientPool MakeAsyncClientPool(const std::vector<SP_DataFilter>& filters)
         {
             SP_AsyncClientPool platformPool = SP_AsyncClientPool(
-#ifdef WIN32
+#ifdef _WIN32
                 new WinAsyncClientPool()
 #else // Other. Assume Linux
                 new LinuxAsyncClientPool()
