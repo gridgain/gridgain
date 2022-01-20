@@ -140,7 +140,7 @@ namespace ignite
             return CTmToTimestamp(date, ns);
         }
 
-        IGNITE_IMPORT_EXPORT std::string GetDynamicLibraryName(const char* name)
+        IGNITE_IMPORT_EXPORT std::string GetDynamicLibraryName(const std::string& name)
         {
             std::stringstream libNameBuffer;
 
