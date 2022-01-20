@@ -58,15 +58,14 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
     }
 
     /**
-     * Checks that if a new dynamic index can shadow default affinity index,
-     * and thus broke the last one.
+     * Checks that a new dynamic index never shadow default affinity index.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testAffinityIndexShadowing() throws Exception {
         final String cacheName = DEFAULT_CACHE_NAME;
-        final int cacheSize = 10_000;
+        final int cacheSize = 1_000;
         IgniteH2IndexingEx.prepareBeforeNodeStart();
 
         IgniteEx n = startGrid(0);
@@ -116,15 +115,14 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
     }
 
     /**
-     * Checks that if a new dynamic index can shadow default affinity index,
-     * and thus broke the last one.
+     * Checks that a new dynamic index never shadow default affinity index.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testAffinityIndexShadowing2() throws Exception {
         final String cacheName = DEFAULT_CACHE_NAME;
-        final int cacheSize = 10_000;
+        final int cacheSize = 1_000;
         IgniteH2IndexingEx.prepareBeforeNodeStart();
 
         IgniteEx n = startGrid(0);
