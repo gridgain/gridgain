@@ -23,13 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * Result of CheckpointingForceTask
  */
-@GridInternal
 public class CheckpointingForceResult extends IgniteDataTransferObject {
 
     /** */

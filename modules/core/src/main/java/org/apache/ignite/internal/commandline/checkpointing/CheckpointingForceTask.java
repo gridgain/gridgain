@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ import org.jetbrains.annotations.Nullable;
  */
 @GridInternal
 public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, CheckpointingForceResult, NodeCheckpointingResult> {
-
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -47,6 +46,13 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         return new CheckpointingForceJob(debug);
     }
 
+    /**
+     * Collect statuses of underlying checkpoint jobs
+     *
+     * @param results Job results.
+     * @return
+     * @throws IgniteException
+     */
     @Nullable
     @Override protected CheckpointingForceResult reduce0(List<ComputeJobResult> results) throws IgniteException {
         CheckpointingForceResult res = new CheckpointingForceResult();
@@ -58,7 +64,9 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         return res;
     }
 
-    /** */
+    /**
+     * Compute job that does a local checkpoint on a node
+     */
     private static class CheckpointingForceJob extends VisorJob<VoidDto, NodeCheckpointingResult> {
 
         /** */
@@ -97,9 +105,10 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
                 }
 
                 fut = progress.futureFor(CheckpointState.FINISHED);
-                if (fut.isDone())
-                    getFuture(fut, res);
-
+                if (fut.isDone()) {
+                    readFutureResult(fut, res);
+                    return res;
+                }
                 else {
                     jobCtx.holdcc();
 
@@ -117,13 +126,13 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
 
                 return null;
             }
-            getFuture(fut, res);
+            readFutureResult(fut, res);
 
             return res;
         }
     }
 
-    private static Object getFuture(GridFutureAdapter fut, NodeCheckpointingResult res) {
+    private static Object readFutureResult(GridFutureAdapter fut, NodeCheckpointingResult res) {
         try {
             return fut.get();
         }

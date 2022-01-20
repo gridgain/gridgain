@@ -25,7 +25,9 @@ import org.apache.ignite.internal.commandline.checkpointing.CheckpointingSubComm
 import org.apache.ignite.internal.commandline.meta.subcommands.VoidDto;
 
 /**
+ * Checkpoint force command descriptor.
  *
+ * Starts manual checkpoint process on a whole cluster
  */
 public class CheckpointForceCommand extends CheckpointAbstractSubCommand<VoidDto, CheckpointingForceResult> {
 
