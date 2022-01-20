@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.gridgain.internal.h2.message.DbException;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
@@ -58,10 +59,12 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
     }
 
     /**
-     * Checks that a new dynamic index never shadow default affinity index.
+     * Checks that a new dynamic index shadows default affinity index correctly.
+     * Expects, shadowed affinity index is consistent after user index was dropped.
      *
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-34628")
     @Test
     public void testAffinityIndexShadowing() throws Exception {
         final String cacheName = DEFAULT_CACHE_NAME;
@@ -91,13 +94,13 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         populateCache(n.cache(cacheName), cacheSize);
 
         // Affinity index shadowed.
-        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNotNull(index(n, n.cache(cacheName), idxName));
 
         // Drop user index.
         dropIdx(n.cache(cacheName), idxName);
 
-        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNull(index(n, n.cache(cacheName), idxName));
 
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
@@ -110,12 +113,14 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         if (fut != null)
             fut.get(getTestTimeout());
 
+        assertNull(index(n, n.cache(cacheName), idxName));
         assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
     }
 
     /**
-     * Checks that a new dynamic index never shadow default affinity index.
+     * Checks that a new dynamic index shadows default affinity index correctly.
+     * The shadowed affinity index must be dropped together with the cache.
      *
      * @throws Exception If failed.
      */
@@ -146,7 +151,8 @@ public class AffinityIndexShadowingTest extends AbstractRebuildIndexTest {
         assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
         populateCache(n.cache(cacheName), cacheSize);
 
-        assertNotNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
+        // Affinity index shadowed.
+        assertNull(index(n, n.cache(cacheName), H2TableDescriptor.AFFINITY_KEY_IDX_NAME));
         assertNotNull(index(n, n.cache(cacheName), idxName));
 
         // Recreate cache.

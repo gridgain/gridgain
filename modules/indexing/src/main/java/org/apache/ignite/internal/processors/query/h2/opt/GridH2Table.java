@@ -82,6 +82,7 @@ import org.gridgain.internal.h2.table.TableType;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.AFFINITY_KEY_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
 
@@ -113,6 +114,9 @@ public class GridH2Table extends TableBase {
 
     /** */
     private final GridH2RowDescriptor desc;
+
+    /** */
+    private final GridH2IndexBase shadowedAffIndex;
 
     /** */
     private volatile ArrayList<Index> idxs;
@@ -227,6 +231,24 @@ public class GridH2Table extends TableBase {
             idxs.add(0, new H2TableScanIndex(this, index(0), null));
 
         pkIndexPos = hasHashIndex ? 2 : 1;
+
+        // HACK: Hide affinity index for compatibile behaviour.
+        // Remember the index to don't forget later to drop it on cache destroy,
+        // Othewise, there will be garbage in PDS, that may lead to broken tree
+        // on next time when cache will be created.
+        {
+            Index affIdx = idxs.get(idxs.size() - 1);
+            if (affIdx instanceof GridH2IndexBase &&
+                AFFINITY_KEY_IDX_NAME.equals(affIdx.getName()) &&
+                tblDesc.isSystemAffinityIndexShadowed(this)
+            ) {
+                shadowedAffIndex = (GridH2IndexBase)affIdx;
+
+                idxs.remove(idxs.size() - 1);
+            }
+            else
+                shadowedAffIndex = null;
+        }
 
         sysIdxsCnt = idxs.size();
 
@@ -708,6 +730,9 @@ public class GridH2Table extends TableBase {
             ensureNotDestroyed();
 
             destroyed = true;
+
+            if (shadowedAffIndex != null)
+                shadowedAffIndex.destroy(rmIndex);
 
             for (int i = 1, len = idxs.size(); i < len; i++)
                 if (idxs.get(i) instanceof GridH2IndexBase)
