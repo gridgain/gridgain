@@ -30,6 +30,7 @@ namespace
 {
     void LoadDefaultCa(SSL_CTX* sslContext)
     {
+        using namespace ignite::common;
         using namespace ignite::network::ssl;
 
         assert(sslContext != 0);
@@ -45,13 +46,10 @@ namespace
         if (!sslStore)
             ThrowLastSecureError("Can not create X509_STORE certificate store", "Try setting custom CA");
 
-        HCERTSTORE sysStore = CertOpenSystemStore(NULL, L"ROOT");
+        HCERTSTORE sysStore = CertOpenSystemStoreA(NULL, "ROOT");
         if (!sysStore)
-        {
-            // TODO: System error handling
-
-            ThrowSecureError("Can not open System Certificate store for secure connection. Try setting custom CA");
-        }
+            ThrowSecureError(GetLastSystemError("Can not open System Certificate store for secure connection",
+                "Try setting custom CA"));
 
         PCCERT_CONTEXT certIter = CertEnumCertificatesInStore(sysStore, NULL);
         while (certIter)

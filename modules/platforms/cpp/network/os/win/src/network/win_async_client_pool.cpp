@@ -55,7 +55,7 @@ namespace ignite
 
             iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
             if (iocp == NULL)
-                ThrowSystemError("Failed to create IOCP instance");
+                common::ThrowLastSystemError("Failed to create IOCP instance");
 
             try
             {
@@ -117,7 +117,7 @@ namespace ignite
 
                 HANDLE iocp0 = clientRef.AddToIocp(iocp);
                 if (iocp0 == NULL)
-                    ThrowSystemError("Can not add socket to IOCP");
+                    common::ThrowLastSystemError("Can not add socket to IOCP");
 
                 iocp = iocp0;
 
@@ -212,15 +212,6 @@ namespace ignite
             SP_WinAsyncClient client = FindClient(id);
             if (client.IsValid() && !client.Get()->IsClosed())
                 client.Get()->Shutdown(err);
-        }
-
-        void WinAsyncClientPool::ThrowSystemError(const std::string& msg)
-        {
-            std::stringstream buf;
-
-            buf << "Windows system error: " << msg << ", system error code: " << GetLastError();
-
-            throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, buf.str().c_str());
         }
 
         SP_WinAsyncClient WinAsyncClientPool::FindClient(uint64_t id) const

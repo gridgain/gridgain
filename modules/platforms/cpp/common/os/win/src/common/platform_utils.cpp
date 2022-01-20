@@ -16,9 +16,11 @@
 
 #include <time.h>
 #include <vector>
+#include <sstream>
 
 #include <windows.h>
 
+#include <ignite/ignite_error.h>
 #include <ignite/common/platform_utils.h>
 
 // Original code is suggested by MSDN at
@@ -171,9 +173,47 @@ namespace ignite
             return ostr;
         }
 
-        IGNITE_IMPORT_EXPORT unsigned GetRandSeed()
+        unsigned GetRandSeed()
         {
             return static_cast<unsigned>(GetTickCount() ^ GetCurrentProcessId());
+        }
+
+        std::string GetLastSystemError(const std::string& description, const std::string& advice)
+        {
+            DWORD errorCode = GetLastError();
+
+            std::string errorDetails;
+            if (errorCode != ERROR_SUCCESS)
+            {
+                char errBuf[1024] = { 0 };
+
+                FormatMessageA(
+                        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, errorCode,
+                        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), errBuf, sizeof(errBuf), NULL);
+
+                errorDetails.assign(errBuf);
+            }
+
+            std::stringstream messageBuilder;
+            messageBuilder << description;
+            if (!errorDetails.empty())
+                messageBuilder << ": " << errorDetails;
+
+            if (!advice.empty())
+                messageBuilder << ". " << advice;
+
+            return messageBuilder.str();
+        }
+
+        void ThrowLastSystemError(const std::string& description, const std::string& advice)
+        {
+            throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, GetLastSystemError(description, advice).c_str());
+        }
+
+        void ThrowLastSystemError(const std::string& description)
+        {
+            std::string empty;
+            ThrowLastSystemError(description, empty);
         }
     }
 }
