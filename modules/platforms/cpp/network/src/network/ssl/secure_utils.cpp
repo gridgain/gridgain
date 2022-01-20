@@ -167,7 +167,7 @@ namespace ignite
                 throw IgniteError(IgniteError::IGNITE_ERR_SECURE_CONNECTION_FAILURE, err.c_str());
             }
 
-            void ThrowLastSecureError(const std::string& description, const std::string& advice)
+            std::string GetLastSecureError()
             {
                 using namespace ignite::network::ssl;
 
@@ -187,15 +187,12 @@ namespace ignite
                     errorDetails.assign(errBuf);
                 }
 
-                std::stringstream messageBuilder;
-                messageBuilder << description;
-                if (!errorDetails.empty())
-                    messageBuilder << ": " << errorDetails;
+                return errorDetails;
+            }
 
-                if (!advice.empty())
-                    messageBuilder << ". " << advice;
-
-                ThrowSecureError(messageBuilder.str());
+            void ThrowLastSecureError(const std::string& description, const std::string& advice)
+            {
+                ThrowSecureError(common::FormatErrorMessage(description, GetLastSecureError(), advice));
             }
 
             void ThrowLastSecureError(const std::string& description)

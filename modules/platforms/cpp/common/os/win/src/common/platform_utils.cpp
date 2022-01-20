@@ -178,7 +178,7 @@ namespace ignite
             return static_cast<unsigned>(GetTickCount() ^ GetCurrentProcessId());
         }
 
-        std::string GetLastSystemError(const std::string& description, const std::string& advice)
+        std::string GetLastSystemError()
         {
             DWORD errorCode = GetLastError();
 
@@ -194,26 +194,7 @@ namespace ignite
                 errorDetails.assign(errBuf);
             }
 
-            std::stringstream messageBuilder;
-            messageBuilder << description;
-            if (!errorDetails.empty())
-                messageBuilder << ": " << errorDetails;
-
-            if (!advice.empty())
-                messageBuilder << ". " << advice;
-
-            return messageBuilder.str();
-        }
-
-        void ThrowLastSystemError(const std::string& description, const std::string& advice)
-        {
-            throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, GetLastSystemError(description, advice).c_str());
-        }
-
-        void ThrowLastSystemError(const std::string& description)
-        {
-            std::string empty;
-            ThrowLastSystemError(description, empty);
+            return errorDetails;
         }
     }
 }

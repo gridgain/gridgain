@@ -64,6 +64,13 @@ namespace ignite
             void ThrowSecureError(const std::string& err);
 
             /**
+             * Get SSL-related error in text format.
+             *
+             * @param err Error message in human-readable format.
+             */
+            std::string GetLastSecureError();
+
+            /**
              * Try extract from OpenSSL error stack and throw SSL-related error.
              *
              * @param description Error description.

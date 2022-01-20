@@ -109,28 +109,11 @@ namespace ignite
         IGNITE_IMPORT_EXPORT unsigned GetRandSeed();
 
         /**
-         * Try extract from system error stack, format and return platform-specific error.
+         * Try extract from system error stack, and return platform-specific error.
          *
-         * @param description Error description.
-         * @param advice User advice.
          * @return Error in human-readable format.
          */
-        IGNITE_IMPORT_EXPORT std::string GetLastSystemError(const std::string& description, const std::string& advice);
-
-        /**
-         * Try extract from system error stack and throw platform-specific error.
-         *
-         * @param description Error description.
-         * @param advice User advice.
-         */
-        IGNITE_IMPORT_EXPORT void ThrowLastSystemError(const std::string& description, const std::string& advice);
-
-        /**
-         * Try extract from system error stack and throw platform-specific error.
-         *
-         * @param description Error description.
-         */
-        IGNITE_IMPORT_EXPORT void ThrowLastSystemError(const std::string& description);
+        IGNITE_IMPORT_EXPORT std::string GetLastSystemError();
     }
 }
 
