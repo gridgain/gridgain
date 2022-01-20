@@ -161,15 +161,15 @@ namespace ignite
 
                 ssl = sslGateway.SSL_new_(static_cast<SSL_CTX*>(filter.sslContext));
                 if (!ssl)
-                    ThrowSecureError("Can not create secure connection");
+                    ThrowLastSecureError("Can not create secure connection");
 
                 bioIn = sslGateway.BIO_new_(sslGateway.BIO_s_mem_());
                 if (!bioIn)
-                    ThrowSecureError("Can not create input BIO");
+                    ThrowLastSecureError("Can not create input BIO");
 
                 bioOut = sslGateway.BIO_new_(sslGateway.BIO_s_mem_());
                 if (!bioOut)
-                    ThrowSecureError("Can not create output BIO");
+                    ThrowLastSecureError("Can not create output BIO");
 
                 sslGateway.SSL_set_bio_(static_cast<SSL*>(ssl), static_cast<BIO*>(bioIn), static_cast<BIO*>(bioOut));
                 sslGateway.SSL_set_connect_state_(static_cast<SSL*>(ssl));
@@ -202,7 +202,7 @@ namespace ignite
                 {
                     int sslError = sslGateway.SSL_get_error_(ssl0, res);
                     if (IsActualError(sslError))
-                        ThrowSecureError("Can not establish secure connection: " + GetSslError(ssl0, res));
+                        ThrowLastSecureError("Can not establish secure connection");
                 }
 
                 SendPendingData();
@@ -239,7 +239,7 @@ namespace ignite
                 SslGateway &sslGateway = SslGateway::GetInstance();
                 int res = sslGateway.BIO_write_(static_cast<BIO*>(bioIn), data.GetData(), data.GetSize());
                 if (res <= 0)
-                    ThrowSecureError("Failed to process SSL data");
+                    ThrowLastSecureError("Failed to process SSL data");
 
                 data.Skip(res);
 

@@ -73,7 +73,7 @@ namespace ignite
                     context = MakeContext(cfg);
 
                     if (!context)
-                        ThrowSecureError("Can not create SSL context. Aborting connect");
+                        ThrowLastSecureError("Can not create SSL context", "Aborting connect");
                 }
 
                 ssl = MakeSsl(context, hostname, port, blocking);
@@ -87,7 +87,7 @@ namespace ignite
                 int res = sslGateway.SSL_set_tlsext_host_name_(ssl0, hostname);
 
                 if (res != SSL_OPERATION_SUCCESS)
-                    ThrowSecureError("Can not set host name for secure connection: " + GetSslError(ssl0, res));
+                    ThrowLastSecureError("Can not set host name for secure connection");
 
                 sslGateway.SSL_set_connect_state_(ssl0);
 
@@ -101,13 +101,13 @@ namespace ignite
                 if (cert)
                     sslGateway.X509_free_(cert);
                 else
-                    ThrowSecureError("Remote host did not provide certificate: " + GetSslError(ssl0, res));
+                    ThrowLastSecureError("Remote host did not provide certificate");
 
                 // Verify the result of chain verification.
                 // Verification performed according to RFC 4158.
                 res = sslGateway.SSL_get_verify_result_(ssl0);
                 if (X509_V_OK != res)
-                    ThrowSecureError("Certificate chain verification failed: " + GetSslError(ssl0, res));
+                    ThrowLastSecureError("Certificate chain verification failed");
 
                 res = WaitOnSocket(ssl, timeout, false);
 
@@ -115,7 +115,7 @@ namespace ignite
                     return false;
 
                 if (res != WaitResult::SUCCESS)
-                    ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
+                    ThrowLastSecureError("Error while establishing secure connection");
 
                 guard.Release();
 
@@ -199,7 +199,7 @@ namespace ignite
 
                 BIO* bio = sslGateway.BIO_new_ssl_connect_(reinterpret_cast<SSL_CTX*>(context));
                 if (!bio)
-                    ThrowSecureError("Can not create SSL connection");
+                    ThrowLastSecureError("Can not create SSL connection");
 
                 common::DeinitGuard<BIO> guard(bio, &FreeBio);
 
@@ -212,12 +212,12 @@ namespace ignite
 
                 long res = sslGateway.BIO_set_conn_hostname_(bio, address.c_str());
                 if (res != SSL_OPERATION_SUCCESS)
-                    ThrowSecureError("Can not set SSL connection hostname");
+                    ThrowLastSecureError("Can not set SSL connection hostname");
 
                 SSL* ssl = 0;
                 sslGateway.BIO_get_ssl_(bio, &ssl);
                 if (!ssl)
-                    ThrowSecureError("Can not get SSL instance from BIO");
+                    ThrowLastSecureError("Can not get SSL instance from BIO");
 
                 guard.Release();
 
@@ -242,7 +242,7 @@ namespace ignite
                     int sslError = sslGateway.SSL_get_error_(ssl0, res);
 
                     if (IsActualError(sslError))
-                        ThrowSecureError("Can not establish secure connection: " + GetSslError(ssl0, res));
+                        ThrowLastSecureError("Can not establish secure connection");
 
                     int want = sslGateway.SSL_want_(ssl0);
 
@@ -252,7 +252,7 @@ namespace ignite
                         return false;
 
                     if (res != WaitResult::SUCCESS)
-                        ThrowSecureError("Error while establishing secure connection: " + GetSslError(ssl0, res));
+                        ThrowLastSecureError("Error while establishing secure connection");
                 }
 
                 if (std::string("TLSv1.3") == sslGateway.SSL_get_version_(ssl0))
@@ -293,10 +293,9 @@ namespace ignite
                 if (fd < 0)
                 {
                     std::stringstream ss;
+                    ss << "Can not get file descriptor from the SSL socket, fd=" << fd;
 
-                    ss << "Can not get file descriptor from the SSL socket: " << fd << ", " << GetSslError(ssl, fd);
-
-                    utils::ThrowNetworkError(ss.str());
+                    ThrowLastSecureError(ss.str());
                 }
 
                 return sockets::WaitOnSocket(fd, timeout, rd);

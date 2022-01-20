@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-#include "network/sockets.h"
-
 #ifdef _WIN32
+#include "network/sockets.h"
 #include <wincrypt.h>
 #endif
 
@@ -39,15 +38,20 @@ namespace
 #ifndef _WIN32
         long res = sslGateway.SSL_CTX_set_default_verify_paths_(sslContext);
         if (res != SSL_OPERATION_SUCCESS)
-            ThrowSecureError("Can not set default Certificate Authority for secure connection. Try setting custom CA");
+            ThrowLastSecureError("Can not set default Certificate Authority for secure connection",
+                 "Try setting custom CA");
 #else
         X509_STORE *sslStore = sslGateway.X509_STORE_new_();
         if (!sslStore)
-            ThrowSecureError("Can not create X509_STORE certificate store. Try setting custom CA");
+            ThrowLastSecureError("Can not create X509_STORE certificate store", "Try setting custom CA");
 
         HCERTSTORE sysStore = CertOpenSystemStore(NULL, L"ROOT");
         if (!sysStore)
+        {
+            // TODO: System error handling
+
             ThrowSecureError("Can not open System Certificate store for secure connection. Try setting custom CA");
+        }
 
         PCCERT_CONTEXT certIter = CertEnumCertificatesInStore(sysStore, NULL);
         while (certIter)
@@ -84,11 +88,11 @@ namespace ignite
 
                 const SSL_METHOD* method = sslGateway.SSLv23_client_method_();
                 if (!method)
-                    ThrowSecureError("Can not get SSL method");
+                    ThrowLastSecureError("Can not get SSL method");
 
                 SSL_CTX* sslContext = sslGateway.SSL_CTX_new_(method);
                 if (!sslContext)
-                    ThrowSecureError("Can not create new SSL context");
+                    ThrowLastSecureError("Can not create new SSL context");
 
                 common::DeinitGuard<SSL_CTX> guard(sslContext, &FreeContext);
 
@@ -102,7 +106,8 @@ namespace ignite
                 {
                     long res = sslGateway.SSL_CTX_load_verify_locations_(sslContext, cfg.caPath.c_str(), 0);
                     if (res != SSL_OPERATION_SUCCESS)
-                        ThrowSecureError("Can not set Certificate Authority path for secure connection");
+                        ThrowLastSecureError("Can not set Certificate Authority path for secure connection, path=" +
+                            cfg.caPath);
                 }
                 else
                     LoadDefaultCa(sslContext);
@@ -111,20 +116,21 @@ namespace ignite
                 {
                     long res = sslGateway.SSL_CTX_use_certificate_chain_file_(sslContext, cfg.certPath.c_str());
                     if (res != SSL_OPERATION_SUCCESS)
-                        ThrowSecureError("Can not set client certificate file for secure connection");
+                        ThrowLastSecureError("Can not set client certificate file for secure connection, path=" +
+                            cfg.certPath);
                 }
 
                 if (!cfg.keyPath.empty())
                 {
                     long res = sslGateway.SSL_CTX_use_RSAPrivateKey_file_(sslContext, cfg.keyPath.c_str(), SSL_FILETYPE_PEM);
                     if (res != SSL_OPERATION_SUCCESS)
-                        ThrowSecureError("Can not set private key file for secure connection");
+                        ThrowLastSecureError("Can not set private key file for secure connection, path=" + cfg.keyPath);
                 }
 
                 const char* const PREFERRED_CIPHERS = "HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4";
                 long res = sslGateway.SSL_CTX_set_cipher_list_(sslContext, PREFERRED_CIPHERS);
                 if (res != SSL_OPERATION_SUCCESS)
-                    ThrowSecureError("Can not set ciphers list for secure connection");
+                    ThrowLastSecureError("Can not set ciphers list for secure connection");
 
                 guard.Release();
                 return sslContext;
@@ -139,43 +145,6 @@ namespace ignite
                 assert(sslGateway.Loaded());
 
                 sslGateway.SSL_CTX_free_(ctx);
-            }
-
-            std::string GetSslError(void* ssl, int ret)
-            {
-                using namespace ignite::network::ssl;
-
-                SslGateway &sslGateway = SslGateway::GetInstance();
-
-                assert(sslGateway.Loaded());
-
-                SSL* ssl0 = reinterpret_cast<SSL*>(ssl);
-
-                int sslError = sslGateway.SSL_get_error_(ssl0, ret);
-
-                switch (sslError)
-                {
-                    case SSL_ERROR_NONE:
-                    case SSL_ERROR_SSL:
-                        break;
-
-                    case SSL_ERROR_WANT_WRITE:
-                        return std::string("SSL_connect wants write");
-
-                    case SSL_ERROR_WANT_READ:
-                        return std::string("SSL_connect wants read");
-
-                    default:
-                        return std::string("SSL error: ") + ignite::common::LexicalCast<std::string>(sslError);
-                }
-
-                unsigned long error = sslGateway.ERR_get_error_();
-
-                char errBuf[1024] = { 0 };
-
-                sslGateway.ERR_error_string_n_(error, errBuf, sizeof(errBuf));
-
-                return std::string(errBuf);
             }
 
             bool IsActualError(int err)
@@ -198,6 +167,43 @@ namespace ignite
             void ThrowSecureError(const std::string& err)
             {
                 throw IgniteError(IgniteError::IGNITE_ERR_SECURE_CONNECTION_FAILURE, err.c_str());
+            }
+
+            void ThrowLastSecureError(const std::string& description, const std::string& advice)
+            {
+                using namespace ignite::network::ssl;
+
+                SslGateway &sslGateway = SslGateway::GetInstance();
+
+                assert(sslGateway.Loaded());
+
+                unsigned long errorCode = sslGateway.ERR_get_error_();
+
+                std::string errorDetails;
+                if (errorCode != 0)
+                {
+                    char errBuf[1024] = { 0 };
+
+                    sslGateway.ERR_error_string_n_(errorCode, errBuf, sizeof(errBuf));
+
+                    errorDetails.assign(errBuf);
+                }
+
+                std::stringstream messageBuilder;
+                messageBuilder << description;
+                if (!errorDetails.empty())
+                    messageBuilder << ": " << errorDetails;
+
+                if (!advice.empty())
+                    messageBuilder << ". " << advice;
+
+                ThrowSecureError(messageBuilder.str());
+            }
+
+            void ThrowLastSecureError(const std::string& description)
+            {
+                std::string empty;
+                ThrowLastSecureError(description, empty);
             }
         }
     }

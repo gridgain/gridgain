@@ -49,15 +49,6 @@ namespace ignite
             void FreeContext(SSL_CTX* ctx);
 
             /**
-             * Get SSL error.
-             *
-             * @param ssl SSL instance.
-             * @param ret Last operation return code.
-             * @return String representation of last SSL error.
-             */
-            std::string GetSslError(void* ssl, int ret);
-
-            /**
              * Check whether error is actual error or code returned when used in async environment.
              *
              * @param err Error obtained with SSL_get_error.
@@ -71,6 +62,21 @@ namespace ignite
              * @param err Error message.
              */
             void ThrowSecureError(const std::string& err);
+
+            /**
+             * Try extract from OpenSSL error stack and throw SSL-related error.
+             *
+             * @param description Error description.
+             * @param advice User advice.
+             */
+            void ThrowLastSecureError(const std::string& description, const std::string& advice);
+
+            /**
+             * Try extract from OpenSSL error stack and throw SSL-related error.
+             *
+             * @param description Error description.
+             */
+            void ThrowLastSecureError(const std::string& description);
         }
     }
 }
