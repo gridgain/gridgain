@@ -1139,11 +1139,11 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      * @return Callable for put operation.
      */
     private Callable<Void> putOperation(
-        final int idx,
-        final int ldrs,
-        final int ldrIdx,
-        final String cacheName,
-        final Integer[] data) {
+            final int idx,
+            final int ldrs,
+            final int ldrIdx,
+            final String cacheName,
+            final Integer[] data) {
         return new Callable<Void>() {
             @Override public Void call() throws Exception {
                 IgniteCache cache = ignite(idx).cache(cacheName);
@@ -2134,11 +2134,11 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void cacheApiTest(CacheMode cacheMode,
-                              CacheAtomicityMode atomicityMode,
-                              int backups,
-                              boolean heapCache,
-                              boolean nearSrv,
-                              boolean nearClient) throws Exception {
+        CacheAtomicityMode atomicityMode,
+        int backups,
+        boolean heapCache,
+        boolean nearSrv,
+        boolean nearClient) throws Exception {
         Ignite srv0 = ignite(0);
 
         NearCacheConfiguration nearCfg = nearSrv ? new NearCacheConfiguration() : null;
@@ -2810,7 +2810,7 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
 
         Object res0 = cache.invokeAllAsync(data.keySet(), new CacheEntryProcessor<Integer, Integer, Integer>() {
             @Override public Integer process(MutableEntry<Integer, Integer> entry,
-                                             Object... arguments) throws EntryProcessorException {
+                Object... arguments) throws EntryProcessorException {
                 Object expected = ((Map)arguments[0]).get(entry.getKey());
 
                 assertEquals(expected, entry.getValue());
@@ -3036,11 +3036,11 @@ public class IgniteCacheGroupsTest extends GridCommonAbstractTest {
      * @return Update future.
      */
     private IgniteInternalFuture updateFuture(final int nodes,
-                                              final String cacheName,
-                                              final List<Integer> keys,
-                                              final boolean reverse,
-                                              final AtomicBoolean stop,
-                                              final AtomicBoolean err) {
+        final String cacheName,
+        final List<Integer> keys,
+        final boolean reverse,
+        final AtomicBoolean stop,
+        final AtomicBoolean err) {
         final AtomicInteger idx = new AtomicInteger();
 
         return GridTestUtils.runMultiThreadedAsync(new Callable<Void>() {
