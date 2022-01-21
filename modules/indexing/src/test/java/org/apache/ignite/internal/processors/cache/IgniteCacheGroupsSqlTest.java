@@ -175,7 +175,7 @@ public class IgniteCacheGroupsSqlTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void joinQuery(String grp1, String grp2, CacheMode cm1,
-                           CacheMode cm2, CacheAtomicityMode cam1, CacheAtomicityMode cam2) throws Exception {
+        CacheMode cm2, CacheAtomicityMode cam1, CacheAtomicityMode cam2) throws Exception {
         int keys = 1000;
         int accsPerPerson = 4;
 
@@ -210,8 +210,8 @@ public class IgniteCacheGroupsSqlTest extends GridCommonAbstractTest {
 
         SqlFieldsQuery qry = new SqlFieldsQuery(
             "select p._key as p_key, p.name, a._key as a_key, a.personId, a.attr \n" +
-                "from \"pers\".Person p inner join \"acc\".Account a \n" +
-                "on (p._key = a.personId)");
+            "from \"pers\".Person p inner join \"acc\".Account a \n" +
+            "on (p._key = a.personId)");
 
         IgniteCache<Object, Object> cache = node.cache("acc");
 
