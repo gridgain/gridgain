@@ -20,15 +20,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import javax.cache.CacheException;
-
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -44,31 +40,6 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGrid(0);
-    }
-
-    /**
-     * Create table with wrapped key and user value type and insert value by cache API.
-     * Check inserted value.
-     * @throws Exception In case of errors.
-     */
-    @Test
-    public void testWrappedKeyValidation() throws Exception {
-        IgniteCache c1 = ignite(0).getOrCreateCache("WRAP_KEYS");
-        c1.query(new SqlFieldsQuery("CREATE TABLE TestKeys (\n" +
-            "  namePK varchar primary key,\n" +
-            "  notUniqueId int\n" +
-            ") WITH \"wrap_key=true," +
-            "value_type=org.apache.ignite.internal.processors.cache.index.QueryEntityValidationSelfTest$TestKey\""))
-            .getAll();
-
-        IgniteCache<String, TestKey> keys = ignite(0).cache("SQL_PUBLIC_TESTKEYS");
-        TestKey k1 = new TestKey(1);
-
-        keys.put("1", k1);
-
-        TestKey rk1 = keys.get("1");
-
-        assertEquals(k1, rk1);
     }
 
     /**
@@ -197,29 +168,6 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
         @QuerySqlField
         int notUniqueId;
 
-        public TestKey(int notUniqueId) {
-            this.notUniqueId = notUniqueId;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            TestKey testKey = (TestKey) o;
-
-            return notUniqueId == testKey.notUniqueId;
-        }
-
-        /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return Objects.hash(notUniqueId);
-        }
     }
 
     /**
