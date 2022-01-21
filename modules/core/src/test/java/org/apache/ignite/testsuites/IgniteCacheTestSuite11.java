@@ -16,6 +16,9 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.GridCacheAffinityBackupsSelfTest;
 import org.apache.ignite.IgniteCacheAffinitySelfTest;
 import org.apache.ignite.cache.affinity.AffinityClientNodeSelfTest;
@@ -35,10 +38,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.Ignite
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Test suite.

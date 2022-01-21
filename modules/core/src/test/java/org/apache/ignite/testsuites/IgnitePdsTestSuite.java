@@ -16,6 +16,9 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.ActiveOnStartPropertyTest;
 import org.apache.ignite.internal.processors.cache.AutoActivationPropertyTest;
 import org.apache.ignite.internal.processors.cache.ClusterStateOnStartPropertyTest;
@@ -47,10 +50,6 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageP
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /** */
 @RunWith(DynamicSuite.class)

@@ -16,6 +16,9 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.cache.IgniteCacheEntryProcessorSequentialCallTest;
 import org.apache.ignite.cache.IgniteWarmupClosureSelfTest;
 import org.apache.ignite.cache.store.GridCacheBalancingStoreSelfTest;
@@ -100,10 +103,6 @@ import org.apache.ignite.internal.processors.datastreamer.MultipleDataStreamersO
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Test suite.

@@ -16,6 +16,10 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import org.apache.ignite.cache.store.CacheStoreReadFromBackupTest;
 import org.apache.ignite.cache.store.CacheStoreWriteErrorTest;
 import org.apache.ignite.cache.store.CacheTransactionalStoreReadFromBackupTest;
@@ -100,11 +104,6 @@ import org.apache.ignite.internal.processors.cache.local.GridCacheLocalTxExcepti
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
 
 /**
  * Test suite.

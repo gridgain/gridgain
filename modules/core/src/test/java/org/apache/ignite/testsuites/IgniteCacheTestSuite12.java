@@ -16,6 +16,9 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationSerializationOnDiscoveryTest;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationSerializationOnExchangeTest;
 import org.apache.ignite.internal.processors.cache.GridTransactionsSystemUserTimeMetricsTest;
@@ -45,10 +48,6 @@ import org.apache.ignite.internal.processors.cache.transactions.TxWithKeyContent
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Test suite.

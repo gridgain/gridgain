@@ -16,6 +16,9 @@
 
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import org.apache.ignite.cache.AutoReleaseSegmentSelfTest;
 import org.apache.ignite.cache.BreakRebalanceChainTest;
 import org.apache.ignite.cache.CircledRebalanceTest;
@@ -47,10 +50,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileDownload
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /** */
 @RunWith(DynamicSuite.class)
