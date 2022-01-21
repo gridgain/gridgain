@@ -231,14 +231,14 @@ public class IgniteClusterActivateDeactivateTestWithPersistence extends IgniteCl
 
     /**
      * Tests "soft" deactivation (without using the --force flag)
-     * when the cluster contains in-memory caches and cluster nodes "support" different lists of data regions.
+     * when the cluster contains persistent caches and cluster nodes "support" different lists of data regions.
      *
-     * Expected behavior: deactivation should fail due to potential data loss.
+     * Expected behavior: the cluster should be deactivated successfully (there is no data loss)..
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testDeactivateClusterWithInMemoryCachesAndDifferentDataRegions() throws Exception {
+    public void testDeactivateClusterWithPersistentCachesAndDifferentDataRegions() throws Exception {
         IgniteEx srv = startGrid(0);
 
         addAdditionalDataRegion = true;

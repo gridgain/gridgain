@@ -1993,11 +1993,11 @@ public class GridCacheUtils {
      * @param dsCfg Data storage configuration.
      * @param name Name of data region configuration to find.
      * @return Data region configuration with the specified name
-     *          or {@code null} if the given data storage configuration does not cantain such data region.
+     *          or {@code null} if the given data storage configuration does not contain such data region.
      */
     @Nullable public static DataRegionConfiguration findDataRegionConfiguration(
-        DataStorageConfiguration dsCfg,
-        String name
+        @Nullable DataStorageConfiguration dsCfg,
+        @Nullable String name
     ) {
         if (dsCfg == null || name == null)
             return null;
@@ -2005,13 +2005,17 @@ public class GridCacheUtils {
         if (dsCfg.getDefaultDataRegionConfiguration().getName().equals(name))
             return dsCfg.getDefaultDataRegionConfiguration();
 
-        if (dsCfg.getDataRegionConfigurations() == null)
+        DataRegionConfiguration[] regions = dsCfg.getDataRegionConfigurations();
+
+        if (regions == null)
             return null;
 
-        return Arrays.stream(dsCfg.getDataRegionConfigurations())
-            .filter(d -> d.getName().equals(name))
-            .findFirst()
-            .orElse(null);
+        for (int i = 0; i < regions.length; ++i) {
+            if (regions[i].getName().equals(name))
+                return regions[i];
+        }
+
+        return null;
     }
 
     /**
@@ -2022,13 +2026,13 @@ public class GridCacheUtils {
      * @param clsLdr Classloader  that is used in order to extract data storage configuration.
      * @param name Name of data region configuration to find.
      * @return Data region configuration with the specified name
-     *          or {@code null} if the given data storage configuration does not cantain such data region.
+     *          or {@code null} if the given data storage configuration does not contain such data region.
      */
     @Nullable public static DataRegionConfiguration findRemoteDataRegionConfiguration(
         ClusterNode node,
         JdkMarshaller marshaller,
         ClassLoader clsLdr,
-        String name
+        @Nullable String name
     ) {
         return findDataRegionConfiguration(extractDataStorage(node, marshaller, clsLdr), name);
     }
