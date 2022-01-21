@@ -2199,8 +2199,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             if (F.isEmpty(srvs))
                 return Collections.emptyList();
 
-            log.warning(">>>>> client configuration = " + ctx.config().getDataStorageConfiguration());
-
             return ctx.cache().cacheDescriptors().values().stream()
                 // Filter out system caches
                 .filter(desc -> !CU.isSystemCache(desc.cacheName()))
@@ -2235,9 +2233,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             .filter(desc -> {
                 String dataRegionName = desc.cacheConfiguration().getDataRegionName();
 
-//                log.warning(">>>>> ctx=" + (ctx!=null));
-//                log.warning(">>>>> ctx.config()=" + (ctx.config()!=null));
-//                log.warning(">>>>> ctx.config().getDataStorageConfiguration()=" + (ctx.config().getDataStorageConfiguration()!=null));
                 DataRegionConfiguration dataRegionCfg =
                     CU.findDataRegionConfiguration(ctx.config().getDataStorageConfiguration(), dataRegionName);
 
