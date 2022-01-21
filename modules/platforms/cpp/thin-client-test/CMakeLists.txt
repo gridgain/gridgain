@@ -27,7 +27,8 @@ find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread sy
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
 include_directories(include)
 
-set(SOURCES src/teamcity/teamcity_boost.cpp
+set(SOURCES
+        src/teamcity/teamcity_boost.cpp
         src/teamcity/teamcity_messages.cpp
         src/cache_client_test.cpp
         src/compute_client_test.cpp
@@ -53,7 +54,7 @@ endif()
 
 set(TEST_TARGET IgniteThinClientTest)
 
-add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all --run_test=IgniteClientTestSuite)
+add_test(NAME ${TEST_TARGET} COMMAND ${TARGET} --catch_system_errors=no --log_level=all)
 
 set_tests_properties(${TEST_TARGET} PROPERTIES ENVIRONMENT
         IGNITE_NATIVE_TEST_CPP_THIN_CONFIG_PATH=${PROJECT_SOURCE_DIR}/config)

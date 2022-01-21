@@ -41,6 +41,8 @@ namespace ignite
                 void *fpSSL_CTX_free;
                 void *fpSSL_CTX_set_verify;
                 void *fpSSL_CTX_set_verify_depth;
+                void *fpSSL_CTX_set_cert_store;
+                void *fpSSL_CTX_set_default_verify_paths;
                 void *fpSSL_CTX_load_verify_locations;
                 void *fpSSL_CTX_use_certificate_chain_file;
                 void *fpSSL_CTX_use_RSAPrivateKey_file;
@@ -61,11 +63,13 @@ namespace ignite
                 void *fpSSL_read;
                 void *fpSSL_pending;
                 void *fpSSL_get_version;
-                void *fpSSL_get_state;
                 void *fpSSL_get_fd;
                 void *fpSSL_new;
                 void *fpSSL_free;
                 void *fpOPENSSL_config;
+                void *fpX509_STORE_new;
+                void *fpX509_STORE_add_cert;
+                void *fpd2i_X509;
                 void *fpX509_free;
                 void *fpBIO_new;
                 void *fpBIO_new_ssl_connect;
@@ -76,7 +80,6 @@ namespace ignite
                 void *fpBIO_ctrl;
                 void *fpERR_get_error;
                 void *fpERR_error_string_n;
-                void *fpERR_print_errors_fp;
 
                 void *fpOpenSSL_version;
                 void *fpSSL_CTX_set_options;
@@ -104,15 +107,6 @@ namespace ignite
                 void LoadAll();
 
                 /**
-                 * Get functions.
-                 * @return Functions structure.
-                 */
-                SslFunctions& GetFunctions()
-                {
-                    return functions;
-                }
-
-                /**
                  * Check whether the libraries are loaded.
                  * @return @c true if loaded.
                  */
@@ -136,6 +130,10 @@ namespace ignite
                 void SSL_CTX_set_verify_(SSL_CTX* ctx, int mode, int (*callback)(int, X509_STORE_CTX*));
 
                 void SSL_CTX_set_verify_depth_(SSL_CTX* ctx, int depth);
+
+                void SSL_CTX_set_cert_store_(SSL_CTX* ctx, X509_STORE* store);
+
+                int SSL_CTX_set_default_verify_paths_(SSL_CTX* ctx);
 
                 int SSL_CTX_load_verify_locations_(SSL_CTX* ctx, const char* cAfile, const char* cApath);
 
@@ -175,8 +173,6 @@ namespace ignite
 
                 const char* SSL_get_version_(const SSL* ssl);
 
-                int SSL_is_init_finished_(const SSL* ssl);
-
                 int SSL_get_fd_(const SSL* ssl);
 
                 SSL* SSL_new_(SSL_CTX* ctx);
@@ -189,7 +185,13 @@ namespace ignite
 
                 void OPENSSL_config_(const char* configName);
 
-                void X509_free_(X509* a);
+                X509_STORE* X509_STORE_new_();
+
+                int X509_STORE_add_cert_(X509_STORE* ctx, X509* cert);
+
+                X509* d2i_X509_(X509** cert, const unsigned char** ppin, long length);
+
+                void X509_free_(X509* cert);
 
                 BIO* BIO_new_(const BIO_METHOD* method);
 
@@ -207,8 +209,6 @@ namespace ignite
 
                 long BIO_ctrl_(BIO* bp, int cmd, long larg, void* parg);
 
-                long BIO_get_fd_(BIO* bp, int* fd);
-
                 long BIO_get_ssl_(BIO* bp, SSL** ssl);
 
                 long BIO_set_nbio_(BIO* bp, long n);
@@ -218,8 +218,6 @@ namespace ignite
                 unsigned long ERR_get_error_();
 
                 void ERR_error_string_n_(unsigned long e, char* buf, size_t len);
-
-                void ERR_print_errors_fp_(FILE *fd);
 
             private:
                 /**
@@ -242,7 +240,7 @@ namespace ignite
                  * @param name Name.
                  * @return Module.
                  */
-                common::dynamic::Module LoadSslLibrary(const char* name);
+                static common::dynamic::Module LoadSslLibrary(const char* name);
 
                 /**
                  * Load all SSL libraries.

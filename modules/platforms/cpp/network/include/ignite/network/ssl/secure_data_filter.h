@@ -21,7 +21,7 @@
 
 #include <ignite/common/concurrent.h>
 #include <ignite/network/data_filter_adapter.h>
-
+#include <ignite/network/ssl/secure_configuration.h>
 
 namespace ignite
 {
@@ -29,21 +29,6 @@ namespace ignite
     {
         namespace ssl
         {
-            /**
-             * TLS/SSL configuration parameters.
-             */
-            struct SecureConfiguration
-            {
-                /** Path to file containing security certificate to use. */
-                std::string certPath;
-
-                /** Path to file containing private key to use. */
-                std::string keyPath;
-
-                /** Path to file containing Certificate authority to use. */
-                std::string caPath;
-            };
-
             /**
              * TLS/SSL Data Filter.
              */
@@ -122,8 +107,10 @@ namespace ignite
 
                     /**
                      * Start connection procedure including handshake.
+                     *
+                     * @return @c true, if connection complete.
                      */
-                    void DoConnect();
+                    bool DoConnect();
 
                     /**
                      * Check whether connection is established.
@@ -237,9 +224,6 @@ namespace ignite
                  * @throw IgniteError on error.
                  */
                 bool SendInternal(uint64_t id, const DataBuffer& data);
-
-                /** Secure configuration. */
-                const SecureConfiguration cfg;
 
                 /** SSL context. */
                 void* sslContext;
