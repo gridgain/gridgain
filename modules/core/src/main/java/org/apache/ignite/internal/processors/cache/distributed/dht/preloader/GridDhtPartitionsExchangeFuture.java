@@ -4444,7 +4444,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 // Cannot create affinity message.
                 Map<UUID, Exception> errs = Collections.singletonMap(
                     nodeId,
-                    node.isClient()? new IgniteNeedReconnectException(node, e) : new IgniteCheckedException(e));
+                    node.isClient() ? new IgniteNeedReconnectException(node, e) : new IgniteCheckedException(e));
 
                 fullMsg.setErrorsMap(errs);
             }
