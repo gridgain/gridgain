@@ -49,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffini
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessageV2;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.lifecycle.LifecycleEventType;
@@ -571,6 +572,14 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
         startClientFut.get(getTestTimeout());
 
         awaitPartitionMapExchange();
+
+        StringBuilder failures = new StringBuilder();
+        errs.forEach((k,v) -> failures.append("nodeId=").append(k).append(", err=").append(v).append(U.nl()));
+
+        assertTrue(
+            "Failure handler should not be triggered " + failures.toString(),
+            errs.isEmpty());
+
     }
 
     /**
@@ -619,6 +628,13 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
         assertThrows(log, () -> startClientCacheFut.get(), IgniteCheckedException.class, null);
 
         awaitPartitionMapExchange();
+
+        StringBuilder failures = new StringBuilder();
+        errs.forEach((k,v) -> failures.append("nodeId=").append(k).append(", err=").append(v).append(U.nl()));
+
+        assertTrue(
+            "Failure handler should not be triggered " + failures.toString(),
+            errs.isEmpty());
 
         // Make sure that the next call is successful.
         assertNotNull(client.cache("client-cache"));
