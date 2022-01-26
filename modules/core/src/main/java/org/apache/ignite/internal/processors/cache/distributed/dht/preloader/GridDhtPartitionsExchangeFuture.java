@@ -4440,7 +4440,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 fullMsg.joinedNodeAffinity(cachesAff);
             }
-            catch (RuntimeException e) {
+            catch (IllegalStateException e) {
                 // Cannot create affinity message.
                 Map<UUID, Exception> errs = Collections.singletonMap(
                     nodeId,

@@ -1211,7 +1211,7 @@ public class CacheGroupContext {
             if (req.sendPartitionsState())
                 res.partitionMap(top.partitionMap(true));
         }
-        catch (RuntimeException err) {
+        catch (IllegalStateException err) {
             res = new GridDhtAffinityAssignmentResponse(
                 req.futureId(),
                 grpId,

@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -51,10 +50,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.lifecycle.LifecycleBean;
-import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
@@ -69,7 +65,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -94,8 +89,8 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
     private final TcpDiscoveryIpFinder CLIENT_IP_FINDER = new TcpDiscoveryVmIpFinder()
         .setAddresses(Collections.singleton("127.0.0.1:47500"));
 
-    /** Lifecycle bean that can be used for configuring communication SPI. */
-    private LifecycleBean lifecycleBean;
+    /** Custom communication SPI that can be used by the client node. */
+    private volatile TestRecordingCommunicationSpi clientCommSpi;
 
     /** Stores errors that triggered failure handler. */
     private final Map<String, Throwable> errs = new ConcurrentHashMap<>();
@@ -123,6 +118,10 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
         if (startClient) {
             cfg.setClientMode(true);
 
+            TestRecordingCommunicationSpi customSpi = clientCommSpi;
+            if (customSpi != null)
+                cfg.setCommunicationSpi(customSpi);
+
             // It is necessary to ensure that client always connects to grid(0).
             ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setIpFinder(CLIENT_IP_FINDER);
 
@@ -137,8 +136,6 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
                 cfg.setCacheConfiguration(txCfg);
             }
         }
-
-        cfg.setLifecycleBeans(lifecycleBean);
 
         cfg.setFailureHandler(new AbstractFailureHandler() {
             /** {@inheritDoc} */
@@ -513,27 +510,11 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
 
         ig.cluster().state(ACTIVE);
 
-        AtomicReference<TestRecordingCommunicationSpi> clientSpi = new AtomicReference<>();
-        CountDownLatch clientStartLatch = new CountDownLatch(1);
+        clientCommSpi = new TestRecordingCommunicationSpi();
 
-        lifecycleBean = new LifecycleBean() {
-            /** Ignite instance. */
-            @IgniteInstanceResource
-            IgniteEx ignite;
-
-            /** {@inheritDoc} */
-            @Override public void onLifecycleEvent(LifecycleEventType evt) throws IgniteException {
-                if (evt == LifecycleEventType.BEFORE_NODE_START) {
-                    clientSpi.set(TestRecordingCommunicationSpi.spi(ignite));
-
-                    clientSpi.get().blockMessages(
-                        GridDhtPartitionsSingleMessage.class,
-                        ig.configuration().getIgniteInstanceName());
-
-                    clientStartLatch.countDown();
-                }
-            }
-        };
+        clientCommSpi.blockMessages(
+            GridDhtPartitionsSingleMessage.class,
+            ig.configuration().getIgniteInstanceName());
 
         // Start client node and block initial PME in order to guarantee that single message will be processed
         // when affinity history for the corresponding topology version is already cleaned.
@@ -550,14 +531,11 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
             }
         });
 
-        assertTrue("Failed to start a new client node in 10 sec.", clientStartLatch.await(10, SECONDS));
-
         // Wait for initial PME.
-        clientSpi.get().waitForBlocked();
+        clientCommSpi.waitForBlocked();
 
         startClient = false;
         startClientCaches = false;
-        lifecycleBean = null;
 
         // Start new server nodes in order to clean the history of affinity assignments.
         for (int i = 2; i < 5; i++) {
@@ -566,7 +544,7 @@ public class CacheNoAffinityExchangeTest extends GridCommonAbstractTest {
         }
 
         // Send single message from the client.
-        clientSpi.get().stopBlock();
+        clientCommSpi.stopBlock();
 
         // Make sure that client node successfully started.
         startClientFut.get(getTestTimeout());
