@@ -65,6 +65,7 @@ libignite_network_la_SOURCES = \
 	src/network/network.cpp \
 	src/network/ssl/secure_data_filter.cpp \
 	src/network/ssl/secure_socket_client.cpp \
+    src/network/ssl/secure_utils.cpp \
 	src/network/ssl/ssl_gateway.cpp
 
 clean-local:

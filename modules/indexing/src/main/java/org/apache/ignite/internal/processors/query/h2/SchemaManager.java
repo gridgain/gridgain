@@ -357,9 +357,6 @@ public class SchemaManager {
     public void onCacheDestroyed(String cacheName, boolean destroy) {
         String schemaName = schemaName(cacheName);
 
-        if (destroy)
-            System.out.println();
-
         H2Schema schema = schemas.get(schemaName);
 
         // Remove this mapping only after callback to DML proc - it needs that mapping internally

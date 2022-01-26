@@ -21,6 +21,7 @@
 #include <string>
 
 #include <ignite/network/socket_client.h>
+#include <ignite/network/ssl/secure_configuration.h>
 
 namespace ignite
 {
@@ -37,11 +38,9 @@ namespace ignite
                 /**
                  * Constructor.
                  *
-                 * @param certPath Certificate file path.
-                 * @param keyPath Private key file path.
-                 * @param caPath Certificate authority file path.
+                 * @param cfg Secure configuration.
                  */
-                SecureSocketClient(const std::string& certPath, const std::string& keyPath, const std::string& caPath);
+                SecureSocketClient(const SecureConfiguration& cfg);
 
                 /**
                  * Destructor.
@@ -98,13 +97,6 @@ namespace ignite
                 void CloseInternal();
 
                 /**
-                 * Throw SSL-related error.
-                 *
-                 * @param err Error message.
-                 */
-                static void ThrowSecureError(const std::string& err);
-
-                /**
                  * Wait on the socket for any event for specified time.
                  * This function uses poll to achive timeout functionality
                  * for every separate socket operation.
@@ -128,17 +120,6 @@ namespace ignite
                 static int WaitOnSocketIfNeeded(int res, void* ssl, int timeout);
 
                 /**
-                 * Make new context instance.
-                 *
-                 * @param certPath Certificate file path.
-                 * @param keyPath Private key file path.
-                 * @param caPath Certificate authority file path.
-                 * @return New context instance on success and null-pointer on fail.
-                 */
-                static void* MakeContext(const std::string& certPath, const std::string& keyPath,
-                    const std::string& caPath);
-
-                /**
                  * Make new SSL instance.
                  *
                  * @param context SSL context.
@@ -158,23 +139,8 @@ namespace ignite
                  */
                 static bool CompleteConnectInternal(void* ssl, int timeout);
 
-                /**
-                 * Get SSL error.
-                 *
-                 * @param ssl SSL instance.
-                 * @param ret Return value of the pervious operation.
-                 * @return Error string.
-                 */
-                static std::string GetSslError(void* ssl, int ret);
-
-                /** Certificate file path. */
-                std::string certPath;
-
-                /** Private key file path. */
-                std::string keyPath;
-
-                /** Certificate authority file path. */
-                std::string caPath;
+                /** Secure configuration. */
+                SecureConfiguration cfg;
 
                 /** SSL context. */
                 void* context;
