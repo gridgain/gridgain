@@ -185,6 +185,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\ignite\network\ssl\secure_configuration.h" />
     <ClInclude Include="..\..\include\ignite\network\ssl\secure_data_filter.h" />
     <ClInclude Include="..\..\include\ignite\network\async_client_pool.h" />
     <ClInclude Include="..\..\include\ignite\network\async_handler.h" />
@@ -207,6 +208,7 @@
     <ClInclude Include="..\..\os\win\src\network\win_async_worker_thread.h" />
     <ClInclude Include="..\..\src\network\ssl\secure_socket_client.h" />
     <ClInclude Include="..\..\src\network\ssl\ssl_gateway.h" />
+    <ClInclude Include="..\..\src\network\ssl\secure_utils.h" />
     <ClInclude Include="..\..\src\network\async_client_pool_adapter.h" />
     <ClInclude Include="..\..\src\network\error_handling_filter.h" />
     <ClInclude Include="..\..\src\network\tcp_socket_client.h" />
@@ -229,6 +231,7 @@
     <ClCompile Include="..\..\src\network\ssl\secure_data_filter.cpp" />
     <ClCompile Include="..\..\src\network\ssl\secure_socket_client.cpp" />
     <ClCompile Include="..\..\src\network\ssl\ssl_gateway.cpp" />
+    <ClCompile Include="..\..\src\network\ssl\secure_utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
