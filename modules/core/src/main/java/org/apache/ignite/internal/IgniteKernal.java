@@ -314,6 +314,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** GridGain site that is shown in log messages. */
     public static final String SITE = "gridgain.com";
 
+    /** GridGain doc that is shown in log messages. */
+    public static final String DOC = "gridgain.com/docs/index.html";
+
     /** System line separator. */
     public static final String NL = U.nl();
 
@@ -2039,7 +2042,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     ">>> " + ver + NL +
                     ">>> " + COPYRIGHT + NL +
                     ">>> " + NL +
-                    ">>> Ignite documentation: " + "http://" + SITE + NL
+                    ">>> GridGain documentation: " + "http://" + DOC + NL
                 );
             }
 
@@ -2053,7 +2056,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     ver,
                     COPYRIGHT,
                     "",
-                    "Ignite documentation: " + "http://" + SITE,
+                    "GridGain documentation: " + "http://" + DOC,
                     "",
                     "Quiet mode.");
 
