@@ -286,8 +286,6 @@ import org.junit.runners.Suite;
 
     IgniteCacheQueryLargeRecordsOomTest.class,
 
-    QueryParserMetricsHolderSelfTest.class,
-
     GridSubqueryJoinOptimizerSelfTest.class,
 
     // DML.
