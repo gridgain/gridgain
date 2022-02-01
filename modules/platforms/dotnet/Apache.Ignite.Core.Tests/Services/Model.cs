@@ -124,13 +124,15 @@ namespace Apache.Ignite.Platform.Model
     {
         Allow, Deny
     }
-    
+
     /// <summary>
     /// A enum is a clone of Java class AccessLevel with the same namespace.
     /// </summary>
     public enum AccessLevel
     {
+        // ReSharper disable InconsistentNaming
         USER, SUPER
+        // ReSharper restore InconsistentNaming
     }
 
     /// <summary>
