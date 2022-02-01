@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
                     var expectedEnumNames = Enum.GetValues(typeof(T)).OfType<T>().Select(x => x.ToString()).ToList();
                     var actualEnumNames = binRes.GetBinaryType().GetEnumValues().Select(v => v.EnumName).ToList();
-                    
+
                     CollectionAssert.AreEquivalent(expectedEnumNames, actualEnumNames);
                 }
                 else
@@ -306,7 +306,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             CheckSerializeDeserialize(val);
         }
-        
+
         /// <summary>
         /// Tests enums serialization by single value.
         /// </summary>
@@ -381,7 +381,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             CheckSerializeDeserialize(new [] {new RawEnumsHolder2(), new RawEnumsHolder2()});
             CheckSerializeDeserialize(new [] {new RawEnumsHolder(), new RawEnumsHolder2()});
         }
-        
+
         private enum ByteEnum : byte
         {
             Foo = byte.MinValue,
@@ -631,16 +631,16 @@ namespace Apache.Ignite.Core.Tests.Binary
         #pragma warning disable 659
         private class RawEnumsHolder
         {
-            private Enum EnmByteRaw { get; set; } = ByteEnum.Bar;
-            private Enum EnmUByteRaw { get; set; } = SByteEnum.Foo;
-            private Enum EnmShortRaw { get; set; } = ShortEnum.Bar;
-            private Enum EnmUShortRaw { get; set; } = UShortEnum.Foo;
-            private Enum EnmIntRaw { get; set; } = IntEnum.Bar;
-            private Enum EnmUIntRaw { get; set; } = UIntEnum.Foo;
-            private Enum EnmLongRaw { get; set; } = LongEnum.Bar;
-            private Enum EnmULongRaw { get; set; } = ULongEnum.Bar;
+            private Enum EnmByteRaw = ByteEnum.Bar;
+            private Enum EnmUByteRaw = SByteEnum.Foo;
+            private Enum EnmShortRaw = ShortEnum.Bar;
+            private Enum EnmUShortRaw = UShortEnum.Foo;
+            private Enum EnmIntRaw = IntEnum.Bar;
+            private Enum EnmUIntRaw = UIntEnum.Foo;
+            private Enum EnmLongRaw = LongEnum.Bar;
+            private Enum EnmULongRaw = ULongEnum.Bar;
 
-            private Enum[] EnmRawArr { get; set; } = new Enum[]
+            private Enum[] EnmRawArr = new Enum[]
             {
                 ByteEnum.Bar, SByteEnum.Foo, ShortEnum.Bar,
                 UShortEnum.Foo, IntEnum.Bar, UIntEnum.Foo, LongEnum.Bar, ULongEnum.Foo
@@ -661,24 +661,24 @@ namespace Apache.Ignite.Core.Tests.Binary
                        Enumerable.SequenceEqual(EnmRawArr, other.EnmRawArr);
             }
         }
-        
+
         /// <summary>
         /// Additionally holds enums holder as field mixed with other simple fields and enums.
         /// </summary>
         #pragma warning disable 659
         private class RawEnumsHolder2 : RawEnumsHolder
         {
-            private RawEnumsHolder EnmHolder { get; set; } = new RawEnumsHolder();
+            private RawEnumsHolder EnmHolder = new RawEnumsHolder();
 
-            private object Holder { get; set; } = new RawEnumsHolder();
+            private object Holder = new RawEnumsHolder();
 
-            private int IntVal { get; set; } = 1;
+            private int IntVal = 1;
 
-            private string StringVal { get; set; } = "Foo";
+            private string StringVal = "Foo";
 
-            private Enum EnmVal1 { get; set; } = LongEnum.Bar;
+            private Enum EnmVal1 = LongEnum.Bar;
 
-            private IntEnum EnmVal2 { get; set; } = IntEnum.Foo;
+            private IntEnum EnmVal2 = IntEnum.Foo;
 
             public override bool Equals(object obj)
             {
