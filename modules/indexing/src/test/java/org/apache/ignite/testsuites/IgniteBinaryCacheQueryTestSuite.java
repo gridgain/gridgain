@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteSqlBigIntegerKeyTest
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryMinMaxTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryStartFinishListenerTest;
 import org.apache.ignite.internal.processors.query.h2.QueryDataPageScanTest;
-import org.apache.ignite.internal.processors.query.h2.QueryParserMetricsHolderSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.ExplainSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.GridQueryParsingTest;
 import org.apache.ignite.internal.processors.query.h2.sql.SqlUnsupportedSelfTest;

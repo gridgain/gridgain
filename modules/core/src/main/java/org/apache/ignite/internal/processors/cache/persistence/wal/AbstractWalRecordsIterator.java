@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -168,15 +168,19 @@ public abstract class AbstractWalRecordsIterator
      * @throws IgniteCheckedException If failed.
      */
     protected void advance() throws IgniteCheckedException {
+        if (curRec != null)
+            lastRead = curRec.get1();
+
         while (true) {
             try {
                 curRec = advanceRecord(currWalSegment);
 
                 if (curRec != null) {
-                    lastRead = curRec.get1();
+                    if (curRec.get2().type() == null) {
+                        lastRead = curRec.get1();
 
-                    if (curRec.get2().type() == null)
                         continue; // Record was skipped by filter of current serializer, should read next record.
+                    }
 
                     return;
                 }
