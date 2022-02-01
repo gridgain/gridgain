@@ -115,7 +115,8 @@ namespace Apache.Ignite.Core.Impl.Common
 
                 if (toIntMtd == null)
                 {
-                    throw new InvalidCastException($"Unable to convert 'System.Enum' to '{toType}': no converter found.");
+                    throw new InvalidCastException(
+                        string.Format("Unable to convert 'System.Enum' to '{0}': no converter found.", toType));
                 }
 
                 return Expression.Call(null, toIntMtd, fromParamExpr);
