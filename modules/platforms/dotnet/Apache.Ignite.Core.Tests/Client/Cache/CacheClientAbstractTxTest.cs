@@ -425,8 +425,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             foreach (var txStart in txStarts)
             {
+                var start = txStart;
+
                 var tasks = Enumerable.Range(0, 3)
-                    .Select(i => Task.Factory.StartNew(() => act(txStart),TaskCreationOptions.LongRunning))
+                    .Select(i => Task.Factory.StartNew(() => act(start),TaskCreationOptions.LongRunning))
                     .ToArray();
 
                 Task.WaitAll(tasks);

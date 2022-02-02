@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2021 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,37 +16,11 @@
 
 package org.apache.ignite.platform.model;
 
-/** Test value object. */
-public class Role {
+/** Test enum. */
+public enum AccessLevel {
     /** */
-    String name;
+    USER,
 
     /** */
-    AccessLevel accessLevel;
-
-    /** */
-    public Role(String name, AccessLevel accessLevel) {
-        this.name = name;
-        this.accessLevel = accessLevel;
-    }
-
-    /** */
-    public String getName() {
-        return name;
-    }
-
-    /** */
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    /** */
-    public AccessLevel getAccessLevel() {
-        return accessLevel;
-    }
-
-    /** */
-    public void setAccessLevel(AccessLevel accessLevel) {
-        this.accessLevel = accessLevel;
-    }
+    SUPER
 }
