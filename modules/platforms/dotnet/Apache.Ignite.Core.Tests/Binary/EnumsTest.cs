@@ -153,7 +153,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             if (ignite != null)
             {
-                var cache = ignite.GetOrCreateCache<int, T>(typeof(T).FullName);
+                var cache = ignite.GetOrCreateCache<int, T>(TestUtils.TestName);
 
                 cache.Put(1, val);
                 var res = cache.Get(1);
