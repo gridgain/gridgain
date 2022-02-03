@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,7 +247,9 @@ public class ComputeJobChangePriorityTest extends GridCommonAbstractTest {
             List<ClusterNode> subgrid,
             Void arg
         ) throws IgniteException {
-            return subgrid.stream().collect(toMap(n -> new NoopJob(), identity()));
+            // To avoid the rare race between job completion and ComputeTaskSession#waitForAttribute,
+            // we need to add a sleep time for the job.
+            return subgrid.stream().collect(toMap(n -> new NoopJob(50), identity()));
         }
 
         /** {@inheritDoc} */
