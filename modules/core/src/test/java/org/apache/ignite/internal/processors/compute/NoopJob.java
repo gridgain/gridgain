@@ -18,43 +18,13 @@ package org.apache.ignite.internal.processors.compute;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobAdapter;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- * Job that does nothing.
+ *
  */
 class NoopJob extends ComputeJobAdapter {
-    /** Sleep time in ms. */
-    final long sleep;
-
-    /**
-     * Default constructor.
-     */
-    public NoopJob() {
-        this(0);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param sleep Sleep time in ms.
-     */
-    public NoopJob(long sleep) {
-        this.sleep = sleep;
-    }
-
     /** {@inheritDoc} */
     @Override public Object execute() throws IgniteException {
-        if (sleep > 0) {
-            try {
-                U.sleep(sleep);
-            }
-            catch (IgniteInterruptedCheckedException e) {
-                throw new IgniteException(e);
-            }
-        }
-
         return null;
     }
 }
