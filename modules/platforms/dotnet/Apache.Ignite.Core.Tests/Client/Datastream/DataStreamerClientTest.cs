@@ -448,6 +448,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
             Assert.IsTrue(streamer.IsClosed);
         }
 
+#if NETCOREAPP // TODO: IGNITE-15710
         /// <summary>
         /// Tests that flush throws when exception happens in cache store.
         /// </summary>
@@ -475,6 +476,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
             // Streamer is closed because of the flush failure.
             Assert.IsTrue(streamer.IsClosed);
         }
+#endif
 
         /// <summary>
         /// Tests that all add/remove operations throw <see cref="ObjectDisposedException"/> when streamer is closed.
@@ -860,7 +862,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
 
         private class BlockingCacheStore : CacheStoreAdapter<int, int>, IFactory<ICacheStore>
         {
-            private static readonly ManualResetEventSlim Gate = new ManualResetEventSlim();
+            private static readonly ManualResetEventSlim Gate = new ManualResetEventSlim(false);
 
             public static void Block()
             {
@@ -874,7 +876,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
 
             public override int Load(int key)
             {
-                throw new NotImplementedException();
+                throw new IgniteException("Error in Store");
             }
 
             public override void Write(int key, int val)
@@ -884,7 +886,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
 
             public override void Delete(int key)
             {
-                throw new NotImplementedException();
+                throw new IgniteException("Error in Store");
             }
 
             public ICacheStore CreateInstance()

@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Deployment
     using System.CodeDom.Compiler;
     using System.Diagnostics;
     using System.IO;
+    using System.Reflection;
     using Apache.Ignite.Core.Deployment;
     using Apache.Ignite.Core.Discovery.Tcp;
     using Apache.Ignite.Core.Discovery.Tcp.Static;
@@ -108,6 +109,8 @@ namespace Apache.Ignite.Core.Tests.Deployment
         /// </summary>
         private string CompileClientNode(string exePath, string version)
         {
+            var netstandard = Assembly.Load("netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51");
+
             var parameters = new CompilerParameters
             {
                 GenerateExecutable = true,
@@ -116,7 +119,8 @@ namespace Apache.Ignite.Core.Tests.Deployment
                 {
                     typeof(Ignition).Assembly.Location,
                     GetType().Assembly.Location,
-                    "System.dll"
+                    "System.dll",
+                    netstandard.Location
                 }
             };
 
@@ -138,7 +142,7 @@ class Program
 {
     static void Main(string[] args)
     {
-        using (var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration(false)) {ClientMode = true, PeerAssemblyLoadingMode = PeerAssemblyLoadingMode.CurrentAppDomain,
+        using (var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration(false, null, true)) {ClientMode = true, PeerAssemblyLoadingMode = PeerAssemblyLoadingMode.CurrentAppDomain,
                 DiscoverySpi = new TcpDiscoverySpi { IpFinder = new TcpDiscoveryStaticIpFinder { Endpoints = new[] { ""127.0.0.1:47500..47502"" } }, SocketTimeout = TimeSpan.FromSeconds(0.3) }
 }))
         {
