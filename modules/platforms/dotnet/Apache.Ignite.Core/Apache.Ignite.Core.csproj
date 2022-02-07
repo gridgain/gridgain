@@ -44,7 +44,7 @@
 
   <ItemGroup>
     <None Include="..\bin\libs\*.jar" Pack="true" PackagePath="build\output\libs" Link="build\output\libs\%(Filename)%(Extension)" />
-    <None Include="Apache.Ignite.targets" Pack="true" PackagePath="build" Link="build\%(Filename)%(Extension)" />
+    <None Include="GridGain.Ignite.targets" Pack="true" PackagePath="build" Link="build\%(Filename)%(Extension)" />
     <None Include="..\..\..\..\config\java.util.logging.properties" Pack="true" PackagePath="build\output\config" Link="build\output\config\%(Filename)%(Extension)" />
     <None Include="NuGet\LINQPad\*.*" Pack="true" PackagePath="linqpad-samples" Link="linqpad-samples\%(Filename)%(Extension)" />
   </ItemGroup>
