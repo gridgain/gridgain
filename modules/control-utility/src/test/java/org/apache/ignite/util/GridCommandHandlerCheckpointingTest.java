@@ -44,15 +44,12 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
      */
     @Test
     public void testHelp() {
-        assertEquals(EXIT_CODE_OK, execute("--checkpointing", "help"));
+        assertEquals(EXIT_CODE_OK, execute("--checkpoint", "help"));
 
         String out = testOut.toString();
 
-        assertContains(log, out, "Print checkpointing help:");
-        assertContains(log, out, "control.(sh|bat) --checkpointing help");
-
         assertContains(log, out, "Start checkpointing process:");
-        assertContains(log, out, "control.(sh|bat) --checkpointing force");
+        assertContains(log, out, "control.(sh|bat) --checkpoint");
     }
 
     @Test
@@ -66,7 +63,7 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
 
         createCacheAndPreload(crd, 1);
 
-        assertEquals(EXIT_CODE_OK, execute("--checkpointing", "force"));
+        assertEquals(EXIT_CODE_OK, execute("--checkpoint", "force"));
 
         final int numOfCheckpointsAfter = checkpointHist.checkpoints().size();
         final CheckpointEntry lastCheckpointAfter = checkpointHist.lastCheckpoint();
