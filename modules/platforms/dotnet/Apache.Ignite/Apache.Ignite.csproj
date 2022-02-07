@@ -43,6 +43,7 @@
     <Reference Include="System.ServiceProcess" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedAssemblyInfo.cs" />
     <Compile Include="Config\AppSettingsConfigurator.cs" />
     <Compile Include="Config\ArgsConfigurator.cs" />
     <Compile Include="Config\Configurator.cs" />

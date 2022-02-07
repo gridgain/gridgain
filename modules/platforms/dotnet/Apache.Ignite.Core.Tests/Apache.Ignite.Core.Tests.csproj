@@ -72,6 +72,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedAssemblyInfo.cs" />
     <Compile Include="ApiParity\BinaryParityTest.cs" />
     <Compile Include="ApiParity\CacheAffinityParityTest.cs" />
     <Compile Include="ApiParity\CacheMetricsParityTest.cs" />

@@ -51,6 +51,7 @@
     <Reference Include="System.Web" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedAssemblyInfo.cs" />
     <Compile Include="IgniteOutputCacheProvider.cs" />
     <Compile Include="IgniteSessionStateStoreProvider.cs" />
     <Compile Include="IgniteWebUtils.cs" />
