@@ -19,12 +19,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Apache Software Foundation")]
-[assembly: AssemblyProduct("Apache Ignite.NET")]
-[assembly: AssemblyCopyright("Copyright 2021")]
+[assembly: AssemblyCompany("GridGain")]
+[assembly: AssemblyProduct("GridGain Ignite.NET")]
+[assembly: AssemblyCopyright("Copyright 2022")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: AssemblyVersion("2.12.0.56898")]
-[assembly: AssemblyFileVersion("2.12.0.56898")]
-[assembly: AssemblyInformationalVersion("2.12.0")]
+[assembly: AssemblyVersion("8.8.127.50721")]
+[assembly: AssemblyFileVersion("8.8.127.50721")]
+[assembly: AssemblyInformationalVersion("8.8.127")]
