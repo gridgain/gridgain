@@ -20,19 +20,9 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Apache.Ignite.EntityFramework.Tests")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Apache Software Foundation")]
-[assembly: AssemblyProduct("Apache Ignite.NET")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
 
 [assembly: Guid("cda5700e-78f3-4a9e-a9b0-704cbe94651c")]
-
-[assembly: AssemblyVersion("8.8.127.50721")]
-[assembly: AssemblyFileVersion("8.8.127.50721")]
-[assembly: AssemblyInformationalVersion("8.8.127")]
 
 [assembly: CLSCompliant(true)]

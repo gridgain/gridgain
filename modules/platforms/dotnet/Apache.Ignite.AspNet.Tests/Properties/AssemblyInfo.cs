@@ -23,19 +23,9 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyTitle("Apache.Ignite.AspNet.Tests")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Apache Software Foundation")]
-[assembly: AssemblyProduct("Apache Ignite.NET")]
-[assembly: AssemblyCopyright("Copyright 2019")]
-[assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
 
 [assembly: Guid("18ea4c71-a11d-4ab1-8042-418f7559d84f")]
-
-[assembly: AssemblyVersion("8.8.127.50721")]
-[assembly: AssemblyFileVersion("8.8.127.50721")]
-[assembly: AssemblyInformationalVersion("8.8.127")]
 
 [assembly: CLSCompliant(true)]
