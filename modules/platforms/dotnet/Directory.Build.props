@@ -26,7 +26,7 @@
         <RepositoryUrl>https://github.com/apache/ignite</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://ignite.apache.org/</PackageProjectUrl>
-        <PackageIcon>logo_ignite_128x128.png</PackageIcon>
+        <PackageIcon>logo_gg_64x64.png</PackageIcon>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <PackageTags>Apache;Ignite;In-Memory;Distributed;Computing;SQL;NoSQL;Database;Cache;Grid;Map;Reduce;LINQ</PackageTags>
     </PropertyGroup>
@@ -34,6 +34,6 @@
         <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="All" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="$(MSBuildThisFileDirectory)\logo_ignite_128x128.png" Pack="true" PackagePath=""/>
+        <None Include="$(MSBuildThisFileDirectory)\logo_gg_64x64.png" Pack="true" PackagePath=""/>
     </ItemGroup>
 </Project>
