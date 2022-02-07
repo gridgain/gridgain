@@ -1,5 +1,5 @@
-﻿/*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
+using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("Apache.Ignite.Benchmarks")]
-[assembly: AssemblyDescription("Apache Ignite.NET Benchmarks")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("GridGain")]
+[assembly: AssemblyProduct("GridGain Ignite.NET")]
+[assembly: AssemblyCopyright("Copyright 2022")]
+[assembly: AssemblyTrademark("")]
+[assembly: AssemblyCulture("")]
 
-[assembly: ComVisible(false)]
-
-[assembly: Guid("8fae8395-7e91-411a-a78f-44d6d3fed0fc")]
+[assembly: AssemblyVersion("8.8.127.50721")]
+[assembly: AssemblyFileVersion("8.8.127.50721")]
+[assembly: AssemblyInformationalVersion("8.8.127")]

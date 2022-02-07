@@ -58,6 +58,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedAssemblyInfo.cs" />
     <Compile Include="DbCachingMode.cs" />
     <Compile Include="DbQueryInfo.cs" />
     <Compile Include="IDbCachingPolicy.cs" />

@@ -50,6 +50,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedAssemblyInfo.cs" />
     <Compile Include="CacheClientLinqExtensions.cs" />
     <Compile Include="CacheLinqExtensions.cs" />
     <Compile Include="CompiledQuery.cs" />
