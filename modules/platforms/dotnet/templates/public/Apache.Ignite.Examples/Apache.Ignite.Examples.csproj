@@ -2,18 +2,12 @@
 
     <PropertyGroup>
         <PackageType>Template</PackageType>
-        <PackageVersion>2.11.0</PackageVersion>
         <PackageId>GridGain.Ignite.Examples</PackageId>
-        <Title>Apache Ignite Examples</Title>
-        <Authors>Apache Ignite</Authors>
-        <Description>Apache Ignite.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://ignite.apache.org/docs/latest/quick-start/dotnet</Description>
-        <PackageTags>apache;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
+        <Title>GridGain Ignite Examples</Title>
+        <Description>GridGain Ignite.NET example projects. This package is a convenient way to download and explore the examples.</Description>
+        <PackageTags>gridgain;ignite;examples;distributed;cache;sql;nosql;linq;dotnet-new;templates;</PackageTags>
         <TargetFramework>netcoreapp3.1</TargetFramework>
-        <PackageProjectUrl>https://ignite.apache.org</PackageProjectUrl>
-	<RepositoryUrl>https://github.com/apache/ignite</RepositoryUrl>
-	<RepositoryType>git</RepositoryType>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <NoWarn>NU5119,NU5128</NoWarn>
 
         <IncludeContentInPack>true</IncludeContentInPack>
