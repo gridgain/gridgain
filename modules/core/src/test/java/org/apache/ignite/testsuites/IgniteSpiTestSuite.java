@@ -46,9 +46,6 @@ import org.junit.runners.Suite;
     // Deployment
     IgniteSpiDeploymentSelfTestSuite.class,
 
-    // Discovery.
-    IgniteSpiDiscoverySelfTestSuite.class,
-
     // Communication.
     IgniteSpiCommunicationSelfTestSuite.class,
 

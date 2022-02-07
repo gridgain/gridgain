@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -102,6 +103,9 @@ public class CheckpointMarkersStorage {
 
     /** Counter representing quantity of checkpoints since last checkpoint history snapshot. */
     private final AtomicInteger checkpointSnapshotCounter = new AtomicInteger(1);
+
+    /** Guards checkpoint snapshot operation, so that it couldn't run in parallel. */
+    private final AtomicBoolean checkpointSnapshotInProgress = new AtomicBoolean(false);
 
     /**
      * @param igniteInstanceName Ignite instance name.
@@ -641,60 +645,68 @@ public class CheckpointMarkersStorage {
 
         if (createSnapshot) {
             Runnable runnable = () -> {
-                EarliestCheckpointMapSnapshot snapshot;
-
-                lock.readLock();
-                try {
-                    // Create the earliest checkpoint map snapshot
-                    snapshot = cpHistory.earliestCheckpointsMapSnapshot();
-                }
-                finally {
-                    lock.readUnlock();
-                }
-
-                File targetFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_FILE);
-
-                // For fail-safety we should first write the snapshot to a temporary file
-                // and then atomically rename it
-                File tmpFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_TMP_FILE);
-
-                if (tmpFile.exists() && !IgniteUtils.delete(tmpFile)) {
-                    log.error("Failed to delete temporary checkpoint snapshot file: " + tmpFile.getAbsolutePath());
-
-                    return;
-                }
-
-                final byte[] bytes;
-
-                try {
-                    bytes = JdkMarshaller.DEFAULT.marshal(snapshot);
-                }
-                catch (IgniteCheckedException e) {
-                    log.error("Failed to marshal checkpoint snapshot: " + e.getMessage(), e);
-
+                if (!checkpointSnapshotInProgress.compareAndSet(false, true)) {
                     return;
                 }
 
                 try {
-                    Files.write(tmpFile.toPath(), bytes);
-                }
-                catch (IOException e) {
-                    log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);
+                    EarliestCheckpointMapSnapshot snapshot;
 
-                    return;
-                }
+                    lock.readLock();
+                    try {
+                        // Create the earliest checkpoint map snapshot
+                        snapshot = cpHistory.earliestCheckpointsMapSnapshot();
+                    }
+                    finally {
+                        lock.readUnlock();
+                    }
 
-                try {
-                    // Atomically rename temporary file
-                    Files.move(
-                        tmpFile.toPath(),
-                        targetFile.toPath(),
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING
-                    );
-                }
-                catch (IOException e) {
-                    log.error("Failed to rename temporary checkpoint snapshot file: " + targetFile, e);
+                    File targetFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_FILE);
+
+                    // For fail-safety we should first write the snapshot to a temporary file
+                    // and then atomically rename it
+                    File tmpFile = new File(cpDir, EARLIEST_CP_SNAPSHOT_TMP_FILE);
+
+                    if (tmpFile.exists() && !IgniteUtils.delete(tmpFile)) {
+                        log.error("Failed to delete temporary checkpoint snapshot file: " + tmpFile.getAbsolutePath());
+
+                        return;
+                    }
+
+                    final byte[] bytes;
+
+                    try {
+                        bytes = JdkMarshaller.DEFAULT.marshal(snapshot);
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.error("Failed to marshal checkpoint snapshot: " + e.getMessage(), e);
+
+                        return;
+                    }
+
+                    try {
+                        Files.write(tmpFile.toPath(), bytes);
+                    }
+                    catch (IOException e) {
+                        log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);
+
+                        return;
+                    }
+
+                    try {
+                        // Atomically rename temporary file
+                        Files.move(
+                            tmpFile.toPath(),
+                            targetFile.toPath(),
+                            StandardCopyOption.ATOMIC_MOVE,
+                            StandardCopyOption.REPLACE_EXISTING
+                        );
+                    }
+                    catch (IOException e) {
+                        log.error("Failed to rename temporary checkpoint snapshot file: " + targetFile, e);
+                    }
+                } finally {
+                    checkpointSnapshotInProgress.set(false);
                 }
             };
 

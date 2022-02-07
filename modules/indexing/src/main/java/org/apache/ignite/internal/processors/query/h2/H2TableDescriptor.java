@@ -80,7 +80,7 @@ public class H2TableDescriptor {
     /** */
     private H2PkHashIndex pkHashIdx;
 
-    /** Flag of table has been created from SQL*/
+    /** Flag of table has been created from SQL. */
     private boolean isSql;
 
     /**
@@ -264,48 +264,56 @@ public class H2TableDescriptor {
 
         // Locate index where affinity column is first (if any).
         if (affCol != null) {
-            boolean affIdxFound = false;
+            List<IndexColumn> unwrappedKeyCols = extractKeyColumns(tbl, keyCol, null);
 
-            for (GridQueryIndexDescriptor idxDesc : type.indexes().values()) {
-                if (idxDesc.type() != QueryIndexType.SORTED)
-                    continue;
+            ArrayList<IndexColumn> colsWithUnwrappedKey = new ArrayList<>(unwrappedKeyCols.size());
 
-                String firstField = idxDesc.fields().iterator().next();
+            colsWithUnwrappedKey.add(affCol);
 
-                Column col = tbl.getColumn(firstField);
+            //We need to reorder PK columns to have affinity key as first column, that's why we can't use simple PK columns
+            H2Utils.addUniqueColumns(colsWithUnwrappedKey, unwrappedKeyCols);
 
-                IndexColumn idxCol = tbl.indexColumn(col.getColumnId(),
-                    idxDesc.descending(firstField) ? SortOrder.DESCENDING : SortOrder.ASCENDING);
+            List<IndexColumn> cols = H2Utils.treeIndexColumns(tbl.rowDescriptor(), new ArrayList<>(2), affCol, keyCol);
 
-                affIdxFound |= H2Utils.equals(idxCol, affCol);
-            }
-
-            // Add explicit affinity key index if nothing alike was found.
-            if (!affIdxFound) {
-                List<IndexColumn> unwrappedKeyCols = extractKeyColumns(tbl, keyCol, null);
-
-                ArrayList<IndexColumn> colsWithUnwrappedKey = new ArrayList<>(unwrappedKeyCols.size());
-
-                colsWithUnwrappedKey.add(affCol);
-
-                //We need to reorder PK columns to have affinity key as first column, that's why we can't use simple PK columns
-                H2Utils.addUniqueColumns(colsWithUnwrappedKey, unwrappedKeyCols);
-
-                List<IndexColumn> cols = H2Utils.treeIndexColumns(tbl.rowDescriptor(), new ArrayList<>(2), affCol, keyCol);
-
-                idxs.add(idx.createSortedIndex(
-                    AFFINITY_KEY_IDX_NAME,
-                    tbl,
-                    false,
-                    true,
-                    colsWithUnwrappedKey,
-                    cols,
-                    -1)
-                );
-            }
+            idxs.add(idx.createSortedIndex(
+                AFFINITY_KEY_IDX_NAME,
+                tbl,
+                false,
+                true,
+                colsWithUnwrappedKey,
+                cols,
+                -1)
+            );
         }
 
         return idxs;
+    }
+
+    /**
+     * Checks if any user index shadows system affinity index,
+     *
+     * @param tbl Table.
+     * @return {@code true} if system index is shadowed, {@code false} otherwise.
+     */
+    public boolean isSystemAffinityIndexShadowed(GridH2Table tbl) {
+        IndexColumn affColumn = tbl.getAffinityKeyColumn();
+
+        for (GridQueryIndexDescriptor idxDesc : type.indexes().values()) {
+            if (idxDesc.type() != QueryIndexType.SORTED)
+                continue;
+
+            String firstField = idxDesc.fields().iterator().next();
+
+            Column col = tbl.getColumn(firstField);
+
+            IndexColumn idxCol = tbl.indexColumn(col.getColumnId(),
+                idxDesc.descending(firstField) ? SortOrder.DESCENDING : SortOrder.ASCENDING);
+
+            if (H2Utils.equals(idxCol, affColumn))
+                return true;
+        }
+
+        return false;
     }
 
     /**
@@ -314,7 +322,6 @@ public class H2TableDescriptor {
      * @param tbl GridH2Table instance
      * @param keyCol Key index column.
      * @param affCol Affinity index column.
-     *
      * @return List of key and affinity columns. Key's, if it possible, splitted into simple components.
      */
     @NotNull private List<IndexColumn> extractKeyColumns(GridH2Table tbl, IndexColumn keyCol, IndexColumn affCol) {

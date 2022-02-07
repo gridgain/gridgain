@@ -23,26 +23,35 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.client.Person;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.BreakBuildIndexConsumer;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.SlowdownBuildIndexConsumer;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.StopBuildIndexConsumer;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.query.QueryIndexDescriptorImpl;
 import org.apache.ignite.internal.processors.query.QueryIndexKey;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder.Status;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEX_REBUILD_BATCH_SIZE;
+import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.addIdxCreateCacheRowConsumer;
+import static org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.nodeName;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder.Status.COMPLETE;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusHolder.Status.INIT;
 import static org.apache.ignite.internal.processors.query.aware.IndexBuildStatusStorage.KEY_PREFIX;
+import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
@@ -52,12 +61,37 @@ import static org.apache.ignite.testframework.GridTestUtils.runAsync;
  */
 @WithSystemProperty(key = IGNITE_INDEX_REBUILD_BATCH_SIZE, value = "1")
 public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
+    /** Original {@link DurableBackgroundCleanupIndexTreeTaskV2#idxTreeFactory}. */
+    private DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory originalTaskIdxTreeFactory;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        originalTaskIdxTreeFactory = idxTreeFactory;
+    }
+
+    /** {@inheritDoc} */
+    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod")
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        idxTreeFactory = originalTaskIdxTreeFactory;
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setCacheConfiguration(
-                cacheCfg(DEFAULT_CACHE_NAME, null).setAffinity(new RendezvousAffinityFunction(false, 1))
+                cacheConfig(DEFAULT_CACHE_NAME),
+                // Add one more cache to keep CacheGroup non-empty when the first cache will be destroyed during test.
+                cacheConfig(DEFAULT_CACHE_NAME + 2)
             );
+    }
+
+    /** */
+    private CacheConfiguration<Object, Object> cacheConfig(String cacheName) {
+        return cacheCfg(cacheName, "GRP").setAffinity(new RendezvousAffinityFunction(false, 1));
     }
 
     /**
@@ -324,6 +358,113 @@ public class ResumeCreateIndexTest extends AbstractRebuildIndexTest {
 
         checkNoStatus(n, cacheName);
         assertEquals(100_000, selectPersonByName(n.cache(cacheName)).size());
+    }
+
+    /**
+     * Checks that incomplete index is destroyed.
+     *
+     * @throws Exception If failed.
+     */
+    @SuppressWarnings("AssignmentToStaticFieldFromInstanceMethod")
+    @Test
+    public void testIncompleteIndexDroppedOnCacheDestroy() throws Exception {
+        final String cacheName = DEFAULT_CACHE_NAME;
+        final int cacheSize = 10_000;
+
+        IgniteEx n = prepareNodeToCreateNewIndex(cacheName, cacheSize, false);
+        populate(n.cache(DEFAULT_CACHE_NAME + 2), 1);
+
+        IgniteEx cli = startClientGrid(1);
+
+        String idxName = "IDX0";
+        StopBuildIndexConsumer failBuildIndexConsumer = new FailBuildIndexConsumer(getTestTimeout(), 1000);
+        addIdxCreateCacheRowConsumer(nodeName(n), idxName, failBuildIndexConsumer);
+
+        IgniteInternalFuture<List<List<?>>> createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
+
+        GridFutureAdapter<Object> startCleanupFut = new GridFutureAdapter<>();
+        DurableBackgroundCleanupIndexTreeTaskV2.idxTreeFactory = treeFactory(idxName, startCleanupFut);
+
+        failBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
+        checkInitStatus(n, cacheName, false, 1);
+        failBuildIndexConsumer.finishBuildIdxFut.onDone();
+
+        cli.cache(DEFAULT_CACHE_NAME).destroy();
+        assertTrue(createIdxFut.isDone());
+        startCleanupFut.get(getTestTimeout());
+
+        cli.createCache(cacheConfig(DEFAULT_CACHE_NAME));
+        populate(n.cache(cacheName), cacheSize);
+
+        checkCompletedStatus(n, cacheName);
+
+        StopBuildIndexConsumer slowdownBuildIndexConsumer = addSlowdownIdxCreateConsumer(n, idxName, 0);
+        createIdxFut = createIdxAsync(cli.cache(cacheName), idxName);
+
+        slowdownBuildIndexConsumer.startBuildIdxFut.get(getTestTimeout());
+        checkInitStatus(n, cacheName, false, 1);
+        slowdownBuildIndexConsumer.finishBuildIdxFut.onDone();
+
+        createIdxFut.get(getTestTimeout());
+
+        checkCompletedStatus(n, cacheName);
+        assertTrue(allIndexes(n).containsKey(new QueryIndexKey(cacheName, idxName)));
+
+        assertEquals(cacheSize, selectPersonByName(n.cache(cacheName)).size());
+    }
+
+    /** */
+    private DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory treeFactory(
+        String indexName,
+        GridFutureAdapter<Object> startFut
+    ) {
+        return new DurableBackgroundCleanupIndexTreeTaskV2.H2TreeFactory() {
+            /** {@inheritDoc} */
+            @Override protected H2Tree create(
+                CacheGroupContext grpCtx,
+                RootPage rootPage,
+                String treeName,
+                String idxName,
+                String cacheName
+            ) throws IgniteCheckedException {
+                if (indexName.equals(idxName))
+                    startFut.onDone();
+
+                return super.create(grpCtx, rootPage, treeName, idxName, cacheName);
+            }
+        };
+    }
+
+    /**
+     * Consumer that fails building indexes of cache.
+     */
+    static class FailBuildIndexConsumer extends StopBuildIndexConsumer {
+        /** Number of rows to add before slowdown. */
+        private final int cnt;
+
+        /**
+         * Constructor.
+         *
+         * @param timeout The maximum time to wait finish future in milliseconds.
+         * @param cnt Amount of rows to be added before failure.
+         */
+        FailBuildIndexConsumer(long timeout, int cnt) {
+            super(timeout);
+
+            this.cnt = cnt;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void accept(CacheDataRow row) throws IgniteCheckedException {
+            if (visitCnt.incrementAndGet() < cnt)
+                return;
+
+            startBuildIdxFut.onDone();
+
+            finishBuildIdxFut.get(timeout);
+
+            throw new IgniteCheckedException("test");
+        }
     }
 
     /**

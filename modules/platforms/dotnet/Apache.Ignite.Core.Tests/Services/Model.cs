@@ -126,11 +126,24 @@ namespace Apache.Ignite.Platform.Model
     }
 
     /// <summary>
+    /// A enum is a clone of Java class AccessLevel with the same namespace.
+    /// </summary>
+    public enum AccessLevel
+    {
+        // ReSharper disable InconsistentNaming
+        USER, SUPER
+        // ReSharper restore InconsistentNaming
+    }
+
+    /// <summary>
     /// A class is a clone of Java class Role with the same namespace.
     /// </summary>
     public class Role
     {
         public String Name { get; set; }
+
+        /** Tests declaration as System.Enum. */
+        public Enum AccessLevel { get; set; }
     }
 
     /// <summary>

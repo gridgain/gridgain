@@ -85,10 +85,8 @@ namespace ignite
                 return;
 
             SP_LinuxAsyncClient client = FindClient(id);
-            if (!client.IsValid() || client.Get()->IsClosed())
-                return;
-
-            client.Get()->Shutdown(err);
+            if (client.IsValid() && !client.Get()->IsClosed())
+                client.Get()->Shutdown(err);
         }
 
         void LinuxAsyncClientPool::CloseAndRelease(uint64_t id, const IgniteError *err)
@@ -111,7 +109,16 @@ namespace ignite
 
             bool closed = client.Get()->Close();
             if (closed)
+            {
+                IgniteError err0(client.Get()->GetCloseError());
+                if (err0.GetCode() == IgniteError::IGNITE_SUCCESS)
+                    err0 = IgniteError(IgniteError::IGNITE_ERR_NETWORK_FAILURE, "Connection closed by server");
+
+                if (!err)
+                    err = &err0;
+
                 HandleConnectionClosed(id, err);
+            }
         }
 
         bool LinuxAsyncClientPool::AddClient(SP_LinuxAsyncClient &client)
