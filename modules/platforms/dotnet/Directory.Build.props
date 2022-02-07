@@ -22,7 +22,7 @@
         <Company>GridGain</Company>
         <Authors>GridGain</Authors>
         <Copyright>© GridGain</Copyright>
-        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageLicenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</PackageLicenseUrl>
         <RepositoryUrl>https://github.com/gridgain/gridgain</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://gridgain.com</PackageProjectUrl>
