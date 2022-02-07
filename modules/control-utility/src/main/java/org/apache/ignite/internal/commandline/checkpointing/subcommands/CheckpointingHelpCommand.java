@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.checkpointing.CheckpointCommand;
-import org.apache.ignite.internal.commandline.meta.MetadataSubCommandsList;
+import org.apache.ignite.internal.commandline.checkpointing.CheckpointingSubCommandsList;
 
 /** */
 public class CheckpointingHelpCommand extends AbstractCommand<Void> {
@@ -43,7 +43,7 @@ public class CheckpointingHelpCommand extends AbstractCommand<Void> {
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return MetadataSubCommandsList.HELP.text();
+        return CheckpointingSubCommandsList.HELP.text();
     }
 
 }
