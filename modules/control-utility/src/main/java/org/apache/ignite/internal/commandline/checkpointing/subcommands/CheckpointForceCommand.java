@@ -36,10 +36,6 @@ public class CheckpointForceCommand extends CheckpointAbstractSubCommand<VoidDto
         return CheckpointingForceTask.class.getName();
     }
 
-    @Override protected VoidDto parseArguments0(CommandArgIterator argIter) {
-        return null;
-    }
-
     /** {@inheritDoc} */
     @Override protected void printResult(CheckpointingForceResult res, Logger log) {
         if (res.isSuccess())

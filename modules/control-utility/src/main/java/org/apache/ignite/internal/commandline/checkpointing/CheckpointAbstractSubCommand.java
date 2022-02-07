@@ -91,12 +91,5 @@ public abstract class CheckpointAbstractSubCommand<
     /**
      *
      */
-    protected MetadataArgsDto parseArguments0(CommandArgIterator argIter) {
-        return null;
-    }
-
-    /**
-     *
-     */
     protected abstract void printResult(MetadataResultDto res, Logger log);
 }
