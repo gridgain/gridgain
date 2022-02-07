@@ -3,7 +3,7 @@
     <PropertyGroup>
         <PackageType>Template</PackageType>
         <PackageVersion>2.11.0</PackageVersion>
-        <PackageId>Apache.Ignite.Examples</PackageId>
+        <PackageId>GridGain.Ignite.Examples</PackageId>
         <Title>Apache Ignite Examples</Title>
         <Authors>Apache Ignite</Authors>
         <Description>Apache Ignite.NET example projects. This package is a convenient way to download and explore the examples. Documentation: https://ignite.apache.org/docs/latest/quick-start/dotnet</Description>
