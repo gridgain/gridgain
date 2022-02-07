@@ -37,8 +37,8 @@ ProjectSection(SolutionItems) = preProject
 	DEVNOTES.txt = DEVNOTES.txt
 	README.md = README.md
 	Directory.Build.props = Directory.Build.props
-	logo_ignite_128x128.png = logo_ignite_128x128.png
 	SharedAssemblyInfo.cs = SharedAssemblyInfo.cs
+	logo_gg_64x64.png = logo_gg_64x64.png
 EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Apache.Ignite.Benchmarks", "Apache.Ignite.Benchmarks\Apache.Ignite.Benchmarks.csproj", "{8F507DBE-56F9-437F-82D4-74C02EC44E41}"
