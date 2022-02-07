@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -143,6 +144,7 @@ import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateSingleEntryIt
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
+import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexWorkflowCallback;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
@@ -252,6 +254,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXE
  * For each table it will create indexes declared in {@link GridQueryTypeDescriptor#indexes()}.
  */
 public class IgniteH2Indexing implements GridQueryIndexing {
+    /** Index rebuild maintenance task name. */
+    public static final String INDEX_REBUILD_MNTC_TASK_NAME = "indexRebuildMaintenanceTask";
+
     /*
      * Register IO for indexes.
      */
@@ -2358,6 +2363,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
         distrCfg.listenDisabledFunctions(new FunctionsManager<>());
+
+        ctx.maintenanceRegistry()
+            .registerWorkflowCallbackIfTaskExists(
+                INDEX_REBUILD_MNTC_TASK_NAME,
+                task -> {
+                    String parametersString = task.parameters();
+
+                    String[] parameters = parametersString.split(File.separator);
+
+                    int cacheId = Integer.parseInt(parameters[0]);
+
+                    String idxName = parameters[1];
+
+                    return new RebuildIndexWorkflowCallback(cacheId, idxName, this, log);
+                }
+            );
     }
 
     /** {@inheritDoc} */

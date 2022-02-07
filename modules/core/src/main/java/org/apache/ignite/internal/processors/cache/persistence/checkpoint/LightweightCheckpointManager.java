@@ -105,7 +105,7 @@ public class LightweightCheckpointManager {
         LongJVMPauseDetector longJvmPauseDetector,
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor
-    ) throws IgniteCheckedException {
+    ) {
         CheckpointReadWriteLock lock = new CheckpointReadWriteLock(logger);
 
         checkpointWorkflow = new CheckpointWorkflow(

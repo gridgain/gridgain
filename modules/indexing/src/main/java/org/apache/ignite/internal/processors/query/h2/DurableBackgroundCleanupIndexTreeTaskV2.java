@@ -279,6 +279,18 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
     }
 
     /**
+     * Renames index's trees.
+     *
+     * @param grpCtx Cache group context.
+     * @throws IgniteCheckedException If failed to rename index's trees.
+     */
+    public void renameIndexTrees(CacheGroupContext grpCtx) throws IgniteCheckedException {
+        renameIndexRootPages(grpCtx, cacheName, oldTreeName, newTreeName, segments);
+
+        needToRen = false;
+    }
+
+    /**
      * Destroying index trees.
      *
      * @param grpCtx Cache group context.

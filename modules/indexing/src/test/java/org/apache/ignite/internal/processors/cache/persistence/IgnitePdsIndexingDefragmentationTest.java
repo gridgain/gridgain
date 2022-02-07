@@ -400,7 +400,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
         /**
          * Whether index rebuild happened.
          */
-        private boolean rebuiltIndexes;
+        private volatile boolean rebuiltIndexes;
 
         /** {@inheritDoc} */
         @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, boolean force) {

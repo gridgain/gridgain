@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.database;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -46,8 +47,8 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -84,10 +85,12 @@ import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteTree;
+import org.apache.ignite.internal.util.function.ThrowableBiFunction;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.CIX2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
@@ -109,6 +112,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
+import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
@@ -129,6 +133,9 @@ import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 public class H2TreeIndex extends H2TreeIndexBase {
     /** */
     private final H2Tree[] segments;
+
+    /** Function that re-creates this index. */
+    private final ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
@@ -182,6 +189,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param segments Tree segments.
      * @param cols Columns.
      * @param log Logger.
+     * @param recreator Function that re-creates this index.
      */
     private H2TreeIndex(
         GridCacheContext<?, ?> cctx,
@@ -192,7 +200,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
         H2Tree[] segments,
         IndexColumn[] cols,
         IoStatisticsHolderIndex stats,
-        IgniteLogger log
+        IgniteLogger log,
+        ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator
     ) {
         super(tbl, idxName, cols,
             pk ? IndexType.createPrimaryKey(false, false) :
@@ -210,6 +219,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
         this.treeName = treeName;
 
         this.segments = segments;
+        this.recreator = recreator;
 
         qryCtxRegistry = ((IgniteH2Indexing)(ctx.query().getIndexing())).queryContextRegistry();
 
@@ -367,7 +377,13 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         IndexColumn.mapColumns(cols, tbl);
 
-        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, stats, log);
+        ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator =
+            (memory, manager) -> {
+            return createIndex(cctx, rowCache, tbl, idxName, pk, affinityKey, unwrappedCols, wrappedCols, inlineSize,
+                segmentsCnt, memory, manager, PageIoResolver.DEFAULT_PAGE_IO_RESOLVER, log);
+        };
+
+        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, stats, log, recreator);
     }
 
     /** {@inheritDoc} */
@@ -431,6 +447,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             }
         }
         catch (IgniteCheckedException e) {
+            handlePossibleCorruption(e);
+
             throw DbException.convert(e);
         }
     }
@@ -466,6 +484,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return (H2CacheRow)tree.put(row);
         }
         catch (Throwable t) {
+            handlePossibleCorruption(t);
+
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -500,6 +520,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.putx(row);
         }
         catch (Throwable t) {
+            handlePossibleCorruption(t);
+
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -525,6 +547,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.removex((H2Row)row);
         }
         catch (Throwable t) {
+            handlePossibleCorruption(t);
+
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -546,6 +570,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.size(filter(qctx));
         }
         catch (IgniteCheckedException e) {
+            handlePossibleCorruption(e);
+
             throw DbException.convert(e);
         }
     }
@@ -565,6 +591,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return new SingleRowCursor(found);
         }
         catch (IgniteCheckedException e) {
+            handlePossibleCorruption(e);
+
             throw DbException.convert(e);
         }
     }
@@ -585,6 +613,23 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param rmvIdx Flag remove.
      */
     @Override public void destroy(boolean rmvIdx) {
+        try {
+            destroy0(rmvIdx, false);
+        }
+        catch (IgniteCheckedException e) {
+            // Should NEVER happen because renameImmediately is false here, but just in case:
+            throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
+     *
+     * @param rmvIdx Flag remove.
+     * @param renameImmediately Use {@code true} to rename index tree immediately, before executing
+     *                          cleanup task.
+     */
+    public void destroy0(boolean rmvIdx, boolean renameImmediately) throws IgniteCheckedException {
         if (!markDestroyed())
             return;
 
@@ -600,7 +645,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
                 if (cctx.group().persistenceEnabled() ||
                     cctx.shared().kernalContext().state().clusterState().state() != INACTIVE) {
-                    DurableBackgroundTask<Long> task = new DurableBackgroundCleanupIndexTreeTaskV2(
+                    DurableBackgroundCleanupIndexTreeTaskV2 task = new DurableBackgroundCleanupIndexTreeTaskV2(
                         cctx.group().name(),
                         cctx.name(),
                         idxName,
@@ -609,6 +654,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         segments.length,
                         segments
                     );
+
+                    if (renameImmediately) {
+                        task.renameIndexTrees(cctx.group());
+                    }
 
                     cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
                 }
@@ -677,6 +726,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return cnt;
         }
         catch (IgniteCheckedException e) {
+            handlePossibleCorruption(e);
+
             throw U.convertException(e);
         }
     }
@@ -924,6 +975,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return new CursorIteratorWrapper(cur);
         }
         catch (IgniteCheckedException e) {
+            handlePossibleCorruption(e);
+
             throw DbException.convert(e);
         }
     }
@@ -1051,5 +1104,45 @@ public class H2TreeIndex extends H2TreeIndexBase {
             int configuredInlineSize,
             PageIoResolver pageIoRslvr
         ) throws IgniteCheckedException;
+    }
+
+    /**
+     * Returns a function that is used to re-create this index.
+     *
+     * @return Function that re-creates index.
+     */
+    public ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> getRecreator() {
+        return recreator;
+    }
+
+    /**
+     * Handles possible index tree corruption by adding a maintenance task so that this index tree will be rebuilt
+     * on the restart.
+     *
+     * @param throwable Error that occured.
+     */
+    private void handlePossibleCorruption(Throwable throwable) {
+        if (throwable instanceof CorruptedTreeException) {
+            GridH2Table table = getTable();
+
+            String errorMsg = "Index of the table " + table.getName() + " is corrupted, to fix this issue a rebuild " +
+                "is required. On the next restart, node will enter the maintenance mode and rebuild corrupted indexes.";
+
+            log.warning(errorMsg);
+
+            int cacheId = table.cacheId();
+
+            try {
+                cctx.kernalContext().maintenanceRegistry()
+                    .registerMaintenanceTask(
+                        new MaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME,
+                            "Corrupted index found",
+                            cacheId + File.separator + idxName
+                        )
+                    );
+            } catch (IgniteCheckedException e) {
+                log.warning("Failed to register maintenance record for corrupted partition files.", e);
+            }
+        }
     }
 }
