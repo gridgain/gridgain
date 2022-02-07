@@ -80,7 +80,7 @@ param (
     [switch]$clean,
     [ValidateSet("Release", "Debug")]
     [string]$configuration="Release",
-    [string]$mavenOpts="-U -P-lgpl,-scala,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
+    [string]$mavenOpts="-U -P-lgpl,-scala,-all-scala,-spark-2.4,-examples,-test,-benchmarks -Dmaven.javadoc.skip=true",
 	[string]$jarDirs="modules\indexing\target,modules\core\target,modules\h2\target,modules\spring\target",
 	[string]$version="",
 	[string]$versionSuffix=""
