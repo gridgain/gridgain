@@ -26,14 +26,16 @@ import org.apache.ignite.internal.client.GridClientDisconnectedException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
-import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
+import org.apache.ignite.internal.commandline.checkpointing.subcommands.CheckpointForceCommand;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 
 /**
+ * Base cli command class for {@link CheckpointForceCommand }
  *
+ * Launch checkpointing process on a cluster and return results
  */
 public abstract class CheckpointAbstractSubCommand<
     MetadataArgsDto extends IgniteDataTransferObject,
