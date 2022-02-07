@@ -22,9 +22,8 @@ import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -72,8 +71,7 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
         cfg.setCacheConfiguration(new CacheConfiguration<>()
             .setName(DEFAULT_CACHE_NAME)
-            .setAffinity(new RendezvousAffinityFunction().setPartitions(1))
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setBackups(1)
         );
 
         cfg.setDataStorageConfiguration(new DataStorageConfiguration().setDefaultDataRegionConfiguration(
@@ -109,14 +107,17 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
     @Test
     public void testCorruptedTree() throws Exception {
         IgniteEx srv = startGrid(0);
+        IgniteEx normalNode = startGrid(1);
 
-        srv.cluster().active(true);
+        normalNode.cluster().state(ClusterState.ACTIVE);
 
+        // Create SQL cache
         IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
         cache.query(new SqlFieldsQuery("create table test (col1 varchar primary key, col2 varchar, col3 varchar) with " +
-            "\"CACHE_GROUP=" + GRP_NAME + "\""));
+            "\"CACHE_GROUP=" + GRP_NAME + "\", \"BACKUPS=1\""));
 
+        // Create two indexes
         cache.query(new SqlFieldsQuery("create index " + IDX_1_NAME + " on test(col2) INLINE_SIZE 0"));
         cache.query(new SqlFieldsQuery("create index " + IDX_2_NAME + " on test(col3) INLINE_SIZE 0"));
 
@@ -133,9 +134,10 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
         PageMemoryEx mem = (PageMemoryEx)srv.context().cache().context().cacheContext(CU.cacheId(cacheName)).dataRegion().pageMemory();
 
-        Collection<H2TableDescriptor> a = indexing.schemaManager().tablesForCache(cacheName);
+        Collection<H2TableDescriptor> tables = indexing.schemaManager().tablesForCache(cacheName);
 
-        for (H2TableDescriptor descriptor : a) {
+        // Corrupt first index
+        for (H2TableDescriptor descriptor : tables) {
             H2TreeIndex index = (H2TreeIndex) descriptor.table().getIndex(IDX_1_NAME);
             int segments = index.segmentsCount();
 
@@ -154,28 +156,32 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
             }
         }
 
-        checkCache(srv.context().maintenanceRegistry(), cache, true);
+        // Check that index was indeed corrupted
+        checkIndexCorruption(srv.context().maintenanceRegistry(), cache);
 
-        stopAllGrids();
+        stopGrid(0);
 
+        // This time node should start in maintenance mode and first index should be rebuilt
         srv = startGrid(0);
 
-        stopAllGrids();
+        assertTrue(srv.context().maintenanceRegistry().isMaintenanceMode());
+
+        stopGrid(0);
 
         GridQueryProcessor.idxCls = CaptureRebuildGridQueryIndexing.class;
 
         srv = startGrid(0);
 
+        normalNode.cluster().state(ClusterState.ACTIVE);
+
         awaitPartitionMapExchange();
 
         CaptureRebuildGridQueryIndexing capturingIndex = (CaptureRebuildGridQueryIndexing) srv.context().query().getIndexing();
 
+        // Check that index was not rebuild during the restart
         assertFalse(capturingIndex.didRebuildIndexes());
 
-        cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-//        checkCache(srv.context().maintenanceRegistry(), cache, false);
-
+        // Validate indexes integrity
         validateIndexes(srv);
     }
 
@@ -196,15 +202,11 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         assertFalse(call.hasIssues());
     }
 
-    private void checkCache(
-        MaintenanceRegistry registry,
-        IgniteCache<Integer, Integer> cache,
-        boolean shouldFail
-    ) {
+    private void checkIndexCorruption(MaintenanceRegistry registry, IgniteCache<Integer, Integer> cache) {
         List<SqlFieldsQuery> queries = Stream.of(
             new SqlFieldsQuery("select * from test where col2=?1").setArgs("test2"),
-            new SqlFieldsQuery("insert into test(col1, col2, col3) values (?1, ?2, ?3)").setArgs("10000", "1", "1"),
-            new SqlFieldsQuery("update test set col2=?2 where col1=?1").setArgs("1", "test3")
+            new SqlFieldsQuery("insert into test(col1, col2, col3) values (?1, ?2, ?3)").setArgs("9998", "1", "1"),
+            new SqlFieldsQuery("update test set col2=?2 where col1=?1").setArgs("3", "test3")
         ).collect(toList());
 
         assertFalse(registry.unregisterMaintenanceTask(IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME));
@@ -213,31 +215,20 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
             try {
                 cache.query(query).getAll();
 
-                if (shouldFail) {
-                    fail("Should've failed with CorruptedTreeException");
-                }
+                fail("Should've failed with CorruptedTreeException");
             }
             catch (CacheException e) {
-                if (!shouldFail) {
-                    fail(e.getMessage());
-                }
-
                 assertTrue(registry.unregisterMaintenanceTask(IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME));
             }
         });
 
+        // Execute query once again to create maintenance record
         try {
             cache.query(queries.get(0)).getAll();
 
-            if (shouldFail) {
-                fail("Should've failed with CorruptedTreeException");
-            }
+            fail("Should've failed with CorruptedTreeException");
         }
         catch (CacheException e) {
-            if (!shouldFail) {
-                fail(e.getMessage());
-            }
-
             assertTrue(e.getMessage().contains(CorruptedTreeException.class.getName()));
         }
     }
