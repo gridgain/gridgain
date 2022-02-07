@@ -21,12 +21,10 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.task.GridInternal;
 
 /**
  *
  */
-@GridInternal
 public class NodeCheckpointingResult extends IgniteDataTransferObject {
 
     /** */
