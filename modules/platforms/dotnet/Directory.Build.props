@@ -35,6 +35,6 @@
     </ItemGroup>
     <ItemGroup>
         <None Include="$(MSBuildThisFileDirectory)\logo_gg_64x64.png" Pack="true" PackagePath=""/>
-        <None Include="$(MSBuildThisFileDirectory)\..\..\..\..\LICENSE" Pack="true" PackagePath=""/>
+        <None Include="$(MSBuildThisFileDirectory)\..\..\..\LICENSE" Pack="true" PackagePath=""/>
     </ItemGroup>
 </Project>
