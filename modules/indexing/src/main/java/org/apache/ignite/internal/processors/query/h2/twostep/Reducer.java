@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
