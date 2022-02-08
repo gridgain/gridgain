@@ -19,9 +19,6 @@ project(Ignite.C++ VERSION 2.9.0.42453)
 
 set(CMAKE_CXX_STANDARD 98)
 
-find_package(Java 1.8 REQUIRED)
-find_package(JNI REQUIRED)
-
 set(CMAKE_PROJECT_VERSION ${PROJECT_VERSION})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIGNITE_IMPL -DIGNITE_FRIEND -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
@@ -56,6 +53,11 @@ option (WITH_THIN_CLIENT OFF)
 option (WITH_TESTS OFF)
 option (WARNINGS_AS_ERRORS OFF)
 
+if (${WITH_CORE} OR ${WITH_TESTS})
+    find_package(Java 1.8 REQUIRED)
+    find_package(JNI REQUIRED)
+endif()
+
 if (${WARNINGS_AS_ERRORS})
     if (MSVC)
         add_compile_options(/WX)
@@ -66,9 +68,12 @@ endif()
 
 add_subdirectory(common)
 add_subdirectory(binary)
-add_subdirectory(jni)
-add_subdirectory(core)
-add_subdirectory(ignite)
+
+if (${WITH_CORE} OR ${WITH_TESTS})
+    add_subdirectory(jni)
+    add_subdirectory(core)
+    add_subdirectory(ignite)
+endif()
 
 if (${WITH_TESTS})
     enable_testing()
