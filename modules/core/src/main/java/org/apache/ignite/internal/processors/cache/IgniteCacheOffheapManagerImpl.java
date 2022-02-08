@@ -3014,6 +3014,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
 
+            log.error("onFinishRemove [oldRow=" + oldRow + ", tsRow=" + tombstoneRow + ']', new Exception());
+
             if (oldVal) {
                 clearPendingEntries(cctx, oldRow);
 
