@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.cache.Cache;
 import javax.cache.configuration.FactoryBuilder;
 import javax.cache.expiry.Duration;
@@ -28,6 +29,7 @@ import javax.cache.integration.CacheLoaderException;
 import javax.cache.integration.CacheWriterException;
 import javax.cache.integration.CompletionListenerFuture;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -37,6 +39,7 @@ import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgniteBiInClosure;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -135,6 +138,20 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Checks that the size of the given cache reaches zero value after 1.5 DEFAULT_TIME_TO_LIVE.
+     *
+     * @param cache Cache to be checked.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void waitAndCheckExpired(IgniteCache<?, ?> cache) throws IgniteCheckedException {
+        boolean awaited = GridTestUtils.waitForCondition(
+            () -> cache.size() == 0,
+            TimeUnit.SECONDS.toMillis(DEFAULT_TIME_TO_LIVE + DEFAULT_TIME_TO_LIVE / 2));
+
+        assertTrue("Failed to wait for expiration", awaited);
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -145,7 +162,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive();
     }
@@ -180,7 +197,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive();
     }
@@ -197,7 +214,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(ignite(0).cache(DEFAULT_CACHE_NAME));
 
         checkSizeAfterLive();
 
@@ -210,7 +227,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(ignite(0).cache(DEFAULT_CACHE_NAME));
 
         checkSizeAfterLive();
     }
@@ -228,7 +245,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(1);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive();
     }
@@ -249,7 +266,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive();
     }
@@ -275,7 +292,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE, gridCount() + 1);
 
-        Thread.sleep(DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive(gridCount() + 1);
     }
@@ -299,7 +316,7 @@ public abstract class CacheTtlAbstractSelfTest extends GridCommonAbstractTest {
 
         checkSizeBeforeLive(SIZE);
 
-        Thread.sleep(time - DEFAULT_TIME_TO_LIVE + 500);
+        waitAndCheckExpired(cache);
 
         checkSizeAfterLive();
     }
