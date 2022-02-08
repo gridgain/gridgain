@@ -52,7 +52,9 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 
-/** */
+/**
+ * Test for the maintenance task that rebuild a corrupted index.
+ */
 public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
     /** */
     private static final String IDX_1_NAME = "FAIL_IDX";
