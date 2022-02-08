@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,8 +59,14 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
     /** Coordinator. */
     private static IgniteEx CRD;
 
-    /** Compute task status monitor. */
-    private ComputeGridMonitorImpl monitor;
+    /** Client node. */
+    private static IgniteEx CLIENT_NODE;
+
+    /** Compute task status monitor for {@link #CRD}. */
+    private ComputeGridMonitorImpl crdMonitor;
+
+    /** Compute task status monitor for {@link #CLIENT_NODE}. */
+    private ComputeGridMonitorImpl clientMonitor;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -70,11 +76,15 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
 
         IgniteEx crd = startGrids(2);
 
+        IgniteEx clientNode = startClientGrid(2);
+
         crd.cluster().state(ACTIVE);
 
         awaitPartitionMapExchange();
 
         CRD = crd;
+
+        CLIENT_NODE = clientNode;
     }
 
     /** {@inheritDoc} */
@@ -84,20 +94,26 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         CRD = null;
+
+        CLIENT_NODE = null;
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        CRD.context().task().listenStatusUpdates(monitor = new ComputeGridMonitorImpl());
+        CRD.context().task().listenStatusUpdates(crdMonitor = new ComputeGridMonitorImpl());
+
+        CLIENT_NODE.context().task().listenStatusUpdates(clientMonitor = new ComputeGridMonitorImpl());
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        CRD.context().task().stopListenStatusUpdates(monitor);
+        CRD.context().task().stopListenStatusUpdates(crdMonitor);
+
+        CLIENT_NODE.context().task().stopListenStatusUpdates(clientMonitor);
     }
 
     /** {@inheritDoc} */
@@ -106,7 +122,7 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checking get of diffs for the successful execution of the task.
+     * Checking get of diffs for the successful execution of the task on server node.
      */
     @Test
     public void simpleTest() {
@@ -114,13 +130,15 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
 
         taskFut.get(getTestTimeout());
 
-        assertTrue(monitor.statusSnapshots.isEmpty());
+        assertTrue(crdMonitor.statusSnapshots.isEmpty());
+        assertTrue(clientMonitor.statusSnapshots.isEmpty());
 
-        assertEquals(3, monitor.statusChanges.size());
+        assertEquals(3, crdMonitor.statusChanges.size());
+        assertTrue(clientMonitor.statusSnapshots.isEmpty());
 
-        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskFinished(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskStarted(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFinished(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
@@ -141,13 +159,13 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
 
         assertThrows(log, () -> taskFut.get(getTestTimeout()), IgniteException.class, null);
 
-        assertTrue(monitor.statusSnapshots.isEmpty());
+        assertTrue(crdMonitor.statusSnapshots.isEmpty());
 
-        assertEquals(3, monitor.statusChanges.size());
+        assertEquals(3, crdMonitor.statusChanges.size());
 
-        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskFailed(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskStarted(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFailed(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
@@ -172,18 +190,18 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
 
         taskFut.get(getTestTimeout());
 
-        assertTrue(monitor.statusSnapshots.isEmpty());
+        assertTrue(crdMonitor.statusSnapshots.isEmpty());
 
-        assertEquals(4, monitor.statusChanges.size());
+        assertEquals(4, crdMonitor.statusChanges.size());
 
-        checkTaskStarted(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskMapped(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkAttributeChanged(monitor.statusChanges.poll(), taskFut.getTaskSession());
-        checkTaskFinished(monitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskStarted(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkAttributeChanged(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFinished(crdMonitor.statusChanges.poll(), taskFut.getTaskSession());
     }
 
     /**
-     * Checking the get of snapshots of task statuses.
+     * Checking the get of snapshots of task statuses for server node.
      *
      * @throws Exception If failed.
      */
@@ -200,7 +218,8 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
         try {
             CRD.context().task().listenStatusUpdates(monitor1);
 
-            assertTrue(monitor.statusSnapshots.isEmpty());
+            assertTrue(crdMonitor.statusSnapshots.isEmpty());
+            assertTrue(clientMonitor.statusSnapshots.isEmpty());
 
             assertEquals(1, monitor1.statusSnapshots.size());
 
@@ -208,6 +227,58 @@ public class ComputeGridMonitorTest extends GridCommonAbstractTest {
         }
         finally {
             CRD.context().task().stopListenStatusUpdates(monitor1);
+        }
+
+        taskFut.get(getTestTimeout());
+    }
+
+    /**
+     * Checking get of diffs for the successful execution of the task on client node.
+     */
+    @Test
+    public void simpleClientNodeTest() {
+        ComputeTaskFuture<Void> taskFut = CLIENT_NODE.compute().executeAsync(new NoopComputeTask(), null);
+
+        taskFut.get(getTestTimeout());
+
+        assertTrue(crdMonitor.statusSnapshots.isEmpty());
+        assertTrue(clientMonitor.statusSnapshots.isEmpty());
+
+        assertEquals(3, clientMonitor.statusChanges.size());
+        assertTrue(crdMonitor.statusSnapshots.isEmpty());
+
+        checkTaskStarted(clientMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskMapped(clientMonitor.statusChanges.poll(), taskFut.getTaskSession());
+        checkTaskFinished(clientMonitor.statusChanges.poll(), taskFut.getTaskSession());
+    }
+
+    /**
+     * Checking the get of snapshots of task statuses for client node.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void snapshotsClientNodeTest() throws Exception {
+        ComputeFullWithWaitTask task = new ComputeFullWithWaitTask(getTestTimeout());
+
+        ComputeTaskFuture<Void> taskFut = CLIENT_NODE.compute().executeAsync(task, null);
+
+        task.doneOnMapFut.get(getTestTimeout());
+
+        ComputeGridMonitorImpl monitor1 = new ComputeGridMonitorImpl();
+
+        try {
+            CLIENT_NODE.context().task().listenStatusUpdates(monitor1);
+
+            assertTrue(clientMonitor.statusSnapshots.isEmpty());
+            assertTrue(crdMonitor.statusSnapshots.isEmpty());
+
+            assertEquals(1, monitor1.statusSnapshots.size());
+
+            checkSnapshot(monitor1.statusSnapshots.poll(), taskFut.getTaskSession());
+        }
+        finally {
+            CLIENT_NODE.context().task().stopListenStatusUpdates(monitor1);
         }
 
         taskFut.get(getTestTimeout());
