@@ -25,6 +25,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: AssemblyVersion("8.8.127.50721")]
-[assembly: AssemblyFileVersion("8.8.127.50721")]
-[assembly: AssemblyInformationalVersion("8.8.127")]
+[assembly: AssemblyVersion("8.8.15.61556")]
+[assembly: AssemblyFileVersion("8.8.15.61556")]
+[assembly: AssemblyInformationalVersion("8.8.15.1")]
