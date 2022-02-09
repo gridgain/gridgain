@@ -20,8 +20,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,6 +71,7 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedUpdateRun;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSortColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlType;
@@ -102,6 +105,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_RETRY_TIMEOUT;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
@@ -412,9 +416,6 @@ public class GridReduceQueryExecutor {
 
         final boolean skipMergeTbl = !qry.explain() && qry.skipMergeTable() || singlePartMode;
 
-        final int segmentsPerIdx = qry.explain() || qry.isReplicatedOnly() || singlePartMode ? 1 :
-            mapper.findFirstPartitioned(cacheIds).config().getQueryParallelism();
-
         final long retryTimeout = retryTimeout(timeoutMillis);
         final long qryStartTime = U.currentTimeMillis();
 
@@ -444,6 +445,8 @@ public class GridReduceQueryExecutor {
 
             final Collection<ClusterNode> nodes = mapping.nodes();
 
+            final Map<ClusterNode, Integer> nodeToSegmentsCnt = createNodeToSegmentsCountMapping(qry, mapping);
+
             assert !F.isEmpty(nodes);
 
             H2PooledConnection conn = h2.connections().connection(schemaName);
@@ -455,7 +458,7 @@ public class GridReduceQueryExecutor {
 
             try {
                 final ReduceQueryRun r = createReduceQueryRun(conn, mapQueries, nodes,
-                    pageSize, segmentsPerIdx, skipMergeTbl, qry.explain(), dataPageScanEnabled);
+                    pageSize, nodeToSegmentsCnt, skipMergeTbl, qry.explain(), dataPageScanEnabled);
 
                 runs.put(qryReqId, r);
 
@@ -625,6 +628,51 @@ public class GridReduceQueryExecutor {
     }
 
     /**
+     * Creates a mapping of node -> expected segments to scan on this particular node.
+     *
+     * @param qry Query to create mapping for.
+     * @param mapping Nodes to partition mapping.
+     * @return Mapping of node to segments.
+     */
+    private Map<ClusterNode, Integer> createNodeToSegmentsCountMapping(GridCacheTwoStepQuery qry, ReducePartitionMapResult mapping) {
+        Map<ClusterNode, Integer> res = new HashMap<>();
+
+        Collection<ClusterNode> nodes = mapping.nodes();
+
+        if (qry.explain() || qry.isReplicatedOnly()) {
+            for (ClusterNode node : nodes) {
+                Integer prev = res.put(node, 1);
+
+                assert prev == null;
+            }
+
+            return res;
+        }
+
+        final int segments = mapper.findFirstPartitioned(qry.cacheIds()).config().getQueryParallelism();
+
+        for (ClusterNode node : nodes) {
+            Map<ClusterNode, IntArray> partsMapping = mapping.queryPartitionsMap();
+
+            if (partsMapping != null) {
+                BitSet bs = new BitSet(segments);
+                IntArray parts = partsMapping.get(node);
+
+                for (int i = 0; i < parts.size(); i++)
+                    bs.set(GridH2IndexBase.calculateSegment(segments, parts.get(i)));
+
+                Integer prev = res.put(node, bs.cardinality());
+
+                assert prev == null;
+            }
+            else
+                res.put(node, segments);
+        }
+
+        return res;
+    }
+
+    /**
      * Wait on retry.
      *
      * @param lastRun Previous query run.
@@ -723,7 +771,7 @@ public class GridReduceQueryExecutor {
      * @param mapQueries Map queries.
      * @param nodes Target nodes.
      * @param pageSize Page size.
-     * @param segmentsPerIdx Segments per-index.
+     * @param nodeToSegmentsCnt Segments per-index.
      * @param skipMergeTbl Skip merge table flag.
      * @param explain Explain query flag.
      * @param dataPageScanEnabled DataPage scan enabled flag.
@@ -734,7 +782,7 @@ public class GridReduceQueryExecutor {
         List<GridCacheSqlQuery> mapQueries,
         Collection<ClusterNode> nodes,
         int pageSize,
-        int segmentsPerIdx,
+        Map<ClusterNode, Integer> nodeToSegmentsCnt,
         boolean skipMergeTbl,
         boolean explain,
         Boolean dataPageScanEnabled) {
@@ -775,17 +823,19 @@ public class GridReduceQueryExecutor {
 
                 replicatedQrysCnt++;
 
-                reducer.setSources(singletonList(node), 1); // Replicated tables can have only 1 segment.
+                reducer.setSources(singletonMap(node, 1)); // Replicated tables can have only 1 segment.
             }
             else
-                reducer.setSources(nodes, segmentsPerIdx);
+                reducer.setSources(nodeToSegmentsCnt);
 
             reducer.setPageSize(r.pageSize());
 
             r.reducers().add(reducer);
         }
 
-        r.init( (r.reducers().size() - replicatedQrysCnt) * nodes.size() * segmentsPerIdx + replicatedQrysCnt);
+        int cnt = nodeToSegmentsCnt.values().stream().mapToInt(i -> i).sum();
+
+        r.init( (r.reducers().size() - replicatedQrysCnt) * cnt + replicatedQrysCnt);
 
         return r;
     }

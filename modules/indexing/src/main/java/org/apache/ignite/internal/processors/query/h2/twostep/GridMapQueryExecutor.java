@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -221,21 +222,28 @@ public class GridMapQueryExecutor {
 
             final Object[] params = req.parameters();
 
-            final boolean singlePart = parts != null && parts.length == 1;
             final int parallelism = explain || replicated || F.isEmpty(cacheIds) ? 1 :
                 CU.firstPartitioned(ctx.cache().context(), cacheIds).config().getQueryParallelism();
 
-            final int segments = explain || replicated || singlePart ? 1 : parallelism;
-            final int singleSegment = singlePart ? calculateSegment(parallelism, parts[0]) : 0;
+            BitSet segments = new BitSet(parallelism);
+
+            if (parts != null) {
+                for (int i = 0; i < parts.length; i++)
+                    segments.set(calculateSegment(parallelism, parts[i]));
+            }
+            else
+                segments.set(0, parallelism);
 
             final int timeout = req.timeout() > 0 || req.explicitTimeout()
                 ? req.timeout()
                 : (int)h2.distributedConfiguration().defaultQueryTimeout();
 
-            for (int i = 1; i < segments; i++) {
+            int firstSegment = segments.nextSetBit(0);
+            int segment = firstSegment;
+            while ((segment = segments.nextSetBit(segment + 1)) != -1) {
                 assert !F.isEmpty(cacheIds);
 
-                final int segment = i;
+                final int segment0 = segment;
 
                 Span span = MTC.span();
 
@@ -245,7 +253,7 @@ public class GridMapQueryExecutor {
                             onQueryRequest0(
                                 node,
                                 req.requestId(),
-                                segment,
+                                segment0,
                                 req.schemaName(),
                                 req.queries(),
                                 cacheIds,
@@ -274,7 +282,7 @@ public class GridMapQueryExecutor {
             onQueryRequest0(
                 node,
                 req.requestId(),
-                singleSegment,
+                firstSegment,
                 req.schemaName(),
                 req.queries(),
                 cacheIds,
