@@ -4802,21 +4802,24 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     assert needReplaceInner != TRUE;
 
+                    boolean cutRoot = false;
+
                     // Loop is needed to prevent the rare case when, after parallel remove of keys, empty root remains.
                     // B+tree after removes key: [empty_root] - [empty_inner_node] - [5] ==>
                     // B+tree after cutting empty root: [5]
-                    for (Tail<L> t = tail; t != null && t.getCount() == 0 && t.lvl != 0 && getRootLevel() == t.lvl; ) {
+                    while (tail.getCount() == 0 && tail.lvl != 0 && getRootLevel() == tail.lvl) {
                         // Free root if it became empty after merge.
 
-                        cutRoot(t.lvl);
-                        freePage(t.pageId, t.page, t.buf, t.walPlc, false);
+                        cutRoot(tail.lvl);
+                        freePage(tail.pageId, tail.page, tail.buf, tail.walPlc, true);
 
-                        t = t.down;
+                        tail = tail.down;
+                        cutRoot = true;
 
                         // Exit: we are done.
                     }
 
-                    if (tail.sibling != null &&
+                    if (!cutRoot && tail.sibling != null &&
                         tail.getCount() + tail.sibling.getCount() < tail.io.getMaxCount(tail.buf, pageSize())) {
                         // Release everything lower than tail, we've already merged this path.
                         doReleaseTail(tail.down);
