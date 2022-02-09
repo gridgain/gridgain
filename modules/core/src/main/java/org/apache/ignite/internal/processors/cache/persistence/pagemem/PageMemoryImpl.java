@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -926,6 +926,12 @@ public class PageMemoryImpl implements PageMemoryEx {
                     buf.rewind();
 
                     tryToRestorePage(fullId, buf);
+
+                    // Mark the page as dirty because it has been restored.
+                    setDirty(fullId, lockedPageAbsPtr, true, false);
+
+                    // And save the page snapshot in the WAL.
+                    beforeReleaseWrite(fullId, pageAddr, true);
 
                     statHolder.trackPhysicalAndLogicalRead(pageAddr);
 

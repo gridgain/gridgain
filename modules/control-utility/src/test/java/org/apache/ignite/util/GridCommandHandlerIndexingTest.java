@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -246,19 +246,9 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         forceCheckpoint();
 
-        File idxPath = indexPartition(ignite, GROUP_NAME);
+        enableCheckpoints(ignite, false);
 
-        stopAllGrids();
-
-        corruptIndexPartition(idxPath, 1024, 4096);
-
-        startGrids(GRID_CNT);
-
-        awaitPartitionMapExchange();
-
-        forceCheckpoint();
-
-        enableCheckpoints(G.allGrids(), false);
+        corruptIndexPartition(indexPartition(ignite, GROUP_NAME), 1024, 4096);
 
         injectTestSystemOut();
 
