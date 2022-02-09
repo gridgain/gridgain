@@ -4802,8 +4802,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     assert needReplaceInner != TRUE;
 
-                    // The loop is needed to prevent a rare situation when after a parallel deletion,
-                    // the b+tree looks like "[empty_root] - [empty_inner] - [1]" and should be "[1]".
+                    // Loop is needed to prevent the rare case when, after parallel remove of keys, empty root remains.
+                    // B+tree after removes key: [empty_root] - [empty_inner_node] - [5] ==>
+                    // B+tree after cutting empty root: [5]
                     for (Tail<L> t = tail; t != null && t.getCount() == 0 && t.lvl != 0 && getRootLevel() == t.lvl; ) {
                         // Free root if it became empty after merge.
 

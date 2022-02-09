@@ -2510,11 +2510,61 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * todo: add test name and description!
+     * Test checks a rare case when, after a parallel removal from the b+tree (cleaning),
+     * an empty leaf could remain. Schematically, this can happen like this:
+     *
+     * B+tree before clearing:
+     *            [ 2 ]
+     *         /         \
+     *    [ 1 ]         [ 3 | 4 ]
+     *    /   \       /     |    \
+     * [ 1 ] [ 2 ]  [ 3 ] [ 4 ] [ 5 ]
+     *
+     * Parallel deletions of keys:
+     *
+     * Remove 2:
+     *       [ 1 ]
+     *     /       \
+     *  [ ]       [ 3 | 4 ]
+     *   |       /    |    \
+     * [ 1 ]  [ 3 ] [ 4 ] [ 5 ]
+     *
+     * Remove 5:
+     *       [ 1 ]
+     *     /       \
+     *  [ ]       [ 3 ]
+     *   |       /    \
+     * [ 1 ]  [ 3 ]  [ 4 ]
+     *
+     * Remove 4:
+     *     [ 1 ]
+     *    /     \
+     *  [ ]     [ ]
+     *   |       |
+     * [ 1 ]   [ 3 ]
+     *
+     * Remove 3:
+     * [ 1 ]
+     *   |
+     *  [ ]
+     *   |
+     * [ 1 ]
+     *
+     * Remove 1 before cutting root and inner node:
+     *  [ ]
+     *   |
+     *  [ ]
+     *
+     * ^^^ An empty leaf remains so that this does not happen when "1" is removed,
+     * an empty root and an inner node remain, which we will cut off (BPlusTree.Remove#cutRoot).
+     *
+     * Remove 1 after cutting root and inner node:
+     *  [ ]
+     *
      * @throws Exception If failed.
      */
     @Test
-    public void test() throws Exception {
+    public void testEmptyLeafAfterConcurrentRemoves() throws Exception {
         MAX_PER_PAGE = 2;
 
         for (int i = 0; i < 500; i++) {
