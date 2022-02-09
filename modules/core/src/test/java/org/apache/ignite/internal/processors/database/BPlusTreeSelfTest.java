@@ -1723,7 +1723,13 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         }
         finally {
             stop.set(true);
-            putRmvOpBarrier.reset();
+
+            // To ensure that an BrokenBarrierException is thrown on method CyclicBarrier#await in other threads.
+            while (!asyncRunFut.isDone()) {
+                putRmvOpBarrier.reset();
+
+                U.sleep(10);
+            }
 
             asyncRunFut.get();
         }

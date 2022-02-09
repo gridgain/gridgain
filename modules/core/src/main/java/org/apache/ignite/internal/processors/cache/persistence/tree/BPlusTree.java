@@ -4814,6 +4814,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         freePage(tail.pageId, tail.page, tail.buf, tail.walPlc, true);
 
                         tail = tail.down;
+
+                        assert tail.sibling == null : tail;
+
                         cutRoot = true;
 
                         // Exit: we are done.
