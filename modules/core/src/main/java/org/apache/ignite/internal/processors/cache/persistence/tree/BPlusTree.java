@@ -4802,8 +4802,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     assert needReplaceInner != TRUE;
 
-                    boolean cutRoot = false;
-
                     // Loop is needed to prevent the rare case when, after parallel remove of keys, empty root remains.
                     // B+tree after removes key: [empty_root] - [empty_inner_node] - [5] ==>
                     // B+tree after cutting empty root: [5]
@@ -4817,12 +4815,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                         assert tail.sibling == null : tail;
 
-                        cutRoot = true;
-
                         // Exit: we are done.
                     }
 
-                    if (!cutRoot && tail.sibling != null &&
+                    if (tail.sibling != null &&
                         tail.getCount() + tail.sibling.getCount() < tail.io.getMaxCount(tail.buf, pageSize())) {
                         // Release everything lower than tail, we've already merged this path.
                         doReleaseTail(tail.down);
