@@ -167,11 +167,8 @@ namespace Apache.Ignite.Core.Tests
         [Test]
         public void TestMultipleDomains()
         {
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                Logger = null
-            };
-
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(noLogger: true));
+            
             using (var ignite = Ignition.Start(cfg))
             {
                 ignite.GetCompute().ExecuteJavaTask<string>(PrintlnTask, "[Primary Domain]");
@@ -232,10 +229,9 @@ namespace Apache.Ignite.Core.Tests
         {
             public void Run(string arg)
             {
-                var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
+                var ignite = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration(noLogger: true))
                 {
-                    IgniteInstanceName = "newDomainGrid",
-                    Logger = null
+                    IgniteInstanceName = "newDomainGrid"
                 });
 
                 ignite.GetCompute().ExecuteJavaTask<string>(PrintlnTask, arg);

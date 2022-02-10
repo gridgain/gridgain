@@ -109,7 +109,7 @@ namespace Apache.Ignite
                             // Wait until stopped.
                             using (var evt = new ManualResetEventSlim(false))
                             {
-                                // ReSharper disable AccessToDisposedClosure (reviewed)
+                                // ReSharper disable AccessToDisposedClosure
                                 ignite.Stopped += (s, a) => evt.Set();
                                 Console.CancelKeyPress += (s, a) => evt.Set();
                                 evt.Wait();

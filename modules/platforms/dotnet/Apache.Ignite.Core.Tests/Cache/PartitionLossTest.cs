@@ -129,7 +129,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any());
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 3000);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -151,7 +151,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Check another ResetLostPartitions overload.
             PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any());
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 3000);
             Assert.IsNotEmpty(cache.GetLostPartitions());
             ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
             Assert.IsEmpty(cache.GetLostPartitions());
