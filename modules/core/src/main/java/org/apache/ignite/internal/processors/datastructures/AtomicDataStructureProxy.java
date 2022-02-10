@@ -182,8 +182,8 @@ public abstract class AtomicDataStructureProxy<V extends AtomicDataStructureValu
     /**
      * @return Error.
      */
-    private IllegalStateException removedError() {
-        return new IllegalStateException("Sequence was removed from cache: " + name);
+    private IgniteException removedError() {
+        return new IgniteException("Sequence was removed from cache: " + name);
     }
 
     /**
