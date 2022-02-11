@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.database;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -48,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
-import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -90,7 +88,6 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.CIX2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
@@ -112,7 +109,6 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
-import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
@@ -447,8 +443,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             }
         }
         catch (IgniteCheckedException e) {
-            handlePossibleCorruption(e);
-
             throw DbException.convert(e);
         }
     }
@@ -484,8 +478,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return (H2CacheRow)tree.put(row);
         }
         catch (Throwable t) {
-            handlePossibleCorruption(t);
-
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -520,8 +512,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.putx(row);
         }
         catch (Throwable t) {
-            handlePossibleCorruption(t);
-
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -547,8 +537,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.removex((H2Row)row);
         }
         catch (Throwable t) {
-            handlePossibleCorruption(t);
-
             ctx.failure().process(new FailureContext(CRITICAL_ERROR, t));
 
             throw DbException.convert(t);
@@ -570,8 +558,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return tree.size(filter(qctx));
         }
         catch (IgniteCheckedException e) {
-            handlePossibleCorruption(e);
-
             throw DbException.convert(e);
         }
     }
@@ -591,8 +577,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return new SingleRowCursor(found);
         }
         catch (IgniteCheckedException e) {
-            handlePossibleCorruption(e);
-
             throw DbException.convert(e);
         }
     }
@@ -726,8 +710,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return cnt;
         }
         catch (IgniteCheckedException e) {
-            handlePossibleCorruption(e);
-
             throw U.convertException(e);
         }
     }
@@ -975,8 +957,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return new CursorIteratorWrapper(cur);
         }
         catch (IgniteCheckedException e) {
-            handlePossibleCorruption(e);
-
             throw DbException.convert(e);
         }
     }
@@ -1113,36 +1093,5 @@ public class H2TreeIndex extends H2TreeIndexBase {
      */
     public ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> getRecreator() {
         return recreator;
-    }
-
-    /**
-     * Handles possible index tree corruption by adding a maintenance task so that this index tree will be rebuilt
-     * on the restart.
-     *
-     * @param throwable Error that occured.
-     */
-    private void handlePossibleCorruption(Throwable throwable) {
-        if (throwable instanceof CorruptedTreeException) {
-            GridH2Table table = getTable();
-
-            String errorMsg = "Index of the table " + table.getName() + " is corrupted, to fix this issue a rebuild " +
-                "is required. On the next restart, node will enter the maintenance mode and rebuild corrupted indexes.";
-
-            log.warning(errorMsg);
-
-            int cacheId = table.cacheId();
-
-            try {
-                cctx.kernalContext().maintenanceRegistry()
-                    .registerMaintenanceTask(
-                        new MaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME,
-                            "Corrupted index found",
-                            cacheId + File.separator + idxName
-                        )
-                    );
-            } catch (IgniteCheckedException e) {
-                log.warning("Failed to register maintenance record for corrupted partition files.", e);
-            }
-        }
     }
 }

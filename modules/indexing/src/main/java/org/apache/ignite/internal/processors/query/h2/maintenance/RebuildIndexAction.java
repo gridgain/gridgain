@@ -123,9 +123,9 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
         try {
             recreateIndex(targetIndex, context, cacheName, storage, schemaManager, targetTable);
 
-            unregisterMaintenanceTask(kernalContext);
-
             manager.forceCheckpoint("afterIndexRebuild", null).futureFor(FINISHED).get();
+
+            unregisterMaintenanceTask(kernalContext);
         }
         finally {
             cleanUpAfterRebuild(manager, storage);

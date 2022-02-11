@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -256,6 +255,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXE
 public class IgniteH2Indexing implements GridQueryIndexing {
     /** Index rebuild maintenance task name. */
     public static final String INDEX_REBUILD_MNTC_TASK_NAME = "indexRebuildMaintenanceTask";
+
+    /** Separator for index rebuild maintenance task parameters. */
+    public static final String INDEX_REBUILD_PARAMETER_SEPARATOR = "/";
 
     /*
      * Register IO for indexes.
@@ -2370,7 +2372,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 task -> {
                     String parametersString = task.parameters();
 
-                    String[] parameters = parametersString.split(File.separator);
+                    String[] parameters = parametersString.split(INDEX_REBUILD_PARAMETER_SEPARATOR);
 
                     int cacheId = Integer.parseInt(parameters[0]);
 

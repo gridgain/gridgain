@@ -60,6 +60,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.maintenance.MaintenanceTask;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.SearchRow;
 import org.gridgain.internal.h2.result.SortOrder;
@@ -67,6 +68,8 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
+import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_PARAMETER_SEPARATOR;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
@@ -1001,6 +1004,26 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      */
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
         CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, cacheName, idxName, grpId, pageIds);
+
+        String errorMsg = "Index of the table " + tblName + " is corrupted, to fix this issue a rebuild " +
+            "is required. On the next restart, node will enter the maintenance mode and rebuild corrupted indexes.";
+
+        log.warning(errorMsg);
+
+        int cacheId = table.cacheId();
+
+        try {
+            cctx.kernalContext().maintenanceRegistry()
+                .registerMaintenanceTask(
+                    new MaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME,
+                        "Corrupted index found",
+                        cacheId + INDEX_REBUILD_PARAMETER_SEPARATOR + idxName
+                    )
+                );
+        }
+        catch (IgniteCheckedException ex) {
+            log.warning("Failed to register maintenance record for corrupted partition files.", ex);
+        }
 
         processFailure(FailureType.CRITICAL_ERROR, e);
 

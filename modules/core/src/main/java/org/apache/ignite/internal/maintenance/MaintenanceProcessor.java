@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -46,16 +47,16 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /**
      * Active {@link MaintenanceTask}s are the ones that were read from disk when node entered Maintenance Mode.
      */
-    private final Map<String, MaintenanceTask> activeTasks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, MaintenanceTask> activeTasks = new ConcurrentHashMap<>();
 
     /**
      * Requested {@link MaintenanceTask}s are collection of tasks requested by user
      * or other components when node operates normally (not in Maintenance Mode).
      */
-    private final Map<String, MaintenanceTask> requestedTasks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, MaintenanceTask> requestedTasks = new ConcurrentHashMap<>();
 
     /** */
-    private final Map<String, MaintenanceWorkflowCallback> workflowCallbacks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, MaintenanceWorkflowCallback> workflowCallbacks = new ConcurrentHashMap<>();
 
     /** */
     private final MaintenanceFileStore fileStorage;
