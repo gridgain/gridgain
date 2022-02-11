@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragme
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationRandomLruEvictionTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsRecoveryAfterFileCorruptionTest;
+import org.apache.ignite.internal.processors.cache.persistence.MaintenancePersistenceTaskTest;
 import org.apache.ignite.internal.processors.cache.persistence.PagesPossibleCorruptionDiagnosticTest;
 import org.apache.ignite.internal.processors.cache.persistence.PendingTreeCorruptionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPageReplacementDuringPartitionClearTest;
@@ -94,6 +95,7 @@ public class IgnitePdsTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, DefragmentationMXBeanTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, PagesPossibleCorruptionDiagnosticTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, MaintenancePersistenceTaskTest.class, ignoredTests);
 
         return suite;
     }
