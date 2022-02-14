@@ -82,7 +82,6 @@ public class MaintenancePersistenceTaskTest extends GridCommonAbstractTest {
     @Test
     public void testInfoAfterClean() throws Exception {
         IgniteEx server1 = startGrid("test1");
-        IgniteEx server2 = startGrid("test2");
 
         server1.cluster().state(ClusterState.ACTIVE);
 
