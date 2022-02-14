@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Common
+namespace Apache.Ignite.Core.Platform
 {
     /// <summary>
-    /// Represents an Ignite platform.
+    /// Interop platform type.
     /// </summary>
-    internal enum PlatformType
+    public enum PlatformType
     {
         /// <summary>
         /// Java platform.
