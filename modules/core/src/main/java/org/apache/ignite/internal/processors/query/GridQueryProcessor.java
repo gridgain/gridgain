@@ -3963,8 +3963,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Gets index build status storage.
-     *
      * @return Index build status storage.
      */
     public IndexBuildStatusStorage getIdxBuildStatusStorage() {

@@ -89,7 +89,6 @@ public class LightweightCheckpointManager {
      * @param longJvmPauseDetector Long JVM pause detector.
      * @param failureProcessor Failure processor.
      * @param cacheProcessor Cache processor.
-     * @throws IgniteCheckedException if fail.
      */
     public LightweightCheckpointManager(
         Function<Class<?>, IgniteLogger> logger,

@@ -29,11 +29,8 @@ import org.jetbrains.annotations.Nullable;
  * Workflow for the index rebuild maintenance task.
  */
 public class RebuildIndexWorkflowCallback implements MaintenanceWorkflowCallback {
-    /** Id of the cache that holds the index. */
-    private final int cacheId;
-
-    /** Target index's name. */
-    private final String idxName;
+    /** Indexes to rebuild. */
+    private final List<MaintenanceRebuildIndexTarget> indexesToRebuild;
 
     /** Indexing. */
     private final IgniteH2Indexing indexing;
@@ -43,15 +40,12 @@ public class RebuildIndexWorkflowCallback implements MaintenanceWorkflowCallback
 
     /**
      * Constructor.
-     *
-     * @param cacheId Id of the cache that contains target index.
-     * @param idxName Target index's name.
+     * @param indexesToRebuild Indexes to rebuild.
      * @param indexing Indexing.
      * @param log Logger.
      */
-    public RebuildIndexWorkflowCallback(int cacheId, String idxName, IgniteH2Indexing indexing, IgniteLogger log) {
-        this.cacheId = cacheId;
-        this.idxName = idxName;
+    public RebuildIndexWorkflowCallback(List<MaintenanceRebuildIndexTarget> indexesToRebuild, IgniteH2Indexing indexing, IgniteLogger log) {
+        this.indexesToRebuild = indexesToRebuild;
         this.indexing = indexing;
         this.log = log;
     }
@@ -63,11 +57,11 @@ public class RebuildIndexWorkflowCallback implements MaintenanceWorkflowCallback
 
     /** {@inheritDoc} */
     @Override public @NotNull List<MaintenanceAction<?>> allActions() {
-        return Collections.singletonList(new RebuildIndexAction(cacheId, idxName, indexing, log));
+        return Collections.singletonList(new RebuildIndexAction(indexesToRebuild, indexing, log));
     }
 
     /** {@inheritDoc} */
     @Override public @Nullable MaintenanceAction<?> automaticAction() {
-        return new RebuildIndexAction(cacheId, idxName, indexing, log);
+        return new RebuildIndexAction(indexesToRebuild, indexing, log);
     }
 }

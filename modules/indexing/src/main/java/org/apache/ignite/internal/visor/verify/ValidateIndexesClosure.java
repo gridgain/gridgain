@@ -33,7 +33,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -94,8 +93,8 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.GRID_NOT_IDLE_MSG;
-import static org.apache.ignite.internal.util.IgniteUtils.error;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.getUpdateCountersSnapshot;
+import static org.apache.ignite.internal.util.IgniteUtils.error;
 
 /**
  * Closure that locally validates indexes of given caches.
@@ -292,7 +291,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                         continue;
 
                     for (GridQueryTypeDescriptor type : types) {
-                        GridH2Table gridH2Tbl = h2Indexing.schemaManager().dataTable(cacheName, type.tableName());
+                        GridH2Table gridH2Tbl = h2Indexing.schemaManager().dataTable(type.schemaName(), type.tableName());
 
                         if (isNull(gridH2Tbl))
                             continue;

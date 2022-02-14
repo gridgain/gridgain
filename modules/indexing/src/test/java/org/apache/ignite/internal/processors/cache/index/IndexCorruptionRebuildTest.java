@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
@@ -34,7 +33,6 @@ import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
-import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
@@ -47,23 +45,30 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
+import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
 
 /**
  * Test for the maintenance task that rebuild a corrupted index.
  */
 public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
     /** */
-    private static final String IDX_1_NAME = "FAIL_IDX";
+    private static final String FAIL_IDX_1 = "FAIL_IDX_1";
 
     /** */
-    private static final String IDX_2_NAME = "OK_IDX";
+    private static final String OK_IDX = "OK_IDX";
 
     /** */
-    private static final String GRP_NAME = "cacheGrp";
+    private static final String FAIL_IDX_2 = "FAIL_IDX_2";
+
+    /** */
+    private static final String FAIL_IDX_3 = "FAIL_IDX_3";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -116,50 +121,44 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         // Create SQL cache
         IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("create table test (col1 varchar primary key, col2 varchar, col3 varchar) with " +
-            "\"CACHE_GROUP=" + GRP_NAME + "\", \"BACKUPS=1\""));
+        String tableName1 = "test1";
+        String tableName2 = "test2";
 
-        // Create two indexes
-        cache.query(new SqlFieldsQuery("create index " + IDX_1_NAME + " on test(col2) INLINE_SIZE 0"));
-        cache.query(new SqlFieldsQuery("create index " + IDX_2_NAME + " on test(col3) INLINE_SIZE 0"));
+        String qry = "create table %s (col1 varchar primary key, col2 varchar, col3 varchar, col4 varchar) with " +
+            "\"BACKUPS=1\"";
+
+        cache.query(new SqlFieldsQuery(String.format(qry, tableName1)));
+        cache.query(new SqlFieldsQuery(String.format(qry, tableName2)));
+
+        // Create indexes
+        cache.query(new SqlFieldsQuery("create index " + FAIL_IDX_1 + " on test1(col2) INLINE_SIZE 0"));
+        cache.query(new SqlFieldsQuery("create index " + OK_IDX + " on test1(col3) INLINE_SIZE 0"));
+        cache.query(new SqlFieldsQuery("create index " + FAIL_IDX_2 + " on test1(col4) INLINE_SIZE 0"));
+        cache.query(new SqlFieldsQuery("create index " + FAIL_IDX_3 + " on test2(col2) INLINE_SIZE 0"));
 
         for (int i = 0; i < 100; i++) {
+            int counter = i;
+
             String value = "test" + i;
 
-            cache.query(new SqlFieldsQuery("insert into test(col1, col2, col3) values (?1, ?2, ?3)")
-                .setArgs(String.valueOf(i), value, value));
+            String query = "insert into %s(col1, col2, col3, col4) values (?1, ?2, ?3, ?4)";
+
+            Stream.of(tableName1, tableName2).map(tableName -> new SqlFieldsQuery(String.format(query, tableName))
+                .setArgs(String.valueOf(counter), value, value, value)).forEach(cache::query);
         }
 
         IgniteH2Indexing indexing = (IgniteH2Indexing) srv.context().query().getIndexing();
 
-        String cacheName = "SQL_PUBLIC_TEST";
+        String cache1Name = "SQL_PUBLIC_TEST1";
+        String cache2Name = "SQL_PUBLIC_TEST2";
 
-        PageMemoryEx mem = (PageMemoryEx)srv.context().cache().context().cacheContext(CU.cacheId(cacheName)).dataRegion().pageMemory();
-
-        Collection<H2TableDescriptor> tables = indexing.schemaManager().tablesForCache(cacheName);
-
-        // Corrupt first index
-        for (H2TableDescriptor descriptor : tables) {
-            H2TreeIndex index = (H2TreeIndex) descriptor.table().getIndex(IDX_1_NAME);
-            int segments = index.segmentsCount();
-
-            for (int segment = 0; segment < segments; segment++) {
-                H2Tree tree = index.treeForRead(segment);
-
-                GridCacheDatabaseSharedManager manager = dbMgr(srv);
-                manager.checkpointReadLock();
-
-                try {
-                    corruptTreeRoot(mem, tree.groupId(), tree.getMetaPageId());
-                }
-                finally {
-                    manager.checkpointReadUnlock();
-                }
-            }
-        }
+        corruptIndex(srv, indexing, cache1Name, FAIL_IDX_1);
+        corruptIndex(srv, indexing, cache1Name, FAIL_IDX_2);
+        corruptIndex(srv, indexing, cache2Name, FAIL_IDX_3);
 
         // Check that index was indeed corrupted
-        checkIndexCorruption(srv.context().maintenanceRegistry(), cache);
+        checkIndexCorruption(srv.context().maintenanceRegistry(), cache, tableName1, asList("col2", "col4"));
+        checkIndexCorruption(srv.context().maintenanceRegistry(), cache, tableName2, singletonList("col2"));
 
         stopGrid(0);
 
@@ -187,10 +186,45 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         validateIndexes(srv);
     }
 
+    /**
+     * Corrupts the index.
+     *
+     * @param srv Node.
+     * @param indexing Indexing.
+     * @param cacheName Name of the cache.
+     * @param idxName Name of the index.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void corruptIndex(IgniteEx srv, IgniteH2Indexing indexing, String cacheName, String idxName) throws IgniteCheckedException {
+        PageMemoryEx mem = (PageMemoryEx) srv.context().cache().context().cacheContext(CU.cacheId(cacheName)).dataRegion().pageMemory();
+
+        Collection<H2TableDescriptor> tables = indexing.schemaManager().tablesForCache(cacheName);
+
+        for (H2TableDescriptor descriptor : tables) {
+            H2TreeIndex index = (H2TreeIndex) descriptor.table().getIndex(idxName);
+            int segments = index.segmentsCount();
+
+            for (int segment = 0; segment < segments; segment++) {
+                H2Tree tree = index.treeForRead(segment);
+
+                GridCacheDatabaseSharedManager manager = dbMgr(srv);
+                manager.checkpointReadLock();
+
+                try {
+                    corruptTreeRoot(mem, tree.groupId(), tree.getMetaPageId());
+                }
+                finally {
+                    manager.checkpointReadUnlock();
+                }
+            }
+        }
+    }
+
+    /** */
     private static void validateIndexes(IgniteEx node) throws Exception {
         ValidateIndexesClosure clo = new ValidateIndexesClosure(
             () -> false,
-            Collections.singleton(DEFAULT_CACHE_NAME),
+            null,
             0,
             0,
             false,
@@ -204,14 +238,23 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         assertFalse(call.hasIssues());
     }
 
-    private void checkIndexCorruption(MaintenanceRegistry registry, IgniteCache<Integer, Integer> cache) {
-        List<SqlFieldsQuery> queries = Stream.of(
-            new SqlFieldsQuery("select * from test where col2=?1").setArgs("test2"),
-            new SqlFieldsQuery("insert into test(col1, col2, col3) values (?1, ?2, ?3)").setArgs("9998", "1", "1"),
-            new SqlFieldsQuery("update test set col2=?2 where col1=?1").setArgs("3", "test3")
+    /**
+     * Checks that index is corrupted.
+     *
+     * @param registry Maintenance registry.
+     * @param cache Cache.
+     * @param tableName Name of the table.
+     * @param colNames Names of columns with presumably corrupted indexes.
+     */
+    private void checkIndexCorruption(
+        MaintenanceRegistry registry,
+        IgniteCache<Integer, Integer> cache,
+        String tableName,
+        List<String> colNames
+    ) {
+        List<SqlFieldsQuery> queries = colNames.stream().map(colName ->
+            new SqlFieldsQuery(String.format("select * from %s where %s=?1", tableName, colName)).setArgs("test2")
         ).collect(toList());
-
-        assertFalse(registry.unregisterMaintenanceTask(IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME));
 
         queries.forEach(query -> {
             try {
@@ -220,19 +263,11 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
                 fail("Should've failed with CorruptedTreeException");
             }
             catch (CacheException e) {
-                assertTrue(registry.unregisterMaintenanceTask(IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME));
+                MaintenanceTask task = registry.requestedTask(INDEX_REBUILD_MNTC_TASK_NAME);
+
+                assertNotNull(task);
             }
         });
-
-        // Execute query once again to create maintenance record
-        try {
-            cache.query(queries.get(0)).getAll();
-
-            fail("Should've failed with CorruptedTreeException");
-        }
-        catch (CacheException e) {
-            assertTrue(e.getMessage().contains(CorruptedTreeException.class.getName()));
-        }
     }
 
     /** */

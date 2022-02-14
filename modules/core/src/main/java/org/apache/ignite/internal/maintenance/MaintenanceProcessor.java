@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -119,6 +120,35 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
         }
 
         return oldTask;
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable MaintenanceTask registerMaintenanceTask(
+        MaintenanceTask task,
+        Function<MaintenanceTask, MaintenanceTask> remappingFunction
+    ) throws IgniteCheckedException {
+        if (disabled)
+            throw new IgniteCheckedException(DISABLED_ERR_MSG);
+
+        if (isMaintenanceMode())
+            throw new IgniteCheckedException("Node is already in Maintenance Mode, " +
+                "registering additional maintenance task is not allowed in Maintenance Mode.");
+
+        MaintenanceTask computedTask = requestedTasks.compute(task.name(), (s, oldTask) -> {
+            if (oldTask != null)
+                return remappingFunction.apply(oldTask);
+
+            return task;
+        });
+
+        try {
+            fileStorage.writeMaintenanceTask(computedTask);
+        }
+        catch (IOException e) {
+            throw new IgniteCheckedException("Failed to register maintenance task " + task, e);
+        }
+
+        return computedTask;
     }
 
     /** {@inheritDoc} */
@@ -294,5 +324,10 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                 "cannot retrieve maintenance actions for it: " + maintenanceTaskName);
 
         return workflowCallbacks.get(maintenanceTaskName).allActions();
+    }
+
+    /** {@inheritDoc} */
+    @Override public MaintenanceTask requestedTask(String maintenanceTaskName) {
+        return requestedTasks.get(maintenanceTaskName);
     }
 }

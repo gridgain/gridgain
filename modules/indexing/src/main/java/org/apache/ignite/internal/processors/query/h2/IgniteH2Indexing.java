@@ -233,6 +233,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFie
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTypeDescriptor;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.parseMaintenanceTaskParameters;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
@@ -255,9 +256,6 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXE
 public class IgniteH2Indexing implements GridQueryIndexing {
     /** Index rebuild maintenance task name. */
     public static final String INDEX_REBUILD_MNTC_TASK_NAME = "indexRebuildMaintenanceTask";
-
-    /** Separator for index rebuild maintenance task parameters. */
-    public static final String INDEX_REBUILD_PARAMETER_SEPARATOR = "/";
 
     /*
      * Register IO for indexes.
@@ -2372,13 +2370,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 task -> {
                     String parametersString = task.parameters();
 
-                    String[] parameters = parametersString.split(INDEX_REBUILD_PARAMETER_SEPARATOR);
-
-                    int cacheId = Integer.parseInt(parameters[0]);
-
-                    String idxName = parameters[1];
-
-                    return new RebuildIndexWorkflowCallback(cacheId, idxName, this, log);
+                    return new RebuildIndexWorkflowCallback(parseMaintenanceTaskParameters(parametersString), this, log);
                 }
             );
     }

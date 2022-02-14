@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.maintenance;
 
+import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -45,11 +46,8 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
  * Maintenance action that handles index rebuilding.
  */
 public class RebuildIndexAction implements MaintenanceAction<Boolean> {
-    /** Id of the cache that contains target index. */
-    private final int cacheId;
-
-    /** Target index's name. */
-    private final String idxName;
+    /** Indexes to rebuild. */
+    private final List<MaintenanceRebuildIndexTarget> indexesToRebuild;
 
     /** Ignite indexing. */
     private final IgniteH2Indexing indexing;
@@ -60,37 +58,18 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
     /**
      * Constructor.
      *
-     * @param cacheId Id of the cache that contains target index.
-     * @param idxName Target index's name.
+     * @param indexesToRebuild Indexes to rebuild.
      * @param indexing Indexing.
      * @param log Logger.
      */
-    public RebuildIndexAction(int cacheId, String idxName, IgniteH2Indexing indexing, IgniteLogger log) {
-        this.cacheId = cacheId;
-        this.idxName = idxName;
+    public RebuildIndexAction(List<MaintenanceRebuildIndexTarget> indexesToRebuild, IgniteH2Indexing indexing, IgniteLogger log) {
+        this.indexesToRebuild = indexesToRebuild;
         this.indexing = indexing;
         this.log = log;
     }
 
     /** {@inheritDoc} */
     @Override public Boolean execute() {
-        try {
-            execute0();
-        }
-        catch (Exception e) {
-            log.error("Rebuilding index " + idxName + " for cache " + cacheId + " failed", e);
-
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Executes index rebuild.
-     *
-     * @throws Exception If failed to execute rebuild.
-     */
-    private void execute0() throws Exception {
         GridKernalContext kernalContext = indexing.kernalContext();
 
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager) kernalContext.cache()
@@ -100,19 +79,63 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
 
         IndexBuildStatusStorage storage = getIndexBuildStatusStorage(kernalContext);
 
-        prepareForRebuild(database, manager, storage);
+        try {
+            prepareForRebuild(database, manager, storage);
 
+            for (MaintenanceRebuildIndexTarget params : indexesToRebuild) {
+                int cacheId = params.cacheId();
+                String idxName = params.idxName();
+
+                try {
+                    execute0(cacheId, idxName, kernalContext, storage, manager);
+                }
+                catch (Exception e) {
+                    log.error("Rebuilding index " + idxName + " for cache " + cacheId + " failed", e);
+
+                    return false;
+                }
+            }
+        }
+        catch (IgniteCheckedException e) {
+            log.error("Failed to prepare for the rebuild of indexes", e);
+            return false;
+        }
+        finally {
+            cleanUpAfterRebuild(manager, storage);
+        }
+
+        unregisterMaintenanceTask(kernalContext);
+
+        return true;
+    }
+
+    /**
+     * Executes index rebuild.
+     *
+     * @param cacheId Cache id.
+     * @param idxName Name of the index.
+     * @param kernalContext Context.
+     * @param storage Index build status storage.
+     * @param manager Checkpoint manager.
+     * @throws Exception If failed to execute rebuild.
+     */
+    private void execute0(
+        int cacheId,
+        String idxName,
+        GridKernalContext kernalContext,
+        IndexBuildStatusStorage storage,
+        CheckpointManager manager
+    ) throws Exception {
         GridCacheContext<?, ?> context = kernalContext.cache().context().cacheContext(cacheId);
 
         String cacheName = context.name();
 
         SchemaManager schemaManager = indexing.schemaManager();
 
-        H2TreeIndex targetIndex = findIndex(cacheName, schemaManager);
+        H2TreeIndex targetIndex = findIndex(cacheName, idxName, schemaManager);
 
         if (targetIndex == null) {
             // Our job here is already done.
-            unregisterMaintenanceTask(kernalContext);
             return;
         }
 
@@ -120,16 +143,9 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
 
         destroyOldIndex(targetIndex, targetTable);
 
-        try {
-            recreateIndex(targetIndex, context, cacheName, storage, schemaManager, targetTable);
+        recreateIndex(targetIndex, context, cacheName, storage, schemaManager, targetTable);
 
-            manager.forceCheckpoint("afterIndexRebuild", null).futureFor(FINISHED).get();
-
-            unregisterMaintenanceTask(kernalContext);
-        }
-        finally {
-            cleanUpAfterRebuild(manager, storage);
-        }
+        manager.forceCheckpoint("afterIndexRebuild", null).futureFor(FINISHED).get();
     }
 
     /**
@@ -208,11 +224,12 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
      * Finds index for the cache by the name.
      *
      * @param cacheName Cache name.
+     * @param idxName Index name.
      * @param schemaManager Schema manager.
      * @return Index or {@code null} if index was not found.
      */
     @Nullable
-    private H2TreeIndex findIndex(String cacheName, SchemaManager schemaManager) {
+    private H2TreeIndex findIndex(String cacheName, String idxName, SchemaManager schemaManager) {
         H2TreeIndex targetIndex = null;
 
         for (H2TableDescriptor tblDesc : schemaManager.tablesForCache(cacheName)) {
