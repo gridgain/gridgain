@@ -25,8 +25,6 @@ AM_CPPFLAGS = \
 	-I@top_srcdir@/common/include \
 	-I@top_srcdir@/common/os/linux/include \
 	-I@top_srcdir@/binary/include \
-	-I@top_srcdir@/jni/include \
-	-I@top_srcdir@/jni/os/linux/include \
 	-I$(JAVA_HOME)/include \
 	-I$(JAVA_HOME)/include/linux \
 	-DIGNITE_IMPL \
@@ -38,20 +36,23 @@ AM_CXXFLAGS = \
 	-std=c++03
 
 libignite_la_LIBADD = \
-	@top_srcdir@/jni/libignite-jni.la \
+	-L$(JAVA_HOME)/jre/lib/amd64/server \
+	-L$(JAVA_HOME)/lib/server \
 	@top_srcdir@/binary/libignite-binary.la
 
 libignite_la_LDFLAGS = \
 	-no-undefined \
 	-ldl \
+	-ljvm \
 	-version-info 0:0:0 \
 	-release $(PACKAGE_VERSION)
 
 libignite_la_DEPENDENCIES = \
-	@top_srcdir@/jni/libignite-jni.la \
 	@top_srcdir@/binary/libignite-binary.la
 
 libignite_la_SOURCES = \
+	src/jni/java.cpp \
+	src/jni/os/linux/utils.cpp \
 	src/ignite.cpp \
 	src/ignition.cpp \
 	src/cluster/cluster_group.cpp \

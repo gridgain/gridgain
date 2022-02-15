@@ -24,8 +24,6 @@ AM_CPPFLAGS = \
     -I@top_srcdir@/../common/include \
     -I@top_srcdir@/../common/os/linux/include \
     -I@top_srcdir@/../binary/include \
-    -I@top_srcdir@/../jni/include \
-    -I@top_srcdir@/../jni/os/linux/include \
     -I$(JAVA_HOME)/include \
     -I$(JAVA_HOME)/include/linux \
     -DIGNITE_IMPL \
