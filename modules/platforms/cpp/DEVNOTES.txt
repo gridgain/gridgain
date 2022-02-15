@@ -151,7 +151,7 @@ Building ODBC Installers on Windows:
 ODBC msi installers will be located in <install_dir>/bin
 
 
-Importing CMake projects to Visual Studio (tm) (since 2015):
+Importing CMake projects to Visual Studio (tm) (2015 and newer):
 ------------------------------------------------------------
  Use CMakeSettings.json.in files in root directory as a template real CMakeSettings.json.
  Edit it manually to set up correct environment variables and import CMake projects as usual.
