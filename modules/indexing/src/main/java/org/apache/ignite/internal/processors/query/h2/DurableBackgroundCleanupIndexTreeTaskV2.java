@@ -489,6 +489,20 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
         }
     }
 
+    /**
+     * @return Cache name.
+     */
+    public String cacheName() {
+        return cacheName;
+    }
+
+    /**
+     * @return Index name.
+     */
+    public String idxName() {
+        return idxName;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DurableBackgroundCleanupIndexTreeTaskV2.class, this);

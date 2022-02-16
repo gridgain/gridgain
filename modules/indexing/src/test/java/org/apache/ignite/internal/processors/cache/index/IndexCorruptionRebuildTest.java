@@ -38,7 +38,10 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTaskState;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
@@ -59,6 +62,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.parseMaintenanceTaskParameters;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  * Test for the maintenance task that rebuild a corrupted index.
@@ -75,6 +79,18 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
     /** */
     private static final String FAIL_IDX_3 = "FAIL_IDX_3";
+
+    /** */
+    private static final String CACHE_NAME_1 = "SQL_PUBLIC_TEST1";
+
+    /** */
+    private static final String CACHE_NAME_2 = "SQL_PUBLIC_TEST2";
+
+    /** */
+    private static final String TABLE_NAME_1 = "test1";
+
+    /** */
+    private static final String TABLE_NAME_2 = "test2";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -125,14 +141,11 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         // Create SQL cache
         IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-        String tableName1 = "test1";
-        String tableName2 = "test2";
-
         String qry = "create table %s (col1 varchar primary key, col2 varchar, col3 varchar, col4 varchar) with " +
             "\"BACKUPS=1\"";
 
-        cache.query(new SqlFieldsQuery(String.format(qry, tableName1)));
-        cache.query(new SqlFieldsQuery(String.format(qry, tableName2)));
+        cache.query(new SqlFieldsQuery(String.format(qry, TABLE_NAME_1)));
+        cache.query(new SqlFieldsQuery(String.format(qry, TABLE_NAME_2)));
 
         // Create indexes
         cache.query(new SqlFieldsQuery("create index " + FAIL_IDX_1 + " on test1(col2) INLINE_SIZE 0"));
@@ -147,7 +160,7 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
             String query = "insert into %s(col1, col2, col3, col4) values (?1, ?2, ?3, ?4)";
 
-            Stream.of(tableName1, tableName2)
+            Stream.of(TABLE_NAME_1, TABLE_NAME_2)
                 .map(tableName ->
                     new SqlFieldsQuery(String.format(query, tableName))
                         .setArgs(String.valueOf(counter), value, value, value)
@@ -156,18 +169,15 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
         IgniteH2Indexing indexing = (IgniteH2Indexing) srv.context().query().getIndexing();
 
-        String cache1Name = "SQL_PUBLIC_TEST1";
-        String cache2Name = "SQL_PUBLIC_TEST2";
-
-        corruptIndex(srv, indexing, cache1Name, FAIL_IDX_1);
-        corruptIndex(srv, indexing, cache1Name, FAIL_IDX_2);
-        corruptIndex(srv, indexing, cache2Name, FAIL_IDX_3);
+        corruptIndex(srv, indexing, CACHE_NAME_1, FAIL_IDX_1);
+        corruptIndex(srv, indexing, CACHE_NAME_1, FAIL_IDX_2);
+        corruptIndex(srv, indexing, CACHE_NAME_2, FAIL_IDX_3);
 
         MaintenanceRegistry registry = srv.context().maintenanceRegistry();
 
         // Check that index was indeed corrupted
-        checkIndexCorruption(registry, cache, tableName1, asList("col2", "col4"));
-        checkIndexCorruption(registry, cache, tableName2, singletonList("col2"));
+        checkIndexCorruption(registry, cache, TABLE_NAME_1, asList("col2", "col4"));
+        checkIndexCorruption(registry, cache, TABLE_NAME_2, singletonList("col2"));
 
         MaintenanceTask task = registry.requestedTask(INDEX_REBUILD_MNTC_TASK_NAME);
 
@@ -176,17 +186,11 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         // Map cache id -> set of corrupted indexes' names
         Map<Integer, Set<String>> rebuildMap = targets.stream().collect(Collectors.groupingBy(
             MaintenanceRebuildIndexTarget::cacheId,
-            Collectors.mapping(MaintenanceRebuildIndexTarget::idxName, toSet()))
-        );
+            Collectors.mapping(MaintenanceRebuildIndexTarget::idxName, toSet())
+        ));
 
         // Check that maintenance task contains all failed indexes
-        Set<String> idxsForCache1 = rebuildMap.get(CU.cacheId(cache1Name));
-        assertEquals(2, idxsForCache1.size());
-        assertTrue(idxsForCache1.containsAll(asList(FAIL_IDX_1, FAIL_IDX_2)));
-
-        Set<String> idxsForCache2 = rebuildMap.get(CU.cacheId(cache2Name));
-        assertEquals(1, idxsForCache2.size());
-        assertTrue(idxsForCache2.contains(FAIL_IDX_3));
+        checkCacheToCorruptedIndexMap(rebuildMap);
 
         stopGrid(0);
 
@@ -194,6 +198,15 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         srv = startGrid(0);
 
         assertTrue(srv.context().maintenanceRegistry().isMaintenanceMode());
+
+        Collection<DurableBackgroundTaskState<?>> durableTasks = tasks(srv.context().durableBackgroundTask()).values();
+
+        Map<Integer, Set<String>> indexTasksByCache = durableTasks.stream().collect(Collectors.groupingBy(
+            state -> CU.cacheId(((DurableBackgroundCleanupIndexTreeTaskV2) state.task()).cacheName()),
+            Collectors.mapping(state -> ((DurableBackgroundCleanupIndexTreeTaskV2) state.task()).idxName(), toSet())
+        ));
+
+        checkCacheToCorruptedIndexMap(indexTasksByCache);
 
         stopGrid(0);
 
@@ -212,6 +225,21 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
         // Validate indexes integrity
         validateIndexes(srv);
+    }
+
+    /**
+     * Checks that caches have certain corrupted indexes.
+     *
+     * @param cacheToCorruptedIndexMap Corrupted indexes map.
+     */
+    private void checkCacheToCorruptedIndexMap(Map<Integer, Set<String>> cacheToCorruptedIndexMap) {
+        Set<String> idxsForCache1 = cacheToCorruptedIndexMap.get(CU.cacheId(CACHE_NAME_1));
+        assertEquals(2, idxsForCache1.size());
+        assertTrue(idxsForCache1.containsAll(asList(FAIL_IDX_1, FAIL_IDX_2)));
+
+        Set<String> idxsForCache2 = cacheToCorruptedIndexMap.get(CU.cacheId(CACHE_NAME_2));
+        assertEquals(1, idxsForCache2.size());
+        assertTrue(idxsForCache2.contains(FAIL_IDX_3));
     }
 
     /**
@@ -370,5 +398,13 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         public boolean didRebuildIndexes() {
             return rebuiltIndexes;
         }
+    }
+
+    /**
+     * @param proc Durable background task processor.
+     * @return Durable tasks.
+     */
+    private Map<String, DurableBackgroundTaskState<?>> tasks(DurableBackgroundTasksProcessor proc) {
+        return getFieldValue(proc, "tasks");
     }
 }
