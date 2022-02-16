@@ -15,8 +15,6 @@
 ::
 @echo off
 
-if "%OS%" == "Windows_NT"  setlocal
-
 set java_version=%~1
 set current_value=%~2
 set value=""
