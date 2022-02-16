@@ -196,7 +196,7 @@ if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.startup.cmdline.Command
 ::
 :: Final JVM_OPTS for Java 9+ compatibility
 ::
-call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% %JVM_OPTS% JVM_OPTS
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
 
 if "%INTERACTIVE%" == "1" (
     "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^

@@ -155,7 +155,7 @@ if "%ARGS%" == "" set ARGS=%*
 ::
 :: Final JVM_OPTS for Java 9+ compatibility
 ::
-call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% %JVM_OPTS% JVM_OPTS
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
 
 ::
 :: Starts Visor console.

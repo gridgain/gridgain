@@ -105,7 +105,7 @@ set JAVA_VER_STR=%JAVA_VER_STR:"=%
 
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER_STR%.x") do set MAJOR_JAVA_VER=%%a& set MINOR_JAVA_VER=%%b
 
-call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% %JVM_OPTS% JVM_OPTS
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
 
 set CP=%IGNITE_LIBS%
 set CP=%CP%;%IGNITE_HOME%\bin\include\sqlline\*

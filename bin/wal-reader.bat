@@ -166,7 +166,7 @@ if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.internal.commandline.wa
 ::
 :: Final CONTROL_JVM_OPTS for Java 9+ compatibility
 ::
-call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% %CONTROL_JVM_OPTS% CONTROL_JVM_OPTS
+call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%CONTROL_JVM_OPTS%" CONTROL_JVM_OPTS
 
 if defined JVM_OPTS (
     echo JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS
