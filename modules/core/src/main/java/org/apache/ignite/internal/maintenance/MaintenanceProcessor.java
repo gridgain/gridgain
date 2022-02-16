@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -92,40 +92,29 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
 
     /** {@inheritDoc} */
     @Nullable @Override public MaintenanceTask registerMaintenanceTask(MaintenanceTask task) throws IgniteCheckedException {
-        if (disabled)
-            throw new IgniteCheckedException(DISABLED_ERR_MSG);
-
-        if (isMaintenanceMode()) {
-            throw new IgniteCheckedException("Node is already in Maintenance Mode, " +
-                "registering additional maintenance task is not allowed in Maintenance Mode.");
-        }
-
-        MaintenanceTask oldTask = requestedTasks.put(task.name(), task);
-
-        if (oldTask != null) {
-            log.info(
-                "Maintenance Task with name " + task.name() +
-                    " is already registered" +
-                    (oldTask.parameters() != null ? " with parameters " + oldTask.parameters() : ".") +
-                    " It will be replaced with new task" +
-                    task.parameters() != null ? " with parameters " + task.parameters() : "" + "."
-            );
-        }
-
-        try {
-            fileStorage.writeMaintenanceTask(task);
-        }
-        catch (IOException e) {
-            throw new IgniteCheckedException("Failed to register maintenance task " + task, e);
-        }
-
-        return oldTask;
+        return registerMaintenanceTask0(task, null);
     }
 
     /** {@inheritDoc} */
     @Nullable @Override public MaintenanceTask registerMaintenanceTask(
         MaintenanceTask task,
-        Function<MaintenanceTask, MaintenanceTask> remappingFunction
+        UnaryOperator<MaintenanceTask> remappingFunction
+    ) throws IgniteCheckedException {
+        return registerMaintenanceTask0(task, remappingFunction);
+    }
+
+    /**
+     * Registers maintenance task and applies remapping function to a previously registered task with the same name
+     * if remapping function is not {@code null}.
+     *
+     * @param task Maintenance task.
+     * @param remappingFunction Remapping function.
+     * @return Previously registered task or {@code null} if there was none or if remapping function is not {@code null}.
+     * @throws IgniteCheckedException If failed to register maintenance task.
+     */
+    @Nullable private MaintenanceTask registerMaintenanceTask0(
+        MaintenanceTask task,
+        @Nullable UnaryOperator<MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException {
         if (disabled)
             throw new IgniteCheckedException(DISABLED_ERR_MSG);
@@ -135,21 +124,43 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
                 "registering additional maintenance task is not allowed in Maintenance Mode.");
         }
 
-        MaintenanceTask computedTask = requestedTasks.compute(task.name(), (taskName, oldTask) -> {
-            if (oldTask != null)
-                return remappingFunction.apply(oldTask);
+        MaintenanceTask taskToWrite;
+        MaintenanceTask oldTask;
 
-            return task;
-        });
+        if (remappingFunction != null) {
+            taskToWrite = requestedTasks.compute(task.name(), (taskName, prevTask) -> {
+                if (prevTask != null)
+                    return remappingFunction.apply(prevTask);
+
+                return task;
+            });
+
+            oldTask = null;
+        }
+        else {
+            taskToWrite = task;
+
+            oldTask = requestedTasks.put(task.name(), task);
+
+            if (oldTask != null) {
+                log.info(
+                    "Maintenance Task with name " + task.name() +
+                        " is already registered" +
+                        (oldTask.parameters() != null ? " with parameters " + oldTask.parameters() : ".") +
+                        " It will be replaced with new task" +
+                        task.parameters() != null ? " with parameters " + task.parameters() : "" + "."
+                );
+            }
+        }
 
         try {
-            fileStorage.writeMaintenanceTask(computedTask);
+            fileStorage.writeMaintenanceTask(taskToWrite);
         }
         catch (IOException e) {
             throw new IgniteCheckedException("Failed to register maintenance task " + task, e);
         }
 
-        return computedTask;
+        return oldTask;
     }
 
     /** {@inheritDoc} */

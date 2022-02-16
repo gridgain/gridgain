@@ -1005,9 +1005,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
         CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, cacheName, idxName, grpId, pageIds);
 
-        String errorMsg = "Index " + idxName + " of the table " + tblName + " is corrupted, to fix this issue a " +
-            "rebuild is required. On the next restart, node will enter the maintenance mode and rebuild corrupted " +
-            "indexes.";
+        String errorMsg = "Index " + idxName + " of the table " + tblName + " (cache " + cacheName + ") is " +
+            "corrupted, to fix this issue a rebuild is required. On the next restart, node will enter the " +
+            "maintenance mode and rebuild corrupted indexes.";
 
         log.warning(errorMsg);
 
@@ -1016,7 +1016,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         try {
             String description = "Corrupted index found";
 
-            MaintenanceTask task = new MaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME,
+            MaintenanceTask task = new MaintenanceTask(
+                INDEX_REBUILD_MNTC_TASK_NAME,
                 description,
                 cacheId + INDEX_REBUILD_PARAMETER_SEPARATOR + idxName
             );
@@ -1032,7 +1033,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
                     String newParams = oldTaskParams + INDEX_REBUILD_PARAMETER_SEPARATOR + newTaskParams;
 
-                    return new MaintenanceTask(INDEX_REBUILD_MNTC_TASK_NAME,
+                    return new MaintenanceTask(
+                        INDEX_REBUILD_MNTC_TASK_NAME,
                         description,
                         newParams
                     );

@@ -17,7 +17,7 @@
 package org.apache.ignite.maintenance;
 
 import java.util.List;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.lang.IgniteThrowableFunction;
@@ -105,7 +105,6 @@ public interface MaintenanceRegistry {
      * with the same name exists, applies remapping function to compute a new task.
      * Has the same restrictions as the {@link #registerMaintenanceTask(MaintenanceTask)}.
      *
-     *
      * @param task {@link MaintenanceTask} object with maintenance information that needs
      *                                     to be stored to maintenance registry.
      *
@@ -118,7 +117,7 @@ public interface MaintenanceRegistry {
      */
     @Nullable public MaintenanceTask registerMaintenanceTask(
         MaintenanceTask task,
-        Function<MaintenanceTask, MaintenanceTask> remappingFunction
+        UnaryOperator<MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException;
 
     /**
