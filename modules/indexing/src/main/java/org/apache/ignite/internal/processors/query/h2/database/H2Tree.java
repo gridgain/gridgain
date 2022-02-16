@@ -71,8 +71,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.mergeTasks;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.toMaintenanceTask;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.mergeTasks;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.toMaintenanceTask;
 
 /**
  * H2 tree index implementation.
@@ -1048,5 +1048,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @Override protected String lockRetryErrorMessage(String op) {
         return super.lockRetryErrorMessage(op) + " Problem with the index [cacheName=" +
             cacheName + ", tblName=" + tblName + ", idxName=" + idxName + ']';
+    }
+
+    /**
+     * @return Table.
+     */
+    public GridH2Table table() {
+        return table;
     }
 }

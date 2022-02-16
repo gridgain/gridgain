@@ -44,6 +44,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.Checkpoint
 
 /**
  * Maintenance action that handles index rebuilding.
+ * TODO: GG-34742 Rebuild multiple indexes of a cache at once.
  */
 public class RebuildIndexAction implements MaintenanceAction<Boolean> {
     /** Indexes to rebuild. */
@@ -170,7 +171,7 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
         GridFutureAdapter<Void> createIdxFut = new GridFutureAdapter<>();
 
         // Create new index from the old one.
-        H2TreeIndex newIndex = oldIndex.getRecreator().apply(context.dataRegion().pageMemory(), context.offheap());
+        H2TreeIndex newIndex = oldIndex.createCopy(context.dataRegion().pageMemory(), context.offheap());
 
         SchemaIndexCacheVisitorImpl visitor = new SchemaIndexCacheVisitorImpl(context, null, createIdxFut) {
             /** {@inheritDoc} */

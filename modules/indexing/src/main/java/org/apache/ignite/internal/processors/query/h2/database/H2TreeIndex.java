@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -83,7 +84,6 @@ import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteTree;
-import org.apache.ignite.internal.util.function.ThrowableBiFunction;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.CIX2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -129,9 +129,6 @@ import static org.gridgain.internal.h2.result.Row.MEMORY_CALCULATE;
 public class H2TreeIndex extends H2TreeIndexBase {
     /** */
     private final H2Tree[] segments;
-
-    /** Function that re-creates this index. */
-    private final ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator;
 
     /** Kernal context. */
     private final GridKernalContext ctx;
@@ -185,7 +182,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param segments Tree segments.
      * @param cols Columns.
      * @param log Logger.
-     * @param recreator Function that re-creates this index.
      */
     private H2TreeIndex(
         GridCacheContext<?, ?> cctx,
@@ -196,8 +192,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
         H2Tree[] segments,
         IndexColumn[] cols,
         IoStatisticsHolderIndex stats,
-        IgniteLogger log,
-        ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator
+        IgniteLogger log
     ) {
         super(tbl, idxName, cols,
             pk ? IndexType.createPrimaryKey(false, false) :
@@ -215,7 +210,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
         this.treeName = treeName;
 
         this.segments = segments;
-        this.recreator = recreator;
 
         qryCtxRegistry = ((IgniteH2Indexing)(ctx.query().getIndexing())).queryContextRegistry();
 
@@ -373,13 +367,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         IndexColumn.mapColumns(cols, tbl);
 
-        ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> recreator =
-            (memory, manager) -> {
-            return createIndex(cctx, rowCache, tbl, idxName, pk, affinityKey, unwrappedCols, wrappedCols, inlineSize,
-                segmentsCnt, memory, manager, PageIoResolver.DEFAULT_PAGE_IO_RESOLVER, log);
-        };
-
-        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, stats, log, recreator);
+        return new H2TreeIndex(cctx, tbl, idxName, pk, treeName, segments, cols, stats, log);
     }
 
     /** {@inheritDoc} */
@@ -1086,11 +1074,30 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
-     * Returns a function that is used to re-create this index.
+     * Creates a new index that is an exact copy of this index.
      *
-     * @return Function that re-creates index.
+     * @param pageMem Page memory.
+     * @param offheap Offheap manager.
+     * @return New index.
      */
-    public ThrowableBiFunction<PageMemory, IgniteCacheOffheapManager, H2TreeIndex, IgniteCheckedException> getRecreator() {
-        return recreator;
+    public H2TreeIndex createCopy(PageMemory pageMem, IgniteCacheOffheapManager offheap) throws IgniteCheckedException {
+        H2Tree firstSegment = segments[0];
+
+        return createIndex(
+            cctx,
+            null,
+            firstSegment.table(),
+            idxName,
+            firstSegment.getPk(),
+            firstSegment.getAffinityKey(),
+            Arrays.asList(firstSegment.cols()),
+            Arrays.asList(firstSegment.cols()),
+            firstSegment.inlineSize(),
+            segments.length,
+            pageMem,
+            offheap,
+            PageIoResolver.DEFAULT_PAGE_IO_RESOLVER,
+            log
+        );
     }
 }

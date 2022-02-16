@@ -98,7 +98,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /** {@inheritDoc} */
     @Override public void registerMaintenanceTask(
         MaintenanceTask task,
-        @NotNull UnaryOperator<MaintenanceTask> remappingFunction
+        UnaryOperator<MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException {
         assert remappingFunction != null;
 

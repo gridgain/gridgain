@@ -114,7 +114,7 @@ public interface MaintenanceRegistry {
      */
     public void registerMaintenanceTask(
         MaintenanceTask task,
-        @NotNull UnaryOperator<MaintenanceTask> remappingFunction
+        UnaryOperator<MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException;
 
     /**

@@ -61,7 +61,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.parseMaintenanceTaskParameters;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**

@@ -23,14 +23,14 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.INDEX_REBUILD_PARAMETER_SEPARATOR;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.mergeTasks;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.parseMaintenanceTaskParameters;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.toMaintenanceTask;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.INDEX_REBUILD_PARAMETER_SEPARATOR;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.mergeTasks;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.toMaintenanceTask;
 import static org.junit.Assert.assertEquals;
 
 /** Tests for {@link MaintenanceRebuildIndexTarget}. */
-public class MaintenanceRebuildIndexTargetSelfTest {
+public class MaintenanceRebuildIndexUtilsSelfTest {
     /**
      * Tests that maintenance task's parameters can be stringified and parsed back.
      */
@@ -96,7 +96,7 @@ public class MaintenanceRebuildIndexTargetSelfTest {
     }
 
     /**
-     * Tests that {@link MaintenanceRebuildIndexTarget#INDEX_REBUILD_PARAMETER_SEPARATOR} can be used in the index name.
+     * Tests that {@link MaintenanceRebuildIndexUtils#INDEX_REBUILD_PARAMETER_SEPARATOR} can be used in the index name.
      */
     @Test
     public void testIndexNameWithSeparatorCharacter() {
