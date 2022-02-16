@@ -17,6 +17,9 @@ package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
@@ -41,6 +44,7 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
+import org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
@@ -52,7 +56,9 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.parseMaintenanceTaskParameters;
 
 /**
  * Test for the maintenance task that rebuild a corrupted index.
@@ -103,8 +109,6 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
-        clearGridToStringClassCache();
-
         GridQueryProcessor.idxCls = null;
 
         super.afterTest();
@@ -143,8 +147,11 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
 
             String query = "insert into %s(col1, col2, col3, col4) values (?1, ?2, ?3, ?4)";
 
-            Stream.of(tableName1, tableName2).map(tableName -> new SqlFieldsQuery(String.format(query, tableName))
-                .setArgs(String.valueOf(counter), value, value, value)).forEach(cache::query);
+            Stream.of(tableName1, tableName2)
+                .map(tableName ->
+                    new SqlFieldsQuery(String.format(query, tableName))
+                        .setArgs(String.valueOf(counter), value, value, value)
+                ).forEach(cache::query);
         }
 
         IgniteH2Indexing indexing = (IgniteH2Indexing) srv.context().query().getIndexing();
@@ -156,9 +163,30 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         corruptIndex(srv, indexing, cache1Name, FAIL_IDX_2);
         corruptIndex(srv, indexing, cache2Name, FAIL_IDX_3);
 
+        MaintenanceRegistry registry = srv.context().maintenanceRegistry();
+
         // Check that index was indeed corrupted
-        checkIndexCorruption(srv.context().maintenanceRegistry(), cache, tableName1, asList("col2", "col4"));
-        checkIndexCorruption(srv.context().maintenanceRegistry(), cache, tableName2, singletonList("col2"));
+        checkIndexCorruption(registry, cache, tableName1, asList("col2", "col4"));
+        checkIndexCorruption(registry, cache, tableName2, singletonList("col2"));
+
+        MaintenanceTask task = registry.requestedTask(INDEX_REBUILD_MNTC_TASK_NAME);
+
+        List<MaintenanceRebuildIndexTarget> targets = parseMaintenanceTaskParameters(task.parameters());
+
+        // Map cache id -> set of corrupted indexes' names
+        Map<Integer, Set<String>> rebuildMap = targets.stream().collect(Collectors.groupingBy(
+            MaintenanceRebuildIndexTarget::cacheId,
+            Collectors.mapping(MaintenanceRebuildIndexTarget::idxName, toSet()))
+        );
+
+        // Check that maintenance task contains all failed indexes
+        Set<String> idxsForCache1 = rebuildMap.get(CU.cacheId(cache1Name));
+        assertEquals(2, idxsForCache1.size());
+        assertTrue(idxsForCache1.containsAll(asList(FAIL_IDX_1, FAIL_IDX_2)));
+
+        Set<String> idxsForCache2 = rebuildMap.get(CU.cacheId(cache2Name));
+        assertEquals(1, idxsForCache2.size());
+        assertTrue(idxsForCache2.contains(FAIL_IDX_3));
 
         stopGrid(0);
 
@@ -195,8 +223,10 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
      * @param idxName Name of the index.
      * @throws IgniteCheckedException If failed.
      */
-    private void corruptIndex(IgniteEx srv, IgniteH2Indexing indexing, String cacheName, String idxName) throws IgniteCheckedException {
-        PageMemoryEx mem = (PageMemoryEx) srv.context().cache().context().cacheContext(CU.cacheId(cacheName)).dataRegion().pageMemory();
+    private void corruptIndex(IgniteEx srv, IgniteH2Indexing indexing, String cacheName,
+        String idxName) throws IgniteCheckedException {
+        PageMemoryEx mem = (PageMemoryEx) srv.context().cache().context().cacheContext(CU.cacheId(cacheName))
+            .dataRegion().pageMemory();
 
         Collection<H2TableDescriptor> tables = indexing.schemaManager().tablesForCache(cacheName);
 
@@ -271,8 +301,7 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private void corruptTreeRoot(PageMemoryEx pageMemory, int grpId, long metaPageId)
-        throws IgniteCheckedException {
+    private void corruptTreeRoot(PageMemoryEx pageMemory, int grpId, long metaPageId) throws IgniteCheckedException {
         long leafId = findFirstLeafId(grpId, metaPageId, pageMemory);
 
         if (leafId != 0L) {
@@ -336,8 +365,6 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         }
 
         /**
-         * Get index rebuild flag.
-         *
          * @return Whether index rebuild happened.
          */
         public boolean didRebuildIndexes() {

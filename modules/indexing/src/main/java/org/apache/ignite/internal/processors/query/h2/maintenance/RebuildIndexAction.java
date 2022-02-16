@@ -268,12 +268,6 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
         // Enable checkpointer
         database.onStateRestored(null);
 
-        // Wait for checkpoint
-        manager.forceCheckpoint("beforeIndexRebuild", null).futureFor(FINISHED).get();
-
-        // Flush WAL
-        database.preserveWalTailPointer();
-
         // IndexBuildStatusStorage listens for checkpoint to update the status of the rebuild in the metastorage.
         // We need to set up the listener manually here, because it's maintenance mode.
         manager.addCheckpointListener(storage, null);

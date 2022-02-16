@@ -68,11 +68,11 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
-import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.INDEX_REBUILD_PARAMETER_SEPARATOR;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.mergeTasks;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexTarget.toMaintenanceTask;
 
 /**
  * H2 tree index implementation.
@@ -1014,31 +1014,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         int cacheId = table.cacheId();
 
         try {
-            String description = "Corrupted index found";
-
-            MaintenanceTask task = new MaintenanceTask(
-                INDEX_REBUILD_MNTC_TASK_NAME,
-                description,
-                cacheId + INDEX_REBUILD_PARAMETER_SEPARATOR + idxName
-            );
+            MaintenanceTask task = toMaintenanceTask(cacheId, idxName);
 
             cctx.kernalContext().maintenanceRegistry().registerMaintenanceTask(
                 task,
-                oldTask -> {
-                    String oldTaskParams = oldTask.parameters();
-                    String newTaskParams = task.parameters();
-
-                    if (oldTaskParams.contains(newTaskParams))
-                        return oldTask;
-
-                    String newParams = oldTaskParams + INDEX_REBUILD_PARAMETER_SEPARATOR + newTaskParams;
-
-                    return new MaintenanceTask(
-                        INDEX_REBUILD_MNTC_TASK_NAME,
-                        description,
-                        newParams
-                    );
-                }
+                oldTask -> mergeTasks(oldTask, task)
             );
         }
         catch (IgniteCheckedException ex) {

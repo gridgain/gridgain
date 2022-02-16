@@ -610,8 +610,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
      *
      * @param rmvIdx Flag remove.
-     * @param renameImmediately Use {@code true} to rename index tree immediately, before executing
-     *                          cleanup task.
+     * @param renameImmediately Use {@code true} to rename index tree immediately, before executing cleanup task.
      */
     public void destroy0(boolean rmvIdx, boolean renameImmediately) throws IgniteCheckedException {
         if (!markDestroyed())

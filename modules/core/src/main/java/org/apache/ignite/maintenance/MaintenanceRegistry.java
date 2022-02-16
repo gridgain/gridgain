@@ -111,13 +111,10 @@ public interface MaintenanceRegistry {
      * @param remappingFunction Function to compute a task if an old {@link MaintenanceTask} with the same name exists.
      *
      * @throws IgniteCheckedException If handling or storing maintenance task failed.
-     *
-     * @return Previously registered {@link MaintenanceTask} with the same ID
-     * or null if no tasks were registered for this ID.
      */
-    @Nullable public MaintenanceTask registerMaintenanceTask(
+    public void registerMaintenanceTask(
         MaintenanceTask task,
-        UnaryOperator<MaintenanceTask> remappingFunction
+        @NotNull UnaryOperator<MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException;
 
     /**
@@ -198,5 +195,5 @@ public interface MaintenanceRegistry {
      * @param maintenanceTaskName Task's name.
      * @return Requested maintenance task or {@code null}.
      */
-    @Nullable MaintenanceTask requestedTask(String maintenanceTaskName);
+    @Nullable public MaintenanceTask requestedTask(String maintenanceTaskName);
 }

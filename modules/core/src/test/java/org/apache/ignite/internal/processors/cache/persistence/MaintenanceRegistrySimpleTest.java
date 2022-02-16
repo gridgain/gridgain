@@ -142,10 +142,10 @@ public class MaintenanceRegistrySimpleTest {
     /**
      * {@link MaintenanceTask} could be updated using remapping function.
      *
-     * @throws IgniteCheckedException If initialization failed.
+     * @throws Exception If failed.
      */
     @Test
-    public void testMaintenanceTaskUpdate() throws IgniteCheckedException {
+    public void testMaintenanceTaskUpdate() throws Exception {
         String name0 = "taskName0";
         String descr = "description";
         String oldParams = "oldParams";
@@ -159,7 +159,7 @@ public class MaintenanceRegistrySimpleTest {
 
         MaintenanceTask oldTask = new MaintenanceTask(name0, descr, oldParams);
 
-        proc.registerMaintenanceTask(oldTask);
+        assertNull(proc.registerMaintenanceTask(oldTask));
 
         MaintenanceTask newTask = new MaintenanceTask(name0, descr, newParams);
 
