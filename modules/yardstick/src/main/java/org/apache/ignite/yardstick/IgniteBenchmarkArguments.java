@@ -143,6 +143,10 @@ public class IgniteBenchmarkArguments {
     private int batch = 500;
 
     /** */
+    @Parameter(names = {"-os", "--objectSize"}, description = "Object size (bytes)")
+    private int objectSize = 100;
+
+    /** */
     @Parameter(names = {"-col", "--collocated"}, description = "Collocated")
     private boolean collocated;
 
@@ -541,6 +545,13 @@ public class IgniteBenchmarkArguments {
      */
     public int batch() {
         return batch;
+    }
+
+    /**
+     * @return Object size.
+     */
+    public int objectSize() {
+        return objectSize;
     }
 
     /**
