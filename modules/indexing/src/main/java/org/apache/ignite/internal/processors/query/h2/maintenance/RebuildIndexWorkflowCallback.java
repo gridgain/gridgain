@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.apache.ignite.maintenance.MaintenanceWorkflowCallback;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -57,7 +56,7 @@ public class RebuildIndexWorkflowCallback implements MaintenanceWorkflowCallback
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull List<MaintenanceAction<?>> allActions() {
+    @Override public List<MaintenanceAction<?>> allActions() {
         return Collections.singletonList(new RebuildIndexAction(indexesToRebuild, indexing, log));
     }
 

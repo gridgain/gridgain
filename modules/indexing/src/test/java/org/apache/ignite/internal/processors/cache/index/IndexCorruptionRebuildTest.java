@@ -117,6 +117,8 @@ public class IndexCorruptionRebuildTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        GridQueryProcessor.idxCls = null;
     }
 
     /** {@inheritDoc} */

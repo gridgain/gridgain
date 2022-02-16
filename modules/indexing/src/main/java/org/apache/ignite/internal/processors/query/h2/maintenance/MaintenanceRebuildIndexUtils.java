@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.maintenance.MaintenanceTask;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.INDEX_REBUILD_MNTC_TASK_NAME;
@@ -85,7 +84,7 @@ public class MaintenanceRebuildIndexUtils {
      * @param idxName Index name.
      * @return Maintenance task.
      */
-    public static MaintenanceTask toMaintenanceTask(int cacheId, @NotNull String idxName) {
+    public static MaintenanceTask toMaintenanceTask(int cacheId, String idxName) {
         String encodedIdxName = ENCODER.encodeToString(idxName.getBytes(StandardCharsets.UTF_8));
 
         return new MaintenanceTask(
@@ -102,7 +101,7 @@ public class MaintenanceRebuildIndexUtils {
      * @param newTask New task.
      * @return Merged task.
      */
-    public static MaintenanceTask mergeTasks(@NotNull MaintenanceTask oldTask, @NotNull MaintenanceTask newTask) {
+    public static MaintenanceTask mergeTasks(MaintenanceTask oldTask, MaintenanceTask newTask) {
         assert Objects.equals(INDEX_REBUILD_MNTC_TASK_NAME, oldTask.name());
         assert Objects.equals(TASK_DESCRIPTION, oldTask.description());
         assert Objects.equals(oldTask.name(), newTask.name());

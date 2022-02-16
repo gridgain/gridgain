@@ -503,6 +503,13 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
         return idxName;
     }
 
+    /**
+     * @return {@code true} if needs to rename index trees, {@code false} otherwise.
+     */
+    public boolean needToRename() {
+        return needToRen;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DurableBackgroundCleanupIndexTreeTaskV2.class, this);

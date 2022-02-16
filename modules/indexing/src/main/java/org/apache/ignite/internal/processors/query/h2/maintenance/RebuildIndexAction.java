@@ -37,7 +37,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.maintenance.MaintenanceAction;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.index.Index;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
@@ -307,7 +306,7 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
     }
 
     /** {@inheritDoc} */
-    @NotNull @Override public String name() {
+    @Override public String name() {
         return "rebuild";
     }
 
