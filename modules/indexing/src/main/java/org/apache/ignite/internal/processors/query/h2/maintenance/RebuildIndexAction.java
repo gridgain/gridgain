@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -228,8 +228,7 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
      * @param schemaManager Schema manager.
      * @return Index or {@code null} if index was not found.
      */
-    @Nullable
-    private H2TreeIndex findIndex(String cacheName, String idxName, SchemaManager schemaManager) {
+    @Nullable private H2TreeIndex findIndex(String cacheName, String idxName, SchemaManager schemaManager) {
         H2TreeIndex targetIndex = null;
 
         for (H2TableDescriptor tblDesc : schemaManager.tablesForCache(cacheName)) {
@@ -256,7 +255,7 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
      * @param database Database manager.
      * @param manager Checkpoint manager.
      * @param storage Index build status storage.
-     * @throws IgniteCheckedException
+     * @throws IgniteCheckedException If failed.
      */
     private void prepareForRebuild(
         GridCacheDatabaseSharedManager database,
@@ -313,12 +312,12 @@ public class RebuildIndexAction implements MaintenanceAction<Boolean> {
     }
 
     /** {@inheritDoc} */
-    @Override public @NotNull String name() {
+    @NotNull @Override public String name() {
         return "rebuild";
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable String description() {
+    @Nullable @Override public String description() {
         return "Rebuilding indexes";
     }
 }

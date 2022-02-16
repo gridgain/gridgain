@@ -1005,8 +1005,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId, long... pageIds) {
         CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, cacheName, idxName, grpId, pageIds);
 
-        String errorMsg = "Index of the table " + tblName + " is corrupted, to fix this issue a rebuild " +
-            "is required. On the next restart, node will enter the maintenance mode and rebuild corrupted indexes.";
+        String errorMsg = "Index " + idxName + " of the table " + tblName + " is corrupted, to fix this issue a " +
+            "rebuild is required. On the next restart, node will enter the maintenance mode and rebuild corrupted " +
+            "indexes.";
 
         log.warning(errorMsg);
 

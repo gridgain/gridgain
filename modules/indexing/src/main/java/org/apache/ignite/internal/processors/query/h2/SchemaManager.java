@@ -677,8 +677,14 @@ public class SchemaManager {
      * @param cacheVisitor Cache visitor.
      * @throws IgniteCheckedException If failed.
      */
-    public void createIndex(GridH2Table h2Tbl, H2TableDescriptor desc, String schemaName, GridH2IndexBase h2Idx, boolean ifNotExists,
-                            SchemaIndexCacheVisitor cacheVisitor) throws IgniteCheckedException {
+    public void createIndex(
+        GridH2Table h2Tbl,
+        H2TableDescriptor desc,
+        String schemaName,
+        GridH2IndexBase h2Idx,
+        boolean ifNotExists,
+        SchemaIndexCacheVisitor cacheVisitor
+    ) throws IgniteCheckedException {
         h2Tbl.proposeUserIndex(h2Idx);
 
         try {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ public class RebuildIndexWorkflowCallback implements MaintenanceWorkflowCallback
 
     /**
      * Constructor.
+     *
      * @param indexesToRebuild Indexes to rebuild.
      * @param indexing Indexing.
      * @param log Logger.

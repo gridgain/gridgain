@@ -17,8 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.maintenance;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.maintenance.MaintenanceTask;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * {@link RebuildIndexAction}'s parameters.
@@ -36,12 +38,12 @@ public class MaintenanceRebuildIndexTarget {
     /**
      * Constructor.
      *
-     * @param id Cache id.
-     * @param name Name of the index.
+     * @param cacheId Cache id.
+     * @param idxName Name of the index.
      */
-    public MaintenanceRebuildIndexTarget(int id, String name) {
-        cacheId = id;
-        idxName = name;
+    public MaintenanceRebuildIndexTarget(int cacheId, String idxName) {
+        this.cacheId = cacheId;
+        this.idxName = idxName;
     }
 
     /**
@@ -64,8 +66,14 @@ public class MaintenanceRebuildIndexTarget {
      * @param parameters Task's parameters.
      * @return List of MaintenanceRebuildIndexTargets.
      */
-    public static List<MaintenanceRebuildIndexTarget> parseMaintenanceTaskParameters(String parameters) {
+    public static List<MaintenanceRebuildIndexTarget> parseMaintenanceTaskParameters(@Nullable String parameters) {
+        if (parameters == null)
+            return Collections.emptyList();
+
         String[] parametersArray = parameters.split(INDEX_REBUILD_PARAMETER_SEPARATOR);
+
+        if (parametersArray.length == 0)
+            return Collections.emptyList();
 
         assert (parametersArray.length % 2) == 0;
 

@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -48,16 +47,16 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     /**
      * Active {@link MaintenanceTask}s are the ones that were read from disk when node entered Maintenance Mode.
      */
-    private final ConcurrentMap<String, MaintenanceTask> activeTasks = new ConcurrentHashMap<>();
+    private final Map<String, MaintenanceTask> activeTasks = new ConcurrentHashMap<>();
 
     /**
      * Requested {@link MaintenanceTask}s are collection of tasks requested by user
      * or other components when node operates normally (not in Maintenance Mode).
      */
-    private final ConcurrentMap<String, MaintenanceTask> requestedTasks = new ConcurrentHashMap<>();
+    private final Map<String, MaintenanceTask> requestedTasks = new ConcurrentHashMap<>();
 
     /** */
-    private final ConcurrentMap<String, MaintenanceWorkflowCallback> workflowCallbacks = new ConcurrentHashMap<>();
+    private final Map<String, MaintenanceWorkflowCallback> workflowCallbacks = new ConcurrentHashMap<>();
 
     /** */
     private final MaintenanceFileStore fileStorage;
@@ -92,13 +91,14 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable MaintenanceTask registerMaintenanceTask(MaintenanceTask task) throws IgniteCheckedException {
+    @Nullable @Override public MaintenanceTask registerMaintenanceTask(MaintenanceTask task) throws IgniteCheckedException {
         if (disabled)
             throw new IgniteCheckedException(DISABLED_ERR_MSG);
 
-        if (isMaintenanceMode())
+        if (isMaintenanceMode()) {
             throw new IgniteCheckedException("Node is already in Maintenance Mode, " +
                 "registering additional maintenance task is not allowed in Maintenance Mode.");
+        }
 
         MaintenanceTask oldTask = requestedTasks.put(task.name(), task);
 
@@ -123,18 +123,19 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable MaintenanceTask registerMaintenanceTask(
+    @Nullable @Override public MaintenanceTask registerMaintenanceTask(
         MaintenanceTask task,
         Function<MaintenanceTask, MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException {
         if (disabled)
             throw new IgniteCheckedException(DISABLED_ERR_MSG);
 
-        if (isMaintenanceMode())
+        if (isMaintenanceMode()) {
             throw new IgniteCheckedException("Node is already in Maintenance Mode, " +
                 "registering additional maintenance task is not allowed in Maintenance Mode.");
+        }
 
-        MaintenanceTask computedTask = requestedTasks.compute(task.name(), (s, oldTask) -> {
+        MaintenanceTask computedTask = requestedTasks.compute(task.name(), (taskName, oldTask) -> {
             if (oldTask != null)
                 return remappingFunction.apply(oldTask);
 
@@ -327,7 +328,7 @@ public class MaintenanceProcessor extends GridProcessorAdapter implements Mainte
     }
 
     /** {@inheritDoc} */
-    @Override public MaintenanceTask requestedTask(String maintenanceTaskName) {
+    @Nullable @Override public MaintenanceTask requestedTask(String maintenanceTaskName) {
         return requestedTasks.get(maintenanceTaskName);
     }
 }

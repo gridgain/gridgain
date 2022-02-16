@@ -2367,11 +2367,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         ctx.maintenanceRegistry()
             .registerWorkflowCallbackIfTaskExists(
                 INDEX_REBUILD_MNTC_TASK_NAME,
-                task -> {
-                    String parametersString = task.parameters();
-
-                    return new RebuildIndexWorkflowCallback(parseMaintenanceTaskParameters(parametersString), this, log);
-                }
+                task -> new RebuildIndexWorkflowCallback(
+                    parseMaintenanceTaskParameters(task.parameters()),
+                    this,
+                    log
+                )
             );
     }
 

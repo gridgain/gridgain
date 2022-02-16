@@ -98,7 +98,7 @@ public interface MaintenanceRegistry {
      * @return Previously registered {@link MaintenanceTask} with the same ID
      * or null if no tasks were registered for this ID.
      */
-    public @Nullable MaintenanceTask registerMaintenanceTask(MaintenanceTask task) throws IgniteCheckedException;
+    @Nullable public MaintenanceTask registerMaintenanceTask(MaintenanceTask task) throws IgniteCheckedException;
 
     /**
      * Method to register {@link MaintenanceTask} locally on the node where method is called. If an old task
@@ -116,7 +116,7 @@ public interface MaintenanceRegistry {
      * @return Previously registered {@link MaintenanceTask} with the same ID
      * or null if no tasks were registered for this ID.
      */
-    public @Nullable MaintenanceTask registerMaintenanceTask(
+    @Nullable public MaintenanceTask registerMaintenanceTask(
         MaintenanceTask task,
         Function<MaintenanceTask, MaintenanceTask> remappingFunction
     ) throws IgniteCheckedException;
@@ -196,11 +196,8 @@ public interface MaintenanceRegistry {
     }
 
     /**
-     * Gets a requested maintenance task by name or returns {@code null} if there is not requested task with that name.
-     *
      * @param maintenanceTaskName Task's name.
      * @return Requested maintenance task or {@code null}.
      */
-    @Nullable
-    MaintenanceTask requestedTask(String maintenanceTaskName);
+    @Nullable MaintenanceTask requestedTask(String maintenanceTaskName);
 }

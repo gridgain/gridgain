@@ -426,10 +426,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
-     * @return Checkpoint manager or {@code null} if this node is a client.
+     * @return Checkpoint manager or {@code null} if this node is a client node.
      */
-    @Nullable
-    public CheckpointManager getCheckpointManager() {
+    @Nullable public CheckpointManager getCheckpointManager() {
         return checkpointManager;
     }
 
