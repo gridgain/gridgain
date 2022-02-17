@@ -35,7 +35,6 @@ endif
 
 if COND_CORE
   MAYBE_CORE = core
-  MAYBE_JNI = jni
 
 if COND_TESTS
     MAYBE_CORE_TESTS = core-test
@@ -44,7 +43,6 @@ endif
 
 if COND_NODE
   MAYBE_CORE = core
-  MAYBE_JNI = jni
   MAYBE_NODE = ignite
 endif
 
@@ -52,7 +50,6 @@ SUBDIRS = \
     common \
     binary \
     $(MAYBE_NETWORK) \
-    $(MAYBE_JNI) \
     $(MAYBE_ODBC) \
     $(MAYBE_CORE) \
     $(MAYBE_THIN_CLIENT) \
@@ -65,7 +62,6 @@ DIST_SUBDIRS = \
     common \
     binary \
     network \
-    jni \
     odbc \
     core \
     thin-client \
