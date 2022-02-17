@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -46,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
@@ -585,6 +585,22 @@ public class H2TreeIndex extends H2TreeIndexBase {
      * @param rmvIdx Flag remove.
      */
     @Override public void destroy(boolean rmvIdx) {
+        try {
+            destroy0(rmvIdx, false);
+        }
+        catch (IgniteCheckedException e) {
+            // Should NEVER happen because renameImmediately is false here, but just in case:
+            throw new IgniteException(e);
+        }
+    }
+
+    /**
+     * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
+     *
+     * @param rmvIdx Flag remove.
+     * @param renameImmediately Use {@code true} to rename index tree immediately, before executing cleanup task.
+     */
+    public void destroy0(boolean rmvIdx, boolean renameImmediately) throws IgniteCheckedException {
         if (!markDestroyed())
             return;
 
@@ -600,7 +616,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
                 if (cctx.group().persistenceEnabled() ||
                     cctx.shared().kernalContext().state().clusterState().state() != INACTIVE) {
-                    DurableBackgroundTask<Long> task = new DurableBackgroundCleanupIndexTreeTaskV2(
+                    DurableBackgroundCleanupIndexTreeTaskV2 task = new DurableBackgroundCleanupIndexTreeTaskV2(
                         cctx.group().name(),
                         cctx.name(),
                         idxName,
@@ -609,6 +625,10 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         segments.length,
                         segments
                     );
+
+                    if (renameImmediately) {
+                        task.renameIndexTrees(cctx.group());
+                    }
 
                     cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
                 }
@@ -1051,5 +1071,33 @@ public class H2TreeIndex extends H2TreeIndexBase {
             int configuredInlineSize,
             PageIoResolver pageIoRslvr
         ) throws IgniteCheckedException;
+    }
+
+    /**
+     * Creates a new index that is an exact copy of this index.
+     *
+     * @param pageMem Page memory.
+     * @param offheap Offheap manager.
+     * @return New index.
+     */
+    public H2TreeIndex createCopy(PageMemory pageMem, IgniteCacheOffheapManager offheap) throws IgniteCheckedException {
+        H2Tree firstSegment = segments[0];
+
+        return createIndex(
+            cctx,
+            null,
+            firstSegment.table(),
+            idxName,
+            firstSegment.getPk(),
+            firstSegment.getAffinityKey(),
+            Arrays.asList(firstSegment.cols()),
+            Arrays.asList(firstSegment.cols()),
+            firstSegment.inlineSize(),
+            segments.length,
+            pageMem,
+            offheap,
+            PageIoResolver.DEFAULT_PAGE_IO_RESOLVER,
+            log
+        );
     }
 }

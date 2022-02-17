@@ -32,10 +32,12 @@ import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
@@ -51,6 +53,7 @@ import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCl
 import static org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTaskV2.renameIndexRootPages;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.cacheContext;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  * Class for testing index tree renaming.
@@ -273,6 +276,47 @@ public class RenameIndexTreeTest extends AbstractRebuildIndexTest {
             assertEquals(newTreeName, record.newTreeName());
             assertEquals(segments, record.segments());
         }
+    }
+
+    /**
+     * Tests that {@link DurableBackgroundCleanupIndexTreeTaskV2#renameIndexTrees(CacheGroupContext)}
+     * can be run before submitting the task.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRenameBeforeRunningTask() throws Exception {
+        IgniteEx n = startGrid(0);
+
+        IgniteCache<Integer, Person> cache = n.cache(DEFAULT_CACHE_NAME);
+
+        populate(cache, 100);
+
+        String idxName = "IDX0";
+        createIdx(cache, idxName);
+
+        H2TreeIndex idx = index(n, cache, idxName);
+
+        GridCacheContext<Integer, Person> cctx = cacheContext(cache);
+
+        String oldTreeName = treeName(idx);
+        H2Tree[] segments = getFieldValue(idx, "segments");
+
+        DurableBackgroundCleanupIndexTreeTaskV2 task = new DurableBackgroundCleanupIndexTreeTaskV2(
+            cctx.group().name(),
+            cctx.name(),
+            idxName,
+            oldTreeName,
+            UUID.randomUUID().toString(),
+            segments.length,
+            segments
+        );
+
+        assertTrue(task.needToRename());
+
+        task.renameIndexTrees(cctx.group());
+
+        assertFalse(task.needToRename());
     }
 
     /**
