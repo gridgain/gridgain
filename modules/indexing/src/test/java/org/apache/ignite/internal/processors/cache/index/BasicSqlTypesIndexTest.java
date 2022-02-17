@@ -32,13 +32,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.gridgain.internal.h2.util.DateTimeUtils;
-import org.gridgain.internal.h2.value.ValueTime;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.index.BasicSqlTypesIndexTest.IndexType.PK;
@@ -270,7 +270,6 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
     }
 
     /** */
-    @Ignore("GG-34036")
     @Test
     public void testSqlTimeTypeIndex() {
         String idxTypeStr = "TIME";
@@ -287,18 +286,73 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
             }
         };
 
-        int i = -1143442969;
-
-        //To correctly search for Time type key in the index, we need to be able to compare the long representations
-        // of Time type. At the moment these time representations are not compatible for some values.
-
-        assertEquals(i, new Time(i).getTime());
-        assertEquals(i, ValueTime.get(new Time(i)).getTime().getTime());
-
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1");
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1,AFFINITY_KEY=idxVal");
         createPopulateAndVerify(idxTypeStr, idxCls, comp, SECONDARY_DESC, "BACKUPS=1");
         createPopulateAndVerify(idxTypeStr, idxCls, comp, SECONDARY_ASC, "BACKUPS=1");
+    }
+
+    /** */
+    @Test
+    public void testSqlTimeTypeValidation() {
+        String idxTypeStr = "TIME";
+
+        final long key = 5655088446892394813L;
+        final int val = 1003030778;
+
+        String tblName = idxTypeStr + "_TBL" + TBL_ID.incrementAndGet();
+        try {
+            String createTblSql = String.format(
+                    CREATE_TBL_PK_ONLY_TEMPLATE,
+                    tblName, idxTypeStr, "BACKUPS=1"
+            );
+            execSql(createTblSql);
+
+            GridTestUtils.assertThrowsWithCause(() -> {
+                Time k = new Time(key);
+
+                execSql(String.format("INSERT INTO \"%s\" (idxVal, val) VALUES (?, ?)", tblName), k, val);
+
+                fail();
+            }, IgniteSQLException.class);
+
+            execSql(String.format("INSERT INTO \"%s\" (idxVal, val) VALUES (?, ?)", tblName),
+                    Time.valueOf(new Time(key).toLocalTime()), val);
+
+            GridTestUtils.assertThrowsWithCause(() -> {
+                //Same time as key, but date is different.
+                Time k = new Time(2480745365634794813L);
+
+                execSql(String.format("INSERT INTO \"%s\" (idxVal, val) VALUES (?, ?)", tblName), k, val);
+
+                fail();
+            }, IgniteSQLException.class);
+
+            GridTestUtils.assertThrowsWithCause(() -> {
+                execSql(String.format("INSERT INTO \"%s\" (idxVal, val) VALUES (?, ?)", tblName),
+                        "21:33:14", val);
+
+                fail();
+            }, TransactionDuplicateKeyException.class);
+
+            List<List<?>> lists = execSql(String.format("select * from \"%s\"", tblName));
+
+            assertEquals(lists.size(), 1);
+            assertEquals(lists.get(0).get(0), Time.valueOf(new Time(key).toLocalTime()));
+            assertEquals(lists.get(0).get(1), val);
+
+            lists = execSql(
+                    String.format("select * from \"%s\" where idxVal = ?", tblName),
+                    Time.valueOf(new Time(key).toLocalTime())
+            );
+
+            assertEquals(lists.size(), 1);
+            assertEquals(lists.get(0).get(0), Time.valueOf(new Time(key).toLocalTime()));
+            assertEquals(lists.get(0).get(1), val);
+        }
+        finally {
+            execSql("DROP TABLE IF EXISTS \"" + tblName + "\"");
+        }
     }
 
     /** */
@@ -481,8 +535,11 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
         if (cls.isAssignableFrom(Date.class))
             return cls.cast(new Date(ThreadLocalRandom.current().nextLong()));
 
-        if (cls.isAssignableFrom(Time.class))
-            return cls.cast(new Time(ThreadLocalRandom.current().nextLong()));
+        if (cls.isAssignableFrom(Time.class)) {
+            long time = ThreadLocalRandom.current().nextLong();
+
+            return cls.cast(Time.valueOf(new Time(time).toLocalTime()));
+        }
 
         if (cls.isAssignableFrom(Timestamp.class))
             return cls.cast(new Timestamp(ThreadLocalRandom.current().nextLong()));

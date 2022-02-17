@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -593,12 +594,41 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override public void validateKeyAndValue(Object key, Object val) throws IgniteCheckedException {
+        validateKeyValueIfNeeded(key);
+
         if (F.isEmpty(validateProps) && F.isEmpty(idxs))
             return;
 
         validateProps(key, val);
 
         validateIndexes(key, val);
+    }
+
+    /**
+     * Validate the key value, if applicable.
+     *
+     * @param key Key value object.
+     * @throws IgniteSQLException if validation is failed.
+     */
+    private void validateKeyValueIfNeeded(Object key) throws IgniteSQLException {
+        if (key instanceof Time) {
+            validateTime((Time) key);
+        }
+    }
+
+    /**
+     * Validate the key value, if applicable.
+     *
+     * @param key Key value object.
+     * @throws IgniteSQLException if validation is failed.
+     */
+    private void validateTime(Time key) {
+        Time t = Time.valueOf(key.toLocalTime());
+
+        if (!t.equals(key)) {
+            throw new IgniteSQLException("Failed to validate index key: " + key + "."
+                    + " Time should be reset to 'zero epoch'.");
+        }
     }
 
     /** Validate properties. */
