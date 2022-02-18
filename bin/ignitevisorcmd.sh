@@ -117,7 +117,7 @@ trap restoreSttySettings INT
 #
 # Final JVM_OPTS for Java 9+ compatibility
 #
-JVM_OPTS=$(getJavaSpecificOpts $version $JVM_OPTS)
+JVM_OPTS=$(getJavaSpecificOpts $version "$JVM_OPTS")
 
 #
 # Start Visor console.

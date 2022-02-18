@@ -110,7 +110,7 @@ fi
 #
 # Final CONTROL_JVM_OPTS for Java 9+ compatibility
 #
-CONTROL_JVM_OPTS=$(getJavaSpecificOpts $version $CONTROL_JVM_OPTS)
+CONTROL_JVM_OPTS=$(getJavaSpecificOpts $version "$CONTROL_JVM_OPTS")
 
 if [ -n "${JVM_OPTS}" ] ; then
   echo "JVM_OPTS environment variable is set, but will not be used. To pass JVM options use CONTROL_JVM_OPTS"
