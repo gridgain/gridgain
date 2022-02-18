@@ -23,6 +23,18 @@
     <files>
         <!-- Copy CPP files. -->
         <file>
+            <source>modules/platforms/cpp/configure.acrel</source>
+            <outputDirectory>/platforms/cpp</outputDirectory>
+            <destName>configure.ac</destName>
+        </file>
+
+        <file>
+            <source>modules/platforms/cpp/Makefile.amrel</source>
+            <outputDirectory>/platforms/cpp</outputDirectory>
+            <destName>Makefile.am</destName>
+        </file>
+		
+        <file>
             <source>modules/platforms/cpp/CMakeLists.txt</source>
             <outputDirectory>/platforms/cpp</outputDirectory>
             <destName>CMakeLists.txt</destName>
