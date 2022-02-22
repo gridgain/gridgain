@@ -106,13 +106,8 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> cache = ignite.cache(CACHE_NAME);
 
         for (int i = 0; i < 100_000; i++) {
-            cache.put(key(i), ThreadLocalRandom.current().nextDouble());
+            cache.put("key" + i, ThreadLocalRandom.current().nextDouble());
         }
-    }
-
-    /***/
-    private static String key(int index) {
-        return "key" + index;
     }
 
     /**
