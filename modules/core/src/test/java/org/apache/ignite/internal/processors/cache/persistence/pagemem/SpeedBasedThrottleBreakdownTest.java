@@ -76,7 +76,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
 
         super.beforeTest();
 
-        deleteWorkFiles();
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -85,7 +85,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
 
         super.afterTest();
 
-        deleteWorkFiles();
+        cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
@@ -116,12 +116,5 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
         }
 
         assertFalse(G.allGrids().isEmpty());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    private void deleteWorkFiles() throws Exception {
-        cleanPersistenceDir();
     }
 }
