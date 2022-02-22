@@ -85,7 +85,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
      * Checkpoint Buffer, it creates a spike of load on it. The test is successful if the CP Buffer protection
      * does not break down and no exception gets thrown as a result.
      *
-     * @throws Exception if something goes wrong
+     * @throws Exception if something goes wrong.
      */
     @Test
     public void speedBasedThrottleShouldNotAllowCPBufferBreakdownWhenCPBufferIsSmall() throws Exception {
