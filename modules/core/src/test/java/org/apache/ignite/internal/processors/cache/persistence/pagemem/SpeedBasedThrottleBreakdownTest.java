@@ -88,7 +88,16 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
         return 3L * 60 * 1000;
     }
 
-    /***/
+    /**
+     * There was the following bug: at the very start of a checkpoint, the checkpoint progress information was not yet
+     * available to the speed-based throttler, in which case it did not apply throttling. If during that short period
+     * there was high pressure on the Checkpoint Buffer, the buffer would be exhausted causing to node failure.
+     *
+     * It was easy to reproduce with a small Checkpoint Buffer. This test does exactly this: with a small
+     * Checkpoint Buffer, it creates a spike of load on it.
+     *
+     * @throws Exception if something goes wrong
+     */
     @Test
     public void speedBasedThrottleShouldNotAllowCPBufferBreakdownWhenCPBufferIsSmall() throws Exception {
         Ignite ignite = startGrids(1);
