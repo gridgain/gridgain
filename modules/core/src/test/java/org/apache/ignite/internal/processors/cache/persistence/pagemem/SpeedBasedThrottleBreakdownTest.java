@@ -42,7 +42,6 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                         // tiny CP buffer is required to reproduce this problem easily
                         .setCheckpointPageBufferSize(3_000_000)
-                        .setName("dfltDataRegion")
                         .setPersistenceEnabled(true))
                 .setCheckpointFrequency(200)
                 .setWriteThrottlingEnabled(true);
