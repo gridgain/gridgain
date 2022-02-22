@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -104,6 +103,5 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
      */
     private void deleteWorkFiles() throws Exception {
         cleanPersistenceDir();
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "snapshot", false));
     }
 }
