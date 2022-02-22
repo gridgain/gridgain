@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -90,8 +89,8 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
     /***/
     @Test
     public void speedBasedThrottleShouldNotAllowCPBufferBreakdownWhenCPBufferIsSmall() throws Exception {
-        IgniteEx ignite = startGrids(1);
-        
+        Ignite ignite = startGrids(1);
+
         ignite.cluster().state(ACTIVE);
         IgniteCache<Object, Object> cache = ignite.cache(CACHE_NAME);
 
