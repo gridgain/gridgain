@@ -23,6 +23,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -113,6 +114,8 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100_000; i++) {
             cache.put("key" + i, ThreadLocalRandom.current().nextDouble());
         }
+
+        assertFalse(G.allGrids().isEmpty());
     }
 
     /**
