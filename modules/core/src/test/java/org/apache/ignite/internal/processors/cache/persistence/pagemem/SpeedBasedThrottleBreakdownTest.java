@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,8 +90,9 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
     /***/
     @Test
     public void speedBasedThrottleShouldNotAllowCPBufferBreakdownWhenCPBufferIsSmall() throws Exception {
-        startGrids(1).cluster().state(ACTIVE);
-        Ignite ignite = ignite(0);
+        IgniteEx ignite = startGrids(1);
+        
+        ignite.cluster().state(ACTIVE);
         IgniteCache<Object, Object> cache = ignite.cache(CACHE_NAME);
 
         for (int i = 0; i < 100_000; i++) {
@@ -105,7 +106,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws IgniteCheckedException If failed.
+     * @throws Exception If failed.
      */
     private void deleteWorkFiles() throws Exception {
         cleanPersistenceDir();
