@@ -67,6 +67,8 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        stopAllGrids();
+
         super.beforeTest();
 
         deleteWorkFiles();
