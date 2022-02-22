@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -35,9 +34,6 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
  * @see PagesWriteSpeedBasedThrottle
  */
 public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
-    /** Cache name. */
-    private static final String CACHE_NAME = "cache1";
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -52,13 +48,6 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
                 .setWriteThrottlingEnabled(true);
 
         cfg.setDataStorageConfiguration(dbCfg);
-
-        CacheConfiguration ccfg1 = new CacheConfiguration();
-
-        ccfg1.setName(CACHE_NAME);
-        ccfg1.setIndexedTypes(String.class, String.class);
-
-        cfg.setCacheConfiguration(ccfg1);
 
         cfg.setConsistentId(gridName);
 
@@ -103,7 +92,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
         Ignite ignite = startGrids(1);
 
         ignite.cluster().state(ACTIVE);
-        IgniteCache<Object, Object> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache = ignite.createCache(DEFAULT_CACHE_NAME);
 
         for (int i = 0; i < 100_000; i++) {
             cache.put("key" + i, ThreadLocalRandom.current().nextDouble());
