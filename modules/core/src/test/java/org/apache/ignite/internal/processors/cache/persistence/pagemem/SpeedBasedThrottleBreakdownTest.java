@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.pagemem;
 
+import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -24,6 +25,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 
@@ -32,7 +35,21 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
  *
  * @see PagesWriteSpeedBasedThrottle
  */
+@RunWith(Parameterized.class)
 public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
+    /***/
+    @Parameterized.Parameter
+    public boolean useSpeedBasedThrottling;
+
+    /** Parameters. */
+    @Parameterized.Parameters(name = "Use speed-based throttling: {0}")
+    public static Iterable<Boolean[]> data() {
+        return Arrays.asList(
+            new Boolean[] {true},
+            new Boolean[] {false}
+        );
+    }
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -43,7 +60,7 @@ public class SpeedBasedThrottleBreakdownTest extends GridCommonAbstractTest {
                         .setCheckpointPageBufferSize(3_000_000)
                         .setPersistenceEnabled(true))
                 .setCheckpointFrequency(200)
-                .setWriteThrottlingEnabled(true);
+                .setWriteThrottlingEnabled(useSpeedBasedThrottling);
 
         cfg.setDataStorageConfiguration(dbCfg);
 
