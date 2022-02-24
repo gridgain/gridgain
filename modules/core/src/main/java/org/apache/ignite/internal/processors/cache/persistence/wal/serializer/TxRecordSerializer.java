@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
@@ -36,6 +37,18 @@ import org.apache.ignite.transactions.TransactionState;
  * {@link TxRecord} WAL serializer.
  */
 public class TxRecordSerializer {
+    /** Logger. */
+    private IgniteLogger log;
+
+    /**
+     * Constructor.
+     *
+     * @param log Logger.
+     */
+    public TxRecordSerializer(IgniteLogger log) {
+        this.log = log;
+    }
+
     /** Mvcc version record size. */
     static final int MVCC_VERSION_SIZE = 8 + 8 + 4;
 
@@ -123,6 +136,15 @@ public class TxRecordSerializer {
             short primaryNode = in.readShort();
 
             int backupNodesSize = in.readInt();
+
+            if (backupNodesSize > 20) {
+                log.info("Read tx record: [primaryNode=" + primaryNode
+                    + ", backupNodesSize=" + backupNodesSize
+                    + ", state=" + state
+                    + ", nearXidVer=" + nearXidVer
+                    + ", writeVer=" + writeVer
+                    + ", participatingNodesSize=" + participatingNodesSize + ']');
+            }
 
             Collection<Short> backupNodes = new ArrayList<>(backupNodesSize);
 

@@ -155,7 +155,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     protected final IgniteCacheObjectProcessor co;
 
     /** Logger. */
-    private final IgniteLogger log;
+    protected final IgniteLogger log;
 
     /** Serializer of {@link TxRecord} records. */
     private TxRecordSerializer txRecordSerializer;
@@ -180,8 +180,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
      * @param keyProvider Cache key provider.
      */
     public RecordDataV1Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
+        log = cctx.logger(getClass());
+
         this.cctx = cctx;
-        this.txRecordSerializer = new TxRecordSerializer();
+        this.txRecordSerializer = new TxRecordSerializer(log);
         this.co = cctx.kernalContext().cacheObjects();
         this.pageSize = cctx.database().pageSize();
         this.encSpi = cctx.gridConfig().getEncryptionSpi();
@@ -194,8 +196,6 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             this.realPageSize = CU.encryptedPageSize(pageSize, encSpi);
         else
             this.realPageSize = pageSize;
-
-        log = cctx.logger(getClass());
     }
 
     /** {@inheritDoc} */

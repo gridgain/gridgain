@@ -77,7 +77,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
     public RecordDataV2Serializer(GridCacheSharedContext cctx, EncryptionCacheKeyProvider keyProvider) {
         super(cctx, keyProvider);
 
-        this.txRecordSerializer = new TxRecordSerializer();
+        this.txRecordSerializer = new TxRecordSerializer(log);
     }
 
     /** {@inheritDoc} */
