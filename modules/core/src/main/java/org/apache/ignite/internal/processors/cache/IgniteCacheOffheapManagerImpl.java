@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -3013,6 +3015,16 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
+
+            if (log.isDebugEnabled()) {
+                StringWriter sw = new StringWriter();
+
+                PrintWriter pw = new PrintWriter(sw);
+
+                new Exception().printStackTrace(pw);
+
+                log.debug("onFinishRemove [oldRow=" + oldRow + ", tsRow=" + tombstoneRow + "] \n" + sw.toString());
+            }
 
             if (oldVal) {
                 clearPendingEntries(cctx, oldRow);
