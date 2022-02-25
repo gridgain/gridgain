@@ -17,6 +17,7 @@
 package org.apache.ignite.sqltests;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -186,8 +187,8 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     @Test
     public void testTimeDataType() throws Exception {
         checkBasicSqlOperations(SqlDataType.TIME,
-            new Timed(new java.sql.Time(0L)),
-            new Timed(new java.sql.Time(123L)));
+            new Timed(Time.valueOf(new Time(0L).toLocalTime())),
+            new Timed(Time.valueOf(new Time(123L).toLocalTime())));
     }
 
     /**
