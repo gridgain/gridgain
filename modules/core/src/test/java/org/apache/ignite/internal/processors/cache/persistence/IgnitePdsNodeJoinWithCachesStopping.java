@@ -16,15 +16,21 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Test checks correctness of simultaneous node join and massive caches stopping.
@@ -33,6 +39,8 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
@@ -88,5 +96,84 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         }
 
         assertTrue(gridStartFut.get());
+    }
+
+    @Test
+    public void testStartStopCacheWithLongPME() throws Exception {
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(2);
+
+        IgniteEx client = startClientGrid(2);
+
+        awaitPartitionMapExchange();
+
+        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(grid(1));
+
+        spi1.blockMessages((node, msg) -> msg instanceof GridDhtPartitionsSingleMessage);
+
+        // Start a new cache and block PME in order to start/stop this cache during the blocked PME.
+        IgniteInternalFuture<?> startFut1 = GridTestUtils.runAsync(() -> {
+            try {
+                client.getOrCreateCache("test-npe-cache");
+            }
+            catch (CacheException e) {
+                throw new RuntimeException("Failed to create a new cache (step 1)", e);
+            }
+        });
+
+        // Wait for initialization phase of PME.
+        spi1.waitForBlocked();
+
+        // Let's destroy the cache that is beign created at this time.
+        // This request should lead to removing the corresponding cache desriptor.
+        // See ClusterCachesInfo.onCacheChangeRequested(DynamicCacheChangeBatch, AffinityTopologyVersion)
+        IgniteInternalFuture<?> stopFut1 = GridTestUtils.runAsync(() -> {
+            try {
+                client.destroyCache("test-npe-cache");
+            }
+            catch (CacheException e) {
+                throw new RuntimeException("Failed to destroy new cache (step 1)", e);
+            }
+        });
+
+        assertTrue(
+            "Failed to wait for DynamicCacheChangeBatch message (destroy, step 1)",
+            waitForCondition(() -> crd.context().discovery().topologyVersionEx().minorTopologyVersion() == 2, getTestTimeout()));
+
+        // Let's start and stop the cache once again to clean up ClusterCachesInfo, i.e.
+        // registeredCaches and markedForDeletionCaches will be cleaned,
+        // and therefore, the corresponding cache descriptor will be lost.
+        IgniteInternalFuture<?> startFut2 = GridTestUtils.runAsync(() -> {
+            try {
+                client.getOrCreateCache("test-npe-cache");
+            }
+            catch (CacheException e) {
+                throw new RuntimeException("Failed to create a new cache (step 2)", e);
+            }
+        });
+
+        assertTrue(
+            "Failed to wait for DynamicCacheChangeBatch message (create, step 2)",
+            waitForCondition(() -> crd.context().discovery().topologyVersionEx().minorTopologyVersion() == 3, getTestTimeout()));
+
+        IgniteInternalFuture<?> stopFut2 = GridTestUtils.runAsync(() -> {
+            try {
+                client.destroyCache("test-npe-cache");
+            }
+            catch (CacheException e) {
+                throw new RuntimeException("Failed to destroy new cache (step 1)", e);
+            }
+        });
+
+        assertTrue(
+            "Failed to wait for DynamicCacheChangeBatch message (create, step 2)",
+            waitForCondition(() -> crd.context().discovery().topologyVersionEx().minorTopologyVersion() == 4, getTestTimeout()));
+
+        // Unblock the initial PME.
+        spi1.stopBlock();
+
+        startFut1.get();
+        stopFut1.get();
+        startFut2.get();
+        stopFut2.get();
     }
 }
