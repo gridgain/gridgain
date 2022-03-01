@@ -1641,7 +1641,7 @@ public class ClusterCachesInfo {
      * @param topVer Topology version.
      */
     public void cleanupRemovedCaches(AffinityTopologyVersion topVer) {
-        markedForDeletionCacheGrps.remove(topVer);
+        markedForDeletionCacheGrps.headMap(topVer, true).clear();
     }
 
     /**
