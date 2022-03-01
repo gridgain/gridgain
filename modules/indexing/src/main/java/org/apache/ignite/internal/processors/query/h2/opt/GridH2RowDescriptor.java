@@ -107,7 +107,6 @@ public class GridH2RowDescriptor {
      */
     @SuppressWarnings({"WeakerAccess", "ToArrayCallWithZeroLengthArrayArgument"})
     public final void refreshMetadataFromTypeDescriptor() {
-
         Map<String, Class<?>> allFields = new LinkedHashMap<>(type.fields());
 
         fields = allFields.keySet().toArray(new String[allFields.size()]);

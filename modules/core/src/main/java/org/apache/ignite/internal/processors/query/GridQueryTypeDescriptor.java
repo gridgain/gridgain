@@ -222,4 +222,24 @@ public interface GridQueryTypeDescriptor {
      * @param fillAbsentPKsWithDefaults Flag.
      */
     public void setFillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults);
+
+    /**
+     * Gets primary key index INLINE_SIZE.
+     */
+    public int primaryKeyInlineSize();
+
+    /**
+     * Sets primary key index INLINE_SIZE.
+     */
+    public void primaryKeyInlineSize(int pkInlineSize);
+
+    /**
+     * Gets affinity fields index INLINE_SIZE.
+     */
+    public int affinityFieldInlineSize();
+
+    /**
+     * Sets affinity fields index INLINE_SIZE.
+     */
+    public void affinityFieldInlineSize(int affFieldInlineSize);
 }

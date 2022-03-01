@@ -322,6 +322,11 @@ public class QueryUtils {
         normalEntity.setFieldsPrecision(entity.getFieldsPrecision());
         normalEntity.setFieldsScale(entity.getFieldsScale());
 
+        if (entity instanceof QueryEntityEx) {
+            normalEntity.setPrimaryKeyInlineSize(((QueryEntityEx)entity).getPrimaryKeyInlineSize());
+            normalEntity.setAffinityKeyInlineSize(((QueryEntityEx)entity).getAffinityKeyInlineSize());
+        }
+
         // Normalize table name.
         String normalTblName = entity.getTableName();
 
@@ -599,6 +604,13 @@ public class QueryUtils {
         }
 
         desc.typeId(valTypeId);
+
+        if (qryEntity instanceof QueryEntityEx) {
+            QueryEntityEx qe = (QueryEntityEx)qryEntity;
+
+            desc.primaryKeyInlineSize(qe.getPrimaryKeyInlineSize() != null ? qe.getPrimaryKeyInlineSize() : -1);
+            desc.affinityFieldInlineSize(qe.getAffinityKeyInlineSize() != null ? qe.getAffinityKeyInlineSize() : -1);
+        }
 
         return new QueryTypeCandidate(typeId, altTypeId, desc);
     }

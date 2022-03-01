@@ -841,9 +841,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             String recommendation;
 
             if (pk || affinityKey) {
-                recommendation = "set system property "
-                    + IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE + " with recommended size " +
-                    "(be aware it will be used by default for all indexes without explicit inline size)";
+                recommendation = "for sorted indexes on primary key and affinity field use 'PK_INLINE_SIZE' and " +
+                    "'AFFINITY_INDEX_INLINE_SIZE' properties for CREATE TABLE command";
             }
             else {
                 recommendation = "use INLINE_SIZE option for CREATE INDEX command, " +
