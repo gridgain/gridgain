@@ -185,7 +185,8 @@ public class QueryEntityEx extends QueryEntity {
         return super.equals(entity) && F.eq(notNullFields, entity.notNullFields)
             && preserveKeysOrder == entity.preserveKeysOrder
             && F.eq(pkInlineSize, entity.pkInlineSize)
-            && F.eq(affKeyInlineSize, entity.affKeyInlineSize);    }
+            && F.eq(affKeyInlineSize, entity.affKeyInlineSize);
+    }
 
     /** {@inheritDoc} */
     @Override public int hashCode() {

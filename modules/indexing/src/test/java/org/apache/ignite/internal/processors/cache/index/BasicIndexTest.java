@@ -34,10 +34,10 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -1965,6 +1965,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         assertEquals(pkInlineSize, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
         assertEquals(affInlineSize, ((H2TreeIndex)tbl.getIndex("AFFINITY_KEY")).inlineSize());
 
+        // Check the warning log message
         LogListener lsnr = LogListener
             .matches("Indexed columns of a row cannot be fully inlined")
             .andMatches("for sorted indexes on primary key and affinity field use 'PK_INLINE_SIZE' and 'AFFINITY_INDEX_INLINE_SIZE' properties for CREATE TABLE command").build();
