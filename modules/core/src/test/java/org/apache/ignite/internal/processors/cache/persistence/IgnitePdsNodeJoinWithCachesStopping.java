@@ -98,6 +98,11 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         assertTrue(gridStartFut.get());
     }
 
+    /**
+     * The test checks the correctness of handling of stop and start caches with same name during the long PME.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testStartStopCacheWithLongPME() throws Exception {
         IgniteEx crd = (IgniteEx) startGridsMultiThreaded(2);
@@ -113,7 +118,7 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         // Start a new cache and block PME in order to start/stop this cache during the blocked PME.
         IgniteInternalFuture<?> startFut1 = GridTestUtils.runAsync(() -> {
             try {
-                client.getOrCreateCache("test-npe-cache");
+                client.getOrCreateCache(DEFAULT_CACHE_NAME);
             }
             catch (CacheException e) {
                 throw new RuntimeException("Failed to create a new cache (step 1)", e);
@@ -128,7 +133,7 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         // See ClusterCachesInfo.onCacheChangeRequested(DynamicCacheChangeBatch, AffinityTopologyVersion)
         IgniteInternalFuture<?> stopFut1 = GridTestUtils.runAsync(() -> {
             try {
-                client.destroyCache("test-npe-cache");
+                client.destroyCache(DEFAULT_CACHE_NAME);
             }
             catch (CacheException e) {
                 throw new RuntimeException("Failed to destroy new cache (step 1)", e);
@@ -144,7 +149,7 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         // and therefore, the corresponding cache descriptor will be lost.
         IgniteInternalFuture<?> startFut2 = GridTestUtils.runAsync(() -> {
             try {
-                client.getOrCreateCache("test-npe-cache");
+                client.getOrCreateCache(DEFAULT_CACHE_NAME);
             }
             catch (CacheException e) {
                 throw new RuntimeException("Failed to create a new cache (step 2)", e);
@@ -157,7 +162,7 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
 
         IgniteInternalFuture<?> stopFut2 = GridTestUtils.runAsync(() -> {
             try {
-                client.destroyCache("test-npe-cache");
+                client.destroyCache(DEFAULT_CACHE_NAME);
             }
             catch (CacheException e) {
                 throw new RuntimeException("Failed to destroy new cache (step 1)", e);
@@ -175,5 +180,7 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         stopFut1.get();
         startFut2.get();
         stopFut2.get();
+
+        assertNull(crd.cache(DEFAULT_CACHE_NAME));
     }
 }

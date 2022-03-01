@@ -119,19 +119,11 @@ public class ClusterCachesInfo {
     private final GridKernalContext ctx;
 
     /**
-     * Map contains cache descriptors that were removed from {@link #registeredCaches} due to cache stop request.
-     * Such descriptors will be removed from the map only after whole cache stop process is finished.
-     * Affinity topology version equals the version which will be applied after a cache is completely removed.
-     */
-    private final ConcurrentNavigableMap<AffinityTopologyVersion, Map<String, DynamicCacheDescriptor>>
-        markedForDeletionCaches = new ConcurrentSkipListMap<>();
-
-    /**
      * Map contains cache group descriptors that were removed from {@link #registeredCacheGrps} due to cache stop request.
      * Such descriptors will be removed from the map only after whole cache stop process is finished.
      * Affinity topology version equals the version which will be applied after a cache group is completely removed.
      */
-    private final ConcurrentNavigableMap<AffinityTopologyVersion, Map<Integer, CacheGroupDescriptor>>
+    private final ConcurrentNavigableMap<AffinityTopologyVersion, List<CacheGroupDescriptor>>
         markedForDeletionCacheGrps = new ConcurrentSkipListMap<>();
 
     /** Dynamic caches. */
@@ -804,15 +796,9 @@ public class ClusterCachesInfo {
         DynamicCacheDescriptor desc,
         AffinityTopologyVersion topVer
     ) {
-        DynamicCacheDescriptor old = registeredCaches.get(cacheName);
+        DynamicCacheDescriptor old = registeredCaches.remove(cacheName);
 
         assert old != null && old == desc : "Dynamic cache map was concurrently modified [req=" + req + ']';
-
-        markedForDeletionCaches
-            .computeIfAbsent(topVer, map -> new ConcurrentHashMap<>())
-            .put(cacheName, old);
-
-        registeredCaches.remove(cacheName);
 
         if (req.restart()) {
             IgniteUuid restartId = req.restartId();
@@ -832,8 +818,8 @@ public class ClusterCachesInfo {
 
         if (!grpDesc.hasCaches()) {
             markedForDeletionCacheGrps
-                .computeIfAbsent(topVer, (map) -> new ConcurrentHashMap<>())
-                .put(grpDesc.groupId(), grpDesc);
+                .computeIfAbsent(topVer, (map) -> new ArrayList<>())
+                .add(grpDesc);
 
             registeredCacheGrps.remove(grpDesc.groupId());
 
@@ -1655,9 +1641,7 @@ public class ClusterCachesInfo {
      * @param topVer Topology version.
      */
     public void cleanupRemovedCaches(AffinityTopologyVersion topVer) {
-        markedForDeletionCaches.headMap(topVer, true).clear();
-
-        markedForDeletionCacheGrps.headMap(topVer, true).clear();
+        markedForDeletionCacheGrps.remove(topVer);
     }
 
     /**
@@ -1665,11 +1649,11 @@ public class ClusterCachesInfo {
      */
     public @Nullable CacheGroupDescriptor markedForDeletionCacheGroupDesc(int grpId) {
         // Find the "latest" available descriptor.
-        for (Map<Integer, CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.values()) {
-            CacheGroupDescriptor desc = descriptors.get(grpId);
-
-            if (desc != null)
-                return desc;
+        for (List<CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.values()) {
+            for (CacheGroupDescriptor descriptor : descriptors) {
+                if (descriptor.groupId() == grpId)
+                    return descriptor;
+            }
         }
 
         return null;
