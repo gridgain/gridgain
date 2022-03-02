@@ -70,8 +70,8 @@ public class QueryEntityEx extends QueryEntity {
             preserveKeysOrder = other0.preserveKeysOrder;
             
             fillAbsentPKsWithDefaults = other0.fillAbsentPKsWithDefaults;
-            pkInlineSize = other0.pkInlineSize != null ? other0.pkInlineSize : -1;
-            affKeyInlineSize = other0.affKeyInlineSize != null ? other0.affKeyInlineSize : -1;
+            pkInlineSize = other0.pkInlineSize;
+            affKeyInlineSize = other0.affKeyInlineSize;
         }
     }
 
