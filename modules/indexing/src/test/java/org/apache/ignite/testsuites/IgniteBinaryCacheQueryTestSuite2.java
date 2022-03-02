@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.IgniteCacheQueryMultiThreaded
 import org.apache.ignite.internal.processors.cache.IgniteCacheSqlQueryMultiThreadedSelfTest;
 import org.apache.ignite.internal.processors.cache.QueryJoinWithDifferentNodeFiltersTest;
 import org.apache.ignite.internal.processors.cache.SqlCacheStartStopTest;
+import org.apache.ignite.internal.processors.cache.distributed.ClientBinaryMetadataTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridCachePartitionedTxMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheClientQueryReplicatedNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheDistributedQueryDefaultTimeoutSelfTest;
@@ -267,7 +268,8 @@ import org.junit.runners.Suite;
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
 
-    IgniteCacheQueryReservationOnUnstableTopologyTest.class
+    IgniteCacheQueryReservationOnUnstableTopologyTest.class,
+    ClientBinaryMetadataTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }
