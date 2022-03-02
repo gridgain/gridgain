@@ -49,6 +49,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.exceptions.SqlCacheException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
@@ -473,10 +474,10 @@ public class QueryUtils {
         desc.schemaName(schemaName);
 
         desc.aliases(qryEntity.getAliases());
-        
+
         if (qryEntity instanceof QueryEntityEx)
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
-        
+
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
         // We better box these types - otherwise, if user provides, say, raw 'byte' for
@@ -553,20 +554,22 @@ public class QueryUtils {
                 String keyType = qryEntity.getKeyType();
 
                 if (keyType != null) {
-                    CacheDefaultBinaryAffinityKeyMapper mapper =
-                        (CacheDefaultBinaryAffinityKeyMapper)coCtx.defaultAffMapper();
+                    CacheDefaultBinaryAffinityKeyMapper mapper = (CacheDefaultBinaryAffinityKeyMapper) coCtx.defaultAffMapper();
 
-                    BinaryField field = mapper.affinityKeyField(keyType);
+                    String affField0 = BinaryContext.affinityFieldName(keyCls);
 
-                    if (field != null) {
-                        String affField0 = field.name();
+                    if (affField0 == null) {
+                        BinaryField field = mapper.affinityKeyField(keyType);
 
-                        if (!F.isEmpty(qryEntity.getKeyFields()) && qryEntity.getKeyFields().contains(affField0)) {
-                            affField = affField0;
+                        if (field != null)
+                            affField0 = field.name();
+                    }
 
-                            if (!escape)
-                                affField = normalizeObjectName(affField, false);
-                        }
+                    if (!F.isEmpty(qryEntity.getKeyFields()) && qryEntity.getKeyFields().contains(affField0)) {
+                        affField = affField0;
+
+                        if (!escape)
+                            affField = normalizeObjectName(affField, false);
                     }
                 }
             }
@@ -667,7 +670,7 @@ public class QueryUtils {
 
         if (qryEntity instanceof QueryEntityEx)
             d.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
-        
+
         // Sql-typed key/value doesn't have field property, but they may have precision and scale constraints.
         // Also if fields are not set then _KEY and _VAL will be created as visible,
         // so we have to add binary properties for them
