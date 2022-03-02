@@ -46,6 +46,7 @@ public class QueryEntityEx extends QueryEntity {
 
     /** INLINE_SIZE for affinity field index. */
     private Integer affKeyInlineSize;
+
     /**
      * Default constructor.
      */
