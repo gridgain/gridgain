@@ -306,6 +306,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 ctxs.queries().evictDetailMetrics();
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
 
+        registerMetadataForRegisteredCaches();
+
         idxBuildStatusStorage.start();
     }
 
