@@ -132,14 +132,12 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         }
     }
 
-    private static Object readFutureResult(GridFutureAdapter fut, NodeCheckpointingResult res) {
+    private static void readFutureResult(GridFutureAdapter fut, NodeCheckpointingResult res) {
         try {
-            return fut.get();
+            fut.get();
         }
         catch (IgniteCheckedException e) {
             res.error(e);
         }
-
-        return null;
     }
 }
