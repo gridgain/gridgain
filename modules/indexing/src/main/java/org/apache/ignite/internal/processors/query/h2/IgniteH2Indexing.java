@@ -143,6 +143,7 @@ import org.apache.ignite.internal.processors.query.h2.dml.DmlUpdateSingleEntryIt
 import org.apache.ignite.internal.processors.query.h2.dml.DmlUtils;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdateMode;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlan;
+import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexWorkflowCallback;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
@@ -232,6 +233,7 @@ import static org.apache.ignite.internal.processors.query.h2.H2Utils.generateFie
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.session;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.validateTypeDescriptor;
 import static org.apache.ignite.internal.processors.query.h2.H2Utils.zeroCursor;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.parseMaintenanceTaskParameters;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.ERROR;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_QRY_TEXT;
 import static org.apache.ignite.internal.processors.tracing.SpanTags.SQL_SCHEMA;
@@ -252,6 +254,9 @@ import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_QRY_EXE
  * For each table it will create indexes declared in {@link GridQueryTypeDescriptor#indexes()}.
  */
 public class IgniteH2Indexing implements GridQueryIndexing {
+    /** Index rebuild maintenance task name. */
+    public static final String INDEX_REBUILD_MNTC_TASK_NAME = "indexRebuildMaintenanceTask";
+
     /*
      * Register IO for indexes.
      */
@@ -2358,6 +2363,16 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         distrCfg = new DistributedSqlConfiguration(ctx, log);
 
         distrCfg.listenDisabledFunctions(new FunctionsManager<>());
+
+        ctx.maintenanceRegistry()
+            .registerWorkflowCallbackIfTaskExists(
+                INDEX_REBUILD_MNTC_TASK_NAME,
+                task -> new RebuildIndexWorkflowCallback(
+                    parseMaintenanceTaskParameters(task.parameters()),
+                    this,
+                    log
+                )
+            );
     }
 
     /** {@inheritDoc} */

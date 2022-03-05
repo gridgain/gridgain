@@ -236,7 +236,7 @@ public class H2TableDescriptor {
             false,
             unwrappedKeyAndAffinityCols,
             wrappedKeyCols,
-            -1
+            tbl.rowDescriptor().tableDescriptor().type().primaryKeyInlineSize()
         );
 
         idxs.add(pkIdx);
@@ -282,8 +282,8 @@ public class H2TableDescriptor {
                 true,
                 colsWithUnwrappedKey,
                 cols,
-                -1)
-            );
+                tbl.rowDescriptor().tableDescriptor().type().affinityFieldInlineSize()
+            ));
         }
 
         return idxs;

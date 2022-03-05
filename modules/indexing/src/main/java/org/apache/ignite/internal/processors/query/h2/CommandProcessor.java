@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -1192,7 +1193,13 @@ public class CommandProcessor {
                 IgniteDiscoverySpi.ALL_NODES), IgniteFeatures.FILLS_ABSENT_PKS_WITH_DEFAULTS)
         )
             res.fillAbsentPKsWithDefaults(true);
-    
+
+        if (Objects.nonNull(createTbl.primaryKeyInlineSize()))
+            res.setPrimaryKeyInlineSize(createTbl.primaryKeyInlineSize());
+
+        if (Objects.nonNull(createTbl.affinityKeyInlineSize()))
+            res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
+
         return res;
     }
 

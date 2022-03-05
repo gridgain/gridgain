@@ -43,6 +43,9 @@ import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.ClientOperationType;
+import org.apache.ignite.client.ClientRetryPolicy;
+import org.apache.ignite.client.ClientRetryPolicyContext;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
@@ -160,9 +163,7 @@ final class ReliableChannel implements AutoCloseable {
         Consumer<PayloadOutputChannel> payloadWriter,
         Function<PayloadInputChannel, T> payloadReader
     ) throws ClientException, ClientError {
-        return applyOnDefaultChannel(channel ->
-            channel.service(op, payloadWriter, payloadReader)
-        );
+        return applyOnDefaultChannel(channel -> channel.service(op, payloadWriter, payloadReader), op);
     }
 
     /**
@@ -195,7 +196,7 @@ final class ReliableChannel implements AutoCloseable {
         int attemptsCnt[] = new int[1];
 
         try {
-            ch = applyOnDefaultChannel(channel -> channel, attemptsLimit, v -> attemptsCnt[0] = v );
+            ch = applyOnDefaultChannel(channel -> channel, null, attemptsLimit, v -> attemptsCnt[0] = v);
         } catch (Throwable ex) {
             if (failure != null) {
                 failure.addSuppressed(ex);
@@ -237,13 +238,14 @@ final class ReliableChannel implements AutoCloseable {
                     else
                         failure0.addSuppressed(err);
 
-                    int leftAttempts = attemptsLimit - attemptsCnt[0];
+                    int attempt = attemptsCnt[0];
+                    int leftAttempts = attemptsLimit - attempt;
 
                     // If it is a first retry then reset attempts (as for initialization we use only 1 attempt).
                     if (failure == null)
                         leftAttempts = getRetryLimit() - 1;
 
-                    if (leftAttempts > 0) {
+                    if (leftAttempts > 0 && shouldRetry(op, attempt, failure0)) {
                         handleServiceAsync(fut, op, payloadWriter, payloadReader, leftAttempts, failure0);
 
                         return null;
@@ -308,8 +310,7 @@ final class ReliableChannel implements AutoCloseable {
 
             if (affNodeId != null) {
                 return applyOnNodeChannelWithFallback(affNodeId, channel ->
-                    channel.service(op, payloadWriter, payloadReader)
-                );
+                    channel.service(op, payloadWriter, payloadReader), op);
             }
         }
 
@@ -355,7 +356,7 @@ final class ReliableChannel implements AutoCloseable {
 
                                 int attemptsLimit = getRetryLimit() - 1;
 
-                                if (attemptsLimit == 0) {
+                                if (attemptsLimit == 0 || !shouldRetry(op, 0, failure)) {
                                     fut.completeExceptionally(err);
                                     return null;
                                 }
@@ -675,7 +676,7 @@ final class ReliableChannel implements AutoCloseable {
             return;
 
         // Apply no-op function. Establish default channel connection.
-        applyOnDefaultChannel(channel -> null);
+        applyOnDefaultChannel(channel -> null, null);
 
         if (affinityAwarenessEnabled)
             initAllChannelsAsync();
@@ -703,14 +704,15 @@ final class ReliableChannel implements AutoCloseable {
     }
 
     /** */
-    private <T> T applyOnDefaultChannel(Function<ClientChannel, T> function) {
-        return applyOnDefaultChannel(function, getRetryLimit(), DO_NOTHING);
+    private <T> T applyOnDefaultChannel(Function<ClientChannel, T> function, ClientOperation op) {
+        return applyOnDefaultChannel(function, op, getRetryLimit(), DO_NOTHING);
     }
 
     /**
      * Apply specified {@code function} on any of available channel.
      */
     private <T> T applyOnDefaultChannel(Function<ClientChannel, T> function,
+                                        ClientOperation op,
                                         int attemptsLimit,
                                         Consumer<Integer> attemptsCallback) {
         ClientConnectionException failure = null;
@@ -746,6 +748,9 @@ final class ReliableChannel implements AutoCloseable {
                     failure.addSuppressed(e);
 
                 onChannelFailure(hld, c);
+
+                if (op != null && !shouldRetry(op, attempt, e))
+                    break;
             }
         }
 
@@ -756,7 +761,7 @@ final class ReliableChannel implements AutoCloseable {
      * Try apply specified {@code function} on a channel corresponding to {@code tryNodeId}.
      * If failed then apply the function on any available channel.
      */
-    private <T> T applyOnNodeChannelWithFallback(UUID tryNodeId, Function<ClientChannel, T> function) {
+    private <T> T applyOnNodeChannelWithFallback(UUID tryNodeId, Function<ClientChannel, T> function, ClientOperation op) {
         ClientChannelHolder hld = nodeChannels.get(tryNodeId);
 
         int retryLimit = getRetryLimit();
@@ -775,12 +780,12 @@ final class ReliableChannel implements AutoCloseable {
 
                 retryLimit -= 1;
 
-                if (retryLimit == 0)
+                if (retryLimit == 0 || !shouldRetry(op, 0, e))
                     throw e;
             }
         }
 
-        return applyOnDefaultChannel(function, retryLimit, DO_NOTHING);
+        return applyOnDefaultChannel(function, op, retryLimit, DO_NOTHING);
     }
 
     /** Get retry limit. */
@@ -793,6 +798,23 @@ final class ReliableChannel implements AutoCloseable {
         int size = holders.size();
 
         return clientCfg.getRetryLimit() > 0 ? Math.min(clientCfg.getRetryLimit(), size) : size;
+    }
+
+    /** Determines whether specified operation should be retried. */
+    private boolean shouldRetry(ClientOperation op, int iteration, ClientConnectionException exception) {
+        ClientOperationType opType = op.toPublicOperationType();
+
+        if (opType == null)
+            return true; // System operation.
+
+        ClientRetryPolicy plc = clientCfg.getRetryPolicy();
+
+        if (plc == null)
+            return false;
+
+        ClientRetryPolicyContext ctx = new ClientRetryPolicyContextImpl(clientCfg, opType, iteration, exception);
+
+        return plc.shouldRetry(ctx);
     }
 
     /**
@@ -934,7 +956,7 @@ final class ReliableChannel implements AutoCloseable {
     }
 
     /**
-     * Get holders reference. For test purposes.
+     * Get holders reference. For test purposes.ClientOperation
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") // For tests.
     List<ClientChannelHolder> getChannelHolders() {

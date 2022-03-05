@@ -1373,8 +1373,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         DiscoveryDataClusterState joiningNodeState;
 
         try {
-            joiningNodeState = marsh.unmarshal((byte[]) discoData.joiningNodeData(), Thread.currentThread().getContextClassLoader());
-        } catch (IgniteCheckedException e) {
+            joiningNodeState = marsh.unmarshal((byte[])discoData.joiningNodeData(), U.resolveClassLoader(ctx.config()));
+        }
+        catch (IgniteCheckedException e) {
             String msg = "Error on unmarshalling discovery data " +
                 "from node " + node.consistentId() + ": " + e.getMessage() +
                 "; node is not allowed to join";

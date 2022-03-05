@@ -50,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConne
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.ClockPageReplacementFlagsTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.ExponentialBackoffTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagePoolTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.ProgressSpeedCalculationTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.SegmentedLruPageListTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
@@ -207,6 +208,7 @@ import org.junit.runners.Suite;
     NoopCheckpointSpiLoggingTest.class,
     JvmConfigurationSuggestionsTest.class,
     ExponentialBackoffTest.class,
+    ProgressSpeedCalculationTest.class,
     JvmConfigurationSuggestionsTest.class,
 
     IgniteStandardMXBeanTest.class

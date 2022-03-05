@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -58,6 +59,8 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -1934,6 +1937,51 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         bob.setField("val_obj", bobInner.build());
 
         grid().cache(cacheName).put(0, bob.build());
+    }
+
+    /** */
+    @Test
+    public void testCreateSystemIndexWithSpecifiedInlineSizeByDdl() throws Exception {
+        srvLog = new ListeningTestLogger(false, log);
+
+        inlineSize = 10;
+
+        final int pkInlineSize = 22;
+        final int affInlineSize = 23;
+
+        IgniteEx ign = startGrid();
+
+        sql("CREATE TABLE TEST (ID VARCHAR, ID_AFF INT, VAL INT, "
+                + "PRIMARY KEY (ID, ID_AFF)) WITH"
+                + "\""
+                + "AFFINITY_KEY=ID_AFF,"
+                + "PK_INLINE_SIZE=" + pkInlineSize + ","
+                + "AFFINITY_INDEX_INLINE_SIZE=" + affInlineSize
+                + "\""
+        );
+
+        GridH2Table tbl = ((IgniteH2Indexing)ign.context().query().getIndexing()).schemaManager().dataTable("PUBLIC", "TEST");
+
+        assertEquals(pkInlineSize, ((H2TreeIndex)tbl.getIndex("_key_PK")).inlineSize());
+        assertEquals(affInlineSize, ((H2TreeIndex)tbl.getIndex("AFFINITY_KEY")).inlineSize());
+
+        // Check the warning log message
+        LogListener lsnr = LogListener
+            .matches("Indexed columns of a row cannot be fully inlined")
+            .andMatches("for sorted indexes on primary key and affinity field use 'PK_INLINE_SIZE' and 'AFFINITY_INDEX_INLINE_SIZE' properties for CREATE TABLE command").build();
+
+        srvLog.registerListener(lsnr);
+
+        final String key_prefix = "ID____________________________________________________________________";
+
+        for (int i = 0; i < 1000; ++i) {
+            sql("INSERT INTO TEST VALUES (?, ?, ?)",
+                key_prefix + i,
+                i,
+                i);
+        }
+
+        assertTrue(lsnr.check());
     }
 
     /** */

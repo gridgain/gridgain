@@ -71,6 +71,7 @@ ipch/
 [Rr]elease*/
 packages
 *.nupkg
+CMakeSettings.json
 
 #Autotools temp files
 /modules/platforms/cpp/**/Makefile

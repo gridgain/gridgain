@@ -48,7 +48,10 @@ public enum ClientBitmaskFeature implements ThinProtocolFeature {
     QRY_PARTITIONS_BATCH_SIZE(7),
 
     /** Binary configuration retrieval. */
-    BINARY_CONFIGURATION(8);
+    BINARY_CONFIGURATION(8),
+
+    /** Service descriptors retrieval. */
+    GET_SERVICE_DESCRIPTORS(9);
 
     /** */
     private static final EnumSet<ClientBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

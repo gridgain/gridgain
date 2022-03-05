@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Apache.Ignite.Service
 {
     using System;
@@ -92,7 +94,7 @@ namespace Apache.Ignite.Service
         internal static void DoInstall(Tuple<string, string>[] args)
         {
             // 1. Check if already defined.
-            if (ServiceController.GetServices().Any(svc => SvcName.Equals(svc.ServiceName)))
+            if (ServiceController.GetServices().Any(svc => SvcName.Equals(svc.ServiceName, StringComparison.Ordinal)))
             {
                 throw new IgniteException("Ignite service is already installed (uninstall it using \"" +
                                           ExeName + " " + IgniteRunner.SvcUninstall + "\" first)");
@@ -144,6 +146,8 @@ namespace Apache.Ignite.Service
         /// <summary>
         /// Runs the service.
         /// </summary>
+        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
+            Justification = "Service lifetime is the same as process lifetime.")]
         internal static void Run(IgniteConfiguration cfg)
         {
             ServiceBase.Run(new IgniteService(cfg));

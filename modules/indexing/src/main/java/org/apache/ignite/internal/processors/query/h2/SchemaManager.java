@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiConsumer;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -664,6 +663,28 @@ public class SchemaManager {
         // Create index.
         final GridH2IndexBase h2Idx = desc.createUserIndex(idxDesc);
 
+        createIndex(h2Tbl, desc, schemaName, h2Idx, ifNotExists, cacheVisitor);
+    }
+
+    /**
+     * Creates index.
+     *
+     * @param h2Tbl Table.
+     * @param desc Table descriptor.
+     * @param schemaName Schema name.
+     * @param h2Idx Index.
+     * @param ifNotExists If-not-exists.
+     * @param cacheVisitor Cache visitor.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void createIndex(
+        GridH2Table h2Tbl,
+        H2TableDescriptor desc,
+        String schemaName,
+        GridH2IndexBase h2Idx,
+        boolean ifNotExists,
+        SchemaIndexCacheVisitor cacheVisitor
+    ) throws IgniteCheckedException {
         h2Tbl.proposeUserIndex(h2Idx);
 
         try {

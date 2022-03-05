@@ -175,7 +175,7 @@ namespace Apache.Ignite.Core.Tests.Examples
         {
             return line.EndsWith("*")
                 ? line.Substring(0, line.Length - 1)
-                : line + "\n";
+                : line + Environment.NewLine;
         }
     }
 }

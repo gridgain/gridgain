@@ -138,6 +138,12 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** Whether absent PK parts should be filled with defaults or not. */
     private boolean fillAbsentPKsWithDefaults;
 
+    /** */
+    private int pkInlineSize;
+
+    /** */
+    private int affFieldInlineSize;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -757,5 +763,25 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void setFillAbsentPKsWithDefaults(boolean fillAbsentPKsWithDefaults) {
         this.fillAbsentPKsWithDefaults = fillAbsentPKsWithDefaults;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int primaryKeyInlineSize() {
+        return pkInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void primaryKeyInlineSize(int pkInlineSize) {
+        this.pkInlineSize = pkInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int affinityFieldInlineSize() {
+        return affFieldInlineSize;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void affinityFieldInlineSize(int affFieldInlineSize) {
+        this.affFieldInlineSize = affFieldInlineSize;
     }
 }

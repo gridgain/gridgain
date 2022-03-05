@@ -25,6 +25,7 @@ import java.io.ObjectStreamException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.cache.processor.EntryProcessorException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -34,13 +35,13 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -131,46 +132,26 @@ public final class GridCacheAtomicSequenceImpl extends AtomicDataStructureProxy<
 
     /** {@inheritDoc} */
     @Override public long incrementAndGet() {
-        try {
-            return internalUpdate(1, incAndGetCall, true);
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
+        return internalUpdate(1, incAndGetCall, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndIncrement() {
-        try {
-            return internalUpdate(1, getAndIncCall, false);
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
+        return internalUpdate(1, getAndIncCall, false);
     }
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) {
         A.ensure(l > 0, " Parameter mustn't be less then 1: " + l);
 
-        try {
-            return internalUpdate(l, null, true);
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
+        return internalUpdate(l, null, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndAdd(long l) {
         A.ensure(l > 0, " Parameter mustn't be less then 1: " + l);
 
-        try {
-            return internalUpdate(l, null, false);
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
+        return internalUpdate(l, null, false);
     }
 
     /**
@@ -181,17 +162,22 @@ public final class GridCacheAtomicSequenceImpl extends AtomicDataStructureProxy<
      * @param updated If {@code true}, will return sequence value after update, otherwise will return sequence value
      *      prior to update.
      * @return Sequence value.
-     * @throws IgniteCheckedException If update failed.
+     * @throws IgniteException If update failed.
      */
-    private long internalUpdate(long l, @Nullable Callable<Long> updateCall, boolean updated) throws IgniteCheckedException {
+    private long internalUpdate(long l, @Nullable Callable<Long> updateCall, boolean updated) throws IgniteException {
         checkRemoved();
 
         assert l > 0;
 
         if (ctx.shared().readOnlyMode()) {
-            throw new CacheInvalidStateException(new IgniteClusterReadOnlyException(
-                String.format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT, "sequence", ctx.group().name(), ctx.name())
-            ));
+            throw U.convertException(
+                new CacheInvalidStateException(
+                    new IgniteClusterReadOnlyException(
+                        String.format(CLUSTER_READ_ONLY_MODE_ERROR_MSG_FORMAT,
+                        "sequence",
+                        ctx.group().name(),
+                        ctx.name())
+            )));
         }
 
         localUpdate.lock();
@@ -229,11 +215,8 @@ public final class GridCacheAtomicSequenceImpl extends AtomicDataStructureProxy<
             try {
                 return CU.retryTopologySafe(updateCall);
             }
-            catch (IgniteCheckedException | IgniteException | IllegalStateException e) {
-                throw e;
-            }
             catch (Exception e) {
-                throw new IgniteCheckedException(e);
+                throw checkRemovedAfterFail(e);
             }
         }
         finally {
@@ -304,7 +287,10 @@ public final class GridCacheAtomicSequenceImpl extends AtomicDataStructureProxy<
 
                     checkRemoved();
 
-                    assert seq != null;
+                    if (seq == null) {
+                        // This is the case when partition is lost and partition loss policy is IGNORE.
+                        throw new EntryProcessorException("Failed to find atomic sequence with the given name: " + key.name());
+                    }
 
                     long curLocVal;
 

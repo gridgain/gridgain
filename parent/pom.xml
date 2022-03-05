@@ -1120,10 +1120,9 @@
                                         <exclude>src/test/binaries/repo/org/apache/ignite/binary/test2/1.1/test2-1.1.jar</exclude>
                                         <exclude>**/*.cmake</exclude>
                                         <exclude>**/CMakeLists.txt</exclude>
-                                        <exclude>**/Makefile.am</exclude>
-                                        <exclude>**/configure.ac</exclude>
-                                        <exclude>**/Makefile.amrel</exclude>
-                                        <exclude>**/configure.acrel</exclude>
+                                        <exclude>**/CMakeSettings.json.in</exclude>
+                                        <exclude>**/cmake-build-*/</exclude>
+                                        <exclude>**/.idea/**</exclude>
                                         <exclude>**/*.pc.in</exclude>
                                         <exclude>**/*.sln</exclude>
                                         <exclude>**/*.snk</exclude>
@@ -1135,9 +1134,6 @@
                                         <exclude>**/*.csproj</exclude>
                                         <exclude>**/*.ndproj</exclude>
                                         <exclude>**/*.csprojrel</exclude>
-                                        <exclude>**/*.vcxproj</exclude>
-                                        <exclude>**/*.vcxprojrel</exclude>
-                                        <exclude>**/*.vcxproj.filters</exclude>
                                         <exclude>**/mkbuild.cmd</exclude>
                                         <exclude>**/module.def</exclude>
                                         <exclude>**/*.fxcop</exclude>
@@ -1148,7 +1144,6 @@
                                         <exclude>**/teamcity_boost.cpp</exclude>
                                         <exclude>**/teamcity_messages.h</exclude>
                                         <exclude>**/teamcity_messages.cpp</exclude>
-                                        <exclude>**/project/vs/**</exclude>
                                         <exclude>**/obj/x64/**</exclude>
                                         <exclude>**/obj/x86/**</exclude>
                                         <exclude>**/bin/x64/**</exclude>
@@ -1207,7 +1202,7 @@
         <profile>
             <id>java-9+</id>
             <activation>
-                <jdk>[1.9,)</jdk>
+                <jdk>[1.9,15)</jdk>
             </activation>
             <properties>
                 <maven.compiler.source>1.8</maven.compiler.source>
@@ -1240,6 +1235,67 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <argLine>--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED --illegal-access=permit</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>java-15+</id>
+            <activation>
+                <jdk>[15,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.source>1.8</maven.compiler.source>
+                <maven.compiler.target>15</maven.compiler.target>
+                <scala.library.version>2.12.15</scala.library.version>
+            </properties>
+            <dependencies/>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.7.0</version>
+                        <configuration>
+                            <compilerArgs>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/sun.nio.ch=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.io=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.nio=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.util=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.lang=ALL-UNNAMED</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <argLine>
+                                --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                                --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                                --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED
+                                --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED
+                                --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED
+                                --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+                                --add-opens=java.base/java.io=ALL-UNNAMED
+                                --add-opens=java.base/java.nio=ALL-UNNAMED
+                                --add-opens=java.base/java.util=ALL-UNNAMED
+                                --add-opens=java.base/java.lang=ALL-UNNAMED
+                            </argLine>
                         </configuration>
                     </plugin>
                 </plugins>
