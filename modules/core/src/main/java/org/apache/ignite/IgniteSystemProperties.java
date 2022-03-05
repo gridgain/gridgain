@@ -2174,6 +2174,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 
+    /** */
+    @SystemProperty(value = "", defaults = "false")
+    public static final String IGNITE_DISABLE_BINARY_PK_COMPARE_FIX = "IGNITE_DISABLE_BINARY_PK_COMPARE_FIX";
+
     /**
      * Enforces singleton.
      */

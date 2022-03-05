@@ -20,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectValueContext;
@@ -33,10 +34,22 @@ import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.gridgain.internal.h2.value.ValueJavaObject;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_BINARY_PK_COMPARE_FIX;
+
 /**
  * H2 Value over {@link CacheObject}. Replacement for {@link ValueJavaObject}.
  */
 public class GridH2ValueCacheObject extends Value {
+    /**
+     * Disable binary compare fix.
+     *
+     * Mutable for the sake of tests only.
+     * Package-private to avoid "unused" inspection triggering.
+     * Non-volatile for performance purposes.
+     */
+    static boolean disableBinaryPkCompareFix =
+        IgniteSystemProperties.getBoolean(IGNITE_DISABLE_BINARY_PK_COMPARE_FIX, false);
+
     /** */
     private CacheObject obj;
 
@@ -140,7 +153,6 @@ public class GridH2ValueCacheObject extends Value {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override public int compareTypeSafe(Value v, CompareMode mode) {
         Object o1 = getObject();
         Object o2 = v.getObject();
@@ -171,7 +183,7 @@ public class GridH2ValueCacheObject extends Value {
             if (o1.equals(o2))
                 return 0;
 
-            if (o1.getClass().equals(BinaryObjectImpl.class))
+            if (!disableBinaryPkCompareFix && o1.getClass() == BinaryObjectImpl.class)
                 return BinaryObjectImpl.compare(o1, o2);
 
             return Bits.compareNotNullSigned(getBytesNoCopy(), v.getBytesNoCopy());
