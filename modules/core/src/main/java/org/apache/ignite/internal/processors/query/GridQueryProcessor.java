@@ -17,8 +17,6 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.io.Serializable;
-import javax.cache.Cache;
-import javax.cache.CacheException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,6 +34,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -62,6 +62,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.binary.BinaryMetadata;
 import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -86,6 +87,8 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
+import org.apache.ignite.internal.processors.platform.PlatformContext;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.aware.IndexBuildStatusStorage;
 import org.apache.ignite.internal.processors.query.aware.IndexRebuildFutureStorage;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
@@ -139,6 +142,7 @@ import static java.util.Collections.singleton;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
@@ -151,6 +155,7 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
 /**
  * Indexing processor.
  */
+@SuppressWarnings("rawtypes")
 public class GridQueryProcessor extends GridProcessorAdapter {
     /** */
     private static final String INLINE_SIZES_DISCO_BAG_KEY = "inline_sizes";
@@ -306,9 +311,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 ctxs.queries().evictDetailMetrics();
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
 
-        registerMetadataForRegisteredCaches();
-
         idxBuildStatusStorage.start();
+
+        registerMetadataForRegisteredCaches(false);
     }
 
     /** {@inheritDoc} */
@@ -1181,10 +1186,12 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
     /**
      * Register metadata locally for already registered caches.
+     *
+     * @param platformOnly Whether to register non-Java platformOnly types only.
      */
-    private void registerMetadataForRegisteredCaches() {
+    public void registerMetadataForRegisteredCaches(boolean platformOnly) {
         for (DynamicCacheDescriptor cacheDescriptor : ctx.cache().cacheDescriptors().values())
-            registerBinaryMetadata(cacheDescriptor.cacheConfiguration(), cacheDescriptor.schema());
+            registerBinaryMetadata(cacheDescriptor.cacheConfiguration(), cacheDescriptor.schema(), platformOnly);
     }
 
     /**
@@ -1198,7 +1205,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 continue;
 
             try {
-                registerBinaryMetadata(req.startCacheConfiguration(), req.schema());
+                registerBinaryMetadata(req.startCacheConfiguration(), req.schema(), false);
             }
             catch (BinaryObjectException e) {
                 ctx.cache().completeCacheStartFuture(req, false, e);
@@ -1211,9 +1218,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      *
      * @param ccfg Cache configuration.
      * @param schema Schema for which register metadata is required.
+     * @param platformOnly Whether to register non-Java platformOnly types only.
      * @throws BinaryObjectException if register was failed.
      */
-    private void registerBinaryMetadata(CacheConfiguration ccfg, QuerySchema schema) throws BinaryObjectException {
+    private void registerBinaryMetadata(CacheConfiguration ccfg, QuerySchema schema, boolean platformOnly) throws BinaryObjectException {
         if (schema != null) {
             Collection<QueryEntity> qryEntities = schema.entities();
 
@@ -1222,14 +1230,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                 if (binaryEnabled) {
                     for (QueryEntity qryEntity : qryEntities) {
-                        Class<?> keyCls = U.box(U.classForName(qryEntity.findKeyType(), null, true));
-                        Class<?> valCls = U.box(U.classForName(qryEntity.findValueType(), null, true));
-
-                        if (keyCls != null)
-                            registerDescriptorLocallyIfNeeded(keyCls);
-
-                        if (valCls != null)
-                            registerDescriptorLocallyIfNeeded(valCls);
+                        registerTypeLocally(qryEntity.findKeyType(), platformOnly);
+                        registerTypeLocally(qryEntity.findValueType(), platformOnly);
                     }
                 }
             }
@@ -1239,17 +1241,50 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /**
      * Register class metadata locally if it didn't do it earlier.
      *
-     * @param cls Class for which the metadata should be registered.
+     * @param clsName Class name for which the metadata should be registered.
+     * @param platformOnly Whether to only register non-Java platform types only.
      * @throws BinaryObjectException if register was failed.
      */
-    private void registerDescriptorLocallyIfNeeded(Class<?> cls) throws BinaryObjectException {
+    private void registerTypeLocally(String clsName, boolean platformOnly) throws BinaryObjectException {
+        if (clsName == null)
+            return;
+
         IgniteCacheObjectProcessor cacheObjProc = ctx.cacheObjects();
 
         if (cacheObjProc instanceof CacheObjectBinaryProcessorImpl) {
-            ((CacheObjectBinaryProcessorImpl)cacheObjProc)
-                .binaryContext()
-                .registerClass(cls, true, false, true);
+            CacheObjectBinaryProcessorImpl binProc = (CacheObjectBinaryProcessorImpl) cacheObjProc;
+
+            Class<?> cls = U.box(U.classForName(clsName, null, true));
+
+            if (cls != null) {
+                if (!platformOnly)
+                    binProc.binaryContext().registerClass(cls, true, false, true);
+            }
+            else
+                registerPlatformTypeLocally(clsName, binProc);
         }
+    }
+
+    /**
+     * Registers platform type locally.
+     *
+     * @param clsName Class name.
+     * @param binProc Binary processor.
+     */
+    private void registerPlatformTypeLocally(String clsName, CacheObjectBinaryProcessorImpl binProc) {
+        PlatformProcessor platformProc = ctx.platform();
+
+        if (platformProc == null || !platformProc.hasContext())
+            return;
+
+        PlatformContext platformCtx = platformProc.context();
+        BinaryMetadata meta = platformCtx.getBinaryType(clsName);
+
+        if (meta != null)
+            binProc.binaryContext().registerClassLocally(
+                    meta.wrap(binProc.binaryContext()),
+                    false,
+                    platformCtx.getMarshallerPlatformId());
     }
 
     /**
@@ -2474,11 +2509,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             // Therefore, we additionally calculate typeId based on typeName from metadata.
             if (val instanceof BinaryObjectImpl) {
                 BinaryType metadata = ctx.cacheObjects().metadata(typeId);
-    
+
                 if (metadata != null)
                     typeId = ((BinaryObjectImpl) val).context().typeId(metadata.typeName());
             }
-            
+
             id = new QueryTypeIdKey(cacheName, typeId);
         }
         else {
