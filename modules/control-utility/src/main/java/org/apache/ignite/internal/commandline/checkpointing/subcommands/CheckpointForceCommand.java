@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.commandline.checkpointing.subcommands;
 
 import java.util.logging.Logger;
-import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.checkpointing.CheckpointAbstractSubCommand;
 import org.apache.ignite.internal.commandline.checkpointing.CheckpointingForceResult;
 import org.apache.ignite.internal.commandline.checkpointing.CheckpointingForceTask;
