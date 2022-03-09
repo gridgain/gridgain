@@ -181,6 +181,6 @@ public class IgnitePdsNodeJoinWithCachesStopping extends GridCommonAbstractTest 
         startFut2.get();
         stopFut2.get();
 
-        assertNull(crd.cache(DEFAULT_CACHE_NAME));
+        assertNull("The '" + DEFAULT_CACHE_NAME + "' cache is not destroyed.", crd.cache(DEFAULT_CACHE_NAME));
     }
 }

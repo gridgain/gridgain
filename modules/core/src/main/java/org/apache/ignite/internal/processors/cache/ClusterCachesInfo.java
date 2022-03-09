@@ -123,7 +123,7 @@ public class ClusterCachesInfo {
      * Such descriptors will be removed from the map only after whole cache stop process is finished.
      * Affinity topology version equals the version which will be applied after a cache group is completely removed.
      */
-    private final ConcurrentNavigableMap<AffinityTopologyVersion, List<CacheGroupDescriptor>>
+    private final ConcurrentNavigableMap<AffinityTopologyVersion, Map<Integer, CacheGroupDescriptor>>
         markedForDeletionCacheGrps = new ConcurrentSkipListMap<>();
 
     /** Dynamic caches. */
@@ -550,7 +550,7 @@ public class ClusterCachesInfo {
      * due to dynamic cache start failure.
      *
      * @param failMsg Dynamic change request fail message.
-     * @param topVer Topology version.
+     * @param topVer Current topology version.
      */
     public void onCacheChangeRequested(DynamicCacheChangeFailureMessage failMsg, AffinityTopologyVersion topVer) {
         ExchangeActions exchangeActions = new ExchangeActions();
@@ -572,7 +572,7 @@ public class ClusterCachesInfo {
 
     /**
      * @param batch Cache change request.
-     * @param topVer Topology version.
+     * @param topVer Current topology version.
      * @return {@code True} if minor topology version should be increased.
      */
     public boolean onCacheChangeRequested(DynamicCacheChangeBatch batch, AffinityTopologyVersion topVer) {
@@ -614,7 +614,7 @@ public class ClusterCachesInfo {
     /**
      * @param exchangeActions Exchange actions to update.
      * @param reqs Requests.
-     * @param topVer Topology version.
+     * @param topVer Current topology version.
      * @param persistedCfgs {@code True} if process start of persisted caches during cluster activation.
      * @return Process result.
      */
@@ -673,7 +673,7 @@ public class ClusterCachesInfo {
     /**
      * @param req Cache change request.
      * @param exchangeActions Exchange actions to update.
-     * @param topVer Topology version.
+     * @param topVer Current topology version.
      * @param persistedCfgs {@code True} if process start of persisted caches during cluster activation.
      * @param res Accumulator for cache change process results.
      * @param reqsToComplete Accumulator for cache change requests which should be completed after
@@ -766,7 +766,7 @@ public class ClusterCachesInfo {
                     return;
                 }
 
-                processStopCacheRequest(exchangeActions, req, cacheName, desc, topVer);
+                processStopCacheRequest(exchangeActions, req, cacheName, desc, topVer.nextMinorVersion());
 
                 needExchange = true;
             }
@@ -787,7 +787,7 @@ public class ClusterCachesInfo {
      * @param exchangeActions Exchange actions to update.
      * @param cacheName Cache name.
      * @param desc Dynamic cache descriptor.
-     * @param topVer Topology version related to the processed request.
+     * @param topVer Topology version that will be applied after the corresponding partition map exchange.
      */
     private void processStopCacheRequest(
         ExchangeActions exchangeActions,
@@ -818,8 +818,8 @@ public class ClusterCachesInfo {
 
         if (!grpDesc.hasCaches()) {
             markedForDeletionCacheGrps
-                .computeIfAbsent(topVer, (map) -> new ArrayList<>())
-                .add(grpDesc);
+                .computeIfAbsent(topVer, (map) -> new ConcurrentHashMap<>())
+                .put(grpDesc.groupId(), grpDesc);
 
             registeredCacheGrps.remove(grpDesc.groupId());
 
@@ -1648,12 +1648,12 @@ public class ClusterCachesInfo {
      * @param grpId Group id.
      */
     public @Nullable CacheGroupDescriptor markedForDeletionCacheGroupDesc(int grpId) {
-        // Find the "latest" available descriptor.
-        for (List<CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.values()) {
-            for (CacheGroupDescriptor descriptor : descriptors) {
-                if (descriptor.groupId() == grpId)
-                    return descriptor;
-            }
+        // Find the "earliest" available descriptor.
+        for (Map<Integer, CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.values()) {
+            CacheGroupDescriptor desc = descriptors.get(grpId);
+
+            if (desc != null)
+                return desc;
         }
 
         return null;
