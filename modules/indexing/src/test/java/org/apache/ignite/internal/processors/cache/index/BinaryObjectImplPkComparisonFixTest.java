@@ -261,7 +261,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
         val.strKey2 = key.strKey2;
         val.strKey3 = key.strKey3;
 
-        val.value = GridTestUtils.randomString(rnd, 10);
+        val.val = GridTestUtils.randomString(rnd, 10);
 
         return val;
     }
@@ -315,6 +315,6 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
         private String strKey3;
 
         /** */
-        private String value;
+        private String val;
     }
 }
