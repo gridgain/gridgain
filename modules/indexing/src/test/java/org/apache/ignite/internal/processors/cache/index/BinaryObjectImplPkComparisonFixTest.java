@@ -117,7 +117,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     /**
      * Tests that switching flag value affects index validation output in case of possibly corrupted PK index.
      * Test creates a cache with SQL indexes and inserts two key/value pairs in it. These keys are specifically chosen
-     * to have same hash value and to corrupt the PK index. Particularly,
+     * to have the same hash value and to corrupt the PK index. Particularly,
      * {@link BinaryObjectImpl#compare(Object, Object)} and {@link Bits#compareNotNullSigned(byte[], byte[])} would
      * return different results on these keys in {@link GridH2ValueCacheObject#compareTypeSafe(Value, CompareMode)},
      * which leads to issues in index validation closure, and unexpected node crashes after Ignite version update.
