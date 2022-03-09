@@ -1536,7 +1536,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             row.deploymentId = ctx.dynamicDeploymentId();
 
             if (row.key.partition() == -1)
-                row.key.partition(grp.config().getAffinity().partition(row.key));
+                row.key.partition(ctx.affinity().partition(row.key));
 
             assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
 
