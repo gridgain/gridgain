@@ -18,10 +18,8 @@ package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
@@ -71,7 +69,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     private static final String FIX_FIELD_NAME = "disableBinaryPkCompareFix";
 
     /** Flag value during data upload and initial indexes validation. */
-    @Parameter(0)
+    @Parameter
     public boolean disableFixOnUpload;
 
     /** Flag value for indexes validation after server restart. */
@@ -130,13 +128,13 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     public void testValidateIndexesAfterRestart() throws Exception {
         assertNotNull(GridH2ValueCacheObject.class.getDeclaredField(FIX_FIELD_NAME));
 
-        AccForecastKey key1 = new AccForecastKey(
+        TestKey key1 = new TestKey(
             "9KkofUymNkX1HlNt89OqSPcJCNys",
             "UUn43TNrUDT1ip0eM1cc0tgVcFxW",
             "iRnj3JcTbmDUWnF49AcHSptMBUz"
         );
 
-        AccForecastKey key2 = new AccForecastKey(
+        TestKey key2 = new TestKey(
             "bhj4CF5sQxj6llPYrph0OM64",
             "I116KgWfT57dgdxehFWs05ae",
             "2QcyVgp8LMMZGug"
@@ -151,7 +149,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
 
             IgniteEx client = startClientGrid(1);
 
-            IgniteCache<AccForecastKey, AccForecastMandate> cache = client.createCache(createCacheConfiguration());
+            IgniteCache<TestKey, TestValue> cache = client.createCache(createCacheConfiguration());
 
             cache.put(key1, val(key1));
             cache.put(key2, val(key2));
@@ -203,8 +201,8 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     /**
      * @return Cache configuration for the test. Ensures that there are SQL indexes configured for the cache.
      */
-    private CacheConfiguration<AccForecastKey, AccForecastMandate> createCacheConfiguration() {
-        CacheConfiguration<AccForecastKey, AccForecastMandate> ccfg = new CacheConfiguration<>();
+    private CacheConfiguration<TestKey, TestValue> createCacheConfiguration() {
+        CacheConfiguration<TestKey, TestValue> ccfg = new CacheConfiguration<>();
 
         ccfg.setName(CACHE_NAME);
 
@@ -214,36 +212,26 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
 
         Set<String> keyFields = new HashSet<>();
 
-        keyFields.add("DBTORACC");
-        keyFields.add("CDTORID");
-        keyFields.add("MNDTID");
-        keyFields.add("DEBTORACCOUNTHASH");
-
-        Map<String, String> colAliases = new HashMap<>();
-
-        colAliases.put("cdtorID", "CDTORID");
-        colAliases.put("dbtorAcc", "DBTORACC");
-        colAliases.put("debtorAccountHash", "DEBTORACCOUNTHASH");
-        colAliases.put("domTimestamp", "DOMTIMESTAMP");
-        colAliases.put("mndtID", "MNDTID");
+        keyFields.add("STRKEY1");
+        keyFields.add("STRKEY2");
+        keyFields.add("STRKEY3");
+        keyFields.add("AFFINITY_KEY");
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
 
-        fields.put("CDTORID", "java.lang.String");
-        fields.put("DBTORACC", "java.lang.String");
-        fields.put("DEBTORACCOUNTHASH", "java.lang.Integer ");
-        fields.put("DOMTIMESTAMP", "java.time.LocalDateTime");
-        fields.put("MNDTID", "java.lang.String");
+        fields.put("STRKEY1", "java.lang.String");
+        fields.put("STRKEY2", "java.lang.String");
+        fields.put("STRKEY3", "java.lang.String");
+        fields.put("AFFINITY_KEY", "java.lang.Integer");
 
         QueryIndex qryIdx =
-            new QueryIndex("DBTORACC", QueryIndexType.SORTED, false, "ACCFORECASTMANDATE_DBTORACC_ASC_IDX");
+            new QueryIndex("STRKEY1", QueryIndexType.SORTED, false, "STRKEY1_ASC_IDX");
 
         QueryEntity qryEntity = new QueryEntity().setTableName("ACCFORECASTMANDATE")
-            .setKeyType(AccForecastKey.class.getName())
+            .setKeyType(TestKey.class.getName())
             .setKeyFields(keyFields)
             .setFields(fields)
-            .setValueType(AccForecastMandate.class.getName())
-            .setAliases(colAliases)
+            .setValueType(TestValue.class.getName())
             .setIndexes(singleton(qryIdx));
 
         ccfg.setQueryEntities(singletonList(qryEntity));
@@ -256,7 +244,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
 
         ccfg.setAffinityMapper(new CacheDefaultBinaryAffinityKeyMapper(
             new CacheKeyConfiguration[] {
-                new CacheKeyConfiguration(AccForecastKey.class.getName(), "debtorAccountHash")
+                new CacheKeyConfiguration(TestKey.class.getName(), "affinityKey")
             }
         ));
 
@@ -266,14 +254,14 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     /**
      * Creates a value for the key.
      */
-    private static AccForecastMandate val(AccForecastKey key) {
-        AccForecastMandate val = new AccForecastMandate();
+    private static TestValue val(TestKey key) {
+        TestValue val = new TestValue();
 
-        val.cdtorID = key.cdtorID;
-        val.dbtorAcc = key.dbtorAcc;
-        val.mndtID = key.mndtID;
+        val.strKey1 = key.strKey1;
+        val.strKey2 = key.strKey2;
+        val.strKey3 = key.strKey3;
 
-        val.cdtorName = GridTestUtils.randomString(rnd, 10);
+        val.value = GridTestUtils.randomString(rnd, 10);
 
         return val;
     }
@@ -281,27 +269,28 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
     /**
      * Key class. Class structure is taken from the real case and a bigger reproducer program for it.
      */
-    public static class AccForecastKey {
+    public static class TestKey {
         /** */
-        private final String dbtorAcc;
+        private final String strKey1;
 
         /** */
-        private final String cdtorID;
+        private final String strKey2;
 
         /** */
-        private final String mndtID;
+        private final String strKey3;
 
         /** */
+        @SuppressWarnings("unused")
         @AffinityKeyMapped
-        private final int debtorAccountHash;
+        private final int affinityKey;
 
         /** */
-        public AccForecastKey(String dbtorAcc, String cdtorID, String mndtID) {
-            this.dbtorAcc = dbtorAcc;
-            this.cdtorID = cdtorID;
-            this.mndtID = mndtID;
+        public TestKey(String strKey1, String strKey2, String strKey3) {
+            this.strKey1 = strKey1;
+            this.strKey2 = strKey2;
+            this.strKey3 = strKey3;
 
-            debtorAccountHash = hashString(dbtorAcc);
+            affinityKey = hashString(strKey1);
         }
 
         /** */
@@ -309,33 +298,23 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
             int h;
             return (toHash == null) ? 0 : (h = toHash.hashCode()) ^ (h >>> 16);
         }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "AccForecastKey{" +
-                "dbtorAcc='" + dbtorAcc + '\'' +
-                ", cdtorID='" + cdtorID + '\'' +
-                ", mndtID='" + mndtID + '\'' +
-                ", debtorAccountHash=" + debtorAccountHash +
-                '}';
-        }
     }
 
     /**
      * Value class. Has only one extra field, it's enough for the test.
      */
     @SuppressWarnings("unused")
-    public static class AccForecastMandate {
+    public static class TestValue {
         /** */
-        private String dbtorAcc;
+        private String strKey1;
 
         /** */
-        private String cdtorID;
+        private String strKey2;
 
         /** */
-        private String mndtID;
+        private String strKey3;
 
         /** */
-        private String cdtorName;
+        private String value;
     }
 }
