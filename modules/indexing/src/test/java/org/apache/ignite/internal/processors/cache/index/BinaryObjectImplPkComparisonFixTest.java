@@ -175,7 +175,7 @@ public class BinaryObjectImplPkComparisonFixTest extends AbstractIndexingCommonT
 
             VisorValidateIndexesJobResult res = validateIndexes(srv);
 
-            assertEquals(res.toString(), disableFixOnUpload  != disableFixOnRestart, res.hasIssues());
+            assertEquals(res.toString(), disableFixOnUpload != disableFixOnRestart, res.hasIssues());
         }
         finally {
             setFieldValue(null, GridH2ValueCacheObject.class, FIX_FIELD_NAME, false);

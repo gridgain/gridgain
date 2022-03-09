@@ -2174,8 +2174,17 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER =
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 
-    /** */
-    @SystemProperty(value = "", defaults = "false")
+    /**
+     * Disables PK comparator fix for binary objects, introduced in 8.8.11 and 8.7.40. It fixed wrong results of certain
+     * SELECT and JOIN queries. On rare ocasions, the fix leads to treating existing indexes as corrupted. This might
+     * lead to node failures. This flag allows to temporarily disable the fix if it happened, until user decides to
+     * rebuild problematic indexes.
+     */
+    @SystemProperty(value = "Disables PK comparator fix for binary objects, introduced in 8.8.11 and 8.7.40. It " +
+        "fixed wrong results of certain SELECT and JOIN queries. On rare ocasions, the fix leads to treating " +
+        "existing indexes as corrupted. This might lead to node failures. This flag allows to temporarily disable " +
+        "the fix if it happened, until user decides to rebuild problematic indexes. The default value is false.",
+        defaults = "false")
     public static final String IGNITE_DISABLE_BINARY_PK_COMPARE_FIX = "IGNITE_DISABLE_BINARY_PK_COMPARE_FIX";
 
     /**
