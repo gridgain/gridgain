@@ -2384,6 +2384,10 @@ public class IgniteTxHandler {
                                         for (int cntr = 1; cntr <= delta; cntr++) {
                                             ctx0.continuousQueries().skipUpdateCounter(null, part.id(), start + cntr,
                                                 topVer, rollbackOnPrimary);
+
+                                            if(rollbackOnPrimary) {
+                                                ctx0.dr().skipUpdateCounter(part.id(), start + cntr);
+                                            }
                                         }
                                     }
                                 }

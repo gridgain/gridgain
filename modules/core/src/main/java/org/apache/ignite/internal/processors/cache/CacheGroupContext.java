@@ -1058,8 +1058,12 @@ public class CacheGroupContext {
         for (int i = 0; i < contQryCaches.size(); i++) {
             GridCacheContext cctx = contQryCaches.get(i);
 
-            if (cacheId != cctx.cacheId())
+            if (cacheId != cctx.cacheId()) {
                 skipCtx = cctx.continuousQueries().skipUpdateCounter(skipCtx, part, cntr, topVer, primary);
+
+                if (primary)
+                    cctx.dr().skipUpdateCounter(part, cntr);
+            }
         }
 
         final List<Runnable> procC = skipCtx != null ? skipCtx.processClosures() : null;
