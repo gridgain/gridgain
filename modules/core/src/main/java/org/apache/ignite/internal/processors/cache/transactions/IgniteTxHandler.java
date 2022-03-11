@@ -2385,7 +2385,7 @@ public class IgniteTxHandler {
                                             ctx0.continuousQueries().skipUpdateCounter(null, part.id(), start + cntr,
                                                 topVer, rollbackOnPrimary);
 
-                                            if (rollbackOnPrimary)
+                                            if (rollbackOnPrimary && ctx0.dr().enabled())
                                                 ctx0.dr().skipUpdateCounter(part.id(), start + cntr);
                                         }
                                     }
