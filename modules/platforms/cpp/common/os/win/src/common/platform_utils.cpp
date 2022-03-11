@@ -17,11 +17,50 @@
 #include <time.h>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 
 #include <windows.h>
 
 #include <ignite/ignite_error.h>
 #include <ignite/common/platform_utils.h>
+
+
+/**
+ * Convert standard WinAPI wide-char string to utf-8 string if possible.
+ *
+ * @param wtz Null terminated wide-char string.
+ * @return UTF-8 string.
+ */
+std::string WcharToUtf8(const WCHAR *wtz)
+{
+    int len = WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            wtz,
+            -1,
+            NULL,
+            0,
+            NULL,
+            NULL);
+
+    if (len <= 0)
+        return std::string();
+
+    std::string utf8Tz;
+    utf8Tz.resize(len);
+
+    WideCharToMultiByte(
+            CP_UTF8,
+            0,
+            wtz,
+            -1,
+            &utf8Tz[0],
+            len,
+            NULL,
+            NULL);
+
+    return utf8Tz;
+}
 
 // Original code is suggested by MSDN at
 // https://docs.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time
@@ -91,6 +130,59 @@ namespace ignite
             out.tm_sec = systemTime.wSecond;
 
             return true;
+        }
+
+        std::string GetTimezone()
+        {
+            TIME_ZONE_INFORMATION info;
+            memset(&info, 0, sizeof(info));
+
+            const WCHAR *wtz = 0;
+
+            DWORD res = GetTimeZoneInformation(&info);
+            switch (res)
+            {
+                case TIME_ZONE_ID_STANDARD:
+                {
+                    wtz = info.StandardName;
+                    break;
+                }
+
+                case TIME_ZONE_ID_DAYLIGHT:
+                {
+                    wtz = info.DaylightName;
+                    break;
+                }
+
+                case TIME_ZONE_ID_UNKNOWN:
+                default:
+                    break;
+            }
+
+            if (wtz)
+                return WcharToUtf8(wtz);
+
+            std::stringstream tzStream;
+
+            tzStream << "UTC";
+
+            if (info.Bias == 0)
+                return tzStream.str();
+
+            int minutes = info.Bias;
+            if (info.Bias < 0)
+            {
+                minutes = -minutes;
+                tzStream << "+";
+            }
+            else
+                tzStream << "-";
+
+            tzStream << std::setfill('0')
+                << std::setw(2) << (minutes / 60) << ":"
+                << std::setw(2) << (minutes % 60);
+
+            return tzStream.str();
         }
 
         std::string GetEnv(const std::string& name)
