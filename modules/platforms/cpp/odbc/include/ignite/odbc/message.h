@@ -86,8 +86,9 @@ namespace ignite
              * Constructor.
              *
              * @param config Configuration.
+             * @param timezone Client's timezone.
              */
-            HandshakeRequest(const config::Configuration& config);
+            HandshakeRequest(const config::Configuration& config, const std::string& timezone);
 
             /**
              * Destructor.
@@ -103,6 +104,9 @@ namespace ignite
         private:
             /** Configuration. */
             const config::Configuration& config;
+
+            /** Timezone. */
+            const std::string& timezone;
         };
 
         /**
