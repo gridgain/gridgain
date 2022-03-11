@@ -42,6 +42,7 @@ import org.apache.ignite.internal.managers.deployment.P2PClassNotFoundException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceConfiguration;
+import org.apache.ignite.services.ServiceDeploymentException;
 import org.apache.ignite.stream.StreamReceiver;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
@@ -170,7 +171,14 @@ public class P2PClassLoadingFailureHandlingTest extends GridCommonAbstractTest {
             .setTotalCount(1)
             .setService(svc);
 
-        client.services().deploy(serviceConfig);
+        try {
+            client.services().deploy(serviceConfig);
+
+            // fall through
+            // TODO: GG-34888 - the exception should always be thrown
+        } catch (ServiceDeploymentException e) {
+            assertThat(e.getMessage(), startsWith("Failed to deploy some services"));
+        }
 
         assertThatFailureHandlerIsNotCalled();
     }
