@@ -1050,6 +1050,17 @@ public class CacheGroupContext {
             listenerLock.readLock().unlock();
         }
 
+        if (isDrEnabled() && primary) {
+            List<GridCacheContext> caches = this.caches;
+
+            for (int i = 0; i < caches.size(); i++) {
+                GridCacheContext cctx = caches.get(i);
+
+                if (cctx.dr().enabled() && cacheId != cctx.cacheId())
+                    cctx.dr().skipUpdateCounter(part, cntr);
+            }
+        }
+
         if (contQryCaches == null)
             return;
 

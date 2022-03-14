@@ -105,9 +105,20 @@ public interface GridCacheReplicationManager extends GridCacheManager {
      * Tombstone cleanup callback.
      *
      * @param part Partition.
-     * @param updCnt Removed tombstone update countder.
+     * @param updCnt Removed tombstone update counter.
      */
     default void onTombstoneCleaned(int part, long updCnt) {
+        // No op.
+    }
+
+    /**
+     * Skip update counter callback.
+     * The method is called when cache groups is used and update counter is reserved for update another cache from the cache group.
+     *
+     * @param part Partition.
+     * @param updCnt Update counter to skip.
+     */
+    default void skipUpdateCounter(int part, long updCnt) {
         // No op.
     }
 }
