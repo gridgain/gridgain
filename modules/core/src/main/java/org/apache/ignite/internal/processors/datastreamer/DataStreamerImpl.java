@@ -2225,7 +2225,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
             AffinityTopologyVersion topVer = topFut.topologyVersion();
 
-            GridCacheVersion ver = new GridCacheVersion(cctx.versions().isolatedStreamerVersion());
+            GridCacheVersion ver = cctx.versions().isolatedStreamerVersion();
 
             long ttl = CU.TTL_ETERNAL;
             long expiryTime = CU.EXPIRE_TIME_ETERNAL;
