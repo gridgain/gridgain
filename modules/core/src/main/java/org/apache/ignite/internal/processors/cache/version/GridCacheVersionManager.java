@@ -211,7 +211,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @return Version for entries loaded with isolated streamer.
      */
     public GridCacheVersion isolatedStreamerVersion() {
-        return isolatedStreamerVer;
+        return new GridCacheVersion(isolatedStreamerVer);
     }
 
     /**
