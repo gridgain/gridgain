@@ -42,7 +42,7 @@ struct TransactionTestSuiteFixture : public odbc::OdbcTestSuite
 {
     static Ignite StartAdditionalNode(const char* name)
     {
-        return StartTestNode("queries-transaction.xml", name);
+        return StartPlatformNode("queries-transaction.xml", name);
     }
 
     /**
