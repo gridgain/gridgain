@@ -655,9 +655,7 @@ namespace ignite
                 return SqlResult::AI_ERROR;
             }
 
-            std::string timezone = common::GetTimezone();
-
-            HandshakeRequest req(config, timezone);
+            HandshakeRequest req(config);
             HandshakeResponse rsp;
 
             try

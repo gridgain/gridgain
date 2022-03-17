@@ -132,59 +132,6 @@ namespace ignite
             return true;
         }
 
-        std::string GetTimezone()
-        {
-            TIME_ZONE_INFORMATION info;
-            memset(&info, 0, sizeof(info));
-
-            const WCHAR *wtz = 0;
-
-            DWORD res = GetTimeZoneInformation(&info);
-            switch (res)
-            {
-                case TIME_ZONE_ID_STANDARD:
-                {
-                    wtz = info.StandardName;
-                    break;
-                }
-
-                case TIME_ZONE_ID_DAYLIGHT:
-                {
-                    wtz = info.DaylightName;
-                    break;
-                }
-
-                case TIME_ZONE_ID_UNKNOWN:
-                default:
-                    break;
-            }
-
-            if (wtz)
-                return WcharToUtf8(wtz);
-
-            std::stringstream tzStream;
-
-            tzStream << "UTC";
-
-            if (info.Bias == 0)
-                return tzStream.str();
-
-            int minutes = info.Bias;
-            if (info.Bias < 0)
-            {
-                minutes = -minutes;
-                tzStream << "+";
-            }
-            else
-                tzStream << "-";
-
-            tzStream << std::setfill('0')
-                << std::setw(2) << (minutes / 60) << ":"
-                << std::setw(2) << (minutes % 60);
-
-            return tzStream.str();
-        }
-
         std::string GetEnv(const std::string& name)
         {
             static const std::string empty;

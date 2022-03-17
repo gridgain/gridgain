@@ -32,7 +32,6 @@ namespace ignite
         const ProtocolVersion ProtocolVersion::VERSION_2_5_0(2, 5, 0);
         const ProtocolVersion ProtocolVersion::VERSION_2_7_0(2, 7, 0);
         const ProtocolVersion ProtocolVersion::VERSION_2_8_0(2, 8, 0);
-        const ProtocolVersion ProtocolVersion::VERSION_2_8_17(2, 8, 17);
 
         ProtocolVersion::VersionSet::value_type supportedArray[] = {
             ProtocolVersion::VERSION_2_1_0,
@@ -41,8 +40,7 @@ namespace ignite
             ProtocolVersion::VERSION_2_3_2,
             ProtocolVersion::VERSION_2_5_0,
             ProtocolVersion::VERSION_2_7_0,
-            ProtocolVersion::VERSION_2_8_0,
-            ProtocolVersion::VERSION_2_8_17
+            ProtocolVersion::VERSION_2_8_0
         };
 
         const ProtocolVersion::VersionSet ProtocolVersion::supported(supportedArray,
@@ -71,7 +69,7 @@ namespace ignite
 
         const ProtocolVersion& ProtocolVersion::GetCurrent()
         {
-            return VERSION_2_8_17;
+            return VERSION_2_8_0;
         }
 
         void ThrowParseError()

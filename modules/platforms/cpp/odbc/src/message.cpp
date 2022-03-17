@@ -46,9 +46,8 @@ namespace ignite
 {
     namespace odbc
     {
-        HandshakeRequest::HandshakeRequest(const config::Configuration& config, const std::string& timezone) :
-            config(config),
-            timezone(timezone)
+        HandshakeRequest::HandshakeRequest(const config::Configuration& config) :
+            config(config)
         {
             // No-op.
         }
@@ -88,9 +87,6 @@ namespace ignite
 
             if (version >= ProtocolVersion::VERSION_2_7_0)
                 writer.WriteInt8(config.GetNestedTxMode());
-
-            if (version >= ProtocolVersion::VERSION_2_8_17)
-                writer.WriteString(timezone);
         }
 
         QueryExecuteRequest::QueryExecuteRequest(const std::string& schema, const std::string& sql,

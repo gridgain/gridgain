@@ -139,14 +139,6 @@ BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_8_0)
     InsertTestBatch(11, 20, 9);
 }
 
-BOOST_AUTO_TEST_CASE(TestConnectionProtocolVersion_2_8_17)
-{
-    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PROTOCOL_VERSION=2.8.17");
-
-    InsertTestStrings(10, false);
-    InsertTestBatch(11, 20, 9);
-}
-
 BOOST_AUTO_TEST_CASE(TestConnectionRangeBegin)
 {
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110..11115;SCHEMA=cache");

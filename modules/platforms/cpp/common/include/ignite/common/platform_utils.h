@@ -51,13 +51,6 @@ namespace ignite
         IGNITE_IMPORT_EXPORT bool IgniteGmTime(time_t in, tm& out);
 
         /**
-         * Get current timezone name in standard format.
-         *
-         * @return Timezone notion in string format.
-         */
-        IGNITE_IMPORT_EXPORT std::string GetTimezone();
-
-        /**
          * Read system environment variable taking thread-safety in count.
          *
          * @param name Environment variable name.
