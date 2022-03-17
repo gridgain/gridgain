@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.odbc.odbc;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.TimeZone;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
@@ -55,6 +57,9 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
     /** Protocol version */
     private final ClientListenerProtocolVersion ver;
+
+    /** Client Timezone. */
+    private static final TimeZone clientTz = TimeZone.getTimeZone("GMT");
 
     /**
      * @param ctx Context.
@@ -241,11 +246,11 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
      * @param paramNum Number of parameters in a row
      * @return Parameters array.
      */
-    @NotNull private static Object[] readParameterRow(BinaryReaderExImpl reader, int paramNum) {
+    @NotNull private Object[] readParameterRow(BinaryReaderExImpl reader, int paramNum) {
         Object[] params = new Object[paramNum];
 
         for (int i = 0; i < paramNum; ++i)
-            params[i] = SqlListenerUtils.readObject(reader, true);
+            params[i] = SqlListenerUtils.readSqlField(reader, clientTz, true);
 
         return params;
     }
@@ -322,24 +327,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
             writer.writeLong(res.queryId());
 
-            Collection<?> items0 = res.items();
-
-            assert items0 != null;
-
-            writer.writeBoolean(res.last());
-
-            writer.writeInt(items0.size());
-
-            for (Object row0 : items0) {
-                if (row0 != null) {
-                    Collection<?> row = (Collection<?>)row0;
-
-                    writer.writeInt(row.size());
-
-                    for (Object obj : row)
-                        SqlListenerUtils.writeObject(writer, obj, true);
-                }
-            }
+            writeResultPage(writer, res.last(), res.items());
         }
         else if (res0 instanceof OdbcQueryMoreResultsResult) {
             OdbcQueryMoreResultsResult res = (OdbcQueryMoreResultsResult) res0;
@@ -349,24 +337,7 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
 
             writer.writeLong(res.queryId());
 
-            Collection<?> items0 = res.items();
-
-            assert items0 != null;
-
-            writer.writeBoolean(res.last());
-
-            writer.writeInt(items0.size());
-
-            for (Object row0 : items0) {
-                if (row0 != null) {
-                    Collection<?> row = (Collection<?>)row0;
-
-                    writer.writeInt(row.size());
-
-                    for (Object obj : row)
-                        SqlListenerUtils.writeObject(writer, obj, true);
-                }
-            }
+            writeResultPage(writer, res.last(), res.items());
         }
         else if (res0 instanceof OdbcQueryCloseResult) {
             OdbcQueryCloseResult res = (OdbcQueryCloseResult) res0;
@@ -411,6 +382,28 @@ public class OdbcMessageParser implements ClientListenerMessageParser {
             assert false : "Should not reach here.";
 
         return new ClientMessage(writer.array());
+    }
+
+    /**
+     * Write result page.
+     * @param writer Writer.
+     * @param last Last page flag.
+     * @param items Rows to write.
+     */
+    private void writeResultPage(BinaryWriterExImpl writer, boolean last, @NotNull Collection<?> items) {
+        writer.writeBoolean(last);
+        writer.writeInt(items.size());
+
+        for (Object row0 : items) {
+            if (row0 != null) {
+                Collection<?> row = (Collection<?>)row0;
+
+                writer.writeInt(row.size());
+
+                for (Object obj : row)
+                    SqlListenerUtils.writeSqlField(writer, obj, clientTz, true);
+            }
+        }
     }
 
     /**
