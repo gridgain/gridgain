@@ -28,6 +28,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.exceptions.SqlCacheException;
+import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
@@ -48,7 +49,7 @@ import org.jetbrains.annotations.Nullable;
 public abstract class SqlListenerUtils {
     /**
      * @param reader Reader.
-     * @param binObjAllow Allow to read non plaint objects.
+     * @param binObjAllow Allow reading non plaint objects.
      * @return Read object.
      * @throws BinaryObjectException On error.
      */
@@ -59,7 +60,7 @@ public abstract class SqlListenerUtils {
 
     /**
      * @param reader Reader.
-     * @param binObjAllow Allow to read non plaint objects.
+     * @param binObjAllow Allow reading non plaint objects.
      * @param keepBinary Whether to deserialize objects or keep in binary format.
      * @return Read object.
      * @throws BinaryObjectException On error.
@@ -74,7 +75,7 @@ public abstract class SqlListenerUtils {
     /**
      * @param type Object type.
      * @param reader Reader.
-     * @param binObjAllow Allow to read non plaint objects.
+     * @param binObjAllow Allow reading non plaint objects.
      * @return Read object.
      * @throws BinaryObjectException On error.
      */
@@ -186,7 +187,7 @@ public abstract class SqlListenerUtils {
     /**
      * @param writer Writer.
      * @param obj Object to write.
-     * @param binObjAllow Allow to write non plain objects.
+     * @param binObjAllow Allow writing non-plain objects.
      * @throws BinaryObjectException On error.
      */
     public static void writeObject(BinaryWriterExImpl writer, @Nullable Object obj, boolean binObjAllow)
@@ -392,5 +393,63 @@ public abstract class SqlListenerUtils {
         ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
 
         return zdt.toInstant().toEpochMilli();
+    }
+
+    /**
+     * @param reader Reader.
+     * @param clientTz Client timezone.
+     * @return Read object.
+     * @throws BinaryObjectException On error.
+     */
+    @Nullable
+    public static Object readSqlField(BinaryRawReaderEx reader, TimeZone clientTz, boolean allowBinary)
+            throws BinaryObjectException {
+        BinaryReaderExImpl reader0 = (BinaryReaderExImpl) reader;
+        TimeZone serverTz = TimeZone.getDefault();
+
+        byte type = reader0.readByte();
+        switch (type) {
+            case GridBinaryMarshaller.DATE: {
+                return new java.sql.Date(convertWithTimeZone(
+                        BinaryUtils.doReadDate(reader0.in()),clientTz, serverTz).getTime());
+            }
+
+            case GridBinaryMarshaller.TIME: {
+                return convertWithTimeZone(BinaryUtils.doReadTime(reader0.in()), clientTz, serverTz);
+            }
+
+            case GridBinaryMarshaller.TIMESTAMP: {
+                return convertWithTimeZone(BinaryUtils.doReadTimestamp(reader0.in()), clientTz, serverTz);
+            }
+
+            default:
+                reader0.in().position(reader0.in().position() - 1);
+                return readObject(reader0, allowBinary);
+        }
+    }
+
+    /**
+     * @param writer Writer.
+     * @param obj Object to write.
+     * @param clientTz Client timezone.
+     * @throws BinaryObjectException On error.
+     */
+    public static void writeSqlField(BinaryWriterExImpl writer, @Nullable Object obj, TimeZone clientTz,
+            boolean allowBinary) throws BinaryObjectException {
+        Class<?> cls = obj == null ? null : obj.getClass();
+
+        TimeZone serverTz = TimeZone.getDefault();
+
+        if (cls == java.sql.Date.class || cls == java.util.Date.class) {
+            writer.writeDate(convertWithTimeZone((java.util.Date)obj, serverTz, clientTz));
+        }
+        else if (cls == Time.class) {
+            writer.writeTime(convertWithTimeZone((Time)obj, serverTz, clientTz));
+        }
+        else if (cls == Timestamp.class) {
+            writer.writeTimestamp(convertWithTimeZone((Timestamp)obj, serverTz, clientTz));
+        }
+        else
+            writeObject(writer, obj, allowBinary);
     }
 }

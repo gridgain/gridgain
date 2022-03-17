@@ -153,31 +153,6 @@ namespace ignite_test
     void InitConfig(ignite::IgniteConfiguration& cfg, const char* cfgFile);
 
     /**
-     * Start Ignite node.
-     *
-     * Starts new Ignite node from specified config file.
-     * Config file is searched in path specified by IGNITE_NATIVE_TEST_CPP_CONFIG_PATH
-     * environmental variable.
-     *
-     * @param cfgFile Ignite node config file name without path.
-     * @return New node.
-     */
-    ignite::Ignite StartNode(const char* cfgFile);
-
-    /**
-     * Start Ignite node.
-     *
-     * Starts new Ignite node with the specified name and from specified config file.
-     * Config file is searched in path specified by IGNITE_NATIVE_TEST_CPP_CONFIG_PATH
-     * environmental variable.
-     *
-     * @param cfgFile Ignite node config file name without path.
-     * @param name Node name.
-     * @return New node.
-     */
-    ignite::Ignite StartNode(const char* cfgFile, const char* name);
-
-    /**
      * Start node with the config for the current platform.
      *
      * @param cfg Basic config path. Changed to platform config if needed.
