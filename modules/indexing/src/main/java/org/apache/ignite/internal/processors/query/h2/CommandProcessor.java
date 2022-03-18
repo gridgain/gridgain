@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -607,6 +608,8 @@ public class CommandProcessor {
                     if (prop == null)
                         throw new SchemaOperationException(SchemaOperationException.CODE_COLUMN_NOT_FOUND, col.name());
 
+                    printIndexColumnWarningIfNeeded(prop);
+
                     flds.put(prop.name(), !col.descending());
                 }
 
@@ -794,6 +797,8 @@ public class CommandProcessor {
                 else {
                     QueryEntity e = toQueryEntity(ctx, cmd);
 
+                    printTablePKWarningIfNeeded(cmd, e);
+
                     CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(cmd.tableName());
 
                     ccfg.setQueryEntities(Collections.singleton(e));
@@ -847,9 +852,6 @@ public class CommandProcessor {
                 }
                 else {
                     ctx.security().authorize(tbl.cacheName(), SecurityPermission.CACHE_DESTROY);
-
-                    String schema = tbl.getSchema().getName();
-                    String tblName = tbl.getName();
 
                     ctx.query().dynamicTableDrop(tbl.cacheName(), cmd.tableName(), cmd.ifExists());
                 }
@@ -983,6 +985,36 @@ public class CommandProcessor {
         }
         catch (Exception e) {
             throw new IgniteSQLException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Check if index property is a Time type property, and print warning if needed.
+     *
+     * @param property Index property.
+     */
+    private void printIndexColumnWarningIfNeeded(GridQueryProperty property) {
+        if (property.type() == Time.class) {
+            log.warning("Index property " + property.name() + " is a Time type object. "
+                    + "It is expected that all Time type objects are set to the \"zero epoch\" value of January 1, 1970. "
+                    + "If they are not, please set them appropriately.");
+        }
+    }
+
+    /**
+     * Check if table schema contains Time type columns, and print warning if needed.
+     *
+     * @param cmd Create table command.
+     * @param entity Query entity con.
+     */
+    private void printTablePKWarningIfNeeded(GridSqlCreateTable cmd, QueryEntity entity) {
+        for (String primaryKeyColumn : cmd.primaryKeyColumns()) {
+            String s = entity.getFields().get(primaryKeyColumn);
+            if (Time.class.getName().equals(s)) {
+                log.warning("Table PK column " + primaryKeyColumn + " is a Time type object. "
+                        + "It is expected that all Time type objects are set to the \"zero epoch\" value of January 1, 1970. "
+                        + "If they are not, please set them appropriately.");
+            }
         }
     }
 
