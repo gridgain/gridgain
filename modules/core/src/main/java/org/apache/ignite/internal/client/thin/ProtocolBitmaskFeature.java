@@ -53,7 +53,13 @@ public enum ProtocolBitmaskFeature {
     BINARY_CONFIGURATION(8),
 
     /** Handle of {@link ClientServices#serviceDescriptors()}. */
-    GET_SERVICE_DESCRIPTORS(9);
+    GET_SERVICE_DESCRIPTORS(9),
+
+    /** Invoke service methods with caller context. */
+    SERVICE_INVOKE_CALLCTX(10),
+
+    /** Handle OP_HEARTBEAT and OP_GET_IDLE_TIMEOUT. */
+    HEARTBEAT(11);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

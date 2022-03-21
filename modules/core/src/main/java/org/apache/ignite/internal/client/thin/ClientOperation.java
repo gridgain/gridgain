@@ -24,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 /** Operation codes. */
 public enum ClientOperation {
     /** Resource close. */RESOURCE_CLOSE(0),
+    /** Heartbeat. */ HEARTBEAT(1),
+    /** Get idle timeout. */ GET_IDLE_TIMEOUT(2),
 
     /** Cache get or create with name. */CACHE_GET_OR_CREATE_WITH_NAME(1052),
     /** Cache put. */CACHE_PUT(1001),

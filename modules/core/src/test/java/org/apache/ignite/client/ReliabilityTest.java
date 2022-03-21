@@ -37,7 +37,10 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.client.thin.AbstractThinClientTest;
 import org.apache.ignite.internal.client.thin.ClientOperation;
@@ -307,9 +310,9 @@ public class ReliabilityTest extends AbstractThinClientTest {
 
         String nullOpsNames = nullOps.stream().map(Enum::name).collect(Collectors.joining(", "));
 
-        long expectedNullCount = 12;
+        long expectedNullCount = 14;
 
-        String msg = expectedNullCount
+        String msg = nullOps.size()
                 + " operation codes do not have public equivalent. When adding new codes, update ClientOperationType too. Missing ops: "
                 + nullOpsNames;
 
@@ -561,6 +564,25 @@ public class ReliabilityTest extends AbstractThinClientTest {
                 } catch (Throwable ignore) {
                 }
             }
+        }
+    }
+
+    /**
+     * Tests that server does not disconnect idle clients when heartbeats are enabled.
+     */
+    @Test
+    public void testServerDoesNotDisconnectIdleClientWithHeartbeats() throws Exception {
+        IgniteConfiguration serverCfg = getConfiguration().setClientConnectorConfiguration(
+                new ClientConnectorConfiguration().setIdleTimeout(2000));
+
+        ClientConfiguration clientCfg = new ClientConfiguration()
+                .setAddresses("127.0.0.1")
+                .setHeartbeatEnabled(true)
+                .setHeartbeatInterval(500);
+
+        try (Ignite ignored = startGrid(serverCfg); IgniteClient client = Ignition.startClient(clientCfg)) {
+            Thread.sleep(6000);
+            assertEquals(0, client.cacheNames().size());
         }
     }
 
