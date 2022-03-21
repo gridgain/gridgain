@@ -68,7 +68,9 @@ public class ClientConfigurationTest {
             .setSslTrustCertificateKeyStorePath(GridTestUtils.keyStorePath("trustone"))
             .setSslTrustCertificateKeyStoreType(DFLT_STORE_TYPE)
             .setSslTrustCertificateKeyStorePassword(GridTestUtils.keyStorePassword())
-            .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM);
+            .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM)
+            .setHeartbeatInterval(3000)
+            .setHeartbeatEnabled(true);
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 
@@ -114,5 +116,16 @@ public class ClientConfigurationTest {
             Assert.assertTrue(containsMsg);
             Assert.assertEquals(1, collect.size());
         }
+    }
+
+    /**
+     * Tests that invalid heartbat interval values are not allowed.
+     */
+    @Test
+    public void testInvalidHeartbeatIntervalThrows() {
+        ClientConfiguration cfg = new ClientConfiguration().setHeartbeatInterval(-1).setAddresses("127.0.0.1");
+
+        GridTestUtils.assertThrowsAnyCause(null, () -> Ignition.startClient(cfg), IllegalArgumentException.class,
+                "heartbeatInterval cannot be zero or less.");
     }
 }
