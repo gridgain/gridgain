@@ -195,8 +195,8 @@ public final class IgniteNodeAttributes {
     /** User authentication enabled flag. */
     public static final String ATTR_AUTHENTICATION_ENABLED = ATTR_PREFIX + ".authentication.enabled";
 
-    @Deprecated
     /** Encryption master key digest. Only needed for compatibility with 8.7.X versions. */
+    @Deprecated
     public static final String ATTR_ENCRYPTION_MASTER_KEY_DIGEST = ATTR_PREFIX + ".master.key.digest";
 
     /** Rebalance thread pool size. */

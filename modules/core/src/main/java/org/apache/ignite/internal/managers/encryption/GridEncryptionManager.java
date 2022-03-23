@@ -248,8 +248,12 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     @Override public void start() throws IgniteCheckedException {
         startSpi();
 
-        if (getSpi().masterKeyDigest() != null)
-            ctx.addNodeAttribute(ATTR_ENCRYPTION_MASTER_KEY_DIGEST, getSpi().masterKeyDigest());
+        byte[] digest = getSpi().masterKeyDigest();
+        if (digest != null) {
+            // Although we send master key digest in the joining data,
+            // this node attribute is still needed for compatibility with the 8.7.X
+            ctx.addNodeAttribute(ATTR_ENCRYPTION_MASTER_KEY_DIGEST, digest);
+        }
 
         ctx.event().addDiscoveryEventListener(discoLsnr = (evt, discoCache) -> {
             UUID leftNodeId = evt.eventNode().id();
