@@ -53,7 +53,7 @@ public:
     bool WaitForConnections(VectorLogger* logger, size_t expected, int32_t timeout = 5000)
     {
         return ignite_test::WaitForCondition(
-                boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, this, logger, expected),
+                boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, logger, expected),
                 timeout);
     }
 
@@ -82,7 +82,7 @@ public:
      * @param expect connections to expect.
      * @return @c true on success.
      */
-    bool CheckActiveConnections(VectorLogger* logger, size_t expect)
+    static bool CheckActiveConnections(VectorLogger* logger, size_t expect)
     {
         return GetActiveConnections(logger) == expect;
     }
@@ -103,10 +103,10 @@ public:
         std::vector<VectorLogger::Event> logs = logger->GetEvents();
         for (Events::iterator it = logs.begin(); it != logs.end(); ++it)
         {
-            if (it->message.find("Client connected") != std::string::npos)
+            if (it->message.find("Client connected: ") != std::string::npos)
                 ++connected;
 
-            if (it->message.find("Client disconnected") != std::string::npos)
+            if (it->message.find("Client disconnected: ") != std::string::npos)
                 ++disconnected;
         }
 
