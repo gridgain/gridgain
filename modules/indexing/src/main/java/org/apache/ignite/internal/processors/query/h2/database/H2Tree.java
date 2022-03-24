@@ -55,6 +55,7 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerI
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -155,6 +156,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Whether index was created from scratch during owning node lifecycle. */
     private final boolean created;
 
+    private final boolean useFixedComparator;
+
     /**
      * Constructor.
      *
@@ -252,6 +255,21 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             // Page is ready - read meta information.
             MetaPageInfo metaInfo = getMetaInfo();
 
+            IgniteProductVersion ver_8_7_40 = IgniteProductVersion.fromString("8.7.40");
+            IgniteProductVersion ver_8_8_11 = IgniteProductVersion.fromString("8.8.11");
+
+            IgniteProductVersion idxCreateVer = metaInfo.createdVersion();
+
+            if (idxCreateVer != null) {
+                if ((idxCreateVer.compareTo(ver_8_7_40) >= 0 && idxCreateVer.minor() == 7) ||
+                    idxCreateVer.compareTo(ver_8_8_11) >= 0)
+                    useFixedComparator = true;
+                else
+                    useFixedComparator = false;
+            }
+            else
+                useFixedComparator = false;
+
             unwrappedPk = metaInfo.useUnwrappedPk();
 
             cols = (unwrappedPk ? unwrappedCols : wrappedCols).toArray(H2Utils.EMPTY_COLUMNS);
@@ -304,6 +322,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         }
         else {
             unwrappedPk = true;
+
+            useFixedComparator = true;
 
             cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
@@ -401,9 +421,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
         if (follow) {
             row.initFromLink(
-                    cctx.group(),
-                    CacheDataRowAdapter.RowData.FULL,
-                    true
+                cctx.group(),
+                CacheDataRowAdapter.RowData.FULL,
+                true
             );
         }
 
@@ -473,7 +493,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return Row.
      */
     private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr, CacheDataRowAdapter.RowData rowData)
-            throws IgniteCheckedException {
+        throws IgniteCheckedException {
         int partId = PageIdUtils.partId(PageIdUtils.pageId(link));
 
         MvccDataRow row = new MvccDataRow(
@@ -599,7 +619,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx,
-        H2Row row) throws IgniteCheckedException {
+                                    H2Row row) throws IgniteCheckedException {
         try {
             if (inlineSize() == 0)
                 return compareRows(getRow(io, pageAddr, idx), row);
@@ -652,6 +672,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                     }
 
                     Value v1 = rowData.getValue(idx0);
+
+                    /**
+                     * Stub GG-33962, GG-34893 (new comparator) workaround.
+                     * Versions < 8.7.40 and < 8.8.11 are used incorrect comparator and a simple comparator change
+                     * leads to the tree corruprion. Thus for "old" versions is used appropriate old comparator,
+                     * we take into account that later all indexes will be rebuild and only one ver of comparator
+                     * will be used.
+                     */
+                    if (useFixedComparator && v1 instanceof GridH2ValueCacheObject)
+                        ((GridH2ValueCacheObject)v1).useCorrectComparator();
 
                     int c = compareValues(v1, v2);
 
@@ -967,6 +997,13 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
          */
         public boolean inlineDecimalSupported() {
             return inlineDecimalSupported;
+        }
+
+        /**
+         * @return Created version.
+         */
+        public IgniteProductVersion createdVersion() {
+            return createdVer;
         }
     }
 

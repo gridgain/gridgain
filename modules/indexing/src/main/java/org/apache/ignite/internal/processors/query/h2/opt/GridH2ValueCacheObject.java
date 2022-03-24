@@ -43,6 +43,8 @@ public class GridH2ValueCacheObject extends Value {
     /** Object value context. */
     private CacheObjectValueContext valCtx;
 
+    private boolean useFixedComparator;
+
     /**
      * Constructor.
      *
@@ -171,13 +173,29 @@ public class GridH2ValueCacheObject extends Value {
             if (o1.equals(o2))
                 return 0;
 
-            if (o1.getClass().equals(BinaryObjectImpl.class))
+            if (correctComparator() && o1.getClass().equals(BinaryObjectImpl.class))
                 return BinaryObjectImpl.compare(o1, o2);
 
             return Bits.compareNotNullSigned(getBytesNoCopy(), v.getBytesNoCopy());
         }
 
         return h1 > h2 ? 1 : -1;
+    }
+
+    /**
+     * Stub GG-33962, GG-34893 (new comparator) workaround.
+     * Versions < 8.7.40 and < 8.8.11 are used incorrect comparator and a simple comparator change
+     * leads to the tree corruprion. Thus for "old" versions is used appropriate old comparator,
+     * we take into account that later all indexes will be rebuild and only one ver of comparator
+     * will be used.
+     */
+    public void useCorrectComparator() {
+        useFixedComparator = true;
+    }
+
+    /** */
+    public boolean correctComparator() {
+        return useFixedComparator;
     }
 
     /** {@inheritDoc} */
