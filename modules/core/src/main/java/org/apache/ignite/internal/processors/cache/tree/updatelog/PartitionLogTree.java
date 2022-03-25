@@ -110,9 +110,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         cmp = Long.compare(updCntr, row.updCntr);
 
-        boolean flag = false;
         /* remove row */
-        if (flag || cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
+        if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
             if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK))
                 throw new AssertionError("updCounter=" + updCntr);
             else
