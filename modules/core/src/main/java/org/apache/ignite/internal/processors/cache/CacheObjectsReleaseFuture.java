@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.lang.IgniteReducer;
@@ -25,6 +26,11 @@ import org.jetbrains.annotations.Nullable;
  *
  */
 public class CacheObjectsReleaseFuture<T, R> extends GridCompoundFuture<T, R> {
+
+    /** */
+    private static final boolean CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL =
+        IgniteSystemProperties.getBoolean("CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL", false);
+
     /** */
     private AffinityTopologyVersion topVer;
 
@@ -54,6 +60,9 @@ public class CacheObjectsReleaseFuture<T, R> extends GridCompoundFuture<T, R> {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return type + "ReleaseFuture [topVer=" + topVer + ", futures=" + futures() + "]";
+        if (CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL)
+            return type + "ReleaseFuture [topVer=" + topVer + ", futures=" + futures() + "]";
+        else
+            return type + "ReleaseFuture [topVer=" + topVer + ", futuresCount=" + futuresCountNoLock() + "]";
     }
 }
