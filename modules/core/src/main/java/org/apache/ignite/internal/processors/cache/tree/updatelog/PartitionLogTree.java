@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
@@ -80,7 +81,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row) {
+    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row)
+        throws IgniteCheckedException {
         UpdateLogRowIO io = (UpdateLogRowIO)iox;
 
         int cmp;
@@ -108,7 +110,13 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         cmp = Long.compare(updCntr, row.updCntr);
 
-        assert cmp != 0 || row.link == 0 /* search insertion poin */ || io.getLink(pageAddr, idx) == row.link /* remove row */;
+        /* remove row */
+        if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
+            if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK))
+                throw new AssertionError("updCounter=" + updCntr);
+            else
+                throw new LogTreeDuplicateUpdateCounterException(io.getLink(pageAddr, idx), "updCounter=" + updCntr);
+        }
 
         return cmp;
     }

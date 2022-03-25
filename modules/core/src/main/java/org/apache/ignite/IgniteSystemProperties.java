@@ -2175,6 +2175,15 @@ public final class IgniteSystemProperties {
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 
     /**
+     * Enables additional check that sender of communication handshake message corresponds to the node id
+     * included in the message. The default value is {@code false}.
+     */
+    @SystemProperty(value = "Enables asserts instead of warning or error log messaged on check some " +
+        "internal invariants", defaults = "false")
+    public static final String IGNITE_STRICT_CONSISTENCY_CHECK =
+        "IGNITE_STRICT_CONSISTENCY_CHECK";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

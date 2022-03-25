@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
+
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -93,6 +96,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMaxSearc
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMinSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshotSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.LogTreeDuplicateUpdateCounterException;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -1905,11 +1909,45 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     }
 
                     if (isIncrementalDrEnabled(cctx)) {
-                        if (oldRow.version().updateCounter() != 0)
-                            removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                        if (oldRow.version().updateCounter() != 0) {
+                            try {
+                                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                            }
+                            catch (IgniteCheckedException e) {
+                                if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                                    LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
 
-                        if (newRow.version().updateCounter() != 0)
-                            addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                                    log.warning("Cannot remove entry from replication log [" +
+                                            "cache=" + cctx.name() +
+                                            ", part=" + partId() +
+                                            ", row=" + oldRow +
+                                            ", rowCollision=" + rowLinkToString(e0.link()),
+                                        e);
+                                }
+                                else
+                                    throw e;
+                            }
+                        }
+
+                        if (newRow.version().updateCounter() != 0) {
+                            try {
+                                addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                            }
+                            catch (IgniteCheckedException e) {
+                                if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                                    LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
+
+                                    log.warning("Cannot replicate the entry [" +
+                                            "cache=" + cctx.name() +
+                                            ", part=" + partId() +
+                                            ", row=" + newRow +
+                                            ", rowCollision=" + rowLinkToString(e0.link()),
+                                        e);
+                                }
+                                else
+                                    throw e;
+                            }
+                        }
                     }
 
                     break;
@@ -2823,12 +2861,46 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (oldRow != null && oldRow.version().updateCounter() != 0)
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                if (oldRow != null && oldRow.version().updateCounter() != 0) {
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
+
+                            log.warning("Cannot remove entry from replication log [" +
+                                    "cache=" + cctx.name() +
+                                    ", part=" + partId() +
+                                    ", row=" + oldRow +
+                                    ", rowCollision=" + rowLinkToString(e0.link()),
+                                e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                if (newRow.version().updateCounter() != 0) {
+                    try {
+                        addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
+
+                            log.warning("Cannot replicate the entry [" +
+                                    "cache=" + cctx.name() +
+                                    ", part=" + partId() +
+                                    ", row=" + newRow +
+                                    ", rowCollision=" + rowLinkToString(e0.link()),
+                                e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
             }
 
             if (oldRow != null) {
@@ -3025,19 +3097,72 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
-
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
                     if (oldTombstone && tombstoneRow == null)
                         cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
+
+                            log.warning("Cannot remove entry from replication log [" +
+                                    "cache=" + cctx.name() +
+                                    ", part=" + partId() +
+                                    ", row=" + oldRow +
+                                    ", rowCollision=" + rowLinkToString(e0.link()),
+                                e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
+
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0) {
+                    try {
+                        addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            LogTreeDuplicateUpdateCounterException e0 = X.cause(e, LogTreeDuplicateUpdateCounterException.class);
+
+                            log.warning("Cannot replicate the tombstone entry [" +
+                                    "cache=" + cctx.name() +
+                                    ", part=" + partId() +
+                                    ", row=" + tombstoneRow +
+                                    ", rowCollision=" + rowLinkToString(e0.link()),
+                                e);
+                        }
+                        else
+                            throw e;
+                    }
                 }
             }
 
             if (oldRow != null && (tombstoneRow == null || tombstoneRow.link() != oldRow.link()))
                 rowStore.removeRow(oldRow.link(), grp.statisticsHolderData());
+        }
+
+        /** */
+        private String rowLinkToString(long link) {
+            if (link == 0)
+                return "[link=0]";
+            try {
+                CacheDataRowAdapter rowData = new CacheDataRowAdapter(link);
+
+                rowData.initFromLink(grp, CacheDataRowAdapter.RowData.FULL);
+
+                return rowData.toString();
+            }
+            catch (IgniteCheckedException e) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+
+                return "Cannot print collision row [link=" + link + "]. Error: " + sw;
+            }
         }
 
         /**
