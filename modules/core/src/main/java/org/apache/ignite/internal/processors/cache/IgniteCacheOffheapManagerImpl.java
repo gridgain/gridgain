@@ -1906,8 +1906,23 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     }
 
                     if (isIncrementalDrEnabled(cctx)) {
-                        if (oldRow.version().updateCounter() != 0)
-                            removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                        if (oldRow.version().updateCounter() != 0) {
+                            try {
+                                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                            }
+                            catch (IgniteCheckedException e) {
+                                if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                                    log.warning("Cannot replicate the entry [" +
+                                        "cache=" + cctx.name() +
+                                        ", part=" + partId() +
+                                        ", key=" + newRow.key() +
+                                        ", val=" + newRow.value() +
+                                        ", updCnt=" + newRow.version().updateCounter(), e);
+                                }
+                                else
+                                    throw e;
+                            }
+                        }
 
                         if (newRow.version().updateCounter() != 0) {
                             try {
@@ -2839,8 +2854,23 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (oldRow != null && oldRow.version().updateCounter() != 0)
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                if (oldRow != null && oldRow.version().updateCounter() != 0) {
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot remove entry from replicated log [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + oldRow.key() +
+                                ", val=" + oldRow.value() +
+                                ", updCnt=" + oldRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
 
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0) {
@@ -3077,7 +3107,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     if (oldTombstone && tombstoneRow == null)
                         cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot remove entry from replicated log [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + oldRow.key() +
+                                ", val=" + oldRow.value() +
+                                ", updCnt=" + oldRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
                 }
             }
 
