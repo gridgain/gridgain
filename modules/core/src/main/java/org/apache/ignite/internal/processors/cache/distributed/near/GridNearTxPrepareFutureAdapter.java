@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.expiry.ExpiryPolicy;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.cache.GridCacheCompoundFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedException;
@@ -49,6 +50,10 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOO
  */
 public abstract class GridNearTxPrepareFutureAdapter extends
     GridCacheCompoundFuture<Object, IgniteInternalTx> implements GridCacheVersionedFuture<IgniteInternalTx> {
+    /** This property allows to disable one phase commit optimization. */
+    private static final boolean IGNITE_DISABLE_ONE_PHASE_COMMIT =
+        IgniteSystemProperties.getBoolean("IGNITE_DISABLE_ONE_PHASE_COMMIT", false);
+
     /** Logger reference. */
     protected static final AtomicReference<IgniteLogger> logRef = new AtomicReference<>();
 
@@ -183,6 +188,9 @@ public abstract class GridNearTxPrepareFutureAdapter extends
             assert entry != null;
 
             Collection<UUID> backups = entry.getValue();
+
+            if (IGNITE_DISABLE_ONE_PHASE_COMMIT)
+                return;
 
             if (backups.size() <= 1)
                 tx.onePhaseCommit(true);
