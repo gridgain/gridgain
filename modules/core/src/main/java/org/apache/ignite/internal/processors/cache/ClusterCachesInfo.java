@@ -566,9 +566,8 @@ public class ClusterCachesInfo {
 
         List<T2<DynamicCacheChangeRequest, DynamicCacheDescriptor>> descs = new ArrayList<>(failMsg.cacheNames().size());
 
+        Next_cache:
         for (String cacheName : failMsg.cacheNames()) {
-            DynamicCacheDescriptor cacheDescr = null;
-
             // The required cache desriptor may have already been deleted in the following scenario:
             // 1 - DynamicCacheChangeBatch(start a new user cache with name "A")
             // 2 - At the same, the user initiates destroing the cache which should be started on the step 1.
@@ -578,14 +577,21 @@ public class ClusterCachesInfo {
 
             // Find the "earliest" available descriptor.
             for (Map<String, DynamicCacheDescriptor> descriptors : markedForDeletionCaches.tailMap(actualTopVer).values()) {
-                cacheDescr = descriptors.get(cacheName);
+                DynamicCacheDescriptor deletedCacheDescr = descriptors.get(cacheName);
 
-                if (cacheDescr != null)
-                    break;
+                if (deletedCacheDescr != null) {
+                    processStopCacheRequestForDeletedCache(
+                        exchangeActions,
+                        DynamicCacheChangeRequest.stopRequest(ctx, cacheName, deletedCacheDescr.sql(), true),
+                        deletedCacheDescr,
+                        actualTopVer
+                    );
+
+                    continue Next_cache;
+                }
             }
 
-            if (cacheDescr == null)
-                cacheDescr = registeredCaches.get(cacheName);
+            DynamicCacheDescriptor cacheDescr = registeredCaches.get(cacheName);
 
             assert cacheDescr != null : "Dynamic cache descriptor is missing [cacheName=" + cacheName + "]";
 
@@ -598,7 +604,7 @@ public class ClusterCachesInfo {
             DynamicCacheChangeRequest req = desc.get1();
             DynamicCacheDescriptor cacheDesc = desc.get2();
 
-            processStopCacheRequest(exchangeActions, req, req.cacheName(), cacheDesc, actualTopVer, true);
+            processStopCacheRequest(exchangeActions, req, req.cacheName(), cacheDesc, actualTopVer);
         }
 
         failMsg.exchangeActions(exchangeActions);
@@ -800,7 +806,7 @@ public class ClusterCachesInfo {
                     return;
                 }
 
-                processStopCacheRequest(exchangeActions, req, cacheName, desc, topVer.nextMinorVersion(), false);
+                processStopCacheRequest(exchangeActions, req, cacheName, desc, topVer.nextMinorVersion());
 
                 needExchange = true;
             }
@@ -817,54 +823,53 @@ public class ClusterCachesInfo {
     }
 
     /**
+     * Prepares an exchange action for the already stopped cache.
+     *
+     * @param req Cache change request.
+     * @param exchangeActions Exchange actions to update.
+     * @param desc Dynamic cache descriptor.
+     * @param topVer Topology version that will be applied after the corresponding partition map exchange.
+     */
+    private void processStopCacheRequestForDeletedCache(
+        ExchangeActions exchangeActions,
+        DynamicCacheChangeRequest req,
+        DynamicCacheDescriptor desc,
+        AffinityTopologyVersion topVer
+    ) {
+        exchangeActions.addCacheToStop(req, desc);
+
+        for (Map<Integer, CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.tailMap(topVer).values()) {
+            CacheGroupDescriptor grpDesc = descriptors.get(desc.groupId());
+
+            if (grpDesc != null) {
+                exchangeActions.addCacheGroupToStop(grpDesc, req.destroy());
+
+                break;
+            }
+        }
+    }
+
+    /**
      * @param req Cache change request.
      * @param exchangeActions Exchange actions to update.
      * @param cacheName Cache name.
      * @param desc Dynamic cache descriptor.
      * @param topVer Topology version that will be applied after the corresponding partition map exchange.
-     * @param checkForAlreadyDeleted {@code true} indicates that the given cache descriptor may have already been deleted.
-     *                              This is possible in the case when the {@code DynamicCacheChangeFailureMessage}
-     *                              is received after the {@code DynamicCacheChangeRequest},
-     *                              which is responsible for stopping the cache.
      */
     private void processStopCacheRequest(
         ExchangeActions exchangeActions,
         DynamicCacheChangeRequest req,
         String cacheName,
         DynamicCacheDescriptor desc,
-        AffinityTopologyVersion topVer,
-        boolean checkForAlreadyDeleted
+        AffinityTopologyVersion topVer
     ) {
-        boolean alreadyRemovedDesc = false;
-        DynamicCacheDescriptor old = null;
-
-        if (checkForAlreadyDeleted) {
-            // Find the "earliest" available descriptor.
-            for (Map<String, DynamicCacheDescriptor> descriptors : markedForDeletionCaches.tailMap(topVer).values()) {
-                old = descriptors.get(cacheName);
-
-                if (old != null)
-                    break;
-            }
-
-            alreadyRemovedDesc = old != null;
-        }
-
-        if (old == null) {
-            old = registeredCaches.get(cacheName);
-
-            markedForDeletionCaches
-                .computeIfAbsent(topVer, map -> new ConcurrentHashMap<>())
-                .put(cacheName, old);
-
-            registeredCaches.remove(cacheName);
-
-            ctx.discovery().removeCacheFilter(cacheName);
-
-            alreadyRemovedDesc = false;
-        }
+        DynamicCacheDescriptor old = registeredCaches.remove(cacheName);
 
         assert old != null && old == desc : "Dynamic cache map was concurrently modified [req=" + req + ']';
+
+        markedForDeletionCaches
+            .computeIfAbsent(topVer, map -> new ConcurrentHashMap<>())
+            .put(cacheName, old);
 
         if (req.restart()) {
             IgniteUuid restartId = req.restartId();
@@ -872,33 +877,15 @@ public class ClusterCachesInfo {
             restartingCaches.put(cacheName, restartId == null ? NULL_OBJECT : restartId);
         }
 
+        ctx.discovery().removeCacheFilter(cacheName);
+
         exchangeActions.addCacheToStop(req, desc);
 
-        boolean alreadyRemovedGrp = false;
-        CacheGroupDescriptor grpDesc = null;
-
-        if (checkForAlreadyDeleted) {
-            // Find the "earliest" available descriptor.
-            for (Map<Integer, CacheGroupDescriptor> descriptors : markedForDeletionCacheGrps.tailMap(topVer).values()) {
-                grpDesc = descriptors.get(desc.groupId());
-
-                if (grpDesc != null)
-                    break;
-            }
-
-            alreadyRemovedGrp = grpDesc != null;
-        }
-
-        if (grpDesc == null) {
-            grpDesc = registeredCacheGrps.get(desc.groupId());
-
-            alreadyRemovedGrp = false;
-        }
+        CacheGroupDescriptor grpDesc = registeredCacheGrps.get(desc.groupId());
 
         assert grpDesc != null && grpDesc.groupId() == desc.groupId() : desc;
 
-        if (!alreadyRemovedDesc)
-            grpDesc.onCacheStopped(desc.cacheName(), desc.cacheId());
+        grpDesc.onCacheStopped(desc.cacheName(), desc.cacheId());
 
         if (!grpDesc.hasCaches()) {
             markedForDeletionCacheGrps
@@ -907,8 +894,7 @@ public class ClusterCachesInfo {
 
             registeredCacheGrps.remove(grpDesc.groupId());
 
-            if (!alreadyRemovedGrp)
-                ctx.discovery().removeCacheGroup(grpDesc);
+            ctx.discovery().removeCacheGroup(grpDesc);
 
             exchangeActions.addCacheGroupToStop(grpDesc, req.destroy());
 
