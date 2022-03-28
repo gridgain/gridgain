@@ -901,14 +901,15 @@ public class ClusterCachesInfo {
             grpDesc.onCacheStopped(desc.cacheName(), desc.cacheId());
 
         if (!grpDesc.hasCaches()) {
-            markedForDeletionCacheGrps
-                .computeIfAbsent(topVer, (map) -> new ConcurrentHashMap<>())
-                .put(grpDesc.groupId(), grpDesc);
+            if (!alreadyRemovedGrp) {
+                markedForDeletionCacheGrps
+                    .computeIfAbsent(topVer, (map) -> new ConcurrentHashMap<>())
+                    .put(grpDesc.groupId(), grpDesc);
+
+                ctx.discovery().removeCacheGroup(grpDesc);
+            }
 
             registeredCacheGrps.remove(grpDesc.groupId());
-
-            if (!alreadyRemovedGrp)
-                ctx.discovery().removeCacheGroup(grpDesc);
 
             exchangeActions.addCacheGroupToStop(grpDesc, req.destroy());
 
@@ -1726,6 +1727,15 @@ public class ClusterCachesInfo {
      * @param topVer Topology version.
      */
     public void cleanupRemovedCaches(AffinityTopologyVersion topVer) {
+        markedForDeletionCaches.headMap(topVer, true).clear();
+    }
+
+    /**
+     * Cleanups cache group descriptors that belong to the {@code topVer} and earlier.
+     *
+     * @param topVer Topology version.
+     */
+    public void cleanupRemovedCacheGroups(AffinityTopologyVersion topVer) {
         markedForDeletionCacheGrps.headMap(topVer, true).clear();
     }
 
