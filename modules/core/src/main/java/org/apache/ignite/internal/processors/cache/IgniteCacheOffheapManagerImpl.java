@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -69,6 +70,7 @@ import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDa
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
@@ -2795,6 +2797,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
         }
 
+        public static final AtomicBoolean messWithCounter = new AtomicBoolean(false);
+
         /**
          * @param cctx Cache context.
          * @param newRow New row.
@@ -2822,13 +2826,45 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 clearPendingEntries(cctx, oldRow);
             }
 
+            if (messWithCounter.get() && newRow != null && oldRow != null) {
+                newRow.version().updateCounter(4);
+
+                messWithCounter.set(false);
+            }
+
             if (isIncrementalDrEnabled(cctx)) {
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                if (newRow.version().updateCounter() != 0) {
+                    int retryCnt = 0;
+                    boolean retried = false;
+
+                    // TODO: parameterize
+                    while (retryCnt < 1000) {
+                        try {
+                            addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+
+                            break;
+                        }
+                        catch (CorruptedTreeException e) {
+                            if (X.hasCause(e, PartitionLogTree.CountersException.class)) {
+                                retried = true;
+
+                                long newCntr = pCntr.reserve(1) + 1;
+                                newRow.version().updateCounter(newCntr);
+
+                                retryCnt++;
+                            }
+                            else
+                                throw e;
+                        }
+                    }
+
+                    if (retried)
+                        rowStore.updateRow(newRow.link(), newRow, grp.statisticsHolderData());
+                }
             }
 
             if (oldRow != null) {

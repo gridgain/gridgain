@@ -108,7 +108,11 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         cmp = Long.compare(updCntr, row.updCntr);
 
-        assert cmp != 0 || row.link == 0 /* search insertion poin */ || io.getLink(pageAddr, idx) == row.link /* remove row */;
+        if (!(cmp != 0
+            || row.link == 0 /* search insertion poin */
+            || io.getLink(pageAddr, idx) == row.link /* remove row */)) {
+            throw new CountersException();
+        }
 
         return cmp;
     }
@@ -119,5 +123,9 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         UpdateLogRow row = io.getLookupRow(this, pageAddr, idx);
 
         return flag == FULL_ROW ? row.initRow(grp) : row;
+    }
+
+    public static class CountersException extends RuntimeException {
+
     }
 }

@@ -216,6 +216,9 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
             assert res;
 
+            // if (reserveCntr.get() < next)
+            //    reserveCntr.set(next);
+
             return true;
         }
     }
