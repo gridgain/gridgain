@@ -93,6 +93,7 @@ import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMaxSearc
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccMinSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccSnapshotSearchRow;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.search.MvccTreeClosure;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.LogTreeDuplicateUpdateCounterException;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.PartitionLogTree;
 import org.apache.ignite.internal.processors.cache.tree.updatelog.UpdateLogRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -1905,11 +1906,41 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     }
 
                     if (isIncrementalDrEnabled(cctx)) {
-                        if (oldRow.version().updateCounter() != 0)
-                            removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                        if (oldRow.version().updateCounter() != 0) {
+                            try {
+                                removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                            }
+                            catch (IgniteCheckedException e) {
+                                if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                                    log.warning("Cannot replicate the entry [" +
+                                        "cache=" + cctx.name() +
+                                        ", part=" + partId() +
+                                        ", key=" + newRow.key() +
+                                        ", val=" + newRow.value() +
+                                        ", updCnt=" + newRow.version().updateCounter(), e);
+                                }
+                                else
+                                    throw e;
+                            }
+                        }
 
-                        if (newRow.version().updateCounter() != 0)
-                            addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                        if (newRow.version().updateCounter() != 0) {
+                            try {
+                                addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                            }
+                            catch (IgniteCheckedException e) {
+                                if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                                    log.warning("Cannot replicate the entry [" +
+                                        "cache=" + cctx.name() +
+                                        ", part=" + partId() +
+                                        ", key=" + newRow.key() +
+                                        ", val=" + newRow.value() +
+                                        ", updCnt=" + newRow.version().updateCounter(), e);
+                                }
+                                else
+                                    throw e;
+                            }
+                        }
                     }
 
                     break;
@@ -2823,12 +2854,42 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (oldRow != null && oldRow.version().updateCounter() != 0)
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                if (oldRow != null && oldRow.version().updateCounter() != 0) {
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot remove entry from replicated log [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + oldRow.key() +
+                                ", val=" + oldRow.value() +
+                                ", updCnt=" + oldRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                if (newRow.version().updateCounter() != 0) {
+                    try {
+                        addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot replicate the entry [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + newRow.key() +
+                                ", val=" + newRow.value() +
+                                ", updCnt=" + newRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
             }
 
             if (oldRow != null) {
@@ -3025,14 +3086,42 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
-                    addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0) {
+                    try {
+                        addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot replicate the tombstone entry [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + tombstoneRow.key() +
+                                ", updCnt=" + tombstoneRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
+                }
 
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
                     if (oldTombstone && tombstoneRow == null)
                         cctx.dr().onTombstoneCleaned(partId, oldRow.version().updateCounter());
 
-                    removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    try {
+                        removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
+                    }
+                    catch (IgniteCheckedException e) {
+                        if (X.hasCause(e, LogTreeDuplicateUpdateCounterException.class)) {
+                            log.warning("Cannot remove entry from replicated log [" +
+                                "cache=" + cctx.name() +
+                                ", part=" + partId() +
+                                ", key=" + oldRow.key() +
+                                ", val=" + oldRow.value() +
+                                ", updCnt=" + oldRow.version().updateCounter(), e);
+                        }
+                        else
+                            throw e;
+                    }
                 }
             }
 
