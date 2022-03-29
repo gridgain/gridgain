@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -152,7 +153,12 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
                     CommunicationTcpUtils.failNode(senderNode, tcpCommSpi.getSpiContext(), ex, log);
 
-                    log.warning("The client will be excluded of the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']');
+                    String warn = "The client will be excluded of the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']';
+
+                    log.warning(warn);
+
+                    //TODO: The exception required only until the issue GG-33733 will fix.
+                    throw new IgniteException(warn);
                 }
 
                 res = new DenyAllSecurityContext(senderNodeId, type);
