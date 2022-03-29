@@ -2196,6 +2196,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         cctx.kernalContext().query().onStartRebuildIndexes(cctx);
 
+        try {
+            prepareIndexesForRebuild(cacheName);
+        } catch (IgniteCheckedException e) {
+            rebuildCacheIdxFut.onDone(e);
+        }
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2219,7 +2225,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             outRebuildCacheIdxFut.onDone(err);
         });
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
+        if (!rebuildCacheIdxFut.isDone())
+            rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
 
         return outRebuildCacheIdxFut;
     }
@@ -2252,6 +2259,20 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             assert tblDesc.table() != null;
 
             tblDesc.table().markRebuildFromHashInProgress(val);
+        }
+    }
+
+    /**
+     * For every affected table prepares the indexes fro rebuild.
+     *
+     * @param cacheName The name of the cache whose tables are to rebuild their indexes.
+     * @throws IgniteCheckedException In case the table is unable to prepare its indexes.
+     */
+    private void prepareIndexesForRebuild(String cacheName) throws IgniteCheckedException {
+        for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+            assert tblDesc.table() != null;
+
+            tblDesc.table().prepareIndexesForRebuild();
         }
     }
 

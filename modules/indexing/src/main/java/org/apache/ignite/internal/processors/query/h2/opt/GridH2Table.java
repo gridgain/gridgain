@@ -94,7 +94,7 @@ public class GridH2Table extends TableBase {
     private static final long EXCLUSIVE_LOCK = -1;
 
     /** 'rebuildFromHashInProgress' field updater */
-    private static final AtomicIntegerFieldUpdater<GridH2Table> rebuildFromHashInProgressFiledUpdater =
+    private static final AtomicIntegerFieldUpdater<GridH2Table> rebuildFromHashInProgressFieldUpdater =
         AtomicIntegerFieldUpdater.newUpdater(GridH2Table.class, "rebuildFromHashInProgress");
 
     /** False representation */
@@ -952,7 +952,7 @@ public class GridH2Table extends TableBase {
     public void markRebuildFromHashInProgress(boolean value) {
         assert !value || (idxs.size() >= 2 && index(1).getIndexType().isHash()) : "Table has no hash index.";
 
-        if (rebuildFromHashInProgressFiledUpdater.compareAndSet(this, value ? FALSE : TRUE, value ? TRUE : FALSE)) {
+        if (rebuildFromHashInProgressFieldUpdater.compareAndSet(this, value ? FALSE : TRUE, value ? TRUE : FALSE)) {
             lock.writeLock().lock();
 
             try {
@@ -1289,6 +1289,37 @@ public class GridH2Table extends TableBase {
         refreshStatsIfNeeded();
 
         return tblStats.primaryRowCount();
+    }
+
+    /**
+     * Destroys the old data and recreate the index.
+     *
+     * @throws IgniteCheckedException In case we were unable to destroy the data.
+     */
+    public void prepareIndexesForRebuild() throws IgniteCheckedException {
+        lock(true);
+
+        try {
+            for (int i = 0; i < idxs.size(); i++) {
+                Index idx = idxs.get(i);
+
+                if (!(idx instanceof H2TreeIndex))
+                    continue;
+
+                H2TreeIndex treeIdx = (H2TreeIndex) idx;
+
+                treeIdx.destroy0(true, true);
+
+                GridCacheContext<?, ?> cctx = cacheContext();
+
+                assert cctx != null;
+
+                idxs.set(i, treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap()));
+            }
+        }
+        finally {
+            unlock(true);
+        }
     }
 
     /**

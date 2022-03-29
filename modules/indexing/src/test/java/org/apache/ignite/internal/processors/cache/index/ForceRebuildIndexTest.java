@@ -16,6 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
+import java.util.Iterator;
+import java.util.List;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.cache.query.QueryRetryException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -27,6 +34,7 @@ import org.junit.Test;
 
 import static java.util.Collections.emptyList;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.prepareBeforeNodeStart;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
@@ -84,6 +92,105 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
 
         checkFinishRebuildIndexes(n, cacheCtx, 100);
         assertEquals(200, stopRebuildIdxConsumer.visitCnt.get());
+    }
+
+    /**
+     * Test verify that after rebuild all corrupted entries will be removed from the index.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCorruptedIndexRebuild() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        sql("CREATE TABLE test_tbl (id1 INTEGER, id2 INTEGER, val VARCHAR, CONSTRAINT pk PRIMARY KEY (id1, id2))"
+                + " WITH \"cache_name=TEST_CACHE, key_type=KEY, value_type=VAL\"");
+
+        sql("CREATE INDEX test_tbl_val_idx ON test_tbl(val)");
+
+        // the keys below are logically equal, but physically (i.e. as byte arrays) are not
+        BinaryObject key1 = ignite.binary().builder("KEY").setField("id1", 1).setField("id2", 2).build();
+        BinaryObject key2 = ignite.binary().builder("KEY").setField("id2", 2).setField("id1", 1).build();
+        BinaryObject val = ignite.binary().builder("VAL").setField("val", "val").build();
+
+        IgniteCache<BinaryObject, BinaryObject> cache = ignite.cache("TEST_CACHE").withKeepBinary();
+        cache.put(key1, val);
+        cache.put(key2, val);
+
+        assertEquals(1L, sql("SELECT count(id1) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
+        assertEquals(2L, sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0));
+        assertEquals(2, cache.size());
+
+        cache.remove(key1);
+        cache.remove(key2);
+
+        assertEquals(0L, sql("SELECT count(id1) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
+        assertEquals(0, cache.size());
+        assertThrowsWithCause(
+                () -> sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0),
+                Exception.class
+        );
+
+        for (int i = 0; i < 10; i++) {
+            BinaryObject key = ignite.binary().builder("KEY")
+                    .setField("id1", i * 10)
+                    .setField("id2", i * 10)
+                    .build();
+            BinaryObject val0 = ignite.binary().builder("VAL")
+                    .setField("val", "val")
+                    .build();
+
+            cache.put(key, val0);
+        }
+
+        GridCacheContext<?, ?> cacheCtx = ignite.cachex("TEST_CACHE").context();
+
+        forceRebuildIndexes(ignite, cacheCtx);
+
+        IgniteInternalFuture<?> fut = indexRebuildFuture(ignite, cacheCtx.cacheId());
+
+        if (fut != null)
+            fut.get(getTestTimeout());
+
+        assertEquals(10L, sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0));
+    }
+
+    /**
+     * In case of lazy queries, if rebuild happened in the middle, such query should be failed with {@link QueryRetryException}.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLazyQueryShouldBeProperlyCancelled() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        sql("CREATE TABLE test_tbl (id INTEGER, aff_key INTEGER, val VARCHAR, CONSTRAINT pk PRIMARY KEY (id, aff_key))"
+                + " WITH \"cache_name=TEST_CACHE, affinity_key=aff_key\"");
+        sql("CREATE INDEX test_tbl_val_idx ON test_tbl(val)");
+
+        for (int i = 0; i < 100_000; i++)
+            sql("INSERT INTO test_tbl VALUES (?, ?, ?)", i, i, "val_" + i);
+
+        Iterator<?> curByPk = openCursor("SELECT id FROM test_tbl USE INDEX (\"_key_PK\") WHERE id > -1").iterator();
+        Iterator<?> curByAff = openCursor("SELECT aff_key FROM test_tbl USE INDEX (AFFINITY_KEY) WHERE aff_key > -1").iterator();
+        Iterator<?> curBySecIdx = openCursor("SELECT val FROM test_tbl USE INDEX (test_tbl_val_idx) WHERE VAL > 'val'").iterator();
+
+        curByPk.next();
+        curByAff.next();
+        curBySecIdx.next();
+
+        GridCacheContext<?, ?> cacheCtx = ignite.cachex("TEST_CACHE").context();
+
+        forceRebuildIndexes(ignite, cacheCtx);
+
+        IgniteInternalFuture<?> fut = indexRebuildFuture(ignite, cacheCtx.cacheId());
+
+        if (fut != null)
+            fut.get(getTestTimeout());
+
+        assertThrowsWithCause(() -> drainIterator(curByPk), QueryRetryException.class);
+        assertThrowsWithCause(() -> drainIterator(curByAff), QueryRetryException.class);
+        assertThrowsWithCause(() -> drainIterator(curBySecIdx), QueryRetryException.class);
     }
 
     /**
@@ -196,5 +303,38 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
         GridDhtPartitionsExchangeFuture exhFut = n.context().cache().context().exchange().lastTopologyFuture();
 
         assertEquals(expContains, idxRebuildAware.rebuildIndexesOnExchange(cacheId, exhFut.initialVersion()));
+    }
+
+    /**
+     * Executes the given query and returns the result.
+     *
+     * @param qry Query string to execute.
+     * @param args Arguments for the query
+     * @return The result.
+     */
+    private List<List<?>> sql(String qry, Object... args) {
+        return openCursor(qry, args).getAll();
+    }
+
+    /**
+     * Opens cursor for the given query.
+     *
+     * @param qry Query to open cursor for.
+     * @param args Arguments for the query
+     * @return Opened cursor.
+     */
+    private FieldsQueryCursor<List<?>> openCursor(String qry, Object... args) {
+        return grid(0).context().query().querySqlFields(new SqlFieldsQuery(qry)
+                .setArgs(args).setLazy(true), true);
+    }
+
+    /**
+     * Fetches all remaining items from the given cursor.
+     *
+     * @param it Iterator to drain.
+     */
+    private static void drainIterator(Iterator<?> it) {
+        while (it.hasNext())
+            it.next();
     }
 }
