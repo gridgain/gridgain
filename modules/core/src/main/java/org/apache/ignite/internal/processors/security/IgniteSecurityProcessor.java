@@ -152,7 +152,12 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
                     CommunicationTcpUtils.failNode(senderNode, tcpCommSpi.getSpiContext(), ex, log);
 
-                    log.warning("The client will be excluded of the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']');
+                    String warn = "The client will be excluded of the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']';
+
+                    log.warning(warn);
+
+                    //TODO: The exception required only until the issue GG-33733 will fix.
+                    throw new SecurityException(warn);
                 }
 
                 res = new DenyAllSecurityContext(senderNodeId, type);
