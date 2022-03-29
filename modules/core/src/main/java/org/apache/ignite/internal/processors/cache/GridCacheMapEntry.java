@@ -1531,7 +1531,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             storeValue(val, expireTime, newVer);
 
             if (tx != null && cctx.group().persistenceEnabled())
-                logPtr = logTxUpdate(tx, val, expireTime, updateCntr0, cctx.group().walEnabled());
+                logPtr = logTxUpdate(tx, val, expireTime, newVer, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
 
@@ -1682,8 +1682,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean startVer = isStartVersion();
 
-            newVer = nextVersion(explicitVer, tx);
-
             boolean internal = isInternal() || !context().userCache();
 
             Map<UUID, CacheContinuousQueryListener> lsnrCol =
@@ -1707,6 +1705,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return new GridCacheUpdateTxResult(false, logPtr);
             }
 
+            newVer = nextVersion(explicitVer, tx);
+
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
             newVer.updateCounter(updateCntr0);
@@ -1716,7 +1716,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             update(null, 0, 0, newVer, true);
 
             if (tx != null && cctx.group().persistenceEnabled())
-                logPtr = logTxUpdate(tx, null, 0, updateCntr0, cctx.group().walEnabled());
+                logPtr = logTxUpdate(tx, null, 0, newVer, cctx.group().walEnabled());
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -3557,7 +3557,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx) {
         if (explicitVer != null)
-            return explicitVer;
+            return new GridCacheVersion(explicitVer);
 
         if (tx == null)
             return nextVersion();
@@ -4249,7 +4249,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param tx Transaction.
      * @param val Value.
      * @param expireTime Expire time (or 0 if not applicable).
-     * @param updCntr Update counter.
+     * @param writeVersion Tx write version.
      * @param walEnabled Whether WAL is enabled.
      * @throws IgniteCheckedException In case of log failure.
      */
@@ -4257,10 +4257,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         IgniteInternalTx tx,
         CacheObject val,
         long expireTime,
-        long updCntr,
+        GridCacheVersion writeVersion,
         boolean walEnabled
     ) throws IgniteCheckedException {
         assert cctx.transactional() && !cctx.transactionalSnapshot();
+        assert tx.writeVersion().equals(writeVersion); // TODO: remove this.
 
         if (tx.local()) { // For remote tx we log all updates in batch: GridDistributedTxRemoteAdapter.commitIfLocked()
             cctx.tm().pendingTxsTracker().onKeysWritten(tx.nearXidVersion(), Collections.singletonList(key));
@@ -4278,10 +4279,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     val,
                     op,
                     tx.nearXidVersion(),
-                    tx.writeVersion(),
+                    writeVersion,
                     expireTime,
                     key.partition(),
-                    updCntr,
+                    writeVersion.updateCounter(),
                     DataEntry.flags(CU.txOnPrimary(tx)))));
             }
             else

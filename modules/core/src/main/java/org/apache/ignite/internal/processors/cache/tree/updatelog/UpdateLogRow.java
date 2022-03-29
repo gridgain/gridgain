@@ -22,8 +22,10 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  *
@@ -38,7 +40,7 @@ public class UpdateLogRow {
     final long updCntr;
 
     /** Link. */
-    @GridToStringInclude
+    @GridToStringExclude
     final long link;
 
     /** Materialized row. */
@@ -132,6 +134,6 @@ public class UpdateLogRow {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(UpdateLogRow.class, this);
+        return S.toString(UpdateLogRow.class, this, "link", U.hexLong(link));
     }
 }
