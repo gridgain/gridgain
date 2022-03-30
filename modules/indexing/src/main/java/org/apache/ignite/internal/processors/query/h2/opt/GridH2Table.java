@@ -696,7 +696,7 @@ public class GridH2Table extends TableBase {
             while (idxs.size() > sysIdxsCnt) {
                 Index idx = idxs.get(sysIdxsCnt);
 
-                if (idx.getName() != null && idx.getSchema().findIndex(ses, idx.getName()) == idx) {
+                if (idx.getName() != null && idx.getSchema().findIndex(ses, idx.getName()) != null) {
                     // This call implicitly removes both idx and its proxy, if any, from idxs.
                     database.removeSchemaObject(ses, idx);
 
