@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -36,7 +35,10 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-public class IgniteDiagnosticMessagesBackPressureTest extends GridCommonAbstractTest {
+/**
+ * Tests that dumping partition release future does not cause memory to be exhausted.
+ */
+public class IgniteDiagnosticPartitionReleaseFutureLimitTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -51,9 +53,15 @@ public class IgniteDiagnosticMessagesBackPressureTest extends GridCommonAbstract
         return cfg;
     }
 
+    /**
+     * Tests that diagnostic message (dumping partition release future) does not cause memory to be exhausted.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     @WithSystemProperty(key = "IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT_LIMIT", value = "1000")
-    public void testDiagnosticMessageHandler() throws Exception {
+    @WithSystemProperty(key = "IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT", value = "5")
+    public void testDiagnosticMessageLimit() throws Exception {
         IgniteEx crd = (IgniteEx) startGridsMultiThreaded(3);
 
         IgniteEx client = startClientGrid(3);
@@ -85,7 +93,7 @@ public class IgniteDiagnosticMessagesBackPressureTest extends GridCommonAbstract
         // The big number of updates is needed for to enlist a huge number of cache futures into the partition release future.
         List<Integer> primaryKeys0 = findKeys(crd.localNode(), crd.cache(cacheName), 1, 0, 0);
         Integer primaryKey = primaryKeys0.get(0);
-        for (int i = 0; i < (500 * 1_000); i++)
+        for (int i = 0; i < (50 * 1_000); i++)
             cache.putAsync(primaryKey, i);
 
         // At least one update should be triggered for keys on server 1 and server 2
@@ -99,41 +107,12 @@ public class IgniteDiagnosticMessagesBackPressureTest extends GridCommonAbstract
         // All updates should be initiated at this moment.
         // Let's wait for ack messages from backups.
         spi0.waitForBlocked();
-        spi1.waitForBlocked(1_000);
-        spi2.waitForBlocked(1_000);
+        spi1.waitForBlocked(100);
+        spi2.waitForBlocked(100);
 
         // Start tracking sys pool on the corrdinator node. Just for logging.
-        AtomicReference<List<T4<Long, Integer, Integer, String>>> infRef = new AtomicReference<>();
         AtomicBoolean stop = new AtomicBoolean();
-        IgniteInternalFuture<?> futExec = GridTestUtils.runAsync(() -> {
-            ThreadPoolExecutor exec = (ThreadPoolExecutor) crd.context().pools().getSystemExecutorService();
-            List<T4<Long, Integer, Integer, String>> inf = new ArrayList<>();
-
-            while (!stop.get()) {
-                T4<Long, Integer, Integer, String> t = new T4<>();
-                t.set1(exec.getCompletedTaskCount());
-                t.set2(exec.getActiveCount());
-                t.set3(exec.getQueue().size());
-
-                StringBuilder sb = new StringBuilder();
-                for (Runnable r : exec.getQueue())
-                    sb.append("\t").append(r.toString()).append(U.nl());
-                t.set4(sb.toString());
-
-                inf.add(t);
-
-                log.warning(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-                log.warning(">>>>> completedCnt = " + t.get1());
-                log.warning(">>>>> activeCount = " + t.get2());
-                log.warning(">>>>> queueSize = " + t.get3());
-                log.warning(">>>>> tasks = [" + U.nl() + t.get4());
-                log.warning(">>>>> ]");
-                log.warning(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
-                doSleep(5_000);
-            }
-            infRef.set(inf);
-        });
+        IgniteInternalFuture<List<T4<Long, Integer, Integer, String>>> futExec = startTrackingSysPool(crd, stop);
 
         // Initiate cluster wide partition map exchange by starting a new cache.
         IgniteInternalFuture<?> startCacheFut = GridTestUtils.runAsync(() -> {
@@ -151,15 +130,65 @@ public class IgniteDiagnosticMessagesBackPressureTest extends GridCommonAbstract
         startCacheFut.get(getTestTimeout());
 
         stop.set(true);
-        futExec.get(getTestTimeout());
+        List<T4<Long, Integer, Integer, String>> stat = futExec.get(getTestTimeout());
 
+        stat.forEach(t -> printThreadPoolStatistics(t.get1(), t.get2(), t.get3(), t.get4()));
+    }
+
+    /**
+     * @param node Ignite node to be used for tracking system pool.
+     * @param stop Stop flasg.
+     * @return Statistics.
+     */
+    private IgniteInternalFuture<List<T4<Long, Integer, Integer, String>>> startTrackingSysPool(
+        IgniteEx node,
+        AtomicBoolean stop
+    ) {
+        IgniteInternalFuture<List<T4<Long, Integer, Integer, String>>> futExec = GridTestUtils.runAsync(() -> {
+            ThreadPoolExecutor exec = (ThreadPoolExecutor) node.context().pools().getSystemExecutorService();
+
+            List<T4<Long, Integer, Integer, String>> inf = new ArrayList<>();
+
+            do {
+                T4<Long, Integer, Integer, String> t = new T4<>();
+                t.set1(exec.getCompletedTaskCount());
+                t.set2(exec.getActiveCount());
+                t.set3(exec.getQueue().size());
+
+                StringBuilder sb = new StringBuilder();
+                for (Runnable r : exec.getQueue())
+                    sb.append("\t").append(r.toString()).append(U.nl());
+                t.set4(sb.toString());
+
+                inf.add(t);
+
+                printThreadPoolStatistics(t.get1(), t.get2(), t.get3(), t.get4());
+
+                doSleep(5_000);
+            }
+            while (!stop.get());
+
+            return inf;
+        });
+
+        return futExec;
+    }
+
+    /**
+     * Prints thread pool statistics to the logger.
+     *
+     * @param completedCnt Number of completed tasks.
+     * @param activeCount Number of active threads.
+     * @param queueSize Queue size.
+     * @param tasks List of tasks (class names).
+     */
+    private void printThreadPoolStatistics(Long completedCnt, Integer activeCount, Integer queueSize, String tasks) {
         log.warning(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        for (T4<Long, Integer, Integer, String> t : infRef.get()) {
-            log.warning("\t>>>>> completedCnt = " + t.get1() +
-                ", activeCount = " + t.get2() +
-                ", queueSize = " + t.get3() +
-                ", tasks = " + t.get4());
-        }
+        log.warning(">>>>> completedCnt = " + completedCnt);
+        log.warning(">>>>> activeCount = " + activeCount);
+        log.warning(">>>>> queueSize = " + queueSize);
+        log.warning(">>>>> tasks = [" + U.nl() + tasks);
+        log.warning(">>>>> ]");
         log.warning(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
     }
 }

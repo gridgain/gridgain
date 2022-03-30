@@ -16,20 +16,28 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.lang.IgniteReducer;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Math.min;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT;
+
 /**
  *
  */
 public class CacheObjectsReleaseFuture<T, R> extends GridCompoundFuture<T, R> {
+    /** @see IgniteSystemProperties#IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT */
+    public static final int DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT = 10;
 
-    /** */
-    private static final boolean CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL =
-        IgniteSystemProperties.getBoolean("CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL", false);
+    /** @see IgniteSystemProperties#IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT */
+    private static final int PARTITION_RELEASE_FUTURE_WARN_LIMIT = IgniteSystemProperties.getInteger(
+        IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT, DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT);
 
     /** */
     private AffinityTopologyVersion topVer;
@@ -60,9 +68,29 @@ public class CacheObjectsReleaseFuture<T, R> extends GridCompoundFuture<T, R> {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        if (CACHE_OBJECTS_RELEASE_FUTURES_PRINT_ALL)
-            return type + "ReleaseFuture [topVer=" + topVer + ", futures=" + futures() + "]";
-        else
-            return type + "ReleaseFuture [topVer=" + topVer + ", futuresCount=" + futuresCountNoLock() + "]";
+        int totalFuts;
+        Collection<IgniteInternalFuture<?>> futures;
+
+        if (PARTITION_RELEASE_FUTURE_WARN_LIMIT >= 0) {
+            compoundsReadLock();
+
+            try {
+                totalFuts = futuresCountNoLock();
+                int firstFutsCnt = min(PARTITION_RELEASE_FUTURE_WARN_LIMIT, totalFuts);
+
+                futures = new ArrayList<>(firstFutsCnt);
+                for (int i = 0; i < firstFutsCnt; ++i)
+                    futures.add(future(i));
+            }
+            finally {
+                compoundsReadUnlock();
+            }
+        }
+        else {
+            futures = (Collection) futures();
+            totalFuts = futures.size();
+        }
+
+        return type + "ReleaseFuture [topVer=" + topVer + ", totalFutures=" + totalFuts + ", futures=" + futures + ']';
     }
 }
