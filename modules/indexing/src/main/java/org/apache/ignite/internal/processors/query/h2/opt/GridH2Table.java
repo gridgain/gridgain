@@ -134,6 +134,9 @@ public class GridH2Table extends TableBase {
     private final ReentrantReadWriteLock lock;
 
     /** */
+    private final boolean hasHashIndex;
+
+    /** */
     private volatile boolean destroyed;
 
     /**
@@ -222,7 +225,7 @@ public class GridH2Table extends TableBase {
 
         idxs.addAll(clones);
 
-        boolean hasHashIndex = idxs.size() >= 2 && index(0).getIndexType().isHash();
+        hasHashIndex = idxs.size() >= 2 && index(0).getIndexType().isHash();
 
         // Add scan index at 0 which is required by H2.
         if (hasHashIndex)
@@ -1315,6 +1318,16 @@ public class GridH2Table extends TableBase {
                 assert cctx != null;
 
                 idxs.set(i, treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap()));
+
+                if (i == pkIndexPos) {
+                    assert (hasHashIndex && pkIndexPos == 2) || (!hasHashIndex && pkIndexPos == 1)
+                            : "hasHashIndex=" + hasHashIndex + ", pkIndexPos=" + pkIndexPos;
+
+                    if (hasHashIndex)
+                        idxs.set(0, new H2TableScanIndex(this, index(2), index(1)));
+                    else
+                        idxs.set(0, new H2TableScanIndex(this, index(1), null));
+                }
             }
         }
         finally {

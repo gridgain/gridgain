@@ -18,11 +18,14 @@ package org.apache.ignite.internal.processors.cache.index;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -36,11 +39,16 @@ import static java.util.Collections.emptyList;
 import static org.apache.ignite.internal.processors.cache.index.IgniteH2IndexingEx.prepareBeforeNodeStart;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Class for testing forced rebuilding of indexes.
  */
 public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
+    /** */
+    private static final Semaphore hook = new Semaphore(0);
+
     /**
      * Checking that a forced rebuild of indexes is possible only after the previous one has finished.
      *
@@ -194,6 +202,49 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
     }
 
     /**
+     * In case of non-lazy queries, if rebuild should wait till the query completes.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNonLazyQueryShouldCompleteNormally() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.getOrCreateCache(new CacheConfiguration<>("DUMMY")
+                .setSqlSchema("PUBLIC")
+                .setSqlFunctionClasses(this.getClass())
+        );
+
+        sql("CREATE TABLE test_tbl (id INTEGER PRIMARY KEY, val VARCHAR) WITH \"cache_name=TEST_CACHE\"");
+
+        for (int i = 0; i < 10_000; i++)
+            sql("INSERT INTO test_tbl VALUES (?, ?)", i, "val_" + i);
+
+        hook.drainPermits();
+
+        IgniteInternalFuture<?> qryFut = runAsync(() -> sql("SELECT id FROM test_tbl WHERE hook() ORDER BY val"));
+
+        assertTrue(waitForCondition(hook::hasQueuedThreads, 2_000));
+
+        GridCacheContext<?, ?> cacheCtx = ignite.cachex("TEST_CACHE").context();
+
+        IgniteInternalFuture<?> startRebuildFut = runAsync(() -> forceRebuildIndexes(ignite, cacheCtx));
+
+        assertFalse(startRebuildFut.isDone());
+
+        hook.release(Integer.MAX_VALUE);
+
+        startRebuildFut.get(getTestTimeout());
+
+        IgniteInternalFuture<?> fut = indexRebuildFuture(ignite, cacheCtx.cacheId());
+
+        assertNotNull(qryFut);
+        qryFut.get(getTestTimeout());
+
+        fut.get(getTestTimeout());
+    }
+
+    /**
      * Checking that a forced index rebuild can only be performed after an index rebuild after an exchange.
      *
      * @throws Exception If failed.
@@ -336,5 +387,20 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
     private static void drainIterator(Iterator<?> it) {
         while (it.hasNext())
             it.next();
+    }
+
+    @QuerySqlFunction
+    public static boolean hook() {
+        try {
+            hook.acquire();
+        }
+        catch (InterruptedException e) {
+            // NO-OP
+        }
+        finally {
+            hook.release();
+        }
+
+        return true;
     }
 }
