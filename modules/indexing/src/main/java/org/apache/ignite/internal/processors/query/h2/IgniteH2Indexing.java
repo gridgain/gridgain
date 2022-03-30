@@ -2153,26 +2153,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String cacheName = cctx.name();
 
-        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
-            // If there are no index store, rebuild all indexes.
-            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
-        }
-        else {
-            // Otherwise iterate over tables looking for missing indexes.
-            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+        if (pageStore != null && pageStore.hasIndexStore(cctx.groupId()) && !force) {
+            boolean required = false;
 
             for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
                 GridH2Table tbl = tblDesc.table();
 
                 assert tbl != null;
 
-                tbl.collectIndexesForPartialRebuild(clo0, force);
+                required = tbl.checkIfIndexesRebuildRequired();
+
+                if (required)
+                    break;
             }
 
-            if (clo0.hasIndexes())
-                clo = clo0;
-            else
-                return null;
+            if (!required)
+                return  null;
         }
 
         // Closure prepared, do rebuild.
@@ -2200,6 +2196,25 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             prepareIndexesForRebuild(cacheName);
         } catch (IgniteCheckedException e) {
             rebuildCacheIdxFut.onDone(e);
+        }
+
+        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
+            // If there are no index store, rebuild all indexes.
+            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
+        }
+        else {
+            // Otherwise iterate over tables looking for missing indexes.
+            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                GridH2Table tbl = tblDesc.table();
+
+                assert tbl != null;
+
+                tbl.collectIndexesForPartialRebuild(clo0, force);
+            }
+
+            clo = clo0;
         }
 
         rebuildCacheIdxFut.listen(fut -> {

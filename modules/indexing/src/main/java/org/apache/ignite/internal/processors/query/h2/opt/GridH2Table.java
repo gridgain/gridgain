@@ -949,6 +949,22 @@ public class GridH2Table extends TableBase {
         }
     }
 
+    /** */
+    public boolean checkIfIndexesRebuildRequired() {
+        for (int i = 0; i < idxs.size(); i++) {
+            Index idx = idxs.get(i);
+
+            if (idx instanceof H2TreeIndex) {
+                H2TreeIndex idx0 = (H2TreeIndex)idx;
+
+                if (idx0.rebuildRequired())
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Mark or unmark index rebuild state.
      */
@@ -1244,7 +1260,9 @@ public class GridH2Table extends TableBase {
         ArrayList<Index> idxs = new ArrayList<>(2);
 
         idxs.add(this.idxs.get(0));
-        idxs.add(this.idxs.get(1));
+
+        if (hasHashIndex)
+            idxs.add(this.idxs.get(1));
 
         return idxs;
     }
@@ -1303,32 +1321,48 @@ public class GridH2Table extends TableBase {
         lock(true);
 
         try {
+            ArrayList<Index> newIdxs = new ArrayList<>(idxs.size());
+
             for (int i = 0; i < idxs.size(); i++) {
                 Index idx = idxs.get(i);
 
-                if (!(idx instanceof H2TreeIndex))
+                if (idx instanceof GridH2ProxyIndex)
                     continue;
 
-                H2TreeIndex treeIdx = (H2TreeIndex) idx;
+                Index newIdx;
+                if (idx instanceof H2TreeIndex) {
+                    H2TreeIndex treeIdx = (H2TreeIndex) idx;
 
-                treeIdx.destroy0(true, true);
+                    treeIdx.destroy0(true, true);
 
-                GridCacheContext<?, ?> cctx = cacheContext();
+                    GridCacheContext<?, ?> cctx = cacheContext();
 
-                assert cctx != null;
+                    assert cctx != null;
 
-                idxs.set(i, treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap()));
-
-                if (i == pkIndexPos) {
-                    assert (hasHashIndex && pkIndexPos == 2) || (!hasHashIndex && pkIndexPos == 1)
-                            : "hasHashIndex=" + hasHashIndex + ", pkIndexPos=" + pkIndexPos;
-
-                    if (hasHashIndex)
-                        idxs.set(0, new H2TableScanIndex(this, index(2), index(1)));
-                    else
-                        idxs.set(0, new H2TableScanIndex(this, index(1), null));
+                    newIdx = treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap());
                 }
+                else
+                    newIdx = idx;
+
+                newIdxs.add(newIdx);
             }
+
+            int size = newIdxs.size();
+            for (int i = 1; i < size; i++) {
+                Index clone = createDuplicateIndexIfNeeded(newIdxs.get(i));
+
+                if (clone != null)
+                    newIdxs.add(clone);
+            }
+
+            if (hasHashIndex)
+                newIdxs.set(0, new H2TableScanIndex(this, (GridH2IndexBase) newIdxs.get(2), (GridH2IndexBase) newIdxs.get(1)));
+            else
+                newIdxs.set(0, new H2TableScanIndex(this, (GridH2IndexBase) newIdxs.get(1), null));
+
+            idxs = newIdxs;
+
+            incrementModificationCounter();
         }
         finally {
             unlock(true);
