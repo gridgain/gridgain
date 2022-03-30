@@ -2785,6 +2785,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
 
+        cachesInfo.cleanupRemovedCacheGroups(topVer);
+
         if (exchActions.deactivate())
             sharedCtx.deactivate();
     }
