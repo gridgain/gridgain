@@ -1263,7 +1263,7 @@ public final class IgniteSystemProperties {
      * The default value is {@code 10}.
      */
     @SystemProperty(value = "This property specifies the maximum number of futures that are included into diagnostic " +
-        "message.", type = Integer.class, defaults = "" + DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT)
+        "message", type = Integer.class, defaults = "" + DFLT_IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT)
     public static final String IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT =
         "IGNITE_PARTITION_RELEASE_FUTURE_WARN_LIMIT";
 

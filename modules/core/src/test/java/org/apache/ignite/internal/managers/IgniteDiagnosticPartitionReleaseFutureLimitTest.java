@@ -71,7 +71,7 @@ public class IgniteDiagnosticPartitionReleaseFutureLimitTest extends GridCommonA
         // Crerate a new atomic partitioned cache with two backups.
         IgniteCache<Integer, Integer> cache = client.getOrCreateCache(
             new CacheConfiguration<Integer, Integer>(cacheName)
-                .setMaxConcurrentAsyncOperations(1024 *1024)
+                .setMaxConcurrentAsyncOperations(1024 * 1024)
                 .setBackups(2)
                 .setAffinity(new RendezvousAffinityFunction(false, 32)));
 
