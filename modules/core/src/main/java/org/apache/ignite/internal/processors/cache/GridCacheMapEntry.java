@@ -2201,11 +2201,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     ) throws IgniteCheckedException, GridCacheEntryRemovedException, GridClosureException {
         assert cctx.atomic() && !detached();
 
-        if (newVer.updateCounter() == 0) {
-            System.out.println();
-        }
-
-
         AtomicCacheUpdateClosure c;
 
         if (!primary && !isNear())

@@ -2056,6 +2056,38 @@ public final class GridTestUtils {
     }
 
     /**
+     * Waits for successful run without assertion.
+     *
+     * @param run Closure to run.
+     * @param timeout Max time to wait in milliseconds.
+     */
+    public static void waitForSuccess(RunnableX run, long timeout) throws Exception {
+        long endTime = U.currentTimeMillis() + timeout;
+
+        if (endTime < 0)
+            endTime = Long.MAX_VALUE;
+
+        AssertionError err = null;
+
+        while (U.currentTimeMillis() < endTime) {
+            try {
+                run.runx();
+
+                return;
+            }
+            catch (AssertionError e) {
+                err = e;
+                U.sleep(DFLT_BUSYWAIT_SLEEP_INTERVAL);
+
+                System.out.println(e.getMessage());
+            }
+        }
+
+        if (err != null)
+            throw err;
+    }
+
+    /**
      * Creates an SSL context from test key store with disabled trust manager.
      *
      * @return Initialized context.
