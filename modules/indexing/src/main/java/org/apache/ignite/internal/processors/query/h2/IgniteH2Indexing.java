@@ -2284,10 +2284,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException In case the table is unable to prepare its indexes.
      */
     private void prepareIndexesForRebuild(String cacheName) throws IgniteCheckedException {
-        for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
-            assert tblDesc.table() != null;
+        try (H2PooledConnection conn = connMgr.connection()) {
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                assert tblDesc.table() != null;
 
-            tblDesc.table().prepareIndexesForRebuild();
+                tblDesc.table().prepareIndexesForRebuild(session(conn));
+            }
         }
     }
 

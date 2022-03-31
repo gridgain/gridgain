@@ -61,6 +61,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.gridgain.internal.h2.command.ddl.CreateTableData;
@@ -696,7 +697,7 @@ public class GridH2Table extends TableBase {
             while (idxs.size() > sysIdxsCnt) {
                 Index idx = idxs.get(sysIdxsCnt);
 
-                if (idx.getName() != null && idx.getSchema().findIndex(ses, idx.getName()) != null) {
+                if (idx.getName() != null && idx.getSchema().findIndex(ses, idx.getName()) == idx) {
                     // This call implicitly removes both idx and its proxy, if any, from idxs.
                     database.removeSchemaObject(ses, idx);
 
@@ -1317,13 +1318,33 @@ public class GridH2Table extends TableBase {
      *
      * @throws IgniteCheckedException In case we were unable to destroy the data.
      */
-    public void prepareIndexesForRebuild() throws IgniteCheckedException {
+    public void prepareIndexesForRebuild(Session session) throws IgniteCheckedException {
         lock(true);
 
         try {
             ArrayList<Index> newIdxs = new ArrayList<>(idxs.size());
 
-            for (int i = 0; i < idxs.size(); i++) {
+            for (int i = 0; i < sysIdxsCnt; i++) {
+                Index idx = idxs.get(i);
+
+                if (idx instanceof GridH2ProxyIndex)
+                    break;
+
+                Index newIdx = idx instanceof H2TreeIndex ? recreateIndex((H2TreeIndex) idx) : idx;
+
+                newIdxs.add(newIdx);
+            }
+
+            for (int i = 1; i < sysIdxsCnt; i++) {
+                Index clone = createDuplicateIndexIfNeeded(newIdxs.get(i));
+
+                if (clone != null)
+                    newIdxs.add(clone);
+            }
+
+            List<IgniteBiTuple<Index, Index>> toReplace = new ArrayList<>();
+
+            for (int i = sysIdxsCnt; i < idxs.size(); i++) {
                 Index idx = idxs.get(i);
 
                 if (idx instanceof GridH2ProxyIndex)
@@ -1331,15 +1352,17 @@ public class GridH2Table extends TableBase {
 
                 Index newIdx;
                 if (idx instanceof H2TreeIndex) {
-                    H2TreeIndex treeIdx = (H2TreeIndex) idx;
+                    newIdx = recreateIndex((H2TreeIndex) idx);
 
-                    treeIdx.destroy0(true, true);
+                    toReplace.add(new IgniteBiTuple<>(idx, newIdx));
 
-                    GridCacheContext<?, ?> cctx = cacheContext();
+                    Index clone = createDuplicateIndexIfNeeded(newIdx);
 
-                    assert cctx != null;
+                    if (clone != null) {
+                        newIdxs.add(clone);
 
-                    newIdx = treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap());
+                        toReplace.add(new IgniteBiTuple<>(null, clone));
+                    }
                 }
                 else
                     newIdx = idx;
@@ -1347,13 +1370,8 @@ public class GridH2Table extends TableBase {
                 newIdxs.add(newIdx);
             }
 
-            int size = newIdxs.size();
-            for (int i = 1; i < size; i++) {
-                Index clone = createDuplicateIndexIfNeeded(newIdxs.get(i));
-
-                if (clone != null)
-                    newIdxs.add(clone);
-            }
+            for (IgniteBiTuple<Index, Index> oldToNew : toReplace)
+                replaceSchemaObject(session, oldToNew.get1(), oldToNew.get2());
 
             if (hasHashIndex)
                 newIdxs.set(0, new H2TableScanIndex(this, (GridH2IndexBase) newIdxs.get(2), (GridH2IndexBase) newIdxs.get(1)));
@@ -1367,6 +1385,30 @@ public class GridH2Table extends TableBase {
         finally {
             unlock(true);
         }
+    }
+
+    /** */
+    private H2TreeIndex recreateIndex(H2TreeIndex treeIdx) throws IgniteCheckedException {
+        treeIdx.destroy0(true, true);
+
+        GridCacheContext<?, ?> cctx = cacheContext();
+
+        assert cctx != null;
+
+        return treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap());
+    }
+
+    /** */
+    private void replaceSchemaObject(
+            Session session,
+            @Nullable SchemaObject oldObj,
+            @Nullable SchemaObject newObj
+    ) {
+        if (oldObj != null)
+            database.removeSchemaObject(session, oldObj);
+
+        if (newObj != null)
+            database.addSchemaObject(session, newObj);
     }
 
     /**
