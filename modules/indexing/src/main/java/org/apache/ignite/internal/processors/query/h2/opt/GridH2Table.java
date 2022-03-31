@@ -1350,9 +1350,10 @@ public class GridH2Table extends TableBase {
                 if (idx instanceof GridH2ProxyIndex)
                     continue;
 
-                Index newIdx;
                 if (idx instanceof H2TreeIndex) {
-                    newIdx = recreateIndex((H2TreeIndex) idx);
+                    Index newIdx = recreateIndex((H2TreeIndex) idx);
+
+                    newIdxs.add(newIdx);
 
                     toReplace.add(new IgniteBiTuple<>(idx, newIdx));
 
@@ -1364,10 +1365,12 @@ public class GridH2Table extends TableBase {
                         toReplace.add(new IgniteBiTuple<>(null, clone));
                     }
                 }
-                else
-                    newIdx = idx;
+                else {
+                    newIdxs.add(idx);
 
-                newIdxs.add(newIdx);
+                    if (idxs.get(i + 1) instanceof GridH2ProxyIndex)
+                        newIdxs.add(idxs.get(++i));
+                }
             }
 
             for (IgniteBiTuple<Index, Index> oldToNew : toReplace)
