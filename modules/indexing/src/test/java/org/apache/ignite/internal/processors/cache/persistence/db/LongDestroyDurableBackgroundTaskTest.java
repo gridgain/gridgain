@@ -151,7 +151,6 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
      */
     private final AtomicBoolean slowDownTreeDestroy = new AtomicBoolean(true);
 
-
     /** */
     private final ListeningTestLogger testLog = new ListeningTestLogger(
         false,
