@@ -1811,8 +1811,7 @@ public class IgniteTxHandler {
                                 tx.addWrite(entry, ctx.deploy().globalLoader());
 
                                 if (txCounters != null && entry.op() != NOOP &&
-                                    !(entry.op() == TRANSFORM && (entry.entryProcessorCalculatedOperation() == null ||
-                                        entry.entryProcessorCalculatedOperation() == NOOP))) {
+                                    !(entry.op() == TRANSFORM && entry.entryProcessorCalculatedOperation() == NOOP)) {
                                     Long cntr = txCounters.generateNextCounter(entry.cacheId(), part);
 
                                     if (cntr != null) // Counter is null if entry is no-op.
