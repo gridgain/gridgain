@@ -2168,7 +2168,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             }
 
             if (!required)
-                return  null;
+                return null;
         }
 
         // Closure prepared, do rebuild.

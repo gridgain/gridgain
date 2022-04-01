@@ -146,6 +146,12 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
      */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
 
+    /**
+     * If {@code true}, tree will wait for {@link #TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY} before actual page destroying.
+     */
+    private final AtomicBoolean slowDownTreeDestroy = new AtomicBoolean(true);
+
+
     /** */
     private final ListeningTestLogger testLog = new ListeningTestLogger(
         false,
@@ -206,6 +212,8 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
 
         originalFactory = idxTreeFactory;
         idxTreeFactory = new H2TreeFactoryEx();
+
+        slowDownTreeDestroy.set(true);
     }
 
     /** {@inheritDoc} */
@@ -597,6 +605,8 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
      */
     @Test
     public void testLongIndexDeletionCheckWhenOneNodeStopped() throws Exception {
+        slowDownTreeDestroy.set(false);
+
         testLongIndexDeletion(true, false, false, true, false);
     }
 
@@ -888,7 +898,8 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                     long lockMaxTime,
                     Deque<GridTuple3<Long, Long, Long>> lockedPages
                 ) throws IgniteCheckedException {
-                    doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+                    if (slowDownTreeDestroy.get())
+                        doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
                     if (Thread.currentThread() instanceof IgniteThread) {
                         IgniteThread thread = (IgniteThread)Thread.currentThread();
