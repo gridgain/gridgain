@@ -335,7 +335,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      */
     private int fillEvictQueue(boolean tombstone, long upper) {
         int total = 0;
-        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+        FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
 
         // Only refill queue if it's empty.
         if (!queue.isEmptyx())
@@ -401,7 +401,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @return {@code True} is unprocessed entries remain.
      */
     public boolean expire(boolean tombstone, IgniteClosure2X<GridCacheEntryEx, Long, Boolean> c, int amount, long now) {
-        FastSizeDeque<PendingRow> queue = tombstone ? tombstoneEvictQueue : ttlEvictQueue;
+        FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
 
         PendingRow row;
 
