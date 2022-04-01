@@ -2278,7 +2278,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /**
-     * For every affected table prepares the indexes fro rebuild.
+     * For every affected table prepares the indexes for rebuild.
      *
      * @param cacheName The name of the cache whose tables are to rebuild their indexes.
      * @throws IgniteCheckedException In case the table is unable to prepare its indexes.
