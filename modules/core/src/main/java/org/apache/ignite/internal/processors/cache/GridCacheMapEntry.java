@@ -4261,7 +4261,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean walEnabled
     ) throws IgniteCheckedException {
         assert cctx.transactional() && !cctx.transactionalSnapshot();
-        assert tx.writeVersion().equals(writeVersion); // TODO: remove this.
 
         if (tx.local()) { // For remote tx we log all updates in batch: GridDistributedTxRemoteAdapter.commitIfLocked()
             cctx.tm().pendingTxsTracker().onKeysWritten(tx.nearXidVersion(), Collections.singletonList(key));
