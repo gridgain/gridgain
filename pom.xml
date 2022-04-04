@@ -728,6 +728,14 @@
                                         </replaceregexp>
 
                                         <replaceregexp byline="true" encoding="UTF-8">
+                                            <regexp pattern="(project\(Ignite.C\+\+ VERSION )\d+\.\d+\.\d+\.\d+\)" />
+                                            <substitution expression="\1${new.client.version}\)" />
+                                            <fileset dir="${basedir}/">
+                                                <include name="**/CMakeLists.txt" />
+                                            </fileset>
+                                        </replaceregexp>
+
+                                        <replaceregexp byline="true" encoding="UTF-8">
                                             <regexp pattern="(Version=.+)\d+\.\d+\.\d+\.\d+(.+)" />
                                             <substitution expression="\1${new.client.version}\2" />
                                             <fileset dir="${basedir}/">
