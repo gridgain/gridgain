@@ -73,7 +73,7 @@ if ($LastExitCode -ne 0) {
 
 $packages | % {
     $packageId = $_.Name -replace '(.*?)\.\d+\.\d+\.\d+(.*)?\.nupkg', '$1'
-    $packageVer = $_.Name -replace '.*?(\.\d+\.\d+\.\d+(.*)?)\.nupkg', '$1'
+    $packageVer = $_.Name -replace '.*?\.(\d+\.\d+\.\d+(.*)?)\.nupkg', '$1'
     dotnet add package $packageId --version $packageVer
 
     if ($LastExitCode -ne 0) {
