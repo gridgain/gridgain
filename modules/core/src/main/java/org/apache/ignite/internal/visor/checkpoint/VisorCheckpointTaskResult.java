@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.commandline.checkpointing;
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.visor.checkpoint;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -26,15 +42,15 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- * Result of CheckpointingForceTask
+ * Result of CheckpointTask
  */
-public class CheckpointingForceResult extends IgniteDataTransferObject {
+public class VisorCheckpointTaskResult extends IgniteDataTransferObject {
 
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Status of force checkpointing */
-    private Map<UUID, NodeCheckpointingResult> status = new HashMap<>();
+    private Map<UUID, VisorCheckpointJobResult> status = new HashMap<>();
 
     /**
      * Whether the checkpoint on all nodes is completed successfully
@@ -51,7 +67,7 @@ public class CheckpointingForceResult extends IgniteDataTransferObject {
      * @return number of nodes
      */
     public long numberOfFailedNodes() {
-        return status.values().stream().filter(NodeCheckpointingResult::failed).count();
+        return status.values().stream().filter(VisorCheckpointJobResult::failed).count();
     }
 
     /**
@@ -60,7 +76,7 @@ public class CheckpointingForceResult extends IgniteDataTransferObject {
      * @return number of nodes
      */
     public long numberOfSuccessNodes() {
-        return status.values().stream().filter(NodeCheckpointingResult::success).count();
+        return status.values().stream().filter(VisorCheckpointJobResult::success).count();
     }
 
     /** {@inheritDoc} */
@@ -74,7 +90,7 @@ public class CheckpointingForceResult extends IgniteDataTransferObject {
         status = U.readMap(in);
     }
 
-    public Map<UUID, NodeCheckpointingResult> status() {
+    public Map<UUID, VisorCheckpointJobResult> status() {
         return status;
     }
 }

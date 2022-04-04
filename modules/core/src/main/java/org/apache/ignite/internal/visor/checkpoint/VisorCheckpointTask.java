@@ -14,7 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.commandline.checkpointing;
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.visor.checkpoint;
 
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
@@ -38,11 +54,11 @@ import org.jetbrains.annotations.Nullable;
  * Task for checkpointing operation
  */
 @GridInternal
-public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, CheckpointingForceResult, NodeCheckpointingResult> {
+public class VisorCheckpointTask extends VisorMultiNodeTask<VoidDto, VisorCheckpointTaskResult, VisorCheckpointJobResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
-    @Override protected VisorJob<VoidDto, NodeCheckpointingResult> job(VoidDto arg) {
+    @Override protected VisorJob<VoidDto, VisorCheckpointJobResult> job(VoidDto arg) {
         return new CheckpointingForceJob(debug);
     }
 
@@ -54,11 +70,11 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
      * @throws IgniteException
      */
     @Nullable
-    @Override protected CheckpointingForceResult reduce0(List<ComputeJobResult> results) throws IgniteException {
-        CheckpointingForceResult res = new CheckpointingForceResult();
+    @Override protected VisorCheckpointTaskResult reduce0(List<ComputeJobResult> results) throws IgniteException {
+        VisorCheckpointTaskResult res = new VisorCheckpointTaskResult();
 
         for (ComputeJobResult result : results) {
-            NodeCheckpointingResult nodeRes = result.getData();
+            VisorCheckpointJobResult nodeRes = result.getData();
             res.status().put(nodeRes.nodeId(), nodeRes);
         }
         return res;
@@ -67,7 +83,7 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
     /**
      * Compute job that does a local checkpoint on a node
      */
-    private static class CheckpointingForceJob extends VisorJob<VoidDto, NodeCheckpointingResult> {
+    private static class CheckpointingForceJob extends VisorJob<VoidDto, VisorCheckpointJobResult> {
 
         /** */
         private static final long serialVersionUID = 0L;
@@ -79,7 +95,7 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         /** */
         private GridFutureAdapter fut;
 
-        private NodeCheckpointingResult res;
+        private VisorCheckpointJobResult res;
 
         long startTime;
 
@@ -92,9 +108,9 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         }
 
         /** {@inheritDoc} */
-        @Override protected NodeCheckpointingResult run(@Nullable VoidDto arg) throws IgniteException {
+        @Override protected VisorCheckpointJobResult run(@Nullable VoidDto arg) throws IgniteException {
             if (fut == null) {
-                res = new NodeCheckpointingResult();
+                res = new VisorCheckpointJobResult();
                 res.nodeId(ignite.localNode().id());
 
                 startTime = U.currentTimeMillis();
@@ -132,7 +148,7 @@ public class CheckpointingForceTask extends VisorMultiNodeTask<VoidDto, Checkpoi
         }
     }
 
-    private static void readFutureResult(GridFutureAdapter fut, NodeCheckpointingResult res) {
+    private static void readFutureResult(GridFutureAdapter fut, VisorCheckpointJobResult res) {
         try {
             fut.get();
         }
