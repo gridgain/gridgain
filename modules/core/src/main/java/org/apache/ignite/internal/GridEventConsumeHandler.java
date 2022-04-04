@@ -34,6 +34,7 @@ import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfo;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentInfoBean;
+import org.apache.ignite.internal.managers.deployment.P2PClassLoadingIssues;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -186,7 +187,7 @@ class GridEventConsumeHandler implements GridContinuousHandler {
             private boolean notificationInProgress;
 
             @Override public void onEvent(Event evt) {
-                if (filter != null && !filter.apply(evt))
+                if (filterDropsEvent(evt))
                     return;
 
                 if (loc) {
@@ -290,6 +291,24 @@ class GridEventConsumeHandler implements GridContinuousHandler {
         });
 
         return RegisterStatus.REGISTERED;
+    }
+
+    /**
+     * Returns {@code true} if there is a filter and this filter filters the given event out.
+     *
+     * @param evt event to check
+     * @return {@code true} if there is a filter and this filter filters the given event out
+     */
+    private boolean filterDropsEvent(Event evt) {
+        try {
+            return filter != null && !filter.apply(evt);
+        } catch (NoClassDefFoundError e) {
+            // Filter might be installed using P2P class loading, so let's be careful and avoid a NCDFE from getting
+            // to a Failure Handler.
+
+            P2PClassLoadingIssues.rethrowDisarmedP2PClassLoadingFailure(e);
+            return true;
+        }
     }
 
     /** {@inheritDoc} */

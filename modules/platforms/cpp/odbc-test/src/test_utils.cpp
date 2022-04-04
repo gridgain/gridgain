@@ -103,6 +103,7 @@ namespace ignite_test
         using namespace ignite;
 
         assert(cfgFile != 0);
+        std::string cfgPath(cfgFile);
 
         cfg.jvmOpts.push_back("-Xdebug");
         cfg.jvmOpts.push_back("-Xnoagent");
@@ -121,6 +122,10 @@ namespace ignite_test
         cfg.jvmClassPath = jni::CreateIgniteHomeClasspath(cfg.igniteHome, true);
 
 #ifdef IGNITE_TESTS_32
+        // Cutting off the ".xml" part.
+        cfgPath.resize(cfgPath.size() - 4);
+        cfgPath += "-32.xml";
+
         cfg.jvmInitMem = 256;
         cfg.jvmMaxMem = 768;
 #else
@@ -135,46 +140,22 @@ namespace ignite_test
 
         std::stringstream path;
 
-        path << cfgDir << common::Fs << cfgFile;
+        path << cfgDir << common::Fs << cfgPath;
 
         cfg.springCfgPath = path.str();
     }
 
-    ignite::Ignite StartNode(const char* cfgFile)
-    {
-        using namespace ignite;
-
-        IgniteConfiguration cfg;
-
-        InitConfig(cfg, cfgFile);
-
-        return Ignition::Start(cfg);
-    }
-
-    ignite::Ignite StartNode(const char* cfgFile, const char* name)
+    ignite::Ignite StartPlatformNode(const char* cfg, const char* name)
     {
         using namespace ignite;
 
         assert(name != 0);
 
-        IgniteConfiguration cfg;
+        IgniteConfiguration config;
 
-        InitConfig(cfg, cfgFile);
+        InitConfig(config, cfg);
 
-        return Ignition::Start(cfg, name);
-    }
-
-    ignite::Ignite StartPlatformNode(const char* cfg, const char* name)
-    {
-        std::string config(cfg);
-
-#ifdef IGNITE_TESTS_32
-        // Cutting off the ".xml" part.
-        config.resize(config.size() - 4);
-        config += "-32.xml";
-#endif //IGNITE_TESTS_32
-
-        return StartNode(config.c_str(), name);
+        return Ignition::Start(config, name);
     }
 
     std::string AppendPath(const std::string& base, const std::string& toAdd)

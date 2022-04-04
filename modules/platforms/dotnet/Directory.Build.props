@@ -16,6 +16,8 @@
 
 <Project>
     <PropertyGroup>
+        <LangVersion>8</LangVersion>
+
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <WarningsAsErrors/>
 

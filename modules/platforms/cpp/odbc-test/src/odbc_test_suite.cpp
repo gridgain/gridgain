@@ -153,19 +153,6 @@ namespace ignite
             }
         }
 
-        Ignite OdbcTestSuite::StartTestNode(const char* cfg, const char* name)
-        {
-            std::string config(cfg);
-
-#ifdef IGNITE_TESTS_32
-            // Cutting off the ".xml" part.
-            config.resize(config.size() - 4);
-            config += "-32.xml";
-#endif //IGNITE_TESTS_32
-
-            return StartNode(config.c_str(), name);
-        }
-
         OdbcTestSuite::OdbcTestSuite():
             env(NULL),
             dbc(NULL),
@@ -462,7 +449,7 @@ namespace ignite
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
         }
 
-        int OdbcTestSuite::InsertTestBatch(int from, int to, int expectedToAffect, bool merge)
+        SQLRETURN OdbcTestSuite::InsertTestBatchNoCheck(int from, int to, bool merge)
         {
             using common::FixedSizeArray;
 
@@ -525,14 +512,6 @@ namespace ignite
                 GetTestI8ArrayField(seed, &i8ArrayFields[i*42], 42);
                 i8ArrayFieldsLen[i] = 42;
             }
-
-            SQLULEN setsProcessed = 0;
-
-            BOOST_TEST_CHECKPOINT("Setting processed pointer");
-            ret = SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, &setsProcessed, SQL_IS_POINTER);
-
-            if (!SQL_SUCCEEDED(ret))
-                BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
             BOOST_TEST_CHECKPOINT("Binding keys");
             ret = SQLBindParameter(stmt, 1, SQL_PARAM_INPUT, SQL_C_SBIGINT, SQL_BIGINT, 0, 0, keys.GetData(), 0, 0);
@@ -608,13 +587,27 @@ namespace ignite
 
             BOOST_TEST_CHECKPOINT("Setting paramset size");
             ret = SQLSetStmtAttr(stmt, SQL_ATTR_PARAMSET_SIZE,
-                 reinterpret_cast<SQLPOINTER>(static_cast<ptrdiff_t>(recordsNum)), 0);
+                                 reinterpret_cast<SQLPOINTER>(static_cast<ptrdiff_t>(recordsNum)), 0);
 
             if (!SQL_SUCCEEDED(ret))
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
             BOOST_TEST_CHECKPOINT("Executing query");
-            ret = SQLExecute(stmt);
+
+            return SQLExecute(stmt);
+        }
+
+        int OdbcTestSuite::InsertTestBatch(int from, int to, int expectedToAffect, bool merge)
+        {
+            SQLULEN setsProcessed = 0;
+
+            BOOST_TEST_CHECKPOINT("Setting processed pointer");
+            SQLRETURN ret = SQLSetStmtAttr(stmt, SQL_ATTR_PARAMS_PROCESSED_PTR, &setsProcessed, SQL_IS_POINTER);
+
+            if (!SQL_SUCCEEDED(ret))
+                BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+            ret = InsertTestBatchNoCheck(from, to, merge);
 
             if (!SQL_SUCCEEDED(ret))
                 BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));

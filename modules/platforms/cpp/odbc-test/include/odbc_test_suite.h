@@ -87,14 +87,6 @@ namespace ignite
             void CleanUp();
 
             /**
-             * Start additional with the specified name and config.
-             *
-             * @param cfg Config path.
-             * @param name Instance name.
-             */
-            static Ignite StartTestNode(const char* cfg, const char* name);
-
-            /**
              * Constructor.
              */
             OdbcTestSuite();
@@ -112,6 +104,16 @@ namespace ignite
              * @param merge Set to true to use merge instead.
              */
             void InsertTestStrings(int recordsNum, bool merge = false);
+
+            /**
+             * Insert requested number of TestType values in a batch.
+             *
+             * @param from Index to start from.
+             * @param to Index to stop.
+             * @param merge Set to true to use merge instead of insert.
+             * @return Execution result.
+             */
+            SQLRETURN InsertTestBatchNoCheck(int from, int to, bool merge = false);
 
             /**
              * Insert requested number of TestType values in a batch.

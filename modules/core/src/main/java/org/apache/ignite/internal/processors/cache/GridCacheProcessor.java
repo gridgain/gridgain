@@ -525,8 +525,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         cctx.cleanup();
-
-        cachesInfo.cleanupRemovedCache(cctx.name());
     }
 
     /**
@@ -558,8 +556,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         sharedCtx.evict().cleanupRemovedGroup(grp.groupId());
-
-        cachesInfo.cleanupRemovedGroup(grp.groupId());
     }
 
     /**
@@ -2752,18 +2748,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * Called during the rollback of the exchange partitions procedure in order to stop the given cache even if it's not
      * fully initialized (e.g. failed on cache init stage).
      *
+     * @param topVer Topology version related to the given {@code exchActions}.
      * @param exchActions Stop requests.
      */
-    void forceCloseCaches(ExchangeActions exchActions) {
+    void forceCloseCaches(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
         assert exchActions != null && !exchActions.cacheStopRequests().isEmpty();
 
-        processCacheStopRequestOnExchangeDone(exchActions);
+        processCacheStopRequestOnExchangeDone(topVer, exchActions);
     }
 
     /**
+     * @param topVer Topology version related to the given {@code exchActions}.
      * @param exchActions Change requests.
      */
-    private void processCacheStopRequestOnExchangeDone(ExchangeActions exchActions) {
+    private void processCacheStopRequestOnExchangeDone(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
         // Reserve at least 2 threads for system operations.
         int parallelismLvl = U.availableThreadCount(ctx, GridIoPolicy.SYSTEM_POOL, 2);
 
@@ -2849,12 +2847,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             throw new IgniteException(msg, e);
         }
+        finally {
+            cachesInfo.cleanupRemovedCaches(topVer);
+        }
 
         for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
             stopCacheGroup(grp.get1().groupId(), grp.get2());
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
+
+        cachesInfo.cleanupRemovedCacheGroups(topVer);
 
         if (exchActions.deactivate())
             sharedCtx.deactivate();
@@ -2922,7 +2925,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (err == null)
-            processCacheStopRequestOnExchangeDone(exchActions);
+            processCacheStopRequestOnExchangeDone(cacheStartVer, exchActions);
     }
 
     /**

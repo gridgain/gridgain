@@ -67,7 +67,7 @@ namespace ignite_test
             const std::string& nativeErrorInfo)
         {
             if ((categoryFilter.empty() || category.find(categoryFilter) != std::string::npos) &&
-                (messageFilter.empty() || message.find(messageFilter) != std::string::npos))
+                (!messageFilter.empty() && message.find(messageFilter) != std::string::npos))
             {
                 ignite::common::concurrent::CsLockGuard guard(lock);
 

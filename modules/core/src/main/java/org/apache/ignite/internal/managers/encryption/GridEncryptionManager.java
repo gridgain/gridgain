@@ -89,6 +89,7 @@ import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType
 import static org.apache.ignite.internal.GridTopic.TOPIC_GEN_ENC_KEY;
 import static org.apache.ignite.internal.IgniteFeatures.CACHE_GROUP_KEY_CHANGE;
 import static org.apache.ignite.internal.IgniteFeatures.MASTER_KEY_CHANGE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_ENCRYPTION_MASTER_KEY_DIGEST;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.util.distributed.DistributedProcess.DistributedProcessType.MASTER_KEY_CHANGE_FINISH;
 import static org.apache.ignite.internal.util.distributed.DistributedProcess.DistributedProcessType.MASTER_KEY_CHANGE_PREPARE;
@@ -246,6 +247,13 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
         startSpi();
+
+        byte[] digest = getSpi().masterKeyDigest();
+        if (digest != null) {
+            // Although we send master key digest in the joining data,
+            // this node attribute is still needed for compatibility with the 8.7.X
+            ctx.addNodeAttribute(ATTR_ENCRYPTION_MASTER_KEY_DIGEST, digest);
+        }
 
         ctx.event().addDiscoveryEventListener(discoLsnr = (evt, discoCache) -> {
             UUID leftNodeId = evt.eventNode().id();

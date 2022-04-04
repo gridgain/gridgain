@@ -151,7 +151,7 @@ struct SchemaTestSuiteFixture : odbc::OdbcTestSuite
      * Constructor.
      */
     SchemaTestSuiteFixture() :
-        grid(StartNode("queries-schema.xml", "Node1"))
+        grid(StartPlatformNode("queries-schema.xml", "Node1"))
     {
         Connect("DRIVER={Apache Ignite};address=127.0.0.1:11110;schema=PUBLIC");
     }

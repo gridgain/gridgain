@@ -57,7 +57,7 @@ struct ConnectionTestSuiteFixture: odbc::OdbcTestSuite
      */
     void StartNode()
     {
-        StartTestNode("queries-test.xml", "NodeMain");
+        StartPlatformNode("queries-test.xml", "NodeMain");
     }
 
     /**

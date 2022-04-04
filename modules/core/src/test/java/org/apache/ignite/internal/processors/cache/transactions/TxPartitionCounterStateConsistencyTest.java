@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.BooleanSupplier;
@@ -47,6 +48,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -963,12 +965,19 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         CountDownLatch resumeDiscoSndLatch = new CountDownLatch(1);
 
         BlockTcpDiscoverySpi crdDiscoSpi = (BlockTcpDiscoverySpi)grid(0).configuration().getDiscoverySpi();
-        CyclicBarrier sync = new CyclicBarrier(2);
+        CountDownLatch sync = new CountDownLatch(1);
 
         crdDiscoSpi.setClosure((node, msg) -> {
             if (msg instanceof CacheAffinityChangeMessage) {
-                U.awaitQuiet(sync);
-                U.awaitQuiet(resumeDiscoSndLatch);
+                sync.countDown();
+
+                try {
+                    if (!U.await(resumeDiscoSndLatch, 10, TimeUnit.SECONDS))
+                        fail("Failed to wait for GridNearLockRequest from a client node.");
+                }
+                catch (IgniteInterruptedCheckedException e) {
+                    fail(e.getMessage());
+                }
             }
 
             return null;
@@ -976,14 +985,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         // Locks mapped wait.
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
-            try {
-                startGrid(3);
+            startGrid(3);
 
-                awaitPartitionMapExchange();
-            }
-            catch (Exception e) {
-                fail(X.getFullStackTrace(e));
-            }
+            awaitPartitionMapExchange();
         });
 
         sync.await();
