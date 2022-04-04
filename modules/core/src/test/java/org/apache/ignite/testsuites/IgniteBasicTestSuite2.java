@@ -34,6 +34,7 @@ import org.apache.ignite.internal.IgniteThreadGroupNodeRestartTest;
 import org.apache.ignite.internal.MarshallerContextLockingSelfTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
+import org.apache.ignite.internal.managers.IgniteDiagnosticPartitionReleaseFutureLimitTest;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBeanTest;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecordSerializationTest;
@@ -140,6 +141,7 @@ import org.junit.runners.Suite;
 
     IgniteDiagnosticMessagesTest.class,
     IgniteDiagnosticMessagesMultipleConnectionsTest.class,
+    IgniteDiagnosticPartitionReleaseFutureLimitTest.class,
 
     IgniteRejectConnectOnNodeStopTest.class,
 
