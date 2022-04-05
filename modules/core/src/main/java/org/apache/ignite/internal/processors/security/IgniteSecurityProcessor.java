@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -158,7 +157,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
                     log.warning(warn);
 
                     //TODO: The exception required only until the issue GG-33733 will fix.
-                    throw new IgniteException(warn);
+                    throw new SecurityException(warn);
                 }
 
                 res = new DenyAllSecurityContext(senderNodeId, type);
