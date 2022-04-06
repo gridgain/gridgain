@@ -19,8 +19,10 @@ package org.apache.ignite.internal.processors.cache.index;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.Semaphore;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.binary.BinaryObject;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -28,11 +30,27 @@ import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.index.IndexingTestUtils.StopBuildIndexConsumer;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.aware.IndexRebuildFutureStorage;
+import org.apache.ignite.internal.processors.query.h2.H2RowCache;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.util.typedef.F;
+import org.gridgain.internal.h2.table.IndexColumn;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.Collections.emptyList;
@@ -109,47 +127,36 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
      */
     @Test
     public void testCorruptedIndexRebuild() throws Exception {
+        H2TreeIndex.h2TreeFactory = CorruptedH2Tree::new;
+
         IgniteEx ignite = startGrid(0);
 
-        sql("CREATE TABLE test_tbl (id1 INTEGER, id2 INTEGER, val VARCHAR, CONSTRAINT pk PRIMARY KEY (id1, id2))"
+        sql("CREATE TABLE test_tbl (id INTEGER PRIMARY KEY, val VARCHAR)"
                 + " WITH \"cache_name=TEST_CACHE, key_type=KEY, value_type=VAL\"");
 
-        sql("CREATE INDEX test_tbl_val_idx ON test_tbl(val)");
-
-        // the keys below are logically equal, but physically (i.e. as byte arrays) are not
-        BinaryObject key1 = ignite.binary().builder("KEY").setField("id1", 1).setField("id2", 2).build();
-        BinaryObject key2 = ignite.binary().builder("KEY").setField("id2", 2).setField("id1", 1).build();
-        BinaryObject val = ignite.binary().builder("VAL").setField("val", "val").build();
-
-        IgniteCache<BinaryObject, BinaryObject> cache = ignite.cache("TEST_CACHE").withKeepBinary();
-        cache.put(key1, val);
-        cache.put(key2, val);
-
-        assertEquals(1L, sql("SELECT count(id1) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
-        assertEquals(2L, sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0));
-        assertEquals(2, cache.size());
-
-        cache.remove(key1);
-        cache.remove(key2);
-
-        assertEquals(0L, sql("SELECT count(id1) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
-        assertEquals(0, cache.size());
-        assertThrowsWithCause(
-                () -> sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0),
-                Exception.class
-        );
+        int corruptedKey = 5;
 
         for (int i = 0; i < 10; i++) {
-            BinaryObject key = ignite.binary().builder("KEY")
-                    .setField("id1", i * 10)
-                    .setField("id2", i * 10)
-                    .build();
-            BinaryObject val0 = ignite.binary().builder("VAL")
-                    .setField("val", "val")
-                    .build();
+            if (i == corruptedKey)
+                CorruptedH2Tree.corrupt = true;
 
-            cache.put(key, val0);
+            sql("INSERT INTO test_tbl VALUES (?, ?)", i, "val_" + i);
+
+            CorruptedH2Tree.corrupt = false;
         }
+
+        assertEquals(10L, sql("SELECT count(id) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
+
+        grid(0).cache("TEST_CACHE")
+                .remove(grid(0).binary().builder("KEY").setField("id", corruptedKey).build());
+
+        assertEquals(9, grid(0).cache("TEST_CACHE").size());
+        assertEquals(10L, sql("SELECT count(id) FROM test_tbl USE INDEX (\"_key_PK\")").get(0).get(0));
+
+        assertThrowsWithCause(
+                () -> sql("SELECT * FROM test_tbl"),
+                Exception.class
+        );
 
         GridCacheContext<?, ?> cacheCtx = ignite.cachex("TEST_CACHE").context();
 
@@ -160,7 +167,7 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
         if (fut != null)
             fut.get(getTestTimeout());
 
-        assertEquals(10L, sql("SELECT count(val) FROM test_tbl USE INDEX (test_tbl_val_idx)").get(0).get(0));
+        assertEquals(9, sql("SELECT * FROM test_tbl").size());
     }
 
     /**
@@ -402,5 +409,28 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
         }
 
         return true;
+    }
+
+    /** */
+    static class CorruptedH2Tree extends H2Tree {
+        static volatile boolean corrupt = false;
+
+        public CorruptedH2Tree(@Nullable GridCacheContext<?, ?> cctx, GridH2Table table, String name, String idxName, String cacheName,
+                String tblName, ReuseList reuseList, int grpId, String grpName, PageMemory pageMem, IgniteWriteAheadLogManager wal,
+                AtomicLong globalRmvId, long metaPageId, boolean initNew, List<IndexColumn> unwrappedCols,
+                List<IndexColumn> wrappedCols, AtomicInteger maxCalculatedInlineSize, boolean pk, boolean affinityKey,
+                boolean mvccEnabled, @Nullable H2RowCache rowCache, @Nullable FailureProcessor failureProcessor,
+                PageLockTrackerManager pageLockTrackerManager, IgniteLogger log, @Nullable IoStatisticsHolder stats,
+                InlineIndexColumnFactory factory, int configuredInlineSize, PageIoResolver pageIoRslvr) throws IgniteCheckedException {
+            super(cctx, table, name, idxName, cacheName, tblName, reuseList, grpId, grpName, pageMem, wal, globalRmvId, metaPageId,
+                    initNew, unwrappedCols, wrappedCols, maxCalculatedInlineSize, pk, affinityKey, mvccEnabled, rowCache,
+                    failureProcessor, pageLockTrackerManager, log, stats, factory, configuredInlineSize, pageIoRslvr);
+        }
+
+        @Override
+        protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx, H2Row row) throws IgniteCheckedException {
+            int cmp = super.compare(io, pageAddr, idx, row);
+            return corrupt ? -cmp : cmp;
+        }
     }
 }
