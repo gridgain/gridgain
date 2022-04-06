@@ -31,6 +31,7 @@ import org.apache.ignite.internal.metric.MetricsConfigurationTest;
 import org.apache.ignite.internal.metric.MetricsSelfTest;
 import org.apache.ignite.internal.metric.ReadMetricsOnNodeStartupTest;
 import org.apache.ignite.internal.metric.SystemMetricsTest;
+import org.apache.ignite.internal.metric.SystemViewClusterActivationTest;
 import org.apache.ignite.internal.metric.SystemViewComputeJobTest;
 import org.apache.ignite.internal.metric.SystemViewSelfTest;
 import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTest;
@@ -80,6 +81,7 @@ public class IgniteCacheTestSuite13 {
         GridTestUtils.addTestIfNeeded(suite, SystemMetricsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, MetricsConfigurationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, SystemViewSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, SystemViewClusterActivationTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, SystemViewComputeJobTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CacheMetricsAddRemoveTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, JmxExporterSpiTest.class, ignoredTests);

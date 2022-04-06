@@ -20,6 +20,9 @@ import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.AffinityFunction;
+import org.apache.ignite.cache.affinity.AffinityKeyMapped;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -33,7 +36,11 @@ import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.util.deque.FastSizeDeque;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,6 +80,68 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
         );
 
         return cfg;
+    }
+
+    /**
+     * Checks correctness tombstone partition determination on pending tree.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "CLEANUP_WORKER_SLEEP_INTERVAL", value = "3000000")
+    @WithSystemProperty(key = "DEFAULT_TOMBSTONE_TTL", value = "50")
+    public void testCorrectnessPartition() throws Exception {
+        IgniteEx ig = startGrid(0);
+
+        ig.cluster().state(ClusterState.ACTIVE);
+
+        AffinityFunction aff = new RendezvousAffinityFunction(false, 16);
+
+        IgniteCache cache = ig.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(aff));
+
+        CustomKey key = null;
+
+        for (int i = 0; i < 100; i++) {
+            CustomKey testKey = new CustomKey(i, "Key");
+
+            if (aff.partition(testKey) != aff.partition(i)) {
+                key = testKey;
+
+                break;
+            }
+        }
+
+        assertNotNull("Can not find key.", key);
+
+        int part = aff.partition(key.id);
+
+        info("Key was found [key=" + key + ", part=" + part + ']');
+
+        cache.put(key, new Object());
+
+        CacheGroupContext grp = ig.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
+
+        IgniteCacheOffheapManager.CacheDataStore store = ((IgniteCacheOffheapManagerImpl)grp.offheap())
+            .dataStore(0, true);
+
+        // Get pending tree of expire cache.
+        PendingEntriesTree pendingTree = store.pendingTree();
+
+        assertTrue(pendingTree.isEmpty());
+
+        cache.remove(key);
+
+        assertFalse(pendingTree.isEmpty());
+
+        FastSizeDeque<PendingRow> expireQueue = grp.shared().evict().evictQueue(true);
+
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            !expireQueue.isEmptyx(), 10_000));
+
+        PendingRow pendingRow = expireQueue.peek();
+
+        assertEquals(part, pendingRow.key.partition());
     }
 
     /** */
@@ -153,6 +222,52 @@ public class PendingTreeCorruptionTest extends GridCommonAbstractTest {
         }
         finally {
             ig.context().cache().context().database().checkpointReadUnlock();
+        }
+    }
+
+    /**
+     * Custom affinity key.
+     */
+    public static class CustomKey {
+        /** Id. */
+        @AffinityKeyMapped
+        private int id;
+
+        /** Name. */
+        private String name;
+
+        /**
+         * Constructor.
+         *
+         * @param id Id.
+         * @param name Name.
+         */
+        public CustomKey(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        /**
+         * Gets id.
+         *
+         * @return Id.
+         */
+        public int getId() {
+            return id;
+        }
+
+        /**
+         * Gets name.
+         *
+         * @return Name.
+         */
+        public String getName() {
+            return name;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(CustomKey.class, this);
         }
     }
 }
