@@ -569,7 +569,7 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     }
 
     /**
-     * @return Add no-op flag.
+     * @return {@code true} if noop flag is set, {@code false} otherwise.
      */
     public boolean noop() {
         return isFlag(TX_ENTRY_NOOP_ON_PRIMARY);
