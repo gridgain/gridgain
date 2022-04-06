@@ -1316,6 +1316,7 @@ public class GridH2Table extends TableBase {
     /**
      * Destroys the old data and recreate the index.
      *
+     * @param session Session.
      * @throws IgniteCheckedException In case we were unable to destroy the data.
      */
     public void prepareIndexesForRebuild(Session session) throws IgniteCheckedException {
