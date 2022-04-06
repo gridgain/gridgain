@@ -1057,6 +1057,19 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             Collection<GridCacheManager> excludes = dhtExcludes(ctx);
 
+            boolean destroyData = destroy;
+
+            if (destroyData) {
+                CacheGroupDescriptor descriptor = cacheGroupDescriptor(ctx.groupId());
+
+                assert descriptor != null;
+
+                // If this is the last cache in the cache group, we don't have to clear the cache as it will be cleared
+                // along with the cache group itself
+                if (!descriptor.hasCaches())
+                    destroyData = false;
+            }
+
             // Reverse order.
             for (ListIterator<GridCacheManager> it = mgrs.listIterator(mgrs.size()); it.hasPrevious(); ) {
                 GridCacheManager mgr = it.previous();
@@ -1071,7 +1084,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             ctx.kernalContext().coordinators().onCacheStop(ctx);
 
-            ctx.group().stopCache(ctx, destroy);
+            ctx.group().stopCache(ctx, destroyData);
 
             U.stopLifecycleAware(log, lifecycleAwares(ctx.group(), cache.configuration(), ctx.store().configuredStore()));
 
