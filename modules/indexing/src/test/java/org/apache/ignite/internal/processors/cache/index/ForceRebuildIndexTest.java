@@ -427,8 +427,7 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
                     failureProcessor, pageLockTrackerManager, log, stats, factory, configuredInlineSize, pageIoRslvr);
         }
 
-        @Override
-        protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx, H2Row row) throws IgniteCheckedException {
+        @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx, H2Row row) throws IgniteCheckedException {
             int cmp = super.compare(io, pageAddr, idx, row);
             return corrupt ? -cmp : cmp;
         }
