@@ -1401,12 +1401,22 @@ public class GridH2Table extends TableBase {
         return treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap());
     }
 
-    /** */
+    /**
+     * Replaces the object in the schema managed by H2.
+     *
+     * <p>Invocation of the method should be guarded by exclusive lock.
+     * @param session Session.
+     * @param oldObj Object to remove. Do nothing if null.
+     * @param newObj Object to add. Do nothing if null.
+     * @see #lock(boolean)
+     */
     private void replaceSchemaObject(
             Session session,
             @Nullable SchemaObject oldObj,
             @Nullable SchemaObject newObj
     ) {
+        assert lock.writeLock().isHeldByCurrentThread() : lock.writeLock();
+
         if (oldObj != null)
             database.removeSchemaObject(session, oldObj);
 

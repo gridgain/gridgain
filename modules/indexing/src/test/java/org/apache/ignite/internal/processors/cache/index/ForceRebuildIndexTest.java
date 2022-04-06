@@ -202,7 +202,7 @@ public class ForceRebuildIndexTest extends AbstractRebuildIndexTest {
     }
 
     /**
-     * In case of non-lazy queries, if rebuild should wait till the query completes.
+     * In case of non-lazy queries, the rebuild operation should wait till the query completes.
      *
      * @throws Exception If failed.
      */
