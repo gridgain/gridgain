@@ -413,6 +413,7 @@ public class GridCacheVersion implements Message, Externalizable, CacheEntryVers
     @Override public String toString() {
         return "GridCacheVersion [topVer=" + topologyVersion() +
             ", order=" + order() +
-            ", nodeOrder=" + nodeOrder() + ']';
+            ", nodeOrder=" + nodeOrder() +
+            ", updCounter=" + updateCounter() + ']';
     }
 }
