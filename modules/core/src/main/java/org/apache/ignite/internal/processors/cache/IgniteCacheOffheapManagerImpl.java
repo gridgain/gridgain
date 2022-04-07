@@ -1955,7 +1955,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             CacheDataRow row,
             long conflictedLink)
         {
-            return  message + " [" +
+            return message + " [" +
                     "cache=" + cacheName +
                     ", part=" + part +
                     ", row=" + row +
