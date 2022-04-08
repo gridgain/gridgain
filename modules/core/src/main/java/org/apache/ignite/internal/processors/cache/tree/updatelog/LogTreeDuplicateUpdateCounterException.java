@@ -32,7 +32,7 @@ public class LogTreeDuplicateUpdateCounterException extends IgniteCheckedExcepti
      *
      */
     public LogTreeDuplicateUpdateCounterException(long link, String msg) {
-        super(msg);
+        super(msg, null, false);
 
         this.link = link;
     }

@@ -67,6 +67,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseB
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
+import org.apache.ignite.internal.processors.cache.tree.updatelog.LogTreeDuplicateUpdateCounterException;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
@@ -2544,6 +2545,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
         }
         catch (CorruptedDataStructureException e) {
+            throw e;
+        }
+        catch (LogTreeDuplicateUpdateCounterException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
