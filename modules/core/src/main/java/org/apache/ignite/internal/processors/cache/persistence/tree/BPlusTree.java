@@ -2544,10 +2544,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 }
             }
         }
-        catch (CorruptedDataStructureException e) {
-            throw e;
-        }
-        catch (LogTreeDuplicateUpdateCounterException e) {
+        catch (CorruptedDataStructureException | LogTreeDuplicateUpdateCounterException e) {
             throw e;
         }
         catch (IgniteCheckedException e) {
