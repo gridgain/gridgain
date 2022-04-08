@@ -73,7 +73,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
     public static final String TS_CLEANUP = "tombstones.suspended.cleanup";
 
     /** */
-    private static final String DEFAULT_TOMBSTONE_TTL_PROP = "DEFAULT_TOMBSTONE_TTL";
+    public static final String DEFAULT_TOMBSTONE_TTL_PROP = "DEFAULT_TOMBSTONE_TTL";
 
     /** Cleanup worker. */
     private CleanupWorker cleanupWorker;
