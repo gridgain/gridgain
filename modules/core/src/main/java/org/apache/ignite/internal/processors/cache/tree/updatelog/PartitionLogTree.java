@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -36,6 +37,9 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     /** */
     private final CacheGroupContext grp;
 
+    /** */
+    private final IgniteLogger log;
+
     /**
      * @param grp Cache group.
      * @param name Tree name.
@@ -45,6 +49,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
      * @param initNew Initialize new index.
      * @param pageLockTrackerManager Page lock tracker manager.
      * @param pageFlag Default flag value for allocated pages.
+     * @param log Logger.
      * @throws IgniteCheckedException If failed.
      */
     public PartitionLogTree(
@@ -55,7 +60,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         ReuseList reuseList,
         boolean initNew,
         PageLockTrackerManager pageLockTrackerManager,
-        byte pageFlag
+        byte pageFlag,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         super(
             name,
@@ -74,6 +80,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         );
 
         this.grp = grp;
+        this.log = log;
 
         assert !grp.dataRegion().config().isPersistenceEnabled() || grp.shared().database().checkpointLockIsHeldByThread();
 
@@ -114,8 +121,12 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
             if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK))
                 throw new AssertionError("Duplicate update counters [updCounter=" + updCntr + ']');
-            else
-                throw new LogTreeDuplicateUpdateCounterException(io.getLink(pageAddr, idx), "updCounter=" + updCntr);
+            else {
+                log.warning("Duplicate update counter at update log tree [" +
+                    "grp=" + grp.cacheOrGroupName() +
+                    ", updCounter=" + updCntr +
+                    +']');
+            }
         }
 
         return cmp;
