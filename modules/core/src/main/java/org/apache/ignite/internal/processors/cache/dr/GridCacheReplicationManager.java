@@ -121,4 +121,26 @@ public interface GridCacheReplicationManager extends GridCacheManager {
     default void skipUpdateCounter(int part, long updCnt) {
         // No op.
     }
+
+    /**
+     *  Print to log DR states.
+     */
+    void logDrStates();
+
+    /**
+     * Cleanup DR states.
+     */
+    void cleanupDrStates();
+
+    /**
+     * Disable update log cleaner.
+     *
+     * @param disable {@code true} disables cleaner, {@code false} enables cleaner.
+     */
+    void disableUpdateLogCleaner(boolean disable);
+
+    /**
+     * Cleanup update log tree.
+     */
+    void cleanupUpdateLog();
 }
