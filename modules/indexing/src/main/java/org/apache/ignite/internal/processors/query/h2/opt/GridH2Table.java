@@ -61,6 +61,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.gridgain.internal.h2.command.ddl.CreateTableData;
@@ -94,7 +95,7 @@ public class GridH2Table extends TableBase {
     private static final long EXCLUSIVE_LOCK = -1;
 
     /** 'rebuildFromHashInProgress' field updater */
-    private static final AtomicIntegerFieldUpdater<GridH2Table> rebuildFromHashInProgressFiledUpdater =
+    private static final AtomicIntegerFieldUpdater<GridH2Table> rebuildFromHashInProgressFieldUpdater =
         AtomicIntegerFieldUpdater.newUpdater(GridH2Table.class, "rebuildFromHashInProgress");
 
     /** False representation */
@@ -132,6 +133,9 @@ public class GridH2Table extends TableBase {
 
     /** */
     private final ReentrantReadWriteLock lock;
+
+    /** */
+    private final boolean hasHashIndex;
 
     /** */
     private volatile boolean destroyed;
@@ -222,7 +226,7 @@ public class GridH2Table extends TableBase {
 
         idxs.addAll(clones);
 
-        boolean hasHashIndex = idxs.size() >= 2 && index(0).getIndexType().isHash();
+        hasHashIndex = idxs.size() >= 2 && index(0).getIndexType().isHash();
 
         // Add scan index at 0 which is required by H2.
         if (hasHashIndex)
@@ -946,13 +950,29 @@ public class GridH2Table extends TableBase {
         }
     }
 
+    /** */
+    public boolean checkIfIndexesRebuildRequired() {
+        for (int i = 0; i < idxs.size(); i++) {
+            Index idx = idxs.get(i);
+
+            if (idx instanceof H2TreeIndex) {
+                H2TreeIndex idx0 = (H2TreeIndex)idx;
+
+                if (idx0.rebuildRequired())
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Mark or unmark index rebuild state.
      */
     public void markRebuildFromHashInProgress(boolean value) {
         assert !value || (idxs.size() >= 2 && index(1).getIndexType().isHash()) : "Table has no hash index.";
 
-        if (rebuildFromHashInProgressFiledUpdater.compareAndSet(this, value ? FALSE : TRUE, value ? TRUE : FALSE)) {
+        if (rebuildFromHashInProgressFieldUpdater.compareAndSet(this, value ? FALSE : TRUE, value ? TRUE : FALSE)) {
             lock.writeLock().lock();
 
             try {
@@ -1241,7 +1261,9 @@ public class GridH2Table extends TableBase {
         ArrayList<Index> idxs = new ArrayList<>(2);
 
         idxs.add(this.idxs.get(0));
-        idxs.add(this.idxs.get(1));
+
+        if (hasHashIndex)
+            idxs.add(this.idxs.get(1));
 
         return idxs;
     }
@@ -1289,6 +1311,118 @@ public class GridH2Table extends TableBase {
         refreshStatsIfNeeded();
 
         return tblStats.primaryRowCount();
+    }
+
+    /**
+     * Destroys the old data and recreate the index.
+     *
+     * @param session Session.
+     * @throws IgniteCheckedException In case we were unable to destroy the data.
+     */
+    public void prepareIndexesForRebuild(Session session) throws IgniteCheckedException {
+        lock(true);
+
+        try {
+            ArrayList<Index> newIdxs = new ArrayList<>(idxs.size());
+
+            for (int i = 0; i < sysIdxsCnt; i++) {
+                Index idx = idxs.get(i);
+
+                if (idx instanceof GridH2ProxyIndex)
+                    break;
+
+                Index newIdx = idx instanceof H2TreeIndex ? recreateIndex((H2TreeIndex) idx) : idx;
+
+                newIdxs.add(newIdx);
+            }
+
+            for (int i = 1; i < sysIdxsCnt; i++) {
+                Index clone = createDuplicateIndexIfNeeded(newIdxs.get(i));
+
+                if (clone != null)
+                    newIdxs.add(clone);
+            }
+
+            List<IgniteBiTuple<Index, Index>> toReplace = new ArrayList<>();
+
+            for (int i = sysIdxsCnt; i < idxs.size(); i++) {
+                Index idx = idxs.get(i);
+
+                if (idx instanceof GridH2ProxyIndex)
+                    continue;
+
+                if (idx instanceof H2TreeIndex) {
+                    Index newIdx = recreateIndex((H2TreeIndex) idx);
+
+                    newIdxs.add(newIdx);
+
+                    toReplace.add(new IgniteBiTuple<>(idx, newIdx));
+
+                    Index clone = createDuplicateIndexIfNeeded(newIdx);
+
+                    if (clone != null) {
+                        newIdxs.add(clone);
+
+                        toReplace.add(new IgniteBiTuple<>(null, clone));
+                    }
+                }
+                else {
+                    newIdxs.add(idx);
+
+                    if (idxs.get(i + 1) instanceof GridH2ProxyIndex)
+                        newIdxs.add(idxs.get(++i));
+                }
+            }
+
+            for (IgniteBiTuple<Index, Index> oldToNew : toReplace)
+                replaceSchemaObject(session, oldToNew.get1(), oldToNew.get2());
+
+            if (hasHashIndex)
+                newIdxs.set(0, new H2TableScanIndex(this, (GridH2IndexBase) newIdxs.get(2), (GridH2IndexBase) newIdxs.get(1)));
+            else
+                newIdxs.set(0, new H2TableScanIndex(this, (GridH2IndexBase) newIdxs.get(1), null));
+
+            idxs = newIdxs;
+
+            incrementModificationCounter();
+        }
+        finally {
+            unlock(true);
+        }
+    }
+
+    /** */
+    private H2TreeIndex recreateIndex(H2TreeIndex treeIdx) throws IgniteCheckedException {
+        treeIdx.destroy0(true, true);
+
+        GridCacheContext<?, ?> cctx = cacheContext();
+
+        assert cctx != null;
+
+        return treeIdx.createCopy(cctx.dataRegion().pageMemory(), cctx.offheap());
+    }
+
+    /**
+     * Replaces the object in the schema managed by H2.
+     *
+     * <p>Invocation of the method should be guarded by exclusive lock.
+     * @param session Session.
+     * @param oldObj Object to remove. Do nothing if null.
+     * @param newObj Object to add. Do nothing if null.
+     * @see #lock(boolean)
+     */
+    private void replaceSchemaObject(
+            Session session,
+            @Nullable SchemaObject oldObj,
+            @Nullable SchemaObject newObj
+    ) {
+        assert lock.writeLock().isHeldByCurrentThread() : lock.writeLock();
+
+        if (oldObj != null)
+            database.removeSchemaObject(session, oldObj);
+
+        if (newObj != null)
+            database.addSchemaObject(session, newObj);
     }
 
     /**

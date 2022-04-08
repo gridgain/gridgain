@@ -2153,25 +2153,21 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String cacheName = cctx.name();
 
-        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
-            // If there are no index store, rebuild all indexes.
-            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
-        }
-        else {
-            // Otherwise iterate over tables looking for missing indexes.
-            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+        if (pageStore != null && pageStore.hasIndexStore(cctx.groupId()) && !force) {
+            boolean required = false;
 
             for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
                 GridH2Table tbl = tblDesc.table();
 
                 assert tbl != null;
 
-                tbl.collectIndexesForPartialRebuild(clo0, force);
+                required = tbl.checkIfIndexesRebuildRequired();
+
+                if (required)
+                    break;
             }
 
-            if (clo0.hasIndexes())
-                clo = clo0;
-            else
+            if (!required)
                 return null;
         }
 
@@ -2196,6 +2192,31 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         cctx.kernalContext().query().onStartRebuildIndexes(cctx);
 
+        try {
+            prepareIndexesForRebuild(cacheName);
+        } catch (IgniteCheckedException e) {
+            rebuildCacheIdxFut.onDone(e);
+        }
+
+        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
+            // If there are no index store, rebuild all indexes.
+            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
+        }
+        else {
+            // Otherwise iterate over tables looking for missing indexes.
+            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                GridH2Table tbl = tblDesc.table();
+
+                assert tbl != null;
+
+                tbl.collectIndexesForPartialRebuild(clo0, force);
+            }
+
+            clo = clo0;
+        }
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2219,7 +2240,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             outRebuildCacheIdxFut.onDone(err);
         });
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
+        if (!rebuildCacheIdxFut.isDone())
+            rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
 
         return outRebuildCacheIdxFut;
     }
@@ -2252,6 +2274,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             assert tblDesc.table() != null;
 
             tblDesc.table().markRebuildFromHashInProgress(val);
+        }
+    }
+
+    /**
+     * For every affected table prepares the indexes for rebuild.
+     *
+     * @param cacheName The name of the cache whose tables are to rebuild their indexes.
+     * @throws IgniteCheckedException In case the table is unable to prepare its indexes.
+     */
+    private void prepareIndexesForRebuild(String cacheName) throws IgniteCheckedException {
+        try (H2PooledConnection conn = connMgr.connection()) {
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                assert tblDesc.table() != null;
+
+                tblDesc.table().prepareIndexesForRebuild(session(conn));
+            }
         }
     }
 
