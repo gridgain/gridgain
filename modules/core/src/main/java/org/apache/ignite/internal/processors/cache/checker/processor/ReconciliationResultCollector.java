@@ -37,6 +37,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -69,7 +70,7 @@ import static org.apache.ignite.internal.processors.cache.verify.PartitionReconc
  */
 public interface ReconciliationResultCollector {
     /**
-     * Appends skippend entries.
+     * Appends skipped entries.
      *
      * @param cacheName Cache name.
      * @param partId Partition id.
@@ -107,12 +108,13 @@ public interface ReconciliationResultCollector {
      * This method is called when the given partition is completely processed.
      *
      * @param cacheName Cache name.
-     * @param partId Partitin id.
+     * @param partId    Partition id.
      */
     void onPartitionProcessed(String cacheName, int partId);
 
     /**
      * Returns partition reconciliation result.
+     *
      * @return Partition reconciliation result.
      */
     ReconciliationAffectedEntries result();
@@ -141,7 +143,7 @@ public interface ReconciliationResultCollector {
         /** Root folder. */
         protected final File reconciliationDir;
 
-        /** Keys that were detected as incosistent during the reconciliation process. */
+        /** Keys that were detected as inconsistent during the reconciliation process. */
         protected final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
@@ -304,14 +306,19 @@ public interface ReconciliationResultCollector {
             synchronized (inconsistentKeys) {
                 synchronized (skippedEntries) {
                     return new ReconciliationAffectedEntries(
-                        ignite.cluster().nodes().stream().collect(Collectors.toMap(
-                            ClusterNode::id,
-                            n -> n.consistentId().toString())),
+                        collectNodeIdToConsistentIdMapping(ignite),
                         inconsistentKeys,
                         skippedEntries
                     );
                 }
             }
+        }
+
+        Map<UUID, String> collectNodeIdToConsistentIdMapping(Ignite ignite) {
+            return ignite.cluster().nodes().stream().collect(Collectors.toMap(
+                ClusterNode::id,
+                n -> n.consistentId().toString())
+            );
         }
 
         /** {@inheritDoc} */
@@ -388,7 +395,7 @@ public interface ReconciliationResultCollector {
             synchronized (inconsistentKeys) {
                 Map<Integer, List<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
                 if (c != null)
-                     meta = c.remove(partId);
+                    meta = c.remove(partId);
             }
 
             if (meta != null && !meta.isEmpty()) {
@@ -403,6 +410,7 @@ public interface ReconciliationResultCollector {
             synchronized (inconsistentKeys) {
                 synchronized (skippedEntries) {
                     return new ReconciliationAffectedEntriesExtended(
+                        collectNodeIdToConsistentIdMapping(ignite),
                         totalKeysCnt.get(),
                         0, // skipped caches count which is not tracked/used.
                         skippedEntries.size());
@@ -463,7 +471,7 @@ public interface ReconciliationResultCollector {
             out.println("\t\t<key>");
             out.println("\t\t\t<nodeConsistentId>, <nodeId>: <value> <version>");
             out.println("\t\t\t...");
-            out.println("\t\t\t<info on whether confilct is fixed>");
+            out.println("\t\t\t<info on whether conflict is fixed>");
             out.println();
         }
 

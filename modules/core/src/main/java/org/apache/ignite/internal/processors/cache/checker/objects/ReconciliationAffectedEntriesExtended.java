@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
@@ -52,7 +54,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      */
-    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
+    public ReconciliationAffectedEntriesExtended(Map<UUID, String> nodesIdsToConsistentIdsMap, int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
+        super(nodesIdsToConsistentIdsMap, null, null);
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;
         this.skippedEntriesCnt = skippedEntriesCnt;
@@ -102,6 +105,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
     /** @inheritDoc */
     @Override public void merge(ReconciliationAffectedEntries outer) {
         assert outer instanceof ReconciliationAffectedEntriesExtended;
+
+        nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);
 
         inconsistentKeysCnt += outer.inconsistentKeysCount();
 

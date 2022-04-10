@@ -436,7 +436,7 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
 
         printer.accept(prepareErrors(res.errors()));
 
-        printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenceIdsMap()));
+        printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistentIdsMap()));
 
         reconciliationRes.print(printer, args.includeSensitive);
     }

@@ -45,7 +45,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     public static final String HIDDEN_DATA = "*****";
 
     /** Map of node ids to node consistent ids. */
-    private Map<UUID, String> nodesIdsToConsistentIdsMap = new HashMap<>();
+    protected Map<UUID, String> nodesIdsToConsistentIdsMap = new HashMap<>();
 
     /** Inconsistent keys. */
     private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
@@ -309,7 +309,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     /**
      * Mapping node ids to consistence ids.
      */
-    public Map<UUID, String> nodesIdsToConsistenceIdsMap() {
+    public Map<UUID, String> nodesIdsToConsistentIdsMap() {
         return nodesIdsToConsistentIdsMap;
     }
 
@@ -335,7 +335,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Inconsisitent keys count.
+     * @return Inconsistent keys count.
      */
     public int inconsistentKeysCount() {
         return inconsistentKeys.values().stream().flatMap(m -> m.values().stream()).mapToInt(List::size).sum();

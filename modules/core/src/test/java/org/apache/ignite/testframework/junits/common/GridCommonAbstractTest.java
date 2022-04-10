@@ -1990,6 +1990,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param exp Expected.
      * @param act Actual.
      */
+    protected static boolean checkCollectionsHasSameNullabilityAndSize(Collection<?> exp, Collection<?> act) {
+        if (exp == null && act == null)
+            return true;
+
+        if (exp == null || act == null)
+            return false;
+
+        return exp.size() == act.size();
+    }
+
+    /**
+     * @param exp Expected.
+     * @param act Actual.
+     */
     protected static void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
         if (exp.size() != act.size())
             fail("Collections are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
@@ -2007,6 +2021,20 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 fail("Collections are not equal (position " + idx + "):\nExpected: " + exp + "\nActual:   " + act);
 
             idx++;
+        }
+    }
+
+    /**
+     * @param exp Expected.
+     * @param act Actual.
+     */
+    protected static void assertEqualsSets(Set<?> exp, Set<?> act) {
+        if (!checkCollectionsHasSameNullabilityAndSize(exp, act))
+            fail("Sets are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
+
+        for (Object itemExp : exp) {
+            if (!act.contains(itemExp))
+                fail("Sets are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
         }
     }
 
