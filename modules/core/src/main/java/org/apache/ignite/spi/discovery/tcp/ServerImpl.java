@@ -3437,8 +3437,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
                     if (msg instanceof TcpDiscoveryCustomEventMessage) {
                         try {
-                            if (!clientSupportsDiscoveryMessage((TcpDiscoveryCustomEventMessage)msg,
-                                clientMsgWorker.clientNodeId))
+                            if (!clientSupportsDiscoveryMessage(msg, clientMsgWorker.clientNodeId))
                                 continue;
                         }
                         catch (Throwable e) {
