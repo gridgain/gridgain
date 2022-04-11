@@ -2185,6 +2185,16 @@ public final class IgniteSystemProperties {
         "IGNITE_CHECK_COMMUNICATION_HANDSHAKE_MESSAGE_SENDER";
 
     /**
+     * Enables strict mode to check not critical internal invariants. When strict mode is disabled warning
+     * or error message is printed to the log. AssertionError is thrown in strict mode.
+     * The default value is {@code false}.
+     */
+    @SystemProperty(value = "Enables asserts instead of warning or error log messaged on check some " +
+        "internal invariants", defaults = "false")
+    public static final String IGNITE_STRICT_CONSISTENCY_CHECK =
+        "IGNITE_STRICT_CONSISTENCY_CHECK";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

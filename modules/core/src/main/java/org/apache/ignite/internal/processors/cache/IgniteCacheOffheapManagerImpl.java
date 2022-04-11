@@ -1317,7 +1317,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             grp.reuseList(),
             true,
             ctx.diagnostic().pageLockTracker(),
-            FLAG_IDX
+            FLAG_IDX,
+            log
         );
 
         return new CacheDataStoreImpl(p, rowStore, dataTree, logTree, () -> pendingEntries, grp, busyLock, log, null);
@@ -3406,8 +3407,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert row.updateCounter() > 0;
 
             UpdateLogRow old = logTree.remove(row);
-
-            assert old == null || old.link() == row.link();
         }
 
         /**
@@ -3420,8 +3419,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert row.updateCounter() > 0;
 
             boolean res = logTree.putx(row);
-
-            assert !res;
         }
 
         /** {@inheritDoc} */
