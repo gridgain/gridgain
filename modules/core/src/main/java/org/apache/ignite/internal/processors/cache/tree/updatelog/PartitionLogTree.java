@@ -38,6 +38,9 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     private final CacheGroupContext grp;
 
     /** */
+    private final boolean strictConsistencyCheck = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK);
+
+    /** */
     private final IgniteLogger log;
 
     /**
@@ -119,7 +122,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
         /* remove row */
         if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
-            if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK))
+            if (strictConsistencyCheck)
                 throw new AssertionError("Duplicate update counters [updCounter=" + updCntr + ']');
             else {
                 log.warning("Duplicate update counter at update log tree [" +
