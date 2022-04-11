@@ -2334,7 +2334,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         freeList,
                         logTreeRoot.isAllocated(),
                         ctx.diagnostic().pageLockTracker(),
-                        PageIdAllocator.FLAG_AUX
+                        PageIdAllocator.FLAG_AUX,
+                        log
                     ) {
                         /** {@inheritDoc} */
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
