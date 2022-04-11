@@ -1246,7 +1246,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      * @throws ClusterTopologyCheckedException If receiver left.
      */
     public void send(ClusterNode node, GridCacheMessage msg, byte plc) throws IgniteCheckedException {
-        assert !node.isLocal() : node;
+//        assert !node.isLocal() : node;
 
         msg.lastAffinityChangedTopologyVersion(cctx.exchange().lastAffinityChangedTopologyVersion(msg.topologyVersion()));
 
