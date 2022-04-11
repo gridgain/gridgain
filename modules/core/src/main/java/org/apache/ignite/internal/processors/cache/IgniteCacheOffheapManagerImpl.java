@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
-
 import javax.cache.Cache;
 import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
@@ -3408,11 +3407,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert row.updateCounter() > 0;
 
             UpdateLogRow old = logTree.remove(row);
-
-            if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK) &&
-                old != null && old.link() != row.link()) {
-                throw new AssertionError("Update log row is not removed [row=" + row + ']');
-            }
         }
 
         /**
@@ -3425,9 +3419,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             assert row.updateCounter() > 0;
 
             boolean res = logTree.putx(row);
-
-            if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK) && res)
-                throw new AssertionError("Replace update log row is not expected [row=" + row + ']');
         }
 
         /** {@inheritDoc} */
