@@ -22,7 +22,7 @@ if (WIN32)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
 
-find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread system)
+find_package(Boost 1.53 REQUIRED COMPONENTS unit_test_framework chrono thread system regex)
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS} ${JNI_INCLUDE_DIRS})
 include_directories(include)
@@ -33,6 +33,7 @@ set(SOURCES
         src/cache_client_test.cpp
         src/compute_client_test.cpp
         src/continuous_query_test.cpp
+        src/test_server.cpp
         src/test_utils.cpp
         src/ignite_client_test.cpp
         src/interop_test.cpp

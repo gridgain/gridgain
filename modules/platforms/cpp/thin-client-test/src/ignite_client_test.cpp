@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <test_server.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/bind.hpp>
@@ -50,7 +51,7 @@ public:
      * @param timeout Timeout.
      * @return True if condition was met, false if timeout has been reached.
      */
-    bool WaitForConnections(VectorLogger* logger, size_t expected, int32_t timeout = 5000)
+    static bool WaitForConnections(VectorLogger* logger, size_t expected, int32_t timeout = 5000)
     {
         return ignite_test::WaitForCondition(
                 boost::bind(&IgniteClientTestSuiteFixture::CheckActiveConnections, logger, expected),
@@ -73,6 +74,44 @@ public:
 
         BOOST_CHECK(WaitForConnections(logger, expect));
         BOOST_CHECK_EQUAL(GetActiveConnections(logger), expect);
+    }
+    /**
+     * Check that client started with specified size of user thread pool started exactly the specified number of threads
+     * in thread pool.
+     *
+     * @param cfg Client configuration.
+     * @param num Expected thread number
+     */
+    static void CheckThreadsNum(IgniteClientConfiguration &cfg, uint32_t num)
+    {
+        ignite::TestServer server;
+        server.PushHandshakeResponse(true);
+        server.Start();
+
+        int32_t threadsBefore = ignite::common::concurrent::GetThreadsCount();
+        int32_t netThreads = 1;
+
+#ifdef _WIN32
+        // In Windows there is one additional thread for connecting.
+        netThreads += 1;
+#endif
+        int32_t threadsExpected = static_cast<int32_t>(num) + netThreads;
+
+        cfg.SetUserThreadPoolSize(num);
+        {
+            IgniteClient client = IgniteClient::Start(cfg);
+
+            int32_t threadsActual = ignite::common::concurrent::GetThreadsCount() - threadsBefore;
+
+            BOOST_CHECK_EQUAL(threadsExpected, threadsActual);
+        }
+
+        int32_t threadsAfter = ignite::common::concurrent::GetThreadsCount();
+
+        BOOST_CHECK_EQUAL(threadsBefore, threadsAfter);
+        BOOST_CHECK_EQUAL(num, cfg.GetUserThreadPoolSize());
+
+        server.Stop();
     }
 
     /**
@@ -214,6 +253,23 @@ BOOST_AUTO_TEST_CASE(IgniteClientReconnect)
     BOOST_CHECK_EQUAL(GetActiveConnections(&logger), 0);
 
     BOOST_REQUIRE_THROW((client.GetOrCreateCache<int, int>("test")), ignite::IgniteError);
+}
+
+BOOST_AUTO_TEST_CASE(IgniteClientUserThreadPoolSize)
+{
+    IgniteClientConfiguration cfg;
+
+    BOOST_CHECK_EQUAL(1, cfg.GetUserThreadPoolSize());
+
+    cfg.SetEndPoints("127.0.0.1:11110");
+
+    CheckThreadsNum(cfg, 1);
+    CheckThreadsNum(cfg, 2);
+    CheckThreadsNum(cfg, 3);
+    CheckThreadsNum(cfg, 4);
+    CheckThreadsNum(cfg, 8);
+    CheckThreadsNum(cfg, 16);
+    CheckThreadsNum(cfg, 128);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
