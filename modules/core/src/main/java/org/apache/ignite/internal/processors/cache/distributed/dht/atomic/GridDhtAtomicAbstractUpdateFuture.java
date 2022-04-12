@@ -474,7 +474,7 @@ public abstract class GridDhtAtomicAbstractUpdateFuture extends GridCacheFutureA
     private void sendDhtRequests(ClusterNode nearNode, GridCacheReturn ret, boolean sndRes) {
         for (GridDhtAtomicAbstractUpdateRequest req : mappings.values()) {
             try {
-//                assert !cctx.localNodeId().equals(req.nodeId()) : req;
+                assert !cctx.localNodeId().equals(req.nodeId()) : req;
 
                 if (updateReq.fullSync()) {
                     req.nearReplyInfo(nearNode.id(), updateReq.futureId());
