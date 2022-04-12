@@ -42,6 +42,7 @@ import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKey.TC_SUBGRID;
 
@@ -483,6 +484,16 @@ public class PlatformCompute extends PlatformAbstractTarget {
         /** {@inheritDoc} */
         @Override public IgniteInternalFuture chain(IgniteClosure doneCb, Executor exec) {
             throw new UnsupportedOperationException("Chain operation is not supported.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public IgniteInternalFuture chainCompose(IgniteClosure doneCb) {
+            throw new UnsupportedOperationException("Chain compose operation is not supported.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public IgniteInternalFuture chainCompose(IgniteClosure doneCb, @Nullable Executor exec) {
+            throw new UnsupportedOperationException("Chain compose operation is not supported.");
         }
 
         /** {@inheritDoc} */
