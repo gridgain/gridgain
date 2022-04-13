@@ -21,9 +21,9 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.examples.model.Person;
-import org.apache.ignite.springdata20.repository.IgniteRepository;
-import org.apache.ignite.springdata20.repository.config.EnableIgniteRepositories;
-import org.apache.ignite.springdata20.repository.support.IgniteRepositoryFactoryBean;
+import org.apache.ignite.springdata22.repository.IgniteRepository;
+import org.apache.ignite.springdata22.repository.config.EnableIgniteRepositories;
+import org.apache.ignite.springdata22.repository.support.IgniteRepositoryFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

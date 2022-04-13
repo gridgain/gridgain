@@ -300,7 +300,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         // ensure dynamic query configuration param exists if dynamicQuery = true
         if (dynamicQueryConfigurationIndex == -1 && this.staticQuery == null) {
             throw new IllegalStateException(
-                "When passing dynamicQuery = true via org.apache.ignite.springdata.repository.config.Query "
+                "When passing dynamicQuery = true via org.apache.ignite.springdata.repository22.config.Query "
                     + "annotation, you must provide a non null method parameter of type DynamicQueryConfig");
         }
     }
@@ -497,7 +497,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             return calcReturnType(mtd, qry.isFieldQuery());
 
         throw new IllegalStateException("Unable to obtain a valid return strategy. When passing dynamicQuery = true "
-            + "via org.apache.ignite.springdata.repository.config.Query annotation, "
+            + "via org.apache.ignite.springdata.repository22.config.Query annotation, "
             + "you must provide a non null method parameter of type "
             + "DynamicQueryConfig with a non empty value (query string) or textQuery "
             + "= true");
