@@ -160,6 +160,52 @@ public class GridFinishedFuture<T> implements IgniteInternalFuture<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public <R> IgniteInternalFuture<R> chainCompose(
+        IgniteClosure<? super IgniteInternalFuture<T>, IgniteInternalFuture<R>> doneCb
+    ) {
+        try {
+            return doneCb.apply(this);
+        }
+        catch (GridClosureException e) {
+            return new GridFinishedFuture<>(e.unwrap());
+        }
+        catch (RuntimeException | Error e) {
+            return new GridFinishedFuture<>(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public <R> IgniteInternalFuture<R> chainCompose(
+        IgniteClosure<? super IgniteInternalFuture<T>, IgniteInternalFuture<R>> doneCb,
+        Executor exec
+    ) {
+        final GridFutureAdapter<R> res = new GridFutureAdapter<>();
+
+        exec.execute(() -> {
+            IgniteInternalFuture<R> doneCbFut;
+
+            try {
+                doneCbFut = doneCb.apply(this);
+            } catch (GridClosureException e) {
+                doneCbFut = new GridFinishedFuture<>(e.unwrap());
+            } catch (RuntimeException e) {
+                doneCbFut = new GridFinishedFuture<>(e);
+            }
+
+            doneCbFut.listen(f -> {
+                try {
+                    res.onDone(f.get(), null);
+                }
+                catch (Exception e) {
+                    res.onDone(e);
+                }
+            });
+        });
+
+        return res;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridFinishedFuture.class, this);
     }
