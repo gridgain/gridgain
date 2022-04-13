@@ -73,8 +73,11 @@ public class DynamicCacheChangeRequest implements Serializable {
     /** Cache active on start or not*/
     private boolean disabledAfterStart;
 
-    /** Cache data destroy flag. Setting to <code>true</code> will cause removing all cache data.*/
+    /** Cache data clear flag. Setting to {@code true} will cause removing all cache data. */
     private boolean destroy;
+
+    /** Setting to {@code true} will cause stopping caches with destroy flag equal to {@code true}. */
+    private boolean callDestroy;
 
     /** Whether cache was created through SQL. */
     private boolean sql;
@@ -175,8 +178,17 @@ public class DynamicCacheChangeRequest implements Serializable {
         req.sql(sql);
         req.stop(true);
         req.destroy(destroy);
+        req.callDestroy(destroy);
 
         return req;
+    }
+
+    public void callDestroy(boolean clear) {
+        this.callDestroy = clear;
+    }
+
+    public boolean callDestroy() {
+        return callDestroy;
     }
 
     /**
