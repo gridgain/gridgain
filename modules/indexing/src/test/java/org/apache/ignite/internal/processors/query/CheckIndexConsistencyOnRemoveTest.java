@@ -61,7 +61,6 @@ public class CheckIndexConsistencyOnRemoveTest extends AbstractIndexingCommonTes
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
-
     }
 
     /** {@inheritDoc} */
@@ -73,7 +72,10 @@ public class CheckIndexConsistencyOnRemoveTest extends AbstractIndexingCommonTes
     }
 
     /**
-     *
+     * Make data inconsistency with two PK which are equal logically and differ in binary representation.
+     * Remove keys from cache, checks:
+     * - warning message is printed;
+     * - secondary tree index isn't corrupted.
      */
     @Test
     public void checkWarningMessage() {
