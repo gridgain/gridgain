@@ -53,7 +53,7 @@ public class CheckIndexConsistencyOnRemoveTest extends AbstractIndexingCommonTes
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        srvLog = new ListeningTestLogger(false, log);
+        srvLog = new ListeningTestLogger(log);
 
         startGrids(1);
     }
