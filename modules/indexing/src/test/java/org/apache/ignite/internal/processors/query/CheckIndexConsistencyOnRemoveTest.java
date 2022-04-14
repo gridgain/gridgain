@@ -129,8 +129,6 @@ public class CheckIndexConsistencyOnRemoveTest extends AbstractIndexingCommonTes
         assertEquals(0, sql("SELECT * from TEST USE INDEX (IDX_VAL)").getAll().size());
     }
 
-
-
     /**
      * @param sql SQL query.
      * @param args Query parameters.
