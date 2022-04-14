@@ -30,6 +30,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -57,9 +58,11 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.database.IndexInformation;
 import org.apache.ignite.internal.processors.query.stat.ObjectStatistics;
 import org.apache.ignite.internal.processors.query.stat.StatisticsKey;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
@@ -863,25 +866,38 @@ public class GridH2Table extends TableBase {
         try {
             ensureNotDestroyed();
 
-            boolean rmv = pk().removex(row0);
+            boolean pkRmv = pk().removex(row0);
 
-            if (rmv) {
-                for (int i = pkIndexPos + 1, len = idxs.size(); i < len; i++) {
-                    Index idx = idxs.get(i);
+            for (int i = pkIndexPos + 1, len = idxs.size(); i < len; i++) {
+                Index idx = idxs.get(i);
 
-                    if (idx instanceof GridH2IndexBase)
-                        ((GridH2IndexBase)idx).removex(row0);
+                if (idx instanceof GridH2IndexBase) {
+                    boolean scndRmv = ((GridH2IndexBase)idx).removex(row0);
+
+                    if (scndRmv != pkRmv) {
+                        log.warning(
+                            "SQL index inconsistency detected:\n" +
+                            "wasInPk=" + pkRmv + ",\n" +
+                            "wasInScnd=" + scndRmv + ",\n" +
+                            "tblName=" + getName() + ",\n" +
+                            "scndIdxName=" + idx.getName() + ",\n" +
+                            "row=" + row0 + ",\n" +
+                            "rowKeyHex=0x" + IgniteUtils.byteArray2HexString(rowKeyBytes(row0)) + ",\n" +
+                            "rowValueHex=0x" + IgniteUtils.byteArray2HexString(rowValueBytes(row0))
+                        );
+                    }
                 }
-
-                if (!tmpIdxs.isEmpty()) {
-                    for (GridH2IndexBase idx : tmpIdxs.values())
-                        idx.removex(row0);
-                }
-
-                size.decrement();
             }
 
-            res = rmv;
+            if (!tmpIdxs.isEmpty()) {
+                for (GridH2IndexBase idx : tmpIdxs.values())
+                    idx.removex(row0);
+            }
+
+            if (pkRmv)
+                size.decrement();
+
+            res = pkRmv;
         }
         finally {
             unlock(false);
@@ -1809,5 +1825,36 @@ public class GridH2Table extends TableBase {
         long version() {
             return ver;
         }
+    }
+
+    /** */
+    public byte[] rowValueBytes(Object row) {
+        if (!S.includeSensitive())
+            return "<HIDDEN>".getBytes();
+
+        if (row instanceof H2CacheRow) {
+            try {
+                return ((H2CacheRow)row).value().valueBytes(cacheContext().cacheObjectContext());
+            }
+            catch (Exception ex) {
+                // NO-OP
+            }
+        }
+
+        return "<UNAVAILABLE>".getBytes();
+    }
+
+    /** */
+    public byte[] rowKeyBytes(Object row) {
+        if (row instanceof H2CacheRow) {
+            try {
+                return ((H2CacheRow)row).key().valueBytes(cacheContext().cacheObjectContext());
+            }
+            catch (Exception ex) {
+                // NO-OP
+            }
+        }
+
+        return "<UNAVAILABLE>".getBytes();
     }
 }
