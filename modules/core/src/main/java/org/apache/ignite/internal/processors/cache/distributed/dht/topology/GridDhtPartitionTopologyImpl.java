@@ -60,6 +60,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
+import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
@@ -115,7 +116,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private GridDhtPartitionFullMap node2part;
 
     /** */
-    private Set<Integer> lostParts;
+    private GridTuple<Set<Integer>> lostParts = new GridTuple<Set<Integer>>() {
+        @Override public void set(@Nullable Set<Integer> val) {
+            log.warning("SET GridDhtPartitionTopologyImpl#lostParts = " + val, new Exception());
+
+            super.set(val);
+        }
+    };
 
     /** */
     private final Map<Integer, Set<UUID>> diffFromAffinity = new HashMap<>();
@@ -905,7 +912,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 loc.updateCounter(updCntr);
 
             // Create a partition in lost state.
-            if (lostParts != null && lostParts.contains(p))
+            if (lostParts.get() != null && lostParts.get().contains(p))
                 loc.markLost();
         }
 
@@ -1567,7 +1574,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     // Apply lost partitions from full message.
                     if (lostParts != null) {
-                        this.lostParts = new HashSet<>(lostParts);
+                        this.lostParts.set(new HashSet<>(lostParts));
 
                         for (Integer part : lostParts) {
                             GridDhtLocalPartition locPart = localPartition(part);
@@ -2190,7 +2197,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 boolean changed = false;
 
                 for (int part = 0; part < parts; part++) {
-                    boolean lost = F.contains(lostParts, part);
+                    boolean lost = F.contains(lostParts.get(), part);
 
                     if (!lost) {
                         boolean hasOwner = false;
@@ -2209,10 +2216,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             // Do not detect and record lost partition in IGNORE mode.
                             if (safe) {
-                                if (lostParts == null)
-                                    lostParts = new TreeSet<>();
+                                if (lostParts.get() == null)
+                                    lostParts.set(new TreeSet<>());
 
-                                lostParts.add(part);
+                                lostParts.get().add(part);
 
                                 if (discoEvt != null) {
                                     if (recentlyLost == null)
@@ -2333,7 +2340,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         lock.readLock().lock();
 
         try {
-            return lostParts == null ? Collections.<Integer>emptySet() : new HashSet<>(lostParts);
+            return lostParts.get() == null ? Collections.<Integer>emptySet() : new HashSet<>(lostParts.get());
         }
         finally {
             lock.readLock().unlock();
