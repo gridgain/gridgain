@@ -2070,7 +2070,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         sharedCtx.database().checkpointReadLock();
 
         try {
-            prepareCacheStop(cctx.name(), false, clearDbObjects);
+            prepareCacheStop(cctx.name(), false, false, clearDbObjects);
 
             if (!cctx.group().hasCaches())
                 stopCacheGroup(cctx.group().groupId(), false);
