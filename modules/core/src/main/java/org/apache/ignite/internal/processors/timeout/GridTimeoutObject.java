@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,15 +25,15 @@ public interface GridTimeoutObject {
     /**
      * @return ID of the object.
      */
-    public IgniteUuid timeoutId();
+    IgniteUuid timeoutId();
 
     /**
      * @return End time.
      */
-    public long endTime();
+    long endTime();
 
     /**
      * Timeout callback.
      */
-    public void onTimeout();
+    void onTimeout();
 }

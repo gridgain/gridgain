@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -412,7 +412,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
 
                 unparkWaiters(MAX_VALUE);
 
-                if (err == null && !isCancelled)
+                if (err == null && !isCancelled.get())
                     err = new IllegalStateException("Worker " + name() + " is terminated unexpectedly");
 
                 if (err instanceof OutOfMemoryError)
@@ -592,7 +592,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
         public void restart() {
             assert runner() == null : "WALWriter is still running.";
 
-            isCancelled = false;
+            isCancelled.set(false);
 
             new IgniteThread(this).start();
         }
@@ -649,7 +649,7 @@ public class FileHandleManagerImpl implements FileHandleManager {
         public void restart() {
             assert runner() == null : "WalSegmentSyncer is running.";
 
-            isCancelled = false;
+            isCancelled.set(false);
 
             new IgniteThread(walSegmentSyncWorker).start();
         }
