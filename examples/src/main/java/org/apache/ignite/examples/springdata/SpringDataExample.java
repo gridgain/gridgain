@@ -63,7 +63,7 @@ public class SpringDataExample {
         System.out.println("\n>>> Repository size: " + repo.count());
 
         // Destroying the context.
-        ctx.destroy();
+        ctx.close();
     }
 
     /**
@@ -141,7 +141,7 @@ public class SpringDataExample {
 
         System.out.println("\n>>> Top Person with surname 'Smith': " + topPerson.getValue());
 
-        List<Long> ids = repo.selectId(1000L, new PageRequest(0, 4));
+        List<Long> ids = repo.selectId(1000L, PageRequest.of(0, 4));
 
         System.out.println("\n>>> Persons working for organization with ID > 1000: ");
 
