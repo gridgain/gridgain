@@ -353,8 +353,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public Map<? extends ComputeJob, ClusterNode> map(
+        @Override public Map<? extends ComputeJob, ClusterNode> map(
             List<ClusterNode> subgrid,
             @Nullable Object arg
         ) throws IgniteException {
