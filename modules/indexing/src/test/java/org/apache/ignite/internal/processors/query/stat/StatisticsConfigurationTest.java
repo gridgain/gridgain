@@ -53,7 +53,6 @@ import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageSt
  * Tests for statistics configuration.
  */
 @RunWith(Parameterized.class)
-@SuppressWarnings("unchecked")
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     /** Columns to check.*/
     private static final String[] COLUMNS = {"A", "B", "C"};

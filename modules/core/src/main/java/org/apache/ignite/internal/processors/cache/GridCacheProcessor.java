@@ -961,7 +961,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     // Re-create cache structures inside indexing in order to apply recent schema changes.
                     GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cache.context(), false);
 
-                    ctx.query().onCacheStop0(cacheInfo, rmvIdx);
+                    ctx.query().onCacheStop0(cacheInfo, rmvIdx, rmvIdx);
                     ctx.query().onCacheStart0(cacheInfo, desc.schema(), desc.sql());
                 }
             }
@@ -990,22 +990,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * @param cache Cache to stop.
      * @param cancel Cancel flag.
-     * @param destroy Cache destroy flag.
+     * @param callDestroy Cache destroy flag. This flag is passed to the {@link GridCacheManager#stop} method.
      * @param clearCache Cache data clear flag. Setting to {@code true} will remove all cache data.
      */
-    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean clearCache) {
-        stopCache(cache, cancel, destroy, clearCache, true);
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean callDestroy, boolean clearCache) {
+        stopCache(cache, cancel, callDestroy, clearCache, true);
     }
 
     /**
      * @param cache Cache to stop.
      * @param cancel Cancel flag.
-     * @param destroy Cache destroy flag.
+     * @param callDestroy Cache destroy flag. This flag is passed to the {@link GridCacheManager#stop} method.
      * @param clearCache Cache data clear flag. Setting to {@code true} will remove all cache data.
      * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
      */
     @SuppressWarnings({"unchecked"})
-    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean clearCache, boolean clearDbObjects) {
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean callDestroy, boolean clearCache, boolean clearDbObjects) {
         GridCacheContext ctx = cache.context();
 
         try {
@@ -1023,7 +1023,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             cache.stop();
 
-            if (destroy)
+            if (callDestroy)
                 cache.removeMetrics();
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
@@ -1031,7 +1031,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (!clearDbObjects)
                 ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
             else
-                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || clearCache);
+                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || callDestroy, clearCache);
 
             if (isNearEnabled(ctx)) {
                 GridDhtCacheAdapter dht = ctx.near().dht();
@@ -1040,7 +1040,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 if (dht != null) {
                     dht.stop();
 
-                    if (destroy)
+                    if (callDestroy)
                         dht.removeMetrics();
 
                     GridCacheContext<?, ?> dhtCtx = dht.context();
@@ -1050,7 +1050,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     for (ListIterator<GridCacheManager> it = dhtMgrs.listIterator(dhtMgrs.size()); it.hasPrevious(); ) {
                         GridCacheManager mgr = it.previous();
 
-                        mgr.stop(cancel, destroy);
+                        mgr.stop(cancel, callDestroy);
                     }
                 }
             }
@@ -1064,12 +1064,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 GridCacheManager mgr = it.previous();
 
                 if (!excludes.contains(mgr))
-                    mgr.stop(cancel, destroy);
+                    mgr.stop(cancel, callDestroy);
             }
 
             ctx.kernalContext().continuous().onCacheStop(ctx);
 
-            ctx.kernalContext().cache().context().snapshot().onCacheStop(ctx, destroy);
+            ctx.kernalContext().cache().context().snapshot().onCacheStop(ctx, callDestroy);
 
             ctx.kernalContext().coordinators().onCacheStop(ctx);
 
@@ -1091,7 +1091,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             try {
                 IgnitePageStoreManager pageStore;
 
-                if (destroy && (pageStore = sharedCtx.pageStore()) != null)
+                if (callDestroy && (pageStore = sharedCtx.pageStore()) != null)
                     pageStore.removeCacheData(new StoredCacheData(ctx.config()));
             }
             catch (IgniteCheckedException e) {
@@ -2616,20 +2616,20 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
     /**
      * @param cacheName Cache name.
-     * @param destroy Cache destroy flag.
+     * @param callDestroy Cache destroy flag. This flag is passed to the {@link GridCacheManager#stop} method.
      * @param clearCache Cache data clear flag. Setting to {@code true} will remove all cache data.
      */
-    public void prepareCacheStop(String cacheName, boolean destroy, boolean clearCache) {
-        prepareCacheStop(cacheName, destroy, clearCache, true);
+    public void prepareCacheStop(String cacheName, boolean callDestroy, boolean clearCache) {
+        prepareCacheStop(cacheName, callDestroy, clearCache, true);
     }
 
     /**
      * @param cacheName Cache name.
-     * @param destroy Cache destroy flag.
+     * @param callDestroy Cache destroy flag. This flag is passed to the {@link GridCacheManager#stop} method.
      * @param clearCache Cache data clear flag. Setting to {@code true} will remove all cache data.
      * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
      */
-    public void prepareCacheStop(String cacheName, boolean destroy, boolean clearCache, boolean clearDbObjects) {
+    public void prepareCacheStop(String cacheName, boolean callDestroy, boolean clearCache, boolean clearDbObjects) {
         assert sharedCtx.database().checkpointLockIsHeldByThread();
 
         GridCacheAdapter<?, ?> cache = caches.remove(cacheName);
@@ -2641,7 +2641,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             onKernalStop(cache, true);
 
-            stopCache(cache, true, destroy, clearCache, clearDbObjects);
+            stopCache(cache, true, callDestroy, clearCache, clearDbObjects);
         }
         else
             // Try to unregister query structures for not started caches.
@@ -2792,7 +2792,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 sharedCtx.kernalContext().pools().getSystemExecutorService(),
                 cachesToStop.entrySet(),
                 cachesToStopByGrp -> {
-                    CacheGroupContext gctx = cacheGrps.get(cachesToStopByGrp.getKey());
+                    Integer groupId = cachesToStopByGrp.getKey();
+
+                    CacheGroupContext gctx = cacheGrps.get(groupId);
 
                     if (gctx != null)
                         gctx.preloader().pause();
@@ -2823,12 +2825,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             sharedCtx.database().checkpointReadLock();
 
                             try {
-                                boolean destroy = action.request().callDestroy();
-                                boolean clearCache = action.request().destroy();
+                                boolean callDestroy = action.request().destroy();
 
-                                prepareCacheStop(cacheName, destroy, clearCache);
+                                // If all caches in group will be destroyed it is not necessary to clear a single cache
+                                // because group will be stopped anyway.
+                                // Stop will still be called with destroy {@code true}, but cache will not be cleared.
+                                boolean clearCache = callDestroy && !grpIdToDestroy.contains(groupId);
 
-                                if (destroy || grpIdToDestroy.contains(cachesToStopByGrp.getKey()))
+                                prepareCacheStop(cacheName, callDestroy, clearCache);
+
+                                if (callDestroy || grpIdToDestroy.contains(groupId))
                                     ctx.query().completeRebuildIndexes(cacheName);
                             }
                             finally {
@@ -3848,7 +3854,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         req.stop(true);
         req.destroy(true);
-        req.callDestroy(true);
         req.restart(restart);
         req.restartId(restartId);
 
@@ -3903,7 +3908,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         req.stop(true);
         req.destroy(destroy);
-        req.callDestroy(destroy);
         req.restart(restart);
         req.restartId(restartId);
 
