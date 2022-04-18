@@ -42,6 +42,9 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
 /**
  * Cancel unused job test.
  */
@@ -92,31 +95,32 @@ public class GridCancelUnusedJobSelfTest extends GridCommonAbstractTest {
     public void testCancel() throws Exception {
         Ignite ignite = G.ignite(getTestIgniteInstanceName());
 
+        // We change it because the work will fall asleep.
+        assertTrue(computeJobWorkerInterruptTimeout(ignite).propagate(100L));
+
         ignite.compute().localDeployTask(GridCancelTestTask.class, U.detectClassLoader(GridCancelTestTask.class));
 
         ComputeTaskFuture<?> fut = executeAsync(ignite.compute(), GridCancelTestTask.class.getName(), null);
 
-        // Wait until jobs begin execution.
-        boolean await = startSignal.await(WAIT_TIME, TimeUnit.MILLISECONDS);
+        assertNotNull(fut);
 
-        assert await : "Jobs did not start.";
+        // Wait until jobs begin execution.
+        assertTrue("Jobs did not start.", startSignal.await(WAIT_TIME, TimeUnit.MILLISECONDS));
 
         info("Test task result: " + fut);
 
-        assert fut != null;
-
         // Only first job should successfully complete.
-        Object res = fut.get();
-        assert (Integer)res == 1;
+        assertThat(fut.get(getTestTimeout()), equalTo(1));
 
         // Wait for all jobs to finish.
-        await = stopSignal.await(WAIT_TIME, TimeUnit.MILLISECONDS);
-        assert await : "Jobs did not stop.";
+        assertTrue("Jobs did not stop.", stopSignal.await(WAIT_TIME, TimeUnit.MILLISECONDS));
 
         // One is definitely processed. But there might be some more processed or cancelled or processed and cancelled.
         // Thus total number should be at least SPLIT_COUNT and at most (SPLIT_COUNT - 1) *2 +1
-        assert (cancelCnt + processedCnt) >= SPLIT_COUNT && (cancelCnt + processedCnt) <= (SPLIT_COUNT - 1) * 2 + 1 :
-            "Invalid cancel count value: " + cancelCnt;
+        assertTrue(
+            "Invalid cancel count value: " + cancelCnt,
+            (cancelCnt + processedCnt) >= SPLIT_COUNT && (cancelCnt + processedCnt) <= (SPLIT_COUNT - 1) * 2 + 1
+        );
     }
 
     /**
@@ -170,6 +174,8 @@ public class GridCancelUnusedJobSelfTest extends GridCommonAbstractTest {
         private ComputeTaskSession ses;
 
         /**
+         * Constructor.
+         *
          * @param arg Argument.
          */
         private GridCancelTestJob(Integer arg) {
@@ -178,7 +184,7 @@ public class GridCancelUnusedJobSelfTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public Serializable execute() {
-            int arg = this.<Integer>argument(0);
+            int arg = argument(0);
 
             try {
                 if (log.isInfoEnabled())

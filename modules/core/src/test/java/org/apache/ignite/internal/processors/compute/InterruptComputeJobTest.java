@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.compute;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +35,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.job.GridJobWorker;
 import org.apache.ignite.internal.processors.job.GridJobWorkerInterrupter;
@@ -99,7 +97,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
         // Reset distributed property.
         node.context().distributedMetastorage().remove(
-            toMetaStorageKey(interruptWorkerTimeoutProperty(node).getName())
+            toMetaStorageKey(computeJobWorkerInterruptTimeout(node).getName())
         );
     }
 
@@ -140,7 +138,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         );
 
         // Check update value.
-        interruptWorkerTimeoutProperty(node).propagate(100500L);
+        computeJobWorkerInterruptTimeout(node).propagate(100500L);
 
         assertThat(node.context().job().computeJobWorkerInterruptTimeout(), equalTo(100500L));
     }
@@ -153,7 +151,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCancel() throws Exception {
-        interruptWorkerTimeoutProperty(node).propagate(TimeUnit.HOURS.toMillis(1));
+        computeJobWorkerInterruptTimeout(node).propagate(TimeUnit.HOURS.toMillis(1));
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
@@ -176,7 +174,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInterrupt() throws Exception {
-        interruptWorkerTimeoutProperty(node).propagate(100L);
+        computeJobWorkerInterruptTimeout(node).propagate(100L);
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
@@ -203,7 +201,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
     public void testCancelBeforeStart() throws Exception {
         PriorityQueueCollisionSpiEx.collisionSpiEx(node).handleCollision = false;
 
-        interruptWorkerTimeoutProperty(node).propagate(TimeUnit.HOURS.toMillis(1));
+        computeJobWorkerInterruptTimeout(node).propagate(TimeUnit.HOURS.toMillis(1));
 
         ComputeTaskFuture<Void> taskFut = node.compute().executeAsync(new ComputeTask(CountDownLatchJob.class), null);
 
@@ -222,19 +220,6 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         assertThat(jobWorker.isCancelled(), equalTo(true));
         assertThat(jobWorker.runner().isInterrupted(), equalTo(false));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(2));
-    }
-
-    /**
-     * @param n Node.
-     * @return Distributed property: computeJobWorkerInterruptTimeout.
-     */
-    private static DistributedChangeableProperty<Serializable> interruptWorkerTimeoutProperty(IgniteEx n) {
-        DistributedChangeableProperty<Serializable> timeoutProperty = n.context().distributedConfiguration()
-            .property("computeJobWorkerInterruptTimeout");
-
-        assertThat(timeoutProperty, notNullValue());
-
-        return timeoutProperty;
     }
 
     /**
