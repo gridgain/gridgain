@@ -70,6 +70,9 @@ public class GridStopWithCancelSelfTest extends GridCommonAbstractTest {
         try {
             Ignite ignite = startGrid("testGrid");
 
+            // We are changing it because compute jobs fall asleep.
+            assertTrue(computeJobWorkerInterruptTimeout(ignite).propagate(10L));
+
             executeAsync(ignite.compute(), CancelledTask.class, null);
 
             cnt.await();

@@ -97,7 +97,7 @@ public class SystemViewComputeJobTest extends GridCommonAbstractTest {
         cache.put(1, 1);
 
         // We are changing it because compute jobs fall asleep.
-        assertTrue(computeJobWorkerInterruptTimeout(server).propagate(100L));
+        assertTrue(computeJobWorkerInterruptTimeout(server).propagate(10L));
     }
 
     /** Tests work of {@link SystemView} for compute grid {@link IgniteCompute#broadcastAsync(IgniteRunnable)} call. */

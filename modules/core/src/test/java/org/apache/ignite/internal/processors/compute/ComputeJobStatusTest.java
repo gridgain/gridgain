@@ -91,6 +91,9 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
 
         node0 = crd;
         node1 = grid(1);
+
+        // We are changing it because compute jobs fall asleep.
+        assertTrue(computeJobWorkerInterruptTimeout(node0).propagate(10L));
     }
 
     /** {@inheritDoc} */
@@ -256,6 +259,9 @@ public class ComputeJobStatusTest extends GridCommonAbstractTest {
             spiEx0.waitJobFut.result().getJobContext().callcc();
 
             checkTaskJobStatuses(sesId, FINISHED, null);
+
+            // Let's wait a bit for the callcc (above) to complete.
+            U.sleep(100);
         }
 
         // Let's check that the job (WaitJob) on the node0 has finished

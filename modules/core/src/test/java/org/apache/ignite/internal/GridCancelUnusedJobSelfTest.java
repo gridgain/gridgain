@@ -95,8 +95,8 @@ public class GridCancelUnusedJobSelfTest extends GridCommonAbstractTest {
     public void testCancel() throws Exception {
         Ignite ignite = G.ignite(getTestIgniteInstanceName());
 
-        // We change it because the work will fall asleep.
-        assertTrue(computeJobWorkerInterruptTimeout(ignite).propagate(100L));
+        // We change it because compute jobs will fall asleep.
+        assertTrue(computeJobWorkerInterruptTimeout(ignite).propagate(10L));
 
         ignite.compute().localDeployTask(GridCancelTestTask.class, U.detectClassLoader(GridCancelTestTask.class));
 
