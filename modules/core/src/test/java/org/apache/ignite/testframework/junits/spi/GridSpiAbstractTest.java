@@ -155,8 +155,9 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         super.beforeTest();
     }
 
-    /** */
-    private void beforeFirstTest() throws Exception {
+    /** {@inheritDoc} */
+    @Override
+    protected void beforeFirstTest() throws Exception {
         if (autoStart) {
             GridSpiTest spiTest = GridTestUtils.getAnnotation(getClass(), GridSpiTest.class);
 

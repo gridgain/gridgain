@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,9 @@ public class GridCancelOnGridStopSelfTest extends GridCommonAbstractTest {
         cancelCall = false;
 
         try (Ignite g = startGrid(1)) {
+            // We change it because compute jobs will fall asleep.
+            assertTrue(computeJobWorkerInterruptTimeout(g).propagate(10L));
+
             cnt = new CountDownLatch(1);
 
             g.compute().executeAsync(CancelledTask.class, null);
@@ -66,7 +69,7 @@ public class GridCancelOnGridStopSelfTest extends GridCommonAbstractTest {
             cnt.await();
         }
 
-        assert cancelCall;
+        assertTrue(cancelCall);
     }
 
     /**
