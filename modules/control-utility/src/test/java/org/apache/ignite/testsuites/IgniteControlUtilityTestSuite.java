@@ -54,7 +54,7 @@ import org.apache.ignite.util.GridCommandHandlerSslTest;
 import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
 import org.apache.ignite.util.GridCommandHandlerWithSSLTest;
-import org.apache.ignite.util.MetricCommandTest;
+import org.apache.ignite.util.GridCommandHandlerMetricTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -105,7 +105,7 @@ import org.junit.runners.Suite;
 
     GridCommandHandlerPropertiesTest.class,
 
-    MetricCommandTest.class,
+    GridCommandHandlerMetricTest.class,
 
     IgniteIndexReaderTest.class,
     IgniteWalConverterTest.class,

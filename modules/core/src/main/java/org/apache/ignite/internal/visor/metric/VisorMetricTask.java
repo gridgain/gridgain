@@ -35,6 +35,7 @@ import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.SEPARATOR;
+import static org.apache.ignite.plugin.security.SecurityPermission.ADMIN_VIEW;
 import static org.apache.ignite.spi.metric.jmx.MetricRegistryMBean.searchHistogram;
 
 /** Represents visor task for obtaining metric values. */
@@ -68,6 +69,8 @@ public class VisorMetricTask extends VisorOneNodeTask<VisorMetricTaskArg, Map<St
         @Override protected Map<String, ?> run(@Nullable VisorMetricTaskArg arg) throws IgniteException {
             if (arg == null)
                 throw new IgniteException("VisorMetricTaskArg is null");
+
+            ignite.context().security().authorize(ADMIN_VIEW);
 
             String name = arg.name();
 

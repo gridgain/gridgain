@@ -42,10 +42,10 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /** Tests output of {@link CommandList#METRIC} command. */
-public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractTest {
+public class GridCommandHandlerMetricTest extends GridCommandHandlerClusterByClassAbstractTest {
 
     /** Command line argument for printing metric values. */
-    private static final String CMD_METRIC = METRIC.text();
+    protected static final String CMD_METRIC = METRIC.text();
 
     /** Test node with 0 index. */
     private IgniteEx ignite0;
@@ -302,13 +302,13 @@ public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractT
      * Gets metric values via command-line utility.
      *
      * @param node Node to obtain metric values from.
-     * @param name Name of a particular metric or metric registry.
+     * @param metricName Name of a particular metric or metric registry.
      * @return String representation of metric values.
      */
-    private Map<String, String> metrics(IgniteEx node, String name) {
+    protected Map<String, String> metrics(IgniteEx node, String metricName) {
         String nodeId = node.context().discovery().localNode().id().toString();
 
-        String out = executeCommand(EXIT_CODE_OK, CMD_METRIC, name, NODE_ID.argName(), nodeId);
+        String out = executeCommand(EXIT_CODE_OK, CMD_METRIC, metricName, NODE_ID.argName(), nodeId);
 
         Map<String, String> res = parseMetricCommandOutput(out);
 
@@ -324,7 +324,7 @@ public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractT
      * @param name Name of the metric.
      * @return String representation of metric value.
      */
-    private String metric(IgniteEx node, String name) {
+    protected String metric(IgniteEx node, String name) {
         Map<String, String> metrics = metrics(node, name);
 
         assertEquals(1, metrics.size());
@@ -338,7 +338,7 @@ public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractT
      * @param out Command output to parse.
      * @return Metric values.
      */
-    private Map<String, String> parseMetricCommandOutput(String out) {
+    protected Map<String, String> parseMetricCommandOutput(String out) {
         String outStart = "--------------------------------------------------------------------------------";
 
         String outEnd = "Command [" + METRIC.toCommandName() + "] finished with code: " + EXIT_CODE_OK;
@@ -369,7 +369,7 @@ public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractT
      * @param args Command lines arguments.
      * @return Result of command execution.
      */
-    private String executeCommand(int expExitCode, String... args) {
+    protected String executeCommand(int expExitCode, String... args) {
         int res = execute(args);
 
         assertEquals(expExitCode, res);
