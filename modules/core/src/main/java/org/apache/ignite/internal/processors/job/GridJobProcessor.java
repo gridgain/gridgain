@@ -2428,7 +2428,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
      * @return Timeout interrupt {@link GridJobWorker workers} after {@link GridJobWorker#cancel cancel} im mills.
      */
     public long computeJobWorkerInterruptTimeout() {
-        return computeJobWorkerInterruptTimeout.getOrDefault(ctx.config().getSystemWorkerBlockedTimeout());
+        return computeJobWorkerInterruptTimeout.getOrDefault(ctx.config().getFailureDetectionTimeout());
     }
 
     /**

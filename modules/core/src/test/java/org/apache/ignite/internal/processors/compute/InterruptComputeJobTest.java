@@ -134,7 +134,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         // Check default.
         assertThat(
             node.context().job().computeJobWorkerInterruptTimeout(),
-            equalTo(node.context().config().getSystemWorkerBlockedTimeout())
+            equalTo(node.context().config().getFailureDetectionTimeout())
         );
 
         // Check update value.
