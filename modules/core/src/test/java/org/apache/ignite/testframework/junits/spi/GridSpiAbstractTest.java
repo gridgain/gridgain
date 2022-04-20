@@ -76,7 +76,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         @Override public void evaluate() throws Throwable {
             GridSpiAbstractTest testClsInstance = (GridSpiAbstractTest)description.getTestClass().newInstance();
             try {
-                testClsInstance.beforeFirstTest();
+                testClsInstance.beforeFirstTestInternal();
 
                 base.evaluate();
             }
@@ -155,8 +155,8 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         super.beforeTest();
     }
 
-    /** {@inheritDoc} */
-    @Override protected void beforeFirstTest() throws Exception {
+    /** */
+    protected void beforeFirstTestInternal() throws Exception {
         if (autoStart) {
             GridSpiTest spiTest = GridTestUtils.getAnnotation(getClass(), GridSpiTest.class);
 
