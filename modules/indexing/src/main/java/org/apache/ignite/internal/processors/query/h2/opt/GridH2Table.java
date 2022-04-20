@@ -878,7 +878,7 @@ public class GridH2Table extends TableBase {
                         log.warning(
                             "SQL index inconsistency detected:\n" +
                             "wasInPk=" + pkRmv + ",\n" +
-                            "wasInScnd=" + scndRmv + ",\n" +
+                            "wasInSecIdx=" + scndRmv + ",\n" +
                             "tblName=" + getName() + ",\n" +
                             "scndIdxName=" + idx.getName() + ",\n" +
                             "row=" + row0 + ",\n" +
