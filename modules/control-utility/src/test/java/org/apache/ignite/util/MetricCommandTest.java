@@ -42,7 +42,7 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metr
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /** Tests output of {@link CommandList#METRIC} command. */
-public class GridCommandHandlerMetricTest extends GridCommandHandlerClusterByClassAbstractTest {
+public class MetricCommandTest extends GridCommandHandlerClusterByClassAbstractTest {
 
     /** Command line argument for printing metric values. */
     protected static final String CMD_METRIC = METRIC.text();
