@@ -880,7 +880,7 @@ public class GridH2Table extends TableBase {
                             "wasInPk=" + pkRmv + ",\n" +
                             "wasInSecIdx=" + scndRmv + ",\n" +
                             "tblName=" + getName() + ",\n" +
-                            "scndIdxName=" + idx.getName() + ",\n" +
+                            "secIdxName=" + idx.getName() + ",\n" +
                             "row=" + row0 + ",\n" +
                             "rowKeyHex=0x" + IgniteUtils.byteArray2HexString(rowKeyBytes(row0)) + ",\n" +
                             "rowValueHex=0x" + IgniteUtils.byteArray2HexString(rowValueBytes(row0))
