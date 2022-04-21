@@ -23,6 +23,7 @@ import com.amazonaws.encryptionsdk.AwsCrypto;
 import com.amazonaws.encryptionsdk.CryptoResult;
 import com.amazonaws.encryptionsdk.kms.KmsMasterKey;
 import com.amazonaws.encryptionsdk.kms.KmsMasterKeyProvider;
+import com.amazonaws.regions.Region;
 import com.amazonaws.services.kms.AWSKMSClientBuilder;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -57,6 +58,18 @@ public class AwsKmsEncryptionService implements EncryptionService {
      */
     public AwsKmsEncryptionService setKeyId(String keyId) {
         this.keyId = keyId;
+
+        return this;
+    }
+
+    /**
+     * AWS region.
+     *
+     * @param region Region.
+     * @return {@code this} for chaining.
+     */
+    public AwsKmsEncryptionService setRegion(Region region) {
+        this.region = region.getName();
 
         return this;
     }
