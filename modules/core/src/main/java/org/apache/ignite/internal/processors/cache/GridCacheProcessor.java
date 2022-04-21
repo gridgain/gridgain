@@ -1028,10 +1028,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
-            if (!clearDbObjects)
-                ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
+            if (clearDbObjects) {
+                boolean rmvIdx = !cache.context().group().persistenceEnabled() || callDestroy;
+                boolean clearIdx = !cache.context().group().persistenceEnabled() || clearCache;
+                ctx.kernalContext().query().onCacheStop(cacheInfo, rmvIdx, clearIdx);
+            }
             else
-                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || callDestroy, clearCache);
+                ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
 
             if (isNearEnabled(ctx)) {
                 GridDhtCacheAdapter dht = ctx.near().dht();
