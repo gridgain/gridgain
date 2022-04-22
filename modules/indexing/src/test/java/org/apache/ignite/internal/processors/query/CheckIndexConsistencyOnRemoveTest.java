@@ -119,7 +119,7 @@ public class CheckIndexConsistencyOnRemoveTest extends AbstractIndexingCommonTes
 
         LogListener lsnr = LogListener
             .matches("SQL index inconsistency detected")
-            .andMatches("scndIdxName=IDX_VAL")
+            .andMatches("secIdxName=IDX_VAL")
             .build();
         srvLog.registerListener(lsnr);
 
