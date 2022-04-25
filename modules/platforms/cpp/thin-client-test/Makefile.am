@@ -65,6 +65,7 @@ ignite_thin_client_tests_SOURCES = \
         src/compute_client_test.cpp \
         src/continuous_query_test.cpp \
         src/test_utils.cpp \
+        src/test_server.cpp \
         src/ignite_client_test.cpp \
         src/sql_fields_query_test.cpp \
         src/auth_test.cpp \

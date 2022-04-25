@@ -106,6 +106,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
@@ -1223,7 +1224,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 catch (Throwable e) {
                     log.error("An error occurred processing the message [msg=" + msg + ", nodeId=" + nodeId + "].", e);
 
-                    throw e;
+                    if (!(e instanceof SecurityException))
+                        throw e;
                 } finally {
                     threadProcessingMessage(false, null);
 

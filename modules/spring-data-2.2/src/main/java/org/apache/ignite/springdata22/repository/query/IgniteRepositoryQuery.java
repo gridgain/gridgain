@@ -37,8 +37,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.cache.Cache;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.reflect.FieldUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.Query;
@@ -300,7 +300,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
         // ensure dynamic query configuration param exists if dynamicQuery = true
         if (dynamicQueryConfigurationIndex == -1 && this.staticQuery == null) {
             throw new IllegalStateException(
-                "When passing dynamicQuery = true via org.apache.ignite.springdata.repository.config.Query "
+                "When passing dynamicQuery = true via org.apache.ignite.springdata.repository22.config.Query "
                     + "annotation, you must provide a non null method parameter of type DynamicQueryConfig");
         }
     }
@@ -497,7 +497,7 @@ public class IgniteRepositoryQuery implements RepositoryQuery {
             return calcReturnType(mtd, qry.isFieldQuery());
 
         throw new IllegalStateException("Unable to obtain a valid return strategy. When passing dynamicQuery = true "
-            + "via org.apache.ignite.springdata.repository.config.Query annotation, "
+            + "via org.apache.ignite.springdata.repository22.config.Query annotation, "
             + "you must provide a non null method parameter of type "
             + "DynamicQueryConfig with a non empty value (query string) or textQuery "
             + "= true");

@@ -186,6 +186,13 @@ If the file name isn't specified the output file name is: '<typeId>.bin'
   Set the property value:
     control.(sh|bat) --property set --name <property_name> --val <property_value>
 
+  Print metric value:
+    control.(sh|bat) --metric [--node-id node_id] name
+
+    Parameters:
+      name     - Name of the metric which value should be printed. If name of the metric registry is specified, value of all its metrics will be printed.
+      node_id  - ID of the node to get the metric values from. If not set, random node will be chosen.
+
   Print information about potentially corrupted caches on local node:
     control.(sh|bat) --persistence
 

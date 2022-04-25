@@ -74,7 +74,7 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-spring-data_2.0</artifactId>
+            <artifactId>ignite-spring-data_2.2</artifactId>
             <version>${project.version}</version>
         </dependency>
 
