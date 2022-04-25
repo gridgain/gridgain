@@ -2610,7 +2610,7 @@ public class GridNioServer<T> {
             GridSelectorNioSessionImpl ses = attach.session();
 
             if (!closed)
-                U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
+                log.info("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
             else if (log.isDebugEnabled())
                 log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
         }
