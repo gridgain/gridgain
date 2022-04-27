@@ -53,7 +53,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
     private boolean client;
 
     /** */
-    private static final int OBJECTS = 200;
+    private static final int OBJECTS = 150;
 
     /** */
     private static final int MAX_CACHES = 5;
@@ -94,7 +94,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 10 * 60_000;
+        return 30 * 60_000;
     }
 
     /** {@inheritDoc} */
