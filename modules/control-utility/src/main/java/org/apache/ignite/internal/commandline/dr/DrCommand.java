@@ -32,6 +32,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.join;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
@@ -39,7 +40,6 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.VALIDATE;
 
 /** */
 public class DrCommand extends AbstractCommand<Object> {
@@ -110,9 +110,9 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Start cache validation for selected caches:",
+        usage(log, "Start partition counters validation for selected caches:",
                 DATA_CENTER_REPLICATION,
-                VALIDATE.toString(),
+                CHECK.toString(),
                 "<remoteDataCenterId>",
                 optional(CMD_AUTO_CONFIRMATION)
         );
