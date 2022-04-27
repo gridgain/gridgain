@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors;
 
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -132,11 +133,11 @@ public abstract class GridProcessorAdapter implements GridProcessor {
      *      </pre>
      *      Note that in case when variable name is the same as JavaBean property you
      *      can just copy Java condition expression into description as a string.
-     * @throws IgniteCheckedException Thrown if given condition is {@code false}
+     * @throws IgniteException Thrown if given condition is {@code false}
      */
-    protected final void assertParameter(boolean cond, String condDesc) throws IgniteCheckedException {
+    protected final void assertParameter(boolean cond, String condDesc) {
         if (!cond)
-            throw new IgniteCheckedException("Grid configuration parameter invalid: " + condDesc);
+            throw new IgniteException("Grid configuration parameter invalid: " + condDesc);
     }
 
     /** {@inheritDoc} */

@@ -75,9 +75,10 @@ public class GridPortProcessor extends GridProcessorAdapter {
      * @param cls Class.
      */
     public void registerPort(int port, IgnitePortProtocol proto, Class cls) {
-        assert port > 0 && port < 65535;
-        assert proto != null;
-        assert cls != null;
+        assertParameter(port > 0 && port <= 65535,
+            "localInboundPort > 0 || localInboundPort <= 65535");
+        assertParameter(proto != null, "proto != null");
+        assertParameter(cls != null, "cls != null");
 
         synchronized (recs) {
             recs.add(new GridPortRecord(port, proto, cls));

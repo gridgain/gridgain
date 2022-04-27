@@ -1226,8 +1226,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             try {
                 assertParameter(x, y);
             }
-            catch (IgniteCheckedException ex) {
-                return ex;
+            catch (IgniteException ex) {
+                return new IgniteCheckedException(ex);
             }
 
             return null;

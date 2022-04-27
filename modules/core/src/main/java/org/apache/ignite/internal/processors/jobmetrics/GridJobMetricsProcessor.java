@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.jobmetrics;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -134,12 +135,12 @@ public class GridJobMetricsProcessor extends GridProcessorAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public void start() throws IgniteCheckedException {
+    @Override public void start() {
         assertParameter(histSize > 0, "metricsHistorySize > 0");
         assertParameter(expireTime > 0, "metricsExpireTime > 0");
 
         if (metrics.snapshotsQueues == null)
-            throw new IgniteCheckedException("Invalid concurrency level configured " +
+            throw new IgniteException("Invalid concurrency level configured " +
                 "(is 'IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL' system property properly set?).");
 
         if (log.isDebugEnabled())
