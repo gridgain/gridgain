@@ -83,6 +83,7 @@ import org.apache.ignite.internal.processors.compute.ComputeJobStatusTest;
 import org.apache.ignite.internal.processors.compute.ComputeTaskWithWithoutFullSupportTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorConfigurationSelfTest;
 import org.apache.ignite.internal.processors.compute.IgniteComputeCustomExecutorSelfTest;
+import org.apache.ignite.internal.processors.compute.InterruptComputeJobTest;
 import org.apache.ignite.internal.processors.compute.PublicThreadpoolStarvationTest;
 import org.apache.ignite.internal.util.StripedExecutorTest;
 import org.apache.ignite.internal.visor.VisorCacheRebalanceCollectorTaskSelfTest;
@@ -187,7 +188,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVI
     ComputeGridMonitorTest.class,
     ComputeJobChangePriorityTest.class,
     ComputeJobStatusTest.class,
-    ComputeTaskWithWithoutFullSupportTest.class
+    ComputeTaskWithWithoutFullSupportTest.class,
+    InterruptComputeJobTest.class
 })
 public class IgniteComputeGridTestSuite {
     /** Activate service grid for test it. */
