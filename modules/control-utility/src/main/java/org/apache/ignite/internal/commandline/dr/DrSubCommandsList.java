@@ -47,7 +47,9 @@ public enum DrSubCommandsList {
     /** */
     RESUME("resume", new DrResumeCommand()),
     /** */
-    VALIDATE("validate-caches", new DrValidateCacheCommand());
+    VALIDATE("validate-caches", new DrValidateCacheCommand()),
+    /** */
+    REPAIR("repair-partition-counters", new DrValidateCacheCommand());
 
     /** */
     private final String name;
