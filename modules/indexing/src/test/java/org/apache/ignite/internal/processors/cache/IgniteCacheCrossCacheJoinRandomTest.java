@@ -94,7 +94,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 30 * 60_000;
+        return 12 * 60_000;
     }
 
     /** {@inheritDoc} */
