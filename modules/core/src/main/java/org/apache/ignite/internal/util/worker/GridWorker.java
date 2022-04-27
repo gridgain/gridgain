@@ -285,9 +285,9 @@ public abstract class GridWorker implements Runnable, WorkProgressDispatcher {
     /**
      * Callback on runner cancellation.
      *
-     * @param first Whether the runner gets canceled the first time.
+     * @param firstCancelRequest Whether the runner gets canceled the first time.
      */
-    protected void onCancel(boolean first) {
+    protected void onCancel(boolean firstCancelRequest) {
         Thread runner = this.runner;
 
         // Cannot apply Future.cancel() because if we do, then Future.get() would always

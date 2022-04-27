@@ -1149,9 +1149,20 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
     }
 
     /** {@inheritDoc} */
-    @Override protected void onCancel(boolean first) {
-        if (first)
+    @Override protected void onCancel(boolean firstCancelRequest) {
+        if (firstCancelRequest)
             handleCancel();
+        else {
+            if (log.isDebugEnabled()) {
+                Thread runner = runner();
+
+                log.debug(String.format(
+                    "Cancel worker is ignored [jobId=%s, interrupted=%s]",
+                    getJobId(),
+                    runner == null ? "unknown" : runner.isInterrupted()
+                ));
+            }
+        }
     }
 
     /** {@inheritDoc} */
@@ -1168,14 +1179,30 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
 
         if (timeout > 0) {
             ctx.timeout().addTimeoutObject(
-                new GridJobWorkerInterrupter(this, U.currentTimeMillis() + timeout)
+                new GridJobWorkerInterruptTimeoutObject(this, U.currentTimeMillis() + timeout)
             );
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                    "Worker will be interrupted later [jobId=%s, timeout=%s]",
+                    getJobId(),
+                    U.humanReadableDuration(timeout)
+                ));
+            }
         }
         else {
             Thread runner = runner();
 
             if (runner != null)
                 runner.interrupt();
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                    "Worker is interrupted on cancel [jobId=%s, interrupted=%s]",
+                    getJobId(),
+                    runner == null ? "unknown" : runner.isInterrupted()
+                ));
+            }
         }
     }
 

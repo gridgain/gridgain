@@ -91,7 +91,7 @@ public class GridFailoverCustomTopologySelfTest extends GridCommonAbstractTest {
         try {
             Ignite ignite1 = startGrids(2);
 
-            // We change it because compute jobs will fall asleep.
+            // We change it because compute jobs will go to sleep.
             assertTrue(computeJobWorkerInterruptTimeout(ignite1).propagate(10L));
 
             ignite1.compute().localDeployTask(JobTask.class, JobTask.class.getClassLoader());

@@ -86,7 +86,7 @@ public class GridCancelledJobsMetricsSelfTest extends GridCommonAbstractTest {
     public void testCancelledJobs() throws Exception {
         final Ignite ignite = G.ignite(getTestIgniteInstanceName());
 
-        // We change it because compute jobs will fall asleep.
+        // We change it because compute jobs will go to sleep.
         assertTrue(computeJobWorkerInterruptTimeout(ignite).propagate(10L));
 
         Collection<ComputeTaskFuture<?>> futs = new ArrayList<>();

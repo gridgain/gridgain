@@ -167,6 +167,12 @@ public class GridJobProcessor extends GridProcessorAdapter {
     /** Total jobs waiting time metric name. */
     public static final String WAITING_TIME = "WaitingTime";
 
+    /**
+     * Distributed property that defines the timeout for interrupting the
+     * {@link GridJobWorker worker} after {@link GridJobWorker#cancel() cancellation} in mills.
+     */
+    public static final String COMPUTE_JOB_WORKER_INTERRUPT_TIMEOUT = "computeJobWorkerInterruptTimeout";
+
     /** */
     private final Marshaller marsh;
 
@@ -315,7 +321,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
 
     /** Timeout interrupt {@link GridJobWorker workers} after {@link GridJobWorker#cancel cancel} im mills. */
     private final DistributedLongProperty computeJobWorkerInterruptTimeout =
-        detachedLongProperty("computeJobWorkerInterruptTimeout");
+        detachedLongProperty(COMPUTE_JOB_WORKER_INTERRUPT_TIMEOUT);
 
     /**
      * @param ctx Kernal context.
@@ -2429,17 +2435,5 @@ public class GridJobProcessor extends GridProcessorAdapter {
      */
     public long computeJobWorkerInterruptTimeout() {
         return computeJobWorkerInterruptTimeout.getOrDefault(ctx.config().getFailureDetectionTimeout());
-    }
-
-    /**
-     * Gets passive job.
-     *
-     * @param jobId Job ID.
-     * @return passive job.
-     */
-    @Nullable public GridJobWorker passiveJob(IgniteUuid jobId) {
-        assert jobId != null;
-
-        return jobAlwaysActivate ? null : passiveJobs.get(jobId);
     }
 }
