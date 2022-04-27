@@ -186,7 +186,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         taskFut.get(1_000L);
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
-        assertThat(jobWorker.runner().isInterrupted(), equalTo(true));
+        assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(true));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), empty());
     }
 
@@ -218,7 +218,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         assertTrue(waitForCondition(jobWorker::isStarted, getTestTimeout(), 10));
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
-        assertThat(jobWorker.runner().isInterrupted(), equalTo(false));
+        assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(false));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(2));
     }
 
@@ -260,7 +260,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         jobWorker.cancel();
 
         assertThat(jobWorker.isCancelled(), equalTo(true));
-        assertThat(jobWorker.runner().isInterrupted(), equalTo(false));
+        assertThat(countDownLatchJobInterrupted(jobWorker), equalTo(false));
         assertThat(jobWorkerInterrupters(timeoutObjects(node), jobWorker), hasSize(1));
     }
 
@@ -301,6 +301,13 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
             .map(GridJobWorkerInterruptTimeoutObject.class::cast)
             .filter(o -> o.jobWorker() == jobWorker)
             .collect(toList());
+    }
+
+    /**
+     * @return Value of {@link CountDownLatchJob#interrupted}.
+     */
+    private static boolean countDownLatchJobInterrupted(GridJobWorker jobWorker) {
+        return ((CountDownLatchJob)jobWorker.getJob()).interrupted;
     }
 
     /**
@@ -381,6 +388,9 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
         /** Latch. */
         final CountDownLatch latch = new CountDownLatch(1);
 
+        /** Interrupted. */
+        volatile boolean interrupted;
+
         /**
          * Constructor.
          */
@@ -394,6 +404,8 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
                 latch.await();
             }
             catch (InterruptedException e) {
+                interrupted = true;
+
                 Thread.currentThread().interrupt();
             }
 
