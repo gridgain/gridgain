@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.verify;
+package org.apache.ignite.internal.visor.dr;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -27,9 +27,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * DR Check partition counters task result.
  */
-public class VisorDrValidateCachesTaskResult extends IgniteDataTransferObject {
+public class VisorDrCheckPartitionCountersTaskResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -37,13 +37,13 @@ public class VisorDrValidateCachesTaskResult extends IgniteDataTransferObject {
     private Map<UUID, Exception> exceptions;
 
     /** Results from cluster. */
-    private Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results;
+    private Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results;
 
     /**
      * @param results Results.
      * @param exceptions Exceptions.
      */
-    public VisorDrValidateCachesTaskResult(Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results,
+    public VisorDrCheckPartitionCountersTaskResult(Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results,
         Map<UUID, Exception> exceptions) {
         this.exceptions = exceptions;
         this.results = results;
@@ -52,7 +52,7 @@ public class VisorDrValidateCachesTaskResult extends IgniteDataTransferObject {
     /**
      * For externalization only.
      */
-    public VisorDrValidateCachesTaskResult() {
+    public VisorDrCheckPartitionCountersTaskResult() {
     }
 
     /**
@@ -65,7 +65,7 @@ public class VisorDrValidateCachesTaskResult extends IgniteDataTransferObject {
     /**
      * @return Results from cluster.
      */
-    public Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results() {
+    public Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results() {
         return results;
     }
 
@@ -83,6 +83,6 @@ public class VisorDrValidateCachesTaskResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(VisorDrValidateCachesTaskResult.class, this);
+        return S.toString(VisorDrCheckPartitionCountersTaskResult.class, this);
     }
 }

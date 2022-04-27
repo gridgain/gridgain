@@ -18,7 +18,7 @@ package org.apache.ignite.internal.commandline.dr.subcommands;
 
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.VALIDATE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 import java.util.Collection;
@@ -31,15 +31,15 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheEntryJobResult;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCachesTaskResult;
+import org.apache.ignite.internal.visor.dr.VisorDrCheckPartitionCountersJobResult;
+import org.apache.ignite.internal.visor.dr.VisorDrCheckPartitionCountersTaskArg;
+import org.apache.ignite.internal.visor.dr.VisorDrCheckPartitionCountersTaskResult;
 
 /**
- * Validate indexes command.
+ * DR check partition counters command.
  */
-public class DrValidateCacheCommand extends DrAbstractRemoteSubCommand<VisorDrValidateCacheTaskArg, VisorDrValidateCachesTaskResult, DrValidateCacheCommand.Arguments> {
-    /** Config parameter. */
+public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult, DrCheckPartitionCountersCommand.Arguments> {
+    /** Check first N entries parameter. */
     public static final String CHECK_FIRST_PARAM = "--check-first";
 
     /** Metrics parameter. */
@@ -48,7 +48,7 @@ public class DrValidateCacheCommand extends DrAbstractRemoteSubCommand<VisorDrVa
     /**
      * Container for command arguments.
      */
-    public class Arguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrValidateCacheTaskArg> {
+    public class Arguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrCheckPartitionCountersTaskArg> {
          /** Caches. */
         private final Set<String> caches;
 
@@ -88,26 +88,26 @@ public class DrValidateCacheCommand extends DrAbstractRemoteSubCommand<VisorDrVa
             return S.toString(Arguments.class, this);
         }
 
-        @Override public VisorDrValidateCacheTaskArg toVisorArgs() {
-            return new VisorDrValidateCacheTaskArg(caches, checkFirst);
+        @Override public VisorDrCheckPartitionCountersTaskArg toVisorArgs() {
+            return new VisorDrCheckPartitionCountersTaskArg(caches, checkFirst);
         }
     }
 
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
-        return "org.apache.ignite.internal.visor.dr.VisorValidateDrCachesTask";
+        return "org.apache.ignite.internal.visor.dr.VisorDrCheckPartitionCountersTask";
     }
 
     /** {@inheritDoc} */
-    @Override protected void printResult(VisorDrValidateCachesTaskResult res, Logger log) {
-        boolean errors = CommandLogger.printErrors(res.exceptions(), "Dr cache validation failed on nodes:", log);
+    @Override protected void printResult(VisorDrCheckPartitionCountersTaskResult res, Logger log) {
+        boolean errors = CommandLogger.printErrors(res.exceptions(), "Check partition counters failed on nodes:", log);
 
-        for (Entry<UUID, Collection<VisorDrValidateCacheEntryJobResult>> nodeEntry : res.results().entrySet()) {
-            Collection<VisorDrValidateCacheEntryJobResult> cacheMetrics = nodeEntry.getValue();
+        for (Entry<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> nodeEntry : res.results().entrySet()) {
+            Collection<VisorDrCheckPartitionCountersJobResult> cacheMetrics = nodeEntry.getValue();
 
             boolean errorWasPrinted = false;
 
-            for (VisorDrValidateCacheEntryJobResult cacheMetric : cacheMetrics) {
+            for (VisorDrCheckPartitionCountersJobResult cacheMetric : cacheMetrics) {
                 if (!cacheMetric.hasIssues())
                     continue;
 
@@ -151,7 +151,7 @@ public class DrValidateCacheCommand extends DrAbstractRemoteSubCommand<VisorDrVa
 
                     if (F.constainsStringIgnoreCase(caches, UTILITY_CACHE_NAME)) {
                         throw new IllegalArgumentException(
-                                VALIDATE + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
+                                CHECK + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
                         );
                     }
                     break;
@@ -192,6 +192,6 @@ public class DrValidateCacheCommand extends DrAbstractRemoteSubCommand<VisorDrVa
 
     /** {@inheritDoc} */
     @Override public String name() {
-        return VALIDATE.text().toUpperCase();
+        return CHECK.text().toUpperCase();
     }
 }

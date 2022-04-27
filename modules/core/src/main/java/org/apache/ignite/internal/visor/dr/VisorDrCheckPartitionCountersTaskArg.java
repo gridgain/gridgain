@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.verify;
+package org.apache.ignite.internal.visor.dr;
 
 import static org.apache.ignite.internal.util.IgniteUtils.readSet;
 import static org.apache.ignite.internal.util.IgniteUtils.writeCollection;
@@ -27,9 +27,9 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Validate dr cache task arguments.
+ * DR Check partition counters task args.
  */
-public class VisorDrValidateCacheTaskArg extends IgniteDataTransferObject {
+public class VisorDrCheckPartitionCountersTaskArg extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -42,7 +42,7 @@ public class VisorDrValidateCacheTaskArg extends IgniteDataTransferObject {
     /**
      * Default constructor.
      */
-    public VisorDrValidateCacheTaskArg() {
+    public VisorDrCheckPartitionCountersTaskArg() {
         // No-op.
     }
 
@@ -52,7 +52,7 @@ public class VisorDrValidateCacheTaskArg extends IgniteDataTransferObject {
      * @param caches Caches.
      * @param checkFirst Check first K elements.
      */
-    public VisorDrValidateCacheTaskArg(
+    public VisorDrCheckPartitionCountersTaskArg(
         Set<String> caches,
         int checkFirst
     ) {
@@ -94,6 +94,6 @@ public class VisorDrValidateCacheTaskArg extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(VisorDrValidateCacheTaskArg.class, this);
+        return S.toString(VisorDrCheckPartitionCountersTaskArg.class, this);
     }
 }

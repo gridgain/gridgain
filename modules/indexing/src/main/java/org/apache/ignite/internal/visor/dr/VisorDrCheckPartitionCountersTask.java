@@ -48,33 +48,30 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheEntryJobResult;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCachesTaskResult;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.logMapped;
 
 /**
- * Task to collect cache query metrics.
+ * Task for check partition counter in DR entries.
  */
 @GridInternal
-public class VisorValidateDrCachesTask extends VisorMultiNodeTask<VisorDrValidateCacheTaskArg,
-        VisorDrValidateCachesTaskResult, Collection<VisorDrValidateCacheEntryJobResult>> {
+public class VisorDrCheckPartitionCountersTask extends VisorMultiNodeTask<VisorDrCheckPartitionCountersTaskArg,
+        VisorDrCheckPartitionCountersTaskResult, Collection<VisorDrCheckPartitionCountersJobResult>> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorJob<VisorDrValidateCacheTaskArg, Collection<VisorDrValidateCacheEntryJobResult>> job(
-            VisorDrValidateCacheTaskArg arg) {
+    @Override protected VisorJob<VisorDrCheckPartitionCountersTaskArg, Collection<VisorDrCheckPartitionCountersJobResult>> job(
+            VisorDrCheckPartitionCountersTaskArg arg) {
         return null;
     }
 
     /** {@inheritDoc} */
     @Override protected Map<? extends ComputeJob, ClusterNode> map0(List<ClusterNode> subgrid,
-            VisorTaskArgument<VisorDrValidateCacheTaskArg> arg) {
-        VisorDrValidateCacheTaskArg argument = arg.getArgument();
+            VisorTaskArgument<VisorDrCheckPartitionCountersTaskArg> arg) {
+        VisorDrCheckPartitionCountersTaskArg argument = arg.getArgument();
 
         Set<String> caches = argument.getCaches();
 
@@ -136,31 +133,31 @@ public class VisorValidateDrCachesTask extends VisorMultiNodeTask<VisorDrValidat
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override protected VisorDrValidateCachesTaskResult reduce0(List<ComputeJobResult> results)
+    @Nullable @Override protected VisorDrCheckPartitionCountersTaskResult reduce0(List<ComputeJobResult> results)
             throws IgniteException {
         Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> taskRes = new HashMap<>();
 
-        Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> nodeMetricsMap = new HashMap<>();
+        Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> nodeMetricsMap = new HashMap<>();
         Map<UUID, Exception> exceptions = new HashMap<>();
 
         for (ComputeJobResult res : results) {
             if (res.getException() != null) {
                 exceptions.put(res.getNode().id(), res.getException());
             } else {
-                Collection<VisorDrValidateCacheEntryJobResult> metrics = res.getData();
+                Collection<VisorDrCheckPartitionCountersJobResult> metrics = res.getData();
 
                 nodeMetricsMap.put(res.getNode().id(), metrics);
             }
         }
 
-       return new VisorDrValidateCachesTaskResult(nodeMetricsMap, exceptions);
+       return new VisorDrCheckPartitionCountersTaskResult(nodeMetricsMap, exceptions);
     }
 
     /**
      * Job that will actually validate entries in dr caches.
      */
     private static class DrCacheEntryValidateJob
-            extends VisorJob<VisorDrValidateCacheTaskArg, Collection<VisorDrValidateCacheEntryJobResult>> {
+            extends VisorJob<VisorDrCheckPartitionCountersTaskArg, Collection<VisorDrCheckPartitionCountersJobResult>> {
         /** Serial number */
         private static final long serialVersionUID = 0L;
 
@@ -173,21 +170,21 @@ public class VisorValidateDrCachesTask extends VisorMultiNodeTask<VisorDrValidat
          * @param arg Last time when metrics were collected.
          * @param debug Debug flag.
          */
-        protected DrCacheEntryValidateJob(@Nullable VisorDrValidateCacheTaskArg arg, Map<String, Set<Integer>> cachesWithPartitions, boolean debug) {
+        protected DrCacheEntryValidateJob(@Nullable VisorDrCheckPartitionCountersTaskArg arg, Map<String, Set<Integer>> cachesWithPartitions, boolean debug) {
             super(arg, debug);
 
             this.cachesWithPartitions = cachesWithPartitions;
         }
 
         /** {@inheritDoc} */
-        @Override protected Collection<VisorDrValidateCacheEntryJobResult> run(
-                @Nullable VisorDrValidateCacheTaskArg arg
+        @Override protected Collection<VisorDrCheckPartitionCountersJobResult> run(
+                @Nullable VisorDrCheckPartitionCountersTaskArg arg
         ) throws IgniteException {
             assert arg != null;
 
             int checkFirst = arg.getCheckFirst();
 
-            List<VisorDrValidateCacheEntryJobResult> metrics = new ArrayList<>();
+            List<VisorDrCheckPartitionCountersJobResult> metrics = new ArrayList<>();
 
             for (Entry<String, Set<Integer>> cachesWithParts : cachesWithPartitions.entrySet()) {
                 metrics.add(
@@ -198,7 +195,7 @@ public class VisorValidateDrCachesTask extends VisorMultiNodeTask<VisorDrValidat
             return metrics;
         }
 
-        private VisorDrValidateCacheEntryJobResult calculateForCache(String cache, Set<Integer> parts, int checkFirst) {
+        private VisorDrCheckPartitionCountersJobResult calculateForCache(String cache, Set<Integer> parts, int checkFirst) {
             ignite.cache(cache);
 
             CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(CU.cacheId(cache));
@@ -225,7 +222,7 @@ public class VisorValidateDrCachesTask extends VisorMultiNodeTask<VisorDrValidat
                 }
             }
 
-            return new VisorDrValidateCacheEntryJobResult(cache, size, affectedCaches, affectedPartitions, entriesProcessed, brokenEntriesFound);
+            return new VisorDrCheckPartitionCountersJobResult(cache, size, affectedCaches, affectedPartitions, entriesProcessed, brokenEntriesFound);
         }
 
         private DrCachePartitionMetrics calculateForPartition(CacheGroupContext grpCtx, String cache, int part, int checkFirst) {

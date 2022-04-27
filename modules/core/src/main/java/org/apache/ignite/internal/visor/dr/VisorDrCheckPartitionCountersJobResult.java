@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.verify;
+package org.apache.ignite.internal.visor.dr;
 
 import java.io.Serializable;
 import java.util.Set;
@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Validate cache entry job result.
  */
-public class VisorDrValidateCacheEntryJobResult implements Serializable {
+public class VisorDrCheckPartitionCountersJobResult implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -54,7 +54,7 @@ public class VisorDrValidateCacheEntryJobResult implements Serializable {
      * @param entriesProcessed Entries processed size.
      * @param brokenEntriesFound Broken entries size.
      */
-    public VisorDrValidateCacheEntryJobResult(String cacheOrGroupName, long size,
+    public VisorDrCheckPartitionCountersJobResult(String cacheOrGroupName, long size,
             Set<Integer> affectedCaches, Set<Integer> affectedPartitions, long entriesProcessed,
             long brokenEntriesFound) {
         this.cacheOrGroupName = cacheOrGroupName;
