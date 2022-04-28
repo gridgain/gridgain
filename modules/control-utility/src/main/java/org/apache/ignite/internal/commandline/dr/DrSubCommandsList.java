@@ -22,6 +22,7 @@ import org.apache.ignite.internal.commandline.dr.subcommands.DrFullStateTransfer
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrPauseCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrResumeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
@@ -49,7 +50,7 @@ public enum DrSubCommandsList {
     /** */
     CHECK("check-partition-counters", new DrCheckPartitionCountersCommand()),
     /** */
-    REPAIR("repair-partition-counters", new DrValidateCacheCommand());
+    REPAIR("repair-partition-counters", new DrRepairPartitionCountersCommand());
 
     /** */
     private final String name;

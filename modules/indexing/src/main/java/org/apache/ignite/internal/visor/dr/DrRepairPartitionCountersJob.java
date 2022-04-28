@@ -81,26 +81,40 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
     private VisorDrRepairPartitionCountersJobResult executeForCache(String cache) {
         Set<Integer> parts = cachePartsMap.get(cache);
 
-        int size = 0;
+        Set<Integer> affectedPartitions = new HashSet<>();
         int entriesProcessed = 0;
         int brokenEntriesFound = 0;
+        int tombstonesCleared = 0;
+        int tombstonesFailedToClear = 0;
         int entriesFixed = 0;
-        int tombstoneCleared = 0;
+        int entriesFailedToFix = 0;
 
         for (Integer part : parts) {
-            executeForPartition(cache, part);
+            PartitionRepairMetrics metrics = executeForPartition(cache, part);
+
+            if (metrics.brokenEntriesFound > 0) {
+                affectedPartitions.add(part);
+            }
+            entriesProcessed += metrics.entriesProcessed;
+            brokenEntriesFound += metrics.brokenEntriesFound;
+            entriesFixed += metrics.entriesFixed;
+            entriesFailedToFix += metrics.entriesFailedToFix;
+            tombstonesCleared += metrics.tombstonesCleared;
+            tombstonesFailedToClear += metrics.tombstonesFailedToClear;
         }
 
-        return new VisorDrRepairPartitionCountersJobResult(cache, size, ,, entriesProcessed, brokenEntriesFound, entriesFixed, tombstoneCleared);
+        return new VisorDrRepairPartitionCountersJobResult(cache, 0, null,
+                affectedPartitions, entriesProcessed, brokenEntriesFound, tombstonesCleared,
+                tombstonesFailedToClear, entriesFixed, entriesFailedToFix);
     }
 
-    private void executeForPartition(String cache, Integer part) {
+    private PartitionRepairMetrics executeForPartition(String cache, Integer part) {
         CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(CU.cacheId(cache));
 
         GridDhtLocalPartition locPart = reservePartition(part, grpCtx, cache);
 
-        int brokenEntriesFound = 0;
-        int
+        PartitionRepairMetrics metrics = new PartitionRepairMetrics();
+
         try {
             try {
                 Set<Long> counters = new HashSet<>();
@@ -110,28 +124,24 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                         .partitionIterator(part, IgniteCacheOffheapManager.DATA_AND_TOMBSTONES);
 
                 while (iter.hasNext()) {
-                    brokenEntriesFound += fillBatch(grpCtx.shared(), iter, batch, counters);
+                    fillBatch(metrics, grpCtx.shared(), iter, batch, counters);
 
-                    repairEntries(grpCtx, batch, part);
+                    repairEntries(metrics, grpCtx, batch, part);
 
                     batch.clear();
                 }
             } finally {
                 locPart.release();
             }
-
-            log.info("Partition repair finished: " + getDetails());
         } catch (IgniteCheckedException e) {
-            log.error("Partition repair failed: " + getDetails(), e);
-
             throw new IgniteException(e);
         }
 
+        return metrics;
     }
 
-    private int fillBatch(GridCacheSharedContext ctx, GridIterator<CacheDataRow> iter,
+    private void fillBatch(PartitionRepairMetrics metrics, GridCacheSharedContext ctx, GridIterator<CacheDataRow> iter,
             ArrayList<GridCacheEntryInfo> batch, Set<Long> counters) {
-        int brokenEntriesFound = 0;
 
         while (iter.hasNext() && batch.size() < 100) {
             ctx.database().checkpointReadLock();
@@ -140,8 +150,10 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                 while (iter.hasNext() && (cnt--) > 0) {
                     CacheDataRow row = iter.next();
 
+                    metrics.entriesProcessed++;
+
                     if (!counters.add(row.version().updateCounter())) {
-                        brokenEntriesFound++;
+                        metrics.brokenEntriesFound++;
 
                         batch.add(extractEntryInfo(row));
                     }
@@ -150,8 +162,6 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                 ctx.database().checkpointReadUnlock();
             }
         }
-
-        return brokenEntriesFound;
     }
 
     private GridCacheEntryInfo extractEntryInfo(CacheDataRow row) {
@@ -169,12 +179,12 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
     }
 
 
-    private void repairEntries(CacheGroupContext grp, List<GridCacheEntryInfo> infos, int part)
+    private void repairEntries(PartitionRepairMetrics metrics,
+            CacheGroupContext grp, List<GridCacheEntryInfo> infos, int part)
             throws IgniteCheckedException {
         if (infos.isEmpty()) {
             return;
         }
-
         grp.shared().database().checkpointReadLock();
         try {
             GridCacheAdapter<Object, Object> cache = grp.sharedGroup() ? null
@@ -187,6 +197,8 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                     GridCacheContext cctx = grp.shared().cacheContext(info.cacheId());
 
                     if (cctx == null) {
+                        metrics.entriesFailedToFix++;
+
                         log.warning(
                                 "Failed to fix entry (cache has gone?): cacheId=" + info.cacheId()
                                         + ", part=" +
@@ -211,8 +223,9 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
 
                 if (info.isDeleted()) {
                     if (entry.clearInternal(info.version())) {
-                        metrics.tombstoneCleared++;
+                        metrics.tombstonesCleared++;
                     } else {
+                        metrics.tombstonesFailedToClear++;
                         log.warning(
                                 "Failed to cleanup tombstone (concurrently removed?): cacheName="
                                         + cache.name() +
@@ -226,6 +239,7 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                 Object val = keepBinaryIfNeeded(cache).get(key);
 
                 if (val == null) {
+                    metrics.entriesFailedToFix++;
                     log.warning(
                             "Failed to fix entry (concurrently removed?): cacheName=" + cache.name()
                                     + ", part=" +
@@ -254,5 +268,15 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
     @Override
     public String toString() {
         return S.toString(DrRepairPartitionCountersJob.class, this);
+    }
+
+    private static class PartitionRepairMetrics {
+        public int brokenEntriesFound;
+        public int tombstonesCleared;
+        public int tombstonesFailedToClear;
+        public int entriesFixed;
+        public int entriesFailedToFix;
+        public int entriesProcessed;
+        public int size;
     }
 }

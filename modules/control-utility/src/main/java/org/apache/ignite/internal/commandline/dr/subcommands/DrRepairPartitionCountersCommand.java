@@ -19,7 +19,6 @@ package org.apache.ignite.internal.commandline.dr.subcommands;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.VALIDATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 import java.util.Collection;
@@ -32,16 +31,15 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersJobResult;
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskArg;
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskResult;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheEntryJobResult;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheTaskArg;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCachesTaskResult;
 
 /**
  * Validate indexes command.
  */
-public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrRepairPartitionCountersTaskArg, VisorDrRepairPartitionCountersTaskResult, DrRepairPartitionCountersCommand.Arguments> {
+public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrRepairPartitionCountersTaskArg,
+        VisorDrRepairPartitionCountersTaskResult, DrRepairPartitionCountersCommand.Arguments> {
     /** Metrics parameter. */
     public static final String CACHES_PARAM = "--caches";
 
@@ -88,12 +86,12 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
     @Override protected void printResult(VisorDrRepairPartitionCountersTaskResult res, Logger log) {
         boolean errors = CommandLogger.printErrors(res.exceptions(), "Dr cache validation failed on nodes:", log);
 
-        for (Entry<UUID, Collection<VisorDrValidateCacheEntryJobResult>> nodeEntry : res.results().entrySet()) {
-            Collection<VisorDrValidateCacheEntryJobResult> cacheMetrics = nodeEntry.getValue();
+        for (Entry<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> nodeEntry : res.results().entrySet()) {
+            Collection<VisorDrRepairPartitionCountersJobResult> cacheMetrics = nodeEntry.getValue();
 
             boolean errorWasPrinted = false;
 
-            for (VisorDrValidateCacheEntryJobResult cacheMetric : cacheMetrics) {
+            for (VisorDrRepairPartitionCountersJobResult cacheMetric : cacheMetrics) {
                 if (!cacheMetric.hasIssues())
                     continue;
 
@@ -133,7 +131,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
 
                     if (F.constainsStringIgnoreCase(caches, UTILITY_CACHE_NAME)) {
                         throw new IllegalArgumentException(
-                                VALIDATE + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
+                                REPAIR + " not allowed for `" + UTILITY_CACHE_NAME + "` cache."
                         );
                     }
                     break;

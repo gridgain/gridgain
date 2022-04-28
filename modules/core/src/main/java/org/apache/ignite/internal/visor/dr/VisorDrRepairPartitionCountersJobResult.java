@@ -26,16 +26,52 @@ public class VisorDrRepairPartitionCountersJobResult extends VisorDrPartitionCou
     /** */
     private static final long serialVersionUID = 0L;
 
-    private long entriesFixed;
-
-    private long tombstoneCleared;
+    private final int tombstonesCleared;
+    private final int tombstonesFailedToClear;
+    private final int entriesFixed;
+    private final int entriesFailedToFix;
 
     public VisorDrRepairPartitionCountersJobResult(String cacheOrGroupName, long size,
             Set<Integer> affectedCaches, Set<Integer> affectedPartitions, long entriesProcessed,
-            long brokenEntriesFound, long entriesFixed, long tombstoneCleared) {
+            long brokenEntriesFound, int tombstonesCleared, int tombstonesFailedToClear,
+            int entriesFixed, int entriesFailedToFix) {
         super(cacheOrGroupName, size, affectedCaches, affectedPartitions, entriesProcessed,
                 brokenEntriesFound);
+        this.tombstonesCleared = tombstonesCleared;
+        this.tombstonesFailedToClear = tombstonesFailedToClear;
         this.entriesFixed = entriesFixed;
-        this.tombstoneCleared = tombstoneCleared;
+        this.entriesFailedToFix = entriesFailedToFix;
+    }
+
+    public int getTombstonesCleared() {
+        return tombstonesCleared;
+    }
+
+    public int getTombstonesFailedToClear() {
+        return tombstonesFailedToClear;
+    }
+
+    public int getEntriesFixed() {
+        return entriesFixed;
+    }
+
+    public int getEntriesFailedToFix() {
+        return entriesFailedToFix;
+    }
+
+    @Override
+    public String toString() {
+        return "VisorDrRepairPartitionCountersJobResult{" +
+                "cacheOrGroupName='" + cacheOrGroupName + '\'' +
+                ", size=" + size +
+                ", affectedCaches=" + affectedCaches +
+                ", affectedPartitions=" + affectedPartitions +
+                ", entriesProcessed=" + entriesProcessed +
+                ", brokenEntriesFound=" + brokenEntriesFound +
+                ", tombstonesCleared=" + tombstonesCleared +
+                ", tombstonesFailedToClear=" + tombstonesFailedToClear +
+                ", entriesFixed=" + entriesFixed +
+                ", entriesFailedToFix=" + entriesFailedToFix +
+                '}';
     }
 }

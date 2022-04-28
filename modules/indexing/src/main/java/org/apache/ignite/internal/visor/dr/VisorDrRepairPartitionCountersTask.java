@@ -17,16 +17,11 @@
 package org.apache.ignite.internal.visor.dr;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Task to collect cache query metrics.
@@ -49,23 +44,9 @@ public class VisorDrRepairPartitionCountersTask extends VisorDrPartitionCounters
         return new DrRepairPartitionCountersJob(args, cachePartsMap, debug, true);
     }
 
-    /** {@inheritDoc} */
-    @Nullable @Override protected VisorDrRepairPartitionCountersTaskResult reduce0(List<ComputeJobResult> results)
-            throws IgniteException {
-        Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> nodeMetricsMap = new HashMap<>();
-        Map<UUID, Exception> exceptions = new HashMap<>();
-
-        for (ComputeJobResult res : results) {
-            if (res.getException() != null) {
-                exceptions.put(res.getNode().id(), res.getException());
-            } else {
-                Collection<VisorDrCheckPartitionCountersJobResult> metrics = res.getData();
-
-                nodeMetricsMap.put(res.getNode().id(), metrics);
-            }
-        }
-
-       return new VisorDrRepairPartitionCountersTaskResult(nodeMetricsMap, exceptions);
+    @Override
+    protected VisorDrRepairPartitionCountersTaskResult createResult(Map<UUID, Exception> exceptions,
+            Map<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> results) {
+        return new VisorDrRepairPartitionCountersTaskResult(results, exceptions);
     }
-
 }

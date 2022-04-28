@@ -9,9 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
+import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.cache.CacheType;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -19,11 +22,15 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.jetbrains.annotations.Nullable;
 
 public abstract class VisorDrPartitionCountersTask<K, V, J> extends VisorMultiNodeTask<K, V, J> {
+
     protected abstract Set<String> getCaches(K args);
 
     protected abstract VisorJob<K, J> createJob(K args, Map<String, Set<Integer>> cachePartsMap, boolean debug);
+
+    protected abstract V createResult(Map<UUID, Exception> exceptions, Map<UUID, J> results);
 
     /** {@inheritDoc} */
     @Override protected VisorJob<K, J> job(K arg) {
@@ -91,5 +98,25 @@ public abstract class VisorDrPartitionCountersTask<K, V, J> extends VisorMultiNo
             if (debug)
                 logMapped(ignite.log(), getClass(), map.values());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Nullable
+    @Override protected V reduce0(List<ComputeJobResult> results)
+            throws IgniteException {
+        Map<UUID, J> nodeMetricsMap = new HashMap<>();
+        Map<UUID, Exception> exceptions = new HashMap<>();
+
+        for (ComputeJobResult res : results) {
+            if (res.getException() != null) {
+                exceptions.put(res.getNode().id(), res.getException());
+            } else {
+                J metrics = res.getData();
+
+                nodeMetricsMap.put(res.getNode().id(), metrics);
+            }
+        }
+
+        return createResult(exceptions, nodeMetricsMap);
     }
 }

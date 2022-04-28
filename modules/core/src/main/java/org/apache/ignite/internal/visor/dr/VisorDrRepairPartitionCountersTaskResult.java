@@ -37,13 +37,13 @@ public class VisorDrRepairPartitionCountersTaskResult extends IgniteDataTransfer
     private Map<UUID, Exception> exceptions;
 
     /** Results from cluster. */
-    private Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results;
+    private Map<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> results;
 
     /**
      * @param results Results.
      * @param exceptions Exceptions.
      */
-    public VisorDrRepairPartitionCountersTaskResult(Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results,
+    public VisorDrRepairPartitionCountersTaskResult(Map<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> results,
         Map<UUID, Exception> exceptions) {
         this.exceptions = exceptions;
         this.results = results;
@@ -65,7 +65,7 @@ public class VisorDrRepairPartitionCountersTaskResult extends IgniteDataTransfer
     /**
      * @return Results from cluster.
      */
-    public Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results() {
+    public Map<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> results() {
         return results;
     }
 
