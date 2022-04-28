@@ -20,7 +20,7 @@ import java.io.Serializable;
 import java.util.Set;
 
 /**
- * Partition dr entry metrics.
+ * Partition dr partition counters metrics.
  */
 class DrCachePartitionMetrics implements Serializable {
     /** Serial number. */
