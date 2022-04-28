@@ -3,14 +3,14 @@ package org.apache.ignite.internal.visor.dr;
 import java.util.Map;
 import java.util.Set;
 
-public class DrFixPartitionCountersJobArgs extends DrPartitionCountersJobArgs {
+public class VisorDrFixPartitionCountersJobArgs extends VisorDrPartitionCountersJobArgs {
     /** */
     private final int batchSize;
 
     /** */
     private final boolean keepBinary;
 
-    public DrFixPartitionCountersJobArgs(
+    public VisorDrFixPartitionCountersJobArgs(
             Map<String, Set<Integer>> cachesWithPartitions, boolean debug, int batchSize,
             boolean keepBinary) {
         super(cachesWithPartitions, debug);

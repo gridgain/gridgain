@@ -3,14 +3,14 @@ package org.apache.ignite.internal.visor.dr;
 import java.util.Map;
 import java.util.Set;
 
-public class DrPartitionCountersJobArgs {
+public class VisorDrPartitionCountersJobArgs {
     /** */
     private final Map<String, Set<Integer>> cachesWithPartitions;
 
     /** */
     private final boolean debug;
 
-    public DrPartitionCountersJobArgs(
+    public VisorDrPartitionCountersJobArgs(
             Map<String, Set<Integer>> cachesWithPartitions, boolean debug) {
         this.cachesWithPartitions = cachesWithPartitions;
         this.debug = debug;

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.visor.dr;
 
 import java.util.ArrayList;
@@ -18,6 +34,9 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Check partition counters job.
+ */
 public class VisorDrCheckPartitionCountersJob extends
         VisorDrPartitionCountersJob<VisorDrCheckPartitionCountersTaskArg, Collection<VisorDrCheckPartitionCountersJobResult>> {
     /** Serial number */
@@ -26,6 +45,13 @@ public class VisorDrCheckPartitionCountersJob extends
     /** Caches with partitions. */
     protected final Map<String, Set<Integer>> cachesWithPartitions;
 
+    /**
+     * Create job with specified argument.
+     *
+     * @param arg Task arguments.
+     * @param cachesWithPartitions Map with cache-partitions pairs.
+     * @param debug Debug flag.
+     */
     public VisorDrCheckPartitionCountersJob(
             @Nullable VisorDrCheckPartitionCountersTaskArg arg, boolean debug,
             Map<String, Set<Integer>> cachesWithPartitions) {
@@ -33,11 +59,8 @@ public class VisorDrCheckPartitionCountersJob extends
         this.cachesWithPartitions = cachesWithPartitions;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Collection<VisorDrCheckPartitionCountersJobResult> run(
+    /** {@inheritDoc} */
+    @Override protected Collection<VisorDrCheckPartitionCountersJobResult> run(
             @Nullable VisorDrCheckPartitionCountersTaskArg arg
     ) throws IgniteException {
         assert arg != null;
@@ -73,7 +96,7 @@ public class VisorDrCheckPartitionCountersJob extends
         Set<Integer> affectedPartitions = new HashSet<>();
 
         for (Integer part : parts) {
-            DrCachePartitionMetrics partMetrics = calculateForPartition(grpCtx, cache, part,
+            VisorDrCachePartitionMetrics partMetrics = calculateForPartition(grpCtx, cache, part,
                     checkFirst);
 
             size += partMetrics.getSize();
@@ -90,7 +113,7 @@ public class VisorDrCheckPartitionCountersJob extends
                 affectedPartitions, entriesProcessed, brokenEntriesFound);
     }
 
-    private DrCachePartitionMetrics calculateForPartition(CacheGroupContext grpCtx, String cache,
+    private VisorDrCachePartitionMetrics calculateForPartition(CacheGroupContext grpCtx, String cache,
             int part, int checkFirst) {
         GridDhtLocalPartition locPart = reservePartition(part, grpCtx, cache);
 
@@ -128,15 +151,12 @@ public class VisorDrCheckPartitionCountersJob extends
             locPart.release();
         }
 
-        return new DrCachePartitionMetrics(locPart.fullSize(), affectedCaches, entriesProcessed,
+        return new VisorDrCachePartitionMetrics(locPart.fullSize(), affectedCaches, entriesProcessed,
                 brokenEntriesFound);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
+    /** {@inheritDoc} */
+    @Override public String toString() {
         return S.toString(VisorDrCheckPartitionCountersJob.class, this);
     }
 }

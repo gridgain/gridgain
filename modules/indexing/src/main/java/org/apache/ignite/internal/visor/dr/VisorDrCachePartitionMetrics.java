@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Partition dr partition counters metrics.
  */
-class DrCachePartitionMetrics implements Serializable {
+class VisorDrCachePartitionMetrics implements Serializable {
     /** Serial number. */
     private static final long serialVersionUID = 0L;
 
@@ -39,7 +39,7 @@ class DrCachePartitionMetrics implements Serializable {
     private final long brokenEntriesFound;
 
     /** Constructor. */
-    public DrCachePartitionMetrics(long size, Set<Integer> affectedCaches, long entriesProcessed, long brokenEntriesFound) {
+    public VisorDrCachePartitionMetrics(long size, Set<Integer> affectedCaches, long entriesProcessed, long brokenEntriesFound) {
         this.size = size;
         this.affectedCaches = affectedCaches;
         this.entriesProcessed = entriesProcessed;

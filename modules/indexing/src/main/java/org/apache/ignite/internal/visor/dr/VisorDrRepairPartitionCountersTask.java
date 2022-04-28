@@ -41,7 +41,7 @@ public class VisorDrRepairPartitionCountersTask extends VisorDrPartitionCounters
     @Override protected VisorJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> createJob(
             VisorDrRepairPartitionCountersTaskArg args, Map<String, Set<Integer>> cachePartsMap,
             boolean debug) {
-        return new DrRepairPartitionCountersJob(args, cachePartsMap, debug, true);
+        return new VisorDrRepairPartitionCountersJob(args, cachePartsMap, debug, true);
     }
 
     /** {@inheritDoc} */

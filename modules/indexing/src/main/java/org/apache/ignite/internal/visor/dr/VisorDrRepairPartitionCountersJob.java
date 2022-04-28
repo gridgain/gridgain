@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.visor.dr;
 
 import java.util.ArrayList;
@@ -28,16 +44,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Job that will actually validate entries in dr caches.
+ * Repair partition counters job.
  */
-class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> {
-    /**
-     * Serial number
-     */
+class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> {
+    /** */
     private static final long serialVersionUID = 0L;
 
+    /** Map with cache-partitions pairs, assigned for node. */
     private final Map<String, Set<Integer>> cachePartsMap;
 
+    /** Keep binary flag. */
     private final boolean keepBinary;
 
     /** Injected logger. */
@@ -46,12 +62,13 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
 
     /**
      * Create job with specified argument.
-     *  @param arg   Last time when metrics were collected.
-     * @param cachePartsMap
-     * @param debug
-     * @param keepBinary
+     *
+     * @param arg Task arguments.
+     * @param cachePartsMap Map with cache-partitions pairs.
+     * @param debug Debug flag.
+     * @param keepBinary Keep binary flag.
      */
-    public DrRepairPartitionCountersJob(@NotNull VisorDrRepairPartitionCountersTaskArg arg,
+    public VisorDrRepairPartitionCountersJob(@NotNull VisorDrRepairPartitionCountersTaskArg arg,
             Map<String, Set<Integer>> cachePartsMap, boolean debug, boolean keepBinary) {
         super(arg, debug);
 
@@ -59,11 +76,8 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
         this.keepBinary = keepBinary;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected Collection<VisorDrRepairPartitionCountersJobResult> run(
+    /** {@inheritDoc} */
+    @Override protected Collection<VisorDrRepairPartitionCountersJobResult> run(
             @Nullable VisorDrRepairPartitionCountersTaskArg arg
     ) throws IgniteException {
         assert arg != null;
@@ -153,6 +167,7 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
                     metrics.entriesProcessed++;
 
                     if (!counters.add(row.version().updateCounter())) {
+                        metrics.affectedCaches.add(row.cacheId());
                         metrics.brokenEntriesFound++;
 
                         batch.add(extractEntryInfo(row));
@@ -177,7 +192,6 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
 
         return info;
     }
-
 
     private void repairEntries(PartitionRepairMetrics metrics,
             CacheGroupContext grp, List<GridCacheEntryInfo> infos, int part)
@@ -262,21 +276,37 @@ class DrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRe
         return (keepBinary) ? cache.keepBinary() : cache;
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String toString() {
-        return S.toString(DrRepairPartitionCountersJob.class, this);
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(VisorDrRepairPartitionCountersJob.class, this);
     }
 
+    /**
+     * Repair job metrics for a single partition.
+     * */
     private static class PartitionRepairMetrics {
+        /** */
         public int brokenEntriesFound;
+
+        /** */
         public int tombstonesCleared;
+
+        /** */
         public int tombstonesFailedToClear;
+
+        /** */
         public int entriesFixed;
+
+        /** */
         public int entriesFailedToFix;
+
+        /** */
         public int entriesProcessed;
+
+        /** */
         public int size;
+
+        /** */
+        public Set<Integer> affectedCaches = new HashSet<>();
     }
 }
