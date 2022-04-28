@@ -16,11 +16,13 @@
 
 package org.apache.ignite.logger.log4j;
 
+import java.io.File;
 import java.io.IOException;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.log4j.Layout;
 import org.apache.log4j.RollingFileAppender;
+import org.apache.log4j.helpers.LogLog;
 
 /**
  * Log4J {@link RollingFileAppender} with added support for grid node IDs.
@@ -83,7 +85,23 @@ public class Log4jRollingFileAppender extends RollingFileAppender implements Log
     /** {@inheritDoc} */
     @Override public synchronized void setFile(String fileName, boolean fileAppend, boolean bufIO, int bufSize)
         throws IOException {
-        if (baseFileName != null)
-            super.setFile(fileName, fileAppend, bufIO, bufSize);
+        if (baseFileName != null) {
+            LogLog.setInternalDebugging(true);
+            LogLog.setQuietMode(false);
+            try {
+                super.setFile(fileName, fileAppend, bufIO, bufSize);
+            }
+            catch (Throwable t) {
+                File file = new File(fileName);
+
+                String format = String.format("WTF !!! fileName=[%s] file=[%s]", file.getPath(), file.getAbsolutePath());
+
+                LogLog.debug(format, t);
+
+                System.err.println(format);
+
+                throw new IOException(format, t);
+            }
+        }
     }
 }
