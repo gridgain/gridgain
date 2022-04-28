@@ -27,22 +27,22 @@ public class VisorDrCheckPartitionCountersJobResult implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /** Cache or group name. */
-    private final String cacheOrGroupName;
+    protected final String cacheOrGroupName;
 
     /** Cache size. */
-    private final long size;
+    protected final long size;
 
     /** Affected cache ids. */
-    private final Set<Integer> affectedCaches;
+    protected final Set<Integer> affectedCaches;
 
     /** Affected partitions. */
-    private final Set<Integer> affectedPartitions;
+    protected final Set<Integer> affectedPartitions;
 
     /** Number of entries processed. */
-    private final long entriesProcessed;
+    protected final long entriesProcessed;
 
     /** Number of broken entries. */
-    private final long brokenEntriesFound;
+    protected final long brokenEntriesFound;
 
     /**
      * Constructor.

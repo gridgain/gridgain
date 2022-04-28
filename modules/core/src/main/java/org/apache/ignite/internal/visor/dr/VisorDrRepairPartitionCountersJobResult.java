@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Validate cache entry job result.
  */
-public class VisorDrRepairPartitionCountersJobResult extends VisorDrPartitionCountersJobResult {
+public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartitionCountersJobResult {
     /** */
     private static final long serialVersionUID = 0L;
 
