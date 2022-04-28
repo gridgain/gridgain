@@ -768,8 +768,10 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         public void cancel() {
             if (state.compareAndSet(null, Boolean.FALSE))
                 finishFut.onDone(); // Cancelled before start.
-            else if (state.get() == Boolean.TRUE)
-                state.set(Boolean.FALSE); // Cancelled while running, need to publish stop request.
+            else if (executor.remove(this))
+                finishFut.onDone(); // Cancelled before clearing started.
+            else
+                state.compareAndSet(Boolean.TRUE, Boolean.FALSE); // Cancelled while running, need to publish stop request.
         }
 
         /** */
@@ -875,7 +877,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * @param grpId Group id.
          * @param partId Partition id.
          */
-        public PartitionKey(int grpId, int partId) {
+        PartitionKey(int grpId, int partId) {
             this.grpId = grpId;
             this.partId = partId;
         }
