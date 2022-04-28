@@ -25,7 +25,6 @@ import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.visor.verify.VisorDrValidateCacheEntryJobResult;
 
 /**
  *
@@ -38,13 +37,13 @@ public class VisorDrRepairPartitionCountersTaskResult extends IgniteDataTransfer
     private Map<UUID, Exception> exceptions;
 
     /** Results from cluster. */
-    private Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results;
+    private Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results;
 
     /**
      * @param results Results.
      * @param exceptions Exceptions.
      */
-    public VisorDrRepairPartitionCountersTaskResult(Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results,
+    public VisorDrRepairPartitionCountersTaskResult(Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results,
         Map<UUID, Exception> exceptions) {
         this.exceptions = exceptions;
         this.results = results;
@@ -66,7 +65,7 @@ public class VisorDrRepairPartitionCountersTaskResult extends IgniteDataTransfer
     /**
      * @return Results from cluster.
      */
-    public Map<UUID, Collection<VisorDrValidateCacheEntryJobResult>> results() {
+    public Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results() {
         return results;
     }
 
