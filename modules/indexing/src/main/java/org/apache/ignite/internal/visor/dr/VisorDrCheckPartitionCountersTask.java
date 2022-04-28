@@ -38,8 +38,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsAdapter;
-import org.apache.ignite.internal.processors.cache.query.GridCacheQueryDetailMetricsKey;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -135,8 +133,6 @@ public class VisorDrCheckPartitionCountersTask extends VisorMultiNodeTask<VisorD
     /** {@inheritDoc} */
     @Nullable @Override protected VisorDrCheckPartitionCountersTaskResult reduce0(List<ComputeJobResult> results)
             throws IgniteException {
-        Map<GridCacheQueryDetailMetricsKey, GridCacheQueryDetailMetricsAdapter> taskRes = new HashMap<>();
-
         Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> nodeMetricsMap = new HashMap<>();
         Map<UUID, Exception> exceptions = new HashMap<>();
 
