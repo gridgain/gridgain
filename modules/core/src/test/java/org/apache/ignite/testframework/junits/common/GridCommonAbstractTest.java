@@ -803,7 +803,15 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             }
 
             for (IgniteCacheProxy<?, ?> c : g0.context().cache().jcaches()) {
-                CacheConfiguration cfg = c.context().config();
+
+                CacheConfiguration cfg = null;
+
+                try {
+                    cfg = c.context().config();
+                }
+                catch (IllegalStateException e) {
+                    log.warning("Ex " + e.getMessage());
+                }
 
                 if (cfg == null || cacheNames != null && !cacheNames.contains(cfg.getName()))
                     continue;
