@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.visor.dr;
 
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.logMapped;
@@ -22,14 +38,36 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.jetbrains.annotations.Nullable;
 
+/**
+ * Abstract dr partition counters task. Contains map/reduce methods implementation.
+ */
 public abstract class VisorDrPartitionCountersTask<K, V, J> extends VisorMultiNodeTask<K, V, J> {
-
+    /**
+     * Gets caches.
+     *
+     * @param args Task args.
+     * @return Set of cache or cache group names.
+     */
     protected abstract Set<String> getCaches(K args);
 
+    /**
+     * Creates job from task args and cache-partitions map.
+     *
+     * @param args Task args.
+     * @param cachePartsMap Cache-partition map, contains caches and partitions assigned for the node.
+     * @param debug Debug flag.
+     * @return VisorJob job.
+     */
     protected abstract VisorJob<K, J> createJob(K args, Map<String, Set<Integer>> cachePartsMap, boolean debug);
 
+    /**
+     * Creates task result from exceptions map and results map.
+     *
+     * @param exceptions Node-exception map.
+     * @param results Node-result map.
+     * @return Task result.
+     */
     protected abstract V createResult(Map<UUID, Exception> exceptions, Map<UUID, J> results);
 
     /** {@inheritDoc} */
@@ -101,7 +139,6 @@ public abstract class VisorDrPartitionCountersTask<K, V, J> extends VisorMultiNo
     }
 
     /** {@inheritDoc} */
-    @Nullable
     @Override protected V reduce0(List<ComputeJobResult> results)
             throws IgniteException {
         Map<UUID, J> nodeMetricsMap = new HashMap<>();

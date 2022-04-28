@@ -37,15 +37,15 @@ public class VisorDrRepairPartitionCountersTask extends VisorDrPartitionCounters
         return args.getCaches();
     }
 
-    @Override
-    protected VisorJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> createJob(
+    /** {@inheritDoc} */
+    @Override protected VisorJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> createJob(
             VisorDrRepairPartitionCountersTaskArg args, Map<String, Set<Integer>> cachePartsMap,
             boolean debug) {
         return new DrRepairPartitionCountersJob(args, cachePartsMap, debug, true);
     }
 
-    @Override
-    protected VisorDrRepairPartitionCountersTaskResult createResult(Map<UUID, Exception> exceptions,
+    /** {@inheritDoc} */
+    @Override protected VisorDrRepairPartitionCountersTaskResult createResult(Map<UUID, Exception> exceptions,
             Map<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> results) {
         return new VisorDrRepairPartitionCountersTaskResult(results, exceptions);
     }

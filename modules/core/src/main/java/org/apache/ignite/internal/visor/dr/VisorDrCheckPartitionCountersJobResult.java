@@ -57,6 +57,9 @@ public class VisorDrCheckPartitionCountersJobResult implements Serializable {
     public VisorDrCheckPartitionCountersJobResult(String cacheOrGroupName, long size,
             Set<Integer> affectedCaches, Set<Integer> affectedPartitions, long entriesProcessed,
             long brokenEntriesFound) {
+        assert affectedCaches != null;
+        assert affectedPartitions != null;
+
         this.cacheOrGroupName = cacheOrGroupName;
         this.size = size;
         this.affectedCaches = affectedCaches;
@@ -65,34 +68,56 @@ public class VisorDrCheckPartitionCountersJobResult implements Serializable {
         this.brokenEntriesFound = brokenEntriesFound;
     }
 
+    /**
+     * @return HasIssues flag.
+     */
     public boolean hasIssues() {
         return brokenEntriesFound != 0;
     }
 
+    /**
+     * @return Cache or group name.
+     */
     public String getCacheOrGroupName() {
         return cacheOrGroupName;
     }
 
+    /**
+     * @return Cache or group size.
+     */
     public long getSize() {
         return size;
     }
 
+    /**
+     * @return Affected cache ids.
+     */
     public Set<Integer> getAffectedCaches() {
         return affectedCaches;
     }
 
+    /**
+     * @return Affected partitions.
+     */
     public Set<Integer> getAffectedPartitions() {
         return affectedPartitions;
     }
 
+    /**
+     * @return Entries processed.
+     */
     public long getEntriesProcessed() {
         return entriesProcessed;
     }
 
+    /**
+     * @return Broken entries found.
+     */
     public long getBrokenEntriesFound() {
         return brokenEntriesFound;
     }
 
+    /** {@inheritDoc} */
     @Override public String toString() {
         return "AggregatedCacheMetrics{" +
                 "cacheOrGroupName='" + cacheOrGroupName + '\'' +

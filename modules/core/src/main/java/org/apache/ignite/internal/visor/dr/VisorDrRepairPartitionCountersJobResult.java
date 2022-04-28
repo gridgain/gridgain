@@ -16,21 +16,41 @@
 
 package org.apache.ignite.internal.visor.dr;
 
-import java.io.Serializable;
 import java.util.Set;
 
 /**
- * Validate cache entry job result.
+ * Visor repair partition counters job result with metrics.
  */
 public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartitionCountersJobResult {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Tombstones cleared. */
     private final int tombstonesCleared;
+
+    /** Tombstones failed to clear. */
     private final int tombstonesFailedToClear;
+
+    /** Entries fixed. */
     private final int entriesFixed;
+
+    /** Entries failed to fix. */
     private final int entriesFailedToFix;
 
+    /**
+     * Constructor.
+     *
+     * @param cacheOrGroupName Cache or group name.
+     * @param size Cache or group name size.
+     * @param affectedCaches Affected cache ids.
+     * @param affectedPartitions Affected partitions.
+     * @param entriesProcessed Count of entries processed.
+     * @param brokenEntriesFound Count of broken entries.
+     * @param tombstonesCleared Count of tombstones cleared.
+     * @param tombstonesFailedToClear Count of tombstones failed to clear.
+     * @param entriesFixed Count of entries fixed.
+     * @param entriesFailedToFix Count of entries failed to fix.
+     */
     public VisorDrRepairPartitionCountersJobResult(String cacheOrGroupName, long size,
             Set<Integer> affectedCaches, Set<Integer> affectedPartitions, long entriesProcessed,
             long brokenEntriesFound, int tombstonesCleared, int tombstonesFailedToClear,
@@ -43,24 +63,36 @@ public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartiti
         this.entriesFailedToFix = entriesFailedToFix;
     }
 
+    /**
+     * @return Tombstones cleared.
+     */
     public int getTombstonesCleared() {
         return tombstonesCleared;
     }
 
+    /**
+     * @return Tombstones failed to clear.
+     */
     public int getTombstonesFailedToClear() {
         return tombstonesFailedToClear;
     }
 
+    /**
+     * @return Entries fixed.
+     */
     public int getEntriesFixed() {
         return entriesFixed;
     }
 
+    /**
+     * @return Entries failed to fix.
+     */
     public int getEntriesFailedToFix() {
         return entriesFailedToFix;
     }
 
-    @Override
-    public String toString() {
+    /** {@inheritDoc} */
+    @Override public String toString() {
         return "VisorDrRepairPartitionCountersJobResult{" +
                 "cacheOrGroupName='" + cacheOrGroupName + '\'' +
                 ", size=" + size +

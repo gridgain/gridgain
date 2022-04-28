@@ -32,20 +32,20 @@ public class VisorDrCheckPartitionCountersTask extends VisorDrPartitionCountersT
     /** */
     private static final long serialVersionUID = 0L;
 
-    @Override
-    protected Set<String> getCaches(VisorDrCheckPartitionCountersTaskArg args) {
+    /** {@inheritDoc} */
+    @Override protected Set<String> getCaches(VisorDrCheckPartitionCountersTaskArg args) {
         return args.getCaches();
     }
 
-    @Override
-    protected VisorJob<VisorDrCheckPartitionCountersTaskArg, Collection<VisorDrCheckPartitionCountersJobResult>> createJob(
+    /** {@inheritDoc} */
+    @Override protected VisorJob<VisorDrCheckPartitionCountersTaskArg, Collection<VisorDrCheckPartitionCountersJobResult>> createJob(
             VisorDrCheckPartitionCountersTaskArg args, Map<String, Set<Integer>> cachePartsMap,
             boolean debug) {
         return new VisorDrCheckPartitionCountersJob(args, debug, cachePartsMap);
     }
 
-    @Override
-    protected VisorDrCheckPartitionCountersTaskResult createResult(Map<UUID, Exception> exceptions,
+    /** {@inheritDoc} */
+    @Override protected VisorDrCheckPartitionCountersTaskResult createResult(Map<UUID, Exception> exceptions,
             Map<UUID, Collection<VisorDrCheckPartitionCountersJobResult>> results) {
         return new VisorDrCheckPartitionCountersTaskResult(results, exceptions);
     }
