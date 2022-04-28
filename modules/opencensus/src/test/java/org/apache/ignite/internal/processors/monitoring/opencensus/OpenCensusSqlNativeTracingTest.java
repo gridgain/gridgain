@@ -600,6 +600,29 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
         });
     }
 
+    /** */
+    @Test
+    public void checkCorrectLogForExpressionWithEmptyPlan() throws Exception {
+        String prsnTable = createTableAndPopulate(Person.class, PARTITIONED, 1);
+
+        reducer().context().query()
+            .querySqlFields(new SqlFieldsQuery("EXPLAIN SELECT * FROM " + prsnTable), false).getAll();
+
+        handler().flush();
+
+        List<SpanId> mapQryEndSpans = checkSpan(SQL_QRY_MAP_END, null, 1, null);
+
+        mapQryEndSpans.forEach(span -> {
+            List<String> logs = getLogs(span);
+
+            assertTrue(
+                "Invalid logs: " + logs,
+                logs.stream()
+                    .anyMatch(msg -> msg.contains("EXPLAIN SELECT"))
+            );
+        });
+    }
+
     /**
      * Checks presence of basic spans that related to SELECT SQL query and are childs of the specfied span.
      *

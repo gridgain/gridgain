@@ -2668,7 +2668,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) {
+    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy, boolean clearIdx) {
         cancelIndexRebuildFuture(idxRebuildFuts.remove(cacheInfo.cacheId()));
         rowCache.onCacheUnregistered(cacheInfo);
 
@@ -2677,7 +2677,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         partReservationMgr.onCacheStop(cacheName);
 
         // Drop schema (needs to be called after callback to DML processor because the latter depends on schema).
-        schemaMgr.onCacheDestroyed(cacheName, destroy);
+        schemaMgr.onCacheDestroyed(cacheName, destroy, clearIdx);
 
         // Unregister connection.
         connMgr.onCacheDestroyed();

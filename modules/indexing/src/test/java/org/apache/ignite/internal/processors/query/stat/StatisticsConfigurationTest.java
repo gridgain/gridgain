@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -54,7 +53,6 @@ import static org.apache.ignite.internal.processors.query.stat.StatisticsUsageSt
  * Tests for statistics configuration.
  */
 @RunWith(Parameterized.class)
-@SuppressWarnings("unchecked")
 public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     /** Columns to check.*/
     private static final String[] COLUMNS = {"A", "B", "C"};
@@ -417,10 +415,6 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
         waitForStats(SCHEMA, "SMALL_A", TIMEOUT, checkTotalRows, checkColumStats);
 
         dropSmallTable(null);
-
-        // TODO: must be removed after fix GG-32766
-        if (persist)
-            statisticsMgr(0).dropStatistics(SMALL_TARGET);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
 

@@ -650,7 +650,10 @@ final class BinaryMetadataTransport {
                 if (!msg.rejected()) {
                     BinaryMetadata locMeta = holder != null && !holder.removing() ? holder.metadata() : null;
 
-                    Set<Integer> changedSchemas = new LinkedHashSet<>();
+                    Set<Integer> changedSchemas = null;
+
+                    if (log.isDebugEnabled())
+                        changedSchemas = new LinkedHashSet<>();
 
                     try {
                         BinaryMetadata mergedMeta = mergeMetadata(locMeta, msg.metadata(), changedSchemas);
