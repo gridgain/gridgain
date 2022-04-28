@@ -1157,7 +1157,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                 Thread runner = runner();
 
                 log.debug(String.format(
-                    "Cancel worker is ignored [jobId=%s, interrupted=%s]",
+                    "Worker cancellation is ignored [jobId=%s, interrupted=%s]",
                     getJobId(),
                     runner == null ? "unknown" : runner.isInterrupted()
                 ));
@@ -1179,7 +1179,7 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
 
         if (timeout > 0) {
             ctx.timeout().addTimeoutObject(
-                new GridJobWorkerInterruptTimeoutObject(this, U.currentTimeMillis() + timeout)
+                new JobWorkerInterruptionTimeoutObject(this, U.currentTimeMillis() + timeout)
             );
 
             if (log.isDebugEnabled()) {

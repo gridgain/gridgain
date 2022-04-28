@@ -37,7 +37,7 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.job.GridJobWorker;
-import org.apache.ignite.internal.processors.job.GridJobWorkerInterruptTimeoutObject;
+import org.apache.ignite.internal.processors.job.JobWorkerInterruptionTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.util.GridConcurrentSkipListSet;
 import org.apache.ignite.internal.util.typedef.F;
@@ -145,7 +145,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
     /**
      * Checks that when {@link GridJobWorker#cancel()} (even twice) is called, the {@link GridJobWorker#runner()}
-     * is not interrupted and that only one {@link GridJobWorkerInterruptTimeoutObject} is created.
+     * is not interrupted and that only one {@link JobWorkerInterruptionTimeoutObject} is created.
      *
      * @throws Exception If failed.
      */
@@ -167,7 +167,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks that after {@link GridJobWorker#cancel()}, the {@link GridJobWorkerInterruptTimeoutObject}
+     * Checks that after {@link GridJobWorker#cancel()}, the {@link JobWorkerInterruptionTimeoutObject}
      * will trigger the {@link Thread#interrupt()}.
      *
      * @throws Exception If failed.
@@ -192,7 +192,7 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
 
     /**
      * Checks that if the worker was {@link GridJobWorker#cancel()} (even twice) before starting work,
-     * then it will be canceled, not interrupted, and have one {@link GridJobWorkerInterruptTimeoutObject} before
+     * then it will be canceled, not interrupted, and have one {@link JobWorkerInterruptionTimeoutObject} before
      * and two after the start.
      *
      * @throws Exception If failed.
@@ -290,15 +290,15 @@ public class InterruptComputeJobTest extends GridCommonAbstractTest {
     /**
      * @param timeoutObjects Value of {@code GridTimeoutProcessor#timeoutObjs}.
      * @param jobWorker Compute job worker.
-     * @return Collection of {@link GridJobWorkerInterruptTimeoutObject} for {@code jobWorker}.
+     * @return Collection of {@link JobWorkerInterruptionTimeoutObject} for {@code jobWorker}.
      */
-    private static Collection<GridJobWorkerInterruptTimeoutObject> jobWorkerInterrupters(
+    private static Collection<JobWorkerInterruptionTimeoutObject> jobWorkerInterrupters(
         GridConcurrentSkipListSet<GridTimeoutObject> timeoutObjects,
         GridJobWorker jobWorker
     ) {
         return timeoutObjects.stream()
-            .filter(GridJobWorkerInterruptTimeoutObject.class::isInstance)
-            .map(GridJobWorkerInterruptTimeoutObject.class::cast)
+            .filter(JobWorkerInterruptionTimeoutObject.class::isInstance)
+            .map(JobWorkerInterruptionTimeoutObject.class::cast)
             .filter(o -> o.jobWorker() == jobWorker)
             .collect(toList());
     }

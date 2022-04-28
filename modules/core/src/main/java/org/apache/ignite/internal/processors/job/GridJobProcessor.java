@@ -87,6 +87,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
@@ -2431,7 +2432,7 @@ public class GridJobProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Timeout interrupt {@link GridJobWorker workers} after {@link GridJobWorker#cancel cancel} im mills.
+     * @return Interruption timeout of {@link GridJobWorker workers} (in millis) after {@link GridWorker#cancel cancel} is called.
      */
     public long computeJobWorkerInterruptTimeout() {
         return computeJobWorkerInterruptTimeout.getOrDefault(ctx.config().getFailureDetectionTimeout());

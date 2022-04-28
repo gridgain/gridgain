@@ -285,7 +285,7 @@ public abstract class GridWorker implements Runnable, WorkProgressDispatcher {
     /**
      * Callback on runner cancellation.
      *
-     * @param firstCancelRequest Whether the runner gets canceled the first time.
+     * @param firstCancelRequest Flag indicating that worker cancellation was requested for the first time.
      */
     protected void onCancel(boolean firstCancelRequest) {
         Thread runner = this.runner;
@@ -297,7 +297,7 @@ public abstract class GridWorker implements Runnable, WorkProgressDispatcher {
     }
 
     /**
-     * Callback on special case, when task gets cancelled before it got scheduled.
+     * Callback on special case, when task is cancelled before is has been scheduled.
      */
     protected void onCancelledBeforeWorkerScheduled() {
         Thread runner = this.runner;

@@ -26,7 +26,7 @@ import org.apache.ignite.lang.IgniteUuid;
  * <p>After calling {@link GridJobWorker#cancel} the worker should try to complete gracefully,
  * if it doesn't then it will {@link Thread#interrupt interrupt} after some time.
  */
-public class GridJobWorkerInterruptTimeoutObject implements GridTimeoutObject {
+public class JobWorkerInterruptionTimeoutObject implements GridTimeoutObject {
     /** Compute job worker. */
     private final GridJobWorker jobWorker;
 
@@ -42,7 +42,7 @@ public class GridJobWorkerInterruptTimeoutObject implements GridTimeoutObject {
      * @param jobWorker Compute job worker.
      * @param endTime Time when the timeout object should be executed in mills.
      */
-    public GridJobWorkerInterruptTimeoutObject(
+    public JobWorkerInterruptionTimeoutObject(
         GridJobWorker jobWorker,
         long endTime
     ) {
@@ -81,6 +81,6 @@ public class GridJobWorkerInterruptTimeoutObject implements GridTimeoutObject {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridJobWorkerInterruptTimeoutObject.class, this);
+        return S.toString(JobWorkerInterruptionTimeoutObject.class, this);
     }
 }
