@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
@@ -136,6 +137,14 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
         cachesData = null;
 
         super.afterTestsStopped();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        for (String cacheName : grid(0).cacheNames())
+            grid(0).destroyCache(cacheName);
+
+        super.afterTest();
     }
 
     /** {@inheritDoc} */
