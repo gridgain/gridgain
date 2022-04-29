@@ -47,14 +47,12 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.tree.PendingRow;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
-import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -207,12 +205,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 return task;
             }
 
-            GridStringBuilder sb = new SB();
-
-            U.printStackTrace(Thread.currentThread().getId(), sb);
-
-            task.setTaskCreateStack(sb.toString());
-
             PartitionEvictionTask prev = futs.putIfAbsent(key, task);
 
             if (prev == null) {
@@ -230,8 +222,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         + ", prev=" + prev
                         + ']');
                 }
-
-                log.info("Stack of creation previous clearing task: " + prev.getTaskCreateStack());
 
                 prev.cancel();
                 prev.awaitCompletion();
@@ -624,19 +614,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /** */
         @GridToStringExclude
         private final AtomicReference<Boolean> state = new AtomicReference<>(null);
-
-        /** */
-        private String taskCreateStack;
-
-        /** */
-        public void setTaskCreateStack(String taskCreateStack) {
-            this.taskCreateStack = taskCreateStack;
-        }
-
-        /** */
-        public String getTaskCreateStack() {
-            return taskCreateStack;
-        }
 
         /**
          * @param part Partition.
