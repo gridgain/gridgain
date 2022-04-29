@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2290,7 +2290,7 @@ public class GridNioServer<T> {
                         }
 
                         // select() call above doesn't throw on interruption; checking it here to propagate timely.
-                        if (!closed && !isCancelled && Thread.interrupted())
+                        if (!closed && !isCancelled.get() && Thread.interrupted())
                             throw new InterruptedException();
                     }
                     finally {
