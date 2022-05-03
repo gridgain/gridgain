@@ -52,8 +52,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
-import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_ID;
+import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
+import static org.apache.ignite.internal.commandline.CommandList.DATA_CENTER_REPLICATION;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
@@ -371,7 +372,14 @@ public class CommandHandlerParsingTest {
     public void testParseAutoConfirmationFlag() {
         for (CommandList cmdL : CommandList.values()) {
             // SET_STATE command have mandatory argument, which used in confirmation message.
-            Command cmd = cmdL != SET_STATE ? cmdL.command() : parseArgs(asList(cmdL.text(), "ACTIVE")).command();
+            Command cmd;
+
+            if (cmdL == SET_STATE)
+                cmd = parseArgs(asList(cmdL.text(), "ACTIVE")).command();
+            else if (cmdL == ROLLING_UPGRADE)
+                cmd = parseArgs(asList(cmdL.text(), "start")).command();
+            else
+                cmd = cmdL.command();
 
             if (cmd.confirmationPrompt() == null)
                 continue;
@@ -1127,7 +1135,7 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
             cmd == CommandList.CLUSTER_CHANGE_ID ||
-            cmd == CommandList.DATA_CENTER_REPLICATION ||
+            cmd == DATA_CENTER_REPLICATION ||
             cmd == CommandList.SET_STATE ||
             cmd == CommandList.ENCRYPTION ||
             cmd == CommandList.METADATA ||
