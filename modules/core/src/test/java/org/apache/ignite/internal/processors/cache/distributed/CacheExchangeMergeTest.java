@@ -76,6 +76,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThreadFactory;
 import org.apache.ignite.transactions.Transaction;
@@ -89,11 +90,11 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.PRELOADER_FORCE_CLEAR;
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.LogListener.matches;
@@ -101,6 +102,7 @@ import static org.apache.ignite.testframework.LogListener.matches;
 /**
  *
  */
+@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     /** */
     private static final long WAIT_SECONDS = 45;
@@ -171,11 +173,12 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 cacheConfiguration("c18", TRANSACTIONAL, PARTITIONED, 2),
                 cacheConfiguration("c19", TRANSACTIONAL, PARTITIONED, 10),
                 cacheConfiguration("c20", TRANSACTIONAL, REPLICATED, 0),
-                cacheConfiguration("c21", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 0),
-                cacheConfiguration("c22", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 1),
-                cacheConfiguration("c23", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 2),
-                cacheConfiguration("c24", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 10),
-                cacheConfiguration("c25", TRANSACTIONAL_SNAPSHOT, REPLICATED, 0)
+                //There were MVCC caches, but now Ignite does not support them.
+                cacheConfiguration("c21", TRANSACTIONAL, PARTITIONED, 0),
+                cacheConfiguration("c22", TRANSACTIONAL, PARTITIONED, 1),
+                cacheConfiguration("c23", TRANSACTIONAL, PARTITIONED, 2),
+                cacheConfiguration("c24", TRANSACTIONAL, PARTITIONED, 10),
+                cacheConfiguration("c25", TRANSACTIONAL, REPLICATED, 0)
             );
         }
 
