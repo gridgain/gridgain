@@ -102,7 +102,7 @@ import static org.apache.ignite.testframework.LogListener.matches;
 /**
  *
  */
-@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
+//@WithSystemProperty(key = PRELOADER_FORCE_CLEAR, value = "true")
 public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     /** */
     private static final long WAIT_SECONDS = 45;
