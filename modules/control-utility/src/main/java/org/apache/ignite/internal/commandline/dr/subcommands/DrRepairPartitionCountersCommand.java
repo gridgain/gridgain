@@ -44,10 +44,10 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
     public static final String CACHES_PARAM = "--caches";
 
     /** Batch size parameter. */
-    public static final String BATCH_SIZE = "--batchSize";
+    public static final String BATCH_SIZE = "--batch-size";
 
     /** Keep binary parameter. */
-    public static final String KEEP_BINARY = "--keepBinary";
+    public static final String KEEP_BINARY = "--keep-binary";
 
     /**
      * Container for command arguments.
