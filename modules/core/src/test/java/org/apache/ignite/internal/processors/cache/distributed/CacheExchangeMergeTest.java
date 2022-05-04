@@ -90,6 +90,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EXCHANGE_HISTORY_SIZE;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -174,11 +175,11 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 cacheConfiguration("c19", TRANSACTIONAL, PARTITIONED, 10),
                 cacheConfiguration("c20", TRANSACTIONAL, REPLICATED, 0),
                 //There were MVCC caches, but now Ignite does not support them.
-                cacheConfiguration("c21", TRANSACTIONAL, PARTITIONED, 0),
-                cacheConfiguration("c22", TRANSACTIONAL, PARTITIONED, 1),
-                cacheConfiguration("c23", TRANSACTIONAL, PARTITIONED, 2),
-                cacheConfiguration("c24", TRANSACTIONAL, PARTITIONED, 10),
-                cacheConfiguration("c25", TRANSACTIONAL, REPLICATED, 0)
+                cacheConfiguration("c21", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 0),
+                cacheConfiguration("c22", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 1),
+                cacheConfiguration("c23", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 2),
+                cacheConfiguration("c24", TRANSACTIONAL_SNAPSHOT, PARTITIONED, 10),
+                cacheConfiguration("c25", TRANSACTIONAL_SNAPSHOT, REPLICATED, 0)
             );
         }
 

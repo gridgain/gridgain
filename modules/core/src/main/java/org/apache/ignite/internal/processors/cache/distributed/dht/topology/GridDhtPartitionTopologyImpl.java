@@ -819,6 +819,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 GridDhtPartitionState state = locPart.state();
 
                                 if (state == MOVING) {
+                                    int pp = p;
+
+                                    String dhtNodesOfPart = grp.affinity().nodes(p, topVer).stream().map(node ->
+                                            "[NodeId = " + node.id() + " state=" + (node2part != null && node2part.get(node.id()) != null ? node2part.get(node.id()).get(pp) : "n/o") + ']')
+                                        .collect(Collectors.joining(", "));
+
+                                    log.info("Partition " + grp.cacheOrGroupName() + "(" + p + ") lays on " + dhtNodesOfPart + ", hence it will be removed from this storage.");
+
                                     locPart.rent();
 
                                     updateSeq = updateLocal(p, locPart.state(), updateSeq, topVer);
