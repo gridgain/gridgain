@@ -66,13 +66,14 @@ public class VisorDrCheckPartitionCountersJob extends
         assert arg != null;
 
         int checkFirst = arg.getCheckFirst();
+        boolean scanUntilFirstError = arg.isScanUntilFirstError();
 
         List<VisorDrCheckPartitionCountersJobResult> metrics = new ArrayList<>();
 
         for (Entry<String, Set<Integer>> cachesWithParts : cachesWithPartitions.entrySet()) {
             metrics.add(
                     calculateForCache(cachesWithParts.getKey(), cachesWithParts.getValue(),
-                            checkFirst)
+                            checkFirst, scanUntilFirstError)
             );
         }
 
@@ -80,7 +81,7 @@ public class VisorDrCheckPartitionCountersJob extends
     }
 
     private VisorDrCheckPartitionCountersJobResult calculateForCache(String cache,
-            Set<Integer> parts, int checkFirst) {
+            Set<Integer> parts, int checkFirst, boolean scanUntilFirstError) {
         ignite.cache(cache);
 
         CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(CU.cacheId(cache));
@@ -97,7 +98,7 @@ public class VisorDrCheckPartitionCountersJob extends
 
         for (Integer part : parts) {
             VisorDrCachePartitionMetrics partMetrics = calculateForPartition(grpCtx, cache, part,
-                    checkFirst);
+                    checkFirst, scanUntilFirstError);
 
             size += partMetrics.getSize();
             entriesProcessed += partMetrics.getEntriesProcessed();
@@ -106,6 +107,9 @@ public class VisorDrCheckPartitionCountersJob extends
                 affectedCaches.addAll(partMetrics.getAffectedCaches());
                 affectedPartitions.add(part);
                 brokenEntriesFound += partMetrics.getBrokenEntriesFound();
+
+                if (scanUntilFirstError)
+                    break;
             }
         }
 
@@ -113,12 +117,15 @@ public class VisorDrCheckPartitionCountersJob extends
                 affectedPartitions, entriesProcessed, brokenEntriesFound);
     }
 
-    private VisorDrCachePartitionMetrics calculateForPartition(CacheGroupContext grpCtx, String cache,
-            int part, int checkFirst) {
+    private VisorDrCachePartitionMetrics calculateForPartition(CacheGroupContext grpCtx,
+            String cache, int part, int checkFirst, boolean scanUntilFirstError) {
         GridDhtLocalPartition locPart = reservePartition(part, grpCtx, cache);
 
         int entriesProcessed = 0;
         int brokenEntriesFound = 0;
+
+        boolean checkFullCache = checkFirst == -1;
+
         Set<Integer> affectedCaches = new HashSet<>();
 
         try {
@@ -127,24 +134,26 @@ public class VisorDrCheckPartitionCountersJob extends
 
             Set<Long> usedCounters = new HashSet<>();
 
-            while (it.hasNext()) {
-                grpCtx.shared().database().checkpointReadLock();
-                try {
-                    while (it.hasNext() && (checkFirst--) > 0) {
-                        CacheDataRow next = it.next();
+            grpCtx.shared().database().checkpointReadLock();
+            try {
+                while (it.hasNext()) {
+                    if (!checkFullCache && (checkFirst--) < 0)
+                        break;
+                    CacheDataRow next = it.next();
 
-                        entriesProcessed++;
+                    entriesProcessed++;
 
-                        if (!usedCounters.add(next.version().updateCounter())) {
-                            brokenEntriesFound++;
-                            affectedCaches.add(next.cacheId());
-                        }
+                    if (!usedCounters.add(next.version().updateCounter())) {
+                        brokenEntriesFound++;
+                        affectedCaches.add(next.cacheId());
+
+                        if (scanUntilFirstError)
+                            break;
                     }
-                } finally {
-                    grpCtx.shared().database().checkpointReadUnlock();
                 }
+            } finally {
+                grpCtx.shared().database().checkpointReadUnlock();
             }
-
         } catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         } finally {
