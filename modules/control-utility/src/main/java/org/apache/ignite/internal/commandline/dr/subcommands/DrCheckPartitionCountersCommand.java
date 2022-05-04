@@ -42,8 +42,11 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
     /** Check first N entries parameter. */
     public static final String CHECK_FIRST_PARAM = "--check-first";
 
-    /** Metrics parameter. */
+    /** Caches parameter. */
     public static final String CACHES_PARAM = "--caches";
+
+    /** Scan until first error flag parameter. */
+    public static final String SCAN_UNTIL_FIRST_ERROR = "--scan-until-first-error";
 
     /**
      * Container for command arguments.
@@ -55,32 +58,24 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
         /** Max number of entries to be checked. */
         private final int checkFirst;
 
+        /** Scan until first broken counter is found. */
+        private final boolean scanUntilFirstError;
+
         /**
          * Constructor.
          *
          * @param caches Caches.
          * @param checkFirst Max number of entries to be checked.
+         * @param scanUntilFirstError Scan until first broken counter is found flag.
          */
         public Arguments(
             Set<String> caches,
-            int checkFirst
+            int checkFirst,
+            boolean scanUntilFirstError
         ) {
             this.caches = caches;
             this.checkFirst = checkFirst;
-        }
-
-        /**
-         * @return Caches.
-         */
-        public Set<String> caches() {
-            return caches;
-        }
-
-        /**
-         * @return Max number of entries to be checked.
-         */
-        public int checkFirst() {
-            return checkFirst;
+            this.scanUntilFirstError = scanUntilFirstError;
         }
 
         /** {@inheritDoc} */
@@ -89,7 +84,7 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
         }
 
         @Override public VisorDrCheckPartitionCountersTaskArg toVisorArgs() {
-            return new VisorDrCheckPartitionCountersTaskArg(caches, checkFirst);
+            return new VisorDrCheckPartitionCountersTaskArg(caches, checkFirst, scanUntilFirstError);
         }
     }
 
@@ -133,6 +128,7 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
     /** {@inheritDoc} */
     @Override protected Arguments parseArguments0(CommandArgIterator argIter) {
         int checkFirst = -1;
+        boolean scanUntilFirstError = false;
         Set<String> caches = null;
 
         while (argIter.hasNextSubArg()) {
@@ -141,6 +137,9 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
             switch (nextArg.toLowerCase(Locale.ENGLISH)) {
                 case CHECK_FIRST_PARAM:
                     checkFirst = readCheckFirstParam(argIter, nextArg);
+                    break;
+                case SCAN_UNTIL_FIRST_ERROR:
+                    scanUntilFirstError = true;
                     break;
                 case CACHES_PARAM:
                     if (!argIter.hasNextSubArg())
@@ -160,10 +159,7 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
             }
         }
 
-        if (checkFirst == -1)
-            throw new IllegalArgumentException(CHECK_FIRST_PARAM + " argument expected.");
-
-        return new Arguments(caches, checkFirst);
+        return new Arguments(caches, checkFirst, scanUntilFirstError);
     }
 
     private int readCheckFirstParam(CommandArgIterator argIter, String nextArg) {

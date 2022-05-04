@@ -110,7 +110,7 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Start partition counters validation for selected caches:",
+        usage(log, "Start partition counters check for selected caches:",
                 DATA_CENTER_REPLICATION,
                 CHECK.toString(),
                 "<remoteDataCenterId>",

@@ -39,6 +39,9 @@ public class VisorDrCheckPartitionCountersTaskArg extends IgniteDataTransferObje
     /** Check first K elements. */
     private int checkFirst = -1;
 
+    /** Scan until first broken counter is found. */
+    private boolean scanUntilFirstError;
+
     /**
      * Default constructor.
      */
@@ -51,13 +54,16 @@ public class VisorDrCheckPartitionCountersTaskArg extends IgniteDataTransferObje
      *
      * @param caches Caches.
      * @param checkFirst Check first K elements.
+     * @param scanUntilFirstError Scan until first broken counter is found flag.
      */
     public VisorDrCheckPartitionCountersTaskArg(
         Set<String> caches,
-        int checkFirst
+        int checkFirst,
+        boolean scanUntilFirstError
     ) {
         this.caches = caches;
         this.checkFirst = checkFirst;
+        this.scanUntilFirstError = scanUntilFirstError;
     }
 
     /**
@@ -74,10 +80,18 @@ public class VisorDrCheckPartitionCountersTaskArg extends IgniteDataTransferObje
         return checkFirst;
     }
 
+    /**
+     * @return scanUntilFirstError.
+     */
+    public boolean isScanUntilFirstError() {
+        return scanUntilFirstError;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         writeCollection(out, caches);
         out.writeInt(checkFirst);
+        out.writeBoolean(scanUntilFirstError);
     }
 
     /** {@inheritDoc} */
@@ -85,6 +99,7 @@ public class VisorDrCheckPartitionCountersTaskArg extends IgniteDataTransferObje
         caches = readSet(in);
 
         checkFirst = in.readInt();
+        scanUntilFirstError = in.readBoolean();
     }
 
     /** {@inheritDoc} */
