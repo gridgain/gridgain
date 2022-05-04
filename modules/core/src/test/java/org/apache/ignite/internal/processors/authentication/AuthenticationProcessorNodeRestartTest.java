@@ -18,12 +18,12 @@ package org.apache.ignite.internal.processors.authentication;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -176,7 +176,7 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
         for (int i = 0; i < testUsersCnt; ++i)
             grid(CLI_NODE).context().authentication().addUser("test" + i, "passwd_test" + i);
 
-        final IgniteInternalFuture restartFut = GridTestUtils.runAsync(() -> {
+        final IgniteInternalFuture<?> restartFut = GridTestUtils.runAsync(() -> {
             try {
                 for (int i = 0; i < RESTARTS; ++i) {
                     int nodeIdx = RND.nextInt(NODES_COUNT - 1);
@@ -191,7 +191,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace(System.err);
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception on server restart: " + e.getMessage());
             }
         });
@@ -209,27 +210,17 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                     assertNotNull(actx);
                 }
             }
-            catch (IgniteCheckedException e) {
-                // Skip exception if server down.
-                if (!serverDownMessage(e.getMessage())) {
-                    e.printStackTrace();
-                    fail("Unexpected exception: " + e.getMessage());
-                }
+            catch (ClusterTopologyCheckedException ignored) {
+                // No-op.
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception: " + e.getMessage());
             }
         }, testUsersCnt, "user-op");
 
         restartFut.get();
-    }
-
-    /**
-     * Exception messages from {@code org.apache.ignite.internal.managers.communication.GridIoManager#send}.
-     */
-    private boolean serverDownMessage(String text) {
-        return Pattern.matches(".*Failed to send message.*node.*left.*", text);
     }
 
     /**
@@ -281,7 +272,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception on add / remove");
             }
         }, 3, "user-op");
@@ -301,7 +293,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception on add / remove");
             }
         }, 3, "user-op");
@@ -343,7 +336,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception on add / remove");
             }
         }, 10, "user-op");
@@ -375,7 +369,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected error on failed operation");
             }
         }, 10, "user-op");
@@ -398,7 +393,8 @@ public class AuthenticationProcessorNodeRestartTest extends GridCommonAbstractTe
                 }
             }
             catch (Exception e) {
-                e.printStackTrace(System.err);
+                log.error("Unexpected exception.", e);
+
                 fail("Unexpected exception on server restart: " + e.getMessage());
             }
         });
