@@ -28,6 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteReducer;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JOBS_METRICS_CONCURRENCY_LEVEL;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 
 /**
  * Processes job metrics.

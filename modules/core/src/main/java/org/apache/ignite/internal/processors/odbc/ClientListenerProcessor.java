@@ -62,6 +62,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLIENT_CONNECTOR_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_META_KEY;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 
 /**
  * Client connector processor.

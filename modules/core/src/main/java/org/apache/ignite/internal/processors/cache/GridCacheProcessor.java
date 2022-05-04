@@ -217,6 +217,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWAR
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**

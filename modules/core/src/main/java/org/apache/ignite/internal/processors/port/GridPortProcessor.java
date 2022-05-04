@@ -28,6 +28,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgnitePortProtocol;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 
 /**
  * Registers and deregisters all ports used by SPI and Manager.

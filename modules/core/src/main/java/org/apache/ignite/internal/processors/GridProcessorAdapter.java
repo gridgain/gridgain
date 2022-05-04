@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -116,28 +115,6 @@ public abstract class GridProcessorAdapter implements GridProcessor {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         // No-op.
-    }
-
-    /**
-     * Throws exception with uniform error message if given parameter's assertion condition
-     * is {@code false}.
-     *
-     * @param cond Assertion condition to check.
-     * @param condDesc Description of failed condition. Note that this description should include
-     *      JavaBean name of the property (<b>not</b> a variable name) as well condition in
-     *      Java syntax like, for example:
-     *      <pre name="code" class="java">
-     *      ...
-     *      assertParameter(dirPath != null, "dirPath != null");
-     *      ...
-     *      </pre>
-     *      Note that in case when variable name is the same as JavaBean property you
-     *      can just copy Java condition expression into description as a string.
-     * @throws IgniteException Thrown if given condition is {@code false}
-     */
-    protected final void assertParameter(boolean cond, String condDesc) {
-        if (!cond)
-            throw new IgniteException("Grid configuration parameter invalid: " + condDesc);
     }
 
     /** {@inheritDoc} */
