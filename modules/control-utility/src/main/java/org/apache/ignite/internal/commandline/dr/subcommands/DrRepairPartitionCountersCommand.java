@@ -80,7 +80,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
 
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
-        return "org.apache.ignite.internal.visor.dr.VisorRepairPartitionCountersTask";
+        return "org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTask";
     }
 
     /** {@inheritDoc} */
