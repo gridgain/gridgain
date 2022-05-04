@@ -134,8 +134,11 @@ This utility can do the following commands:
   Start data center replication on all caches in cluster:
     control.(sh|bat) --dr resume <remoteDataCenterId> [--yes]
 
-  Start partition counters validation for selected caches:
+  Start partition counters check for selected caches:
     control.(sh|bat) --dr check-partition-counters <remoteDataCenterId> [--yes]
+
+  Start partition counters repairing for selected caches:
+    control.(sh|bat) --dr repair-partition-counters <remoteDataCenterId> [--yes]
 
   Print tracing configuration:
     control.(sh|bat) --tracing-configuration

@@ -145,9 +145,9 @@ public abstract class VisorDrPartitionCountersTask<K, V, J> extends VisorMultiNo
         Map<UUID, Exception> exceptions = new HashMap<>();
 
         for (ComputeJobResult res : results) {
-            if (res.getException() != null) {
+            if (res.getException() != null)
                 exceptions.put(res.getNode().id(), res.getException());
-            } else {
+            else {
                 J metrics = res.getData();
 
                 nodeMetricsMap.put(res.getNode().id(), metrics);

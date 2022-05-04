@@ -36,12 +36,18 @@ import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskArg
 import org.apache.ignite.internal.visor.dr.VisorDrRepairPartitionCountersTaskResult;
 
 /**
- * Validate indexes command.
+ * Repair partition counters command.
  */
 public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrRepairPartitionCountersTaskArg,
         VisorDrRepairPartitionCountersTaskResult, DrRepairPartitionCountersCommand.Arguments> {
-    /** Metrics parameter. */
+    /** Caches parameter. */
     public static final String CACHES_PARAM = "--caches";
+
+    /** Batch size parameter. */
+    public static final String BATCH_SIZE = "--batchSize";
+
+    /** Keep binary parameter. */
+    public static final String KEEP_BINARY = "--keepBinary";
 
     /**
      * Container for command arguments.
@@ -50,21 +56,16 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
          /** Caches. */
         private final Set<String> caches;
 
-        /**
-         * Constructor.
-         *
-         * @param caches Caches.
-         */
-        public Arguments(
-            Set<String> caches) {
-            this.caches = caches;
-        }
+        /** Caches. */
+        private final int batchSize;
 
-        /**
-         * @return Caches.
-         */
-        public Set<String> caches() {
-            return caches;
+        /** Caches. */
+        private final boolean keepBinary;
+
+        public Arguments(Set<String> caches, int batchSize, boolean keepBinary) {
+            this.caches = caches;
+            this.batchSize = batchSize;
+            this.keepBinary = keepBinary;
         }
 
         /** {@inheritDoc} */
@@ -73,7 +74,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
         }
 
         @Override public VisorDrRepairPartitionCountersTaskArg toVisorArgs() {
-            return new VisorDrRepairPartitionCountersTaskArg(caches);
+            return new VisorDrRepairPartitionCountersTaskArg(caches, batchSize, keepBinary);
         }
     }
 
@@ -84,7 +85,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
 
     /** {@inheritDoc} */
     @Override protected void printResult(VisorDrRepairPartitionCountersTaskResult res, Logger log) {
-        boolean errors = CommandLogger.printErrors(res.exceptions(), "Dr cache validation failed on nodes:", log);
+        boolean errors = CommandLogger.printErrors(res.exceptions(), "Dr partition repair task failed on nodes:", log);
 
         for (Entry<UUID, Collection<VisorDrRepairPartitionCountersJobResult>> nodeEntry : res.results().entrySet()) {
             Collection<VisorDrRepairPartitionCountersJobResult> cacheMetrics = nodeEntry.getValue();
@@ -117,6 +118,8 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
     /** {@inheritDoc} */
     @Override protected Arguments parseArguments0(CommandArgIterator argIter) {
         Set<String> caches = null;
+        boolean keepBinary = false;
+        int batchSize = 100;
 
         while (argIter.hasNextSubArg()) {
             String nextArg = argIter.nextArg("");
@@ -135,15 +138,21 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
                         );
                     }
                     break;
+                case BATCH_SIZE:
+                    batchSize = readBatchSizeParam(argIter, nextArg);
+                    break;
+                case KEEP_BINARY:
+                    keepBinary = true;
+                    break;
                 default:
                     throw new IllegalArgumentException("Argument " + nextArg + " is not supported.");
             }
         }
 
-        return new Arguments(caches);
+        return new Arguments(caches, batchSize, keepBinary);
     }
 
-    private int readCheckFirstParam(CommandArgIterator argIter, String nextArg) {
+    private int readBatchSizeParam(CommandArgIterator argIter, String nextArg) {
         if (!argIter.hasNextSubArg())
             throw new IllegalArgumentException(
                     "Numeric value for '" + nextArg + "' parameter expected.");

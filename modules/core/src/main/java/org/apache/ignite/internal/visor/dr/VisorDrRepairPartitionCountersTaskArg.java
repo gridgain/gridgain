@@ -27,7 +27,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Validate dr cache task arguments.
+ * DR repair partition counters task arguments.
  */
 public class VisorDrRepairPartitionCountersTaskArg extends IgniteDataTransferObject {
     /** */
@@ -36,20 +36,31 @@ public class VisorDrRepairPartitionCountersTaskArg extends IgniteDataTransferObj
     /** Caches. */
     private Set<String> caches;
 
+    /** Batch size. */
+    private int batchSize;
+
+    /** Keep binary flag. */
+    private boolean keepBinary;
+
+    /**
+     * Default constructor.
+     *
+     * @param caches Cache names.
+     * @param batchSize Batch size.
+     * @param keepBinary Keep binary flag.
+     */
+    public VisorDrRepairPartitionCountersTaskArg(Set<String> caches, int batchSize,
+            boolean keepBinary) {
+        this.batchSize = batchSize;
+        this.keepBinary = keepBinary;
+        this.caches = caches;
+    }
+
     /**
      * Default constructor.
      */
     public VisorDrRepairPartitionCountersTaskArg() {
-        // No-op.
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param caches Caches.
-     */
-    public VisorDrRepairPartitionCountersTaskArg(Set<String> caches) {
-        this.caches = caches;
+        //No-op
     }
 
     /**
@@ -59,14 +70,32 @@ public class VisorDrRepairPartitionCountersTaskArg extends IgniteDataTransferObj
         return caches;
     }
 
+    /**
+     * @return BatchSize.
+     */
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    /**
+     * @return KeepBinary flag.
+     */
+    public boolean isKeepBinary() {
+        return keepBinary;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         writeCollection(out, caches);
+        out.writeInt(batchSize);
+        out.writeBoolean(keepBinary);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         caches = readSet(in);
+        batchSize = in.readInt();
+        keepBinary = in.readBoolean();
     }
 
     /** {@inheritDoc} */

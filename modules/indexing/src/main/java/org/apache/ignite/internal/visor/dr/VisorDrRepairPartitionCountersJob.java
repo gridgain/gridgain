@@ -53,6 +53,9 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
     /** Map with cache-partitions pairs, assigned for node. */
     private final Map<String, Set<Integer>> cachePartsMap;
 
+    /** Batch size. */
+    private final int batchSize;
+
     /** Keep binary flag. */
     private final boolean keepBinary;
 
@@ -66,14 +69,14 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
      * @param arg Task arguments.
      * @param cachePartsMap Map with cache-partitions pairs.
      * @param debug Debug flag.
-     * @param keepBinary Keep binary flag.
      */
     public VisorDrRepairPartitionCountersJob(@NotNull VisorDrRepairPartitionCountersTaskArg arg,
-            Map<String, Set<Integer>> cachePartsMap, boolean debug, boolean keepBinary) {
+            Map<String, Set<Integer>> cachePartsMap, boolean debug) {
         super(arg, debug);
 
         this.cachePartsMap = cachePartsMap;
-        this.keepBinary = keepBinary;
+        this.keepBinary = arg.isKeepBinary();
+        this.batchSize = arg.getBatchSize();
     }
 
     /** {@inheritDoc} */
@@ -96,12 +99,14 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
         Set<Integer> parts = cachePartsMap.get(cache);
 
         Set<Integer> affectedPartitions = new HashSet<>();
-        int entriesProcessed = 0;
-        int brokenEntriesFound = 0;
-        int tombstonesCleared = 0;
-        int tombstonesFailedToClear = 0;
-        int entriesFixed = 0;
-        int entriesFailedToFix = 0;
+        Set<Integer> affectedCaches = new HashSet<>();
+        long entriesProcessed = 0;
+        long brokenEntriesFound = 0;
+        long tombstonesCleared = 0;
+        long tombstonesFailedToClear = 0;
+        long entriesFixed = 0;
+        long entriesFailedToFix = 0;
+        long size = 0;
 
         for (Integer part : parts) {
             PartitionRepairMetrics metrics = executeForPartition(cache, part);
@@ -109,15 +114,17 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
             if (metrics.brokenEntriesFound > 0) {
                 affectedPartitions.add(part);
             }
+            affectedCaches.addAll(metrics.affectedCaches);
             entriesProcessed += metrics.entriesProcessed;
             brokenEntriesFound += metrics.brokenEntriesFound;
             entriesFixed += metrics.entriesFixed;
             entriesFailedToFix += metrics.entriesFailedToFix;
             tombstonesCleared += metrics.tombstonesCleared;
             tombstonesFailedToClear += metrics.tombstonesFailedToClear;
+            size += metrics.size;
         }
 
-        return new VisorDrRepairPartitionCountersJobResult(cache, 0, null,
+        return new VisorDrRepairPartitionCountersJobResult(cache, size, affectedCaches,
                 affectedPartitions, entriesProcessed, brokenEntriesFound, tombstonesCleared,
                 tombstonesFailedToClear, entriesFixed, entriesFailedToFix);
     }
@@ -128,6 +135,8 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
         GridDhtLocalPartition locPart = reservePartition(part, grpCtx, cache);
 
         PartitionRepairMetrics metrics = new PartitionRepairMetrics();
+
+        metrics.size = locPart.fullSize();
 
         try {
             try {
@@ -157,10 +166,10 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
     private void fillBatch(PartitionRepairMetrics metrics, GridCacheSharedContext ctx, GridIterator<CacheDataRow> iter,
             ArrayList<GridCacheEntryInfo> batch, Set<Long> counters) {
 
-        while (iter.hasNext() && batch.size() < 100) {
+        while (iter.hasNext() && batch.size() < batchSize) {
             ctx.database().checkpointReadLock();
             try {
-                int cnt = 100;
+                int cnt = batchSize;
                 while (iter.hasNext() && (cnt--) > 0) {
                     CacheDataRow row = iter.next();
 
@@ -283,28 +292,28 @@ class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<Viso
 
     /**
      * Repair job metrics for a single partition.
-     * */
+     */
     private static class PartitionRepairMetrics {
         /** */
-        public int brokenEntriesFound;
+        public long brokenEntriesFound;
 
         /** */
-        public int tombstonesCleared;
+        public long tombstonesCleared;
 
         /** */
-        public int tombstonesFailedToClear;
+        public long tombstonesFailedToClear;
 
         /** */
-        public int entriesFixed;
+        public long entriesFixed;
 
         /** */
-        public int entriesFailedToFix;
+        public long entriesFailedToFix;
 
         /** */
-        public int entriesProcessed;
+        public long entriesProcessed;
 
         /** */
-        public int size;
+        public long size;
 
         /** */
         public Set<Integer> affectedCaches = new HashSet<>();

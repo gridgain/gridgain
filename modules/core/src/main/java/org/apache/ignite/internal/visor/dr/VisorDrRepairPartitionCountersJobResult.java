@@ -26,16 +26,16 @@ public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartiti
     private static final long serialVersionUID = 0L;
 
     /** Tombstones cleared. */
-    private final int tombstonesCleared;
+    private final long tombstonesCleared;
 
     /** Tombstones failed to clear. */
-    private final int tombstonesFailedToClear;
+    private final long tombstonesFailedToClear;
 
     /** Entries fixed. */
-    private final int entriesFixed;
+    private final long entriesFixed;
 
     /** Entries failed to fix. */
-    private final int entriesFailedToFix;
+    private final long entriesFailedToFix;
 
     /**
      * Constructor.
@@ -53,8 +53,8 @@ public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartiti
      */
     public VisorDrRepairPartitionCountersJobResult(String cacheOrGroupName, long size,
             Set<Integer> affectedCaches, Set<Integer> affectedPartitions, long entriesProcessed,
-            long brokenEntriesFound, int tombstonesCleared, int tombstonesFailedToClear,
-            int entriesFixed, int entriesFailedToFix) {
+            long brokenEntriesFound, long tombstonesCleared, long tombstonesFailedToClear,
+            long entriesFixed, long entriesFailedToFix) {
         super(cacheOrGroupName, size, affectedCaches, affectedPartitions, entriesProcessed,
                 brokenEntriesFound);
         this.tombstonesCleared = tombstonesCleared;
@@ -66,28 +66,28 @@ public class VisorDrRepairPartitionCountersJobResult extends VisorDrCheckPartiti
     /**
      * @return Tombstones cleared.
      */
-    public int getTombstonesCleared() {
+    public long getTombstonesCleared() {
         return tombstonesCleared;
     }
 
     /**
      * @return Tombstones failed to clear.
      */
-    public int getTombstonesFailedToClear() {
+    public long getTombstonesFailedToClear() {
         return tombstonesFailedToClear;
     }
 
     /**
      * @return Entries fixed.
      */
-    public int getEntriesFixed() {
+    public long getEntriesFixed() {
         return entriesFixed;
     }
 
     /**
      * @return Entries failed to fix.
      */
-    public int getEntriesFailedToFix() {
+    public long getEntriesFailedToFix() {
         return entriesFailedToFix;
     }
 

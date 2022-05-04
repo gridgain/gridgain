@@ -42,7 +42,7 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
     /** Check first N entries parameter. */
     public static final String CHECK_FIRST_PARAM = "--check-first";
 
-    /** Metrics parameter. */
+    /** Caches parameter. */
     public static final String CACHES_PARAM = "--caches";
 
     /**
@@ -67,20 +67,6 @@ public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<
         ) {
             this.caches = caches;
             this.checkFirst = checkFirst;
-        }
-
-        /**
-         * @return Caches.
-         */
-        public Set<String> caches() {
-            return caches;
-        }
-
-        /**
-         * @return Max number of entries to be checked.
-         */
-        public int checkFirst() {
-            return checkFirst;
         }
 
         /** {@inheritDoc} */

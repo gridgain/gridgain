@@ -27,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * DR repair partition counters task results.
  */
 public class VisorDrRepairPartitionCountersTaskResult extends IgniteDataTransferObject {
     /** */

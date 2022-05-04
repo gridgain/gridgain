@@ -37,6 +37,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_S
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
@@ -110,9 +111,16 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Start partition counters validation for selected caches:",
+        usage(log, "Start partition counters check for selected caches:",
                 DATA_CENTER_REPLICATION,
                 CHECK.toString(),
+                "<remoteDataCenterId>",
+                optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Start partition counters repairing for selected caches:",
+                DATA_CENTER_REPLICATION,
+                REPAIR.toString(),
                 "<remoteDataCenterId>",
                 optional(CMD_AUTO_CONFIRMATION)
         );
