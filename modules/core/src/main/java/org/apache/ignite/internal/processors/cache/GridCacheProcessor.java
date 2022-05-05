@@ -217,6 +217,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWAR
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**
@@ -1231,8 +1232,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             try {
                 assertParameter(x, y);
             }
-            catch (IgniteCheckedException ex) {
-                return ex;
+            catch (IgniteException ex) {
+                return new IgniteCheckedException(ex);
             }
 
             return null;

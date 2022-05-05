@@ -62,6 +62,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.CLIENT_CONNECTOR_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.odbc.ClientListenerNioListener.CONN_CTX_META_KEY;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 
 /**
  * Client connector processor.
@@ -521,12 +522,12 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
      * Validate client connector configuration.
      *
      * @param cfg Configuration.
-     * @throws IgniteCheckedException If failed.
+     * @throws IgniteException If failed.
      */
-    private void validateConfiguration(ClientConnectorConfiguration cfg) throws IgniteCheckedException {
+    private void validateConfiguration(ClientConnectorConfiguration cfg) {
         assertParameter(cfg.getPort() > 1024, "port > 1024");
         assertParameter(cfg.getPort() <= 65535, "port <= 65535");
-        assertParameter(cfg.getPortRange() >= 0, "portRange > 0");
+        assertParameter(cfg.getPortRange() >= 0, "portRange >= 0");
         assertParameter(cfg.getSocketSendBufferSize() >= 0, "socketSendBufferSize > 0");
         assertParameter(cfg.getSocketReceiveBufferSize() >= 0, "socketReceiveBufferSize > 0");
         assertParameter(cfg.getMaxOpenCursorsPerConnection() >= 0, "maxOpenCursorsPerConnection() >= 0");
