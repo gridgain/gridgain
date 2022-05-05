@@ -119,8 +119,7 @@ public class GridCacheVersionEx extends GridCacheVersion {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void updateCounter(long updateCounter) {
+    @Override public void updateCounter(long updateCounter) {
         super.updateCounter(updateCounter);
 
         drVer.updateCounter(updateCounter);
