@@ -184,6 +184,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 assert lastAffVer == null || topVer.compareTo(lastAffVer) > 0 :
                     "lastAffVer=" + lastAffVer + ", topVer=" + topVer + ", customMsg=" + customMsg;
 
+                log.warning(">>>>> lastAffVer changed [prev=" + lastAffVer + ", new=" + topVer + ']');
+
                 lastAffVer = topVer;
             }
         }
@@ -217,20 +219,22 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
 
         // Skip message if affinity was already recalculated.
+        // Perhaps, this change can be accepted as a good enough solution.
+        // boolean exchangeNeeded = true;
         boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
 
         msg.exchangeNeeded(exchangeNeeded);
 
         if (exchangeNeeded) {
-            if (log.isDebugEnabled()) {
-                log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
+            if (log.isInfoEnabled()) {
+                log.warning(">>>>> Need process affinity change message [lastAffVer=" + lastAffVer +
                     ", msgExchId=" + msg.exchangeId() +
                     ", msgVer=" + msg.topologyVersion() + ']');
             }
         }
         else {
-            if (log.isDebugEnabled()) {
-                log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
+            if (log.isInfoEnabled()) {
+                log.warning(">>>>> Ignore affinity change message [lastAffVer=" + lastAffVer +
                     ", msgExchId=" + msg.exchangeId() +
                     ", msgVer=" + msg.topologyVersion() + ']');
             }
@@ -273,8 +277,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         CacheAffinityChangeMessage msg = null;
 
         synchronized (mux) {
-            if (waitInfo == null || !waitInfo.topVer.equals(lastAffVer))
+            if (waitInfo == null || !waitInfo.topVer.equals(lastAffVer)) {
+                log.warning(">>>>> checkRebalanceState skipped [grpId=" + top.groupId() + ", caheck=" + checkGrpId
+                    + ", waitInfo=" + (waitInfo == null? "null" : waitInfo.topVer) + ", lastAffVer=" + lastAffVer + ']');
                 return;
+            }
 
             Set<Integer> partWait = waitInfo.waitGrps.get(checkGrpId);
 
@@ -306,14 +313,28 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     if (waitInfo.waitGrps.isEmpty()) {
                         msg = affinityChangeMessage(waitInfo);
 
+                        log.warning(">>>>> checkRebalanceState [rebalanced=true, msg=" + msg + ']');
                         waitInfo = null;
                     }
                 }
             }
 
             try {
-                if (msg != null)
+                if (msg != null) {
+                    log.warning(">>>>> sending CacheAffinityAssignmentMessage [msg=" + msg + ']');
+
+                    if (msg.topologyVersion().equals(new AffinityTopologyVersion(4, 0))) {
+                        try {
+                            log.warning(">>>>> sleeping... CacheAffinityAssignmentMessage [msg=" + msg + ']');
+                            Thread.sleep(10_000);
+                            log.warning(">>>>> sending... CacheAffinityAssignmentMessage [msg=" + msg + ']');
+                        }
+                        catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     cctx.discovery().sendCustomEvent(msg);
+                }
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to send affinity change message.", e);
@@ -1999,6 +2020,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         });
 
         synchronized (mux) {
+            log.warning(">>>>> onCentralizedAffinityChange waitInfo = null");
             this.waitInfo = null;
         }
 

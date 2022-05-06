@@ -68,8 +68,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTestUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
@@ -112,13 +112,15 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     private static final String CACHE_NAME = "cache";
 
     /** Partitions count. */
-    private static final int PARTS_CNT = 32;
+    private static final int PARTS_CNT = 12;
 
     /** Block message predicate to set to Communication SPI in node configuration. */
     private IgniteBiPredicate<ClusterNode, Message> blockMsgPred;
 
     /** Record message predicate to set to Communication SPI in node configuration. */
     private IgniteBiPredicate<ClusterNode, Message> recordMsgPred;
+
+    private volatile TestRecordingCommunicationSpi testSpi;
 
     /** */
     private int backups;
@@ -157,8 +159,12 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(new WalRebalanceCheckingCommunicationSpi());
 
-        if (blockMsgPred != null)
-            ((TestRecordingCommunicationSpi) cfg.getCommunicationSpi()).blockMessages(blockMsgPred);
+        if (blockMsgPred != null) {
+            testSpi = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+            testSpi.blockMessages(blockMsgPred);
+        }
+        else
+            testSpi = null;
 
         if (recordMsgPred != null)
             ((TestRecordingCommunicationSpi) cfg.getCommunicationSpi()).record(recordMsgPred);
@@ -560,6 +566,62 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             for (int k = 0; k < entryCnt; k++)
                 assertEquals(new IndexedObject(k), cache1.get(k));
         }
+    }
+
+    @Test
+    public void testBBB() throws Exception {
+        // 2.0
+        IgniteEx crd = startGrids(2);
+
+        // 2.1
+        crd.cluster().state(ACTIVE);
+
+        RendezvousAffinityFunction aff = new RendezvousAffinityFunction(false, PARTS_CNT);
+
+        // 2.2
+        String cacheName = "test-cache-1";
+        IgniteCache<Integer, IndexedObject> cache0 = crd.getOrCreateCache(
+            new CacheConfiguration<Integer, IndexedObject>(cacheName)
+                .setBackups(/*backups*/1)
+                .setAffinity(aff)
+                .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC));
+
+        // Fill initial data and force checkpoint.
+        final int entryCnt = PARTS_CNT * 200;
+        final int preloadEntryCnt = PARTS_CNT * 201;
+        int val = 0;
+
+        for (int k = 0; k < preloadEntryCnt; k++)
+            cache0.put(k, new IndexedObject(val++));
+
+        // Upload additional data to a particular partition (primary partition belongs to coordinator, for instance)
+        // in order to trigger full rebalance for that partition instead of historical one.
+        int[] primaries0 = grid(1).affinity(cacheName).primaryPartitions(grid(1).localNode());
+
+        // 3.0
+        stopGrid(1);
+
+        for (int i = 0; i < 10; ++i)
+            cache0.put(primaries0[0], new IndexedObject(val++));
+
+        // 4.0
+        startGrid(1);
+
+        doSleep(3_000);
+
+        // 5.0
+        GridTestUtils.runAsync(() -> {
+           startGrid(2);
+        });
+
+        doSleep(3_000);
+
+        // 6.0
+        GridTestUtils.runAsync(() -> {
+           startClientGrid(3);
+        });
+
+        awaitPartitionMapExchange();
     }
 
     /**

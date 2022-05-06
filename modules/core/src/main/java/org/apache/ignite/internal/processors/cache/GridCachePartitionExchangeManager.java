@@ -442,6 +442,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         GridDhtPartitionsExchangeFuture cur = lastTopologyFuture();
 
                         if (!cur.isDone() && cur.changedAffinity() && !msg.restoreState()) {
+                            log.warning(">>>>> processing of single message should be posponed [msg=" + msg + ']');
                             cur.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                                 @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                                     if (fut.error() == null)
@@ -652,6 +653,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                 if (msg.exchangeId() == null) {
                     if (msg.exchangeNeeded()) {
                         exchId = exchangeId(n.id(), affinityTopologyVersion(evt), evt);
+
+                        log.warning(">>>>> onDiscoveryEvent CacheAffinityChangeMessage [msg=" + msg + ", exchId=" + exchId + ']');
 
                         exchFut = exchangeFuture(exchId, evt, cache, null, msg);
                     }
@@ -1391,8 +1394,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             return;
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Refreshing partitions [oldest=" + oldest.id() + ", loc=" + cctx.localNodeId() +
+        if (log.isInfoEnabled()) {
+            log.info(">>>>> Refreshing partitions [oldest=" + oldest.id() + ", loc=" + cctx.localNodeId() +
                 ", cacheGroups= " + grps + ']');
         }
 
@@ -1424,8 +1427,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             sendAllPartitions(rmts, rmtTopVer, grps);
         }
         else {
-            if (log.isDebugEnabled())
-                log.debug("Refreshing local partitions from non-oldest node: " +
+            if (log.isInfoEnabled())
+                log.info(">>>>> Refreshing local partitions from non-oldest node: " +
                     cctx.localNodeId());
 
             sendLocalPartitions(oldest, null, grps);
@@ -1956,6 +1959,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      */
     private boolean addFuture(GridDhtPartitionsExchangeFuture fut) {
         if (fut.onAdded()) {
+            log.warning(">>>>> adding new exchange future [fut=" + fut + ']');
             exchWorker.addExchangeFuture(fut);
 
             return true;
@@ -2043,8 +2047,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         try {
             if (msg.exchangeId() == null) {
-                if (log.isDebugEnabled())
-                    log.debug("Received local partition update [nodeId=" + node.id() + ", parts=" +
+                if (log.isInfoEnabled())
+                    log.info(">>>>> Received local partition update [nodeId=" + node.id() + ", parts=" +
                         msg + ']');
 
                 boolean updated = false;
