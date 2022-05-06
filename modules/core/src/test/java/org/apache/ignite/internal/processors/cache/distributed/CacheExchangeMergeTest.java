@@ -1006,6 +1006,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-35224")
     public void testJoinExchangeCoordinatorChange_NoMerge_2() throws Exception {
         for (CoordinatorChangeMode mode : CoordinatorChangeMode.values()) {
             exchangeCoordinatorChangeNoMerge(8, true, mode);
