@@ -287,7 +287,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
      * @param <Idx> Type of the indexed field.
      */
     private <Key extends ClassWrapper, Idx> void createPopulateAndVerify(Class<Idx> idxCls,
-                                                                         @Nullable Comparator<Idx> comp, @Nullable Class<Key> keyCls) {
+        @Nullable Comparator<Idx> comp, @Nullable Class<Key> keyCls) {
         Ignite ign = grid(0);
 
         String tblName = idxCls.getSimpleName().toUpperCase() + "_TBL" + TBL_ID.incrementAndGet();
@@ -365,7 +365,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
      * @param <Idx> Type of the indexed value.
      */
     private <Key, Idx> void populateTable(Map<Idx, Integer> data, IgniteCache<Object, Integer> cache, Class<Key> keyCls,
-                                          Class<Idx> idxCls) {
+        Class<Idx> idxCls) {
         Map<Idx, Key> idxToKey = new HashMap<>();
 
         for (int i = 0; i < DATSET_SIZE; i++) {
@@ -484,7 +484,7 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
      * @param <T> Java type mapping of the indexed column.
      */
     private <T> void verifyRange(Map<T, Integer> data, String tblName,
-                                 String idxFieldName, String idxName, Comparator<T> comp) {
+        String idxFieldName, String idxName, Comparator<T> comp) {
         T val = getRandom(data.keySet());
 
         List<List<?>> res = execSql(String.format(SELECT_ORDERED_RANGE_TEMPLATE, tblName, idxName, idxFieldName), val);
