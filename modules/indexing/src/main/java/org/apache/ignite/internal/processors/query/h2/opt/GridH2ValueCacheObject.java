@@ -43,6 +43,7 @@ public class GridH2ValueCacheObject extends Value {
     /** Object value context. */
     private CacheObjectValueContext valCtx;
 
+    /** Stub flag, check {@link GridH2ValueCacheObject#useCorrectComparator()} description. */
     private boolean useFixedComparator;
 
     /**

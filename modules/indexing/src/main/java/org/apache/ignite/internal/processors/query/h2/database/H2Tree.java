@@ -493,7 +493,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @return Row.
      */
     private H2CacheRow createMvccRow0(long link, long mvccCrdVer, long mvccCntr, int mvccOpCntr, CacheDataRowAdapter.RowData rowData)
-        throws IgniteCheckedException {
+            throws IgniteCheckedException {
         int partId = PageIdUtils.partId(PageIdUtils.pageId(link));
 
         MvccDataRow row = new MvccDataRow(
@@ -619,7 +619,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** {@inheritDoc} */
     @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override protected int compare(BPlusIO<H2Row> io, long pageAddr, int idx,
-                                    H2Row row) throws IgniteCheckedException {
+        H2Row row) throws IgniteCheckedException {
         try {
             if (inlineSize() == 0)
                 return compareRows(getRow(io, pageAddr, idx), row);
