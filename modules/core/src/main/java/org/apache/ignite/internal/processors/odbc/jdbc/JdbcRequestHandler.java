@@ -752,14 +752,24 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             unregisterReq = true;
 
-            U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+            if (X.cause(e, QueryCancelledException.class) != null) {
+                U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
 
-            if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
-            else if (X.cause(e, IgniteSQLException.class) != null)
-                return exceptionToResult(X.cause(e, IgniteSQLException.class));
-            else
+            }
+            else if (X.cause(e, IgniteSQLException.class) != null) {
+                IgniteSQLException e0 = X.cause(e, IgniteSQLException.class);
+
+                if (isNeedToNodeLog(e0))
+                    U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+
+                return exceptionToResult(e0);
+            }
+            else {
+                U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+
                 return exceptionToResult(e);
+            }
         }
         finally {
             cleanupQueryCancellationMeta(unregisterReq, req.requestId());
@@ -1629,5 +1639,15 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /** {@inheritDoc} */
     @Override public ClientListenerProtocolVersion protocolVersion() {
         return protocolVer;
+    }
+
+    /**
+     * Checks SQL error to print into node log.
+     *
+     * @param e Exception to handle.
+     * @return {@code true} is the exception should be printed into node log. Otherwise, returns {@code false}.
+     */
+    private static boolean isNeedToNodeLog(IgniteSQLException e) {
+        return e.statusCode() != IgniteQueryErrorCode.DUPLICATE_KEY;
     }
 }
