@@ -39,6 +39,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
@@ -1188,7 +1189,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                         ClusterNode node0 = getSpiContext().node(node.id());
 
                         if (node0 == null)
-                            throw new IgniteCheckedException("Failed to send message to remote node " +
+                            throw new ClusterTopologyCheckedException("Failed to send message to remote node " +
                                 "(node has left the grid): " + node.id());
                     }
 
