@@ -43,8 +43,8 @@ public class GridH2ValueCacheObject extends Value {
     /** Object value context. */
     private CacheObjectValueContext valCtx;
 
-    /** Stub flag, check {@link GridH2ValueCacheObject#useCorrectComparator()} description. */
-    private boolean useCorrectComparator;
+    /** Stub flag, check {@link GridH2ValueCacheObject#useLegacyComparator()} description. */
+    private boolean useLegacyComparator;
 
     /**
      * Constructor.
@@ -174,7 +174,7 @@ public class GridH2ValueCacheObject extends Value {
             if (o1.equals(o2))
                 return 0;
 
-            if (correctComparator() && o1.getClass().equals(BinaryObjectImpl.class))
+            if (!legacyComparator() && o1 instanceof BinaryObjectImpl)
                 return BinaryObjectImpl.compare(o1, o2);
 
             return Bits.compareNotNullSigned(getBytesNoCopy(), v.getBytesNoCopy());
@@ -190,15 +190,15 @@ public class GridH2ValueCacheObject extends Value {
      * we take into account that later all indexes will be rebuild and only one ver of comparator
      * will be used.
      */
-    public void useCorrectComparator() {
-        useCorrectComparator = true;
+    public void useLegacyComparator() {
+        useLegacyComparator = true;
     }
 
     /**
      * @return {@code false} if legacy comparator is used.
      */
-    public boolean correctComparator() {
-        return useCorrectComparator;
+    public boolean legacyComparator() {
+        return useLegacyComparator;
     }
 
     /** {@inheritDoc} */

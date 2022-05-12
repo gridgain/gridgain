@@ -188,9 +188,6 @@ public class BasicJavaTypesIndexTest extends AbstractIndexingCommonTest {
         GridH2ValueCacheObject v2 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo2), idx.objectContext());
         GridH2ValueCacheObject v3 = new GridH2ValueCacheObject(ignite(0).binary().toBinary(pojo3), idx.objectContext());
 
-        v1.useCorrectComparator();
-        v2.useCorrectComparator();
-
         // Begin: emulate pass POJO as SQL parameter through network.
         Object[] param = {pojo3};
 

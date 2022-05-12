@@ -156,8 +156,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Whether index was created from scratch during owning node lifecycle. */
     private final boolean created;
 
-    /** Stub flag, check {@link GridH2ValueCacheObject#useCorrectComparator()} description. */
-    private final boolean useCorrectComparator;
+    /** Stub flag, check {@link GridH2ValueCacheObject#useLegacyComparator()} description. */
+    private final boolean useLegacyComparator;
 
     /**
      * Constructor.
@@ -264,9 +264,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             if (idxCreateVer == null /* too old version */ ||
                 idxCreateVer.compareTo(ver_8_7_40) < 0 ||
                 idxCreateVer.minor() != 7 && idxCreateVer.compareTo(ver_8_8_11) < 0)
-                useCorrectComparator = false; // Fallback to legacy comparator due to compatibility reasons.
+                useLegacyComparator = true; // Fallback to legacy comparator due to compatibility reasons.
             else
-                useCorrectComparator = true;
+                useLegacyComparator = false;
 
             unwrappedPk = metaInfo.useUnwrappedPk();
 
@@ -321,7 +321,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         else {
             unwrappedPk = true;
 
-            useCorrectComparator = true;
+            useLegacyComparator = false;
 
             cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
@@ -678,8 +678,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                      * we take into account that later all indexes will be rebuild and only one ver of comparator
                      * will be used.
                      */
-                    if (useCorrectComparator && v1 instanceof GridH2ValueCacheObject)
-                        ((GridH2ValueCacheObject)v1).useCorrectComparator();
+                    if (useLegacyComparator && v1 instanceof GridH2ValueCacheObject)
+                        ((GridH2ValueCacheObject)v1).useLegacyComparator();
 
                     int c = compareValues(v1, v2);
 
