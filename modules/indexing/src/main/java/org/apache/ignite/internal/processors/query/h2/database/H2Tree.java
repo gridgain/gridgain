@@ -156,7 +156,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     /** Whether index was created from scratch during owning node lifecycle. */
     private final boolean created;
 
-    private final boolean useFixedComparator;
+    /** Stub flag, check {@link GridH2ValueCacheObject#useCorrectComparator()} description. */
+    private final boolean useCorrectComparator;
 
     /**
      * Constructor.
@@ -263,12 +264,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             if (idxCreateVer != null) {
                 if ((idxCreateVer.compareTo(ver_8_7_40) >= 0 && idxCreateVer.minor() == 7) ||
                     idxCreateVer.compareTo(ver_8_8_11) >= 0)
-                    useFixedComparator = true;
+                    useCorrectComparator = true;
                 else
-                    useFixedComparator = false;
+                    useCorrectComparator = false;
             }
             else
-                useFixedComparator = false;
+                useCorrectComparator = false;
 
             unwrappedPk = metaInfo.useUnwrappedPk();
 
@@ -323,7 +324,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         else {
             unwrappedPk = true;
 
-            useFixedComparator = true;
+            useCorrectComparator = true;
 
             cols = unwrappedCols.toArray(H2Utils.EMPTY_COLUMNS);
             inlineCols = cols;
@@ -680,7 +681,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                      * we take into account that later all indexes will be rebuild and only one ver of comparator
                      * will be used.
                      */
-                    if (useFixedComparator && v1 instanceof GridH2ValueCacheObject)
+                    if (useCorrectComparator && v1 instanceof GridH2ValueCacheObject)
                         ((GridH2ValueCacheObject)v1).useCorrectComparator();
 
                     int c = compareValues(v1, v2);

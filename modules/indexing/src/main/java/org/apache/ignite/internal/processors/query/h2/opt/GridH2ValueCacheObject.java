@@ -44,7 +44,7 @@ public class GridH2ValueCacheObject extends Value {
     private CacheObjectValueContext valCtx;
 
     /** Stub flag, check {@link GridH2ValueCacheObject#useCorrectComparator()} description. */
-    private boolean useFixedComparator;
+    private boolean useCorrectComparator;
 
     /**
      * Constructor.
@@ -191,12 +191,14 @@ public class GridH2ValueCacheObject extends Value {
      * will be used.
      */
     public void useCorrectComparator() {
-        useFixedComparator = true;
+        useCorrectComparator = true;
     }
 
-    /** */
+    /**
+     * @return {@code false} if legacy comparator is used.
+     */
     public boolean correctComparator() {
-        return useFixedComparator;
+        return useCorrectComparator;
     }
 
     /** {@inheritDoc} */
