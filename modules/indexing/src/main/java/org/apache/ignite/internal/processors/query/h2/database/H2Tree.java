@@ -261,15 +261,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
             IgniteProductVersion idxCreateVer = metaInfo.createdVersion();
 
-            if (idxCreateVer != null) {
-                if ((idxCreateVer.compareTo(ver_8_7_40) >= 0 && idxCreateVer.minor() == 7) ||
-                    idxCreateVer.compareTo(ver_8_8_11) >= 0)
-                    useCorrectComparator = true;
-                else
-                    useCorrectComparator = false;
-            }
+            if (idxCreateVer == null /* too old version */ ||
+                idxCreateVer.compareTo(ver_8_7_40) < 0 ||
+                idxCreateVer.minor() != 7 && idxCreateVer.compareTo(ver_8_8_11) < 0)
+                useCorrectComparator = false; // Fallback to legacy comparator due to compatibility reasons.
             else
-                useCorrectComparator = false;
+                useCorrectComparator = true;
 
             unwrappedPk = metaInfo.useUnwrappedPk();
 
