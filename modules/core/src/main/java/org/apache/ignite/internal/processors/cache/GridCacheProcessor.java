@@ -2235,12 +2235,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridCacheContext<?, ?> cacheCtx,
         CacheConfiguration cfg
     ) throws IgniteCheckedException {
-        GridCacheAdapter cache = cacheCtx.cache();
-
-        sharedCtx.addCacheContext(cacheCtx);
-
-        caches.put(cacheCtx.name(), cache);
-
         // Intentionally compare Boolean references using '!=' below to check if the flag has been explicitly set.
         if (cfg.isStoreKeepBinary() && cfg.isStoreKeepBinary() != CacheConfiguration.DFLT_STORE_KEEP_BINARY
             && !(ctx.config().getMarshaller() instanceof BinaryMarshaller))
@@ -2268,6 +2262,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (log.isDebugEnabled())
                 log.debug("Started DHT cache: " + dhtCtx.cache().name());
         }
+
+        sharedCtx.addCacheContext(cacheCtx);
+
+        caches.put(cacheCtx.name(), cacheCtx.cache());
 
         ctx.continuous().onCacheStart(cacheCtx);
 

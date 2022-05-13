@@ -246,7 +246,7 @@ public class GridCacheContext<K, V> implements Externalizable {
     private volatile boolean affNode;
 
     /** Conflict resolver. */
-    private CacheVersionConflictResolver conflictRslvr;
+    private volatile CacheVersionConflictResolver conflictRslvr;
 
     /** */
     private CacheObjectContext cacheObjCtx;
