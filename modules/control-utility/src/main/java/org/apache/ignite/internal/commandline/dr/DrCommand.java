@@ -22,6 +22,7 @@ import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
@@ -114,7 +115,9 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Start partition counters check for selected caches:",
                 DATA_CENTER_REPLICATION,
                 CHECK.toString(),
-                "<remoteDataCenterId>",
+                optional(DrCheckPartitionCountersCommand.CACHES_PARAM, "cacheName1,cacheName2,...,cacheNameN"),
+                optional(DrCheckPartitionCountersCommand.CHECK_FIRST_PARAM),
+                optional(DrCheckPartitionCountersCommand.SCAN_UNTIL_FIRST_ERROR),
                 optional(CMD_AUTO_CONFIRMATION)
         );
 
