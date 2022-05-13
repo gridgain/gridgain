@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
+import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
@@ -754,7 +755,12 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             unregisterReq = true;
 
             if (X.cause(e, QueryCancelledException.class) != null) {
-                U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to execute SQL query " +
+                        "[reqId=" + req.requestId() +
+                        ", req=" + req +
+                        "]. Error:" + X.getFullStackTrace(e));
+                }
 
                 return exceptionToResult(new QueryCancelledException());
             }
@@ -762,12 +768,12 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                 IgniteSQLException e0 = X.cause(e, IgniteSQLException.class);
 
                 if (isNeedToNodeLog(e0))
-                    U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+                    U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
 
                 return exceptionToResult(e0);
             }
             else {
-                U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+                U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
 
                 return exceptionToResult(e);
             }
@@ -1649,6 +1655,6 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return {@code true} is the exception should be printed into node log. Otherwise, returns {@code false}.
      */
     private static boolean isNeedToNodeLog(IgniteSQLException e) {
-        return e.statusCode() != IgniteQueryErrorCode.DUPLICATE_KEY;
+        return SqlStateCode.INTERNAL_ERROR.equals(e.sqlState());
     }
 }
