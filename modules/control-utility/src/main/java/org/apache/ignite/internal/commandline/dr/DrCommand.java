@@ -24,6 +24,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
 
@@ -124,7 +125,9 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Start partition counters repairing for selected caches:",
                 DATA_CENTER_REPLICATION,
                 REPAIR.toString(),
-                "<remoteDataCenterId>",
+                optional(DrRepairPartitionCountersCommand.CACHES_PARAM, "cacheName1,cacheName2,...,cacheNameN"),
+                optional(DrRepairPartitionCountersCommand.BATCH_SIZE),
+                optional(DrRepairPartitionCountersCommand.KEEP_BINARY),
                 optional(CMD_AUTO_CONFIRMATION)
         );
     }
