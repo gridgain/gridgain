@@ -135,7 +135,7 @@ This utility can do the following commands:
     control.(sh|bat) --dr resume <remoteDataCenterId> [--yes]
 
   Start partition counters check for selected caches:
-    control.(sh|bat) --dr check-partition-counters <remoteDataCenterId> [--yes]
+    control.(sh|bat) --dr check-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--check-first] [--scan-until-first-error] [--yes]
 
   Print tracing configuration:
     control.(sh|bat) --tracing-configuration
