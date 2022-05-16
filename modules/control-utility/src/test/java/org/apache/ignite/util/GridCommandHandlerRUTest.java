@@ -131,6 +131,9 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
      */
     @Test
     public void testRollingUpgradeStatus() throws Exception {
+        // Status cmd does not require cofirmation.
+        autoConfirmation = false;
+
         Ignite ignite = startGrid(0);
 
         injectTestSystemOut();

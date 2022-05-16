@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -695,7 +695,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /** */
-    private void beforeFirstTest() throws Exception {
+    protected void beforeFirstTest() throws Exception {
         sharedStaticIpFinder = new TcpDiscoveryVmIpFinder(true);
 
         clsLdr = Thread.currentThread().getContextClassLoader();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2823,7 +2823,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     if (!isInterruptedException)
                         U.error(log, "Exception in discovery notifier worker thread.", t);
 
-                    if (!isInterruptedException || !isCancelled) {
+                    if (!isInterruptedException || !isCancelled.get()) {
                         FailureType type = t instanceof OutOfMemoryError ? CRITICAL_ERROR : SYSTEM_WORKER_TERMINATION;
 
                         ctx.failure().process(new FailureContext(type, t));
@@ -2991,7 +2991,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     onIdle();
                 }
                 catch (InterruptedException e) {
-                    if (!isCancelled)
+                    if (!isCancelled.get())
                         ctx.failure().process(new FailureContext(SYSTEM_WORKER_TERMINATION, e));
 
                     throw e;

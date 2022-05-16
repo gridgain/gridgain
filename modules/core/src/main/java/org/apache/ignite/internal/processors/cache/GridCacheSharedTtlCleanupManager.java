@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -324,7 +324,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                     }
                     catch (IgniteCheckedException ex) {
                         if (cctx.kernalContext().isStopping()) {
-                            isCancelled = true;
+                            isCancelled.set(true);
 
                             return; // Node is stopped before affinity has prepared.
                         }
@@ -379,13 +379,13 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
             }
             catch (Throwable t) {
                 if (X.hasCause(t, NodeStoppingException.class)) {
-                    isCancelled = true; // Treat node stopping as valid worker cancellation.
+                    isCancelled.set(true); // Treat node stopping as valid worker cancellation.
 
                     return;
                 }
 
                 if (!(t instanceof IgniteInterruptedCheckedException || t instanceof InterruptedException)) {
-                    if (isCancelled)
+                    if (isCancelled.get())
                         return;
 
                     err = t;
@@ -394,7 +394,7 @@ public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdap
                 throw t;
             }
             finally {
-                if (err == null && !isCancelled)
+                if (err == null && !isCancelled.get())
                     err = new IllegalStateException("Thread " + name() + " is terminated unexpectedly");
 
                 if (err instanceof OutOfMemoryError)
