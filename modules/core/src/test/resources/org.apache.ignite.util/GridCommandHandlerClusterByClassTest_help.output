@@ -137,6 +137,9 @@ This utility can do the following commands:
   Start partition counters check for selected caches:
     control.(sh|bat) --dr check-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--check-first] [--scan-until-first-error] [--yes]
 
+  Start partition counters repairing for selected caches:
+    control.(sh|bat) --dr repair-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--batch-size] [--keep-binary] [--yes]
+
   Print tracing configuration:
     control.(sh|bat) --tracing-configuration
 
