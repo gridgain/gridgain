@@ -444,11 +444,11 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
                                 return false;
                         }
 
-                        if(!res.get(0).get(1).getClass().equals(dataType.javaType))
+                        if (!res.get(0).get(1).getClass().equals(dataType.javaType))
                             return false;
 
                         if (expVal instanceof byte[]) {
-                            if(!Arrays.equals((byte[])expVal, (byte[])res.get(0).get(1)))
+                            if (!Arrays.equals((byte[])expVal, (byte[])res.get(0).get(1)))
                                 return false;
                         }
                         else {
