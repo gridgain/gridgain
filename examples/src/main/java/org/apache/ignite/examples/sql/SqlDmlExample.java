@@ -17,10 +17,12 @@
 package org.apache.ignite.examples.sql;
 
 import java.util.List;
+import java.util.UUID;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.examples.model.Organization;
 import org.apache.ignite.examples.model.Person;
@@ -35,6 +37,106 @@ public class SqlDmlExample {
     /** Persons cache name. */
     private static final String PERSON_CACHE = SqlDmlExample.class.getSimpleName() + "Persons";
 
+    public static void main(String[] args) throws Exception {
+        Ignite ignite = Ignition.start("/home/zstan/work/repo/1/configuration.xml");
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache(new CacheConfiguration<>("somecachename"));
+
+        //50% good entries
+        for (int i = 0; i < 200_000; i++) {
+            String insert = "INSERT INTO CONTACT_CACHE.contact (accountId, FIRSTNAMEUPPER, LASTNAMEUPPER) VALUES (" +
+                "'id" + i +"'," + "'firstnameupper" + i +"'," + "'lastnameupper" + i +"')";
+
+            cache.query(new SqlFieldsQuery(insert)).getAll();
+        }
+
+        //50% bad entries
+        for (int i = 200_000; i < 400_000; i++) {
+            String insert = "INSERT INTO CONTACT_CACHE.contact (accountId, FIRSTNAMEUPPER, LASTNAMEUPPER) VALUES (" +
+                "'id" + i +"','" + UUID.randomUUID().toString() +"','" + UUID.randomUUID().toString() +"')";
+
+            cache.query(new SqlFieldsQuery(insert)).getAll();
+        }
+
+        //with prepared statements
+        String sql = "SELECT DISTINCT\n" +
+            "         *\n" +
+            "      FROM\n" +
+            "         CONTACT_CACHE.contact c " +
+            "USE INDEX(CONTACT_CACHE.CONTACT_LASTNAMEUPPER_FIRSTNAMEUPPER_DATEOFBIRTH__C_ASC_IDX) \n" +
+            "        \n" +
+            "      WHERE\n" +
+            "\t\tc.firstnameupper like ? \n" +
+            "\t\tAND c.lastnameupper like ?";
+
+        //without prepared statements
+        String sql2 = "SELECT DISTINCT\n" +
+            "         *\n" +
+            "      FROM\n" +
+            "         CONTACT_CACHE.contact c " +
+            "USE INDEX(CONTACT_CACHE.CONTACT_LASTNAMEUPPER_FIRSTNAMEUPPER_DATEOFBIRTH__C_ASC_IDX) \n" +
+            "        \n" +
+            "      WHERE\n" +
+            "\t\tc.firstnameupper like 'firstn%' \n" +
+            "\t\tAND c.lastnameupper like 'last%'";
+
+        SqlFieldsQuery query = new SqlFieldsQuery("explain " + sql);
+
+        SqlFieldsQuery query2 = new SqlFieldsQuery(sql);
+
+        SqlFieldsQuery query3 = new SqlFieldsQuery("explain " + sql2);
+
+        SqlFieldsQuery query4 = new SqlFieldsQuery(sql2);
+
+        query.setArgs("firstn%", "last%");
+
+        query2.setArgs("firstn%", "last%");
+
+        System.out.println("EXPLAIN1: " + cache.query(query).getAll().get(0));
+
+        System.gc();
+
+        long start = System.currentTimeMillis();
+
+        System.out.println(cache.query(query2).getAll().size());
+
+        System.out.println("with prepared: " + (System.currentTimeMillis() - start));
+
+        System.out.println("EXPLAIN2: " + cache.query(query3).getAll().get(0));
+
+        System.gc();
+
+        start = System.currentTimeMillis();
+
+        System.out.println(cache.query(query4).getAll().size());
+
+        System.out.println("without prepared: " + (System.currentTimeMillis() - start));
+
+        ///----
+
+        System.out.println("EXPLAIN1: " + cache.query(query).getAll().get(0));
+
+        System.gc();
+
+        start = System.currentTimeMillis();
+
+        System.out.println(cache.query(query2).getAll().size());
+
+        System.out.println("with prepared: " + (System.currentTimeMillis() - start));
+
+        System.out.println("EXPLAIN2: " + cache.query(query3).getAll().get(0));
+
+        System.gc();
+
+        start = System.currentTimeMillis();
+
+        System.out.println(cache.query(query4).getAll().size());
+
+        System.out.println("without prepared: " + (System.currentTimeMillis() - start));
+    }
+
     /**
      * Executes example.
      *
@@ -42,7 +144,7 @@ public class SqlDmlExample {
      * @throws Exception If example execution failed.
      */
     @SuppressWarnings({"unused", "ThrowFromFinallyBlock"})
-    public static void main(String[] args) throws Exception {
+    public static void main1(String[] args) throws Exception {
         try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
             print("Cache query DML example started.");
 
