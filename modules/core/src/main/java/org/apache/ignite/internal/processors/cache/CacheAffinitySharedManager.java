@@ -1600,6 +1600,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (affReq != null && affReq.contains(aff.groupId())) {
                     assert resTopVer.compareTo(aff.lastVersion()) >= 0 : aff.lastVersion();
 
+                    log.warning("IN onLocalJoin: " + (receivedAff == null) + " " + (aff == null) +
+                        " " + (aff != null ? aff.groupId() : " "));
                     CacheGroupAffinityMessage affMsg = receivedAff.get(aff.groupId());
 
                     if (affMsg == null) {
