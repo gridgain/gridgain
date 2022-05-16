@@ -25,6 +25,7 @@ import org.apache.ignite.internal.commandline.dr.subcommands.DrPauseCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrResumeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
 import org.jetbrains.annotations.NotNull;
 
 /** */
@@ -44,7 +45,9 @@ public enum DrSubCommandsList {
     /** */
     PAUSE("pause", new DrPauseCommand()),
     /** */
-    RESUME("resume", new DrResumeCommand());
+    RESUME("resume", new DrResumeCommand()),
+    /** */
+    CHECK("check-partition-counters", new DrCheckPartitionCountersCommand());
 
     /** */
     private final String name;
