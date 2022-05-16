@@ -476,7 +476,6 @@ public class CheckWarnJoinPartitionedTables extends GridCommonAbstractTest {
         execute(new SqlFieldsQuery(
             "CREATE TABLE A (ID INT, TITLE VARCHAR, PRICE INT, COMMENT VARCHAR, PRIMARY KEY (ID, TITLE, PRICE));"));
 
-        // PRICE = ID
         checkLogListener(false,
                 "SELECT a1.* FROM A a1 LEFT JOIN A a2 on a1.PRICE = a2.ID and a1.TITLE = a2.TITLE and a1.ID = a2.PRICE;");
     }
