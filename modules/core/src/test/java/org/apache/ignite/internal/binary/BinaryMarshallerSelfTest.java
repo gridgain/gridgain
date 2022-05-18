@@ -6103,7 +6103,6 @@ public class BinaryMarshallerSelfTest extends GridCommonAbstractTest {
         }
     }
 
-
     /** */
     public static class EmptyBinarylizable implements Binarylizable {
         /** */
