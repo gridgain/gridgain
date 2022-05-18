@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+
+import com.google.inject.internal.util.Objects;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -421,8 +423,42 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     private void check(IgniteEx ignite, String qryStr, SqlDataType dataType, Object expKey, Object expVal)
         throws Exception {
         if (writeSyncMode == CacheWriteSynchronizationMode.FULL_ASYNC &&
-            !waitForCondition(() -> !ignite.context().query().querySqlFields(
-                new SqlFieldsQuery(qryStr), false).getAll().isEmpty(),
+            !waitForCondition(() -> {
+                    List<List<?>> res = ignite.context().query().querySqlFields(
+                        new SqlFieldsQuery(qryStr), false).getAll();
+
+                    if (res.isEmpty())
+                        return false;
+                    else {
+                        if (res.size() != 1)
+                            return false;
+                        if (res.get(0).size() != 2)
+                            return false;
+
+                        if (expKey instanceof byte[]) {
+                            if (!Arrays.equals((byte[])expKey, (byte[])res.get(0).get(0)))
+                                return false;
+                        }
+                        else {
+                            if (!Objects.equal(expKey, res.get(0).get(0)))
+                                return false;
+                        }
+
+                        if (!res.get(0).get(1).getClass().equals(dataType.javaType))
+                            return false;
+
+                        if (expVal instanceof byte[]) {
+                            if (!Arrays.equals((byte[])expVal, (byte[])res.get(0).get(1)))
+                                return false;
+                        }
+                        else {
+                            if (!Objects.equal(expVal, res.get(0).get(1)))
+                                return false;
+                        }
+
+                        return true;
+                    }
+                },
                 TIMEOUT_FOR_KEY_RETRIEVAL_IN_FULL_ASYNC_MODE))
             fail("Unable to retrieve data via SELECT.");
 
