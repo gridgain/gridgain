@@ -45,7 +45,7 @@ public class SqlDmlExample {
         IgniteCache<Object, Object> cache = ignite.getOrCreateCache(new CacheConfiguration<>("somecachename"));
 
         //50% good entries
-        for (int i = 0; i < 200_000; i++) {
+        for (int i = 0; i < 10_000; i++) {
             String insert = "INSERT INTO CONTACT_CACHE.contact (accountId, FIRSTNAMEUPPER, LASTNAMEUPPER) VALUES (" +
                 "'id" + i +"'," + "'firstnameupper" + i +"'," + "'lastnameupper" + i +"')";
 
@@ -53,7 +53,7 @@ public class SqlDmlExample {
         }
 
         //50% bad entries
-        for (int i = 200_000; i < 400_000; i++) {
+        for (int i = 10_000; i < 20_000; i++) {
             String insert = "INSERT INTO CONTACT_CACHE.contact (accountId, FIRSTNAMEUPPER, LASTNAMEUPPER) VALUES (" +
                 "'id" + i +"','" + UUID.randomUUID().toString() +"','" + UUID.randomUUID().toString() +"')";
 
@@ -65,7 +65,7 @@ public class SqlDmlExample {
             "         *\n" +
             "      FROM\n" +
             "         CONTACT_CACHE.contact c " +
-            "USE INDEX(CONTACT_CACHE.CONTACT_LASTNAMEUPPER_FIRSTNAMEUPPER_DATEOFBIRTH__C_ASC_IDX) \n" +
+            //"USE INDEX(CONTACT_CACHE.CONTACT_LASTNAMEUPPER_FIRSTNAMEUPPER_DATEOFBIRTH__C_ASC_IDX) \n" +
             "        \n" +
             "      WHERE\n" +
             "\t\tc.firstnameupper like ? \n" +
@@ -82,6 +82,10 @@ public class SqlDmlExample {
             "\t\tc.firstnameupper like 'firstn%' \n" +
             "\t\tAND c.lastnameupper like 'last%'";
 
+        SqlFieldsQuery query00 = new SqlFieldsQuery("explain " + sql);
+
+        SqlFieldsQuery query02 = new SqlFieldsQuery(sql);
+
         SqlFieldsQuery query = new SqlFieldsQuery("explain " + sql);
 
         SqlFieldsQuery query2 = new SqlFieldsQuery(sql);
@@ -90,9 +94,15 @@ public class SqlDmlExample {
 
         SqlFieldsQuery query4 = new SqlFieldsQuery(sql2);
 
-        query.setArgs("firstn%", "last%");
+        query00.setArgs("%firstn", "$last");
+        query02.setArgs("%firstn", "$last");
 
+        query.setArgs("firstn%", "last%");
         query2.setArgs("firstn%", "last%");
+
+        System.out.println("EXPLAIN0: " + cache.query(query00).getAll().get(0));
+
+        System.out.println(cache.query(query02).getAll().size());
 
         System.out.println("EXPLAIN1: " + cache.query(query).getAll().get(0));
 
