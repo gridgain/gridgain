@@ -31,6 +31,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
 import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -64,6 +65,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
+import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
@@ -752,14 +754,29 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             unregisterReq = true;
 
-            U.error(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+            if (X.cause(e, QueryCancelledException.class) != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Failed to execute SQL query " +
+                        "[reqId=" + req.requestId() +
+                        ", req=" + req +
+                        "]. Error:" + X.getFullStackTrace(e));
+                }
 
-            if (X.cause(e, QueryCancelledException.class) != null)
                 return exceptionToResult(new QueryCancelledException());
-            else if (X.cause(e, IgniteSQLException.class) != null)
-                return exceptionToResult(X.cause(e, IgniteSQLException.class));
-            else
+            }
+            else if (X.cause(e, IgniteSQLException.class) != null) {
+                IgniteSQLException e0 = X.cause(e, IgniteSQLException.class);
+
+                if (isNeedToNodeLog(e0))
+                    U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+
+                return exceptionToResult(e0);
+            }
+            else {
+                U.warn(log, "Failed to execute SQL query [reqId=" + req.requestId() + ", req=" + req + ']', e);
+
                 return exceptionToResult(e);
+            }
         }
         finally {
             cleanupQueryCancellationMeta(unregisterReq, req.requestId());
@@ -1629,5 +1646,15 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /** {@inheritDoc} */
     @Override public ClientListenerProtocolVersion protocolVersion() {
         return protocolVer;
+    }
+
+    /**
+     * Checks SQL error to print into node log.
+     *
+     * @param e Exception to handle.
+     * @return {@code true} is the exception should be printed into node log. Otherwise, returns {@code false}.
+     */
+    private static boolean isNeedToNodeLog(IgniteSQLException e) {
+        return SqlStateCode.INTERNAL_ERROR.equals(e.sqlState());
     }
 }

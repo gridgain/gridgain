@@ -117,28 +117,6 @@ public abstract class GridProcessorAdapter implements GridProcessor {
         // No-op.
     }
 
-    /**
-     * Throws exception with uniform error message if given parameter's assertion condition
-     * is {@code false}.
-     *
-     * @param cond Assertion condition to check.
-     * @param condDesc Description of failed condition. Note that this description should include
-     *      JavaBean name of the property (<b>not</b> a variable name) as well condition in
-     *      Java syntax like, for example:
-     *      <pre name="code" class="java">
-     *      ...
-     *      assertParameter(dirPath != null, "dirPath != null");
-     *      ...
-     *      </pre>
-     *      Note that in case when variable name is the same as JavaBean property you
-     *      can just copy Java condition expression into description as a string.
-     * @throws IgniteCheckedException Thrown if given condition is {@code false}
-     */
-    protected final void assertParameter(boolean cond, String condDesc) throws IgniteCheckedException {
-        if (!cond)
-            throw new IgniteCheckedException("Grid configuration parameter invalid: " + condDesc);
-    }
-
     /** {@inheritDoc} */
     @Override public void printMemoryStats() {
         // No-op.

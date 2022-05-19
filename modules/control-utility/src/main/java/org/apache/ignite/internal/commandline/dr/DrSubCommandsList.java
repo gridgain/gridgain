@@ -22,9 +22,11 @@ import org.apache.ignite.internal.commandline.dr.subcommands.DrFullStateTransfer
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrPauseCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrResumeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
 import org.jetbrains.annotations.NotNull;
 
 /** */
@@ -44,7 +46,11 @@ public enum DrSubCommandsList {
     /** */
     PAUSE("pause", new DrPauseCommand()),
     /** */
-    RESUME("resume", new DrResumeCommand());
+    RESUME("resume", new DrResumeCommand()),
+    /** */
+    CHECK("check-partition-counters", new DrCheckPartitionCountersCommand()),
+    /** */
+    REPAIR("repair-partition-counters", new DrRepairPartitionCountersCommand());
 
     /** */
     private final String name;

@@ -217,6 +217,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWAR
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
+import static org.apache.ignite.internal.util.IgniteUtils.assertParameter;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**
@@ -1231,8 +1232,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             try {
                 assertParameter(x, y);
             }
-            catch (IgniteCheckedException ex) {
-                return ex;
+            catch (IgniteException ex) {
+                return new IgniteCheckedException(ex);
             }
 
             return null;
@@ -2234,12 +2235,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridCacheContext<?, ?> cacheCtx,
         CacheConfiguration cfg
     ) throws IgniteCheckedException {
-        GridCacheAdapter cache = cacheCtx.cache();
-
-        sharedCtx.addCacheContext(cacheCtx);
-
-        caches.put(cacheCtx.name(), cache);
-
         // Intentionally compare Boolean references using '!=' below to check if the flag has been explicitly set.
         if (cfg.isStoreKeepBinary() && cfg.isStoreKeepBinary() != CacheConfiguration.DFLT_STORE_KEEP_BINARY
             && !(ctx.config().getMarshaller() instanceof BinaryMarshaller))
@@ -2267,6 +2262,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (log.isDebugEnabled())
                 log.debug("Started DHT cache: " + dhtCtx.cache().name());
         }
+
+        sharedCtx.addCacheContext(cacheCtx);
+
+        caches.put(cacheCtx.name(), cacheCtx.cache());
 
         ctx.continuous().onCacheStart(cacheCtx);
 
