@@ -80,7 +80,7 @@ public class GridUnsafeDataInput extends InputStream implements GridDataInput {
 
     /** Buffer for reading from stream. */
     @GridToStringExclude
-    private byte[] inBuf;
+    private byte[] inBuf = new byte[1024];
 
     /** Maximum message size. */
     private int maxOff;
@@ -109,7 +109,7 @@ public class GridUnsafeDataInput extends InputStream implements GridDataInput {
     @Override public void inputStream(InputStream in) throws IOException {
         this.in = in;
 
-        buf = inBuf = new byte[1024];
+        buf = inBuf;
     }
 
     /**
