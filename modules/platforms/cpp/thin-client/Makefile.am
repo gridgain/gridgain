@@ -70,6 +70,7 @@ libignite_thin_client_la_SOURCES = \
     src/impl/transactions/transactions_impl.cpp \
     src/impl/transactions/transactions_proxy.cpp \
     src/ignite_client.cpp \
+    src/cache/query/query_cursor_proxy.cpp \
     src/cache/query/query_fields_cursor.cpp \
     src/cache/query/query_fields_row.cpp \
     src/compute/compute_client.cpp

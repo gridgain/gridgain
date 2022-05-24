@@ -28,6 +28,8 @@ nobase_include_HEADERS = \
     ignite/thin/cache/query/continuous/continuous_query_handle.h \
     ignite/thin/cache/query/query_fields_cursor.h \
     ignite/thin/cache/query/query_fields_row.h \
+    ignite/thin/cache/query/query_scursor.h \
+    ignite/thin/cache/query/query_scan.h \
     ignite/thin/cache/query/query_sql_fields.h \
     ignite/thin/compute/compute_client.h \
     ignite/impl/thin/copyable.h \
@@ -35,6 +37,7 @@ nobase_include_HEADERS = \
     ignite/impl/thin/writable_key.h \
     ignite/impl/thin/readable.h \
     ignite/impl/thin/writable.h \
+    ignite/impl/thin/cache/query/query_cursor_proxy.h \
     ignite/impl/thin/cache/cache_client_proxy.h \
     ignite/impl/thin/cache/continuous/continuous_query_client_holder.h
 
