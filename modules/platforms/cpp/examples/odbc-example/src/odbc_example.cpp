@@ -244,9 +244,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 1;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "John", sizeof(firstName));
-        strncpy(lastName, "Doe", sizeof(lastName));
-        strncpy(resume, "Master Degree.", sizeof(resume));
+        strncpy(firstName, "John", sizeof(firstName) - 1);
+        strncpy(lastName, "Doe", sizeof(lastName) - 1);
+        strncpy(resume, "Master Degree.", sizeof(resume) - 1);
         salary = 2200.0;
 
         ret = SQLExecute(stmt);
@@ -263,9 +263,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 1;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "Jane", sizeof(firstName));
-        strncpy(lastName, "Doe", sizeof(lastName));
-        strncpy(resume, "Bachelor Degree.", sizeof(resume));
+        strncpy(firstName, "Jane", sizeof(firstName) - 1);
+        strncpy(lastName, "Doe", sizeof(lastName) - 1);
+        strncpy(resume, "Bachelor Degree.", sizeof(resume) - 1);
         salary = 1300.0;
 
         ret = SQLExecute(stmt);
@@ -283,9 +283,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 2;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "John", sizeof(firstName));
-        strncpy(lastName, "Smith", sizeof(lastName));
-        strncpy(resume, "Bachelor Degree.", sizeof(resume));
+        strncpy(firstName, "John", sizeof(firstName) - 1);
+        strncpy(lastName, "Smith", sizeof(lastName) - 1);
+        strncpy(resume, "Bachelor Degree.", sizeof(resume) - 1);
         salary = 1700.0;
 
         ret = SQLExecute(stmt);
@@ -302,9 +302,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 2;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "Jane", sizeof(firstName));
-        strncpy(lastName, "Smith", sizeof(lastName));
-        strncpy(resume, "Master Degree.", sizeof(resume));
+        strncpy(firstName, "Jane", sizeof(firstName) - 1);
+        strncpy(lastName, "Smith", sizeof(lastName) - 1);
+        strncpy(resume, "Master Degree.", sizeof(resume) - 1);
         salary = 2500.0;
 
         ret = SQLExecute(stmt);
@@ -321,9 +321,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 2;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "John", sizeof(firstName));
-        strncpy(lastName, "Roe", sizeof(lastName));
-        strncpy(resume, "Bachelor Degree.", sizeof(resume));
+        strncpy(firstName, "John", sizeof(firstName) - 1);
+        strncpy(lastName, "Roe", sizeof(lastName) - 1);
+        strncpy(resume, "Bachelor Degree.", sizeof(resume) - 1);
         salary = 1500.0;
 
         ret = SQLExecute(stmt);
@@ -340,9 +340,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 2;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "Jane", sizeof(firstName));
-        strncpy(lastName, "Roe", sizeof(lastName));
-        strncpy(resume, "Bachelor Degree.", sizeof(resume));
+        strncpy(firstName, "Jane", sizeof(firstName) - 1);
+        strncpy(lastName, "Roe", sizeof(lastName) - 1);
+        strncpy(resume, "Bachelor Degree.", sizeof(resume) - 1);
         salary = 1000.0;
 
         ret = SQLExecute(stmt);
@@ -359,9 +359,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 1;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "Richard", sizeof(firstName));
-        strncpy(lastName, "Miles", sizeof(lastName));
-        strncpy(resume, "Master Degree.", sizeof(resume));
+        strncpy(firstName, "Richard", sizeof(firstName) - 1);
+        strncpy(lastName, "Miles", sizeof(lastName) - 1);
+        strncpy(resume, "Master Degree.", sizeof(resume) - 1);
         salary = 2400.0;
 
         ret = SQLExecute(stmt);
@@ -378,9 +378,9 @@ void PopulatePerson(SQLHDBC dbc)
         keyOrgIdAff = 2;
 
         orgId = keyOrgIdAff;
-        strncpy(firstName, "Mary", sizeof(firstName));
-        strncpy(lastName, "Major", sizeof(lastName));
-        strncpy(resume, "Bachelor Degree.", sizeof(resume));
+        strncpy(firstName, "Mary", sizeof(firstName) - 1);
+        strncpy(lastName, "Major", sizeof(lastName) - 1);
+        strncpy(resume, "Bachelor Degree.", sizeof(resume) - 1);
         salary = 900.0;
 
         ret = SQLExecute(stmt);
