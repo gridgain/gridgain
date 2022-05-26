@@ -64,7 +64,11 @@ public class DeletionDuringRebalanceTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * Gets a configuration object for the cahce with default name {@code DEFAULT_CACHE_NAME}.
+     *
+     * @return Cache configuration object.
+     */
     private CacheConfiguration simpleCacheConfiguration() {
         CacheConfiguration cfg = new CacheConfiguration()
             .setName(DEFAULT_CACHE_NAME)
