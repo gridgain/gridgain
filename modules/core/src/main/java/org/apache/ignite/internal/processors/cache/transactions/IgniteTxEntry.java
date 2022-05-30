@@ -944,6 +944,9 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         }
         else
             expiryPlcBytes = null;
+
+        if (oldVal != null)
+            oldVal.marshal(context());
     }
 
     /**
