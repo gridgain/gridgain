@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,6 +128,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V3;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_OUT_OF_ORDER_UPDATE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD_V2;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.MASTER_KEY_CHANGE_RECORD_V2;
@@ -2076,7 +2077,8 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     DataEntry readEncryptedDataEntry(ByteBufferBackedDataInput in, RecordType recType) throws IOException, IgniteCheckedException {
         boolean needDecryption = in.readByte() == ENCRYPTED;
 
-        RecordType dataRecordType = recType == ENCRYPTED_DATA_RECORD_V3 ? DATA_RECORD_V2 : DATA_RECORD;
+        RecordType dataRecordType =
+            recType == ENCRYPTED_DATA_RECORD_V3 || recType == ENCRYPTED_OUT_OF_ORDER_UPDATE ? DATA_RECORD_V2 : DATA_RECORD;
 
         if (needDecryption) {
             if (encSpi == null) {
@@ -2085,8 +2087,10 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
                 return new EncryptedDataEntry();
             }
 
-            T3<ByteBufferBackedDataInput, Integer, RecordType> clData = readEncryptedData(in, false,
-                recType == ENCRYPTED_DATA_RECORD_V2 || recType == ENCRYPTED_DATA_RECORD_V3);
+            boolean readKeyId = recType == ENCRYPTED_DATA_RECORD_V2 || recType == ENCRYPTED_DATA_RECORD_V3
+                || recType == ENCRYPTED_OUT_OF_ORDER_UPDATE;
+
+            T3<ByteBufferBackedDataInput, Integer, RecordType> clData = readEncryptedData(in, false, readKeyId);
 
             if (clData.get1() == null)
                 return null;
@@ -2186,10 +2190,13 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (needEncryption(rec))
             return ENCRYPTED_RECORD_V2;
 
-        if (rec.type() != DATA_RECORD && rec.type() != DATA_RECORD_V2)
+        if (rec.type() != DATA_RECORD && rec.type() != DATA_RECORD_V2 && rec.type() != OUT_OF_ORDER_UPDATE)
             return rec.type();
 
-        return isDataRecordEncrypted((DataRecord)rec) ? ENCRYPTED_DATA_RECORD_V3 : rec.type();
+        if (isDataRecordEncrypted((DataRecord)rec))
+            return rec.type() == OUT_OF_ORDER_UPDATE? ENCRYPTED_OUT_OF_ORDER_UPDATE : ENCRYPTED_DATA_RECORD_V3;
+
+        return rec.type();
     }
 
     /**
