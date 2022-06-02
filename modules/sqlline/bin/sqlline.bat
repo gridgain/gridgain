@@ -110,6 +110,7 @@ call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_
 
 set CP=%IGNITE_LIBS%
 set CP=%CP%;%IGNITE_HOME%\bin\include\sqlline\*
+set JVM_OPTS=%JVM_OPTS% -DIGNITE_SENSITIVE_DATA_LOGGING=plain -Dsys.ignite.jdbc.keepBinary=true
 
 "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% -cp "%CP%" sqlline.SqlLine -d org.apache.ignite.IgniteJdbcThinDriver %*
 
