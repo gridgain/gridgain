@@ -2575,8 +2575,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private void drReplicate(GridDrType drType, @Nullable CacheObject val, GridCacheVersion ver, AffinityTopologyVersion topVer)
         throws IgniteCheckedException {
-        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal())
+        if (cctx.isDrEnabled() && drType != DR_NONE && !isInternal()) {
+            log.info("DR is enabled, so we send data to sender?.." + drType + " " + key);
             cctx.dr().replicate(key, val, rawTtl(), rawExpireTime(), ver.conflictVersion(), drType, topVer);
+        }
     }
 
     /**
