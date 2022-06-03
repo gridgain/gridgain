@@ -138,6 +138,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
@@ -253,6 +254,7 @@ import org.apache.ignite.internal.util.typedef.T6;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.LT;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -9879,23 +9881,69 @@ public abstract class IgniteUtils {
 
             if (!F.isEmpty(hostName)) {
                 InetSocketAddress inetSockAddr = resolve
-                    ? new InetSocketAddress(hostName, port)
+                    ? createResolved(hostName, port)
                     : InetSocketAddress.createUnresolved(hostName, port);
 
                 if (resolve && inetSockAddr.isUnresolved() ||
                     !inetSockAddr.isUnresolved() && inetSockAddr.getAddress().isLoopbackAddress()
                 )
-                    inetSockAddr = new InetSocketAddress(addr, port);
+                    inetSockAddr = createResolved(addr, port);
 
                 res.add(inetSockAddr);
             }
 
             // Always append address because local and remote nodes may have the same hostname
             // therefore remote hostname will be always resolved to local address.
-            res.add(new InetSocketAddress(addr, port));
+            res.add(createResolved(addr, port));
         }
 
         return res;
+    }
+
+    /**
+     * Creates a resolved inet socket address, writing the diagnostic information into a log if operation took
+     * a significant amount of time.
+     *
+     * @param addr Host address.
+     * @param port Port value.
+     * @return Resolved address.
+     */
+    private static InetSocketAddress createResolved(String addr, int port) {
+        log(
+            null,
+            S.toString(
+                "Resolving address",
+                "addr", addr, false,
+                "port", port, false,
+                "thread", Thread.currentThread().getName(), false
+            )
+        );
+
+        long startNanos = System.nanoTime();
+
+        try {
+            return new InetSocketAddress(addr, port);
+        }
+        finally {
+            long endNanos = System.nanoTime();
+
+            long duration = endNanos - startNanos;
+
+            long threshold = U.millisToNanos(200);
+
+            if (duration > threshold)
+                error(
+                    null,
+                    S.toString(
+                        "Resolving address took too much time",
+                        "duration(ms)", U.nanosToMillis(duration), false,
+                        "addr", addr, false,
+                        "port", port, false,
+                        "thread", Thread.currentThread().getName(), false
+                    ),
+                    new TimeoutException()
+                );
+        }
     }
 
     /**
