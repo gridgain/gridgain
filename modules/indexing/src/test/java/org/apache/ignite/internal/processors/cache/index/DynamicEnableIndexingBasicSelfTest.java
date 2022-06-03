@@ -22,8 +22,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -32,7 +30,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.Repeat;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,16 +41,17 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @RunWith(Parameterized.class)
 public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbstractTest {
-
     /** Test parameters. */
     @Parameters(name = "hasNear={0},nodeIdx={1},cacheMode={2},atomicityMode={3}")
     public static Iterable<Object[]> params() {
-        int[] opNodes = new int[] {IDX_SRV_NON_CRD};
+        int[] opNodes = new int[] {IDX_CLI, IDX_SRV_CRD, IDX_SRV_NON_CRD, IDX_SRV_FILTERED};
 
-        CacheMode[] cacheModes = new CacheMode[] {CacheMode.REPLICATED};
+        CacheMode[] cacheModes = new CacheMode[] {CacheMode.PARTITIONED, CacheMode.REPLICATED};
 
         CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
-            CacheAtomicityMode.ATOMIC
+            CacheAtomicityMode.ATOMIC,
+            CacheAtomicityMode.TRANSACTIONAL,
+            CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT
         };
 
         List<Object[]> res = new ArrayList<>();
@@ -61,8 +59,10 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
         for (int node : opNodes) {
             for (CacheMode cacheMode : cacheModes) {
                 for (CacheAtomicityMode atomicityMode : atomicityModes) {
+                    res.add(new Object[] {true, node, cacheMode, atomicityMode});
 
                     // For TRANSACTIONAL_SNAPSHOT near caches is forbidden.
+                    if (atomicityMode != CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT)
                         res.add(new Object[] {false, node, cacheMode, atomicityMode});
 
                 }
