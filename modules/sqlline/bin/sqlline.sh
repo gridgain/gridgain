@@ -66,7 +66,7 @@ if [ $osname = "OS/390" ] ; then
 fi
 
 #
-# Set IGNITE_LIBS.
+# Set IGNITE _LIBS.
 #
 . "${SCRIPTS_HOME}"/include/setenv.sh
 
