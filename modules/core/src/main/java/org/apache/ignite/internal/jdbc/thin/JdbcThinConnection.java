@@ -132,6 +132,7 @@ import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CON
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
+import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INVALID_ATTRIBUTE_VALUE;
 import static org.apache.ignite.marshaller.MarshallerUtils.processSystemClasses;
 
 /**
@@ -1026,6 +1027,12 @@ public class JdbcThinConnection implements Connection {
                         LOG.log(Level.FINE, "Exception during sending an sql request.", e);
 
                     throw e;
+                }
+                catch (BinaryObjectException e) {
+                    if (LOG.isLoggable(Level.FINE))
+                        LOG.log(Level.FINE, "Exception during sending an sql request.", e);
+
+                    throw new SQLException("Deserialization error", INVALID_ATTRIBUTE_VALUE, e);
                 }
                 catch (Exception e) {
                     if (LOG.isLoggable(Level.FINE))

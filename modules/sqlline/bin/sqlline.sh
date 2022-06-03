@@ -75,7 +75,7 @@ JVM_OPTS=${JVM_OPTS:-}
 #
 # Final JVM_OPTS for Java 9+ compatibility
 #
-JVM_OPTS="${JVM_OPTS:-} -DIGNITE_SENSITIVE_DATA_LOGGING=plain -Dsys.ignite.jdbc.keepBinary=true"
+JVM_OPTS=$(getJavaSpecificOpts $version "$JVM_OPTS")
 
 JDBCLINK="jdbc:ignite:thin://${HOST_AND_PORT:-}${SCHEMA_DELIMITER:-}${SCHEMA:-}${PARAMS:-}"
 

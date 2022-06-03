@@ -41,12 +41,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** Prefix for property names. */
     public static final String PROP_PREFIX = "ignite.jdbc.";
 
-    /** Prefix for system property names. */
-    public static final String SYS_PROP_PREFIX = "sys." ;
-
-    /** Prefix for system property names. */
-    public static final String FULL_SYS_PROP_PREFIX = SYS_PROP_PREFIX + PROP_PREFIX;
-
     /** Default socket buffer size. */
     private static final int DFLT_SOCK_BUFFER_SIZE = 64 * 1024;
 
@@ -730,7 +724,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
      * @throws SQLException On error.
      */
     public void init(String url, Properties props) throws SQLException {
-        Properties props0 = prepareProperties(props);
+        Properties props0 = (Properties)props.clone();
 
         if (!F.isEmpty(url))
             parseUrl(url, props0);
@@ -742,22 +736,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             setUsername(props.getProperty("user"));
             setPassword(props.getProperty("password"));
         }
-    }
-
-    /** */
-    private Properties prepareProperties(Properties props) {
-        Properties props0 = (Properties)props.clone();
-
-        for (String sysProp : System.getProperties().stringPropertyNames()) {
-            if (sysProp.startsWith(FULL_SYS_PROP_PREFIX)) {
-                String propName = sysProp.substring(SYS_PROP_PREFIX.length());
-
-                if (props0.getProperty(propName) == null)
-                    props0.setProperty(propName, System.getProperty(sysProp));
-            }
-        }
-
-        return props0;
     }
 
     /**

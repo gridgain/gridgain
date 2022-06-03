@@ -83,6 +83,10 @@ public final class SqlStateCode {
     /** Query canceled. */
     public static final String QUERY_CANCELLED = "57014";
 
-    /** Query canceled. */
+    /** Memory allocation error. */
     public static final String MEMORY_ALLOCATION_ERROR = "HY001";
+
+    /** Invalid attribute value. */
+    public static final String INVALID_ATTRIBUTE_VALUE = "HV024";
+
 }
