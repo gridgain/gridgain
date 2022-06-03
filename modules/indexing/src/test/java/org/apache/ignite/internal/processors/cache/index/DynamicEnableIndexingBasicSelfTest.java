@@ -29,7 +29,6 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.Repeat;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -124,18 +123,17 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
 
     /** */
     @Test
-    @Repeat(500)
     public void testEnableDynamicIndexing() throws Exception {
-        loadData(node(), 0, 200 / 2);
+        loadData(node(), 0, NUM_ENTRIES / 2);
 
         createTable();
 
         grid(IDX_SRV_CRD).cache(POI_CACHE_NAME).indexReadyFuture().get();
 
-        loadData(node(), 200 / 2, 200);
+        loadData(node(), NUM_ENTRIES / 2, NUM_ENTRIES);
 
         for (Ignite ig : G.allGrids()) {
-            assertEquals(200, query(ig, SELECT_ALL_QUERY).size());
+            assertEquals(NUM_ENTRIES, query(ig, SELECT_ALL_QUERY).size());
 
             performQueryingIntegrityCheck(ig);
 
