@@ -44,10 +44,6 @@ import org.junit.runners.Parameterized.Parameters;
  */
 @RunWith(Parameterized.class)
 public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbstractTest {
-    @BeforeClass
-    public static void setupLazy() {
-        GridTestUtils.setFieldValue(SqlFieldsQuery.class, "DFLT_LAZY", true);
-    }
 
     /** Test parameters. */
     @Parameters(name = "hasNear={0},nodeIdx={1},cacheMode={2},atomicityMode={3}")
