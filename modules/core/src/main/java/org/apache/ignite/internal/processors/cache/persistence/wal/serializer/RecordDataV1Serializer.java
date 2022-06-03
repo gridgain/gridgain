@@ -2194,7 +2194,7 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
             return rec.type();
 
         if (isDataRecordEncrypted((DataRecord)rec))
-            return rec.type() == OUT_OF_ORDER_UPDATE? ENCRYPTED_OUT_OF_ORDER_UPDATE : ENCRYPTED_DATA_RECORD_V3;
+            return rec.type() == OUT_OF_ORDER_UPDATE ? ENCRYPTED_OUT_OF_ORDER_UPDATE : ENCRYPTED_DATA_RECORD_V3;
 
         return rec.type();
     }
