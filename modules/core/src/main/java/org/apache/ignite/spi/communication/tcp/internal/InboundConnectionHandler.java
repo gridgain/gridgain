@@ -492,7 +492,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 ClusterNode node0 = tcpDiscoverySpi.getNode0(sndId);
 
                 if (node0 != null) {
-                    //assert node0.isClient() : node0;
+                    assert node0.isClient() : node0;
 
                     if (node0.version().compareTo(VERSION_SINCE_CLIENT_COULD_WAIT_TO_CONNECT) >= 0)
                         unknownNode = false;
