@@ -1,11 +1,12 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,16 +17,16 @@
 
 package org.apache.ignite.internal.processors.platform.client.datastructures;
 
-import org.apache.ignite.IgniteAtomicLong;
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
+import org.apache.ignite.internal.processors.datastructures.GridCacheAtomicLongImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
+import org.apache.ignite.internal.processors.platform.client.ClientLongResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Atomic long compare and set request.
+ * Atomic long compare and set and get request.
  */
-public class ClientAtomicLongValueCompareAndSetRequest extends ClientAtomicLongRequest {
+public class ClientAtomicLongValueCompareAndSetAndGetRequest extends ClientAtomicLongRequest {
     /** */
     private final long expected;
 
@@ -37,7 +38,7 @@ public class ClientAtomicLongValueCompareAndSetRequest extends ClientAtomicLongR
      *
      * @param reader Reader.
      */
-    public ClientAtomicLongValueCompareAndSetRequest(BinaryRawReader reader) {
+    public ClientAtomicLongValueCompareAndSetAndGetRequest(BinaryRawReader reader) {
         super(reader);
 
         expected = reader.readLong();
@@ -46,11 +47,11 @@ public class ClientAtomicLongValueCompareAndSetRequest extends ClientAtomicLongR
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        IgniteAtomicLong atomicLong = atomicLong(ctx);
+        GridCacheAtomicLongImpl atomicLong = atomicLong(ctx);
 
         if (atomicLong == null)
             return notFoundResponse();
 
-        return new ClientBooleanResponse(requestId(), atomicLong.compareAndSet(expected, val));
+        return new ClientLongResponse(requestId(), atomicLong.compareAndSetAndGet(expected, val));
     }
 }
