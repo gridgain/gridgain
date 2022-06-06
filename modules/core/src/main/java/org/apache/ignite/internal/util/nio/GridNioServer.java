@@ -2847,6 +2847,13 @@ public class GridNioServer<T> {
 
                 IOException err = new IOException("Failed to send message (connection was closed): " + ses);
 
+                try {
+                    filterChain.onSessionClosed(ses);
+                }
+                catch (IgniteCheckedException e1) {
+                    filterChain.onExceptionCaught(ses, e1);
+                }
+
                 if (outRecovery != null || inRecovery != null) {
                     try {
                         // Poll will update recovery data.
@@ -2869,13 +2876,6 @@ public class GridNioServer<T> {
 
                     while ((req = ses.pollFuture()) != null)
                         req.onError(err);
-                }
-
-                try {
-                    filterChain.onSessionClosed(ses);
-                }
-                catch (IgniteCheckedException e1) {
-                    filterChain.onExceptionCaught(ses, e1);
                 }
 
                 return true;
