@@ -1596,11 +1596,11 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         checkAffinity(4, topVer(4, 0), false);
 
-        checkNoExchange(4, topVer(4, 1));
+        // CacheAffinityChanged message cannot be skipped, so the ideal assignment will be available on the [4, 2] ver.
 
         commSpi0.stopBlock();
 
-        checkAffinity(4, topVer(4, 1), true);
+        checkAffinity(4, topVer(4, 2), true);
 
         awaitPartitionMapExchange(true, true, null, false);
 
