@@ -18,12 +18,10 @@ package org.apache.ignite.spi.communication.tcp;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -373,16 +371,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * closed connection won't automatically reopen when we don't expect it.
      */
     private void interruptCommWorkerThreads(String clientName) {
-        List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
-            .filter(t -> t.getName().contains("tcp-comm-worker"))
-            .filter(t -> t.getName().contains(clientName))
-            .collect(Collectors.toList());
-
-        for (Thread tcpCommWorkerThread : tcpCommWorkerThreads) {
-            U.interrupt(tcpCommWorkerThread);
-
-            U.join(tcpCommWorkerThread, log);
-        }
+        CommWorkerThreads.interruptCommWorkerThreads(clientName, log);
     }
 
     /**
