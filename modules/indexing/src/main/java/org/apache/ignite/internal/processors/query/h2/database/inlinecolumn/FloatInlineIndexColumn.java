@@ -28,7 +28,7 @@ public class FloatInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-     FloatInlineIndexColumn(Column col) {
+     public FloatInlineIndexColumn(Column col) {
         super(col, Value.FLOAT, (short)4);
     }
 

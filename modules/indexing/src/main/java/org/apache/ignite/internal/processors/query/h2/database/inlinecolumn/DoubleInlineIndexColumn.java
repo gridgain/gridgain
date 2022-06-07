@@ -28,7 +28,7 @@ public class DoubleInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-    DoubleInlineIndexColumn(Column col) {
+    public DoubleInlineIndexColumn(Column col) {
         super(col, Value.DOUBLE, (short)8);
     }
 
