@@ -366,8 +366,13 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
                 yield break;
             }
 
-            var file = Shell.ExecuteSafe("readlink", "-f /usr/bin/java", log: log);
+            var file = Shell.ExecuteSafe("/usr/bin/readlink", "-f /usr/bin/java", log: log);
             // /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
+
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                file = Shell.ExecuteSafe("readlink", "-f /usr/bin/java", log: log);
+            }
 
             if (string.IsNullOrWhiteSpace(file))
             {
