@@ -216,11 +216,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             return false;
         }
 
-        // Skip message if affinity was already recalculated.
-        // Perhaps, this change can be accepted as a good enough solution.
-        // boolean exchangeNeeded = true;
-        boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
-
         // Do not skip this message, otherwise the "exchangeNeeded" flag can be incorrectly calculated on client nodes
         // and, therefore, trigger partition map exchnage independently on these nodes only (see GG-35222 for the details).
         msg.exchangeNeeded(true);
