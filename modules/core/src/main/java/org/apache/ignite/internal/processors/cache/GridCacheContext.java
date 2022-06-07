@@ -2354,6 +2354,7 @@ public class GridCacheContext<K, V> implements Externalizable {
             int qryParallelism
     ) {
         CacheConfiguration oldCfg = cacheCfg;
+        log.info("+++ " + name() + " " + entities);
 
         if (oldCfg != null)
             cacheCfg = GridCacheUtils.patchCacheConfiguration(oldCfg, entities, sqlSchema, isSqlEscape, qryParallelism);

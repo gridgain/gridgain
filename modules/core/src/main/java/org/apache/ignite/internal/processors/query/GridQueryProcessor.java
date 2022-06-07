@@ -1899,9 +1899,24 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             if (cctx != null)
                 cacheInfo = new GridCacheContextInfo<>(cctx, false);
-            else
-                return;
+            else {
+                DynamicCacheDescriptor desc = ctx.cache().cacheDescriptors().get(cacheName);
+                if (desc == null)
+                    return;
 
+                List<QueryEntity> ents = new ArrayList<>(desc.cacheConfiguration().getQueryEntities());
+                ents.addAll(((SchemaAddQueryEntityOperation)op).entities());
+                desc.cacheConfiguration().setQueryEntities(ents);
+
+                try {
+                    cctx.kernalContext().query().initQueryStructuresForNotStartedCache(desc);
+                }
+                catch (IgniteCheckedException e) {
+                    e.printStackTrace();
+                }
+
+                return;
+            }
         }
         else
             cacheInfo = idx.registeredCacheInfo(cacheName);

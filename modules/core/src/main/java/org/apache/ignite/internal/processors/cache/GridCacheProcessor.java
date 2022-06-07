@@ -149,6 +149,7 @@ import org.apache.ignite.internal.processors.query.schema.SchemaExchangeWorkerTa
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaAbstractDiscoveryMessage;
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
+import org.apache.ignite.internal.processors.query.schema.operation.SchemaAddQueryEntityOperation;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -372,8 +373,12 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (msg instanceof SchemaAbstractDiscoveryMessage) {
             SchemaAbstractDiscoveryMessage msg0 = (SchemaAbstractDiscoveryMessage)msg;
 
-            if (msg0.exchange())
+            if (msg0.exchange()) {
+                if (msg0.operation() instanceof SchemaAddQueryEntityOperation) {
+                    log.info("+++ " + msg0.operation());
+                }
                 return new SchemaExchangeWorkerTask(msg0);
+            }
         }
         else if (msg instanceof ClientCacheChangeDummyDiscoveryMessage) {
             ClientCacheChangeDummyDiscoveryMessage msg0 = (ClientCacheChangeDummyDiscoveryMessage)msg;
