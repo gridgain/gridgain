@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.concurrent.Callable;
+
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryInvalidTypeException;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -31,15 +32,12 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Ignore;
-import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -1108,10 +1106,10 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
     @org.junit.Test
     public void testExceptionOnDeserializeResponse() throws SQLException {
         try (Connection c = connect(grid(0), null)) {
-            execute(c, "CREATE TABLE TEST(id int primary key, name varchar, BINFIELD OTHER) WITH " +
-                "\"cache_name=TEST,VALUE_TYPE=TEST_TYPE\"");
+            execute(c, "CREATE TABLE TEST_DESERIALIZE(id int primary key, name varchar, BINFIELD OTHER) WITH " +
+                "\"cache_name=TEST_DESERIALIZE,VALUE_TYPE=TEST_TYPE\"");
 
-            IgniteCache<Object, Object> cc = grid(0).cache("TEST");
+            IgniteCache<Object, Object> cc = grid(0).cache("TEST_DESERIALIZE");
 
             BinaryObjectBuilder bobFld = grid(0).binary().builder("TestType");
             bobFld.setField("fld0", 0);
@@ -1125,7 +1123,7 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
             try (Statement stmt = c.createStatement()) {
                 SQLException ex = GridTestUtils.assertThrows(
                     log,
-                    () -> stmt.executeQuery("SELECT * FROM TEST"),
+                    () -> stmt.executeQuery("SELECT * FROM TEST_DESERIALIZE"),
                     SQLException.class,
                     "Deserialization error"
                 );
@@ -1133,7 +1131,7 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
                 assertEquals(SqlStateCode.INVALID_ATTRIBUTE_VALUE, ex.getSQLState());
                 assertTrue(X.hasCause(ex, "TestType", BinaryInvalidTypeException.class));
 
-                ResultSet rs = stmt.executeQuery("SELECT id FROM TEST");
+                ResultSet rs = stmt.executeQuery("SELECT id FROM TEST_DESERIALIZE");
 
                 rs.next();
                 assertEquals(0, rs.getInt(1));
