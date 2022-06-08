@@ -107,10 +107,10 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
 
         createTable();
 
-        check(srv);
+//        U.sleep(2000L);
 
         System.out.println("+++ CHECK CLI");
-        cli.cache(CACHE_NAME);
+//        cli.cache(CACHE_NAME);
 
         GridTestUtils.waitForCondition(() -> {
                     try {

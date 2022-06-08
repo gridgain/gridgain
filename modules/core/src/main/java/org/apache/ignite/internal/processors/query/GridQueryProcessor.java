@@ -34,6 +34,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -1900,22 +1901,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             if (cctx != null)
                 cacheInfo = new GridCacheContextInfo<>(cctx, false);
             else {
-                DynamicCacheDescriptor desc = ctx.cache().cacheDescriptors().get(cacheName);
-                if (desc == null)
-                    return;
-
-                List<QueryEntity> ents = new ArrayList<>(desc.cacheConfiguration().getQueryEntities());
-                ents.addAll(((SchemaAddQueryEntityOperation)op).entities());
-                desc.cacheConfiguration().setQueryEntities(ents);
-
-                try {
-                    cctx.kernalContext().query().initQueryStructuresForNotStartedCache(desc);
-                }
-                catch (IgniteCheckedException e) {
-                    e.printStackTrace();
-                }
-
-                return;
+                cacheInfo = new GridCacheContextInfo<>(ctx.cache().cacheDescriptors().get(cacheName));
+//                return;
             }
         }
         else
