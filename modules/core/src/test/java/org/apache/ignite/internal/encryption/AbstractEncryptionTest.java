@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
     static final String GRID_1 = "grid-1";
 
     /** */
-    public static final String KEYSTORE_PASSWORD = "love_sex_god";
+    public static final String KEYSTORE_PASSWORD = "tde-password";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {

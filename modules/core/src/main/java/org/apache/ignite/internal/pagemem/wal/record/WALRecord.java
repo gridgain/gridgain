@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -229,11 +229,14 @@ public abstract class WALRecord {
         /** Record that indicates that "corrupted" flag should be removed from tracking page. */
         TRACKING_PAGE_REPAIR_DELTA(61, PHYSICAL),
 
-        /** Atomic out-of-order update. */
+        /** Out-of-order update which is used by atomic caches on backup nodes. */
         OUT_OF_ORDER_UPDATE(62, LOGICAL),
 
         /** Record for renaming the index root pages. */
-        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL);
+        INDEX_ROOT_PAGE_RENAME_RECORD(72, LOGICAL),
+
+        /** Ecnrypted out-of-order update which is used by atomic caches on backup nodes. */
+        ENCRYPTED_OUT_OF_ORDER_UPDATE(74, LOGICAL);
 
         /** Index for serialization. Should be consistent throughout all versions. */
         private final int idx;

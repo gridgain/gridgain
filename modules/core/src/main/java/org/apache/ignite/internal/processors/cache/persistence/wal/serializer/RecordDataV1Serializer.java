@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,9 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_OUT_OF_ORDER_UPDATE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.OUT_OF_ORDER_UPDATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.REC_TYPE_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.putRecordType;
@@ -2001,10 +2003,13 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
         if (needEncryption(rec))
             return ENCRYPTED_RECORD;
 
-        if (rec.type() != DATA_RECORD)
+        if (rec.type() != DATA_RECORD && rec.type() != OUT_OF_ORDER_UPDATE)
             return rec.type();
 
-        return isDataRecordEncrypted((DataRecord)rec) ? ENCRYPTED_DATA_RECORD : DATA_RECORD;
+        if (isDataRecordEncrypted((DataRecord)rec))
+            return rec.type() == OUT_OF_ORDER_UPDATE ? ENCRYPTED_OUT_OF_ORDER_UPDATE : ENCRYPTED_DATA_RECORD;
+
+        return rec.type();
     }
 
     /**

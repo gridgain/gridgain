@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ConsistentCutRecord;
+import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.ExchangeRecord;
 import org.apache.ignite.internal.pagemem.wal.record.IndexRenameRootPageRecord;
@@ -79,6 +80,8 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.RotatedIdPartRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.SplitExistingPageRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.TrackingPageDeltaRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.TrackingPageRepairDeltaRecord;
+import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersionImpl;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
@@ -87,6 +90,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.transactions.TransactionState;
 
+import static org.apache.ignite.internal.binary.GridBinaryMarshaller.NULL;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_EXISTING_PAGE_SPLIT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_FIX_COUNT;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.BTREE_FIX_LEFTMOST_CHILD;
@@ -113,6 +117,7 @@ import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_PAGE_UPDATE_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD;
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_OUT_OF_ORDER_UPDATE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_RECORD;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.EXCHANGE;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.HEADER_RECORD;
@@ -158,6 +163,8 @@ import static org.apache.ignite.internal.processors.cache.tree.DataInnerIO.VERSI
  * required.
  */
 public class RecordUtils {
+    public static final String TEST_CACHE_NAME = "test-cache";
+
     /** **/
     private static final Map<WALRecord.RecordType, Supplier<WALRecord>> TEST_WAL_RECORD_SUPPLIER =
         new EnumMap<WALRecord.RecordType, Supplier<WALRecord>>(WALRecord.RecordType.class) {{
@@ -165,7 +172,7 @@ public class RecordUtils {
             put(PAGE_RECORD, RecordUtils::buildPageSnapshot);
             put(DATA_RECORD, RecordUtils::buildDataRecord);
             put(CHECKPOINT_RECORD, RecordUtils::buildCheckpointRecord);
-            put(HEADER_RECORD, RecordUtils::buildHeaderRecord);
+            put(HEADER_RECORD, buildUpsupportedWalRecord(HEADER_RECORD));
             put(INIT_NEW_PAGE_RECORD, RecordUtils::buildInitNewPageRecord);
             put(DATA_PAGE_INSERT_RECORD, RecordUtils::buildDataPageInsertRecord);
             put(DATA_PAGE_INSERT_FRAGMENT_RECORD, RecordUtils::buildDataPageInsertFragmentRecord);
@@ -181,11 +188,11 @@ public class RecordUtils {
             put(BTREE_FIX_COUNT, RecordUtils::buildFixCountRecord);
             put(BTREE_PAGE_REPLACE, RecordUtils::buildReplaceRecord);
             put(BTREE_PAGE_REMOVE, RecordUtils::buildRemoveRecord);
-            put(BTREE_PAGE_INNER_REPLACE, RecordUtils::buildBtreeInnerReplace);
+            put(BTREE_PAGE_INNER_REPLACE, buildUpsupportedWalRecord(BTREE_PAGE_INNER_REPLACE));
             put(BTREE_FIX_REMOVE_ID, RecordUtils::buildFixRemoveId);
-            put(BTREE_FORWARD_PAGE_SPLIT, RecordUtils::buildBtreeForwardPageSplit);
+            put(BTREE_FORWARD_PAGE_SPLIT, buildUpsupportedWalRecord(BTREE_FORWARD_PAGE_SPLIT));
             put(BTREE_EXISTING_PAGE_SPLIT, RecordUtils::buildSplitExistingPageRecord);
-            put(BTREE_PAGE_MERGE, RecordUtils::buildBtreeMergeRecord);
+            put(BTREE_PAGE_MERGE, buildUpsupportedWalRecord(BTREE_PAGE_MERGE));
             put(PAGES_LIST_SET_NEXT, RecordUtils::buildPagesListSetNextRecord);
             put(PAGES_LIST_SET_PREVIOUS, RecordUtils::buildPagesListSetPreviousRecord);
             put(PAGES_LIST_INIT_NEW_PAGE, RecordUtils::buildPagesListInitNewPageRecord);
@@ -209,7 +216,7 @@ public class RecordUtils {
             put(SNAPSHOT, RecordUtils::buildSnapshotRecord);
             put(METASTORE_DATA_RECORD, RecordUtils::buildMetastoreDataRecord);
             put(EXCHANGE, RecordUtils::buildExchangeRecord);
-            put(RESERVED, RecordUtils::buildReservedRecord);
+            put(RESERVED, buildUpsupportedWalRecord(RESERVED));
             put(ROLLBACK_TX_RECORD, RecordUtils::buildRollbackRecord);
             put(PARTITION_META_PAGE_UPDATE_COUNTERS_V2, RecordUtils::buildMetaPageUpdatePartitionDataRecordV2);
             put(BTREE_META_PAGE_INIT_ROOT_V3, RecordUtils::buildMetaPageInitRootInlineFlagsCreatedVersionRecord);
@@ -217,12 +224,13 @@ public class RecordUtils {
             put(MVCC_DATA_PAGE_MARK_UPDATED_RECORD, RecordUtils::buildDataPageMvccMarkUpdatedRecord);
             put(MVCC_DATA_PAGE_TX_STATE_HINT_UPDATED_RECORD, RecordUtils::buildDataPageMvccUpdateTxStateHintRecord);
             put(MVCC_DATA_PAGE_NEW_TX_STATE_HINT_UPDATED_RECORD, RecordUtils::buildDataPageMvccUpdateNewTxStateHintRecord);
-            put(ENCRYPTED_RECORD, RecordUtils::buildEncryptedRecord);
-            put(ENCRYPTED_DATA_RECORD, RecordUtils::buildEncryptedDataRecord);
+            put(ENCRYPTED_RECORD, buildUpsupportedWalRecord(ENCRYPTED_RECORD));
+            put(ENCRYPTED_DATA_RECORD, buildUpsupportedWalRecord(ENCRYPTED_DATA_RECORD));
             put(MVCC_DATA_RECORD, RecordUtils::buildMvccDataRecord);
             put(MVCC_TX_RECORD, RecordUtils::buildMvccTxRecord);
             put(CONSISTENT_CUT, RecordUtils::buildConsistentCutRecord);
             put(OUT_OF_ORDER_UPDATE, RecordUtils::buildOutOfOrderRecord);
+            put(ENCRYPTED_OUT_OF_ORDER_UPDATE, buildUpsupportedWalRecord(ENCRYPTED_OUT_OF_ORDER_UPDATE));
             put(INDEX_ROOT_PAGE_RENAME_RECORD, RecordUtils::buildIndexRenameRootPageRecord);
         }};
 
@@ -261,11 +269,6 @@ public class RecordUtils {
         CheckpointRecord record = new CheckpointRecord(new FileWALPointer(1, 1, 1));
         record.cacheGroupStates(new HashMap<>());
         return record;
-    }
-
-    /** **/
-    public static UnsupportedWalRecord buildHeaderRecord() {
-        return new UnsupportedWalRecord(HEADER_RECORD);
     }
 
     /** **/
@@ -358,28 +361,13 @@ public class RecordUtils {
     }
 
     /** **/
-    public static UnsupportedWalRecord buildBtreeInnerReplace() {
-        return new UnsupportedWalRecord(BTREE_PAGE_INNER_REPLACE);
-    }
-
-    /** **/
     public static FixRemoveId buildFixRemoveId() {
         return new FixRemoveId(1, 1, 1);
     }
 
     /** **/
-    public static UnsupportedWalRecord buildBtreeForwardPageSplit() {
-        return new UnsupportedWalRecord(BTREE_FORWARD_PAGE_SPLIT);
-    }
-
-    /** **/
     public static SplitExistingPageRecord buildSplitExistingPageRecord() {
         return new SplitExistingPageRecord(1, 1, 1, 1);
-    }
-
-    /** **/
-    public static UnsupportedWalRecord buildBtreeMergeRecord() {
-        return new UnsupportedWalRecord(BTREE_PAGE_MERGE);
     }
 
     /** **/
@@ -502,11 +490,6 @@ public class RecordUtils {
     }
 
     /** **/
-    public static UnsupportedWalRecord buildReservedRecord() {
-        return new UnsupportedWalRecord(RESERVED);
-    }
-
-    /** **/
     public static RollbackRecord buildRollbackRecord() {
         return new RollbackRecord(1, 1, 1, 1);
     }
@@ -542,16 +525,6 @@ public class RecordUtils {
     }
 
     /** **/
-    public static UnsupportedWalRecord buildEncryptedRecord() {
-        return new UnsupportedWalRecord(ENCRYPTED_RECORD);
-    }
-
-    /** **/
-    public static UnsupportedWalRecord buildEncryptedDataRecord() {
-        return new UnsupportedWalRecord(ENCRYPTED_DATA_RECORD);
-    }
-
-    /** **/
     public static MvccDataRecord buildMvccDataRecord() {
         return new MvccDataRecord(Collections.emptyList(), 1);
     }
@@ -574,7 +547,20 @@ public class RecordUtils {
 
     /** **/
     public static OutOfOrderDataRecord buildOutOfOrderRecord() {
-        return new OutOfOrderDataRecord(Collections.emptyList());
+        KeyCacheObjectImpl key = new KeyCacheObjectImpl(0L, new byte[] { NULL }, 0);
+
+        DataEntry entry = new DataEntry(
+            CU.cacheId("test-cache"),
+            key,
+            null,
+            GridCacheOperation.DELETE,
+            null,
+            new GridCacheVersion(1, 1, 1, 0),
+            -1L,
+            0,
+            123);
+
+        return new OutOfOrderDataRecord(entry);
     }
 
     /**
@@ -599,5 +585,15 @@ public class RecordUtils {
             "newTreeName",
             666
         );
+    }
+
+    /**
+     * Creates a new supplier that always return UnsupportedWalRecord for the given {@code type}.
+     *
+     * @param type WAL record type.
+     * @return Supplier that always return UnsupportedWalRecord.
+     */
+    private static Supplier<WALRecord> buildUpsupportedWalRecord(WALRecord.RecordType type) {
+        return () -> new UnsupportedWalRecord(type);
     }
 }

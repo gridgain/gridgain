@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -246,6 +246,17 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
                 for (int i = 0; i < entryCnt; i++)
                     entries.add(readPlainDataEntry(in));
+
+                return new OutOfOrderDataRecord(entries, timeStamp);
+
+            case ENCRYPTED_OUT_OF_ORDER_UPDATE:
+                entryCnt = in.readInt();
+                timeStamp = in.readLong();
+
+                entries = new ArrayList<>(entryCnt);
+
+                for (int i = 0; i < entryCnt; i++)
+                    entries.add(readEncryptedDataEntry(in));
 
                 return new OutOfOrderDataRecord(entries, timeStamp);
 
