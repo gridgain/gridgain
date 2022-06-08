@@ -36,7 +36,7 @@ public class RandomForestTest {
     private final int cntOfTrees = 10;
 
     /** Min imp delta. */
-    private final double minImpDelta = 1.0;
+    private final double minImpDelta = 0.1;
 
     /** Max depth. */
     private final int maxDepth = 1;
@@ -65,13 +65,13 @@ public class RandomForestTest {
     @Test
     public void testNeedSplit() {
         TreeNode node = new TreeNode(1, 1);
-        node.setImpurity(1000);
-        assertTrue(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity() - minImpDelta * 1.01))));
-        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity() - minImpDelta * 0.5))));
-        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity()))));
+        node.setImpurity(1.0);
+        assertTrue(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), minImpDelta * 1.01))));
+        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), minImpDelta * 0.5))));
+        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), 0))));
 
         TreeNode child = node.toConditional(0, 0).get(0);
-        child.setImpurity(1000);
-        assertFalse(rf.needSplit(child, Optional.of(new NodeSplit(0, 0, child.getImpurity() - minImpDelta * 1.01))));
+        child.setImpurity(1.0);
+        assertFalse(rf.needSplit(child, Optional.of(new NodeSplit(0, 0, child.getImpurity(), minImpDelta * 1.01))));
     }
 }

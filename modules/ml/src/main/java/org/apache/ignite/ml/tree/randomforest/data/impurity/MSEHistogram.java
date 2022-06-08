@@ -100,6 +100,7 @@ public class MSEHistogram extends ImpurityHistogram implements ImpurityComputer<
         double bestImpurity = Double.POSITIVE_INFINITY;
         double bestSplitVal = Double.NEGATIVE_INFINITY;
         int bestBucketId = -1;
+        double bestGain = 0;
 
         //counter corresponds to number of samples
         //ys corresponds to sumOfLabels
@@ -134,14 +135,19 @@ public class MSEHistogram extends ImpurityHistogram implements ImpurityComputer<
             if (rightCnt > 0)
                 impurity += impurity(rightCnt, rightY, rightY2);
 
+            double parentImpurity = impurity(leftCnt + rightCnt, leftY + rightY, leftY2 + rightY2);
+
+            double gain = parentImpurity - impurity;
+
             if (impurity < bestImpurity) {
                 bestImpurity = impurity;
                 bestSplitVal = bucketMeta.bucketIdToValue(bucketId);
                 bestBucketId = bucketId;
+                bestGain = gain;
             }
         }
 
-        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestImpurity);
+        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestImpurity, bestGain);
     }
 
     /**

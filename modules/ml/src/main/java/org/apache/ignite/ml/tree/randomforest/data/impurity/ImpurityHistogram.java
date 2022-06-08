@@ -52,13 +52,14 @@ public abstract class ImpurityHistogram implements Serializable {
      * @param bestBucketId Best bucket id.
      * @param bestSplitVal Best split value.
      * @param bestImpurity Best impurity.
+     * @param bestGain Best gain.
      * @return Best split value.
      */
-    protected Optional<NodeSplit> checkAndReturnSplitValue(int bestBucketId, double bestSplitVal, double bestImpurity) {
+    protected Optional<NodeSplit> checkAndReturnSplitValue(int bestBucketId, double bestSplitVal, double bestImpurity, double bestGain) {
         if (isLastBucket(bestBucketId))
             return Optional.empty();
         else
-            return Optional.of(new NodeSplit(featureId, bestSplitVal, bestImpurity));
+            return Optional.of(new NodeSplit(featureId, bestSplitVal, bestImpurity, bestGain));
     }
 
     /**

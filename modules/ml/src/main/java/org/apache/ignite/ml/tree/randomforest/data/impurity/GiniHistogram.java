@@ -96,6 +96,7 @@ public class GiniHistogram extends ImpurityHistogram implements ImpurityComputer
         double bestImpurity = Double.POSITIVE_INFINITY;
         double bestSplitVal = Double.NEGATIVE_INFINITY;
         int bestBucketId = -1;
+        double bestGain = 0;
 
         List<TreeMap<Integer, Double>> countersDistribPerCls = hists.stream()
             .map(ObjectHistogram::computeDistributionFunction)
@@ -115,6 +116,7 @@ public class GiniHistogram extends ImpurityHistogram implements ImpurityComputer
 
             double leftImpurity = 0;
             double rightImpurity = 0;
+            double parentImpurity = 0;
 
             //Compute number of samples left and right in according to split by bucketId
             for (int lbId = 0; lbId < lblMapping.size(); lbId++) {
@@ -132,24 +134,38 @@ public class GiniHistogram extends ImpurityHistogram implements ImpurityComputer
                 //count of samples with label [corresponding lblId] to the left of bucket
                 Double toLeftCnt = countersDistribPerCls.get(lbId).getOrDefault(bucketId, lastLeftValues.get(lbId));
 
-                if (toLeftCnt > 0)
-                    leftImpurity += Math.pow(toLeftCnt, 2) / totalToleftCnt;
+                if (toLeftCnt > 0) {
+                    double lblLeftProbability = toLeftCnt / totalToleftCnt;
+                    leftImpurity += (lblLeftProbability * (1 - lblLeftProbability));
+                }
 
                 //number of samples to the right of bucket = total samples count - toLeftCnt
                 double toRightCnt = totalSampleCntPerLb[lbId] - toLeftCnt;
-                if (toRightCnt > 0)
-                    rightImpurity += (Math.pow(toRightCnt, 2)) / totalToRightCnt;
+                if (toRightCnt > 0) {
+                    double lblRightProbability = toRightCnt / totalToRightCnt;
+                    rightImpurity += (lblRightProbability * (1 - lblRightProbability));
+                }
+
+                double lblParentProbability = totalSampleCntPerLb[lbId] / (totalToleftCnt + totalToRightCnt);
+                parentImpurity += (lblParentProbability * (1 - lblParentProbability));
             }
 
-            double impurityInBucket = -(leftImpurity + rightImpurity);
-            if (impurityInBucket <= bestImpurity) {
-                bestImpurity = impurityInBucket;
+            double leftWeight = totalToleftCnt / (totalToleftCnt + totalToRightCnt);
+            double rightWeight = totalToRightCnt / (totalToleftCnt + totalToRightCnt);
+
+            double weightedSplitImpurity = leftImpurity * leftWeight + rightImpurity * rightWeight;
+
+            double gain = parentImpurity - weightedSplitImpurity;
+
+            if (weightedSplitImpurity <= bestImpurity) {
+                bestImpurity = weightedSplitImpurity;
                 bestSplitVal = bucketMeta.bucketIdToValue(bucketId);
                 bestBucketId = bucketId;
+                bestGain = gain;
             }
         }
 
-        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestImpurity);
+        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestImpurity, bestGain);
     }
 
     /** {@inheritDoc} */
