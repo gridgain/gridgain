@@ -3406,7 +3406,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            UpdateLogRow old = logTree.remove(row);
+            logTree.remove(row);
         }
 
         /**
@@ -3418,7 +3418,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            boolean res = logTree.putx(row);
+            logTree.putx(row);
         }
 
         /** {@inheritDoc} */
