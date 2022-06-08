@@ -64,7 +64,7 @@ public class IgniteVersionUtils {
     static {
         VER_STR = IgniteProperties.get("ignite.version")
             .replace(".a", "-a") // Backward compatibility fix.
-            .replace(".b", "-b")
+            //.replace(".b", "-b")
             .replace(".final", "-final");
 
         BUILD_TSTAMP_FROM_PROPERTY = IgniteProperties.get("ignite.build");
