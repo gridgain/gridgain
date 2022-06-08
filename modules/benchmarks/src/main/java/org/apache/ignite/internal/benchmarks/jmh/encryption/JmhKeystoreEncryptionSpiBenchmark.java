@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ public class JmhKeystoreEncryptionSpiBenchmark extends JmhAbstractBenchmark {
             encSpi = new KeystoreEncryptionSpi();
 
             encSpi.setKeyStorePath(resolveIgnitePath("modules/core/src/test/resources/tde.jks").getAbsolutePath());
-            encSpi.setKeyStorePassword("love_sex_god".toCharArray());
+            encSpi.setKeyStorePassword("tde-password".toCharArray());
 
             encSpi.onBeforeStart();
             encSpi.spiStart("test-instance");
