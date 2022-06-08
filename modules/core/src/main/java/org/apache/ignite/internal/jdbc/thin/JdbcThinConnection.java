@@ -1029,10 +1029,16 @@ public class JdbcThinConnection implements Connection {
                     throw e;
                 }
                 catch (BinaryObjectException e) {
-                    if (LOG.isLoggable(Level.FINE))
-                        LOG.log(Level.FINE, "Exception during sending an sql request.", e);
+                    String err = "Serialization error during sending an sql request. " +
+                        "The error can be caused by the fact that the classes used on the node are missing " +
+                        "on the client. Try to use JDBC connection option 'keepBinary=true' " +
+                        "to to avoid deserialization. Also you can use system property " +
+                        "IGNITE_SENSITIVE_DATA_LOGGING=\"plain\" to readable print content of a BinaryObject";
 
-                    throw new SQLException("Deserialization error", INVALID_ATTRIBUTE_VALUE, e);
+                    if (LOG.isLoggable(Level.FINE))
+                        LOG.log(Level.FINE, err, e);
+
+                    throw new SQLException(err, INVALID_ATTRIBUTE_VALUE, e);
                 }
                 catch (Exception e) {
                     if (LOG.isLoggable(Level.FINE))
