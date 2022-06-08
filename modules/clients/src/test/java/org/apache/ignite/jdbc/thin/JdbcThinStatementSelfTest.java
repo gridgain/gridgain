@@ -1125,7 +1125,7 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
                     log,
                     () -> stmt.executeQuery("SELECT * FROM TEST_DESERIALIZE"),
                     SQLException.class,
-                    "INVALID_TARGET_TYPE_SPECIFICATION"
+                    "Serialization error during sending an sql request"
                 );
 
                 assertEquals(SqlStateCode.DATA_EXCEPTION, ex.getSQLState());
