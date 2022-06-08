@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -31,7 +32,9 @@ import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.wal.record.RecordUtils;
@@ -40,6 +43,7 @@ import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
+import static org.apache.ignite.testframework.wal.record.RecordUtils.TEST_CACHE_NAME;
 
 /**
  * Tests of serialization and deserialization of all WAL record types {@link org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType}.
@@ -53,6 +57,16 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
     /** **/
     private boolean compactionEnabled;
 
+    /** */
+    private boolean encryptionEnabled;
+
+    /** */
+    private static final String KEYSTORE_PATH =
+        IgniteUtils.resolveIgnitePath("modules/core/src/test/resources/tde.jks").getAbsolutePath();
+
+    /** */
+    private static final String KEYSTORE_PASSWORD = "tde-password";
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(name);
@@ -65,6 +79,19 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
             .setWalCompactionEnabled(compactionEnabled));
 
         cfg.setConsistentId(name);
+
+        CacheConfiguration<?, ?> cacheCfg = new CacheConfiguration<>(TEST_CACHE_NAME);
+        cacheCfg.setEncryptionEnabled(encryptionEnabled);
+        cfg.setCacheConfiguration(cacheCfg);
+
+        if (encryptionEnabled) {
+            KeystoreEncryptionSpi encSpi = new KeystoreEncryptionSpi();
+
+            encSpi.setKeyStorePath(KEYSTORE_PATH);
+            encSpi.setKeyStorePassword(KEYSTORE_PASSWORD.toCharArray());
+
+            cfg.setEncryptionSpi(encSpi);
+        }
 
         return cfg;
     }
@@ -87,8 +114,28 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
      * @throws Exception If fail.
      */
     @Test
+    public void testAllWalRecordsSerializedAndDeserializedSuccessfullyWithEncryption() throws Exception {
+        serializeAndDeserializeAllWalRecords(true);
+    }
+
+    /**
+     * @throws Exception If fail.
+     */
+    @Test
     public void testAllWalRecordsSerializedAndDeserializedSuccessfully() throws Exception {
+        serializeAndDeserializeAllWalRecords(false);
+    }
+
+    /**
+     * Tries to serialize and deserialize all available wal records.
+     *
+     * @param useEncryption enables chacking od encrypted cache.
+     *
+     * @throws Exception If fail.
+     */
+    public void serializeAndDeserializeAllWalRecords(boolean useEncryption) throws Exception {
         compactionEnabled = false;
+        encryptionEnabled = useEncryption;
 
         IgniteEx ignite = startGrid(0);
 
@@ -107,7 +154,8 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
 
                 if (RecordUtils.isIncludeIntoLog(record)) {
                     serializedRecords.add(new ReflectionEquals(record, "prev", "pos",
-                        "updateCounter" //updateCounter for PartitionMetaStateRecord isn't serialized.
+                        "updateCounter", //updateCounter for PartitionMetaStateRecord isn't serialized.
+                        "writeEntries" // Data entries cannot be properly checked for equality.
                     ));
 
                     wal.log(record);
@@ -167,7 +215,8 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
 
                 if (RecordUtils.isIncludeIntoLog(record) && notDeltaType) {
                     serializedRecords.add(new ReflectionEquals(record, "prev", "pos",
-                        "updateCounter" //updateCounter for PartitionMetaStateRecord isn't serialized.
+                        "updateCounter", //updateCounter for PartitionMetaStateRecord isn't serialized.
+                        "writeEntries" // Data entries cannot be properly checked for equality.
                     ));
 
                     lastPointer = wal.log(record);
