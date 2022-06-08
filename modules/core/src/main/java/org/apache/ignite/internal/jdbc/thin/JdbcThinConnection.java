@@ -67,6 +67,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.binary.BinaryObjectException;
@@ -132,7 +133,7 @@ import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CLIENT_CON
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_CLOSED;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.CONNECTION_FAILURE;
 import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INTERNAL_ERROR;
-import static org.apache.ignite.internal.processors.odbc.SqlStateCode.INVALID_ATTRIBUTE_VALUE;
+import static org.apache.ignite.internal.processors.odbc.SqlStateCode.DATA_EXCEPTION;
 import static org.apache.ignite.marshaller.MarshallerUtils.processSystemClasses;
 
 /**
@@ -1038,7 +1039,7 @@ public class JdbcThinConnection implements Connection {
                     if (LOG.isLoggable(Level.FINE))
                         LOG.log(Level.FINE, err, e);
 
-                    throw new SQLException(err, INVALID_ATTRIBUTE_VALUE, e);
+                    throw new SQLException(err, DATA_EXCEPTION, e);
                 }
                 catch (Exception e) {
                     if (LOG.isLoggable(Level.FINE))

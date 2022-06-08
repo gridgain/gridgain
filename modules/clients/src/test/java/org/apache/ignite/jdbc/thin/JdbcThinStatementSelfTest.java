@@ -1125,10 +1125,10 @@ public class JdbcThinStatementSelfTest extends JdbcThinAbstractSelfTest {
                     log,
                     () -> stmt.executeQuery("SELECT * FROM TEST_DESERIALIZE"),
                     SQLException.class,
-                    "Deserialization error"
+                    "INVALID_TARGET_TYPE_SPECIFICATION"
                 );
 
-                assertEquals(SqlStateCode.INVALID_ATTRIBUTE_VALUE, ex.getSQLState());
+                assertEquals(SqlStateCode.DATA_EXCEPTION, ex.getSQLState());
                 assertTrue(X.hasCause(ex, "TestType", BinaryInvalidTypeException.class));
 
                 ResultSet rs = stmt.executeQuery("SELECT id FROM TEST_DESERIALIZE");
