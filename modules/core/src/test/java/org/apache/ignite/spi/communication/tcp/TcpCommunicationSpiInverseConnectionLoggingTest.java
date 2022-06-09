@@ -188,7 +188,8 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
                 GridIoMessage msg0 = (GridIoMessage)msg;
 
                 if (msg0.message() instanceof TcpInverseConnectionResponseMessage) {
-                    log.info("Client skips inverse connection response to server: " + node);
+                    if (log.isInfoEnabled())
+                        log.info("Client skips inverse connection response to server: " + node);
 
                     return;
                 }
