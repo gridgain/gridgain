@@ -3395,6 +3395,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return Partitions supply info list.
      */
     private List<SupplyPartitionInfo> assignPartitionStates(GridDhtPartitionTopology top, boolean resetOwners) {
+        assert crd != null;
+
         Map<Integer, CounterWithNodes> maxCntrs = new HashMap<>();
         Map<Integer, TreeSet<Long>> varCntrs = new HashMap<>();
         Map<Integer, Long> maxClearCntrs = new HashMap<>();
@@ -3489,8 +3491,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHist);
 
-        if (resetOwners)
+        if (resetOwners) {
+            log.warning(">>>>> resetOwnersByCounter true [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
             resetOwnersByCounter(top, maxCntrs, haveHist);
+        }
+        else
+            log.warning(">>>>> resetOwnersByCounter false [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
 
         for (Map.Entry<Integer, TreeSet<Long>> sortedCnrs : varCntrs.entrySet()) {
             Integer part = sortedCnrs.getKey();

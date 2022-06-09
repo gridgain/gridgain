@@ -2364,6 +2364,16 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             lock.writeLock().lock();
 
             try {
+                if (lostParts != null) {
+                    log.warning(">>>>> resetOwners [name=" + grp.cacheOrGroupName() + ", lost=" + lostParts + ']');
+                    for (Integer lostPart : lostParts) {
+                        for (GridDhtPartitionMap partMap : node2part.values())
+                            partMap.put(lostPart, LOST);
+                    }
+                }
+                else
+                    log.warning(">>>>> resetOwners [name=" + grp.cacheOrGroupName() + ", lostParts=" + "null");
+
                 // First process local partitions.
                 UUID locNodeId = ctx.localNodeId();
 

@@ -1267,6 +1267,16 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         lock.writeLock().lock();
 
         try {
+            if (lostParts != null) {
+                log.warning(">>>>> resetOwners [grpId=" + grpId + ", lost=" + lostParts + ']');
+                for (Integer lostPart : lostParts) {
+                    for (GridDhtPartitionMap partMap : node2part.values())
+                        partMap.put(lostPart, LOST);
+                }
+            }
+            else
+                log.warning(">>>>> resetOwners [grpId=" + grpId + ", lostParts=" + "null");
+
             // Process remote partitions.
             for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                 int part = entry.getKey();
