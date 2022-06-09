@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.communication.tcp.internal.CommunicationWorker;
 
 /**
  * Utils to work with communication worker threads.
@@ -34,7 +35,7 @@ class CommunicationWorkerThreadUtils {
      */
     static void interruptCommWorkerThreads(String clientName, IgniteLogger log) {
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
-            .filter(t -> t.getName().contains("tcp-comm-worker"))
+            .filter(t -> t.getName().contains(CommunicationWorker.WORKER_NAME))
             .filter(t -> t.getName().contains(clientName))
             .collect(Collectors.toList());
 
