@@ -371,7 +371,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
      * closed connection won't automatically reopen when we don't expect it.
      */
     private void interruptCommWorkerThreads(String clientName) {
-        CommWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
+        CommunicationWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
     }
 
     /**

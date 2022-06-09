@@ -119,7 +119,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
      * @param clientName The name of the client whose threads we want to interrupt.
      */
     private void interruptCommWorkerThreads(String clientName) {
-        CommWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
+        CommunicationWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
     }
 
     /**
