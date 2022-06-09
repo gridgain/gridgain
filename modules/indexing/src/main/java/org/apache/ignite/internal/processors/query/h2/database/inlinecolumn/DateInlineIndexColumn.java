@@ -29,7 +29,7 @@ public class DateInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-    DateInlineIndexColumn(Column col) {
+    public DateInlineIndexColumn(Column col) {
         super(col, Value.DATE, (short)8);
     }
 

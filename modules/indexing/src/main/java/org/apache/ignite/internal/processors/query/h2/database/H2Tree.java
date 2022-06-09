@@ -329,7 +329,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
                 table, cols, factory, true);
 
-            inlineSize = computeInlineSize(inlineIdxs, configuredInlineSize, cctx.config().getSqlIndexMaxInlineSize());
+            inlineSize = computeInlineSize(idxName, inlineIdxs, configuredInlineSize,
+                    cctx.config().getSqlIndexMaxInlineSize(), log);
 
             setIos(
                 H2ExtrasInnerIO.getVersions(inlineSize, mvccEnabled),

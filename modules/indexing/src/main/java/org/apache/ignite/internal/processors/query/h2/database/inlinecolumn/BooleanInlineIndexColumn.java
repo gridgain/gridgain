@@ -28,7 +28,7 @@ public class BooleanInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-    BooleanInlineIndexColumn(Column col) {
+    public BooleanInlineIndexColumn(Column col) {
         super(col, Value.BOOLEAN, (short)1);
     }
 
