@@ -39,8 +39,6 @@ import org.apache.ignite.testframework.MemorizingAppender;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.singletonList;
@@ -78,22 +76,20 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         return cfg;
     }
 
-    /***/
-    @Before
-    public void installAppender() {
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         log4jAppender.installSelfOn(TestCommunicationSpi.class);
     }
 
-    /***/
-    @After
-    public void removeAppender() {
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
         log4jAppender.removeSelfFrom(TestCommunicationSpi.class);
-    }
 
-    /***/
-    @After
-    public void stopAll() {
         stopAllGrids();
+
+        super.afterTest();
     }
 
     /***/
