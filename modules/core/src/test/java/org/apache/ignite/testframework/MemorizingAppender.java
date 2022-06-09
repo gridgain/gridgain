@@ -56,7 +56,7 @@ public class MemorizingAppender extends AppenderSkeleton {
     /**
      * Returns all events that were seen by this Appender so far.
      *
-     * @return all events that were seen by this Appender so far
+     * @return All events that were seen by this Appender so far.
      */
     public List<LoggingEvent> events() {
         return new ArrayList<>(events);
@@ -65,7 +65,7 @@ public class MemorizingAppender extends AppenderSkeleton {
     /**
      * Adds this Appender to the logger corresponding to the provided class.
      *
-     * @param target class on whose logger to install this Appender
+     * @param target Class on whose logger to install this Appender.
      */
     public void installSelfOn(Class<?> target) {
         Logger logger = Logger.getLogger(target);
@@ -75,13 +75,20 @@ public class MemorizingAppender extends AppenderSkeleton {
     /**
      * Removes this Appender from the logger corresponding to the provided class.
      *
-     * @param target class from whose logger to remove this Appender
+     * @param target Class from whose logger to remove this Appender.
      */
     public void removeSelfFrom(Class<?> target) {
         Logger logger = Logger.getLogger(target);
         logger.removeAppender(this);
     }
 
+    /**
+     * Returns the single event satisfying the given predicate. If no such event exists or more than one event matches,
+     * then an exception is thrown.
+     *
+     * @param predicate Predicate to use to select the event.
+     * @return The single event satisfying the given predicate.
+     */
     public LoggingEvent singleEventSatisfying(Predicate<LoggingEvent> predicate) {
         List<LoggingEvent> matches = events.stream().filter(predicate).collect(toList());
 

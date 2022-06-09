@@ -26,7 +26,6 @@ import org.apache.ignite.testframework.MemorizingAppender;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -91,6 +90,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     public void logsWithErrorWhenCantSendMessageToServerWhichLeft() throws Exception {
         IgniteEx server1 = startGrid(SERVER1_NAME);
         IgniteEx server2 = startGrid("server2");
+
         ClusterNode server2Node = server2.localNode();
 
         server1.cluster().state(ACTIVE);
@@ -102,6 +102,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
         LoggingEvent event = log4jAppender.singleEventSatisfying(
             evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node")
         );
+
         assertThat(event.getLevel(), is(Level.ERROR));
     }
 
@@ -116,7 +117,6 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     }
 
     /***/
-    @NotNull
     private UUIDCollectionMessage someMessage() {
         return new UUIDCollectionMessage(singletonList(UUID.randomUUID()));
     }
@@ -126,6 +126,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     public void logsWithInfoWhenCantSendMessageToClientWhichLeft() throws Exception {
         IgniteEx server = startGrid(SERVER1_NAME);
         IgniteEx client = startGrid(CLIENT_NAME);
+
         ClusterNode clientNode = client.localNode();
 
         server.cluster().state(ACTIVE);
@@ -137,6 +138,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
         LoggingEvent event = log4jAppender.singleEventSatisfying(
             evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node")
         );
+
         assertThat(event.getLevel(), is(Level.INFO));
     }
 }
