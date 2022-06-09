@@ -75,6 +75,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         TcpCommunicationSpi spi = new TestCommunicationSpi();
 
         spi.setForceClientToServerConnections(true);
+
         if (CLIENT_NAME.equals(gridName))
             cfg.setClientMode(true);
         else if (SERVER_NAME.equals(gridName))
@@ -97,11 +98,13 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         log4jAppender.removeSelfFrom(TestCommunicationSpi.class);
     }
 
+    /***/
     @After
     public void stopAll() {
         stopAllGrids();
     }
 
+    /***/
     @Test
     public void logsInfoForExceptionMeaningSwitchToInverseConnection() throws Exception {
         IgniteEx server = startGrid(SERVER_NAME);
