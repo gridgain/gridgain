@@ -52,9 +52,4 @@ public class ClientExceptionsUtils {
             && igniteSpiException.getMessage().contains(
                 "because it is started in 'forceClientToServerConnections' mode; inverse connection will be requested");
     }
-
-    /***/
-    private ClientExceptionsUtils() {
-        // prevent instantiation
-    }
 }

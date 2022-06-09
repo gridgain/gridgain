@@ -44,9 +44,4 @@ class CommWorkerThreadUtils {
             U.join(tcpCommWorkerThread, log);
         }
     }
-
-    /***/
-    private CommWorkerThreadUtils() {
-        // prevent instantiation
-    }
 }
