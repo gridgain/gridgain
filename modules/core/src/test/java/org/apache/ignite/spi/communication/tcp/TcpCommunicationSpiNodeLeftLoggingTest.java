@@ -98,7 +98,13 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
         assertThat(event.getLevel(), is(Level.ERROR));
     }
 
-    /***/
+    /**
+     * Sends some message from one Ignite node to another node, the send will fail because the target node
+     * has already left.
+     *
+     * @param sourceIgnite Ignite node from which to send a message.
+     * @param targetNode   Target node to which to send the message.
+     */
     private void sendFailingMessage(Ignite sourceIgnite, ClusterNode targetNode) {
         GridTestUtils.assertThrows(
             log,

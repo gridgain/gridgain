@@ -127,7 +127,8 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     }
 
     /**
-     * Sends some message from one Ignite node to another node.
+     * Sends some message from one Ignite node to another node, the send will fail because an inverse connection
+     * cannot be established.
      *
      * @param sourceIgnite Ignite node from which to send a message.
      * @param targetNode   Target node to which to send the message.
