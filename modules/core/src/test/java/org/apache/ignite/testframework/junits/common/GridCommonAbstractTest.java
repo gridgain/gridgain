@@ -58,6 +58,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
@@ -626,7 +627,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         List<IgniteEx> allNodes0 = G.allGrids().stream()
             .map(i -> (IgniteEx)i)
-            .filter(i -> isServer(i.localNode()) && (nodeSet == null || nodeSet.contains(i.localNode())))
+            .filter(i -> isServer(i) && (nodeSet == null || nodeSet.contains(i.localNode())))
             .collect(toList());
 
         Set<ClusterNode> nodes0 = allNodes0.stream()
@@ -686,6 +687,21 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 else
                     break;
             }
+        }
+    }
+
+    /**
+     * Returns {@code true} if {@link IgniteEx} instance is a server node (i.e., neither a client nor a daemon node).
+     *
+     * @param ignite Instance to check.
+     * @return {@code true} if {@link IgniteEx} instance is a server node (i.e., neither a client nor a daemon node).
+     */
+    private boolean isServer(IgniteEx ignite) {
+        try {
+            return isServer(ignite.localNode());
+        } catch (IgniteClientDisconnectedException e) {
+            // This is a client, so we don't need it, and the exception is not relevant, let's not propagate it.
+            return false;
         }
     }
 
