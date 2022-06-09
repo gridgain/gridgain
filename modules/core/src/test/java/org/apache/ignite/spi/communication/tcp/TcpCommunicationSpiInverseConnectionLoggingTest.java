@@ -138,7 +138,11 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         );
     }
 
-    /***/
+    /**
+     * Returns some message.
+     *
+     * @return Some message.
+     */
     private UUIDCollectionMessage someMessage() {
         return new UUIDCollectionMessage(singletonList(UUID.randomUUID()));
     }

@@ -74,7 +74,11 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
         super.afterTest();
     }
 
-    /***/
+    /**
+     * Tests that when we cannot send a message to a server node that left the topology, then we log this at INFO level.
+     *
+     * @throws Exception If something goes wrong.
+     */
     @Test
     public void logsWithErrorWhenCantSendMessageToServerWhichLeft() throws Exception {
         IgniteEx server1 = startGrid(SERVER1_NAME);
@@ -111,12 +115,20 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
         );
     }
 
-    /***/
+    /**
+     * Returns some message.
+     *
+     * @return Some message.
+     */
     private UUIDCollectionMessage someMessage() {
         return new UUIDCollectionMessage(singletonList(UUID.randomUUID()));
     }
 
-    /***/
+    /**
+     * Tests that when we cannot send a message to a client node that left the topology, then we log this at WARN level.
+     *
+     * @throws Exception If something goes wrong.
+     */
     @Test
     public void logsWithWarnWhenCantSendMessageToClientWhichLeft() throws Exception {
         IgniteEx server = startGrid(SERVER1_NAME);

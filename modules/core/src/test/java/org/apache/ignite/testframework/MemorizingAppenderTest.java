@@ -49,7 +49,9 @@ public class MemorizingAppenderTest {
         appender.removeSelfFrom(MemorizingAppenderTest.class);
     }
 
-    /***/
+    /**
+     * Tests that MemorizingAppender memorizes logging events.
+     */
     @Test
     public void memorizesLoggingEvents() {
         Logger.getLogger(MemorizingAppenderTest.class).info("Hello!");

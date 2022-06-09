@@ -38,7 +38,10 @@ public class ClientExceptionsUtilsTest {
     @Mock
     private ClusterNode node;
 
-    /***/
+    /**
+     * Tests that {@link ClientExceptionsUtils#isClientNodeTopologyException(Throwable, ClusterNode)} detects
+     * client {@link ClusterTopologyCheckedException}.
+     */
     @Test
     public void detectsClientNodeTopologyException() {
         when(node.isClient()).thenReturn(true);
@@ -46,7 +49,10 @@ public class ClientExceptionsUtilsTest {
         assertTrue(ClientExceptionsUtils.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
     }
 
-    /***/
+    /**
+     * Tests that {@link ClientExceptionsUtils#isClientNodeTopologyException(Throwable, ClusterNode)} returns {@code false}
+     * when node is not a client.
+     */
     @Test
     public void doesNotDetectsClientNodeTopologyExceptionForNonClient() {
         when(node.isClient()).thenReturn(false);
@@ -54,7 +60,10 @@ public class ClientExceptionsUtilsTest {
         assertFalse(ClientExceptionsUtils.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
     }
 
-    /***/
+    /**
+     * Tests that {@link ClientExceptionsUtils#isClientNodeTopologyException(Throwable, ClusterNode)} returns {@code false}
+     * when exception is not a {@link ClusterTopologyCheckedException}.
+     */
     @Test
     public void doesNotDetectClientNodeTopologyExceptionForOtherExceptions() {
         lenient().when(node.isClient()).thenReturn(true);
