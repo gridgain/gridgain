@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -62,9 +63,6 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     /***/
     private final MemorizingAppender log4jAppender = new MemorizingAppender();
 
-    /***/
-    private volatile TcpCommunicationSpi server1CommunicationSpi;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
@@ -74,11 +72,6 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         TcpCommunicationSpi spi = new TestCommunicationSpi();
 
         spi.setForceClientToServerConnections(true);
-
-        if (CLIENT_NAME.equals(gridName))
-            cfg.setClientMode(true);
-        else if (SERVER_NAME.equals(gridName))
-            server1CommunicationSpi = spi;
 
         cfg.setCommunicationSpi(spi);
 
@@ -107,7 +100,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     @Test
     public void logsInfoForExceptionMeaningSwitchToInverseConnection() throws Exception {
         IgniteEx server = startGrid(SERVER_NAME);
-        IgniteEx client = startGrid(CLIENT_NAME);
+        IgniteEx client = startClientGrid(CLIENT_NAME);
 
         ClusterNode clientNode = client.localNode();
 
@@ -117,7 +110,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
 
         GridTestUtils.invoke(spi, "onNodeLeft", clientNode.consistentId(), clientNode.id());
 
-        sendFailingMessageTo(clientNode);
+        sendFailingMessage(server, clientNode);
 
         LoggingEvent event = log4jAppender.singleEventSatisfying(evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node "));
         assertThat(event.getLevel(), is(Level.INFO));
@@ -133,11 +126,16 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         CommWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
     }
 
-    /***/
-    private void sendFailingMessageTo(ClusterNode clientNode) {
+    /**
+     * Sends some message from one Ignite node to another node.
+     *
+     * @param sourceIgnite Ignite node from which to send a message.
+     * @param targetNode   Target node to which to send the message.
+     */
+    private void sendFailingMessage(Ignite sourceIgnite, ClusterNode targetNode) {
         GridTestUtils.assertThrows(
             log,
-            () -> server1CommunicationSpi.sendMessage(clientNode, someMessage()),
+            () -> sourceIgnite.configuration().getCommunicationSpi().sendMessage(targetNode, someMessage()),
             Exception.class,
             null
         );

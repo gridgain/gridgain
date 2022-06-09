@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.communication.tcp;
 
 import java.util.UUID;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -48,20 +49,11 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     /***/
     private final MemorizingAppender log4jAppender = new MemorizingAppender();
 
-    /***/
-    private volatile TcpCommunicationSpi server1CommunicationSpi;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         TcpCommunicationSpi spi = new TcpCommunicationSpi();
-
-        if (CLIENT_NAME.equals(gridName)) {
-            cfg.setClientMode(true);
-        } else if (SERVER1_NAME.equals(gridName)) {
-            server1CommunicationSpi = spi;
-        }
 
         cfg.setCommunicationSpi(spi);
 
@@ -97,7 +89,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
 
         server2.close();
 
-        sendFailingMessageTo(server2Node);
+        sendFailingMessage(server1, server2Node);
 
         LoggingEvent event = log4jAppender.singleEventSatisfying(
             evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node")
@@ -107,10 +99,10 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     }
 
     /***/
-    private void sendFailingMessageTo(ClusterNode clientNode) {
+    private void sendFailingMessage(Ignite sourceIgnite, ClusterNode targetNode) {
         GridTestUtils.assertThrows(
             log,
-            () -> server1CommunicationSpi.sendMessage(clientNode, someMessage()),
+            () -> sourceIgnite.configuration().getCommunicationSpi().sendMessage(targetNode, someMessage()),
             Exception.class,
             null
         );
@@ -125,7 +117,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
     @Test
     public void logsWithInfoWhenCantSendMessageToClientWhichLeft() throws Exception {
         IgniteEx server = startGrid(SERVER1_NAME);
-        IgniteEx client = startGrid(CLIENT_NAME);
+        IgniteEx client = startClientGrid(CLIENT_NAME);
 
         ClusterNode clientNode = client.localNode();
 
@@ -133,7 +125,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
 
         client.close();
 
-        sendFailingMessageTo(clientNode);
+        sendFailingMessage(server, clientNode);
 
         LoggingEvent event = log4jAppender.singleEventSatisfying(
             evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node")
