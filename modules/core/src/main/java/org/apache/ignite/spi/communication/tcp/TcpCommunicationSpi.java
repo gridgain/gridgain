@@ -56,7 +56,6 @@ import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
 import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.worker.WorkersRegistry;
@@ -1202,12 +1201,12 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.", t);
 
+                String messageForLog = "Failed to send message to remote node [node=" + node + ", msg=" + msg + ']';
                 if (ClientExceptionsUtils.isClientNodeTopologyException(t, node)
                     || ClientExceptionsUtils.isAttemptToEstablishDirectConnectionWhenOnlyInverseIsAllowed(t))
-                    log.info("Failed to send message to remote node [node=" + node + ", msg=" + msg + "]: "
-                        + X.getFullStackTrace(t));
+                    log.warning(messageForLog, t);
                 else
-                    log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
+                    log.error(messageForLog, t);
 
                 if (t instanceof Error)
                     throw (Error)t;

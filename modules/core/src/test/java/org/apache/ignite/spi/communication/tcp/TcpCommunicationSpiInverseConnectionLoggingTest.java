@@ -98,7 +98,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
 
     /***/
     @Test
-    public void logsInfoForExceptionMeaningSwitchToInverseConnection() throws Exception {
+    public void logsWarnForExceptionMeaningSwitchToInverseConnection() throws Exception {
         IgniteEx server = startGrid(SERVER_NAME);
         IgniteEx client = startClientGrid(CLIENT_NAME);
 
@@ -113,7 +113,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         sendFailingMessage(server, clientNode);
 
         LoggingEvent event = log4jAppender.singleEventSatisfying(evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node "));
-        assertThat(event.getLevel(), is(Level.INFO));
+        assertThat(event.getLevel(), is(Level.WARN));
     }
 
     /**

@@ -121,7 +121,7 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
 
     /***/
     @Test
-    public void logsWithInfoWhenCantSendMessageToClientWhichLeft() throws Exception {
+    public void logsWithWarnWhenCantSendMessageToClientWhichLeft() throws Exception {
         IgniteEx server = startGrid(SERVER1_NAME);
         IgniteEx client = startClientGrid(CLIENT_NAME);
 
@@ -137,6 +137,6 @@ public class TcpCommunicationSpiNodeLeftLoggingTest extends GridCommonAbstractTe
             evt -> evt.getRenderedMessage().startsWith("Failed to send message to remote node")
         );
 
-        assertThat(event.getLevel(), is(Level.INFO));
+        assertThat(event.getLevel(), is(Level.WARN));
     }
 }
