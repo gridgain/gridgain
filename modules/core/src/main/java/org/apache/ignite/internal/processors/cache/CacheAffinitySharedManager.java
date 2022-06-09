@@ -216,17 +216,27 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             return false;
         }
 
-        // Do not skip this message, otherwise the "exchangeNeeded" flag can be incorrectly calculated on client nodes
-        // and, therefore, trigger partition map exchnage independently on these nodes only (see GG-35222 for the details).
-        msg.exchangeNeeded(true);
+        // Skip message if affinity was already recalculated.
+        boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
 
-        if (log.isDebugEnabled()) {
-            log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
-                ", msgExchId=" + msg.exchangeId() +
-                ", msgVer=" + msg.topologyVersion() + ']');
+        msg.exchangeNeeded(exchangeNeeded);
+
+        if (exchangeNeeded) {
+            if (log.isDebugEnabled()) {
+                log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
+                    ", msgExchId=" + msg.exchangeId() +
+                    ", msgVer=" + msg.topologyVersion() + ']');
+            }
+        }
+        else {
+            if (log.isDebugEnabled()) {
+                log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
+                    ", msgExchId=" + msg.exchangeId() +
+                    ", msgVer=" + msg.topologyVersion() + ']');
+            }
         }
 
-        return true;
+        return exchangeNeeded;
     }
 
     /**
