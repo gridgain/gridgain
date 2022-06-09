@@ -773,8 +773,10 @@ public class GridMapQueryExecutor {
 
             String messageForLog = "Failed to send error message";
 
-            if (node.isClient())
-                log.debug(messageForLog, e);
+            if (node.isClient()) {
+                if (log.isDebugEnabled())
+                    log.debug(messageForLog + U.nl() + X.getFullStackTrace(e));
+            }
             else
                 U.error(log, messageForLog, e);
         }
