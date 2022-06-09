@@ -17,6 +17,8 @@
 package org.apache.ignite;
 
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * This interface defines basic logging functionality used throughout the system. We had to
@@ -100,6 +102,17 @@ public interface IgniteLogger {
      * @param msg Debug message.
      */
     public void debug(String msg);
+
+    /**
+     * Logs out a debug message with an attached Throwable.
+     *
+     * @param msg Debug message.
+     * @param ex  Throwable to attach.
+     */
+    public default void debug(String msg, Throwable ex) {
+        if (isDebugEnabled())
+            debug(msg + U.nl() + X.getFullStackTrace(ex));
+    }
 
     /**
      * Logs out debug message.

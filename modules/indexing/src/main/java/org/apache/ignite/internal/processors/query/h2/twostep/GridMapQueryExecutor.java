@@ -771,10 +771,11 @@ public class GridMapQueryExecutor {
         catch (Exception e) {
             e.addSuppressed(err);
 
+            String messageForLog = "Failed to send error message";
             if (node.isClient())
-                log.debug("Failed to send error message: " + X.getFullStackTrace(e));
+                log.debug(messageForLog, e);
             else
-                U.error(log, "Failed to send error message.", e);
+                U.error(log, messageForLog, e);
         }
     }
 
