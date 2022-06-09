@@ -34,6 +34,7 @@ public class ClientExceptionsUtils {
      */
     public static boolean isClientNodeTopologyException(Throwable t, ClusterNode node) {
         ClusterTopologyCheckedException ex = X.cause(t, ClusterTopologyCheckedException.class);
+
         return ex != null && node.isClient();
     }
 
