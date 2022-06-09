@@ -19,7 +19,6 @@ package org.apache.ignite.spi.communication.tcp;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -63,8 +62,13 @@ public class ClientExceptionsUtilsTest {
         assertFalse(ClientExceptionsUtils.isClientNodeTopologyException(new IgniteCheckedException(), node));
     }
 
-    /***/
-    @NotNull
+    /**
+     * Returns a {@link ClusterTopologyCheckedException} that is produced when an attempt to await for an inverse connection
+     * fails due to a timeout.
+     *
+     * @return A {@link ClusterTopologyCheckedException} that is produced when an attempt to await for an inverse connection
+     * fails due to a timeout.
+     */
     private Exception clusterTopologyCheckedException() {
         return new ClusterTopologyCheckedException(
             "Failed to wait for establishing inverse connection (node left topology): 67cf0e5e-974c-463a-a1f2-915fe3cdd3e7"
