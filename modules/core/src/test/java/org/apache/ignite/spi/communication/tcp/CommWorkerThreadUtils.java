@@ -28,6 +28,9 @@ class CommWorkerThreadUtils {
     /**
      * We need to interrupt communication worker client nodes so that
      * closed connection won't automatically reopen when we don't expect it.
+     *
+     * @param clientName The name of the client whose threads we want to interrupt.
+     * @param log        The logger to use while joining the interrupted threads.
      */
     static void interruptCommWorkerThreads(String clientName, IgniteLogger log) {
         List<Thread> tcpCommWorkerThreads = Thread.getAllStackTraces().keySet().stream()
