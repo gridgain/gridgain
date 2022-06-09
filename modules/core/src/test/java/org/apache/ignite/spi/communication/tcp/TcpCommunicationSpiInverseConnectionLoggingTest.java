@@ -92,7 +92,12 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         super.afterTest();
     }
 
-    /***/
+    /**
+     * Tests that an exception that is produced when we cause an inversion connection opening from the client's side
+     * is logged with WARN.
+     *
+     * @throws Exception If something goes wrong.
+     */
     @Test
     public void logsWarnForExceptionMeaningSwitchToInverseConnection() throws Exception {
         IgniteEx server = startGrid(SERVER_NAME);
