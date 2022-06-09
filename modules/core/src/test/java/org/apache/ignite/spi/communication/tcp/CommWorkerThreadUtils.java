@@ -24,7 +24,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  * Utils to work with communication worker threads.
  */
-class CommWorkerThreads {
+class CommWorkerThreadUtils {
     /**
      * We need to interrupt communication worker client nodes so that
      * closed connection won't automatically reopen when we don't expect it.
@@ -43,7 +43,7 @@ class CommWorkerThreads {
     }
 
     /***/
-    private CommWorkerThreads() {
+    private CommWorkerThreadUtils() {
         // prevent instantiation
     }
 }
