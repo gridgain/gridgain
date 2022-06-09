@@ -69,6 +69,7 @@ public class MemorizingAppender extends AppenderSkeleton {
      */
     public void installSelfOn(Class<?> target) {
         Logger logger = Logger.getLogger(target);
+
         logger.addAppender(this);
     }
 
@@ -79,6 +80,7 @@ public class MemorizingAppender extends AppenderSkeleton {
      */
     public void removeSelfFrom(Class<?> target) {
         Logger logger = Logger.getLogger(target);
+
         logger.removeAppender(this);
     }
 
