@@ -28,9 +28,9 @@ public class ClientExceptionsUtils {
     /**
      * Returns {@code true} if the exception relates to cluster topology change that prevents a connection, AND the given node is client.
      *
-     * @param t    the exception we analyze
-     * @param node node to which we tried to send a message, but the send produced the given exception
-     * @return {@code true} if the exception relates to cluster topology change that prevents a connection, AND the given node is client
+     * @param t    The exception we analyze.
+     * @param node Node to which we tried to send a message, but the send produced the given exception.
+     * @return {@code true} if the exception relates to cluster topology change that prevents a connection, AND the given node is client.
      */
     public static boolean isClientNodeTopologyException(Throwable t, ClusterNode node) {
         ClusterTopologyCheckedException ex = X.cause(t, ClusterTopologyCheckedException.class);
@@ -41,9 +41,9 @@ public class ClientExceptionsUtils {
      * Returns {@code true} if the exception that is provided is thrown because an attempt to open a direct connection
      * was made while only inverse connections are allowed.
      *
-     * @param t exception to inspect
+     * @param t Exception to inspect.
      * @return {@code true} if the exception that is provided is thrown because an attempt to open a direct connection
-     *     was made while only inverse connections are allowed
+     *     was made while only inverse connections are allowed.
      */
     public static boolean isAttemptToEstablishDirectConnectionWhenOnlyInverseIsAllowed(Throwable t) {
         IgniteSpiException igniteSpiException = X.cause(t, IgniteSpiException.class);
