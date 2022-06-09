@@ -38,7 +38,6 @@ import org.apache.ignite.testframework.MemorizingAppender;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
-import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -109,6 +108,7 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     public void logsInfoForExceptionMeaningSwitchToInverseConnection() throws Exception {
         IgniteEx server = startGrid(SERVER_NAME);
         IgniteEx client = startGrid(CLIENT_NAME);
+
         ClusterNode clientNode = client.localNode();
 
         interruptCommWorkerThreads(client.name());
@@ -126,6 +126,8 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     /**
      * We need to interrupt communication worker client nodes so that
      * closed connection won't automatically reopen when we don't expect it.
+     *
+     * @param clientName The name of the client whose threads we want to interrupt.
      */
     private void interruptCommWorkerThreads(String clientName) {
         CommWorkerThreadUtils.interruptCommWorkerThreads(clientName, log);
@@ -142,12 +144,14 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
     }
 
     /***/
-    @NotNull
     private UUIDCollectionMessage someMessage() {
         return new UUIDCollectionMessage(singletonList(UUID.randomUUID()));
     }
 
-    /** */
+    /**
+     * A custom {@link TcpCommunicationSpi} that allows to model the situation when an inverse connection must be
+     * established, but it cannot be.
+     */
     private static class TestCommunicationSpi extends TcpCommunicationSpi {
         /** {@inheritDoc} */
         @Override protected GridCommunicationClient createTcpClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
@@ -166,6 +170,8 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         }
 
         /**
+         * Creates an attribute name by prepending it with the class name (and a dot).
+         *
          * @param name Name.
          */
         private String createAttributeName(String name) {
@@ -173,8 +179,11 @@ public class TcpCommunicationSpiInverseConnectionLoggingTest extends GridCommonA
         }
 
         /** {@inheritDoc} */
-        @Override public void sendMessage(ClusterNode node, Message msg,
-                                          IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
+        @Override public void sendMessage(
+            ClusterNode node,
+            Message msg,
+            IgniteInClosure<IgniteException> ackC
+        ) throws IgniteSpiException {
             if (msg instanceof GridIoMessage) {
                 GridIoMessage msg0 = (GridIoMessage)msg;
 
