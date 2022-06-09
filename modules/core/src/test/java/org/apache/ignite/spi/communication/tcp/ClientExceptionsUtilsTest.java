@@ -31,10 +31,10 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests of {@link ClientExceptions}.
+ * Tests of {@link ClientExceptionsUtils}.
  */
 @RunWith(MockitoJUnitRunner.class)
-public class ClientExceptionsTest {
+public class ClientExceptionsUtilsTest {
     /***/
     @Mock
     private ClusterNode node;
@@ -44,7 +44,7 @@ public class ClientExceptionsTest {
     public void detectsClientNodeTopologyException() {
         when(node.isClient()).thenReturn(true);
 
-        assertTrue(ClientExceptions.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
+        assertTrue(ClientExceptionsUtils.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
     }
 
     /***/
@@ -52,7 +52,7 @@ public class ClientExceptionsTest {
     public void doesNotDetectsClientNodeTopologyExceptionForNonClient() {
         when(node.isClient()).thenReturn(false);
 
-        assertFalse(ClientExceptions.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
+        assertFalse(ClientExceptionsUtils.isClientNodeTopologyException(clusterTopologyCheckedException(), node));
     }
 
     /***/
@@ -60,7 +60,7 @@ public class ClientExceptionsTest {
     public void doesNotDetectClientNodeTopologyExceptionForOtherExceptions() {
         lenient().when(node.isClient()).thenReturn(true);
 
-        assertFalse(ClientExceptions.isClientNodeTopologyException(new IgniteCheckedException(), node));
+        assertFalse(ClientExceptionsUtils.isClientNodeTopologyException(new IgniteCheckedException(), node));
     }
 
     /***/

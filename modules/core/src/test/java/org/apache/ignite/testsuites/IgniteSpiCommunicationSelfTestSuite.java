@@ -16,7 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
-import org.apache.ignite.spi.communication.tcp.ClientExceptionsTest;
+import org.apache.ignite.spi.communication.tcp.ClientExceptionsUtilsTest;
 import org.apache.ignite.spi.communication.tcp.GridSandboxedClientWithoutNetworkTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationInverseConnectionEstablishingTest;
 import org.apache.ignite.spi.communication.tcp.GridTcpCommunicationSpiConcurrentConnectSelfTest;
@@ -123,7 +123,7 @@ import org.junit.runners.Suite;
 
     TcpCommunicationSpiNodeLeftLoggingTest.class,
     TcpCommunicationSpiInverseConnectionLoggingTest.class,
-    ClientExceptionsTest.class
+    ClientExceptionsUtilsTest.class
 })
 public class IgniteSpiCommunicationSelfTestSuite {
 }

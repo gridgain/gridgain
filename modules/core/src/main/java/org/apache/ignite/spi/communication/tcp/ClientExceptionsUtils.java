@@ -22,9 +22,9 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
 
 /**
- * Tools to analyze client-related exceptions.
+ * Utils to analyze client-related exceptions.
  */
-public class ClientExceptions {
+public class ClientExceptionsUtils {
     /**
      * Returns {@code true} if the exception relates to cluster topology change that prevents a connection, AND the given node is client.
      *
@@ -53,7 +53,7 @@ public class ClientExceptions {
     }
 
     /***/
-    private ClientExceptions() {
+    private ClientExceptionsUtils() {
         // prevent instantiation
     }
 }
