@@ -57,6 +57,7 @@ public class MemorizingAppenderTest {
         List<LoggingEvent> events = appender.events();
 
         assertThat(events, hasSize(1));
+
         LoggingEvent event = events.get(0);
 
         assertThat(event.getLevel(), is(Level.INFO));
