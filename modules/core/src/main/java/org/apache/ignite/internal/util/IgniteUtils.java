@@ -2308,6 +2308,9 @@ public abstract class IgniteUtils {
 
         addrs.add(ipAddr);
 
+        if (IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_IGNORE_LOCAL_HOST_NAME, false))
+            return;
+
         if (allHostNames)
             hostNames.add(hostName);
         else if (!F.isEmpty(hostName) && !addr.isLoopbackAddress())

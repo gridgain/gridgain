@@ -737,6 +737,11 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_OVERRIDE_CONSISTENT_ID = "IGNITE_OVERRIDE_CONSISTENT_ID";
 
+    /**
+     * System property to ignore reading host name of the local address.
+     */
+    public static final String IGNITE_IGNORE_LOCAL_HOST_NAME = "IGNITE_IGNORE_LOCAL_HOST_NAME";
+
     /** */
     public static final String IGNITE_IO_BALANCE_PERIOD = "IGNITE_IO_BALANCE_PERIOD";
 
