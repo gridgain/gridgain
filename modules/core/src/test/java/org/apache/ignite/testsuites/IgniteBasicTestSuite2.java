@@ -87,6 +87,7 @@ import org.apache.ignite.plugin.PluginNodeValidationTest;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.checkpoint.noop.NoopCheckpointSpiLoggingTest;
 import org.apache.ignite.startup.properties.NotStringSystemPropertyTest;
+import org.apache.ignite.testframework.MemorizingAppenderTest;
 import org.apache.ignite.testframework.MessageOrderLogListenerTest;
 import org.apache.ignite.testframework.test.ConfigVariationsExecutionTest;
 import org.apache.ignite.testframework.test.ConfigVariationsTestSuiteBuilderTest;
@@ -165,6 +166,8 @@ import org.junit.runners.Suite;
     ListeningTestLoggerTest.class,
 
     MessageOrderLogListenerTest.class,
+
+    MemorizingAppenderTest.class,
 
     CacheLocalGetSerializationTest.class,
 

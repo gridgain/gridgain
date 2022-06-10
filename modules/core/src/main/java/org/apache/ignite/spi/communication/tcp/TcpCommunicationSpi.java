@@ -1201,7 +1201,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.", t);
 
-                log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
+                String messageForLog = "Failed to send message to remote node [node=" + node + ", msg=" + msg + ']';
+
+                if (ClientExceptionsUtils.isClientNodeTopologyException(t, node)
+                    || ClientExceptionsUtils.isAttemptToEstablishDirectConnectionWhenOnlyInverseIsAllowed(t))
+                    log.warning(messageForLog, t);
+                else
+                    log.error(messageForLog, t);
 
                 if (t instanceof Error)
                     throw (Error)t;
