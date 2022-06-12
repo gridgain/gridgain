@@ -200,12 +200,13 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Callback invoked from discovery thread when discovery custom message is received.
-     *
      * @param msg Customer message.
-     * @return {@code True} if minor topology version should be increased.
+     * @return {@code True} if send the event.
      */
-    boolean onCustomEvent(CacheAffinityChangeMessage msg) {
+    public boolean isSendCustomEvent(@Nullable CacheAffinityChangeMessage msg) {
+        if (msg == null)
+            return false;
+
         if (msg.exchangeId() != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
@@ -312,7 +313,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             }
 
             try {
-                if (msg != null)
+                if (isSendCustomEvent(msg))
                     cctx.discovery().sendCustomEvent(msg);
             }
             catch (IgniteCheckedException e) {

@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.function.Predicate;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -31,6 +32,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Test callback for discovery SPI.
@@ -172,6 +174,13 @@ public class DiscoverySpiTestListener implements IgniteDiscoverySpiInternalListe
      *
      */
     public void stopBlockCustomEvents() {
+        stopBlockCustomEvents(null);
+    }
+
+    /**
+     *
+     */
+    public void stopBlockCustomEvents(@Nullable Predicate<DiscoverySpiCustomMessage> pred) {
         if (spi == null)
             return;
 
@@ -187,6 +196,9 @@ public class DiscoverySpiTestListener implements IgniteDiscoverySpiInternalListe
 
         for (DiscoverySpiCustomMessage msg : msgs) {
             log.info("Resend blocked message: " + msg);
+
+            if (pred != null && !pred.test(msg))
+                continue;
 
             spi.sendCustomEvent(msg);
         }

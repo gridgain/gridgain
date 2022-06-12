@@ -55,7 +55,7 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
     private GridDhtPartitionsFullMessage partsMsg;
 
     /** */
-    private transient boolean exchangeNeeded;
+    private boolean exchangeNeeded;
 
     /**
      * Constructor used when message is created after cache rebalance finished.

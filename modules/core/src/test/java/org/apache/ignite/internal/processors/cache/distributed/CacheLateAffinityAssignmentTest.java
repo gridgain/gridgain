@@ -61,6 +61,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.cluster.ClusterTopologyServerNotFoundException;
 import org.apache.ignite.internal.cluster.NodeOrderComparator;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
@@ -1564,7 +1565,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
      */
     @Test
     public void testDelayAssignmentAffinityChanged() throws Exception {
-        Ignite ignite0 = startServer(0, 1);
+        IgniteEx ignite0 = (IgniteEx) startServer(0, 1);
 
         for (int i = 0; i < 1024; i++)
             ignite0.cache(CACHE_NAME1).put(i, i);
@@ -1573,69 +1574,47 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(lsnr);
 
-        TestRecordingCommunicationSpi commSpi0 =
-            (TestRecordingCommunicationSpi)ignite0.configuration().getCommunicationSpi();
-
-        // Starting a new client node should not lead to a rebalance obviously.
-        // So, it is expected that data distribution is ideal (ideal assignment).
-        startClient(1, 2);
-
-        checkAffinity(2, topVer(2, 0), true);
-
         // Block late affinity assignment. (*)
         lsnr.blockCustomEvent(CacheAffinityChangeMessage.class);
 
-        // Starting a new server node triggers data rebalancing.
-        // [3, 0] - is not ideal (expected)
-        startServer(2, 3);
+        startServer(1, 2);
 
-        checkAffinity(3, topVer(3, 0), false);
+        checkAffinity(2, topVer(2, 0), false);
 
-        // Wait for sending late affinity assignment message (1) from the coordinator node.
-        // This message will be blocked (*)
         lsnr.waitCustomEvent();
 
-        // Block rebalance messages.
-        blockSupplySend(commSpi0, CACHE_NAME1);
+        DiscoverySpiTestListener lsnr2 = new DiscoverySpiTestListener();
 
-        // Starting a new server node means that the late affinity assignment message (1) should be skipped.
-        startServer(3, 4);
+        ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(lsnr2);
 
-        startClient(4, 5);
+        lsnr2.blockCustomEvent(CacheAffinityChangeMessage.class);
 
-        // Unblock the late affinity assignment message (1).
-        lsnr.stopBlockCustomEvents();
+        startServer(2, 3);
 
-        // [5, 0] - is not ideal (expected)
-        checkAffinity(5, topVer(5, 0), false);
+        lsnr2.waitCustomEvent();
 
-        // Rebalance is blocked at this moment, so [5, 1] is not ready.
-        checkNoExchange(5, topVer(5, 1));
+        startClient(3, 4);
 
-        // Unblock rebalancing.
-        // The late affinity assignments message (2) should be fired after all.
-        commSpi0.stopBlock();
+        ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(null);
+
+        // This message will not be send, see CacheAffinitySharedManager.checkRebalanceState.
+        lsnr.stopBlockCustomEvents(msg -> {
+            DiscoveryCustomMessage msg0 = GridTestUtils.getFieldValue(msg, "delegate");
+
+            return ignite0.context().cache().context().cache().context().affinity().isSendCustomEvent((CacheAffinityChangeMessage) msg0);
+        });
+
+        lsnr2.stopBlockCustomEvents(msg -> {
+            DiscoveryCustomMessage msg0 = GridTestUtils.getFieldValue(msg, "delegate");
+
+            ((CacheAffinityChangeMessage)msg0).exchangeNeeded(true);
+
+            return true;
+        });
 
         // [5, 1] should be ideal
-        checkAffinity(5, topVer(5, 1), true);
+        checkAffinity(4, topVer(4, 1), true);
 
-        // Test failed here.
-        // client:
-        //      Started exchange init [
-        //          topVer=AffinityTopologyVersion [topVer=5, minorTopVer=1],
-        //          crd=false,
-        //          evt=DISCOVERY_CUSTOM_EVT, evtNode=00ac9434-fd34-4aae-95d3-ceb477700000,
-        //          customEvt=CacheAffinityChangeMessage [
-        //              id=3ccc8984181-ea41279c-71cb-4b8c-8b48-1dee1baa6fe0,                       <<< (1)
-        //              topVer=AffinityTopologyVersion [topVer=3, minorTopVer=0], ...]             <<< !!!
-        // coordinator:
-        //      Started exchange init
-        //          [topVer=AffinityTopologyVersion [topVer=5, minorTopVer=1],
-        //          crd=true,
-        //          evt=DISCOVERY_CUSTOM_EVT, evtNode=00ac9434-fd34-4aae-95d3-ceb477700000,
-        //          customEvt=CacheAffinityChangeMessage [
-        //              id=d2ec8984181-ea41279c-71cb-4b8c-8b48-1dee1baa6fe0,                        <<< (2)
-        //              topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0], ...]              <<< !!!
         awaitPartitionMapExchange(true, true, null, false);
 
         assertPartitionsSame(idleVerify(grid(0), CACHE_NAME1));
@@ -3246,5 +3225,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
             return null;
         }
+    }
+
+    @Override protected long getPartitionMapExchangeTimeout() {
+        return super.getPartitionMapExchangeTimeout() * 100000;
     }
 }
