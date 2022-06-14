@@ -3492,7 +3492,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         List<SupplyPartitionInfo> list = assignHistoricalSuppliers(top, maxCntrs, varCntrs, haveHist);
 
         if (resetOwners) {
-            log.warning(">>>>> resetOwnersByCounter true [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
+            if (cctx.cache().cacheGroup(top.groupId()) != null)
+                log.warning(">>>>> resetOwnersByCounter true [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
+            else
+                log.warning(">>>>> resetOwnersByCounter true [name=" + "cache group is not initialized yet" + ']');
+
             resetOwnersByCounter(top, maxCntrs, haveHist);
         }
         else
