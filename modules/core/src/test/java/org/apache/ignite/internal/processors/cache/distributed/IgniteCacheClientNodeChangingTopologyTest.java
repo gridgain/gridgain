@@ -664,7 +664,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         checkData(map, null, cache, 4);
 
         // Cache fill during node left.
-        GridCompoundFuture putFut0 = new GridCompoundFuture();
+        /*GridCompoundFuture putFut0 = new GridCompoundFuture();
 
         for (int i = 0; i < 100; i++) {
             final int fi = i;
@@ -689,7 +689,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         ignite3.close();
 
-        assertThrowsWithCause(() -> putFut0.get(), ClusterTopologyCheckedException.class);
+        assertThrowsWithCause(() -> putFut0.get(), ClusterTopologyCheckedException.class);*/
     }
 
     /**
