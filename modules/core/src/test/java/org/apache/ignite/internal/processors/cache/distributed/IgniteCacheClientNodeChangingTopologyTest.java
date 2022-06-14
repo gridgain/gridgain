@@ -55,6 +55,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityFunctionContextImpl;
@@ -68,6 +69,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLock
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -96,6 +98,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -552,29 +555,30 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         client = true;
 
-        final Ignite ignite2 = startGrid(2);
+        final Ignite client = startGrid(2);
 
-        assertTrue(ignite2.configuration().isClientMode());
+        assertTrue(client.configuration().isClientMode());
 
         final Map<Integer, Integer> map = new HashMap<>();
 
+        // First cache fill.
         for (int i = 0; i < 100; i++)
             map.put(i, i);
 
-        TestCommunicationSpi spi = (TestCommunicationSpi)ignite2.configuration().getCommunicationSpi();
+        TestCommunicationSpi spi = (TestCommunicationSpi)client.configuration().getCommunicationSpi();
 
         spi.blockMessages(GridNearLockRequest.class, ignite0.localNode().id());
         spi.blockMessages(GridNearLockRequest.class, ignite1.localNode().id());
 
         spi.record(GridNearLockRequest.class);
 
-        final IgniteCache<Integer, Integer> cache = ignite2.cache(DEFAULT_CACHE_NAME);
+        final IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
         IgniteInternalFuture<?> putFut = GridTestUtils.runAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
                 Thread.currentThread().setName("put-thread");
 
-                try (Transaction tx = ignite2.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                     cache.putAll(map);
 
                     tx.commit();
@@ -586,7 +590,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         assertFalse(putFut.isDone());
 
-        client = false;
+        this.client = false;
 
         IgniteEx ignite3 = startGrid(3);
 
@@ -612,6 +616,9 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         ignite3.close();
 
+        awaitPartitionMapExchange();
+
+        // Second cache fill.
         for (int i = 0; i < 100; i++)
             map.put(i, i + 1);
 
@@ -622,7 +629,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
             @Override public Object call() throws Exception {
                 Thread.currentThread().setName("put-thread");
 
-                try (Transaction tx = ignite2.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                     for (Map.Entry<Integer, Integer> e : map.entrySet())
                         cache.put(e.getKey(), e.getValue());
 
@@ -633,7 +640,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
             }
         });
 
-        startGrid(3);
+        ignite3 = startGrid(3);
 
         log.info("Stop block2.");
 
@@ -648,13 +655,41 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         for (int i = 0; i < 100; i++)
             map.put(i, i + 2);
 
-        try (Transaction tx = ignite2.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+        try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
             cache.putAll(map);
 
             tx.commit();
         }
 
         checkData(map, null, cache, 4);
+
+        // Cache fill during node left.
+        GridCompoundFuture putFut0 = new GridCompoundFuture();
+
+        for (int i = 0; i < 100; i++) {
+            final int fi = i;
+            IgniteInternalFuture f = GridTestUtils.runAsync(new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    Thread.currentThread().setName("put-thread");
+
+                    try (Transaction tx = client.transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
+                        cache.put(fi, map.get(fi));
+
+                        tx.commit();
+                    }
+
+                    return null;
+                }
+            });
+
+            putFut0.add(f);
+        }
+
+        putFut0.markInitialized();
+
+        ignite3.close();
+
+        assertThrowsWithCause(() -> putFut0.get(), ClusterTopologyCheckedException.class);
     }
 
     /**
