@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,6 +39,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteServices;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.IgniteTransactions;
@@ -85,12 +87,17 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceContext;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
+import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddFinishedMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -155,6 +162,8 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(commSpi);
 
+        cfg.setDiscoverySpi(new MyCustomSpi());
+
         TcpDiscoverySpi discoSpi = (TcpDiscoverySpi)cfg.getDiscoverySpi();
 
         discoSpi.setForceServerMode(forceSrvMode);
@@ -199,6 +208,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         ccfg.setNodeFilter(cacheNodeFilter);
         ccfg.setAffinity(affinityFunction(null));
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
+        ccfg.setAtomicityMode(TRANSACTIONAL);
         ccfg.setBackups(0);
 
         return ccfg;
@@ -1616,6 +1626,106 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
         checkAffinity(4, topVer(4, 1), true);
 
         awaitPartitionMapExchange(true, true, null, false);
+
+        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME1));
+    }
+
+	/**
+     *
+     */
+    public static class MyCustomSpi extends TcpDiscoverySpi {
+        /** */
+        public volatile IgniteInClosure<TcpDiscoveryNodeAddFinishedMessage> inreceptor;
+
+        /** {@inheritDoc} */
+        @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
+            if (msg instanceof TcpDiscoveryNodeAddFinishedMessage) {
+                IgniteInClosure<TcpDiscoveryNodeAddFinishedMessage> inreceptor0 = inreceptor;
+
+                if (inreceptor0 != null)
+                    inreceptor0.apply((TcpDiscoveryNodeAddFinishedMessage)msg);
+            }
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDelayAssignmentAffinityChangedWrongMapping() throws Exception {
+        IgniteEx ignite0 = (IgniteEx) startServer(0, 1);
+
+        for (int i = 0; i < 1024; i++)
+            ignite0.cache(CACHE_NAME1).put(i, i);
+
+        CountDownLatch latch1 = new CountDownLatch(1);
+        CountDownLatch latch2 = new CountDownLatch(1);
+        DiscoverySpiTestListener lsnr = new DiscoverySpiTestListener() {
+            @Override
+            public boolean beforeSendCustomEvent(DiscoverySpi spi, IgniteLogger log, DiscoverySpiCustomMessage msg) {
+                DiscoveryCustomMessage msg0 = GridTestUtils.getFieldValue(msg, "delegate");
+
+                if (msg0 instanceof CacheAffinityChangeMessage) {
+                    log.info(">>>>> Block custom message: " + msg0 + ']');
+
+                    latch1.countDown();
+
+                    try {
+                        latch2.await();
+                    }
+                    catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                return super.beforeSendCustomEvent(spi, log, msg);
+            }
+        };
+
+        IgniteDiscoverySpi discoSpi0 = ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi());
+
+        // Block late affinity assignment.
+        discoSpi0.setInternalListener(lsnr);
+
+        startServer(1, 2);
+
+        checkAffinity(2, topVer(2, 0), false);
+
+        // Wait for the late affinity assignment message is ready and isSendCustomEvent() == true
+        latch1.await();
+
+        TestRecordingCommunicationSpi commSpi0 =
+            (TestRecordingCommunicationSpi)ignite0.configuration().getCommunicationSpi();
+
+        // Block rebalance messages.
+        blockSupplySend(commSpi0, CACHE_NAME1);
+
+        AtomicInteger joinedNodesCnt = new AtomicInteger();
+
+        // Count the number of joined nodes.
+        ((MyCustomSpi)discoSpi0).inreceptor = msg -> joinedNodesCnt.incrementAndGet();
+
+        IgniteInternalFuture<?> startSrvFut = GridTestUtils.runAsync(() -> {
+            startServer(2, 3);
+        });
+        assertTrue(GridTestUtils.waitForCondition(() -> joinedNodesCnt.get() == 1, 30_000));
+
+        // Send blocked message.
+        latch2.countDown();
+
+        ((IgniteDiscoverySpi)ignite0.configuration().getDiscoverySpi()).setInternalListener(null);
+
+        startSrvFut.get();
+
+        for (int i = 0; i < 1024; i++)
+            ignite0.cache(CACHE_NAME1).put(i, i);
+
+        commSpi0.stopBlock();
+
+        awaitPartitionMapExchange(true, true, null, false);
+
+        for (int i = 0; i < 1024; i++)
+            ignite0.cache(CACHE_NAME1).put(i, i);
 
         assertPartitionsSame(idleVerify(grid(0), CACHE_NAME1));
     }
