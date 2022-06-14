@@ -3499,8 +3499,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             resetOwnersByCounter(top, maxCntrs, haveHist);
         }
-        else
-            log.warning(">>>>> resetOwnersByCounter false [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
+        else {
+            if (cctx.cache().cacheGroup(top.groupId()) != null)
+                log.warning(">>>>> resetOwnersByCounter false [name=" + cctx.cache().cacheGroup(top.groupId()).cacheOrGroupName() + ']');
+            else
+                log.warning(">>>>> resetOwnersByCounter false [name=" + "cache group is not initialized yet" + ']');
+        }
 
         for (Map.Entry<Integer, TreeSet<Long>> sortedCnrs : varCntrs.entrySet()) {
             Integer part = sortedCnrs.getKey();
