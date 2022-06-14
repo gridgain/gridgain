@@ -29,23 +29,33 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
- * Tests basic functionality of enabling indexing.
+ * Tests table availability on client node when CREATE TABLE command is called on existing cache.
  */
 public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTest {
+    /** */
     private static final int ROWS = 10;
+
+    /** */
     private final String CACHE_NAME = "TEST";
+
+    /** */
     private final String TYPE_NAME = "TEST_TYPE";
+
+    /** */
     protected static final String ATTR_FILTERED = "FILTERED";
 
+    /** */
     private IgniteEx srv;
+
+    /** */
     private IgniteEx cli;
 
     /** {@inheritDoc} */
@@ -101,24 +111,20 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
     /** */
     @Test
     public void test() throws Exception {
-//        assertNotNull(cli.cache(CACHE_NAME));
-
         load(0, ROWS);
 
         createTable();
-
-//        U.sleep(2000L);
-
-        System.out.println("+++ CHECK CLI");
-//        cli.cache(CACHE_NAME);
 
         GridTestUtils.waitForCondition(() -> {
                     try {
                         check(cli);
                         return true;
                     }
-                    catch (Throwable e) {
-                        return false;
+                    catch (IgniteSQLException ex) {
+                        if (ex.getMessage().contains("Failed to parse query. Table \"TEST\" not found"))
+                            return false;
+                        else
+                            throw ex;
                     }
                 },
                 10_000L);
@@ -128,7 +134,6 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
 
     /** */
     private void createTable() {
-        System.out.println("+++ CREATE TABLE");
         srv.context().query().querySqlFields(new SqlFieldsQuery(String.format("CREATE TABLE TEST.TEST " +
             "(ID INT, VAL0 int, VAL1 VARCHAR," +
             " PRIMARY KEY (ID)" +

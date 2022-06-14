@@ -1900,10 +1900,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             if (cctx != null)
                 cacheInfo = new GridCacheContextInfo<>(cctx, false);
-            else {
+            else
                 cacheInfo = new GridCacheContextInfo<>(ctx.cache().cacheDescriptors().get(cacheName));
-//                return;
-            }
         }
         else
             cacheInfo = idx.registeredCacheInfo(cacheName);

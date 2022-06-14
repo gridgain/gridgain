@@ -706,7 +706,7 @@ public class ReducePartitionMapper {
                 return cctx;
         }
 
-        throw new IllegalStateException("Failed to find partitioned cache.");
+        throw new IllegalStateException("Failed to find partitioned cache [cacheIds=" + cacheIds + ']');
     }
 
     /**

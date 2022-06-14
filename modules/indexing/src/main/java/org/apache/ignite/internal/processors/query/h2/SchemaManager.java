@@ -30,7 +30,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.BiConsumer;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -131,8 +134,11 @@ public class SchemaManager {
     /** System VIEW collection. */
     private final Set<SqlSystemView> systemViews = new GridConcurrentHashSet<>();
 
-    /** Mutex to synchronize schema operations. */
+    /** Mutex to synchronize H2 schema operations. */
     private final Object schemaMux = new Object();
+
+    /** Lock to synchronize H2 schema operations & dataTables changes. */
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /** Kernal context. */
     private final GridKernalContext ctx;
@@ -328,22 +334,29 @@ public class SchemaManager {
      */
     public void onCacheTypeCreated(GridCacheContextInfo cacheInfo, IgniteH2Indexing idx,
         GridQueryTypeDescriptor type, boolean isSql) throws IgniteCheckedException {
-        String schemaName = schemaName(cacheInfo.name());
+        lock.writeLock().lock();
 
-        H2TableDescriptor tblDesc = new H2TableDescriptor(idx, schemaName, type, cacheInfo, isSql);
+        try {
+            String schemaName = schemaName(cacheInfo.name());
 
-        H2Schema schema = schema(schemaName);
+            H2TableDescriptor tblDesc = new H2TableDescriptor(idx, schemaName, type, cacheInfo, isSql);
 
-        try (H2PooledConnection conn = connMgr.connection(schema.schemaName())) {
-            GridH2Table h2tbl = createTable(schema.schemaName(), schema, tblDesc, conn);
+            H2Schema schema = schema(schemaName);
 
-            schema.add(tblDesc);
+            try (H2PooledConnection conn = connMgr.connection(schema.schemaName())) {
+                GridH2Table h2tbl = createTable(schema.schemaName(), schema, tblDesc, conn);
 
-            if (dataTables.putIfAbsent(h2tbl.identifier(), h2tbl) != null)
-                throw new IllegalStateException("Table already exists: " + h2tbl.identifierString());
+                schema.add(tblDesc);
+
+                if (dataTables.putIfAbsent(h2tbl.identifier(), h2tbl) != null)
+                    throw new IllegalStateException("Table already exists: " + h2tbl.identifierString());
+            }
+            catch (SQLException e) {
+                throw new IgniteCheckedException("Failed to register query type: " + tblDesc, e);
+            }
         }
-        catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to register query type: " + tblDesc, e);
+        finally {
+            lock.writeLock().unlock();
         }
     }
 
@@ -355,53 +368,60 @@ public class SchemaManager {
      * @param clearIdx Whether to clear the index.
      */
     public void onCacheDestroyed(String cacheName, boolean destroy, boolean clearIdx) {
-        String schemaName = schemaName(cacheName);
+        lock.writeLock().lock();
 
-        H2Schema schema = schemas.get(schemaName);
+        try {
+            String schemaName = schemaName(cacheName);
 
-        // Remove this mapping only after callback to DML proc - it needs that mapping internally
-        cacheName2schema.remove(cacheName);
+            H2Schema schema = schemas.get(schemaName);
 
-        // Drop tables.
-        Collection<H2TableDescriptor> rmvTbls = new HashSet<>();
+            // Remove this mapping only after callback to DML proc - it needs that mapping internally
+            cacheName2schema.remove(cacheName);
 
-        for (H2TableDescriptor tbl : schema.tables()) {
-            if (F.eq(tbl.cacheName(), cacheName)) {
-                try {
-                    tbl.table().setRemoveIndexOnDestroy(clearIdx);
+            // Drop tables.
+            Collection<H2TableDescriptor> rmvTbls = new HashSet<>();
 
-                    dropTable(tbl, destroy);
-                }
-                catch (Exception e) {
-                    U.error(log, "Failed to drop table on cache stop (will ignore): " + tbl.fullTableName(), e);
-                }
+            for (H2TableDescriptor tbl : schema.tables()) {
+                if (F.eq(tbl.cacheName(), cacheName)) {
+                    try {
+                        tbl.table().setRemoveIndexOnDestroy(clearIdx);
 
-                schema.drop(tbl);
+                        dropTable(tbl, destroy);
+                    }
+                    catch (Exception e) {
+                        U.error(log, "Failed to drop table on cache stop (will ignore): " + tbl.fullTableName(), e);
+                    }
 
-                rmvTbls.add(tbl);
+                    schema.drop(tbl);
 
-                GridH2Table h2Tbl = tbl.table();
+                    rmvTbls.add(tbl);
 
-                dataTables.remove(h2Tbl.identifier(), h2Tbl);
-            }
-        }
+                    GridH2Table h2Tbl = tbl.table();
 
-        synchronized (schemaMux) {
-            if (schema.decrementUsageCount()) {
-                schemas.remove(schemaName);
-
-                try {
-                    dropSchema(schemaName);
-                }
-                catch (Exception e) {
-                    U.error(log, "Failed to drop schema on cache stop (will ignore): " + cacheName, e);
+                    dataTables.remove(h2Tbl.identifier(), h2Tbl);
                 }
             }
-        }
 
-        for (H2TableDescriptor tbl : rmvTbls) {
-            for (Index idx : tbl.table().getIndexes())
-                idx.close(null);
+            synchronized (schemaMux) {
+                if (schema.decrementUsageCount()) {
+                    schemas.remove(schemaName);
+
+                    try {
+                        dropSchema(schemaName);
+                    }
+                    catch (Exception e) {
+                        U.error(log, "Failed to drop schema on cache stop (will ignore): " + cacheName, e);
+                    }
+                }
+            }
+
+            for (H2TableDescriptor tbl : rmvTbls) {
+                for (Index idx : tbl.table().getIndexes())
+                    idx.close(null);
+            }
+        }
+        finally {
+            lock.writeLock().unlock();
         }
     }
 
@@ -836,14 +856,28 @@ public class SchemaManager {
      * @return Table or {@code null} if none found.
      */
     public GridH2Table dataTable(String schemaName, String tblName) {
-        return dataTables.get(new QueryTable(schemaName, tblName));
+        lock.readLock().lock();
+
+        try {
+            return dataTables.get(new QueryTable(schemaName, tblName));
+        }
+        finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
      * @return all known tables.
      */
     public Collection<GridH2Table> dataTables() {
-        return dataTables.values();
+        lock.readLock().lock();
+
+        try {
+            return dataTables.values();
+        }
+        finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
@@ -861,16 +895,23 @@ public class SchemaManager {
      * @return Table or {@code null} if index is not found.
      */
     public GridH2Table dataTableForIndex(String schemaName, String idxName) {
-        for (Map.Entry<QueryTable, GridH2Table> dataTableEntry : dataTables.entrySet()) {
-            if (F.eq(dataTableEntry.getKey().schema(), schemaName)) {
-                GridH2Table h2Tbl = dataTableEntry.getValue();
+        lock.readLock().lock();
 
-                if (h2Tbl.userIndex(idxName) != null)
-                    return h2Tbl;
+        try {
+            for (Map.Entry<QueryTable, GridH2Table> dataTableEntry : dataTables.entrySet()) {
+                if (F.eq(dataTableEntry.getKey().schema(), schemaName)) {
+                    GridH2Table h2Tbl = dataTableEntry.getValue();
+
+                    if (h2Tbl.userIndex(idxName) != null)
+                        return h2Tbl;
+                }
             }
-        }
 
-        return null;
+            return null;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
