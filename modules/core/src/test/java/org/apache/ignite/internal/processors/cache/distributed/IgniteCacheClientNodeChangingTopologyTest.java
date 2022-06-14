@@ -526,7 +526,7 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
         super.beforeTest();
         MvccFeatureChecker.skipIfNotSupported(MvccFeatureChecker.Feature.ENTRY_LOCK);
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 50; i++) {
             try {
                 pessimisticTx(null);
             }
