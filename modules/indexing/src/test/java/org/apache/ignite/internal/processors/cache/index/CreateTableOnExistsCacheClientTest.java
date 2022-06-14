@@ -22,17 +22,15 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -50,9 +48,6 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
     private final String TYPE_NAME = "TEST_TYPE";
 
     /** */
-    protected static final String ATTR_FILTERED = "FILTERED";
-
-    /** */
     private IgniteEx srv;
 
     /** */
@@ -61,28 +56,14 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         srv = startGrid("crd");
-
-        cli = clientWithCoordinator("cli", srv);
+        cli = startClientGrid("cli");
 
         srv.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<?, ?> ccfg = testCacheConfiguration(CACHE_NAME);
-
-        srv.getOrCreateCache(ccfg);
+        srv.getOrCreateCache(new CacheConfiguration<>(CACHE_NAME)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC));
 
         awaitPartitionMapExchange();
-    }
-
-    /** */
-    private IgniteEx clientWithCoordinator(String name, IgniteEx ign) throws Exception {
-        while (true) {
-            IgniteEx cli = startClientGrid(name);
-
-            if (((TcpDiscoveryNode)cli.localNode()).clientRouterNodeId().equals(ign.localNode().id()))
-                return cli;
-            else
-                stopGrid(name);
-        }
     }
 
     /** {@inheritDoc} */
@@ -92,20 +73,13 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
         super.afterTest();
     }
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClusterStateOnStart(ClusterState.INACTIVE)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMaxSize(128 * 1024 * 1024)))
-            .setSqlSchemas("TEST");
-    }
-
-    /** */
-    protected CacheConfiguration<?, ?> testCacheConfiguration(
-        String name
-    ) {
-        return new CacheConfiguration<>(name)
-            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+            .setSqlConfiguration(new SqlConfiguration().setSqlSchemas("TEST"));
     }
 
     /** */
@@ -162,16 +136,5 @@ public class CreateTableOnExistsCacheClientTest extends AbstractIndexingCommonTe
         ).getAll();
 
         assertEquals(ROWS, res.size());
-    }
-
-    /** */
-    protected static class NodeFilter implements IgnitePredicate<ClusterNode> {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(ClusterNode node) {
-            return node.attribute(ATTR_FILTERED) == null;
-        }
     }
 }
