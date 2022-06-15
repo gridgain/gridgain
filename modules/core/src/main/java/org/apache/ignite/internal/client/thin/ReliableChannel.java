@@ -704,7 +704,7 @@ final class ReliableChannel implements AutoCloseable {
     }
 
     /** */
-    private <T> T applyOnDefaultChannel(Function<ClientChannel, T> function, ClientOperation op) {
+    <T> T applyOnDefaultChannel(Function<ClientChannel, T> function, ClientOperation op) {
         return applyOnDefaultChannel(function, op, getRetryLimit(), DO_NOTHING);
     }
 
