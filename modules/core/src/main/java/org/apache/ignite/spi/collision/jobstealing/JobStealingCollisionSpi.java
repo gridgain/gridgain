@@ -69,7 +69,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
  * from slower node and moved to the fast under-utilized node.
  * <p>
  * The design and ideas for this SPI are significantly influenced by
- * <a href="http://gee.cs.oswego.edu/dl/papers/fj.pdf">Java Fork/Join Framework</a>
+ * <a href="https://docs.oracle.com/javase/tutorial/essential/concurrency/forkjoin.html">Java Fork/Join Framework</a>
  * authored by Doug Lea and planned for Java 7. {@code GridJobStealingCollisionSpi} took
  * similar concepts and applied them to the grid (as opposed to within VM support planned
  * in Java 7).
