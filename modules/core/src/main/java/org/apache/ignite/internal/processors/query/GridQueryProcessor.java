@@ -2003,11 +2003,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     registerCache0(op0.cacheName(), op.schemaName(), cacheInfo, candRes.get1(), false);
                 }
 
-                if (idxRebuildFutStorage.prepareRebuildIndexes(singleton(cacheInfo.cacheId()), null).isEmpty())
-                    rebuildIndexesFromHash0(cacheInfo.cacheContext(), false);
-                else {
-                    if (log.isInfoEnabled())
-                        log.info("Rebuilding indexes for the cache is already in progress: " + cacheInfo.name());
+                if (!cacheInfo.isClientCache()) {
+                    if (idxRebuildFutStorage.prepareRebuildIndexes(singleton(cacheInfo.cacheId()), null).isEmpty())
+                        rebuildIndexesFromHash0(cacheInfo.cacheContext(), false);
+                    else {
+                        if (log.isInfoEnabled())
+                            log.info("Rebuilding indexes for the cache is already in progress: " + cacheInfo.name());
+                    }
                 }
             }
             else
