@@ -2003,7 +2003,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     registerCache0(op0.cacheName(), op.schemaName(), cacheInfo, candRes.get1(), false);
                 }
 
-                if (!cacheInfo.isClientCache()) {
+                if (!cacheInfo.isCacheContextInited()) {
                     if (idxRebuildFutStorage.prepareRebuildIndexes(singleton(cacheInfo.cacheId()), null).isEmpty())
                         rebuildIndexesFromHash0(cacheInfo.cacheContext(), false);
                     else {
