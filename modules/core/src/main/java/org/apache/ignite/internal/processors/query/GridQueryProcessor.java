@@ -921,6 +921,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     public void onCacheStart0(GridCacheContextInfo<?, ?> cacheInfo, QuerySchema schema, boolean isSql)
         throws IgniteCheckedException {
         if (!cacheSupportSql(cacheInfo.config())) {
+            if (ctx.clientNode())
+                return;
+
             synchronized (stateMux) {
                 boolean proceed = false;
 
@@ -1900,8 +1903,12 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             if (cctx != null)
                 cacheInfo = new GridCacheContextInfo<>(cctx, false);
-            else
-                cacheInfo = new GridCacheContextInfo<>(ctx.cache().cacheDescriptors().get(cacheName));
+            else {
+                if (ctx.clientNode())
+                    cacheInfo = new GridCacheContextInfo<>(ctx.cache().cacheDescriptors().get(cacheName));
+                else
+                    return;
+            }
         }
         else
             cacheInfo = idx.registeredCacheInfo(cacheName);
@@ -2003,7 +2010,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     registerCache0(op0.cacheName(), op.schemaName(), cacheInfo, candRes.get1(), false);
                 }
 
-                if (!cacheInfo.isCacheContextInited()) {
+                if (!ctx.clientNode()) {
                     if (idxRebuildFutStorage.prepareRebuildIndexes(singleton(cacheInfo.cacheId()), null).isEmpty())
                         rebuildIndexesFromHash0(cacheInfo.cacheContext(), false);
                     else {
