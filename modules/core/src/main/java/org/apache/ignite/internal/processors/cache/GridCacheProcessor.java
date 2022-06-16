@@ -4193,8 +4193,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             return false;
         }
 
-        if (msg instanceof CacheAffinityChangeMessage)
-            return true; // sharedCtx.affinity().onCustomEvent(((CacheAffinityChangeMessage)msg));
+        if (msg instanceof CacheAffinityChangeMessage) {
+            CacheAffinityChangeMessage msg0 = (CacheAffinityChangeMessage) msg;
+
+            AffinityTopologyVersion changedVer = ctx.cache().context().exchange().lastAffinityChangedTopologyVersion(topVer);
+
+            // Ignore old
+            boolean needEx = msg0.topologyVersion().compareTo(changedVer) >= 0;
+
+            ((CacheAffinityChangeMessage)msg).exchangeNeeded(needEx);
+
+            return needEx; // sharedCtx.affinity().onCustomEvent(((CacheAffinityChangeMessage)msg));
+        }
 
         if (msg instanceof SnapshotDiscoveryMessage &&
             ((SnapshotDiscoveryMessage)msg).needExchange())

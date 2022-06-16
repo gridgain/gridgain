@@ -195,10 +195,13 @@ public class DiscoverySpiTestListener implements IgniteDiscoverySpiInternalListe
         }
 
         for (DiscoverySpiCustomMessage msg : msgs) {
-            log.info("Resend blocked message: " + msg);
+            if (pred != null && !pred.test(msg)) {
+                log.info("Ignore blocked message: " + msg);
 
-            if (pred != null && !pred.test(msg))
                 continue;
+            }
+
+            log.info("Resend blocked message: " + msg);
 
             spi.sendCustomEvent(msg);
         }
