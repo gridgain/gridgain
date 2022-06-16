@@ -297,13 +297,13 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
                 // check lost partitions
                 if (!top.lostPartitions().contains(partId)) {
                     fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
-                        ", actualPartState=" + actualState + ", expectedPartState=" + LOST +  ", markedAsLost=false]");
+                        ", actualPartState=" + actualState + ", expectedPartState=" + LOST + ", markedAsLost=false]");
                 }
 
                 // check actual partition state
                 if (actualState != LOST && actualState != EVICTED) {
                     fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
-                        ", actualPartState=" + actualState + ", expectedPartState=" + LOST +  ", markedAsLost=true]");
+                        ", actualPartState=" + actualState + ", expectedPartState=" + LOST + ", markedAsLost=true]");
                 }
 
                 // check node2part mapping
@@ -315,7 +315,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
                     if (s != LOST && s != EVICTED) {
                         fail("Unexpected partition state [partId=" + partId + ", nodeId=" + g.localNode().id() +
                             ", node2partNodeId=" + n.localNode().id() +
-                            ", node2partState=" + s + ", expectedPartState=" + LOST +  ", markedAsLost=true]");
+                            ", node2partState=" + s + ", expectedPartState=" + LOST + ", markedAsLost=true]");
                     }
                 }
             }
