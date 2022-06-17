@@ -556,6 +556,12 @@ public class GridH2Table extends TableBase {
     @Override public void unlock(Session ses) {
         SessionLock sesLock = sessions.remove(ses);
 
+        if (sesLock == null) {
+            log.warning("Requested session ses=[" + ses + "] was already removed from active sessions list.");
+
+             return;
+        }
+
         if (sesLock.locked)
             unlock(sesLock.isExclusive());
     }
