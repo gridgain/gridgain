@@ -81,7 +81,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.Prepared;
-import org.gridgain.internal.h2.jdbc.JdbcSQLNonTransientConnectionException;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
