@@ -200,13 +200,13 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
+     * Callback invoked from discovery thread when discovery custom message is received.
+     *
      * @param msg Customer message.
-     * @return {@code True} if send the event.
+     * @param topVer Current topology version.
+     * @return {@code True} if minor topology version should be increased.
      */
-    public boolean isSendCustomEvent(@Nullable CacheAffinityChangeMessage msg) {
-        if (msg == null)
-            return false;
-
+    boolean onCustomEvent(CacheAffinityChangeMessage msg, AffinityTopologyVersion topVer) {
         if (msg.exchangeId() != null) {
             if (log.isDebugEnabled()) {
                 log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
@@ -217,21 +217,26 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             return false;
         }
 
+        AffinityTopologyVersion changedVer = cctx.cache().context().exchange().lastAffinityChangedTopologyVersion(topVer);
+
         // Skip message if affinity was already recalculated.
-        boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
+        //boolean exchangeNeeded = msg.topologyVersion().compareTo(changedVer) >= 0;
+        boolean exchangeNeeded = msg.topologyVersion().topologyVersion() >= changedVer.topologyVersion();
 
         msg.exchangeNeeded(exchangeNeeded);
 
         if (exchangeNeeded) {
-            if (log.isDebugEnabled()) {
-                log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
+            if (log.isInfoEnabled()) {
+                log.warning(">>>>> Need process affinity change message [lastAffVer=" + lastAffVer +
+                    ", changeVer=" + changedVer +
                     ", msgExchId=" + msg.exchangeId() +
                     ", msgVer=" + msg.topologyVersion() + ']');
             }
         }
         else {
-            if (log.isDebugEnabled()) {
-                log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
+            if (log.isInfoEnabled()) {
+                log.warning(">>>>> Ignore affinity change message [lastAffVer=" + lastAffVer +
+                    ", changeVer=" + changedVer +
                     ", msgExchId=" + msg.exchangeId() +
                     ", msgVer=" + msg.topologyVersion() + ']');
             }
@@ -239,6 +244,47 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         return exchangeNeeded;
     }
+
+//    /**
+//     * @param msg Customer message.
+//     * @return {@code True} if send the event.
+//     */
+//    public boolean isSendCustomEvent(@Nullable CacheAffinityChangeMessage msg) {
+//        if (msg == null)
+//            return false;
+//
+//        if (msg.exchangeId() != null) {
+//            if (log.isDebugEnabled()) {
+//                log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
+//                    ", msgExchId=" + msg.exchangeId() +
+//                    ", msgVer=" + msg.topologyVersion() + ']');
+//            }
+//
+//            return false;
+//        }
+//
+//        // Skip message if affinity was already recalculated.
+//        boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
+//
+//        msg.exchangeNeeded(exchangeNeeded);
+//
+//        if (exchangeNeeded) {
+//            if (log.isDebugEnabled()) {
+//                log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
+//                    ", msgExchId=" + msg.exchangeId() +
+//                    ", msgVer=" + msg.topologyVersion() + ']');
+//            }
+//        }
+//        else {
+//            if (log.isDebugEnabled()) {
+//                log.debug("Ignore affinity change message [lastAffVer=" + lastAffVer +
+//                    ", msgExchId=" + msg.exchangeId() +
+//                    ", msgVer=" + msg.topologyVersion() + ']');
+//            }
+//        }
+//
+//        return exchangeNeeded;
+//    }
 
     /**
      * @param topVer Expected topology version.
@@ -313,7 +359,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             }
 
             try {
-                if (isSendCustomEvent(msg))
+                if (/*isSendCustomEvent(msg)*/ msg != null)
                     cctx.discovery().sendCustomEvent(msg);
             }
             catch (IgniteCheckedException e) {
