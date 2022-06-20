@@ -35,6 +35,6 @@ public enum GridDrType {
     /** Replication during preload. */
     DR_PRELOAD,
 
-    /** Entry initiated in current dc. */
-    DR_NATIVE
+    /** Got back an entry, which was created in current dc, during full state transfer. */
+    DR_IGNORE
 }

@@ -1861,15 +1861,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             switch (c.operationType()) {
                 case PUT: {
-                    assert c.newRow() != null : c;
-
                     CacheDataRow oldRow = c.oldRow();
+                    CacheDataRow newRow = c.newRow();
+                    newRow.version().updateCounter(); /// == 0 set 0
+
+                    assert newRow != null : c;
 
                     // Row was logically removed by update closure.
                     if (c.newRow().tombstone())
-                        finishRemove(cctx, row.key(), oldRow, c.newRow());
+                        finishRemove(cctx, row.key(), oldRow, newRow);
                     else
-                        finishUpdate(cctx, c.newRow(), oldRow);
+                        finishUpdate(cctx, newRow, oldRow);
 
                     break;
                 }
@@ -2836,6 +2838,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // Ignore entry initial value.
                 if (newRow.version().updateCounter() != 0 && (ver0 == ver1 || dc0 != dc1))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
+                else
+                    System.err.println();
             }
 
             if (oldRow != null) {
