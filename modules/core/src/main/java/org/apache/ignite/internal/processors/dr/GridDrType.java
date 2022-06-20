@@ -33,5 +33,7 @@ public enum GridDrType {
     DR_LOAD,
 
     /** Replication during preload. */
-    DR_PRELOAD
+    DR_PRELOAD,
+
+    DR_HER
 }
