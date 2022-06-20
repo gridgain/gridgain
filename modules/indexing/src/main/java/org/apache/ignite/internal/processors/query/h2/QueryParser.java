@@ -610,10 +610,12 @@ public class QueryParser {
 
             }
             catch (SQLException e) {
-                if (e.getErrorCode() == ErrorCode.DATABASE_IS_CLOSED)
+                if (e.getErrorCode() == ErrorCode.DATABASE_IS_CLOSED) {
                     idx.kernalContext().failure().process(new FailureContext(CRITICAL_ERROR, e));
 
-                throw new IgniteSQLException("Critical database error. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
+                    throw new IgniteSQLException("Critical database error. " + e.getMessage(), IgniteQueryErrorCode.QUERY_CANCELED, e);
+                } else
+                    throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
