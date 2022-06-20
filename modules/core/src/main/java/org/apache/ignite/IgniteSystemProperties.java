@@ -745,8 +745,6 @@ public final class IgniteSystemProperties {
      * {@link IgniteUtils#resolveLocalAddresses} will not add hostname of local address to the list of node's addresses.
      * Defaults to {@code true}.
      */
-    @SystemProperty(value = "Ignores local address's hostname if IGNITE_LOCAL_HOST is defined "
-        + "when resolving local node's addresses", defaults = "true")
     public static final String IGNITE_IGNORE_LOCAL_HOST_NAME = "IGNITE_IGNORE_LOCAL_HOST_NAME";
 
     /** */
