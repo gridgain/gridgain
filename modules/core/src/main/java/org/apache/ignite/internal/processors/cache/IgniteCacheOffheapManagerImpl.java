@@ -1311,6 +1311,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         PartitionLogTree logTree = new PartitionLogTree(
             grp,
+            p,
             logTreeName,
             grp.dataRegion().pageMemory(),
             allocateForTree(),
