@@ -2827,10 +2827,14 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
+                final GridCacheVersion ver0 = newRow.version();
+                final GridCacheVersion ver1 = newRow.version().conflictVersion();
+
+                final byte dc0 = newRow.version().dataCenterId();
+                final byte dc1 = newRow.version().conflictVersion().dataCenterId();
+
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0 && (newRow.version().conflictVersion() == null ||
-                    (newRow.version() == newRow.version().conflictVersion() ||
-                        newRow.version().dataCenterId() != newRow.version().conflictVersion().dataCenterId())))
+                if (newRow.version().updateCounter() != 0 && (ver0 == ver1 || dc0 != dc1))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
 
