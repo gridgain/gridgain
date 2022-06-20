@@ -35,5 +35,6 @@ public enum GridDrType {
     /** Replication during preload. */
     DR_PRELOAD,
 
-    DR_HER
+    /** Entry initiated in current dc. */
+    DR_NATIVE
 }
