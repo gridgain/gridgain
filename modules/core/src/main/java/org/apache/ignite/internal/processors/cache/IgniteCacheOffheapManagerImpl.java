@@ -1859,19 +1859,32 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
 
+            CacheDataRow newRow = c.newRow();
+
+            boolean skipUpdatePartitionLog = false;
+
+            if (newRow != null) {
+                final GridCacheVersion ver0 = newRow.version();
+                final GridCacheVersion ver1 = newRow.version().conflictVersion();
+
+                final byte dc0 = newRow.version().dataCenterId();
+                final byte dc1 = newRow.version().conflictVersion().dataCenterId();
+
+                if (ver0 != ver1 && dc0 == dc1)
+                    skipUpdatePartitionLog = true;
+            }
+
             switch (c.operationType()) {
                 case PUT: {
                     CacheDataRow oldRow = c.oldRow();
-                    CacheDataRow newRow = c.newRow();
-                    newRow.version().updateCounter(); /// == 0 set 0
 
                     assert newRow != null : c;
 
                     // Row was logically removed by update closure.
                     if (c.newRow().tombstone())
-                        finishRemove(cctx, row.key(), oldRow, newRow);
+                        finishRemove(cctx, row.key(), oldRow, newRow, skipUpdatePartitionLog);
                     else
-                        finishUpdate(cctx, newRow, oldRow);
+                        finishUpdate(cctx, newRow, oldRow, skipUpdatePartitionLog);
 
                     break;
                 }
@@ -1880,14 +1893,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     // Closures should not produce physical removes, probably should add assertion instead.
                     CacheDataRow oldRow = c.oldRow();
 
-                    finishRemove(cctx, row.key(), oldRow, null);
+                    finishRemove(cctx, row.key(), oldRow, null, skipUpdatePartitionLog);
 
                     break;
                 }
 
                 case IN_PLACE:
                     CacheDataRow oldRow = c.oldRow();
-                    CacheDataRow newRow = c.newRow();
 
                     assert oldRow != null;
                     assert newRow != null;
@@ -2127,7 +2139,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     assert !hasOld : row;
 
-                    finishUpdate(cctx, row, null);
+                    finishUpdate(cctx, row, null, false);
                 }
 
                 return true;
@@ -2706,7 +2718,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                         old = dataTree.put(dataRow);
                 }
 
-                finishUpdate(cctx, dataRow, old);
+                finishUpdate(cctx, dataRow, old, false);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2802,10 +2814,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param cctx Cache context.
          * @param newRow New row.
          * @param oldRow Old row if available.
+         * @param skipUpdatePartitionLog If {@code true} skip update partition log tree.
          * @throws IgniteCheckedException If failed.
          */
-        private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
-            throws IgniteCheckedException {
+        private void finishUpdate(
+            GridCacheContext cctx,
+            CacheDataRow newRow,
+            @Nullable CacheDataRow oldRow,
+            boolean skipUpdatePartitionLog
+        ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
@@ -2829,17 +2846,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (oldRow != null && oldRow.version().updateCounter() != 0)
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
-                final GridCacheVersion ver0 = newRow.version();
-                final GridCacheVersion ver1 = newRow.version().conflictVersion();
-
-                final byte dc0 = newRow.version().dataCenterId();
-                final byte dc1 = newRow.version().conflictVersion().dataCenterId();
-
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0 && (ver0 == ver1 || dc0 != dc1))
+                if (newRow.version().updateCounter() != 0 && !skipUpdatePartitionLog)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
-                else
-                    System.err.println();
             }
 
             if (oldRow != null) {
@@ -2891,7 +2900,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 CacheDataRow oldRow = dataTree.remove(new SearchRow(cacheId, key));
 
                 if (oldRow != null)
-                    finishRemove(cctx, key, oldRow, null);
+                    finishRemove(cctx, key, oldRow, null, false);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2982,7 +2991,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 // assert c.operationType() == PUT || c.operationType() == IN_PLACE : c.operationType();
 
                 if (c.operationType() != NOOP)
-                    finishRemove(cctx, key, c.oldRow, c.newRow);
+                    finishRemove(cctx, key, c.oldRow, c.newRow, false);
             }
             finally {
                 busyLock.leaveBusy();
@@ -2994,13 +3003,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param key Key.
          * @param oldRow Removed row. Can be null for logical remove (ts write as first entry op).
          * @param tombstoneRow Tombstone row (if tombstone was created for remove). Not null means logical removal.
+         * @param skipUpdatePartitionLog If {@code true} skip update partition log tree.
          * @throws IgniteCheckedException If failed.
          */
         private void finishRemove(
             GridCacheContext cctx,
             KeyCacheObject key,
             @Nullable CacheDataRow oldRow,
-            @Nullable CacheDataRow tombstoneRow
+            @Nullable CacheDataRow tombstoneRow,
+            boolean skipUpdatePartitionLog
         ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean oldVal = oldRow != null && !oldRow.tombstone();
@@ -3036,7 +3047,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 && !skipUpdatePartitionLog)
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
 
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
