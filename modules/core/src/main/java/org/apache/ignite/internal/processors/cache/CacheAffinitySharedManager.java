@@ -223,6 +223,68 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         //boolean exchangeNeeded = msg.topologyVersion().compareTo(changedVer) >= 0;
         boolean exchangeNeeded = msg.topologyVersion().topologyVersion() >= changedVer.topologyVersion();
 
+        try {
+            if (!exchangeNeeded/* && false*/) {
+                // There is an "affinity changed" exchange,
+                // however starting a new cache or joining a client node with statically configured caches
+                // should not lead to skipping the late affinity assignment message.
+                boolean firstFut = true;
+                boolean onlyClientExchanges = true;
+                while (true) {
+                    if (!cctx.cache().context().exchange().exchangeFutures().isEmpty()) {
+                        GridDhtPartitionsExchangeFuture fut = cctx.cache().context().exchange().exchangeFutures().get(0);
+
+                        if (fut.initialVersion().compareTo(changedVer) >= 0)
+                            break;
+                    }
+                }
+                for (GridDhtPartitionsExchangeFuture fut : cctx.cache().context().exchange().exchangeFutures()) {
+                    log.warning(">>>>> processing exchange fut [fut=" + fut + ']');
+                    if (firstFut) {
+                        firstFut = false;
+
+                        if (fut.initialVersion().before(changedVer)) {
+                            log.warning(">>>>> cannot find exchnage future that relates to changed affinity version [" +
+                                "msg=" + msg + ", changedVer=" + changedVer +
+                                ", exchangeFutVer=" + fut.initialVersion() + ", exchangeFut=" + fut + ']');
+                        }
+                    }
+
+                    if (fut.initialVersion().after(changedVer)) {
+                        log.warning(">>>>> skipping exchnage future (after aff changed ver) [" +
+                            "msg=" + msg + ", changedVer=" + changedVer + ", exchangeFut=" + fut + ']');
+
+                        continue;
+                    }
+
+                    if (fut.initialVersion().compareTo(msg.topologyVersion()) <= 0) {
+                        log.warning(">>>>> skipping exchnage future (before late aff ver) [" +
+                            "msg=" + msg + ", changedVer=" + changedVer + ", exchangeFut=" + fut + ']');
+
+                        break;
+                    }
+
+                    if (!fut.firstEvent().eventNode().isClient() && fut.changedAffinity()) {
+                        onlyClientExchanges = false;
+
+                        log.warning(">>>>> found out server exchange [" +
+                            "msg=" + msg + ", changedVer=" + changedVer +
+                            ", firstEventNode=" + fut.firstEvent().eventNode() +
+                            ", isClient=" + fut.firstEvent().eventNode().isClient() +
+                            ", futAffChanged=" + fut.changedAffinity() +
+                            ", exchangeFut=" + fut + ']');
+
+                        break;
+                    }
+                }
+
+                exchangeNeeded = onlyClientExchanges;
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
         msg.exchangeNeeded(exchangeNeeded);
 
         if (exchangeNeeded) {
@@ -230,7 +292,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 log.warning(">>>>> Need process affinity change message [lastAffVer=" + lastAffVer +
                     ", changeVer=" + changedVer +
                     ", msgExchId=" + msg.exchangeId() +
-                    ", msgVer=" + msg.topologyVersion() + ']');
+                    ", msgVer=" + msg.topologyVersion() +
+                    ", msg=" + msg + ']');
             }
         }
         else {
@@ -238,7 +301,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 log.warning(">>>>> Ignore affinity change message [lastAffVer=" + lastAffVer +
                     ", changeVer=" + changedVer +
                     ", msgExchId=" + msg.exchangeId() +
-                    ", msgVer=" + msg.topologyVersion() + ']');
+                    ", msgVer=" + msg.topologyVersion() +
+                    ", msg=" + msg + ']');
             }
         }
 

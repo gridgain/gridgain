@@ -1064,7 +1064,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Unblock supply messages from supplier2
         supplierSpi2.stopBlock();
 
-        awaitPartitionMapExchange(true, true, null);
+        //awaitPartitionMapExchange(true, true, null);
+        awaitPartitionMapExchange(true, true, null, true, null);
 
         // Check data consistency.
         assertPartitionsSame(idleVerify(restartedDemander, cacheName2, cacheName1));
