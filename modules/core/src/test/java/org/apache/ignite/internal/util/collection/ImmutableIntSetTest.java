@@ -35,6 +35,7 @@ public class ImmutableIntSetTest {
         IntSet immutableSet = ImmutableIntSet.wrap(new HashSet<>(Arrays.asList(2)));
 
         assertTrue(immutableSet.contains(2));
+
         assertFalse(immutableSet.contains(1));
     }
 
