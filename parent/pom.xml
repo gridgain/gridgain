@@ -60,7 +60,7 @@
         <bouncycastle.version>1.68</bouncycastle.version>
         <commons.beanutils.bundle.version>1.9.2_1</commons.beanutils.bundle.version>
         <commons.beanutils.version>1.9.4</commons.beanutils.version>
-        <commons.codec.version>1.13</commons.codec.version>
+        <commons.codec.version>1.15</commons.codec.version>
         <commons.collections.version>3.2.2</commons.collections.version>
         <commons.compress.version>1.20</commons.compress.version>
         <commons.lang3.version>3.12.0</commons.lang3.version>

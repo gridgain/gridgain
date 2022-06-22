@@ -18,6 +18,7 @@
 #define _IGNITE_IMPL_THIN_PROTOCOL_VERSION
 
 #include <stdint.h>
+#include <set>
 
 #include <string>
 
@@ -154,6 +155,9 @@ namespace ignite
                 /** Maintenance part. */
                 int16_t vmaintenance;
             };
+
+            /** Version set type. */
+            typedef std::set<ProtocolVersion> VersionSet;
         }
     }
 }

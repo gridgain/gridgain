@@ -69,6 +69,8 @@ namespace ignite
                         enforceJoinOrder(false),
                         lazy(false),
                         collocated(false),
+                        parts(),
+                        updateBatchSize(1),
                         args()
                     {
                         // No-op.
@@ -90,6 +92,8 @@ namespace ignite
                         enforceJoinOrder(other.enforceJoinOrder),
                         lazy(other.lazy),
                         collocated(other.collocated),
+                        parts(other.parts),
+                        updateBatchSize(other.updateBatchSize),
                         args()
                     {
                         args.reserve(other.args.size());
@@ -146,6 +150,7 @@ namespace ignite
                             swap(enforceJoinOrder, other.enforceJoinOrder);
                             swap(lazy, other.lazy);
                             swap(collocated, other.collocated);
+                            swap(parts, other.parts);
                             swap(args, other.args);
                         }
                     }
@@ -387,9 +392,53 @@ namespace ignite
                     }
 
                     /**
+                     * Get partitions for the query.
+                     *
+                     * The query will be executed only on nodes which are primary for specified partitions.
+                     *
+                     * @return Partitions for the query.
+                     */
+                    const std::vector<int32_t>& GetPartitions() const
+                    {
+                        return parts;
+                    }
+
+                    /**
+                     * Set partitions for the query.
+                     *
+                     * The query will be executed only on nodes which are primary for specified partitions.
+                     *
+                     * @param partitions Partitions for the query.
+                     */
+                    void SetPartitions(const std::vector<int32_t>& partitions)
+                    {
+                        this->parts = partitions;
+                    }
+
+                    /**
+                     * Set batch size for update queries.
+                     *
+                     * @param size Batch size for update queries.
+                     */
+                    void SetUpdateBatchSize(int32_t size)
+                    {
+                        updateBatchSize = size;
+                    }
+
+                    /**
+                     * Get batch size for update queries.
+                     *
+                     * @return Batch size for update queries.
+                     */
+                    int32_t GetUpdateBatchSize() const
+                    {
+                        return updateBatchSize;
+                    }
+
+                    /**
                      * Add argument for the query.
                      *
-                     * @tparam T Type of argument. Should be should be copy-constructable and assignable. BinaryType
+                     * @tparam T Type of argument. Should be copy-constructable and assignable. BinaryType
                      * class template should be specialized for this type.
                      *
                      * @param arg Argument.
@@ -456,6 +505,12 @@ namespace ignite
 
                     /** Collocated flag. */
                     bool collocated;
+
+                    /** Partitions. */
+                    std::vector<int32_t> parts;
+
+                    /** Max rows to fetch. */
+                    int32_t updateBatchSize;
 
                     /** Arguments. */
                     std::vector<impl::thin::CopyableWritable*> args;
