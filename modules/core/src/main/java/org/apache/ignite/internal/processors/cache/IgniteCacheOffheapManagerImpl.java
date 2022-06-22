@@ -1861,17 +1861,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             CacheDataRow newRow = c.newRow();
 
-            if (newRow != null) {
-                final GridCacheVersion ver0 = newRow.version();
-                final GridCacheVersion ver1 = newRow.version().conflictVersion();
-
-                final byte dc0 = newRow.version().dataCenterId();
-                final byte dc1 = newRow.version().conflictVersion().dataCenterId();
-
-                if (ver0 != ver1 && dc0 == dc1)
-                    newRow.version().updateCounter(0);
-            }
-
             switch (c.operationType()) {
                 case PUT: {
                     CacheDataRow oldRow = c.oldRow();
@@ -1933,6 +1922,26 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 default:
                     assert false : c.operationType();
             }
+        }
+
+        /**
+         * Check replication conditions.
+         *
+         * @param row Row to check.
+         * @return {@code true} if row need to be replicated, {@code false} otherwise.
+         */
+        static boolean replicationRequire(CacheDataRow row) {
+            if (row != null) {
+                final GridCacheVersion ver0 = row.version();
+                final GridCacheVersion ver1 = row.version().conflictVersion();
+
+                final byte dc0 = row.version().dataCenterId();
+                final byte dc1 = row.version().conflictVersion().dataCenterId();
+
+                return ver0 == ver1 || dc0 != dc1;
+            }
+
+            return false;
         }
 
         /**
@@ -2843,7 +2852,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0)
+                if (newRow.version().updateCounter() != 0 && replicationRequire(newRow))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
 
@@ -3041,7 +3050,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 && replicationRequire(tombstoneRow))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
 
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
