@@ -1536,8 +1536,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 logPtr = logTxUpdate(tx, val, expireTime, newVer, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
-
-
+            
             GridDrType drType0 = drType;
 
             if (!replicationRequire(newVer))
