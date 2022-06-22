@@ -126,6 +126,7 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.INVOKE_NO_OP;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.REMOVE_NO_VAL;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.replicationRequire;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MAX_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
@@ -1536,7 +1537,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             update(val, expireTime, ttl, newVer, true);
 
-            drReplicate(drType, val, newVer, topVer);
+
+            GridDrType drType0 = drType;
+
+            if (!replicationRequire(newVer))
+                drType0 = DR_IGNORE;
+
+            drReplicate(drType0, val, newVer, topVer);
 
             recordNodeId(affNodeId, topVer);
 
@@ -2234,7 +2241,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             c = new AtomicCacheUpdateClosure(this,
                 topVer,
-                new GridCacheVersion(newVer),
+                newVer.copy(),
                 op,
                 writeObj,
                 invokeArgs,
@@ -3563,7 +3570,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx) {
         if (explicitVer != null)
-            return new GridCacheVersion(explicitVer);
+            return explicitVer.copy();
 
         if (tx == null)
             return nextVersion();
@@ -3572,7 +3579,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         assert newVer != null : "Failed to get write version for tx: " + tx;
 
-        return new GridCacheVersion(newVer); // clone.
+        return newVer.copy(); // clone.
     }
 
     /** {@inheritDoc} */

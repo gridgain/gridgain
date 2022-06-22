@@ -1927,21 +1927,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /**
          * Check replication conditions.
          *
-         * @param row Row to check.
+         * @param ver Version to check.
          * @return {@code true} if row need to be replicated, {@code false} otherwise.
          */
-        static boolean replicationRequire(CacheDataRow row) {
-            if (row != null) {
-                final GridCacheVersion ver0 = row.version();
-                final GridCacheVersion ver1 = row.version().conflictVersion();
+        public static boolean replicationRequire(GridCacheVersion ver) {
+            final GridCacheVersion conflictVer = ver.conflictVersion();
 
-                final byte dc0 = row.version().dataCenterId();
-                final byte dc1 = row.version().conflictVersion().dataCenterId();
+            if (ver == conflictVer)
+                return true;
 
-                return ver0 == ver1 || dc0 != dc1;
-            }
+            final byte dc0 = ver.dataCenterId();
+            final byte dc1 = conflictVer.dataCenterId();
 
-            return false;
+            return dc0 != dc1;
         }
 
         /**
@@ -2852,7 +2850,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0 && replicationRequire(newRow))
+                if (newRow.version().updateCounter() != 0 && replicationRequire(newRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
 
@@ -3050,7 +3048,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 && replicationRequire(tombstoneRow))
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 &&
+                    replicationRequire(tombstoneRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
 
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {

@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
@@ -688,6 +689,10 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 // Deal with conflicts.
                                 GridCacheVersion explicitVer = txEntry.conflictVersion() != null ?
                                     txEntry.conflictVersion() : writeVersion();
+
+                                if (txEntry.conflictVersion() != null)
+                                    explicitVer = new GridCacheVersionEx(explicitVer.topologyVersion(),
+                                        explicitVer.nodeOrderAndDrIdRaw(), explicitVer.order(), explicitVer.copy());
 
                                 if ((op == CREATE || op == UPDATE) &&
                                     txEntry.conflictExpireTime() == CU.EXPIRE_TIME_CALCULATE) {

@@ -645,7 +645,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                             val,
                                             op,
                                             nearXidVersion(),
-                                            new GridCacheVersion(writeVersion()),
+                                            writeVersion().copy(),
                                             0,
                                             txEntry.key().partition(),
                                             txEntry.updateCounter(),
