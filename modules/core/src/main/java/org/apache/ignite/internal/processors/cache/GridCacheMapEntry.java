@@ -131,6 +131,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MAX_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
+import static org.apache.ignite.internal.processors.dr.GridDrType.DR_BACKUP;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_IGNORE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
@@ -1539,7 +1540,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             GridDrType drType0 = drType;
 
-            if (!replicationRequire(newVer))
+            if (!replicationRequire(newVer) && drType != DR_BACKUP)
                 drType0 = DR_IGNORE;
 
             drReplicate(drType0, val, newVer, topVer);
@@ -2382,7 +2383,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 GridDrType drType0 = drType;
 
-                if (replicationRequire(newVer))
+                if (replicationRequire(newVer) && drType != DR_BACKUP)
                     drType0 = DR_IGNORE;
 
                 drReplicate(drType0, updateVal, updateVer, topVer);
