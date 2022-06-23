@@ -62,6 +62,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTaskSessionImpl;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.InvalidUserCommandException;
+import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.compute.ComputeTaskTimeoutCheckedException;
@@ -1111,9 +1113,12 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                         LT.error(log, e, "Failed to obtain remote job result policy for result from " +
                             "ComputeTask.result(..) method (will fail the whole task): " + jobRes);
                     }
-                    else
-                        U.error(log, "Failed to obtain remote job result policy for result from " +
-                            "ComputeTask.result(..) method (will fail the whole task): " + jobRes, e);
+                    else {
+                        String logMessage = "Failed to obtain remote job result policy for result from " +
+                            "ComputeTask.result(..) method (will fail the whole task): " + jobRes;
+
+                        logRespectingInvalidCommandExceptions(e, logMessage);
+                    }
 
                     finishTask(null, e);
 
@@ -1124,7 +1129,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                         "ComputeTask.result(..) method due to undeclared user exception " +
                         "(will fail the whole task): " + jobRes;
 
-                    U.error(log, errMsg, e);
+                    logRespectingInvalidCommandExceptions(e, errMsg);
 
                     Throwable tmp = new ComputeUserUndeclaredException(errMsg, e);
 
@@ -1139,6 +1144,23 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
                 }
             }
         });
+    }
+
+    /**
+     * Logs an exception as an ERROR, UNLESS it's an {@link InvalidUserCommandException}; if it is an
+     * InvalidUserCommandException, then log it as DEBUG.
+     *
+     * @param e          Exception to log.
+     * @param logMessage Logging message.
+     */
+    private void logRespectingInvalidCommandExceptions(Throwable e, String logMessage) {
+        if (UserCommandExceptions.causedByUserCommandException(e)) {
+            // Log this with DEBUG because it's not a system exception, it should not be highlighted
+            // in the logs.
+            if (log.isDebugEnabled())
+                log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
+        } else
+            U.error(log, logMessage, e);
     }
 
     /**
@@ -1187,7 +1209,7 @@ public class GridTaskWorker<T, R> extends GridWorker implements GridTimeoutObjec
             String errMsg = "Failed to reduce job results due to undeclared user exception [task=" + task +
                 ", err=" + e + ']';
 
-            U.error(log, errMsg, e);
+            logRespectingInvalidCommandExceptions(e, errMsg);
 
             userE = new ComputeUserUndeclaredException(errMsg, e);
 

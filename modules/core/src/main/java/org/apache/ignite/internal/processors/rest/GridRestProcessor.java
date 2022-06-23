@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.ConnectorMessageInterceptor;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskResultBean;
@@ -371,8 +372,17 @@ public class GridRestProcessor extends GridProcessorAdapter {
                         res = new GridRestResponse(STATUS_ILLEGAL_STATE, iae.getMessage());
                     }
                     else {
-                        if (!X.hasCause(e, VisorClusterGroupEmptyException.class))
-                            LT.error(log, e, "Failed to handle request: " + req.command());
+                        if (!X.hasCause(e, VisorClusterGroupEmptyException.class)) {
+                            String logMessage = "Failed to handle request: " + req.command();
+
+                            if (UserCommandExceptions.causedByUserCommandException(e)) {
+                                // Log this with DEBUG because it's not a system exception, it should not be highlighted
+                                // in the logs.
+                                if (log.isDebugEnabled())
+                                    log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
+                            } else
+                                LT.error(log, e, logMessage);
+                        }
 
                         if (log.isDebugEnabled())
                             log.debug("Failed to handle request [req=" + req + ", e=" + e + "]");
