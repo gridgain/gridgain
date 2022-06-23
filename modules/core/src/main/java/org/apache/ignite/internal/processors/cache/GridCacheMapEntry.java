@@ -2382,7 +2382,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 GridDrType drType0 = drType;
 
-                if (conflictVer != null && newVer.dataCenterId() == conflictVer.dataCenterId())
+                if (replicationRequire(newVer))
                     drType0 = DR_IGNORE;
 
                 drReplicate(drType0, updateVal, updateVer, topVer);
