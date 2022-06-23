@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testframework;
 
+import com.google.common.collect.Lists;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -71,6 +72,7 @@ import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.management.Attribute;
@@ -2456,6 +2458,13 @@ public final class GridTestUtils {
      */
     public static void assertInactive(ClusterState state) {
         assertFalse(state + " isn't inactive state", ClusterState.active(state));
+    }
+
+    /** @return Cartesian product of collections. See {@link Lists#cartesianProduct(List)}. */
+    public static Collection<Object[]> cartesianProduct(Collection<?>... c) {
+        List<List<?>> lists = F.asList(c).stream().map(ArrayList::new).collect(Collectors.toList());
+
+        return F.transform(Lists.cartesianProduct(lists), List::toArray);
     }
 
     /** Test parameters scale factor util. */
