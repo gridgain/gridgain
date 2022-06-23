@@ -291,6 +291,19 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
      * @throws IOException If parsing failed.
      */
     protected JsonNode validateJsonResponse(String content, boolean errorExpected) throws IOException {
+        return validateJsonResponse(content, errorExpected, false);
+    }
+
+    /**
+     * Validates JSON response.
+     *
+     * @param content Content to check.
+     * @param errorExpected is error expected.
+     * @param canBeUnauthenticated can a request be unauthenticated
+     * @return REST result if {@code errorExpected} is {@code false}. Error instead.
+     * @throws IOException If parsing failed.
+     */
+    protected JsonNode validateJsonResponse(String content, boolean errorExpected, boolean canBeUnauthenticated) throws IOException {
         assertNotNull(content);
         assertFalse(content.isEmpty());
 
@@ -305,7 +318,8 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         assertEquals(STATUS_SUCCESS, node.get("successStatus").asInt());
 
-        assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
+        if (!canBeUnauthenticated)
+            assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
 
         return node.get(errorExpected ? "error" : "response");
     }
@@ -1401,7 +1415,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     public void testProbeCommand() throws Exception {
         String ret = content(null, GridRestCommand.PROBE);
 
-        assertResponseSucceeded(ret, false);
+        validateJsonResponse(ret, false, true);
     }
 
     /**
@@ -2455,7 +2469,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     public void testVersion() throws Exception {
         String ret = content(null, GridRestCommand.VERSION);
 
-        JsonNode res = validateJsonResponse(ret);
+        JsonNode res = validateJsonResponse(ret, false, true);
 
         assertEquals(VER_STR, res.asText());
     }
