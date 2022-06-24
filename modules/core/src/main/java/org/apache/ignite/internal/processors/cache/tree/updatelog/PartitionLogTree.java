@@ -91,8 +91,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row)
-        throws IgniteCheckedException {
+    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row) {
         UpdateLogRowIO io = (UpdateLogRowIO)iox;
 
         int cmp;
@@ -121,7 +120,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         cmp = Long.compare(updCntr, row.updCntr);
 
         /* remove row */
-        if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
+        if (cmp == 0 && row.link != 0 /* search insertion point */ && io.getLink(pageAddr, idx) != row.link) {
             if (strictConsistencyCheck)
                 throw new AssertionError("Duplicate update counters [updCounter=" + updCntr + ']');
             else {
