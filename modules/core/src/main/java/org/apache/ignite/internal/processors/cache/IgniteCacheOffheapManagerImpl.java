@@ -1859,17 +1859,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             dataTree.invoke(row, CacheDataRowAdapter.RowData.NO_KEY, c);
 
+            CacheDataRow newRow = c.newRow();
+
             switch (c.operationType()) {
                 case PUT: {
-                    assert c.newRow() != null : c;
-
                     CacheDataRow oldRow = c.oldRow();
+
+                    assert newRow != null : c;
 
                     // Row was logically removed by update closure.
                     if (c.newRow().tombstone())
-                        finishRemove(cctx, row.key(), oldRow, c.newRow());
+                        finishRemove(cctx, row.key(), oldRow, newRow);
                     else
-                        finishUpdate(cctx, c.newRow(), oldRow);
+                        finishUpdate(cctx, newRow, oldRow);
 
                     break;
                 }
@@ -1885,7 +1887,6 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 case IN_PLACE:
                     CacheDataRow oldRow = c.oldRow();
-                    CacheDataRow newRow = c.newRow();
 
                     assert oldRow != null;
                     assert newRow != null;
@@ -1921,6 +1922,24 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 default:
                     assert false : c.operationType();
             }
+        }
+
+        /**
+         * Check replication conditions.
+         *
+         * @param ver Version to check.
+         * @return {@code true} if row need to be replicated, {@code false} otherwise.
+         */
+        public static boolean replicationRequire(GridCacheVersion ver) {
+            final GridCacheVersion conflictVer = ver.conflictVersion();
+
+            if (ver == conflictVer)
+                return true;
+
+            final byte dc0 = ver.dataCenterId();
+            final byte dc1 = conflictVer.dataCenterId();
+
+            return dc0 != dc1;
         }
 
         /**
@@ -2802,8 +2821,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
          * @param oldRow Old row if available.
          * @throws IgniteCheckedException If failed.
          */
-        private void finishUpdate(GridCacheContext cctx, CacheDataRow newRow, @Nullable CacheDataRow oldRow)
-            throws IgniteCheckedException {
+        private void finishUpdate(
+            GridCacheContext cctx,
+            CacheDataRow newRow,
+            @Nullable CacheDataRow oldRow
+        ) throws IgniteCheckedException {
             boolean oldTombstone = oldRow != null && oldRow.tombstone();
             boolean hasOldVal = oldRow != null && !oldRow.tombstone();
 
@@ -2828,7 +2850,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                     removeFromLog(new UpdateLogRow(cctx.cacheId(), oldRow.version().updateCounter(), oldRow.link()));
 
                 // Ignore entry initial value.
-                if (newRow.version().updateCounter() != 0)
+                if (newRow.version().updateCounter() != 0 && replicationRequire(newRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), newRow.version().updateCounter(), newRow.link()));
             }
 
@@ -3026,7 +3048,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (isIncrementalDrEnabled(cctx)) {
-                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0)
+                if (tombstoneRow != null && tombstoneRow.version().updateCounter() != 0 &&
+                    replicationRequire(tombstoneRow.version()))
                     addUpdateToLog(new UpdateLogRow(cctx.cacheId(), tombstoneRow.version().updateCounter(), tombstoneRow.link()));
 
                 if (oldRow != null && oldRow.version().updateCounter() != 0) {
@@ -3406,7 +3429,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void removeFromLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            UpdateLogRow old = logTree.remove(row);
+            logTree.remove(row);
         }
 
         /**
@@ -3418,7 +3441,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         private void addUpdateToLog(UpdateLogRow row) throws IgniteCheckedException {
             assert row.updateCounter() > 0;
 
-            boolean res = logTree.putx(row);
+            logTree.putx(row);
         }
 
         /** {@inheritDoc} */
