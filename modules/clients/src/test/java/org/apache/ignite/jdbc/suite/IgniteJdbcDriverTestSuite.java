@@ -58,6 +58,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinConnectionSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionTimeoutSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataPageScanPropertySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataSourceSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinDatabaseFailureTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDefaultTimeoutTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDeleteStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDiskSpillingClientsTest;
@@ -252,6 +253,8 @@ import org.junit.runners.Suite;
     JdbcThinTransactionsServerNoAutoCommitComplexSelfTest.class,
 
     JdbcThinLocalQueriesSelfTest.class,
+    // FH tests.
+    JdbcThinDatabaseFailureTest.class,
 
     // Various commands.
     JdbcThinWalModeChangeSelfTest.class,

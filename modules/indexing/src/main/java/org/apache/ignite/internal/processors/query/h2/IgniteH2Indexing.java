@@ -1476,7 +1476,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param cancel Cancel.
      * @param timeout Timeout.
      * @return Fields query.
-     * @throws IgniteCheckedException On error.
      */
     private QueryCursorImpl<List<?>> executeSelectForDml(
         @Nullable Long qryId,
@@ -1485,7 +1484,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         MvccQueryTracker mvccTracker,
         GridQueryCancel cancel,
         int timeout
-    ) throws IgniteCheckedException {
+    ) {
         QueryParserResult parseRes = parser.parse(schema, selectQry, false);
 
         QueryParserResultSelect select = parseRes.select();
@@ -1525,7 +1524,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param inTx Flag whether query is executed within transaction.
      * @param timeout Timeout.
      * @return Query result.
-     * @throws IgniteCheckedException On error.
      */
     private Iterable<List<?>> executeSelect0(
         @Nullable Long qryId,
@@ -1537,7 +1535,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         GridQueryCancel cancel,
         boolean inTx,
         int timeout
-    ) throws IgniteCheckedException {
+    ) {
         assert !select.mvccEnabled() || mvccTracker != null;
 
         // Check security.
@@ -1737,7 +1735,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         AffinityTopologyVersion topVer,
         MvccSnapshot mvccSnapshot,
         GridQueryCancel cancel
-    ) throws IgniteCheckedException {
+    ) {
         SqlFieldsQuery fldsQry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(qry), timeout, TimeUnit.MILLISECONDS);
 
         if (params != null)
