@@ -508,10 +508,14 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
         try (InputStream keyStoreFile = keyStoreFile()) {
             assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
 
-            log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
-                ", keyStorePwd(char[])=" + keyStorePwd + ", keyStorePwd=" + (new String(keyStorePwd)) +
-                ", type=" + KeyStore.getDefaultType() + ", keySize=" + keySize +
-                ", keyStoreFile=" + (new File(keyStorePath).toPath().toAbsolutePath()));
+            {
+                File fff = new File(keyStorePath);
+
+                log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
+                    ", keyStorePwd(char[])=" + keyStorePwd + ", keyStorePwd=" + (new String(keyStorePwd)) +
+                    ", type=" + KeyStore.getDefaultType() + ", keySize=" + keySize +
+                    ", keyStoreFile=" + (fff.toPath().toAbsolutePath()) + ", exists=" + fff.exists() + ']');
+            }
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 

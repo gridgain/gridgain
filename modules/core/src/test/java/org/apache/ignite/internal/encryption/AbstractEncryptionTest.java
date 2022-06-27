@@ -106,6 +106,7 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
 
         encSpi.setKeyStorePath(keystorePath());
         encSpi.setKeyStorePassword(keystorePassword());
+        encSpi.setKeySize(128);
 
         cfg.setEncryptionSpi(encSpi);
 
