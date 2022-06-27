@@ -391,7 +391,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /**
      * Ensures spi started.
-     * 
+     *
      * @throws IgniteException If spi not started.
      */
     private void ensureStarted() throws IgniteException {
@@ -507,6 +507,10 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
         try (InputStream keyStoreFile = keyStoreFile()) {
             assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
+
+            log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
+                ", keyStorePwd=" + keyStorePwd + ", type=" + KeyStore.getDefaultType() +
+                ", keyStoreFile=" + (new File(keyStorePath).toPath().toAbsolutePath()));
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 
