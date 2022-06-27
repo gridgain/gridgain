@@ -116,6 +116,7 @@ import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -152,6 +153,9 @@ import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager {
     /** Batch size for cache removals during destroy. */
     private static final int BATCH_SIZE = 1000;
+
+    /** The message shows when several entries expire. */
+    public static final String SEVERAL_ENTRYES_ARE_ENTERD_TO_EXPIRE_QUEUE_MSG = "Several entryes are enterd to expire queue";
 
     /** */
     protected GridCacheSharedContext ctx;
@@ -1494,6 +1498,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         int scanned = 0;
 
+        long erlierstEpireTime = upper;
+
         do {
             if (amount != -1 && scanned >= amount)
                 break;
@@ -1510,12 +1516,21 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
 
+            if (row.expireTime < erlierstEpireTime)
+                erlierstEpireTime = row.expireTime;
+
             if (c.applyAsInt(row) != 0)
                 break;
 
             scanned++;
         }
         while (cur.next());
+
+        if (scanned > 0 && log.isInfoEnabled()) {
+            LT.info(log, SEVERAL_ENTRYES_ARE_ENTERD_TO_EXPIRE_QUEUE_MSG + tombstone,
+                SEVERAL_ENTRYES_ARE_ENTERD_TO_EXPIRE_QUEUE_MSG + " [tombstone=" + tombstone +
+                ", earliest=" + U.format(erlierstEpireTime) + ", count=" + scanned + ", treeSize=" + pendingEntries.size() + ']');
+        }
 
         return scanned;
     }
