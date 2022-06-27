@@ -77,7 +77,7 @@ public class GridOsCacheDrManager implements GridCacheReplicationManager {
     }
 
     /** {@inheritDoc} */
-    @Override public void onExchange(AffinityTopologyVersion topVer, boolean left) throws IgniteCheckedException {
+    @Override public void onExchange(AffinityTopologyVersion topVer, boolean left) {
         // No-op.
     }
 
