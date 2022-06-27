@@ -510,7 +510,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
             log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
                 ", keyStorePwd(char[])=" + keyStorePwd + ", keyStorePwd=" + (new String(keyStorePwd)) +
-                ", type=" + KeyStore.getDefaultType() +
+                ", type=" + KeyStore.getDefaultType() + ", keySize=" + keySize +
                 ", keyStoreFile=" + (new File(keyStorePath).toPath().toAbsolutePath()));
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
