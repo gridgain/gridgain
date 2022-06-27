@@ -59,7 +59,6 @@ public class UpdateLogRow {
     /**
      * @param cacheId Cache ID.
      * @param updCntr Update counter.
-     * @param link Data row link.
      */
     public UpdateLogRow(int cacheId, long updCntr) {
         this(cacheId, updCntr, 0L);

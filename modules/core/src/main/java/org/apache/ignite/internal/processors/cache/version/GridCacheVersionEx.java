@@ -113,6 +113,19 @@ public class GridCacheVersionEx extends GridCacheVersion {
         this.drVer = drVer;
     }
 
+    /**
+     * Inner copy method.
+     */
+    public GridCacheVersionEx copy() {
+        GridCacheVersionEx ver0 = new GridCacheVersionEx();
+        ver0.topVer = topVer;
+        ver0.nodeOrderDrId = nodeOrderDrId;
+        ver0.order = order;
+        ver0.updateCounter = updateCounter;
+        ver0.drVer = drVer;
+        return ver0;
+    }
+
     /** {@inheritDoc} */
     @Override public GridCacheVersion conflictVersion() {
         return drVer;
