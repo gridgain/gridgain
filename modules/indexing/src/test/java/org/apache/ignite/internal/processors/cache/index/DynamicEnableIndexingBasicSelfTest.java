@@ -119,7 +119,9 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        node().destroyCache(POI_CACHE_NAME);
+        grid(IDX_SRV_CRD).destroyCache(POI_CACHE_NAME);
+
+        awaitPartitionMapExchange();
 
         super.afterTest();
     }
@@ -147,20 +149,23 @@ public class DynamicEnableIndexingBasicSelfTest extends DynamicEnableIndexingAbs
     /** */
     @Test
     public void testNotStartedCacheOnClientNode() throws Exception {
-        loadData(node(), 0, NUM_ENTRIES);
+        //Doesn't check when cache is started on the client.
+        if (nodeIdx == IDX_CLI)
+            return;
 
-        createTable();
+        loadData(grid(IDX_SRV_CRD), 0, NUM_ENTRIES);
+
+        createTable(grid(IDX_SRV_CRD).cache(POI_CACHE_NAME), cacheMode == CacheMode.REPLICATED ? 1 : QUERY_PARALLELISM);
 
         grid(IDX_SRV_CRD).cache(POI_CACHE_NAME).indexReadyFuture().get();
 
         GridTestUtils.waitForCondition(() -> {
                 try {
-                    grid(IDX_CLI).context().query()
+                    return grid(IDX_CLI).context().query()
                         .querySqlFields(new SqlFieldsQuery(
                                 String.format("SELECT * FROM %s.%s", POI_SCHEMA_NAME, POI_TABLE_NAME)),
                             true)
-                        .getAll();
-                    return true;
+                        .getAll().size() == NUM_ENTRIES;
                 }
                 catch (IgniteSQLException ex) {
                     if (ex.getMessage().contains("Failed to parse query"))
