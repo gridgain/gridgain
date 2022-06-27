@@ -509,7 +509,8 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
             assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
 
             log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
-                ", keyStorePwd=" + keyStorePwd + ", type=" + KeyStore.getDefaultType() +
+                ", keyStorePwd(char[])=" + keyStorePwd + ", keyStorePwd=" + (new String(keyStorePwd)) +
+                ", type=" + KeyStore.getDefaultType() +
                 ", keyStoreFile=" + (new File(keyStorePath).toPath().toAbsolutePath()));
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
