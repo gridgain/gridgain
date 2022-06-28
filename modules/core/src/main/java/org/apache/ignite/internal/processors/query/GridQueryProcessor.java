@@ -920,6 +920,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void onCacheStart0(GridCacheContextInfo<?, ?> cacheInfo, QuerySchema schema, boolean isSql)
         throws IgniteCheckedException {
+        log.info("+++ onCacheStart0 " + cacheSupportSql(cacheInfo.config()));
         if (!cacheSupportSql(cacheInfo.config())) {
             if (ctx.clientNode())
                 return;
@@ -978,7 +979,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                             if (!worker.nop()) {
                                 IgniteInternalFuture fut = worker.future();
 
-                                assert fut.isDone();
+                                // If the future is not complete it means that schema operation will be processed
+                                // by handle discovery message.
+                                if (!fut.isDone())
+                                    return;
 
                                 if (fut.error() == null) {
                                     SchemaAbstractOperation op0 = op.proposeMessage().operation();
