@@ -471,13 +471,23 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
     private InputStream keyStoreFile() throws IOException {
         File abs = new File(keyStorePath);
 
-        if (abs.exists())
+        if (abs.exists()) {
+            log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath +
+                ", abs=" + abs.toPath().toAbsolutePath() + ", exists=" + abs.exists() + ']');
+
             return new FileInputStream(abs);
+        }
 
         URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
 
-        if (clsPthRes != null)
+        if (clsPthRes != null) {
+            log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath +
+                ", clsPthRes=" + clsPthRes + ']');
+
             return clsPthRes.openStream();
+        }
+
+        log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath + " it seems that the file cannot be loaded]");
 
         return null;
     }
