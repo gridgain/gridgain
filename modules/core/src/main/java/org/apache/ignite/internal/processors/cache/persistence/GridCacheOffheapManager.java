@@ -2322,6 +2322,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         }
                     };
 
+                    if (!pendingTree0.isEmpty())
+                        log.info("Partition " + partId + " of '" + grp.cacheOrGroupName() + "' has " + pendingTree0.size() + " pending entries");
+
                     String logTreeName = updateLogTreeName();
 
                     RootPage logTreeRoot = metas.updateLogTreeRoot;

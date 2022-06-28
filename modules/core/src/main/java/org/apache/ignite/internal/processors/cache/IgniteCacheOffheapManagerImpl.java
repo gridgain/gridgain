@@ -116,6 +116,7 @@ import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -1485,6 +1486,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     ) throws IgniteCheckedException {
         if (pendingEntries == null)
             return 0;
+
+        if (!pendingEntries.isEmpty()) {
+            log.info(S.toString("Filling an eviction queue",
+                "tombstone", tombstone, false
+            ));
+        }
 
         GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
                 new PendingRow(cacheId, tombstone, upper, 0));

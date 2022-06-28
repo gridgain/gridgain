@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
 
 /**
@@ -76,7 +77,15 @@ public class PendingRow {
      */
     PendingRow initKey(CacheGroupContext grp) throws IgniteCheckedException {
         CacheDataRowAdapter rowData = grp.mvccEnabled() ? new MvccDataRow(link) : new CacheDataRowAdapter(link);
-        rowData.initFromLink(grp, CacheDataRowAdapter.RowData.KEY_ONLY);
+
+        try {
+            rowData.initFromLink(grp, CacheDataRowAdapter.RowData.KEY_ONLY);
+        }
+        catch (Throwable t) {
+            U.log(null, "Failed to init pending row from link: " + this);
+
+            throw t;
+        }
 
         key = rowData.key();
 
@@ -85,7 +94,7 @@ public class PendingRow {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PendingRow.class, this, "expireTime", expireTime, "link", link, "cacheId", cacheId,
+        return S.toString(PendingRow.class, this, "expireTime", expireTime, "link", U.hexLong(link), "cacheId", cacheId,
             "tombstone", tombstone, "key", key);
     }
 }

@@ -133,6 +133,7 @@ import org.apache.ignite.internal.processors.cache.query.continuous.CacheContinu
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTransactionsImpl;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
+import org.apache.ignite.internal.processors.cache.tree.PendingEntriesTree;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager;
 import org.apache.ignite.internal.processors.cache.warmup.WarmUpStrategy;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
@@ -2827,6 +2828,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             sharedCtx.database().checkpointReadLock();
 
                             try {
+                                IgniteCacheOffheapManager offheap = cache.context().offheap();
+
+                                for (IgniteCacheOffheapManager.CacheDataStore store : offheap.cacheDataStores()) {
+                                    PendingEntriesTree pendingTree = store.pendingTree();
+
+                                    if (pendingTree == null)
+                                        continue;
+
+                                    if (!pendingTree.isEmpty())
+                                        log.info("Partition " + store.partId() + " of '" + cacheName + "' has " + pendingTree.size() + " pending entries");
+                                }
+
                                 boolean callDestroy = action.request().destroy();
 
                                 // If all caches in group will be destroyed it is not necessary to clear a single cache
