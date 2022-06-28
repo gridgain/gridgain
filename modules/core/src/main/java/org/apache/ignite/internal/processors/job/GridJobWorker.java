@@ -46,6 +46,7 @@ import org.apache.ignite.internal.GridJobSessionImpl;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.NodeStoppingException;
+import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -655,7 +656,15 @@ public class GridJobWorker extends GridWorker implements GridTimeoutObject {
                         // Should be throttled, because GridServiceProxy continuously retry getting service.
                         LT.error(log, e, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']');
                     else {
-                        U.error(log, "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']', e);
+                        String logMessage = "Failed to execute job [jobId=" + ses.getJobId() + ", ses=" + ses + ']';
+
+                        if (UserCommandExceptions.causedByUserCommandException(e)) {
+                            // Log this with DEBUG because it's not a system exception, it should not be highlighted
+                            // in the logs.
+                            if (log.isDebugEnabled())
+                                log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
+                        } else
+                            U.error(log, logMessage, e);
 
                         if (X.hasCause(e, OutOfMemoryError.class))
                             ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
