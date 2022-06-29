@@ -85,6 +85,9 @@ public final class IgniteQueryErrorCode {
     /** Query out of memory. */
     public static final int QUERY_OUT_OF_MEMORY = 3015;
 
+    /** Database is closed by some reasons. */
+    public static final int DB_UNRECOVERABLE_ERROR = 3016;
+
     /* 4xxx - cache related runtime errors */
 
     /** Attempt to INSERT a key that is already in cache. */

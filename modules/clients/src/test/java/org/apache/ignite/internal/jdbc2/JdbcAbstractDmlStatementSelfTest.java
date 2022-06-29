@@ -65,7 +65,7 @@ public abstract class JdbcAbstractDmlStatementSelfTest extends GridCommonAbstrac
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        ((IgniteEx)ignite(0)).context().cache().dynamicStartSqlCache(cacheConfig());
+        ignite(0).context().cache().dynamicStartSqlCache(cacheConfig());
 
         conn = DriverManager.getConnection(getCfgUrl());
     }
