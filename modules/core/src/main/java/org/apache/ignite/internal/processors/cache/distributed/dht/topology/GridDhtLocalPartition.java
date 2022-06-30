@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -954,6 +955,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 grp.offheap().partitionIterator(id, TOMBSTONES) :
                 grp.offheap().partitionIterator(id, DATA_AND_TOMBSTONES);
 
+            HashSet skippedCachIds = new HashSet<Integer>();
+
+            CacheDataRow skippedRow = null;
+
             while (it0.hasNext()) {
                 if (stopClo.getAsBoolean() || state0 != state())
                     return cleared;
@@ -976,8 +981,17 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     if (rowFilter.test(row))
                         continue;
 
-                    if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId()))
+                    if (grp.sharedGroup() && (cctx == null || cctx.cacheId() != row.cacheId())) {
                         cctx = ctx.cacheContext(row.cacheId());
+
+                        if (cctx == null) {
+                            skippedCachIds.add(row.cacheId());
+
+                            skippedRow = row;
+
+                            continue;
+                        }
+                    }
 
                     if (clearClo.apply(row, cctx, clearVer))
                         cleared++;
@@ -990,6 +1004,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 finally {
                     ctx.database().checkpointReadUnlock();
                 }
+            }
+
+            if (!skippedCachIds.isEmpty()) {
+                log.warning("Cache with this IDs are not found [cacheIds=" + skippedCachIds + ", part=" + id +
+                    ", rowExample=" + skippedRow + ']');
             }
 
             if (forceTestCheckpointOnEviction && partWhereTestCheckpointEnforced == null && cleared >= fullSize()) {
