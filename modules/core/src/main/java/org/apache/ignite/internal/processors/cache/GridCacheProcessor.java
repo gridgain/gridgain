@@ -2828,16 +2828,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             sharedCtx.database().checkpointReadLock();
 
                             try {
-                                IgniteCacheOffheapManager offheap = cache.context().offheap();
+                                if (cache != null) {
+                                    IgniteCacheOffheapManager offheap = cache.context().offheap();
 
-                                for (IgniteCacheOffheapManager.CacheDataStore store : offheap.cacheDataStores()) {
-                                    PendingEntriesTree pendingTree = store.pendingTree();
+                                    for (IgniteCacheOffheapManager.CacheDataStore store : offheap.cacheDataStores()) {
+                                        PendingEntriesTree pendingTree = store.pendingTree();
 
-                                    if (pendingTree == null)
-                                        continue;
+                                        if (pendingTree == null)
+                                            continue;
 
-                                    if (!pendingTree.isEmpty())
-                                        log.info("Partition " + store.partId() + " of '" + cacheName + "' has " + pendingTree.size() + " pending entries");
+                                        if (!pendingTree.isEmpty())
+                                            log.info("Partition " + store.partId() + " of '" + cacheName + "' has " + pendingTree.size() + " pending entries");
+                                    }
                                 }
 
                                 boolean callDestroy = action.request().destroy();
