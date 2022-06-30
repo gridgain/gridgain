@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +57,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.ByteBufferBac
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.record.HeaderRecord;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+
+import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.ENCRYPTED_DATA_RECORD_V2;
 
 /**
  * Record data V2 serializer.
@@ -254,17 +256,6 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
                 for (int i = 0; i < entryCnt; i++)
                     entries.add(readPlainDataEntry(in, type));
-
-                return new OutOfOrderDataRecord(entries, timeStamp);
-
-            case ENCRYPTED_OUT_OF_ORDER_UPDATE:
-                entryCnt = in.readInt();
-                timeStamp = in.readLong();
-
-                entries = new ArrayList<>(entryCnt);
-
-                for (int i = 0; i < entryCnt; i++)
-                    entries.add(readEncryptedDataEntry(in, type));
 
                 return new OutOfOrderDataRecord(entries, timeStamp);
 
