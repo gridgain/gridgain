@@ -37,7 +37,8 @@ Prerequisites:
  * CMake >= 3.6 must be installed
  * IMPORTANT: Apache Ignite C++ should be installed. Refer to $IGNITE_HOME/platforms/cpp/DEVNOTES.txt for instructions.
 
-To build examples execute the following commands one by one from examples root directory:
+To build examples execute the following commands one by one:
+ * cd $IGNITE_HOME/platforms/cpp/examples
  * mkdir cmake-build-[debug|release]
  * cd ./cmake-build-[debug|release]
  * run CMake configuration:
@@ -63,12 +64,16 @@ Running examples.
 ----------------------------------
 
 Before running examples ensure that:
- * LD_LIBRARY_PATH environment variable is set and pointing to a directory with "libjvm.so" library. Typically, this
-   library is located in $JAVA_HOME/jre/lib/amd64/server directory.
- * For odbc-example additionally ODBC Driver Manager must be present and installed on your platform and
-   GridGain ODBC driver must be built and installed according to instructions for your platform.
- * For odbc-example make sure that path to GridGain libraries is added to LD_LIBRARY_PATH (usually it is /usr/local/lib).
-
+ * GridGain library binaries (<ignite_install_dir>/bin or <ignite_install_dir>/lib) are added to $PATH
+   (Windows and Linux) or $LD_LIBRARY_PATH (Linux only). This is especially important for Windows, as in Linux systems
+   installation path is ordinary pointed by $PATH by default;
+ * $JAVA_HOME is set to point to a valid JDK installation;
+ * $PATH or $LD_LIBRARY_PATH environment variables are set and pointing to a directory with libjvm library. In Linux
+   this  library is usually located in $JAVA_HOME/jre/lib/amd64/server directory, while in Windows it is most probably
+   in $JAVA_HOME/jre/bin/amd64/server;
+ * For odbc-example additionally ODBC Driver Manager must be present and installed on your platform. This is concerns
+   Linux systems as Windows always have system ODBC Driver Manager present by default;
+ * For odbc-example GridGain ODBC driver must be built and installed according to instructions for your platform.
 
 Importing CMake projects to Visual Studio (tm) (since 2015):
 ------------------------------------------------------------
