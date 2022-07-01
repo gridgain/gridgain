@@ -27,7 +27,7 @@ public class DecimalInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-    DecimalInlineIndexColumn(Column col) {
+    public DecimalInlineIndexColumn(Column col) {
         super(col, Value.DECIMAL, (short)4);
     }
 

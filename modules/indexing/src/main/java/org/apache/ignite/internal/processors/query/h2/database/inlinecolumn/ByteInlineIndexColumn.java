@@ -28,7 +28,7 @@ public class ByteInlineIndexColumn extends AbstractInlineIndexColumn {
     /**
      * @param col Column.
      */
-    ByteInlineIndexColumn(Column col) {
+    public ByteInlineIndexColumn(Column col) {
         super(col, Value.BYTE, (short)1);
     }
 

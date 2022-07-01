@@ -38,17 +38,6 @@ param (
 echo ".NET SDKs:"
 dotnet --list-sdks
 
-$newSdks = dotnet --list-sdks | where {$_ -match "\d+\.\d+"} | where {[int]($_.Split(".")[0]) -gt 2}
-
-if ($newSdks.Length -gt 0) {
-    # Enable global.json only when .NET SDK 3+ is present.
-    # We don't need it otherwise, and "rollForward" is not supported on lower versions.
-    echo "Enabling global.json..."
-
-    Set-Location $PSScriptRoot
-    Copy-Item _global.json global.json
-}
-
 # Find NuGet packages (*.nupkg)
 $dir = If ([System.IO.Path]::IsPathRooted($packageDir)) { $packageDir } Else { Join-Path $PSScriptRoot $packageDir }
 if (!(Test-Path $dir)) {
@@ -61,7 +50,7 @@ if ($packages.Length -eq 0) {
 }
 
 
-echo "Verifying $($packages.Length) packages from '$dir'..."  
+echo "Verifying $($packages.Length) packages from '$dir'..."
 
 
 # Clear package cache
@@ -82,9 +71,10 @@ if ($LastExitCode -ne 0) {
 }
 
 
-$packages | % { 
+$packages | % {
     $packageId = $_.Name -replace '(.*?)\.\d+\.\d+\.\d+(.*)?\.nupkg', '$1'
-    dotnet add package $packageId -s $dir
+    $packageVer = $_.Name -replace '.*?\.(\d+\.\d+\.\d+(.*)?)\.nupkg', '$1'
+    dotnet add package $packageId --version $packageVer
 
     if ($LastExitCode -ne 0) {
         throw "Failed to install package $packageId"

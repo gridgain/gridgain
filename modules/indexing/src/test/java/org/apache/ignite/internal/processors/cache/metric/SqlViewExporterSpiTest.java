@@ -60,15 +60,15 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static java.util.Arrays.asList;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_PREDICATE;
 import static org.apache.ignite.internal.metric.SystemViewSelfTest.TEST_TRANSFORMER;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheGroupId;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 import static org.apache.ignite.internal.processors.cache.index.AbstractSchemaSelfTest.queryProcessor;
-import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
 import static org.apache.ignite.internal.processors.query.h2.SchemaManager.SQL_SCHEMA_VIEW;
 import static org.apache.ignite.internal.util.IgniteUtils.toStringSafe;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -410,8 +410,17 @@ public class SqlViewExporterSpiTest extends AbstractExporterSpiTest {
             "DATA_REGION_PAGE_LISTS",
             "CACHE_GROUP_PAGE_LISTS",
             "STATISTICS_CONFIGURATION",
+            "STATISTICS_PARTITION_DATA",
             "STATISTICS_LOCAL_DATA",
-            "STATISTICS_PARTITION_DATA"
+            "DS_ATOMICLONGS",
+            "DS_ATOMICREFERENCES",
+            "DS_ATOMICSTAMPED",
+            "DS_ATOMICSEQUENCES",
+            "DS_COUNTDOWNLATCHES",
+            "DS_REENTRANTLOCKS",
+            "DS_SETS",
+            "DS_SEMAPHORES",
+            "DS_QUEUES"
         ));
 
         Set<String> actViews = new HashSet<>();

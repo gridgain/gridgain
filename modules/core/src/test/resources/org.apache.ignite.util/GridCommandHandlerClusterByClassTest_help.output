@@ -134,6 +134,12 @@ This utility can do the following commands:
   Start data center replication on all caches in cluster:
     control.(sh|bat) --dr resume <remoteDataCenterId> [--yes]
 
+  Start partition counters check for selected caches:
+    control.(sh|bat) --dr check-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--check-first] [--scan-until-first-error] [--yes]
+
+  Start partition counters repairing for selected caches:
+    control.(sh|bat) --dr repair-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--batch-size] [--keep-binary] [--yes]
+
   Print tracing configuration:
     control.(sh|bat) --tracing-configuration
 
@@ -185,6 +191,13 @@ If the file name isn't specified the output file name is: '<typeId>.bin'
 
   Set the property value:
     control.(sh|bat) --property set --name <property_name> --val <property_value>
+
+  Print metric value:
+    control.(sh|bat) --metric [--node-id node_id] name
+
+    Parameters:
+      name     - Name of the metric which value should be printed. If name of the metric registry is specified, value of all its metrics will be printed.
+      node_id  - ID of the node to get the metric values from. If not set, random node will be chosen.
 
   Print information about potentially corrupted caches on local node:
     control.(sh|bat) --persistence

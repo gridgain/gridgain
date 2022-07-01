@@ -49,6 +49,7 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAttribu
 import org.apache.ignite.internal.managers.discovery.IgniteTopologyPrintFormatSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerInternalEventsSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerSelfTest;
+import org.apache.ignite.internal.managers.events.LifecycleAwareListenerTest;
 import org.apache.ignite.internal.processors.cache.ClusterActiveStateChangeWithNodeOutOfBaselineTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustInMemoryTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustTest;
@@ -115,6 +116,7 @@ import org.junit.runners.Suite;
     NodeWithFilterRestartTest.class,
     ClusterActiveStateChangeWithNodeOutOfBaselineTest.class,
     GridMutableLongTest.class,
+    LifecycleAwareListenerTest.class,
     GridCheckpointTest.class
 })
 public class IgniteKernalSelfTestSuite {

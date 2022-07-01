@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2290,7 +2290,7 @@ public class GridNioServer<T> {
                         }
 
                         // select() call above doesn't throw on interruption; checking it here to propagate timely.
-                        if (!closed && !isCancelled && Thread.interrupted())
+                        if (!closed && !isCancelled.get() && Thread.interrupted())
                             throw new InterruptedException();
                     }
                     finally {
@@ -2610,7 +2610,7 @@ public class GridNioServer<T> {
             GridSelectorNioSessionImpl ses = attach.session();
 
             if (!closed)
-                U.error(log, "Failed to process selector key [ses=" + ses + ']', e);
+                log.info("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
             else if (log.isDebugEnabled())
                 log.debug("Failed to process selector key [ses=" + ses + ", err=" + e + ']');
         }
@@ -2847,35 +2847,35 @@ public class GridNioServer<T> {
 
                 IOException err = new IOException("Failed to send message (connection was closed): " + ses);
 
-                if (outRecovery != null || inRecovery != null) {
-                    try {
+                try {
+                    if (outRecovery != null || inRecovery != null) {
                         // Poll will update recovery data.
                         while ((req = ses.pollFuture()) != null) {
                             if (req.skipRecovery())
                                 req.onError(err);
                         }
                     }
-                    finally {
-                        if (outRecovery != null)
-                            outRecovery.release();
+                    else {
+                        if (req != null)
+                            req.onError(err);
 
-                        if (inRecovery != null && inRecovery != outRecovery)
-                            inRecovery.release();
+                        while ((req = ses.pollFuture()) != null)
+                            req.onError(err);
+                    }
+
+                    try {
+                        filterChain.onSessionClosed(ses);
+                    }
+                    catch (IgniteCheckedException e1) {
+                        filterChain.onExceptionCaught(ses, e1);
                     }
                 }
-                else {
-                    if (req != null)
-                        req.onError(err);
+                finally {
+                    if (outRecovery != null)
+                        outRecovery.release();
 
-                    while ((req = ses.pollFuture()) != null)
-                        req.onError(err);
-                }
-
-                try {
-                    filterChain.onSessionClosed(ses);
-                }
-                catch (IgniteCheckedException e1) {
-                    filterChain.onExceptionCaught(ses, e1);
+                    if (inRecovery != null && inRecovery != outRecovery)
+                        inRecovery.release();
                 }
 
                 return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,6 +157,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCO_FAILED_CLIEN
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TEST_ENV;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
@@ -289,6 +290,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         System.setProperty(IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT, "1000");
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
         System.setProperty(IGNITE_TEST_ENV, "true");
+        System.setProperty(IGNITE_STRICT_CONSISTENCY_CHECK, "true");
 
         S.setSensitiveDataLoggingSupplier(() -> {
             String sysStrToStringIncludeSensitive = getString(IGNITE_TO_STRING_INCLUDE_SENSITIVE);
@@ -693,7 +695,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /** */
-    private void beforeFirstTest() throws Exception {
+    protected void beforeFirstTest() throws Exception {
         sharedStaticIpFinder = new TcpDiscoveryVmIpFinder(true);
 
         clsLdr = Thread.currentThread().getContextClassLoader();

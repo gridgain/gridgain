@@ -126,10 +126,13 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.INVOKE_NO_OP;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.REMOVE_NO_VAL;
+import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.replicationRequire;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MAX_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
+import static org.apache.ignite.internal.processors.dr.GridDrType.DR_BACKUP;
+import static org.apache.ignite.internal.processors.dr.GridDrType.DR_IGNORE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
@@ -1531,11 +1534,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             storeValue(val, expireTime, newVer);
 
             if (tx != null && cctx.group().persistenceEnabled())
-                logPtr = logTxUpdate(tx, val, expireTime, updateCntr0, cctx.group().walEnabled());
+                logPtr = logTxUpdate(tx, val, expireTime, newVer, cctx.group().walEnabled());
 
             update(val, expireTime, ttl, newVer, true);
 
-            drReplicate(drType, val, newVer, topVer);
+            GridDrType drType0 = drType;
+
+            if (!replicationRequire(newVer) && drType != DR_BACKUP)
+                drType0 = DR_IGNORE;
+
+            drReplicate(drType0, val, newVer, topVer);
 
             recordNodeId(affNodeId, topVer);
 
@@ -1682,8 +1690,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             boolean startVer = isStartVersion();
 
-            newVer = nextVersion(explicitVer, tx);
-
             boolean internal = isInternal() || !context().userCache();
 
             Map<UUID, CacheContinuousQueryListener> lsnrCol =
@@ -1707,6 +1713,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return new GridCacheUpdateTxResult(false, logPtr);
             }
 
+            newVer = nextVersion(explicitVer, tx);
+
             updateCntr0 = nextPartitionCounter(tx, updateCntr);
 
             newVer.updateCounter(updateCntr0);
@@ -1716,7 +1724,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             update(null, 0, 0, newVer, true);
 
             if (tx != null && cctx.group().persistenceEnabled())
-                logPtr = logTxUpdate(tx, null, 0, updateCntr0, cctx.group().walEnabled());
+                logPtr = logTxUpdate(tx, null, 0, newVer, cctx.group().walEnabled());
 
             drReplicate(drType, null, newVer, topVer);
 
@@ -2233,7 +2241,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             c = new AtomicCacheUpdateClosure(this,
                 topVer,
-                new GridCacheVersion(newVer),
+                newVer.copy(),
                 op,
                 writeObj,
                 invokeArgs,
@@ -2373,7 +2381,12 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
-                drReplicate(drType, updateVal, updateVer, topVer);
+                GridDrType drType0 = drType;
+
+                if (replicationRequire(newVer) && drType != DR_BACKUP)
+                    drType0 = DR_IGNORE;
+
+                drReplicate(drType0, updateVal, updateVer, topVer);
 
                 recordNodeId(affNodeId, topVer);
 
@@ -3557,7 +3570,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private GridCacheVersion nextVersion(GridCacheVersion explicitVer, IgniteInternalTx tx) {
         if (explicitVer != null)
-            return explicitVer;
+            return explicitVer.copy();
 
         if (tx == null)
             return nextVersion();
@@ -3566,7 +3579,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         assert newVer != null : "Failed to get write version for tx: " + tx;
 
-        return new GridCacheVersion(newVer); // clone.
+        return newVer.copy(); // clone.
     }
 
     /** {@inheritDoc} */
@@ -4249,7 +4262,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * @param tx Transaction.
      * @param val Value.
      * @param expireTime Expire time (or 0 if not applicable).
-     * @param updCntr Update counter.
+     * @param writeVersion Tx write version.
      * @param walEnabled Whether WAL is enabled.
      * @throws IgniteCheckedException In case of log failure.
      */
@@ -4257,7 +4270,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         IgniteInternalTx tx,
         CacheObject val,
         long expireTime,
-        long updCntr,
+        GridCacheVersion writeVersion,
         boolean walEnabled
     ) throws IgniteCheckedException {
         assert cctx.transactional() && !cctx.transactionalSnapshot();
@@ -4278,10 +4291,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     val,
                     op,
                     tx.nearXidVersion(),
-                    tx.writeVersion(),
+                    writeVersion,
                     expireTime,
                     key.partition(),
-                    updCntr,
+                    writeVersion.updateCounter(),
                     DataEntry.flags(CU.txOnPrimary(tx)))));
             }
             else

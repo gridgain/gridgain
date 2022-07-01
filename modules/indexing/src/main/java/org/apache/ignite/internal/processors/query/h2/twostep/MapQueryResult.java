@@ -385,12 +385,17 @@ class MapQueryResult {
             fetchSizeInterceptor = new H2QueryFetchSizeInterceptor(h2, qryInfo, log);
         }
 
-        /** */
-        private String plan() {
+        /**
+         * Returns plan or if it unavailable - sql text representation.
+         **/
+        private String planOrSql() {
             try {
                 Prepared stmt = GridSqlQueryParser.prepared((PreparedStatement)rs.getStatement());
 
-                return stmt.getPlanSQL(false);
+                String plan = stmt.getPlanSQL(false);
+
+                return plan != null ? plan : stmt.getSQL()
+                    .replace('\n', ' ').replace("\"", "");
             }
             catch (SQLException ex) {
                 log.error("Unexpected exception", ex);
@@ -403,7 +408,7 @@ class MapQueryResult {
         void close() {
             try (MTC.TraceSurroundings ignored =
                      MTC.support(tracing.create(SQL_QRY_MAP_END, MTC.span())
-                         .addLog(this::plan))
+                         .addLog(this::planOrSql))
             ) {
                 fetchSizeInterceptor.checkOnClose();
 

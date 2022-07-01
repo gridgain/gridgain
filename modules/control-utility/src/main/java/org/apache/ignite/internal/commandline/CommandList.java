@@ -21,6 +21,7 @@ import org.apache.ignite.internal.commandline.diagnostic.DiagnosticCommand;
 import org.apache.ignite.internal.commandline.dr.DrCommand;
 import org.apache.ignite.internal.commandline.encryption.EncryptionCommands;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
+import org.apache.ignite.internal.commandline.metric.MetricCommand;
 import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
@@ -84,6 +85,9 @@ public enum CommandList {
 
     /** Commands to manage distributed properties. */
     PROPERTY("--property", new PropertyCommand()),
+
+    /** Command for printing metric values. */
+    METRIC("--metric", new MetricCommand()),
 
     /** */
     PERSISTENCE("--persistence", new PersistenceCommand()),

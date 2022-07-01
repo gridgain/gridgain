@@ -39,6 +39,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
@@ -1188,7 +1189,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                         ClusterNode node0 = getSpiContext().node(node.id());
 
                         if (node0 == null)
-                            throw new IgniteCheckedException("Failed to send message to remote node " +
+                            throw new ClusterTopologyCheckedException("Failed to send message to remote node " +
                                 "(node has left the grid): " + node.id());
                     }
 
@@ -1200,7 +1201,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.", t);
 
-                log.error("Failed to send message to remote node [node=" + node + ", msg=" + msg + ']', t);
+                String messageForLog = "Failed to send message to remote node [node=" + node + ", msg=" + msg + ']';
+
+                if (ClientExceptionsUtils.isClientNodeTopologyException(t, node)
+                    || ClientExceptionsUtils.isAttemptToEstablishDirectConnectionWhenOnlyInverseIsAllowed(t))
+                    log.warning(messageForLog, t);
+                else
+                    log.error(messageForLog, t);
 
                 if (t instanceof Error)
                     throw (Error)t;

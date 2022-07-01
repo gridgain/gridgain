@@ -24,9 +24,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,6 +43,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.ConnectorMessageInterceptor;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.rest.client.message.GridClientTaskResultBean;
@@ -97,6 +100,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEO
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.VERSION;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_ILLEGAL_STATE;
@@ -110,6 +114,9 @@ public class GridRestProcessor extends GridProcessorAdapter {
     /** HTTP protocol class name. */
     private static final String HTTP_PROTO_CLS =
         "org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyRestProtocol";
+
+    /** Commands, that are not required to be authenticated. */
+    private static final Set<GridRestCommand> SKIP_AUTHENTICATION_COMMANDS = EnumSet.of(VERSION, PROBE);
 
     /** Delay between sessions timeout checks. */
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
@@ -251,6 +258,9 @@ public class GridRestProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Received request from client: " + req);
 
+        if (SKIP_AUTHENTICATION_COMMANDS.contains(req.command()))
+            return handle(req, false);
+
         boolean authenticationEnabled = ctx.authentication().enabled();
         boolean securityEnabled = ctx.security().enabled();
 
@@ -362,8 +372,17 @@ public class GridRestProcessor extends GridProcessorAdapter {
                         res = new GridRestResponse(STATUS_ILLEGAL_STATE, iae.getMessage());
                     }
                     else {
-                        if (!X.hasCause(e, VisorClusterGroupEmptyException.class))
-                            LT.error(log, e, "Failed to handle request: " + req.command());
+                        if (!X.hasCause(e, VisorClusterGroupEmptyException.class)) {
+                            String logMessage = "Failed to handle request: " + req.command();
+
+                            if (UserCommandExceptions.causedByUserCommandException(e)) {
+                                // Log this with DEBUG because it's not a system exception, it should not be highlighted
+                                // in the logs.
+                                if (log.isDebugEnabled())
+                                    log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
+                            } else
+                                LT.error(log, e, logMessage);
+                        }
 
                         if (log.isDebugEnabled())
                             log.debug("Failed to handle request [req=" + req + ", e=" + e + "]");

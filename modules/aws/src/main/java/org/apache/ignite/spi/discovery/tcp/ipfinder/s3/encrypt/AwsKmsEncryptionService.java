@@ -19,12 +19,12 @@ package org.apache.ignite.spi.discovery.tcp.ipfinder.s3.encrypt;
 import java.util.List;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.encryptionsdk.AwsCrypto;
 import com.amazonaws.encryptionsdk.CryptoResult;
 import com.amazonaws.encryptionsdk.kms.KmsMasterKey;
 import com.amazonaws.encryptionsdk.kms.KmsMasterKeyProvider;
 import com.amazonaws.regions.Region;
+import com.amazonaws.services.kms.AWSKMSClientBuilder;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -36,7 +36,7 @@ public class AwsKmsEncryptionService implements EncryptionService {
     private String keyId;
 
     /** AWS Region. */
-    private Region region;
+    private String region;
 
     /** AWS Credentials to access the key. */
     private AWSCredentials creds;
@@ -69,6 +69,18 @@ public class AwsKmsEncryptionService implements EncryptionService {
      * @return {@code this} for chaining.
      */
     public AwsKmsEncryptionService setRegion(Region region) {
+        this.region = region.getName();
+
+        return this;
+    }
+
+    /**
+     * AWS region.
+     *
+     * @param region Region.
+     * @return {@code this} for chaining.
+     */
+    public AwsKmsEncryptionService setRegion(String region) {
         this.region = region;
 
         return this;
@@ -136,14 +148,21 @@ public class AwsKmsEncryptionService implements EncryptionService {
      * @return An instance of {@link AwsCrypto}.
      */
     AwsCrypto createClient() {
-        return crypto = new AwsCrypto();
+        return crypto = AwsCrypto.standard();
     }
 
     /**
      * @return An instance of {@link KmsMasterKeyProvider}.
      */
     KmsMasterKeyProvider createKmsMasterKeyProvider() {
-        return new KmsMasterKeyProvider(new AWSStaticCredentialsProvider(creds), region, clientConf, keyId);
+        AWSKMSClientBuilder clientBuilder = AWSKMSClientBuilder.standard()
+            .withClientConfiguration(clientConf)
+            .withRegion(region);
+
+        return KmsMasterKeyProvider.builder()
+            .withClientBuilder(clientBuilder)
+            .withCredentials(creds)
+            .buildStrict(keyId);
     }
 
     /** {@inheritDoc} */

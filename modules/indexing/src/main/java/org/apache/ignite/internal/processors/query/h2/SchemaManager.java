@@ -352,8 +352,9 @@ public class SchemaManager {
      *
      * @param cacheName Cache name.
      * @param destroy Whether to remove indexes.
+     * @param clearIdx Whether to clear the index.
      */
-    public void onCacheDestroyed(String cacheName, boolean destroy) {
+    public void onCacheDestroyed(String cacheName, boolean destroy, boolean clearIdx) {
         String schemaName = schemaName(cacheName);
 
         H2Schema schema = schemas.get(schemaName);
@@ -367,7 +368,7 @@ public class SchemaManager {
         for (H2TableDescriptor tbl : schema.tables()) {
             if (F.eq(tbl.cacheName(), cacheName)) {
                 try {
-                    tbl.table().setRemoveIndexOnDestroy(destroy);
+                    tbl.table().setRemoveIndexOnDestroy(clearIdx);
 
                     dropTable(tbl, destroy);
                 }

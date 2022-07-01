@@ -221,6 +221,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private static final int DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE = Integer.getInteger(
         IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE, DFLT_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE);
 
+    public static final boolean IGNITE_DISABLE_ONE_PHASE_COMMIT =
+        IgniteSystemProperties.getBoolean("IGNITE_DISABLE_ONE_PHASE_COMMIT", false);
+
     /** Node left rollback message. */
     static final String NODE_LEFT_ROLLBACK_MSG = "Primary owner [nodeId=%s, consistentId=%s] of an affected partition " +
         "has left the topology. The transaction was rolled back.";

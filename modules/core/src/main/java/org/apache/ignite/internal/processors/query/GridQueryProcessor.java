@@ -1131,14 +1131,15 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         GridCacheContextInfo cacheInfo = idx.registeredCacheInfo(cacheName);
 
         if (cacheInfo != null)
-            onCacheStop(cacheInfo, true);
+            onCacheStop(cacheInfo, true, true);
     }
 
     /**
      * @param cacheInfo Cache context info.
      * @param removeIdx If {@code true}, will remove index.
+     * @param clearIdx If {@code true}, will clear the index.
      */
-    public void onCacheStop(GridCacheContextInfo cacheInfo, boolean removeIdx) {
+    public void onCacheStop(GridCacheContextInfo cacheInfo, boolean removeIdx, boolean clearIdx) {
         if (idx == null)
             return;
 
@@ -1146,7 +1147,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             return;
 
         try {
-            onCacheStop0(cacheInfo, removeIdx);
+            onCacheStop0(cacheInfo, removeIdx, clearIdx);
         }
         finally {
             busyLock.leaveBusy();
@@ -2207,7 +2208,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 cacheNames.add(CU.mask(cacheName));
             }
             catch (IgniteCheckedException | RuntimeException e) {
-                onCacheStop0(cacheInfo, true);
+                onCacheStop0(cacheInfo, true, true);
 
                 throw e;
             }
@@ -2220,8 +2221,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      *
      * @param cacheInfo Cache context info.
      * @param destroy Destroy flag.
+     * @param clearIdx Clear flag.
      */
-    public void onCacheStop0(GridCacheContextInfo cacheInfo, boolean destroy) {
+    public void onCacheStop0(GridCacheContextInfo cacheInfo, boolean destroy, boolean clearIdx) {
         if (idx == null || !cacheNames.contains(cacheInfo.name()))
             return;
 
@@ -2261,7 +2263,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             // Notify indexing.
             try {
-                idx.unregisterCache(cacheInfo, destroy);
+                idx.unregisterCache(cacheInfo, destroy, clearIdx);
             }
             catch (Exception e) {
                 U.error(log, "Failed to clear indexing on cache unregister (will ignore): " + cacheName, e);

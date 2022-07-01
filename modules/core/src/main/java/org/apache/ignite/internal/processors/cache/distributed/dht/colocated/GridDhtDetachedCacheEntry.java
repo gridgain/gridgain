@@ -87,7 +87,7 @@ public class GridDhtDetachedCacheEntry extends GridDistributedCacheEntry {
         IgniteInternalTx tx,
         CacheObject val,
         long expireTime,
-        long updCntr,
+        GridCacheVersion updCntr,
         boolean walEnabled)
         throws IgniteCheckedException {
         return null;

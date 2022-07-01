@@ -35,16 +35,24 @@ Prerequisites:
    * Visual Studio 2010 or later
    * Windows SDK 7.1 or later
  * CMake >= 3.6 must be installed
- * Apache Ignite C++ should be installed. Refer to $IGNITE_HOME/platforms/cpp/DEVNOTES.txt for instructions.
+ * IMPORTANT: Apache Ignite C++ should be installed. Refer to $IGNITE_HOME/platforms/cpp/DEVNOTES.txt for instructions.
 
-To build examples execute the following commands one by one from examples root directory:
+To build examples execute the following commands one by one:
+ * cd $IGNITE_HOME/platforms/cpp/examples
  * mkdir cmake-build-[debug|release]
  * cd ./cmake-build-[debug|release]
  * run CMake configuration:
   * on Linux or Mac OS X:
      cmake .. -DCMAKE_BUILD_TYPE=[Release|Debug] [-DIGNITE_CPP_DIR=<ignite_install_dir>]
   * on Windows:
-     cmake .. -DCMAKE_GENERATOR_PLATFORM=[Win32|x64] [-DIGNITE_CPP_DIR=<ignite_install_dir>]
+     cmake .. -DCMAKE_GENERATOR_PLATFORM=[Win32|x64] -DCMAKE_BUILD_TYPE=[Release|Debug]
+           -DIGNITE_CPP_DIR=<ignite_install_dir>
+
+    IMPORTANT: Ignite C++ should be built and installed for this command to work correctly. If you have installed
+    Ignite C++ in non-default directory or getting "IGNITE_INCLUDE_DIR-NOTFOUND" errors while executing this command,
+    you should make sure you've set IGNITE_CPP_DIR option correctly, pointing to the installation directory of
+    Ignite C++ (it should be the same path that was used in CMAKE_INSTALL_PREFIX during Ignite C++ installation)
+
  * cmake --build . --config [Release|Debug]
 
 CMake by default generate on Windows Visual Studio projects. You can find generated projects in CMake
@@ -56,12 +64,16 @@ Running examples.
 ----------------------------------
 
 Before running examples ensure that:
- * LD_LIBRARY_PATH environment variable is set and pointing to a directory with "libjvm.so" library. Typically this
-   library is located in $JAVA_HOME/jre/lib/amd64/server directory.
- * For odbc-example additionaly ODBC Driver Manager must be present and installed on your platform and
-   GridGain ODBC driver must be built and installed according to instructions for your platform.
- * For odbc-example make sure that path to GridGain libraries is added to LD_LIBRARY_PATH (usually it is /usr/local/lib).
-
+ * GridGain library binaries (<ignite_install_dir>/bin or <ignite_install_dir>/lib) are added to $PATH
+   (Windows and Linux) or $LD_LIBRARY_PATH (Linux only). This is especially important for Windows, as in Linux systems
+   installation path is ordinary pointed by $PATH by default;
+ * $JAVA_HOME is set to point to a valid JDK installation;
+ * $PATH or $LD_LIBRARY_PATH environment variables are set and pointing to a directory with libjvm library. In Linux
+   this  library is usually located in $JAVA_HOME/jre/lib/amd64/server directory, while in Windows it is most probably
+   in $JAVA_HOME/jre/bin/amd64/server;
+ * For odbc-example additionally ODBC Driver Manager must be present and installed on your platform. This is concerns
+   Linux systems as Windows always have system ODBC Driver Manager present by default;
+ * For odbc-example GridGain ODBC driver must be built and installed according to instructions for your platform.
 
 Importing CMake projects to Visual Studio (tm) (since 2015):
 ------------------------------------------------------------

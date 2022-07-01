@@ -19,5 +19,7 @@ noinst_HEADERS = \
     teamcity/teamcity_messages.h \
     ignite/complex_type.h \
     ignite/test_type.h \
+    test_server.h \
     test_utils.h \
     vector_logger.h
+

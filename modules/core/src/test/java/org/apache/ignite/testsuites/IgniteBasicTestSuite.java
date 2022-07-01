@@ -36,6 +36,7 @@ import org.apache.ignite.internal.GridStopWithCollisionSpiTest;
 import org.apache.ignite.internal.IgniteLocalNodeMapBeforeStartTest;
 import org.apache.ignite.internal.IgniteSlowClientDetectionSelfTest;
 import org.apache.ignite.internal.TransactionsMXBeanImplTest;
+import org.apache.ignite.internal.UserCommandExceptionsTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2TestNoOptimizations;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessorMemoryLeakTest;
@@ -147,6 +148,7 @@ import org.junit.runners.Suite;
     OdbcConfigurationValidationSelfTest.class,
     OdbcEscapeSequenceSelfTest.class,
     SqlListenerUtilsTest.class,
+    UserCommandExceptionsTest.class,
 })
 public class IgniteBasicTestSuite {
 }

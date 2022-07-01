@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.failure.FailureContext;
@@ -70,7 +69,6 @@ import org.apache.ignite.internal.util.lang.GridTuple;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
@@ -90,8 +88,8 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.NOO
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.READ;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.RELOAD;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_BACKUP;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
@@ -534,8 +532,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
 
                         Collection<IgniteTxEntry> entries = near() || cctx.snapshot().needTxReadLogging() ? allEntries() : writeEntries();
 
-                        // Data entry to write to WAL and associated with it TxEntry.
-                        List<T2<DataEntry, IgniteTxEntry>> dataEntries = null;
+                        // Data entry to write to WAL.
+                        List<DataEntry> dataEntries = null;
 
                         batchStoreCommit(writeMap().values(), taskName);
 
@@ -595,6 +593,7 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                     CacheObject val = res.get2();
 
                                     GridCacheVersion explicitVer = txEntry.conflictVersion();
+                                    DataEntry dataEntry = null;
 
                                     if (explicitVer == null)
                                         explicitVer = writeVersion();
@@ -640,23 +639,20 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                         if (dataEntries == null)
                                             dataEntries = new ArrayList<>(entries.size());
 
-                                        dataEntries.add(
-                                            new T2<>(
-                                                new DataEntry(
-                                                    cacheCtx.cacheId(),
-                                                    txEntry.key(),
-                                                    val,
-                                                    op,
-                                                    nearXidVersion(),
-                                                    writeVersion(),
-                                                    0,
-                                                    txEntry.key().partition(),
-                                                    txEntry.updateCounter(),
-                                                    DataEntry.flags(CU.txOnPrimary(this))
-                                                ),
-                                                txEntry
-                                            )
+                                        dataEntry = new DataEntry(
+                                            cacheCtx.cacheId(),
+                                            txEntry.key(),
+                                            val,
+                                            op,
+                                            nearXidVersion(),
+                                            writeVersion().copy(),
+                                            0,
+                                            txEntry.key().partition(),
+                                            txEntry.updateCounter(),
+                                            DataEntry.flags(CU.txOnPrimary(this))
                                         );
+
+                                        dataEntries.add(dataEntry);
                                     }
 
                                     if (op == CREATE || op == UPDATE) {
@@ -704,7 +700,10 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                                 dhtVer,
                                                 txEntry.updateCounter());
 
-                                            txEntry.updateCounter(updRes.updateCounter());
+                                            if (dataEntry != null) {
+                                                dataEntry.writeVersion().updateCounter(updRes.updateCounter());
+                                                dataEntry.partitionCounter(updRes.updateCounter());
+                                            }
 
                                             if (updRes.loggedPointer() != null)
                                                 ptr = updRes.loggedPointer();
@@ -741,7 +740,10 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                                             dhtVer,
                                             txEntry.updateCounter());
 
-                                        txEntry.updateCounter(updRes.updateCounter());
+                                        if (dataEntry != null) {
+                                            dataEntry.writeVersion().updateCounter(updRes.updateCounter());
+                                            dataEntry.partitionCounter(updRes.updateCounter());
+                                        }
 
                                         if (updRes.loggedPointer() != null)
                                             ptr = updRes.loggedPointer();
@@ -838,14 +840,8 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         if (!near() && !F.isEmpty(dataEntries)) {
                             logKeysToPendingTxsTracker(dataEntries);
 
-                            if (cctx.wal() != null) {
-                                // Set new update counters for data entries received from persisted tx entries.
-                                List<DataEntry> entriesWithCounters = dataEntries.stream()
-                                    .map(tuple -> tuple.get1().partitionCounter(tuple.get2().updateCounter()))
-                                    .collect(Collectors.toList());
-
-                                ptr = cctx.wal().log(new DataRecord(entriesWithCounters));
-                            }
+                            if (cctx.wal() != null)
+                                ptr = cctx.wal().log(new DataRecord(dataEntries));
                         }
 
                         if (ptr != null)
@@ -891,15 +887,13 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
     }
 
     /**
-     * @param dataEntryTuples Data entries.
+     * @param dataEntries Data entries.
      */
-    private void logKeysToPendingTxsTracker(List<T2<DataEntry, IgniteTxEntry>> dataEntryTuples) {
+    private void logKeysToPendingTxsTracker(List<DataEntry> dataEntries) {
         List<KeyCacheObject> readKeys = new ArrayList<>();
         List<KeyCacheObject> writeKeys = new ArrayList<>();
 
-        for (T2<DataEntry, IgniteTxEntry> tuple : dataEntryTuples) {
-            DataEntry dataEntry = tuple.get1().partitionCounter(tuple.get2().updateCounter());
-
+        for (DataEntry dataEntry : dataEntries) {
             if (dataEntry.op() == READ)
                 readKeys.add(dataEntry.key());
             else

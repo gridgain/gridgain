@@ -2328,13 +2328,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                     PartitionLogTree logTree = new PartitionLogTree(
                         grp,
+                        partId,
                         logTreeName,
                         grp.dataRegion().pageMemory(),
                         logTreeRoot.pageId().pageId(),
                         freeList,
                         logTreeRoot.isAllocated(),
                         ctx.diagnostic().pageLockTracker(),
-                        PageIdAllocator.FLAG_AUX
+                        PageIdAllocator.FLAG_AUX,
+                        log
                     ) {
                         /** {@inheritDoc} */
                         @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
@@ -3399,6 +3401,58 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);
+            }
+        }
+
+        /**
+         * Drops {@link PartitionLogTree} and force three re-creation.
+         *
+         * @throws IgniteCheckedException If failed.
+         */
+        public void dropPartitionLogTree() throws IgniteCheckedException {
+            assert grp.shared().kernalContext().maintenanceRegistry().isMaintenanceMode();
+            // Link to the tree must be cleared together with the tree's root page.
+            assert grp.shared().database().checkpointLockIsHeldByThread();
+
+            logTree().destroy();
+
+            // Clear link to tree root page, which just has been recycled.
+            // Zero link will force tree creation on initialization.
+            resetUpdateLogTreeLink();
+
+            // Force initialization of CacheStore with all its structures on the next access.
+            if (init.compareAndSet(true, false))
+                delegate = null;
+        }
+
+        private void resetUpdateLogTreeLink() throws IgniteCheckedException {
+            PageMemoryEx pageMem = (PageMemoryEx)grp.dataRegion().pageMemory();
+
+            IgniteWriteAheadLogManager wal = grp.shared().wal();
+
+            int grpId = grp.groupId();
+            long partMetaId = pageMem.partitionMetaPageId(grpId, partId);
+
+            long partMetaPage = pageMem.acquirePage(grpId, partMetaId);
+
+            try {
+                long partMetaPageAddr = pageMem.writeLock(grpId, partMetaId, partMetaPage);
+                try {
+                    PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.latest();
+
+                    io.setUpdateTreeRoot(partMetaPageAddr, 0);
+
+                    if (isWalDeltaRecordNeeded(pageMem, grpId, partMetaId, partMetaPage, wal, null)) {
+                        wal.log(new PageSnapshot(new FullPageId(partMetaId, grpId), partMetaPageAddr,
+                            pageMem.pageSize(), pageMem.realPageSize(grpId)));
+                    }
+                }
+                finally {
+                    pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null, true);
+                }
+            }
+            finally {
+                pageMem.releasePage(grpId, partMetaId, partMetaPage);
             }
         }
     }

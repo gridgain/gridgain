@@ -52,7 +52,7 @@ public interface GridCacheReplicationManager extends GridCacheManager {
         long expireTime,
         GridCacheVersion ver,
         GridDrType drType,
-        AffinityTopologyVersion topVer)throws IgniteCheckedException;
+        AffinityTopologyVersion topVer) throws IgniteCheckedException;
 
     /**
      * Process partitions exchange event.

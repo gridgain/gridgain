@@ -67,13 +67,15 @@ public class GridCacheVersion implements Message, Externalizable, CacheEntryVers
     }
 
     /**
-     * Copying constructor.
+     * Inner copy method.
      */
-    public GridCacheVersion(GridCacheVersion ver) {
-        this.topVer = ver.topVer;
-        this.nodeOrderDrId = ver.nodeOrderDrId;
-        this.order = ver.order;
-        this.updateCounter = ver.updateCounter;
+    public GridCacheVersion copy() {
+        GridCacheVersion ver0 = new GridCacheVersion();
+        ver0.topVer = topVer;
+        ver0.nodeOrderDrId = nodeOrderDrId;
+        ver0.order = order;
+        ver0.updateCounter = updateCounter;
+        return ver0;
     }
 
     /**
