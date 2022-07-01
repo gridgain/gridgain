@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgnitePersistentS
 import org.apache.ignite.internal.processors.cache.persistence.PersistenceDirectoryWarningLoggingTest;
 import org.apache.ignite.internal.processors.cache.persistence.RestorePartitionStateDuringCheckpointTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteCacheGroupsWithRestartsTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryEncryptionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryWithParamsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsMultiNodePutGetRestartTest;
@@ -92,6 +93,7 @@ import org.junit.runners.Suite;
 
     IgniteLogicalRecoveryTest.class,
     IgniteLogicalRecoveryWithParamsTest.class,
+    IgniteLogicalRecoveryEncryptionTest.class,
 
     IgniteSequentialNodeCrashRecoveryTest.class,
 

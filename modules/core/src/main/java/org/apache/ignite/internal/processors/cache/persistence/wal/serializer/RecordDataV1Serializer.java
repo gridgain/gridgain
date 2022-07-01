@@ -212,8 +212,6 @@ public class RecordDataV1Serializer implements RecordDataSerializer {
     @Override public WALRecord readRecord(RecordType type, ByteBufferBackedDataInput in, int size)
         throws IOException, IgniteCheckedException {
         if (type == ENCRYPTED_RECORD || type == ENCRYPTED_RECORD_V2) {
-            System.out.println("Decrypting " + type);
-
             DecryptionResult decryptionResult = readEncryptedData(in, true, type == ENCRYPTED_RECORD_V2);
 
             if (decryptionResult.isDecryptedSuccessfully()) {
