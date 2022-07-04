@@ -44,10 +44,10 @@ namespace Apache.Ignite.Core.Tests.Services
         private const string CheckThinTaskName = "org.apache.ignite.platform.PlatformServiceCallThinTask";
         
         /** */
-        private const string NODE_TYPE_ATTR = "TYPE";
+        private const string NodeTypeAttr = "TYPE";
         
         /** */
-        private const string DOTNET_SRV_NODE_TYPE = "dotnet-srv";
+        private const string DotnetSrvNodeType = "dotnet-srv";
 
         /** */
         private const string CheckCollectionsThinTaskName =
@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Tests.Services
             };
 
             if (withNodeFilter)
-                cfg.NodeFilter = new NodeTypeFilter(DOTNET_SRV_NODE_TYPE);
+                cfg.NodeFilter = new NodeTypeFilter(DotnetSrvNodeType);
 
             Grid1.GetServices().Deploy(cfg);
 
@@ -151,7 +151,7 @@ namespace Apache.Ignite.Core.Tests.Services
                 {
                     NameMapper = BinaryBasicNameMapper.SimpleNameInstance
                 },
-                UserAttributes = new Dictionary<string, object> {{NODE_TYPE_ATTR, DOTNET_SRV_NODE_TYPE}}
+                UserAttributes = new Dictionary<string, object> {{NodeTypeAttr, DotnetSrvNodeType}}
             };
         }
         
@@ -175,7 +175,7 @@ namespace Apache.Ignite.Core.Tests.Services
             /** <inheritdoc /> */
             public bool Invoke(IClusterNode node)
             {
-                if (node.TryGetAttribute<string>(NODE_TYPE_ATTR, out var attr) 
+                if (node.TryGetAttribute<string>(NodeTypeAttr, out var attr) 
                     && string.Compare(attr, _type, true) == 0)
                 {
                     return true;
