@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.pagemem.wal.record;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 /**
  * Encrypted record from WAL.
  * That types of record returned from a {@code RecordDataSerializer} on offline WAL iteration.
@@ -24,12 +26,12 @@ public class EncryptedRecord extends WALRecord implements WalRecordCacheGroupAwa
     /**
      * Group id.
      */
-    private int grpId;
+    private final int grpId;
 
     /**
      * Type of plain record.
      */
-    private RecordType plainRecType;
+    private final RecordType plainRecType;
 
     /**
      * @param grpId Group id
@@ -55,5 +57,10 @@ public class EncryptedRecord extends WALRecord implements WalRecordCacheGroupAwa
      */
     public RecordType plainRecordType() {
         return plainRecType;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(EncryptedRecord.class, this, "super", super.toString());
     }
 }

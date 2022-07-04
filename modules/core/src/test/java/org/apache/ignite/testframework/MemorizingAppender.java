@@ -17,7 +17,10 @@
 package org.apache.ignite.testframework;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 import org.apache.log4j.AppenderSkeleton;
@@ -37,6 +40,9 @@ public class MemorizingAppender extends AppenderSkeleton {
      * Events that were seen by this Appender.
      */
     private final List<LoggingEvent> events = new CopyOnWriteArrayList<>();
+
+    /** Loggers on which we were installed using {@link #installSelfOn(Class)}. */
+    private final Set<Logger> installedOn = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** {@inheritDoc} */
     @Override protected void append(LoggingEvent event) {
@@ -71,6 +77,8 @@ public class MemorizingAppender extends AppenderSkeleton {
         Logger logger = Logger.getLogger(target);
 
         logger.addAppender(this);
+
+        installedOn.add(logger);
     }
 
     /**
@@ -82,6 +90,17 @@ public class MemorizingAppender extends AppenderSkeleton {
         Logger logger = Logger.getLogger(target);
 
         logger.removeAppender(this);
+
+        installedOn.remove(logger);
+    }
+
+    /**
+     * Removes this appender from all loggers on which it was installed using {@link #installSelfOn(Class)}.
+     */
+    public void removeSelfFromEverywhere() {
+        installedOn.forEach(logger -> logger.removeAppender(this));
+
+        installedOn.clear();
     }
 
     /**

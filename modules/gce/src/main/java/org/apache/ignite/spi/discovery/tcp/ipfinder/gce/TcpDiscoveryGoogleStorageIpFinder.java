@@ -21,7 +21,7 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.StorageScopes;
 import com.google.api.services.storage.model.Bucket;
@@ -289,7 +289,7 @@ public class TcpDiscoveryGoogleStorageIpFinder extends TcpDiscoveryIpFinderAdapt
 
                 try {
                     cred = new GoogleCredential.Builder().setTransport(httpTransport)
-                        .setJsonFactory(JacksonFactory.getDefaultInstance()).setServiceAccountId(srvcAccountId)
+                        .setJsonFactory(GsonFactory.getDefaultInstance()).setServiceAccountId(srvcAccountId)
                         .setServiceAccountPrivateKeyFromP12File(new File(srvcAccountP12FilePath))
                         .setServiceAccountScopes(Collections.singleton(StorageScopes.DEVSTORAGE_FULL_CONTROL)).build();
 
@@ -299,7 +299,7 @@ public class TcpDiscoveryGoogleStorageIpFinder extends TcpDiscoveryIpFinderAdapt
                 }
 
                 try {
-                    storage = new Storage.Builder(httpTransport, JacksonFactory.getDefaultInstance(), cred)
+                    storage = new Storage.Builder(httpTransport, GsonFactory.getDefaultInstance(), cred)
                         .setApplicationName(projectName).build();
                 }
                 catch (Exception e) {
