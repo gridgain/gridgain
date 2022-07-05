@@ -607,6 +607,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         try {
             DistributedMetaStorageVersion locVer = ver;
 
+            // next block of code is needed for handling RU scenario only, when nodes of obsolete versions (2.4, 2.5)
+            // are not allowed to join cluster this code can be removed
             if (!discoData.hasJoiningNodeData()) {
                 // Joining node doesn't support distributed metastorage feature.
 
