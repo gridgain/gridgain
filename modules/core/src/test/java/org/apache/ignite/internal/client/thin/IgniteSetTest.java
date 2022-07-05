@@ -37,9 +37,9 @@ import org.junit.Test;
 
 /**
  * Tests client set.
- * Partition awareness tests are in {@link ThinClientPartitionAwarenessStableTopologyTest#testIgniteSet()}.
+ * Partition awareness tests are in {@link ThinClientAffinityAwarenessStableTopologyTest#testIgniteSet()}.
  */
-@SuppressWarnings({"rawtypes", "ZeroLengthArrayAllocation", "ThrowableNotThrown"})
+@SuppressWarnings({"rawtypes", "ZeroLengthArrayAllocation"})
 public class IgniteSetTest extends AbstractThinClientTest {
     /** Client. */
     static IgniteClient client;
@@ -54,7 +54,7 @@ public class IgniteSetTest extends AbstractThinClientTest {
 
     /** {@inheritDoc} */
     @Override protected ClientConfiguration getClientConfiguration() {
-        return super.getClientConfiguration().setPartitionAwarenessEnabled(true);
+        return super.getClientConfiguration().setAffinityAwarenessEnabled(true);
     }
 
     /** {@inheritDoc} */
@@ -525,7 +525,6 @@ public class IgniteSetTest extends AbstractThinClientTest {
     /**
      * Asserts that usage throws closed exception.
      */
-    @SuppressWarnings("ThrowableNotThrown")
     private static void assertThrowsClosed(ClientIgniteSet<Integer> set) {
         String msg = "IgniteSet with name '" + set.name() + "' does not exist.";
         GridTestUtils.assertThrows(null, set::size, ClientException.class, msg);
