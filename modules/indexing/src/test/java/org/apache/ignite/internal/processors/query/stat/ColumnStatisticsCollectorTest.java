@@ -59,7 +59,7 @@ public class ColumnStatisticsCollectorTest extends GridCommonAbstractTest {
         types.put(new Value[]{ValueDecimal.get(BigDecimal.ONE), ValueDecimal.get(BigDecimal.TEN)},
             (v1, v2) -> v1.getBigDecimal().compareTo(v2.getBigDecimal()));
         types.put(new Value[]{ValueDate.fromMillis(1), ValueDate.fromMillis(10000), ValueDate.fromMillis(9999999)},
-            (v1, v2) -> v1.getDate().compareTo(v2.getDate()));
+            (v1, v2) -> v1.getDate(null).compareTo(v2.getDate(null)));
         types.put(new Value[]{ValueUuid.get(1,2), ValueUuid.get(2,1), ValueUuid.get(2,2)},
             (v1, v2) -> new UUID(((ValueUuid)v1).getHigh(),((ValueUuid)v1).getLow())
                 .compareTo(new UUID(((ValueUuid)v2).getHigh(),((ValueUuid)v2).getLow())));

@@ -99,6 +99,9 @@ public class InlineIndexColumnFactory {
             case Value.TIMESTAMP:
                 return new TimestampInlineIndexColumn(col);
 
+            case Value.TIMESTAMP_TZ:
+                return new TimestampLocalTimeZoneInlineIndexColumn(col);
+
             case Value.UUID:
                 return new UuidInlineIndexColumn(col);
 

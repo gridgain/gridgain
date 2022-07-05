@@ -97,14 +97,17 @@ public class DmlUtils {
             }
 
             if (val instanceof Timestamp && LocalDateTimeUtils.LOCAL_DATE_TIME == expCls)
-                return LocalDateTimeUtils.valueToLocalDateTime(ValueTimestamp.get((Timestamp)val));
+                return LocalDateTimeUtils.valueToLocalDateTime(ValueTimestamp.get(null, (Timestamp)val));
 
             if (val instanceof Date && LocalDateTimeUtils.LOCAL_DATE == expCls) {
                 return LocalDateTimeUtils.valueToLocalDate(ValueDate.fromMillis(((Date)val).getTime()));
             }
 
             if (val instanceof Time && LocalDateTimeUtils.LOCAL_TIME == expCls)
-                return LocalDateTimeUtils.valueToLocalTime(ValueTime.get((Time)val));
+                return LocalDateTimeUtils.valueToLocalTime(ValueTime.get(null, (Time)val));
+
+            if (val instanceof Timestamp && LocalDateTimeUtils.INSTANT == expCls)
+                return LocalDateTimeUtils.valueToInstant(ValueTimestamp.get(null, (Timestamp)val));
 
             // We have to convert arrays of reference types manually -
             // see https://issues.apache.org/jira/browse/IGNITE-4327

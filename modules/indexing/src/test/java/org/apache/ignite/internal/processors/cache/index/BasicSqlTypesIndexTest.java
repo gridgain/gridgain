@@ -293,7 +293,7 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
         // of Time type. At the moment these time representations are not compatible for some values.
 
         assertEquals(i, new Time(i).getTime());
-        assertEquals(i, ValueTime.get(new Time(i)).getTime().getTime());
+        assertEquals(i, ValueTime.get(null, new Time(i)).getTime(null).getTime());
 
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1");
         createPopulateAndVerify(idxTypeStr, idxCls, comp, PK, "BACKUPS=1,AFFINITY_KEY=idxVal");

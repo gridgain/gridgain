@@ -100,7 +100,7 @@ class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
         CLS_TO_VAL.put(InetSocketAddress.class, val -> ValueString.get(Objects.toString(val)));
         CLS_TO_VAL.put(BigDecimal.class, val -> ValueDecimal.get((BigDecimal) val));
         CLS_TO_VAL.put(BigInteger.class, val -> ValueDecimal.get(new BigDecimal((BigInteger) val)));
-        CLS_TO_VAL.put(Date.class, val -> ValueTimestamp.fromMillis(((Date) val).getTime()));
+        CLS_TO_VAL.put(Date.class, val -> ValueTimestamp.fromMillis(((Date) val).getTime(), 0));
         CLS_TO_VAL.put(Boolean.class, val -> ValueBoolean.get((Boolean) val));
         CLS_TO_VAL.put(Byte.class, val -> ValueByte.get((Byte) val));
         CLS_TO_VAL.put(Short.class, val -> ValueShort.get((Short) val));

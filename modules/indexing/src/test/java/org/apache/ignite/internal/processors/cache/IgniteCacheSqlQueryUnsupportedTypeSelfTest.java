@@ -18,9 +18,12 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.time.Instant;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -74,10 +77,10 @@ public class IgniteCacheSqlQueryUnsupportedTypeSelfTest extends GridCommonAbstra
                     .addQueryField("id", Integer.class.getName(), null)
                     .addQueryField("time", Instant.class.getName(), null)
                     .setTableName("PERSON")
-                .setIndexes(Arrays.asList(
-                    new QueryIndex("id", true),
-                    new QueryIndex("time", true)
-                ))
+                    .setIndexes(Arrays.asList(
+                        new QueryIndex("id", true),
+                        new QueryIndex("time", true)
+                    ))
             ));
     }
 
@@ -100,6 +103,43 @@ public class IgniteCacheSqlQueryUnsupportedTypeSelfTest extends GridCommonAbstra
             res = execute("SELECT * FROM CACHE.PERSON WHERE time = ?", p2.time);
 
             assertEquals(2, res.get(0).get(0));
+        }
+    }
+
+    /**
+     * Check that unsupported by IgniteSQL type is correctly inserted.
+     */
+    @Test
+    public void testSqlInstantType() {
+        try (IgniteCache<Integer, Person> person = grid(0).createCache(instantCacheConfiguration())) {
+            Instant now = Instant.now();
+
+            List<Instant> data = new ArrayList<>();
+
+            for (int i = 0; i < 100; i++) {
+                Instant val = now.plus(-i + 50, ChronoUnit.SECONDS);
+
+                data.add(val);
+                person.put(i, new Person(i, val));
+            }
+
+            {
+                List<List<?>> actual = execute("SELECT time FROM CACHE.PERSON");
+
+                assertEqualsCollections(data.stream().sorted().collect(Collectors.toList()),
+                    actual.stream().map(l -> l.get(0)).collect(Collectors.toList()));
+            }
+
+            {
+                List<Instant> expected = data.stream()
+                    .filter(t -> t.compareTo(now) > 0)
+                    .sorted()
+                    .collect(Collectors.toList());
+
+                List<List<?>> actual = execute("SELECT time FROM CACHE.PERSON WHERE time > ?", now);
+
+                assertEqualsCollections(expected, actual.stream().map(l -> l.get(0)).collect(Collectors.toList()));
+            }
         }
     }
 

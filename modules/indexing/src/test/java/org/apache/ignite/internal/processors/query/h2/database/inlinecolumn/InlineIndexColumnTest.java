@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
@@ -767,9 +766,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     /** */
     @Test
     public void testDate() throws Exception {
-        testPutGet(ValueDate.get(Date.valueOf("2017-02-20")),
-            ValueDate.get(Date.valueOf("2017-02-21")),
-            ValueDate.get(Date.valueOf("2017-02-19")));
+        testPutGet(ValueDate.get(null, Date.valueOf("2017-02-20")),
+            ValueDate.get(null, Date.valueOf("2017-02-21")),
+            ValueDate.get(null, Date.valueOf("2017-02-19")));
 
         int maxSize = 1 + 8; // 1 byte header + 8 bytes value.
 
@@ -778,16 +777,16 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(-1, putAndCompare(Date.valueOf("2017-02-16"), Date.valueOf("2017-02-24"), Date.class, maxSize));
         assertEquals(0, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-24"), Date.class, maxSize));
         assertEquals(CANT_BE_COMPARE, putAndCompare(Date.valueOf("2017-02-24"), Date.valueOf("2017-02-20"), Date.class, maxSize - 1));
-        assertEquals(-1, putAndCompare(new Date(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MIN_VALUE)),
-            new Date(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MAX_VALUE)), Date.class, maxSize));
+        assertEquals(-1, putAndCompare(new Date(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffsetMillis(Long.MIN_VALUE)),
+            new Date(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffsetMillis(Long.MAX_VALUE)), Date.class, maxSize));
     }
 
     /** */
     @Test
     public void testTime() throws Exception {
-        testPutGet(ValueTime.get(Time.valueOf("10:01:01")),
-            ValueTime.get(Time.valueOf("11:02:02")),
-            ValueTime.get(Time.valueOf("12:03:03")));
+        testPutGet(ValueTime.get(null, Time.valueOf("10:01:01")),
+            ValueTime.get(null, Time.valueOf("11:02:02")),
+            ValueTime.get(null, Time.valueOf("12:03:03")));
 
         int maxSize = 1 + 8; // 1 byte header + 8 bytes value.
 
@@ -802,9 +801,9 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     /** */
     @Test
     public void testTimestamp() throws Exception {
-        testPutGet(ValueTimestamp.get(Timestamp.valueOf("2017-02-20 10:01:01")),
-            ValueTimestamp.get(Timestamp.valueOf("2017-02-20 10:01:01")),
-            ValueTimestamp.get(Timestamp.valueOf("2017-02-20 10:01:01")));
+        testPutGet(ValueTimestamp.get(null, Timestamp.valueOf("2017-02-20 10:01:01")),
+            ValueTimestamp.get(null, Timestamp.valueOf("2017-02-20 10:01:01")),
+            ValueTimestamp.get(null, Timestamp.valueOf("2017-02-20 10:01:01")));
 
         int maxSize = 1 + 16; // 1 byte header + 16 bytes value.
 
@@ -816,8 +815,8 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
         assertEquals(0, putAndCompare(Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize));
         assertEquals(CANT_BE_COMPARE, putAndCompare(Timestamp.valueOf("2017-02-20 4:19:59"), Timestamp.valueOf("2017-02-20 4:20:00"), Timestamp.class, maxSize - 1));
         assertEquals(-1, putAndCompare(Timestamp.valueOf("2017-02-20 00:00:00"), Timestamp.valueOf("2017-02-20 23:59:59"), Timestamp.class, maxSize));
-        assertEquals(-1, putAndCompare(new Timestamp(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MIN_VALUE)),
-            new Timestamp(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffset(Long.MAX_VALUE)), Timestamp.class, maxSize));
+        assertEquals(-1, putAndCompare(new Timestamp(Long.MIN_VALUE - DateTimeUtils.getTimeZoneOffsetMillis(Long.MIN_VALUE)),
+            new Timestamp(Long.MAX_VALUE - DateTimeUtils.getTimeZoneOffsetMillis(Long.MAX_VALUE)), Timestamp.class, maxSize));
     }
 
     /** */
@@ -1036,13 +1035,13 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
                 return ValueDouble.get((Double)val);
 
             case Value.DATE:
-                return ValueDate.get((Date)val);
+                return ValueDate.get(null, (Date)val);
 
             case Value.TIME:
-                return ValueTime.get((Time)val);
+                return ValueTime.get(null, (Time)val);
 
             case Value.TIMESTAMP:
-                return ValueTimestamp.get((Timestamp)val);
+                return ValueTimestamp.get(null, (Timestamp)val);
 
             case Value.UUID:
                 return ValueUuid.get((UUID)val);

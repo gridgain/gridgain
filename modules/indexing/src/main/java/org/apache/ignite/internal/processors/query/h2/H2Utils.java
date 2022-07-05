@@ -29,7 +29,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.text.MessageFormat;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,7 +38,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -73,6 +71,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.gridgain.internal.h2.api.TimestampWithTimeZone;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.aggregate.AggregateData;
@@ -105,6 +104,7 @@ import org.gridgain.internal.h2.value.ValueShort;
 import org.gridgain.internal.h2.value.ValueString;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestamp;
+import org.gridgain.internal.h2.value.ValueTimestampTimeZone;
 import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -633,13 +633,13 @@ public class H2Utils {
                 if (LocalDateTimeUtils.LOCAL_DATE == obj.getClass())
                     return LocalDateTimeUtils.localDateToDateValue(obj);
 
-                return ValueDate.get((Date)obj);
+                return ValueDate.get(null, (Date)obj);
 
             case Value.TIME:
                 if (LocalDateTimeUtils.LOCAL_TIME == obj.getClass())
                     return LocalDateTimeUtils.localTimeToTimeValue(obj);
 
-                return ValueTime.get((Time)obj);
+                return ValueTime.get(null, (Time)obj);
 
             case Value.TIMESTAMP:
                 if (obj instanceof java.util.Date && !(obj instanceof Timestamp))
@@ -648,8 +648,12 @@ public class H2Utils {
                 if (LocalDateTimeUtils.LOCAL_DATE_TIME == obj.getClass())
                     return LocalDateTimeUtils.localDateTimeToValue(obj);
 
-                return ValueTimestamp.get((Timestamp)obj);
+                return ValueTimestamp.get(null, (Timestamp)obj);
+            case Value.TIMESTAMP_TZ:
+                if (LocalDateTimeUtils.INSTANT == obj.getClass())
+                    return LocalDateTimeUtils.instantToValue(obj);
 
+                return ValueTimestampTimeZone.get((TimestampWithTimeZone)obj);
             case Value.DECIMAL:
                 return ValueDecimal.get((BigDecimal)obj);
             case Value.STRING:
@@ -739,6 +743,8 @@ public class H2Utils {
             return Value.TIME;
         else if (LocalDateTimeUtils.LOCAL_DATE_TIME == x)
             return Value.TIMESTAMP;
+        else if (LocalDateTimeUtils.INSTANT == x)
+            return Value.TIMESTAMP_TZ;
         else {
             if (JdbcUtils.customDataTypesHandler != null)
                 return JdbcUtils.customDataTypesHandler.getTypeIdFromClass(x);
@@ -928,8 +934,6 @@ public class H2Utils {
                 stmt.setObject(idx, obj, Types.JAVA_OBJECT);
             else if (obj instanceof BigDecimal)
                 stmt.setObject(idx, obj, Types.DECIMAL);
-            else if (obj.getClass() == Instant.class)
-                stmt.setObject(idx, obj, Types.JAVA_OBJECT);
             else
                 stmt.setObject(idx, obj);
         }

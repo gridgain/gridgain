@@ -114,11 +114,11 @@ public class ColumnStatisticsCollector {
                 return U.join(val.getBigDecimal().unscaledValue().toByteArray(),
                         BigInteger.valueOf(val.getBigDecimal().scale()).toByteArray());
             case Value.TIME:
-                return BigInteger.valueOf(val.getTime().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTime(null).getTime()).toByteArray();
             case Value.DATE:
-                return BigInteger.valueOf(val.getDate().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getDate(null).getTime()).toByteArray();
             case Value.TIMESTAMP:
-                return BigInteger.valueOf(val.getTimestamp().getTime()).toByteArray();
+                return BigInteger.valueOf(val.getTimestamp(null).getTime()).toByteArray();
             default:
                 return val.getBytes();
         }

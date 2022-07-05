@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -169,6 +170,7 @@ public class QueryUtils {
             LocalTime.class,
             LocalDate.class,
             LocalDateTime.class,
+            Instant.class,
             String.class,
             UUID.class,
             byte[].class
