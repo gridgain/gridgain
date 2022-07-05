@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.processors.cache.persistence.wal.memtracker.PageMemoryTrackerConfiguration;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 /**
@@ -50,9 +51,8 @@ public abstract class AbstractWalDeltaConsistencyTest extends GridCommonAbstract
      * @param name Cache name.
      * @return Cache configuration.
      */
-    @SuppressWarnings("unchecked")
-    protected <K,V> CacheConfiguration<K, V> cacheConfiguration(String name) {
-        return defaultCacheConfiguration().setName(name);
+    protected <K, V> CacheConfiguration<K, V> cacheConfiguration(String name) {
+        return GridAbstractTest.<K, V>defaultCacheConfiguration().setName(name);
     }
 
     /**
