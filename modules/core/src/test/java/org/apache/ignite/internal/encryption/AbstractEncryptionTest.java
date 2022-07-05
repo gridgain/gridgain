@@ -266,12 +266,16 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
         return ENCRYPTED_CACHE;
     }
 
+//    public static void main(String[] args) throws Exception {
+//        createKeyStore("C:\\projects\\incubator-ignite\\modules\\yardstick\\src\\main\\resources\\tde.jks");
+//    }
+
     /**
      * Method to create new keystore.
      * Use it whenever you need special keystore for an encryption tests.
      */
     @SuppressWarnings("unused")
-    protected File createKeyStore(String keystorePath) throws Exception {
+    protected static File createKeyStore(String keystorePath) throws Exception {
         KeyStore ks = KeyStore.getInstance("PKCS12");
 
         ks.load(null, null);
