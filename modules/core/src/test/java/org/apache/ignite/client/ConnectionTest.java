@@ -89,6 +89,15 @@ public class ConnectionTest {
 
     /** */
     @Test
+    public void testValidBigHandshakeMessage() throws Exception {
+        char[] data = new char[1024 * 65];
+        String userName = new String(data);
+
+        testConnectionWithUsername(userName, Config.SERVER);
+    }
+
+    /** */
+    @Test
     public void testHandshakeTooLargeServerDropsConnection() throws Exception {
         try (LocalIgniteCluster ignored = LocalIgniteCluster.start(1, IPv4_HOST)) {
             Socket clientSocket = new Socket(IPv4_HOST, 10800);
