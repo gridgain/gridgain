@@ -135,6 +135,12 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
     private final ConcurrentMap<IgniteUuid, ServiceInfo> registeredServices = new ConcurrentHashMap<>();
 
     /**
+     * Map of registered services, kept in-sync with registeredServices above, and keyed by name to improve performance
+     * for lookups.
+     */
+    private final ConcurrentMap<String, ServiceInfo> registeredServicesByName = new ConcurrentHashMap<>();
+
+    /**
      * Collection of services information that were processed by deployment worker. <b>It is updated from deployment
      * worker</b>.
      * <p/>
@@ -279,6 +285,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         cancelDeployedServices();
 
         registeredServices.clear();
+        registeredServicesByName.clear();
 
         // If user requests sent to network but not received back to handle in deployment manager.
         Stream.concat(depFuts.values().stream(), undepFuts.values().stream()).forEach(fut -> {
@@ -1524,9 +1531,9 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         ServiceDeploymentActions depActions = null;
 
         if (!registeredServices.isEmpty()) {
-            depActions = new ServiceDeploymentActions();
+            depActions = new ServiceDeploymentActions(ctx);
 
-            depActions.servicesToDeploy(new HashMap<>(registeredServices));
+            depActions.servicesToDeploy(registeredServices);
         }
 
         depMgr.onLocalJoin(evt, discoCache, depActions);
@@ -1659,6 +1666,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             }
             else if (req instanceof ServiceUndeploymentRequest) {
                 ServiceInfo rmv = registeredServices.remove(reqSrvcId);
+                registeredServicesByName.remove(oldDesc.name());
 
                 assert oldDesc == rmv : "Concurrent map modification.";
 
@@ -1667,7 +1675,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         }
 
         if (!toDeploy.isEmpty() || !toUndeploy.isEmpty()) {
-            ServiceDeploymentActions depActions = new ServiceDeploymentActions();
+            ServiceDeploymentActions depActions = new ServiceDeploymentActions(ctx);
 
             if (!toDeploy.isEmpty())
                 depActions.servicesToDeploy(toDeploy);
@@ -1686,6 +1694,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         desc.context(ctx);
 
         registeredServices.put(desc.serviceId(), desc);
+        registeredServicesByName.put(desc.name(), desc);
     }
 
     /**
@@ -1695,10 +1704,10 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         if (msg.activate() && registeredServices.isEmpty())
             return;
 
-        ServiceDeploymentActions depActions = new ServiceDeploymentActions();
+        ServiceDeploymentActions depActions = new ServiceDeploymentActions(ctx);
 
         if (msg.activate())
-            depActions.servicesToDeploy(new HashMap<>(registeredServices));
+            depActions.servicesToDeploy(registeredServices);
         else
             depActions.deactivate(true);
 
@@ -1728,11 +1737,14 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
         }
 
         if (!toUndeploy.isEmpty()) {
-            ServiceDeploymentActions depActions = new ServiceDeploymentActions();
+            ServiceDeploymentActions depActions = new ServiceDeploymentActions(ctx);
 
             depActions.servicesToUndeploy(toUndeploy);
 
             msg.servicesDeploymentActions(depActions);
+
+            // Remove the names from the service-by-name map as well
+            toUndeploy.values().forEach((desc) -> registeredServicesByName.remove(desc.name()));
         }
     }
 
@@ -1772,7 +1784,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             servicesTopsUpdateMux.notifyAll();
         }
 
-        ServiceDeploymentActions depActions = new ServiceDeploymentActions();
+        ServiceDeploymentActions depActions = new ServiceDeploymentActions(ctx);
 
         depActions.deploymentTopologies(fullTops);
         depActions.deploymentErrors(fullErrors);
@@ -1785,12 +1797,7 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      * @return Mapped service descriptor. Possibly {@code null} if not found.
      */
     @Nullable private ServiceInfo lookupInRegisteredServices(String name) {
-        for (ServiceInfo desc : registeredServices.values()) {
-            if (desc.name().equals(name))
-                return desc;
-        }
-
-        return null;
+        return registeredServicesByName.get(name);
     }
 
     /**

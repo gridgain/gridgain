@@ -2501,7 +2501,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             compressionStrategy.start(ctx, cfg);
         }
 
-        CacheGroupContext grp = new CacheGroupContext(sharedCtx,
+        CacheGroupContext grp = new CacheGroupContext(
+            sharedCtx,
             desc.groupId(),
             desc.receivedFrom(),
             cacheType,

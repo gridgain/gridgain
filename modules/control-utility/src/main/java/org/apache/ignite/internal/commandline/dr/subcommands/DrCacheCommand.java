@@ -202,7 +202,8 @@ public class DrCacheCommand extends
         }
         else if (arg.remoteDataCenterId != 0) {
             for (GridClientNode node : nodes) {
-                if (node.attribute("plugins.gg.replication.snd.hub") != null) {
+                if (node.attribute("plugins.gg.replication.ist.snd.hub") != null ||
+                    node.attribute("plugins.gg.replication.snd.hub") != null) {
                     arg.actionCoordinator = node.nodeId();
 
                     break;
@@ -319,8 +320,11 @@ public class DrCacheCommand extends
     /** */
     @SuppressWarnings("PublicInnerClass") public enum Action {
         /** Stop. */ STOP("stop"),
+
         /** Start. */ START("start"),
-        /** Full state transfer. */ FULL_STATE_TRANSFER("full-state-transfer");
+
+        /** Full state transfer. */
+        FULL_STATE_TRANSFER("full-state-transfer");
 
         /** String representation. */
         private final String text;

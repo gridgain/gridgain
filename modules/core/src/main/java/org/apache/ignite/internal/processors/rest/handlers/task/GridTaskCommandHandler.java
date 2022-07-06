@@ -40,6 +40,7 @@ import org.apache.ignite.internal.ComputeTaskInternalFuture;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.UserCommandExceptions;
 import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
@@ -267,9 +268,18 @@ public class GridTaskCommandHandler extends GridRestCommandHandlerAdapter {
                                         "nodes alive?) [name=" + name + ", clientId=" + req.clientId() +
                                         ", err=" + e + ']');
                                 else {
-                                    if (!X.hasCause(e, VisorClusterGroupEmptyException.class))
-                                        U.error(log, "Failed to execute task [name=" + name + ", clientId=" +
-                                            req.clientId() + ']', e);
+                                    if (!X.hasCause(e, VisorClusterGroupEmptyException.class)) {
+                                        String logMessage = "Failed to execute task [name=" + name + ", clientId=" +
+                                            req.clientId() + ']';
+
+                                        if (UserCommandExceptions.causedByUserCommandException(e)) {
+                                            // Log this with DEBUG because it's not a system exception, it should not be highlighted
+                                            // in the logs.
+                                            if (log.isDebugEnabled())
+                                                log.debug(logMessage + U.nl() + X.getFullStackTrace(e));
+                                        } else
+                                            U.error(log, logMessage, e);
+                                    }
                                 }
 
                                 desc = new TaskDescriptor(true, null, e);

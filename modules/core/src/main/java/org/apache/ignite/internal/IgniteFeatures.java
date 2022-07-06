@@ -242,9 +242,12 @@ public enum IgniteFeatures {
 
     /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
     SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
-    
+
     /** Whether the absent PK parts should be filled with defaults or not. */
-    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64),
+
+    /** Whether there is {@link InvalidUserCommandException} class. */
+    HAS_INVALID_USER_COMMAND_EXCEPTION(65);
 
     /**
      * Unique feature identifier.

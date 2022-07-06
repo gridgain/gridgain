@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.store.CacheStoreManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConflictContext;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
@@ -685,9 +686,18 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                 GridCacheOperation op = res.get1();
                                 CacheObject val = res.get2();
 
+                                GridCacheVersion explicitVer;
+
                                 // Deal with conflicts.
-                                GridCacheVersion explicitVer = txEntry.conflictVersion() != null ?
-                                    txEntry.conflictVersion() : writeVersion();
+                                if (txEntry.conflictVersion() != null) {
+                                    explicitVer = txEntry.conflictVersion();
+
+                                    // Prohibit further replication for already replicated item.
+                                    if (txEntry.conflictVersion().dataCenterId() == writeVersion().dataCenterId())
+                                        explicitVer = new GridCacheVersionEx(explicitVer.topologyVersion(),
+                                            explicitVer.nodeOrderAndDrIdRaw(), explicitVer.order(), explicitVer.copy());
+                                } else
+                                    explicitVer = writeVersion();
 
                                 if ((op == CREATE || op == UPDATE) &&
                                     txEntry.conflictExpireTime() == CU.EXPIRE_TIME_CALCULATE) {
@@ -745,6 +755,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                                     txEntry.value(val, true, false);
                                     txEntry.op(op);
                                     txEntry.entryProcessors(null);
+
                                     txEntry.conflictVersion(explicitVer);
                                 }
 

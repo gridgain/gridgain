@@ -16,26 +16,46 @@
 
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
+import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.maintenance.MaintenanceTask;
 
 /**
  *
  */
 public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
+    /** Index rebuild maintenance task name. */
+    public static final String PART_LOG_TREE_REBUILD_MNTC_TASK_NAME = "PartitionLogTreeRebuildMaintenanceTask";
+
+    /** Maintenance task parameters separator. */
+    public static final String PARAMETER_SEPARATOR = "|";
+
+    /** Maintenance task parameters separator regexp. */
+    public static final String PARAMETER_SEPARATOR_REGEX = "\\|";
+
+    /** Maintenance task description. */
+    private static final String TASK_DESCRIPTION = "Partition log tree rebuild";
+
     /** */
     public static final Object FULL_ROW = new Object();
 
     /** */
     private final CacheGroupContext grp;
+
+    /** */
+    private final int part;
 
     /** */
     private final boolean strictConsistencyCheck = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK);
@@ -45,6 +65,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
 
     /**
      * @param grp Cache group.
+     * @param part Partition.
      * @param name Tree name.
      * @param pageMem Page memory.
      * @param metaPageId Meta page ID.
@@ -57,6 +78,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
      */
     public PartitionLogTree(
         CacheGroupContext grp,
+        int part,
         String name,
         PageMemory pageMem,
         long metaPageId,
@@ -82,6 +104,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
             pageLockTrackerManager
         );
 
+        this.part = part;
         this.grp = grp;
         this.log = log;
 
@@ -91,8 +114,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     }
 
     /** {@inheritDoc} */
-    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row)
-        throws IgniteCheckedException {
+    @Override protected int compare(BPlusIO<UpdateLogRow> iox, long pageAddr, int idx, UpdateLogRow row) {
         UpdateLogRowIO io = (UpdateLogRowIO)iox;
 
         int cmp;
@@ -121,15 +143,17 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         cmp = Long.compare(updCntr, row.updCntr);
 
         /* remove row */
-        if (cmp == 0 && row.link != 0 /* search insertion poin */ && io.getLink(pageAddr, idx) != row.link) {
+        if (cmp == 0 && row.link != 0 /* search insertion point */ && io.getLink(pageAddr, idx) != row.link) {
+            String msg = "Duplicate update counter at update log tree [" + "grp=" + grp.cacheOrGroupName() + ", part="
+                + part + ", updCounter=" + updCntr + +']';
+
+            // Update counter is unique number assigned to a row on per-partition basis.
+            // Duplicate value (caused by bugs or whatever) may affect other components, which relies on that invariant.
+            // However, a user controls (via system property) whether the violence is critical or not.
             if (strictConsistencyCheck)
-                throw new AssertionError("Duplicate update counters [updCounter=" + updCntr + ']');
-            else {
-                log.warning("Duplicate update counter at update log tree [" +
-                    "grp=" + grp.cacheOrGroupName() +
-                    ", updCounter=" + updCntr +
-                    +']');
-            }
+                throw new DuplicateUpdateCounterException(msg);
+            else
+                log.warning(msg);
         }
 
         return cmp;
@@ -141,5 +165,77 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         UpdateLogRow row = io.getLookupRow(this, pageAddr, idx);
 
         return flag == FULL_ROW ? row.initRow(grp) : row;
+    }
+
+    /**
+     * Construct the exception and invoke failure processor.
+     *
+     * @param msg Message.
+     * @param cause Cause.
+     * @param grpId Group id.
+     * @param pageIds Pages ids.
+     * @return New CorruptedTreeException instance.
+     */
+    @Override protected CorruptedTreeException corruptedTreeException(String msg, Throwable cause, int grpId,
+        long... pageIds) {
+        if (cause instanceof DuplicateUpdateCounterException) {
+            // Duplicate update counter doesn't mean the tree is corrupted.
+            return super.corruptedTreeException(msg, cause, grpId, pageIds);
+        }
+
+        CorruptedTreeException e = new CorruptedTreeException(msg, cause, grpName, null, name(), grpId, pageIds);
+
+        String errorMsg = "Partition log tree of partition `" + part + "` of cache group `" + grpName + "` is corrupted, " +
+            "to fix this issue a rebuild is required. On the next restart, node will enter " +
+            "the maintenance mode and rebuild corrupted tree.";
+
+        log.warning(errorMsg);
+
+        try {
+            MaintenanceTask task = toMaintenanceTask(grpId);
+
+            grp.shared().kernalContext().maintenanceRegistry().registerMaintenanceTask(task,
+                oldTask -> mergeTasks(oldTask, task));
+        }
+        catch (IgniteCheckedException ex) {
+            log.warning("Failed to register maintenance record for corrupted partition files.", ex);
+        }
+
+        processFailure(FailureType.CRITICAL_ERROR, e);
+
+        return e;
+    }
+
+    /**
+     * Constructs a partition log tree rebuild maintenance task.
+     *
+     * @param groupId Group id.
+     * @return Maintenance task.
+     */
+    public static MaintenanceTask toMaintenanceTask(int groupId) {
+        return new MaintenanceTask(PART_LOG_TREE_REBUILD_MNTC_TASK_NAME, TASK_DESCRIPTION,
+            U.hexInt(groupId));
+    }
+
+    /**
+     * Merges two index rebuild maintenance tasks concatenating their parameters.
+     *
+     * @param oldTask Old task
+     * @param newTask New task.
+     * @return Merged task.
+     */
+    public static MaintenanceTask mergeTasks(MaintenanceTask oldTask, MaintenanceTask newTask) {
+        assert Objects.equals(PART_LOG_TREE_REBUILD_MNTC_TASK_NAME, oldTask.name());
+        assert Objects.equals(oldTask.name(), newTask.name());
+
+        String oldTaskParams = oldTask.parameters();
+        String newTaskParams = newTask.parameters();
+
+        if (oldTaskParams.contains(newTaskParams))
+            return oldTask;
+
+        String mergedParams = oldTaskParams + PARAMETER_SEPARATOR + newTaskParams;
+
+        return new MaintenanceTask(oldTask.name(), oldTask.description(), mergedParams);
     }
 }

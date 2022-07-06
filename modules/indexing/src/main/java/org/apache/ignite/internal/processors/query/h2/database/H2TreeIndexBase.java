@@ -96,15 +96,19 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
      * @param maxInlineSize Max inline size from cache config.
      * @return Inline size.
      */
-    static int computeInlineSize(List<InlineIndexColumn> inlineIdxs, int cfgInlineSize, int maxInlineSize) {
+    static int computeInlineSize(
+            String name,
+            List<InlineIndexColumn> inlineIdxs,
+            int cfgInlineSize,
+            int maxInlineSize,
+            IgniteLogger log) {
         if (cfgInlineSize == 0)
             return 0;
 
         if (F.isEmpty(inlineIdxs))
             return 0;
 
-        if (cfgInlineSize != -1)
-            return Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
+        boolean fixedSize = true;
 
         int propSize = maxInlineSize == -1 ? IgniteSystemProperties.getInteger(IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE,
             IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT) : maxInlineSize;
@@ -117,6 +121,8 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
         for (InlineIndexColumn idxHelper : inlineIdxs) {
             // for variable types - default variable size, for other types - type's size + type marker
             int sizeInc = idxHelper.size() < 0 ? IGNITE_VARIABLE_TYPE_DEFAULT_INDEX_SIZE : idxHelper.size() + 1;
+
+            fixedSize &= idxHelper.size() != -1;
 
             if (idxHelper instanceof StringInlineIndexColumn || idxHelper instanceof BytesInlineIndexColumn) {
                 String sql = idxHelper.columnSql();
@@ -135,6 +141,20 @@ public abstract class H2TreeIndexBase extends GridH2IndexBase {
             // total index size is limited by the property
             if (size > propSize)
                 size = propSize;
+        }
+
+        if (cfgInlineSize != -1) {
+            cfgInlineSize = Math.min(PageIO.MAX_PAYLOAD_SIZE, cfgInlineSize);
+
+            if (fixedSize && size < cfgInlineSize) {
+                log.warning("Explicit INLINE_SIZE for fixed size index item is too big. " +
+                        "This will lead to wasting of space inside index pages. Ignoring " +
+                        "[index=" + name + ", explicitInlineSize=" + cfgInlineSize + ", realInlineSize=" + size + ']');
+
+                return size;
+            }
+
+            return cfgInlineSize;
         }
 
         return Math.min(PageIO.MAX_PAYLOAD_SIZE, size);
