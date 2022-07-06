@@ -920,7 +920,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public void onCacheStart0(GridCacheContextInfo<?, ?> cacheInfo, QuerySchema schema, boolean isSql)
         throws IgniteCheckedException {
-        log.info("+++ onCacheStart0 " + cacheSupportSql(cacheInfo.config()));
         if (!cacheSupportSql(cacheInfo.config())) {
             if (ctx.clientNode())
                 return;
