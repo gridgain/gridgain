@@ -391,7 +391,7 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
     /**
      * Ensures spi started.
-     * 
+     *
      * @throws IgniteException If spi not started.
      */
     private void ensureStarted() throws IgniteException {
