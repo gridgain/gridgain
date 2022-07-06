@@ -110,7 +110,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.databind.version}</version>
+            <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
@@ -171,6 +171,12 @@
             <artifactId>spring-context</artifactId>
             <version>${spring-5.2.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.13.3</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
