@@ -471,23 +471,13 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
     private InputStream keyStoreFile() throws IOException {
         File abs = new File(keyStorePath);
 
-        if (abs.exists()) {
-            log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath +
-                ", abs=" + abs.toPath().toAbsolutePath() + ", exists=" + abs.exists() + ']');
-
+        if (abs.exists())
             return new FileInputStream(abs);
-        }
 
         URL clsPthRes = KeystoreEncryptionSpi.class.getClassLoader().getResource(keyStorePath);
 
-        if (clsPthRes != null) {
-            log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath +
-                ", clsPthRes=" + clsPthRes + ']');
-
+        if (clsPthRes != null)
             return clsPthRes.openStream();
-        }
-
-        log.warning(">>>>> keyStoreFile [keyStorePath=" + keyStorePath + " it seems that the file cannot be loaded]");
 
         return null;
     }
@@ -517,15 +507,6 @@ public class KeystoreEncryptionSpi extends IgniteSpiAdapter implements Encryptio
 
         try (InputStream keyStoreFile = keyStoreFile()) {
             assertParameter(keyStoreFile != null, keyStorePath + " doesn't exists!");
-
-            {
-                File fff = new File(keyStorePath);
-
-                log.warning(">>>>> loading master key... [keyStorePath=" + keyStorePath +
-                    ", keyStorePwd(char[])=" + keyStorePwd + ", keyStorePwd=" + (new String(keyStorePwd)) +
-                    ", type=" + KeyStore.getDefaultType() + ", keySize=" + keySize +
-                    ", keyStoreFile=" + (fff.toPath().toAbsolutePath()) + ", exists=" + fff.exists() + ']');
-            }
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 

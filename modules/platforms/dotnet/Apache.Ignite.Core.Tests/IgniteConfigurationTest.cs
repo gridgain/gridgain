@@ -753,7 +753,7 @@ namespace Apache.Ignite.Core.Tests
                 },
                 EncryptionSpi = new KeystoreEncryptionSpi
                 {
-                    KeySize = 256,
+                    KeySize = 192,
                     KeyStorePassword = "tde-password",
                     KeyStorePath = "tde.jks",
                     MasterKeyName = KeystoreEncryptionSpi.DefaultMasterKeyName
