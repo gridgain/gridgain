@@ -368,18 +368,16 @@ public class SchemaManager {
      * @param clearIdx Whether to clear the index.
      */
     public void onCacheDestroyed(String cacheName, boolean destroy, boolean clearIdx) {
+        String schemaName = schemaName(cacheName);
+
+        H2Schema schema = schemas.get(schemaName);
+        // Drop tables.
+        Collection<H2TableDescriptor> rmvTbls = new HashSet<>();
+
         lock.writeLock().lock();
-
         try {
-            String schemaName = schemaName(cacheName);
-
-            H2Schema schema = schemas.get(schemaName);
-
             // Remove this mapping only after callback to DML proc - it needs that mapping internally
             cacheName2schema.remove(cacheName);
-
-            // Drop tables.
-            Collection<H2TableDescriptor> rmvTbls = new HashSet<>();
 
             for (H2TableDescriptor tbl : schema.tables()) {
                 if (F.eq(tbl.cacheName(), cacheName)) {
@@ -401,27 +399,27 @@ public class SchemaManager {
                     dataTables.remove(h2Tbl.identifier(), h2Tbl);
                 }
             }
-
-            synchronized (schemaMux) {
-                if (schema.decrementUsageCount()) {
-                    schemas.remove(schemaName);
-
-                    try {
-                        dropSchema(schemaName);
-                    }
-                    catch (Exception e) {
-                        U.error(log, "Failed to drop schema on cache stop (will ignore): " + cacheName, e);
-                    }
-                }
-            }
-
-            for (H2TableDescriptor tbl : rmvTbls) {
-                for (Index idx : tbl.table().getIndexes())
-                    idx.close(null);
-            }
         }
         finally {
             lock.writeLock().unlock();
+        }
+
+        synchronized (schemaMux) {
+            if (schema.decrementUsageCount()) {
+                schemas.remove(schemaName);
+
+                try {
+                    dropSchema(schemaName);
+                }
+                catch (Exception e) {
+                    U.error(log, "Failed to drop schema on cache stop (will ignore): " + cacheName, e);
+                }
+            }
+        }
+
+        for (H2TableDescriptor tbl : rmvTbls) {
+            for (Index idx : tbl.table().getIndexes())
+                idx.close(null);
         }
     }
 
