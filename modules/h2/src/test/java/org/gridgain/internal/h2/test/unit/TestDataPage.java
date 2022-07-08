@@ -165,12 +165,12 @@ public class TestDataPage extends TestBase implements DataHandler {
             }
             testValue(ValueDecimal.get(new BigDecimal(i * i)));
         }
-        testValue(ValueDate.get(new Date(System.currentTimeMillis())));
-        testValue(ValueDate.get(new Date(0)));
-        testValue(ValueTime.get(new Time(System.currentTimeMillis())));
-        testValue(ValueTime.get(new Time(0)));
-        testValue(ValueTimestamp.fromMillis(System.currentTimeMillis()));
-        testValue(ValueTimestamp.fromMillis(0));
+        testValue(ValueDate.get(null, new Date(System.currentTimeMillis())));
+        testValue(ValueDate.get(null, new Date(0)));
+        testValue(ValueTime.get(null, new Time(System.currentTimeMillis())));
+        testValue(ValueTime.get(null, new Time(0)));
+        testValue(ValueTimestamp.fromMillis(System.currentTimeMillis(), 0));
+        testValue(ValueTimestamp.fromMillis(0, 0));
         testValue(ValueTimestampTimeZone.parse("2000-01-01 10:00:00"));
         testValue(ValueJavaObject.getNoCopy(null, new byte[0], this));
         testValue(ValueJavaObject.getNoCopy(null, new byte[100], this));

@@ -318,7 +318,7 @@ public class TestUpdatableResultSet extends TestDb {
         assertEquals("java.sql.Time", meta.getColumnClassName(++c));
         assertEquals("java.sql.Timestamp", meta.getColumnClassName(++c));
         assertEquals(SysProperties.RETURN_OFFSET_DATE_TIME && LocalDateTimeUtils.isJava8DateApiPresent() //
-                ? "java.time.OffsetDateTime" : "org.h2.api.TimestampWithTimeZone", //
+                ? "java.time.OffsetDateTime" : "org.gridgain.internal.h2.api.TimestampWithTimeZone", //
             meta.getColumnClassName(++c));
         assertEquals("java.lang.Double", meta.getColumnClassName(++c));
         assertEquals("java.lang.Float", meta.getColumnClassName(++c));

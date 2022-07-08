@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.util.TimeZone;
 import org.gridgain.internal.h2.engine.Mode;
 import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.message.DbException;
@@ -545,16 +546,16 @@ public abstract class Value extends VersionedValue {
         return ((ValueBoolean) convertTo(Value.BOOLEAN)).getBoolean();
     }
 
-    public Date getDate() {
-        return ((ValueDate) convertTo(Value.DATE)).getDate();
+    public Date getDate(TimeZone timeZone) {
+        return ((ValueDate) convertTo(Value.DATE)).getDate(timeZone);
     }
 
-    public Time getTime() {
-        return ((ValueTime) convertTo(Value.TIME)).getTime();
+    public Time getTime(TimeZone timeZone) {
+        return ((ValueTime) convertTo(Value.TIME)).getTime(timeZone);
     }
 
-    public Timestamp getTimestamp() {
-        return ((ValueTimestamp) convertTo(Value.TIMESTAMP)).getTimestamp();
+    public Timestamp getTimestamp(TimeZone timeZone) {
+        return ((ValueTimestamp) convertTo(Value.TIMESTAMP)).getTimestamp(timeZone);
     }
 
     public byte[] getBytes() {
@@ -1128,12 +1129,14 @@ public abstract class Value extends VersionedValue {
             return ValueDate.fromDateValue(DateTimeUtils.EPOCH_DATE_VALUE);
         case TIMESTAMP:
             return ValueDate.fromDateValue(((ValueTimestamp) this).getDateValue());
-        case TIMESTAMP_TZ: {
-            ValueTimestampTimeZone ts = (ValueTimestampTimeZone) this;
-            long dateValue = ts.getDateValue(), timeNanos = ts.getTimeNanos();
-            long millis = DateTimeUtils.getMillis(dateValue, timeNanos, ts.getTimeZoneOffsetMins());
-            return ValueDate.fromMillis(millis);
-        }
+            case TIMESTAMP_TZ: {
+                ValueTimestampTimeZone ts = (ValueTimestampTimeZone) this;
+                long timeNanos = ts.getTimeNanos();
+                long epochSeconds = DateTimeUtils.getEpochSeconds(ts.getDateValue(), timeNanos,
+                    ts.getTimeZoneOffsetSeconds());
+                return ValueDate.fromDateValue(DateTimeUtils
+                    .dateValueFromLocalSeconds(epochSeconds + DateTimeUtils.getTimeZone().getTimeZoneOffsetUTC(epochSeconds)));
+            }
         case ENUM:
             throw getDataConversionError(DATE);
         }
@@ -1148,14 +1151,15 @@ public abstract class Value extends VersionedValue {
             return ValueTime.fromNanos(0);
         case TIMESTAMP:
             return ValueTime.fromNanos(((ValueTimestamp) this).getTimeNanos());
-        case TIMESTAMP_TZ: {
-            ValueTimestampTimeZone ts = (ValueTimestampTimeZone) this;
-            long dateValue = ts.getDateValue(), timeNanos = ts.getTimeNanos();
-            long millis = DateTimeUtils.getMillis(dateValue, timeNanos, ts.getTimeZoneOffsetMins());
-            return ValueTime.fromNanos(
-                    DateTimeUtils.nanosFromLocalMillis(millis + DateTimeUtils.getTimeZoneOffset(millis))
-                            + timeNanos % 1_000_000);
-        }
+            case TIMESTAMP_TZ: {
+                ValueTimestampTimeZone ts = (ValueTimestampTimeZone) this;
+                long timeNanos = ts.getTimeNanos();
+                long epochSeconds = DateTimeUtils.getEpochSeconds(ts.getDateValue(), timeNanos,
+                    ts.getTimeZoneOffsetSeconds());
+                return ValueTime.fromNanos(
+                    DateTimeUtils.nanosFromLocalSeconds(epochSeconds + DateTimeUtils.getTimeZoneOffset(epochSeconds))
+                        + timeNanos % DateTimeUtils.NANOS_PER_SECOND);
+            }
         case ENUM:
             throw getDataConversionError(TIME);
         }
@@ -1164,18 +1168,21 @@ public abstract class Value extends VersionedValue {
 
     private ValueTimestamp convertToTimestamp(Mode mode) {
         switch (getValueType()) {
-        case TIME:
-            return DateTimeUtils.normalizeTimestamp(0, ((ValueTime) this).getNanos());
-        case DATE:
-            return ValueTimestamp.fromDateValueAndNanos(((ValueDate) this).getDateValue(), 0);
-        case TIMESTAMP_TZ: {
-            ValueTimestampTimeZone ts = (ValueTimestampTimeZone) this;
-            long dateValue = ts.getDateValue(), timeNanos = ts.getTimeNanos();
-            long millis = DateTimeUtils.getMillis(dateValue, timeNanos, ts.getTimeZoneOffsetMins());
-            return ValueTimestamp.fromMillisNanos(millis, (int) (timeNanos % 1_000_000));
-        }
-        case ENUM:
-            throw getDataConversionError(TIMESTAMP);
+            case TIME:
+                return DateTimeUtils.normalizeTimestamp(0, ((ValueTime)this).getNanos());
+            case DATE:
+                return ValueTimestamp.fromDateValueAndNanos(((ValueDate)this).getDateValue(), 0);
+            case TIMESTAMP_TZ: {
+                ValueTimestampTimeZone ts = (ValueTimestampTimeZone)this;
+                long timeNanos = ts.getTimeNanos();
+                long epochSeconds = DateTimeUtils.getEpochSeconds(ts.getDateValue(), timeNanos,
+                    ts.getTimeZoneOffsetSeconds());
+                epochSeconds += DateTimeUtils.getTimeZoneOffset(epochSeconds);
+                return ValueTimestamp.fromDateValueAndNanos(DateTimeUtils.dateValueFromLocalSeconds(epochSeconds),
+                    DateTimeUtils.nanosFromLocalSeconds(epochSeconds) + timeNanos % DateTimeUtils.NANOS_PER_SECOND);
+            }
+            case ENUM:
+                throw getDataConversionError(TIMESTAMP);
         }
         return ValueTimestamp.parse(getString().trim(), mode);
     }

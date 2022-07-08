@@ -38,7 +38,7 @@ public class TestClearReferences extends TestBase {
         "org.gridgain.internal.h2.tools.CompressTool.cachedBuffer",
         "org.gridgain.internal.h2.util.CloseWatcher.queue",
         "org.gridgain.internal.h2.util.CloseWatcher.refs",
-        "org.gridgain.internal.h2.util.DateTimeUtils.timeZone",
+        "org.gridgain.internal.h2.util.DateTimeUtils.LOCAL",
         "org.gridgain.internal.h2.util.MathUtils.cachedSecureRandom",
         "org.gridgain.internal.h2.util.NetUtils.cachedLocalAddress",
         "org.gridgain.internal.h2.util.StringUtils.softCache",

@@ -25,7 +25,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-
+import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.CommandInterface;
 import org.gridgain.internal.h2.expression.ParameterInterface;
 import org.gridgain.internal.h2.message.DbException;
@@ -33,7 +33,6 @@ import org.gridgain.internal.h2.message.TraceObject;
 import org.gridgain.internal.h2.result.MergedResult;
 import org.gridgain.internal.h2.result.ResultInterface;
 import org.gridgain.internal.h2.result.ResultWithGeneratedKeys;
-import org.gridgain.internal.h2.util.DateTimeUtils;
 import org.gridgain.internal.h2.util.IOUtils;
 import org.gridgain.internal.h2.util.Utils;
 import org.gridgain.internal.h2.value.DataType;
@@ -52,7 +51,6 @@ import org.gridgain.internal.h2.value.ValueShort;
 import org.gridgain.internal.h2.value.ValueString;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestamp;
-import org.gridgain.internal.h2.api.ErrorCode;
 
 /**
  * Represents a prepared statement.
@@ -459,14 +457,12 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setDate(int parameterIndex, java.sql.Date x)
-            throws SQLException {
+    public void setDate(int parameterIndex, java.sql.Date x) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setDate("+parameterIndex+", " + TraceObject.quoteDate(x) + ");");
+                debugCode("setDate(" + parameterIndex + ", " + quoteDate(x) + ");");
             }
-            Value v = x == null ? (Value) ValueNull.INSTANCE : ValueDate.get(x);
-            setParameter(parameterIndex, v);
+            setParameter(parameterIndex, x == null ? ValueNull.INSTANCE : ValueDate.get(null, x));
         } catch (Exception e) {
             throw logAndConvert(e);
         }
@@ -480,18 +476,17 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setTime(int parameterIndex, java.sql.Time x)
-            throws SQLException {
+    public void setTime(int parameterIndex, java.sql.Time x) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setTime("+parameterIndex+", " + TraceObject.quoteTime(x) + ");");
+                debugCode("setTime(" + parameterIndex + ", " + quoteTime(x) + ");");
             }
-            Value v = x == null ? (Value) ValueNull.INSTANCE : ValueTime.get(x);
-            setParameter(parameterIndex, v);
+            setParameter(parameterIndex, x == null ? ValueNull.INSTANCE : ValueTime.get(null, x));
         } catch (Exception e) {
             throw logAndConvert(e);
         }
     }
+
 
     /**
      * Sets the value of a parameter.
@@ -501,14 +496,12 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setTimestamp(int parameterIndex, java.sql.Timestamp x)
-            throws SQLException {
+    public void setTimestamp(int parameterIndex, java.sql.Timestamp x) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setTimestamp("+parameterIndex+", " + TraceObject.quoteTimestamp(x) + ");");
+                debugCode("setTimestamp(" + parameterIndex + ", " + quoteTimestamp(x) + ");");
             }
-            Value v = x == null ? (Value) ValueNull.INSTANCE : ValueTimestamp.get(x);
-            setParameter(parameterIndex, v);
+            setParameter(parameterIndex, x == null ? ValueNull.INSTANCE : ValueTimestamp.get(null, x));
         } catch (Exception e) {
             throw logAndConvert(e);
         }
@@ -725,17 +718,15 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setDate(int parameterIndex, java.sql.Date x, Calendar calendar)
-            throws SQLException {
+    public void setDate(int parameterIndex, java.sql.Date x, Calendar calendar) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setDate("+parameterIndex+", " + TraceObject.quoteDate(x) + ", calendar);");
+                debugCode("setDate(" + parameterIndex + ", " + quoteDate(x) + ", calendar);");
             }
             if (x == null) {
                 setParameter(parameterIndex, ValueNull.INSTANCE);
             } else {
-                setParameter(parameterIndex,
-                        calendar != null ? DateTimeUtils.convertDate(x, calendar) : ValueDate.get(x));
+                setParameter(parameterIndex, ValueDate.get(calendar != null ? calendar.getTimeZone() : null, x));
             }
         } catch (Exception e) {
             throw logAndConvert(e);
@@ -752,17 +743,15 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setTime(int parameterIndex, java.sql.Time x, Calendar calendar)
-            throws SQLException {
+    public void setTime(int parameterIndex, java.sql.Time x, Calendar calendar) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setTime("+parameterIndex+", " + TraceObject.quoteTime(x) + ", calendar);");
+                debugCode("setTime(" + parameterIndex + ", " + quoteTime(x) + ", calendar);");
             }
             if (x == null) {
                 setParameter(parameterIndex, ValueNull.INSTANCE);
             } else {
-                setParameter(parameterIndex,
-                        calendar != null ? DateTimeUtils.convertTime(x, calendar) : ValueTime.get(x));
+                setParameter(parameterIndex, ValueTime.get(calendar != null ? calendar.getTimeZone() : null, x));
             }
         } catch (Exception e) {
             throw logAndConvert(e);
@@ -779,18 +768,15 @@ public class JdbcPreparedStatement extends JdbcStatement implements
      * @throws SQLException if this object is closed
      */
     @Override
-    public void setTimestamp(int parameterIndex, java.sql.Timestamp x,
-            Calendar calendar) throws SQLException {
+    public void setTimestamp(int parameterIndex, java.sql.Timestamp x, Calendar calendar) throws SQLException {
         try {
             if (isDebugEnabled()) {
-                debugCode("setTimestamp(" + parameterIndex + ", " +
-                        TraceObject.quoteTimestamp(x) + ", calendar);");
+                debugCode("setTimestamp(" + parameterIndex + ", " + quoteTimestamp(x) + ", calendar);");
             }
             if (x == null) {
                 setParameter(parameterIndex, ValueNull.INSTANCE);
             } else {
-                setParameter(parameterIndex,
-                        calendar != null ? DateTimeUtils.convertTimestamp(x, calendar) : ValueTimestamp.get(x));
+                setParameter(parameterIndex, ValueTimestamp.get(calendar != null ? calendar.getTimeZone() : null, x));
             }
         } catch (Exception e) {
             throw logAndConvert(e);

@@ -524,12 +524,12 @@ public class ToChar {
         if (!(value instanceof ValueTimestampTimeZone)) {
             TimeZone tz = TimeZone.getDefault();
             if (tzd) {
-                boolean daylight = tz.inDaylightTime(value.getTimestamp());
+                boolean daylight = tz.inDaylightTime(value.getTimestamp(null));
                 return tz.getDisplayName(daylight, TimeZone.SHORT);
             }
             return tz.getID();
         }
-        return DateTimeUtils.timeZoneNameFromOffsetMins(((ValueTimestampTimeZone) value).getTimeZoneOffsetMins());
+        return DateTimeUtils.timeZoneNameFromOffsetSeconds(((ValueTimestampTimeZone) value).getTimeZoneOffsetSeconds());
     }
 
     /**

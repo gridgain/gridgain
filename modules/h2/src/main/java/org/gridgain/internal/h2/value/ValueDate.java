@@ -48,12 +48,14 @@ public class ValueDate extends Value {
     /**
      * Get or create a date value for the given date.
      *
+     * @param timeZone time zone, or {@code null} for default
      * @param date the date
      * @return the value
      */
-    public static ValueDate get(Date date) {
+    public static ValueDate get(TimeZone timeZone, Date date) {
         long ms = date.getTime();
-        return fromDateValue(DateTimeUtils.dateValueFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromDateValue(DateTimeUtils.dateValueFromLocalMillis(
+            ms + (timeZone == null ? DateTimeUtils.getTimeZoneOffsetMillis(ms) : timeZone.getOffset(ms))));
     }
 
     /**
@@ -64,7 +66,7 @@ public class ValueDate extends Value {
      * @return the value
      */
     public static ValueDate fromMillis(long ms) {
-        return fromDateValue(DateTimeUtils.dateValueFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromDateValue(DateTimeUtils.dateValueFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffsetMillis(ms)));
     }
 
     /**
@@ -87,10 +89,9 @@ public class ValueDate extends Value {
     }
 
     @Override
-    public Date getDate() {
-        return DateTimeUtils.convertDateValueToDate(dateValue);
+    public Date getDate(TimeZone timeZone) {
+        return new Date(DateTimeUtils.getMillis(timeZone, dateValue, 0));
     }
-
     @Override
     public TypeInfo getType() {
         return TypeInfo.TYPE_DATE;
@@ -136,7 +137,7 @@ public class ValueDate extends Value {
 
     @Override
     public Object getObject() {
-        return getDate();
+        return getDate(null);
     }
 
     @Override

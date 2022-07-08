@@ -73,12 +73,14 @@ public class ValueTime extends Value {
     /**
      * Get or create a time value for the given time.
      *
+     * @param timeZone time zone, or {@code null} for default
      * @param time the time
      * @return the value
      */
-    public static ValueTime get(Time time) {
+    public static ValueTime get(TimeZone timeZone, Time time) {
         long ms = time.getTime();
-        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromNanos(DateTimeUtils.nanosFromLocalMillis(
+            ms + (timeZone == null ? DateTimeUtils.getTimeZoneOffsetMillis(ms) : timeZone.getOffset(ms))));
     }
 
     /**
@@ -89,7 +91,7 @@ public class ValueTime extends Value {
      * @return the value
      */
     public static ValueTime fromMillis(long ms) {
-        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffset(ms)));
+        return fromNanos(DateTimeUtils.nanosFromLocalMillis(ms + DateTimeUtils.getTimeZoneOffsetMillis(ms)));
     }
 
     /**
@@ -115,10 +117,9 @@ public class ValueTime extends Value {
     }
 
     @Override
-    public Time getTime() {
-        return DateTimeUtils.convertNanoToTime(nanos);
+    public Time getTime(TimeZone timeZone) {
+        return new Time(DateTimeUtils.getMillis(timeZone, DateTimeUtils.EPOCH_DATE_VALUE, nanos));
     }
-
     @Override
     public TypeInfo getType() {
         return TypeInfo.TYPE_TIME;
@@ -188,7 +189,7 @@ public class ValueTime extends Value {
 
     @Override
     public Object getObject() {
-        return getTime();
+        return getTime(null);
     }
 
     @Override

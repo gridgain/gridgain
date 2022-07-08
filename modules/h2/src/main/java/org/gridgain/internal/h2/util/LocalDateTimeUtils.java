@@ -10,9 +10,9 @@ package org.gridgain.internal.h2.util;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
-import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
+import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.value.DataType;
 import org.gridgain.internal.h2.value.Value;
@@ -21,8 +21,6 @@ import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueTime;
 import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.gridgain.internal.h2.value.ValueTimestampTimeZone;
-import org.gridgain.internal.h2.api.ErrorCode;
-import org.gridgain.internal.h2.api.IntervalQualifier;
 
 /**
  * This utility class contains time conversion functions for Java 8
@@ -479,10 +477,9 @@ public class LocalDateTimeUtils {
         try {
             Object localDateTime = localDateTimeFromDateNanos(dateValue, timeNanos);
 
-            short timeZoneOffsetMins = valueTimestampTimeZone.getTimeZoneOffsetMins();
-            int offsetSeconds = (int) TimeUnit.MINUTES.toSeconds(timeZoneOffsetMins);
+            int timeZoneOffsetSeconds = valueTimestampTimeZone.getTimeZoneOffsetSeconds();
 
-            Object offset = ZONE_OFFSET_OF_TOTAL_SECONDS.invoke(null, offsetSeconds);
+            Object offset = ZONE_OFFSET_OF_TOTAL_SECONDS.invoke(null, timeZoneOffsetSeconds);
 
             return (zoned ? ZONED_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_ID
                 : OFFSET_DATE_TIME_OF_LOCAL_DATE_TIME_ZONE_OFFSET)
@@ -619,7 +616,7 @@ public class LocalDateTimeUtils {
             }
             long timeNanos = (epochSecond - absoluteDay * 86_400) * 1_000_000_000 + nano;
             return ValueTimestampTimeZone.fromDateValueAndNanos(
-                    DateTimeUtils.dateValueFromAbsoluteDay(absoluteDay), timeNanos, (short) 0);
+                    DateTimeUtils.dateValueFromAbsoluteDay(absoluteDay), timeNanos, 0);
         } catch (IllegalAccessException e) {
             throw DbException.convert(e);
         } catch (InvocationTargetException e) {
@@ -681,10 +678,10 @@ public class LocalDateTimeUtils {
         return (Long) LOCAL_TIME_TO_NANO.invoke(localTime);
     }
 
-    private static short zoneOffsetToOffsetMinute(Object zoneOffset)
-                    throws IllegalAccessException, InvocationTargetException {
+    private static int zoneOffsetToOffsetSeconds(Object zoneOffset)
+        throws IllegalAccessException, InvocationTargetException {
         int totalSeconds = (Integer) ZONE_OFFSET_GET_TOTAL_SECONDS.invoke(zoneOffset);
-        return (short) TimeUnit.SECONDS.toMinutes(totalSeconds);
+        return totalSeconds;
     }
 
     private static Object localDateFromDateValue(long dateValue)
