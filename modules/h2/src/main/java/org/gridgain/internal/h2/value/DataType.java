@@ -24,20 +24,19 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
-
-import org.gridgain.internal.h2.engine.Mode;
-import org.gridgain.internal.h2.engine.SessionInterface;
-import org.gridgain.internal.h2.engine.SysProperties;
-import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.Interval;
 import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.api.TimestampWithTimeZone;
+import org.gridgain.internal.h2.engine.Mode;
+import org.gridgain.internal.h2.engine.SessionInterface;
+import org.gridgain.internal.h2.engine.SysProperties;
 import org.gridgain.internal.h2.jdbc.JdbcArray;
 import org.gridgain.internal.h2.jdbc.JdbcBlob;
 import org.gridgain.internal.h2.jdbc.JdbcClob;
 import org.gridgain.internal.h2.jdbc.JdbcConnection;
 import org.gridgain.internal.h2.jdbc.JdbcLob;
+import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.JdbcUtils;
 import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 import org.gridgain.internal.h2.util.Utils;
@@ -572,24 +571,60 @@ public class DataType {
                 break;
             }
             case Value.DATE: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_DATE);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localDateToDateValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Date value = rs.getDate(columnIndex);
                 v = value == null ? (Value) ValueNull.INSTANCE :
                     ValueDate.get(value);
                 break;
             }
             case Value.TIME: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localTimeToTimeValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Time value = rs.getTime(columnIndex);
                 v = value == null ? (Value) ValueNull.INSTANCE :
                     ValueTime.get(value);
                 break;
             }
             case Value.TIMESTAMP: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.LOCAL_DATE_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.localDateTimeToValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Timestamp value = rs.getTimestamp(columnIndex);
                 v = value == null ? (Value) ValueNull.INSTANCE :
                     ValueTimestamp.get(value);
                 break;
             }
             case Value.TIMESTAMP_TZ: {
+                if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+                    try {
+                        Object value = rs.getObject(columnIndex, LocalDateTimeUtils.OFFSET_DATE_TIME);
+                        v = value == null ? ValueNull.INSTANCE : LocalDateTimeUtils.offsetDateTimeToValue(value);
+                        break;
+                    } catch (SQLException ignore) {
+                        // Nothing to do
+                    }
+                }
                 Object obj = rs.getObject(columnIndex);
                 if (obj == null) {
                     v = ValueNull.INSTANCE;

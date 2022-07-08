@@ -64,8 +64,15 @@ public class DateTimeUtils {
      */
     public static final long NANOS_PER_DAY = MILLIS_PER_DAY * 1_000_000;
 
-    private static final int SHIFT_YEAR = 9;
-    private static final int SHIFT_MONTH = 5;
+    /**
+     * The offset of year bits in date values.
+     */
+    static final int SHIFT_YEAR = 9;
+
+    /**
+     * The offset of month bits in date values.
+     */
+    static final int SHIFT_MONTH = 5;
 
     /**
      * Gregorian change date for a {@link GregorianCalendar} that represents a
@@ -822,7 +829,16 @@ public class DateTimeUtils {
      * @return number of day in year
      */
     public static int getDayOfYear(long dateValue) {
-        return (int) (absoluteDayFromDateValue(dateValue) - absoluteDayFromYear(yearFromDateValue(dateValue))) + 1;
+        int m = monthFromDateValue(dateValue);
+        int a = (367 * m - 362) / 12 + dayFromDateValue(dateValue);
+        if (m > 2) {
+            a--;
+            long y = yearFromDateValue(dateValue);
+            if ((y & 3) != 0 || (y % 100 == 0 && y % 400 != 0)) {
+                a--;
+            }
+        }
+        return a;
     }
 
     /**
