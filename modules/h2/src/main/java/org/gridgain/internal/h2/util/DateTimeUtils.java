@@ -85,6 +85,16 @@ public class DateTimeUtils {
      */
     public static final int EPOCH_DATE_VALUE = (1970 << SHIFT_YEAR) + (1 << SHIFT_MONTH) + 1;
 
+    /**
+     * Minimum possible date value.
+     */
+    public static final long MIN_DATE_VALUE = (-1_000_000_000L << SHIFT_YEAR) + (1 << SHIFT_MONTH) + 1;
+
+    /**
+     * Maximum possible date value.
+     */
+    public static final long MAX_DATE_VALUE = (1_000_000_000L << SHIFT_YEAR) + (12 << SHIFT_MONTH) + 31;
+
     private static final int[] NORMAL_DAYS_PER_MONTH = { 0, 31, 28, 31, 30, 31,
             30, 31, 31, 30, 31, 30, 31 };
 
