@@ -8,10 +8,12 @@ package org.gridgain.internal.h2.value;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-
+import java.sql.Types;
+import java.util.TimeZone;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 
 /**
  * Implementation of the DATE data type.
@@ -135,8 +137,15 @@ public class ValueDate extends Value {
     }
 
     @Override
-    public void set(PreparedStatement prep, int parameterIndex)
-            throws SQLException {
-        prep.setDate(parameterIndex, getDate());
+    public void set(PreparedStatement prep, int parameterIndex) throws SQLException {
+        if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+            try {
+                prep.setObject(parameterIndex, LocalDateTimeUtils.valueToLocalDate(this), Types.DATE);
+                return;
+            } catch (SQLException ignore) {
+                // Nothing to do
+            }
+        }
+        prep.setDate(parameterIndex, getDate(null));
     }
 }

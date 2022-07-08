@@ -8,10 +8,13 @@ package org.gridgain.internal.h2.value;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.TimeZone;
 import org.gridgain.internal.h2.engine.Mode;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.util.DateTimeUtils;
+import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 
 /**
  * Implementation of the TIMESTAMP data type.
@@ -258,9 +261,16 @@ public class ValueTimestamp extends Value {
     }
 
     @Override
-    public void set(PreparedStatement prep, int parameterIndex)
-            throws SQLException {
-        prep.setTimestamp(parameterIndex, getTimestamp());
+    public void set(PreparedStatement prep, int parameterIndex) throws SQLException {
+        if (LocalDateTimeUtils.isJava8DateApiPresent()) {
+            try {
+                prep.setObject(parameterIndex, LocalDateTimeUtils.valueToLocalDateTime(this), Types.TIMESTAMP);
+                return;
+            } catch (SQLException ignore) {
+                // Nothing to do
+            }
+        }
+        prep.setTimestamp(parameterIndex, getTimestamp(null));
     }
 
     @Override
