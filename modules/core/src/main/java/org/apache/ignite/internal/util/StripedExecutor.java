@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -586,7 +586,7 @@ public class StripedExecutor implements ExecutorService {
                 }
             }
 
-            if (!isCancelled) {
+            if (!isCancelled.get()) {
                 errHnd.apply(new IllegalStateException("Thread " + Thread.currentThread().getName() +
                     " is terminated unexpectedly"));
             }

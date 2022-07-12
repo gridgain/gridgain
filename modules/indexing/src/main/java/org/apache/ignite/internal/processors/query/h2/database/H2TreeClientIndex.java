@@ -80,7 +80,7 @@ public class H2TreeClientIndex extends H2TreeIndexBase {
         List<InlineIndexColumn> inlineCols = getAvailableInlineColumns(false, ccfg.getName(),
             idxName, log, pk, tbl, cols, new InlineIndexColumnFactory(tbl.getCompareMode()), true);
 
-        inlineSize = computeInlineSize(inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize());
+        inlineSize = computeInlineSize(idxName, inlineCols, inlineSize, ccfg.getSqlIndexMaxInlineSize(), log);
 
         return new H2TreeClientIndex(tbl, idxName, cols, idxType, inlineSize);
     }

@@ -70,12 +70,21 @@ public class SecurityPermissionSetBuilder {
     public static final SecurityPermissionSet ALLOW_ALL = create().build();
 
     /**
+     * Static factory method for create new permission builder with specified defaultAllow permission
+     *
+     * @return SecurityPermissionSetBuilder
+     */
+    public static SecurityPermissionSetBuilder fromDefaultAllow(boolean defaultAllow) {
+        return new SecurityPermissionSetBuilder().defaultAllowAll(defaultAllow);
+    }
+
+    /**
      * Static factory method for create new permission builder.
      *
      * @return SecurityPermissionSetBuilder
      */
     public static SecurityPermissionSetBuilder create() {
-        return new SecurityPermissionSetBuilder().defaultAllowAll(true);
+        return SecurityPermissionSetBuilder.fromDefaultAllow(true);
     }
 
     /**

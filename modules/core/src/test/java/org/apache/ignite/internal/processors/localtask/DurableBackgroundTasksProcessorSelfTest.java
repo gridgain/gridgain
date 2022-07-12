@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -142,6 +142,40 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
         t.taskFut.onDone(complete(null));
 
         execAsyncFut.get(getTestTimeout());
+    }
+
+    /**
+     * Check that the task can be started on the node if it joined after the cluster activation.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTaskStartOnNodeJoinedAfterActivation() throws Exception {
+        IgniteEx n = startGrid(0);
+        startGrid(1);
+
+        n.cluster().state(ACTIVE);
+
+        stopGrid(1);
+        n = startGrid(1);
+
+        SimpleTask t = new SimpleTask("t");
+        execAsync(n, t, true);
+
+        t.onExecFut.get(getTestTimeout());
+        checkStateAndMetaStorage(n, t, STARTED, true, false);
+
+        stopGrid(1);
+        n = startGrid(1);
+
+        checkStateAndMetaStorage(n, t, STARTED, true, false);
+
+        n.cluster().state(INACTIVE);
+
+        stopGrid(1);
+        n = startGrid(1);
+
+        checkStateAndMetaStorage(n, t, INIT, true, false);
     }
 
     /**

@@ -41,7 +41,7 @@ public class MetricUtils {
     public static final char HISTOGRAM_NAME_DIVIDER = '_';
 
     /**
-     * Builds metric name. Each parameter will separated by '.' char.
+     * Builds metric name. Each parameter will be separated by '.' char.
      *
      * @param names Metric name parts.
      * @return Metric name.
@@ -104,7 +104,7 @@ public class MetricUtils {
     }
 
     /**
-     * Update metrics value only if current value if less then {@code update}.
+     * Update metrics value only if current value is less than {@code update}.
      *
      * @param m Metric to update.
      * @param update New value.
@@ -117,7 +117,7 @@ public class MetricUtils {
     }
 
     /**
-     * Update metrics value only if current value if greater then {@code update}.
+     * Update metrics value only if current value is greater than {@code update}.
      *
      * @param m Metric to update.
      * @param update New value.

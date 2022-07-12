@@ -1476,7 +1476,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param cancel Cancel.
      * @param timeout Timeout.
      * @return Fields query.
-     * @throws IgniteCheckedException On error.
      */
     private QueryCursorImpl<List<?>> executeSelectForDml(
         @Nullable Long qryId,
@@ -1485,7 +1484,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         MvccQueryTracker mvccTracker,
         GridQueryCancel cancel,
         int timeout
-    ) throws IgniteCheckedException {
+    ) {
         QueryParserResult parseRes = parser.parse(schema, selectQry, false);
 
         QueryParserResultSelect select = parseRes.select();
@@ -1525,7 +1524,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param inTx Flag whether query is executed within transaction.
      * @param timeout Timeout.
      * @return Query result.
-     * @throws IgniteCheckedException On error.
      */
     private Iterable<List<?>> executeSelect0(
         @Nullable Long qryId,
@@ -1537,7 +1535,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         GridQueryCancel cancel,
         boolean inTx,
         int timeout
-    ) throws IgniteCheckedException {
+    ) {
         assert !select.mvccEnabled() || mvccTracker != null;
 
         // Check security.
@@ -1737,7 +1735,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         AffinityTopologyVersion topVer,
         MvccSnapshot mvccSnapshot,
         GridQueryCancel cancel
-    ) throws IgniteCheckedException {
+    ) {
         SqlFieldsQuery fldsQry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(qry), timeout, TimeUnit.MILLISECONDS);
 
         if (params != null)
@@ -2153,25 +2151,21 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String cacheName = cctx.name();
 
-        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
-            // If there are no index store, rebuild all indexes.
-            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
-        }
-        else {
-            // Otherwise iterate over tables looking for missing indexes.
-            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+        if (pageStore != null && pageStore.hasIndexStore(cctx.groupId()) && !force) {
+            boolean required = false;
 
             for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
                 GridH2Table tbl = tblDesc.table();
 
                 assert tbl != null;
 
-                tbl.collectIndexesForPartialRebuild(clo0, force);
+                required = tbl.checkIfIndexesRebuildRequired();
+
+                if (required)
+                    break;
             }
 
-            if (clo0.hasIndexes())
-                clo = clo0;
-            else
+            if (!required)
                 return null;
         }
 
@@ -2196,6 +2190,31 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         cctx.kernalContext().query().onStartRebuildIndexes(cctx);
 
+        try {
+            prepareIndexesForRebuild(cacheName);
+        } catch (IgniteCheckedException e) {
+            rebuildCacheIdxFut.onDone(e);
+        }
+
+        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
+            // If there are no index store, rebuild all indexes.
+            clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
+        }
+        else {
+            // Otherwise iterate over tables looking for missing indexes.
+            IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
+
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                GridH2Table tbl = tblDesc.table();
+
+                assert tbl != null;
+
+                tbl.collectIndexesForPartialRebuild(clo0, force);
+            }
+
+            clo = clo0;
+        }
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2219,7 +2238,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             outRebuildCacheIdxFut.onDone(err);
         });
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
+        if (!rebuildCacheIdxFut.isDone())
+            rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut, intRebFut.cancelToken());
 
         return outRebuildCacheIdxFut;
     }
@@ -2252,6 +2272,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             assert tblDesc.table() != null;
 
             tblDesc.table().markRebuildFromHashInProgress(val);
+        }
+    }
+
+    /**
+     * For every affected table prepares the indexes for rebuild.
+     *
+     * @param cacheName The name of the cache whose tables are to rebuild their indexes.
+     * @throws IgniteCheckedException In case the table is unable to prepare its indexes.
+     */
+    private void prepareIndexesForRebuild(String cacheName) throws IgniteCheckedException {
+        try (H2PooledConnection conn = connMgr.connection()) {
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                assert tblDesc.table() != null;
+
+                tblDesc.table().prepareIndexesForRebuild(session(conn));
+            }
         }
     }
 
@@ -2630,7 +2666,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy) {
+    @Override public void unregisterCache(GridCacheContextInfo cacheInfo, boolean destroy, boolean clearIdx) {
         cancelIndexRebuildFuture(idxRebuildFuts.remove(cacheInfo.cacheId()));
         rowCache.onCacheUnregistered(cacheInfo);
 
@@ -2639,7 +2675,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         partReservationMgr.onCacheStop(cacheName);
 
         // Drop schema (needs to be called after callback to DML processor because the latter depends on schema).
-        schemaMgr.onCacheDestroyed(cacheName, destroy);
+        schemaMgr.onCacheDestroyed(cacheName, destroy, clearIdx);
 
         // Unregister connection.
         connMgr.onCacheDestroyed();

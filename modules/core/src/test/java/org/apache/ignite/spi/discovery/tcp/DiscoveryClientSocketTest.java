@@ -83,7 +83,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
 
                 connection.getOutputStream().write(U.IGNITE_HEADER);
 
-                clientFut.get(10_000);
+                clientFut.get(20_000);
             }
             catch (IgniteFutureTimeoutCheckedException e) {
                 U.dumpThreads(log);
@@ -106,7 +106,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
      * @param connection Socket connection.
      * @throws IOException If have some issue happens in time read from socket.
      */
-    public void readHandshake(Socket connection) throws IOException {
+    private void readHandshake(Socket connection) throws IOException {
         byte[] buf = new byte[4];
         int read = 0;
 
@@ -160,7 +160,7 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
                         }
                     });
 
-                    writeFut.get(10 * handshakeInterval);
+                    writeFut.get(Math.min(10 * handshakeInterval, 3_000));
                 }
             }
             catch (IgniteFutureTimeoutCheckedException e) {

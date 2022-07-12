@@ -3437,7 +3437,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
                     if (msg instanceof TcpDiscoveryCustomEventMessage) {
                         try {
-                            if (!clientSupportsDiscoveryMessage((TcpDiscoveryCustomEventMessage)msg,
+                            if (!clientSupportsDiscoveryMessage(msg,
                                 clientMsgWorker.clientNodeId))
                                 continue;
                         }
@@ -7100,7 +7100,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             LT.error(log, e, "Failed to initialize connection [sock=" + sock + "]\n\t" +
                                 U.MAC_INVALID_ARG_MSG);
                         else {
-                            U.error(
+                            U.warn(
                                 log,
                                 "Failed to initialize connection (this can happen due to short time " +
                                     "network problems and can be ignored if does not affect node discovery) " +

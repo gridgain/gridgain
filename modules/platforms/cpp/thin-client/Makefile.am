@@ -54,6 +54,7 @@ libignite_thin_client_la_SOURCES = \
     src/impl/data_channel.cpp \
     src/impl/utility.cpp \
     src/impl/protocol_version.cpp \
+    src/impl/protocol_context.cpp \
     src/impl/ignite_node.cpp \
     src/impl/ignite_client_impl.cpp \
     src/impl/data_router.cpp \
@@ -70,6 +71,7 @@ libignite_thin_client_la_SOURCES = \
     src/impl/transactions/transactions_impl.cpp \
     src/impl/transactions/transactions_proxy.cpp \
     src/ignite_client.cpp \
+    src/cache/query/query_cursor_proxy.cpp \
     src/cache/query/query_fields_cursor.cpp \
     src/cache/query/query_fields_row.cpp \
     src/compute/compute_client.cpp

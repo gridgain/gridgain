@@ -23,71 +23,245 @@ import org.jetbrains.annotations.Nullable;
 
 /** Operation codes. */
 public enum ClientOperation {
-    /** Resource close. */RESOURCE_CLOSE(0),
-    /** Heartbeat. */ HEARTBEAT(1),
-    /** Get idle timeout. */ GET_IDLE_TIMEOUT(2),
+    /** Resource close. */
+    RESOURCE_CLOSE(0),
 
-    /** Cache get or create with name. */CACHE_GET_OR_CREATE_WITH_NAME(1052),
-    /** Cache put. */CACHE_PUT(1001),
-    /** Cache get. */CACHE_GET(1000),
-    /** Cache create with configuration. */CACHE_CREATE_WITH_CONFIGURATION(1053),
-    /** Cache get names. */CACHE_GET_NAMES(1050),
-    /** Cache destroy. */CACHE_DESTROY(1056),
-    /** Cache get or create with configuration. */CACHE_GET_OR_CREATE_WITH_CONFIGURATION(1054),
-    /** Cache create with name. */CACHE_CREATE_WITH_NAME(1051),
-    /** Cache contains key. */CACHE_CONTAINS_KEY(1011),
-    /** Cache contains keys. */CACHE_CONTAINS_KEYS(1012),
-    /** Cache get configuration. */CACHE_GET_CONFIGURATION(1055),
-    /** Get size. */CACHE_GET_SIZE(1020),
-    /** Put all. */CACHE_PUT_ALL(1004),
-    /** Get all. */CACHE_GET_ALL(1003),
-    /** Cache replace if equals. */CACHE_REPLACE_IF_EQUALS(1010),
-    /** Cache replace. */CACHE_REPLACE(1009),
-    /** Cache remove key. */CACHE_REMOVE_KEY(1016),
-    /** Cache remove if equals. */CACHE_REMOVE_IF_EQUALS(1017),
-    /** Cache remove keys. */CACHE_REMOVE_KEYS(1018),
-    /** Cache remove all. */CACHE_REMOVE_ALL(1019),
-    /** Cache get and put. */CACHE_GET_AND_PUT(1005),
-    /** Cache get and remove. */CACHE_GET_AND_REMOVE(1007),
-    /** Cache get and replace. */CACHE_GET_AND_REPLACE(1006),
-    /** Cache put if absent. */CACHE_PUT_IF_ABSENT(1002),
-    /** Cache get and put if absent. */CACHE_GET_AND_PUT_IF_ABSENT(1008),
-    /** Cache clear. */CACHE_CLEAR(1013),
-    /** Cache clear key. */CACHE_CLEAR_KEY(1014),
-    /** Cache clear keys. */CACHE_CLEAR_KEYS(1015),
-    /** Cache partitions. */CACHE_PARTITIONS(1101),
+    /** Heartbeat. */
+    HEARTBEAT(1),
 
-    /** Query scan. */QUERY_SCAN(2000),
-    /** Query scan cursor get page. */QUERY_SCAN_CURSOR_GET_PAGE(2001),
-    /** Query sql. */QUERY_SQL(2002),
-    /** Query sql cursor get page. */QUERY_SQL_CURSOR_GET_PAGE(2003),
-    /** Query sql fields. */QUERY_SQL_FIELDS(2004),
-    /** Query sql fields cursor get page. */QUERY_SQL_FIELDS_CURSOR_GET_PAGE(2005),
-    /** Continuous query. */QUERY_CONTINUOUS(2006),
-    /** Continuous query event. */QUERY_CONTINUOUS_EVENT(2007, ClientNotificationType.CONTINUOUS_QUERY_EVENT),
+    /** Get idle timeout. */
+    GET_IDLE_TIMEOUT(2),
 
-    /** Get binary type. */GET_BINARY_TYPE(3002),
-    /** Register binary type name. */REGISTER_BINARY_TYPE_NAME(3001),
-    /** Put binary type. */PUT_BINARY_TYPE(3003),
-    /** Get binary type name. */GET_BINARY_TYPE_NAME(3000),
+    /** Cache get or create with name. */
+    CACHE_GET_OR_CREATE_WITH_NAME(1052),
 
-    /** Start new transaction. */TX_START(4000),
-    /** End the transaction (commit or rollback). */TX_END(4001),
+    /** Cache put. */
+    CACHE_PUT(1001),
 
-    /** Get cluster state. */CLUSTER_GET_STATE(5000),
-    /** Change cluster state. */CLUSTER_CHANGE_STATE(5001),
-    /** Get WAL state. */CLUSTER_GET_WAL_STATE(5003),
-    /** Change WAL state. */CLUSTER_CHANGE_WAL_STATE(5002),
-    /** Get nodes IDs by filter. */CLUSTER_GROUP_GET_NODE_IDS(5100),
-    /** Get nodes info by IDs. */CLUSTER_GROUP_GET_NODE_INFO(5101),
+    /** Cache get. */
+    CACHE_GET(1000),
 
-    /** Execute compute task. */COMPUTE_TASK_EXECUTE(6000),
-    /** Finished compute task notification. */COMPUTE_TASK_FINISHED(6001,
-        ClientNotificationType.COMPUTE_TASK_FINISHED),
+    /** Cache create with configuration. */
+    CACHE_CREATE_WITH_CONFIGURATION(1053),
 
-    /** Invoke service. */SERVICE_INVOKE(7000),
-    /** Get service descriptors. */SERVICE_GET_DESCRIPTORS(7001),
-    /** Get service descriptors. */SERVICE_GET_DESCRIPTOR(7002);
+    /** Cache get names. */
+    CACHE_GET_NAMES(1050),
+
+    /** Cache destroy. */
+    CACHE_DESTROY(1056),
+
+    /** Cache get or create with configuration. */
+    CACHE_GET_OR_CREATE_WITH_CONFIGURATION(1054),
+
+    /** Cache create with name. */
+    CACHE_CREATE_WITH_NAME(1051),
+
+    /** Cache contains key. */
+    CACHE_CONTAINS_KEY(1011),
+
+    /** Cache contains keys. */
+    CACHE_CONTAINS_KEYS(1012),
+
+    /** Cache get configuration. */
+    CACHE_GET_CONFIGURATION(1055),
+
+    /** Get size. */
+    CACHE_GET_SIZE(1020),
+
+    /** Put all. */
+    CACHE_PUT_ALL(1004),
+
+    /** Get all. */
+    CACHE_GET_ALL(1003),
+
+    /** Cache replace if equals. */
+    CACHE_REPLACE_IF_EQUALS(1010),
+
+    /** Cache replace. */
+    CACHE_REPLACE(1009),
+
+    /** Cache remove key. */
+    CACHE_REMOVE_KEY(1016),
+
+    /** Cache remove if equals. */
+    CACHE_REMOVE_IF_EQUALS(1017),
+
+    /** Cache remove keys. */
+    CACHE_REMOVE_KEYS(1018),
+
+    /** Cache remove all. */
+    CACHE_REMOVE_ALL(1019),
+
+    /** Cache get and put. */
+    CACHE_GET_AND_PUT(1005),
+
+    /** Cache get and remove. */
+    CACHE_GET_AND_REMOVE(1007),
+
+    /** Cache get and replace. */
+    CACHE_GET_AND_REPLACE(1006),
+
+    /** Cache put if absent. */
+    CACHE_PUT_IF_ABSENT(1002),
+
+    /** Cache get and put if absent. */
+    CACHE_GET_AND_PUT_IF_ABSENT(1008),
+
+    /** Cache clear. */
+    CACHE_CLEAR(1013),
+
+    /** Cache clear key. */
+    CACHE_CLEAR_KEY(1014),
+
+    /** Cache clear keys. */
+    CACHE_CLEAR_KEYS(1015),
+
+    /** Cache partitions. */
+    CACHE_PARTITIONS(1101),
+
+    /** Query scan. */
+    QUERY_SCAN(2000),
+
+    /** Query scan cursor get page. */
+    QUERY_SCAN_CURSOR_GET_PAGE(2001),
+
+    /** Query sql. */
+    QUERY_SQL(2002),
+
+    /** Query sql cursor get page. */
+    QUERY_SQL_CURSOR_GET_PAGE(2003),
+
+    /** Query sql fields. */
+    QUERY_SQL_FIELDS(2004),
+
+    /** Query sql fields cursor get page. */
+    QUERY_SQL_FIELDS_CURSOR_GET_PAGE(2005),
+
+    /** Continuous query. */
+    QUERY_CONTINUOUS(2006),
+
+    /** Continuous query event. */
+    QUERY_CONTINUOUS_EVENT(2007, ClientNotificationType.CONTINUOUS_QUERY_EVENT),
+
+    /** Get binary type name. */
+    GET_BINARY_TYPE_NAME(3000),
+
+    /** Register binary type name. */
+    REGISTER_BINARY_TYPE_NAME(3001),
+
+    /** Get binary type. */
+    GET_BINARY_TYPE(3002),
+
+    /** Put binary type. */
+    PUT_BINARY_TYPE(3003),
+
+    /** Get binary configuration. */
+    GET_BINARY_CONFIGURATION(3004),
+
+    /** Start new transaction. */
+    TX_START(4000),
+
+    /** End the transaction (commit or rollback). */
+    TX_END(4001),
+
+    /** Get cluster state. */
+    CLUSTER_GET_STATE(5000),
+
+    /** Change cluster state. */
+    CLUSTER_CHANGE_STATE(5001),
+
+    /** Get WAL state. */
+    CLUSTER_GET_WAL_STATE(5003),
+
+    /** Change WAL state. */
+    CLUSTER_CHANGE_WAL_STATE(5002),
+
+    /** Get nodes IDs by filter. */
+    CLUSTER_GROUP_GET_NODE_IDS(5100),
+
+    /** Get nodes info by IDs. */
+    CLUSTER_GROUP_GET_NODE_INFO(5101),
+
+    /** Execute compute task. */
+    COMPUTE_TASK_EXECUTE(6000),
+
+    /** Finished compute task notification. */
+    COMPUTE_TASK_FINISHED(6001, ClientNotificationType.COMPUTE_TASK_FINISHED),
+
+    /** Invoke service. */
+    SERVICE_INVOKE(7000),
+
+    /** Get service descriptors. */
+    SERVICE_GET_DESCRIPTORS(7001),
+
+    /** Get service descriptors. */
+    SERVICE_GET_DESCRIPTOR(7002),
+
+    /** Get or create an AtomicLong by name. */
+    ATOMIC_LONG_CREATE(9000),
+
+    /** Remove an AtomicLong. */
+    ATOMIC_LONG_REMOVE(9001),
+
+    /** Check if AtomicLong exists. */
+    ATOMIC_LONG_EXISTS(9002),
+
+    /** AtomicLong.get. */
+    ATOMIC_LONG_VALUE_GET(9003),
+
+    /** AtomicLong.addAndGet (also covers incrementAndGet, getAndIncrement, getAndAdd, decrementAndGet, getAndDecrement).  */
+    ATOMIC_LONG_VALUE_ADD_AND_GET(9004),
+
+    /** AtomicLong.getAndSet. */
+    ATOMIC_LONG_VALUE_GET_AND_SET(9005),
+
+    /** AtomicLong.compareAndSet. */
+    ATOMIC_LONG_VALUE_COMPARE_AND_SET(9006),
+
+    /** AtomicLong.compareAndSetAndGet. */
+    ATOMIC_LONG_VALUE_COMPARE_AND_SET_AND_GET(9007),
+
+    /** Create an IgniteSet. */
+    OP_SET_GET_OR_CREATE(9010),
+
+    /** Remove an IgniteSet. */
+    OP_SET_CLOSE(9011),
+
+    /** Check if IgniteSet exists. */
+    OP_SET_EXISTS(9012),
+
+    /** IgniteSet.add. */
+    OP_SET_VALUE_ADD(9013),
+
+    /** IgniteSet.addAll. */
+    OP_SET_VALUE_ADD_ALL(9014),
+
+    /** IgniteSet.remove. */
+    OP_SET_VALUE_REMOVE(9015),
+
+    /** IgniteSet.removeAll. */
+    OP_SET_VALUE_REMOVE_ALL(9016),
+
+    /** IgniteSet.contains. */
+    OP_SET_VALUE_CONTAINS(9017),
+
+    /** IgniteSet.containsAll. */
+    OP_SET_VALUE_CONTAINS_ALL(9018),
+
+    /** IgniteSet.retainAll. */
+    OP_SET_VALUE_RETAIN_ALL(9019),
+
+    /** IgniteSet.size. */
+    OP_SET_SIZE(9020),
+
+    /** IgniteSet.clear. */
+    OP_SET_CLEAR(9021),
+
+    /** IgniteSet.iterator. */
+    OP_SET_ITERATOR_START(9022),
+
+    /** IgniteSet.iterator page. */
+    OP_SET_ITERATOR_GET_PAGE(9023);
 
     /** Code. */
     private final int code;
@@ -244,6 +418,67 @@ public enum ClientOperation {
 
             case SERVICE_GET_DESCRIPTOR:
                 return ClientOperationType.SERVICE_GET_DESCRIPTOR;
+
+            case ATOMIC_LONG_CREATE:
+                return ClientOperationType.ATOMIC_LONG_CREATE;
+
+            case ATOMIC_LONG_REMOVE:
+                return ClientOperationType.ATOMIC_LONG_REMOVE;
+
+            case ATOMIC_LONG_EXISTS:
+                return ClientOperationType.ATOMIC_LONG_EXISTS;
+
+            case ATOMIC_LONG_VALUE_GET:
+                return ClientOperationType.ATOMIC_LONG_VALUE_GET;
+
+            case ATOMIC_LONG_VALUE_ADD_AND_GET:
+                return ClientOperationType.ATOMIC_LONG_VALUE_ADD_AND_GET;
+
+            case ATOMIC_LONG_VALUE_GET_AND_SET:
+                return ClientOperationType.ATOMIC_LONG_VALUE_GET_AND_SET;
+
+            case ATOMIC_LONG_VALUE_COMPARE_AND_SET:
+            case ATOMIC_LONG_VALUE_COMPARE_AND_SET_AND_GET:
+                return ClientOperationType.ATOMIC_LONG_VALUE_COMPARE_AND_SET;
+
+            case OP_SET_GET_OR_CREATE:
+                return ClientOperationType.SET_GET_OR_CREATE;
+
+            case OP_SET_CLOSE:
+                return ClientOperationType.SET_REMOVE;
+
+            case OP_SET_EXISTS:
+                return ClientOperationType.SET_EXISTS;
+
+            case OP_SET_VALUE_ADD:
+                return ClientOperationType.SET_VALUE_ADD;
+
+            case OP_SET_VALUE_ADD_ALL:
+                return ClientOperationType.SET_VALUE_ADD_ALL;
+
+            case OP_SET_VALUE_REMOVE:
+                return ClientOperationType.SET_VALUE_REMOVE;
+
+            case OP_SET_VALUE_REMOVE_ALL:
+                return ClientOperationType.SET_VALUE_REMOVE_ALL;
+
+            case OP_SET_VALUE_CONTAINS:
+                return ClientOperationType.SET_VALUE_CONTAINS;
+
+            case OP_SET_VALUE_CONTAINS_ALL:
+                return ClientOperationType.SET_VALUE_CONTAINS_ALL;
+
+            case OP_SET_VALUE_RETAIN_ALL:
+                return ClientOperationType.SET_VALUE_RETAIN_ALL;
+
+            case OP_SET_SIZE:
+                return ClientOperationType.SET_SIZE;
+
+            case OP_SET_CLEAR:
+                return ClientOperationType.SET_CLEAR;
+
+            case OP_SET_ITERATOR_START:
+                return ClientOperationType.SET_ITERATOR;
 
             default:
                 return null;

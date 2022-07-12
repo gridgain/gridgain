@@ -22,7 +22,6 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.encryptionsdk.AwsCrypto;
 import com.amazonaws.encryptionsdk.CryptoResult;
 import com.amazonaws.encryptionsdk.kms.KmsMasterKeyProvider;
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
@@ -45,7 +44,7 @@ public class AwsKmsEncryptionServiceTest extends GridCommonAbstractTest {
         AwsKmsEncryptionService awsKmsEncryptionSvc = Mockito.spy(new AwsKmsEncryptionService());
         awsKmsEncryptionSvc.setKeyId(encKey)
             .setCredentials(new BasicAWSCredentials("dummy", "dummy"))
-            .setRegion(Region.getRegion(Regions.AP_SOUTH_1));
+            .setRegion(Regions.AP_SOUTH_1.getName());
 
         AwsCrypto awsCrypto = Mockito.mock(AwsCrypto.class);
         KmsMasterKeyProvider prov = Mockito.mock(KmsMasterKeyProvider.class);

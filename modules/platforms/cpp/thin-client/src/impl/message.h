@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include <ignite/thin/cache/query/query_scan.h>
 #include <ignite/thin/cache/query/query_sql_fields.h>
 #include <ignite/thin/transactions/transaction_consts.h>
 
@@ -33,7 +34,7 @@
 #include "impl/affinity/affinity_topology_version.h"
 #include "impl/affinity/partition_awareness_group.h"
 #include "impl/cache/query/cursor_page.h"
-#include "impl/protocol_version.h"
+#include "impl/protocol_context.h"
 
 namespace ignite
 {
@@ -163,6 +164,12 @@ namespace ignite
                     /** Cache partitions request. */
                     CACHE_PARTITIONS = 1101,
 
+                    /** Scan query request. */
+                    QUERY_SCAN = 2000,
+
+                    /** Scan query get page request. */
+                    QUERY_SCAN_CURSOR_GET_PAGE = 2001,
+
                     /** SQL fields query request. */
                     QUERY_SQL_FIELDS = 2004,
 
@@ -246,9 +253,8 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
                  */
-                virtual void Write(binary::BinaryWriterImpl&, const ProtocolVersion&) const
+                virtual void Write(binary::BinaryWriterImpl&, const ProtocolContext&) const
                 {
                     // No-op.
                 }
@@ -336,7 +342,7 @@ namespace ignite
                  *
                  * @param writer Writer.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion&) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const;
 
             private:
                 /** Resource ID. */
@@ -368,7 +374,7 @@ namespace ignite
                  * Write request using provided writer.
                  * @param writer Writer.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion&) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const;
 
             private:
                 /** Cache IDs. */
@@ -399,9 +405,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Name. */
@@ -432,9 +438,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Name. */
@@ -469,9 +475,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Cache ID. */
@@ -525,7 +531,7 @@ namespace ignite
                  * Write request using provided writer.
                  * @param writer Writer.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion&) const
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const
                 {
                     writer.WriteInt32(cacheId);
 
@@ -581,9 +587,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Peek modes. */
@@ -624,11 +630,11 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const
                 {
-                    CacheRequest<OpCode>::Write(writer, ver);
+                    CacheRequest<OpCode>::Write(writer, context);
 
                     value.Write(writer);
                 }
@@ -672,11 +678,11 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const
                 {
-                    CacheRequest<OpCode>::Write(writer, ver);
+                    CacheRequest<OpCode>::Write(writer, context);
 
                     val1.Write(writer);
                     val2.Write(writer);
@@ -727,11 +733,11 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const
                 {
-                    CacheRequest<OpCode>::Write(writer, ver);
+                    CacheRequest<OpCode>::Write(writer, context);
 
                     val1.Write(writer);
                     val2.Write(writer);
@@ -783,9 +789,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion&) const {
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const
+                {
                     writer.WriteInt8(concurrency);
                     writer.WriteInt8(isolation);
                     writer.WriteInt64(timeout);
@@ -836,9 +842,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion&) const {
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const
+                {
                     writer.WriteInt32(txId);
                     writer.WriteBool(commited);
                 }
@@ -879,9 +885,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Cache ID. */
@@ -916,9 +922,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Cache ID. */
@@ -950,9 +956,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Query. */
@@ -960,9 +966,10 @@ namespace ignite
             };
 
             /**
-             * Cache SQL fields cursor get page request.
+             * Cache query cursor get page request.
              */
-            class SqlFieldsCursorGetPageRequest : public RequestAdapter<MessageType::QUERY_SQL_FIELDS_CURSOR_GET_PAGE>
+            template<int16_t OpCode>
+            class QueryCursorGetPageRequest : public RequestAdapter<OpCode>
             {
             public:
                 /**
@@ -970,7 +977,7 @@ namespace ignite
                  *
                  * @param cursorId Cursor ID.
                  */
-                explicit SqlFieldsCursorGetPageRequest(int64_t cursorId) :
+                explicit QueryCursorGetPageRequest(int64_t cursorId) :
                     cursorId(cursorId)
                 {
                     // No-op.
@@ -979,7 +986,7 @@ namespace ignite
                 /**
                  * Destructor.
                  */
-                virtual ~SqlFieldsCursorGetPageRequest()
+                virtual ~QueryCursorGetPageRequest()
                 {
                     // No-op.
                 }
@@ -987,13 +994,49 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext&) const
+                {
+                    writer.WriteInt64(cursorId);
+                }
 
             private:
                 /** Cursor ID. */
                 const int64_t cursorId;
+            };
+
+            /**
+             * Cache scan query request.
+             */
+            class ScanQueryRequest : public CacheRequest<MessageType::QUERY_SCAN>
+            {
+            public:
+                /**
+                 * Constructor.
+                 *
+                 * @param cacheId Cache ID.
+                 * @param qry SQL query.
+                 */
+                explicit ScanQueryRequest(int32_t cacheId, const ignite::thin::cache::query::ScanQuery &qry);
+
+                /**
+                 * Destructor.
+                 */
+                virtual ~ScanQueryRequest()
+                {
+                    // No-op.
+                }
+
+                /**
+                 * Write request using provided writer.
+                 * @param writer Writer.
+                 * @param context Protocol context.
+                 */
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
+
+            private:
+                /** Query. */
+                const ignite::thin::cache::query::ScanQuery &qry;
             };
 
             /**
@@ -1030,9 +1073,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Page size. */
@@ -1080,9 +1123,9 @@ namespace ignite
                 /**
                  * Write request using provided writer.
                  * @param writer Writer.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolVersion& ver) const;
+                virtual void Write(binary::BinaryWriterImpl& writer, const ProtocolContext& context) const;
 
             private:
                 /** Flags. */
@@ -1116,10 +1159,11 @@ namespace ignite
 
                 /**
                  * Read response using provided reader.
+                 *
                  * @param reader Reader.
-                 * @param ver Protocol version.
+                 * @param context Protocol context.
                  */
-                virtual void Read(binary::BinaryReaderImpl& reader, const ProtocolVersion& ver);
+                virtual void Read(binary::BinaryReaderImpl& reader, const ProtocolContext& context);
 
                 /**
                  * Get request processing status.
@@ -1170,7 +1214,7 @@ namespace ignite
                 /**
                  * Read data if response status is ResponseStatus::SUCCESS.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl&, const ProtocolVersion&)
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl&, const ProtocolContext&)
                 {
                     // No-op.
                 }
@@ -1211,7 +1255,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
                 /**
                  * Get version.
@@ -1264,7 +1308,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Value. */
@@ -1301,7 +1345,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Cache ID. */
@@ -1338,7 +1382,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Cache ID. */
@@ -1383,7 +1427,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Value. */
@@ -1428,7 +1472,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Value. */
@@ -1473,11 +1517,69 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Value. */
                 int32_t value;
+            };
+
+            /**
+             * Cache scan query response.
+             */
+            class ScanQueryResponse : public Response
+            {
+            public:
+                /**
+                 * Constructor.
+                 */
+                ScanQueryResponse() :
+                    cursorId(0),
+                    cursorPage(new cache::query::CursorPage())
+                {
+                    // No-op.
+                }
+
+                /**
+                 * Destructor.
+                 */
+                virtual ~ScanQueryResponse()
+                {
+                    // No-op.
+                }
+
+                /**
+                 * Get cursor ID.
+                 *
+                 * @return Cursor ID.
+                 */
+                int64_t GetCursorId() const
+                {
+                    return cursorId;
+                }
+
+                /**
+                 * Get cursor page.
+                 * @return Cursor page.
+                 */
+                cache::query::SP_CursorPage GetCursorPage() const
+                {
+                    return cursorPage;
+                }
+
+                /**
+                 * Read data if response status is ResponseStatus::SUCCESS.
+                 *
+                 * @param reader Reader.
+                 */
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
+
+            private:
+                /** Cursor ID. */
+                int64_t cursorId;
+
+                /** Cursor Page. */
+                cache::query::SP_CursorPage cursorPage;
             };
 
             /**
@@ -1538,7 +1640,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Cursor ID. */
@@ -1552,15 +1654,15 @@ namespace ignite
             };
 
             /**
-             * Cache SQL fields cursor get page response.
+             * Query cursor get page response.
              */
-            class SqlFieldsCursorGetPageResponse : public Response
+            class QueryCursorGetPageResponse : public Response
             {
             public:
                 /**
                  * Constructor.
                  */
-                SqlFieldsCursorGetPageResponse() :
+                QueryCursorGetPageResponse() :
                     cursorPage(new cache::query::CursorPage())
                 {
                     // No-op.
@@ -1569,7 +1671,7 @@ namespace ignite
                 /**
                  * Destructor.
                  */
-                virtual ~SqlFieldsCursorGetPageResponse()
+                virtual ~QueryCursorGetPageResponse()
                 {
                     // No-op.
                 }
@@ -1588,7 +1690,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Cursor Page. */
@@ -1632,7 +1734,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Query ID. */
@@ -1676,7 +1778,7 @@ namespace ignite
                  *
                  * @param reader Reader.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion&);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&);
 
             private:
                 /** Task ID. */
@@ -1709,8 +1811,9 @@ namespace ignite
                  * Read notification data.
                  *
                  * @param reader Reader.
+                 * @param context Protocol context.
                  */
-                virtual void Read(binary::BinaryReaderImpl& reader, const ProtocolVersion& ver)
+                virtual void Read(binary::BinaryReaderImpl& reader, const ProtocolContext& context)
                 {
                     flags = reader.ReadInt16();
 
@@ -1729,7 +1832,7 @@ namespace ignite
                         return;
                     }
 
-                    ReadOnSuccess(reader, ver);
+                    ReadOnSuccess(reader, context);
                 }
 
                 /**
@@ -1744,9 +1847,9 @@ namespace ignite
                  * Read data if response status is ResponseStatus::SUCCESS.
                  *
                  * @param reader Reader.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion& ver) = 0;
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext& context) = 0;
             };
 
             /**
@@ -1804,9 +1907,9 @@ namespace ignite
                  * Read data if response status is ResponseStatus::SUCCESS.
                  *
                  * @param reader Reader.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion& ver);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext& context);
 
             private:
                 /** Result. */
@@ -1840,9 +1943,9 @@ namespace ignite
                  * Read data if response status is ResponseStatus::SUCCESS.
                  *
                  * @param reader Reader.
-                 * @param ver Version.
+                 * @param context Protocol context.
                  */
-                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolVersion& ver);
+                virtual void ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext& context);
 
             private:
                 /** Result. */

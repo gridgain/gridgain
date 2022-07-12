@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
@@ -53,7 +54,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
     private boolean client;
 
     /** */
-    private static final int OBJECTS = 200;
+    private static final int OBJECTS = 150;
 
     /** */
     private static final int MAX_CACHES = 5;
@@ -94,7 +95,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
     /** {@inheritDoc} */
     @Override protected long getTestTimeout() {
-        return 10 * 60_000;
+        return 12 * 60_000;
     }
 
     /** {@inheritDoc} */
@@ -136,6 +137,14 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
         cachesData = null;
 
         super.afterTestsStopped();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        for (String cacheName : grid(0).cacheNames())
+            grid(0).destroyCache(cacheName);
+
+        super.afterTest();
     }
 
     /** {@inheritDoc} */

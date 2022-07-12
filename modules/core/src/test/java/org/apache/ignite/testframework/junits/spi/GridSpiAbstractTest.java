@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         @Override public void evaluate() throws Throwable {
             GridSpiAbstractTest testClsInstance = (GridSpiAbstractTest)description.getTestClass().newInstance();
             try {
-                testClsInstance.beforeFirstTest();
+                testClsInstance.beforeFirstTestInternal();
 
                 base.evaluate();
             }
@@ -140,7 +140,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     /**
      * @throws Exception If failed.
      */
-    private void resetTestData() throws Exception {
+    private void resetTestData() {
         tests.put(getClass(), new TestData<T>());
     }
 
@@ -156,7 +156,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     }
 
     /** */
-    private void beforeFirstTest() throws Exception {
+    protected void beforeFirstTestInternal() throws Exception {
         if (autoStart) {
             GridSpiTest spiTest = GridTestUtils.getAnnotation(getClass(), GridSpiTest.class);
 

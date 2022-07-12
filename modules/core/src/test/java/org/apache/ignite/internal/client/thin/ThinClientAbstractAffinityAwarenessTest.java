@@ -145,11 +145,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         assertNotNull("Unexpected (null) next operation [expCh=" + expCh + ", expOp=" + expOp + ']', nextChOp);
 
-        assertEquals("Unexpected channel for opertation [expCh=" + expCh + ", expOp=" + expOp +
-            ", nextOpCh=" + nextChOp + ']', expCh, nextChOp.get1());
-
         assertEquals("Unexpected operation on channel [expCh=" + expCh + ", expOp=" + expOp +
-            ", nextOpCh=" + nextChOp + ']', expOp, nextChOp.get2());
+                ", nextOpCh=" + nextChOp + ']', expOp, nextChOp.get2());
+
+        assertEquals("Unexpected channel for operation [expCh=" + expCh + ", expOp=" + expOp +
+            ", nextOpCh=" + nextChOp + ']', expCh, nextChOp.get1());
     }
 
     /**

@@ -113,7 +113,7 @@ class GmmPartitionData implements AutoCloseable {
     /**
      * Builder for GMM partition data.
      */
-    public static class Builder<K, V> implements PartitionDataBuilder<K, V, EmptyContext, GmmPartitionData> {
+    static class Builder<K, V> implements PartitionDataBuilder<K, V, EmptyContext, GmmPartitionData> {
         /** Serial version uid. */
         private static final long serialVersionUID = 1847063348042022561L;
 

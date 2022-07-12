@@ -111,7 +111,18 @@ public class RollingUpgradeCommand extends AbstractCommand<RollingUpgradeArgumen
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will change rolling upgrade mode.";
+        switch (rollingUpgradeArgs.command()) {
+            case FINISH:
+                return "Warning: the command will disable rolling upgrade mode.";
+            case FORCE:
+                return "Warning: the command will enable rolling upgrade mode (force mode).";
+            case START:
+                return "Warning: the command will enable rolling upgrade mode.";
+            case STATUS:
+                return null;
+            default:
+                throw new IllegalArgumentException("Unsupported command: " + rollingUpgradeArgs.command());
+        }
     }
 
     /**
@@ -145,7 +156,7 @@ public class RollingUpgradeCommand extends AbstractCommand<RollingUpgradeArgumen
     private void printRollingUpgradeStatus(Logger log, VisorRollingUpgradeStatusResult res) {
         VisorRollingUpgradeStatus status = res.getStatus();
 
-        log.info("Rolling upgrade is " + (status.isEnabled() ? "enabled" : "disabled"));
+        log.info("Rolling upgrade is " + (status.isEnabled() ? "enabled." : "disabled."));
         if (status.isForcedModeEnabled())
             log.info("Forced mode is enabled.");
         log.info("Initial version: " + status.getInitialVersion());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.apache.ignite.testframework.junits.common;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -57,6 +58,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteEvents;
@@ -123,6 +125,8 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.verify.ConsistencyUtils;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
+import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.service.IgniteServiceProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
@@ -168,6 +172,8 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Super class for all common tests.
@@ -621,7 +627,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         List<IgniteEx> allNodes0 = G.allGrids().stream()
             .map(i -> (IgniteEx)i)
-            .filter(i -> isServer(i.localNode()) && (nodeSet == null || nodeSet.contains(i.localNode())))
+            .filter(i -> isServer(i) && (nodeSet == null || nodeSet.contains(i.localNode())))
             .collect(toList());
 
         Set<ClusterNode> nodes0 = allNodes0.stream()
@@ -681,6 +687,21 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 else
                     break;
             }
+        }
+    }
+
+    /**
+     * Returns {@code true} if {@link IgniteEx} instance is a server node (i.e., neither a client nor a daemon node).
+     *
+     * @param ignite Instance to check.
+     * @return {@code true} if {@link IgniteEx} instance is a server node (i.e., neither a client nor a daemon node).
+     */
+    private boolean isServer(IgniteEx ignite) {
+        try {
+            return isServer(ignite.localNode());
+        } catch (IgniteClientDisconnectedException e) {
+            // This is a client, so we don't need it, and the exception is not relevant, let's not propagate it.
+            return false;
         }
     }
 
@@ -2968,5 +2989,18 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         finally {
             dbMgr.checkpointReadUnlock();
         }
+    }
+
+    /**
+     * @param n Node.
+     * @return Distributed property: {@code GridJobProcessor#computeJobWorkerInterruptTimeout}.
+     */
+    protected DistributedChangeableProperty<Serializable> computeJobWorkerInterruptTimeout(Ignite n) {
+        DistributedChangeableProperty<Serializable> timeoutProperty = ((IgniteEx)n).context().distributedConfiguration()
+            .property(GridJobProcessor.COMPUTE_JOB_WORKER_INTERRUPT_TIMEOUT);
+
+        assertThat(timeoutProperty, notNullValue());
+
+        return timeoutProperty;
     }
 }

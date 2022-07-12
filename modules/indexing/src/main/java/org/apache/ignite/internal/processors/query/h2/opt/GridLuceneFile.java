@@ -36,6 +36,9 @@ public class GridLuceneFile implements Accountable {
     private long length;
 
     /** */
+    private final String name;
+
+    /** */
     private final GridLuceneDirectory dir;
 
     /** */
@@ -52,8 +55,16 @@ public class GridLuceneFile implements Accountable {
      *
      * @param dir Directory.
      */
-    GridLuceneFile(GridLuceneDirectory dir) {
+    GridLuceneFile(GridLuceneDirectory dir, String name) {
         this.dir = dir;
+        this.name = name;
+    }
+
+    /**
+     * @return filename
+     */
+    public String getName() {
+        return name;
     }
 
     /**
@@ -105,6 +116,7 @@ public class GridLuceneFile implements Accountable {
     void releaseRef() {
         refCnt.decrementAndGet();
 
+        // TODO https://ggsystems.atlassian.net/browse/GG-35086
         deferredDelete();
     }
 
@@ -148,7 +160,7 @@ public class GridLuceneFile implements Accountable {
     }
 
     /**
-     * Deletes file and deallocates memory..
+     * Deletes file and deallocates memory.
      */
     public void delete() {
         if (!deleted.compareAndSet(false, true))
@@ -170,6 +182,7 @@ public class GridLuceneFile implements Accountable {
             dir.memory().release(buffers.arr[i], BUFFER_SIZE);
 
         buffers = null;
+        dir.pendingDeletions.remove(name);
     }
 
     /**

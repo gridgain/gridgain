@@ -516,12 +516,12 @@ BOOST_AUTO_TEST_CASE(TestLongEventsProcessingDisconnect)
 
     ContinuousQueryHandleClient handle = cache.QueryContinuous(qry);
 
-    for (int32_t i = 0; i < 20; ++i)
+    for (int32_t i = 0; i < 10; ++i)
         cache.Put(i, TestEntry(i * 10));
 
     Ignition::Stop(node.GetName(), true);
 
-    listener->CheckDisconnected();
+    listener->CheckDisconnected(200 * 20 * 2);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

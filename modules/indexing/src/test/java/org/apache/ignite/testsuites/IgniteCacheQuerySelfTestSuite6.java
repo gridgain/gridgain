@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheCon
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicOneNodeTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.GridCacheContinuousQueryReplicatedAtomicSelfTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.IgniteCacheContinuousQueryClientTest;
+import org.apache.ignite.internal.processors.query.CheckIndexConsistencyOnRemoveTest;
 import org.apache.ignite.internal.processors.query.HashJoinQueryTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlSinglePartitionMultiParallelismTest;
 import org.apache.ignite.internal.processors.query.MemLeakOnSqlWithClientReconnectTest;
@@ -51,6 +52,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    CheckIndexConsistencyOnRemoveTest.class,
     GridCacheContinuousQueryPartitionAtomicOneNodeTest.class,
     CacheContinuousWithTransformerPartitionedSelfTest.class,
     GridCacheContinuousQueryLocalAtomicSelfTest.class,

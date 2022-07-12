@@ -23,7 +23,11 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.concurrent.Callable;
+
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
 /**
@@ -47,11 +51,27 @@ public class JdbcThinInsertStatementSelfTest extends JdbcThinAbstractDmlStatemen
         {"p2", 2, "Joe", "Black", 35}
     };
 
+    /** Test logger. */
+    private static ListeningTestLogger srvLog;
+
     /** Statement. */
     private Statement stmt;
 
     /** Prepared statement. */
     private PreparedStatement prepStmt;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setGridLogger(srvLog);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        srvLog = new ListeningTestLogger(log);
+
+        super.beforeTestsStarted();
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -173,8 +193,14 @@ public class JdbcThinInsertStatementSelfTest extends JdbcThinAbstractDmlStatemen
      *
      */
     @Test
-    public void testDuplicateKeys() {
+    public void testDuplicateKeys() throws InterruptedException {
         jcache(0).put("p2", new Person(2, "Joe", "Black", 35));
+
+        LogListener lsnr = LogListener
+            .matches("Failed to execute SQL query")
+            .build();
+
+        srvLog.registerListener(lsnr);
 
         GridTestUtils.assertThrowsAnyCause(log, new Callable<Object>() {
             /** {@inheritDoc} */
@@ -183,6 +209,8 @@ public class JdbcThinInsertStatementSelfTest extends JdbcThinAbstractDmlStatemen
             }
         }, SQLException.class,
             "Failed to INSERT some keys because they are already in cache [keys=[p2]]");
+
+        assertFalse(lsnr.check(1000L));
 
         assertEquals(3, jcache(0).withKeepBinary().getAll(new HashSet<>(Arrays.asList("p1", "p2", "p3"))).size());
     }

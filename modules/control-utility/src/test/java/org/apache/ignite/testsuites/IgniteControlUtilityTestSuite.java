@@ -20,6 +20,7 @@ import org.apache.ignite.events.IgniteControlUtilityBaselineEventsLocalTest;
 import org.apache.ignite.events.IgniteControlUtilityBaselineEventsRemoteTest;
 import org.apache.ignite.internal.commandline.CommandHandlerParsingTest;
 import org.apache.ignite.internal.commandline.indexreader.IgniteIndexReaderTest;
+import org.apache.ignite.internal.commandline.walconverter.IgniteEncryptedWalConverterTest;
 import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterArgumentsTest;
 import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterSensitiveDataTest;
 import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterTest;
@@ -55,6 +56,7 @@ import org.apache.ignite.util.GridCommandHandlerSslTest;
 import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
 import org.apache.ignite.util.GridCommandHandlerWithSSLTest;
+import org.apache.ignite.util.MetricCommandTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -105,8 +107,11 @@ import org.junit.runners.Suite;
 
     GridCommandHandlerPropertiesTest.class,
 
+    MetricCommandTest.class,
+
     IgniteIndexReaderTest.class,
     IgniteWalConverterTest.class,
+    IgniteEncryptedWalConverterTest.class,
     IgniteWalConverterArgumentsTest.class,
     IgniteWalConverterSensitiveDataTest.class,
     GridCommandHandlerDefragmentationTest.class,
