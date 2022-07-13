@@ -264,7 +264,8 @@ public class ValueTimestampTimeZone extends Value {
         if (SysProperties.RETURN_OFFSET_DATE_TIME && LocalDateTimeUtils.isJava8DateApiPresent()) {
             return LocalDateTimeUtils.valueToOffsetDateTime(this);
         }
-        return new TimestampWithTimeZone(dateValue, timeNanos, timeZoneOffsetSeconds);
+
+        return LocalDateTimeUtils.valueToInstant(this);
     }
 
     @Override

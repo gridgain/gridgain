@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -734,12 +735,22 @@ public abstract class AbstractDataTypesCoverageTest extends GridCommonAbstractTe
         }
 
         /**
+         * Constructor.
+         *
+         * @param timestamp Original Instant value.
+         */
+        public Dated(Instant timestamp) {
+            val = timestamp;
+            sqlStrVal = format(timestamp, PATTERN);
+        }
+
+        /**
          * Creates an SQL "PARSEDATETIME" expression for the given date and pattern.
          *
          * @param date Date.
          * @param pattern Pattern.
          */
-        private static String format(LocalDateTime date, String pattern) {
+        private static String format(TemporalAccessor date, String pattern) {
             return "PARSEDATETIME('" + DATE_TIME_DATE_FORMAT.format(date) + "', '" + pattern + "')";
         }
 

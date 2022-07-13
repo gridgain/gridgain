@@ -2532,11 +2532,6 @@ public class GridSqlQueryParser {
     /**
      */
     public static void checkTypeSupported(int type, String errMsg) {
-        if (type == Value.TIMESTAMP_TZ) {
-            throw new IgniteSQLException("TIMESTAMP WITH TIMEZONE type is not supported " + errMsg,
-                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
         if (type == Value.ENUM) {
             throw new IgniteSQLException("ENUM type is not supported " + errMsg,
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);

@@ -138,7 +138,8 @@ public class IgniteCacheSqlQueryUnsupportedTypeSelfTest extends GridCommonAbstra
 
                 List<List<?>> actual = execute("SELECT time FROM CACHE.PERSON WHERE time > ?", now);
 
-                assertEqualsCollections(expected, actual.stream().map(l -> l.get(0)).collect(Collectors.toList()));
+                assertEqualsCollections(expected, actual.stream().map(l -> l.get(0))
+                    .collect(Collectors.toList()));
             }
         }
     }

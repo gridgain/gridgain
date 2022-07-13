@@ -218,6 +218,18 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
     }
 
     /**
+     * TODO: add ticket to documentat this.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTimestampWithTimeZoneDataType() throws Exception {
+        checkBasicSqlOperations(SqlDataType.TIMESTAMP_TZ,
+            new Dated(java.time.Instant.ofEpochMilli(0L)),
+            new Dated(java.time.Instant.ofEpochMilli(123L)));
+    }
+
+    /**
      * https://apacheignite-sql.readme.io/docs/data-types#section-varchar
      *
      * @throws Exception If failed.
@@ -539,7 +551,14 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
          * Please pay attention that point is just an example of GEOMETRY data types.
          * It might have sense to add few more Geometry data types to check when basic functionality will be fixed.
          */
-        GEOMETRY(org.locationtech.jts.geom.Point.class);
+        GEOMETRY(org.locationtech.jts.geom.Point.class),
+
+        /** */
+        TIMESTAMP_TZ(java.time.Instant.class) {
+            @Override public String toString() {
+                return "TIMESTAMP WITH TIME ZONE";
+            }
+        };
 
         /**
          * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html

@@ -21,6 +21,7 @@ import java.math.RoundingMode;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.GregorianCalendar;
@@ -315,6 +316,18 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    public void testSqlTimestampTzTypeIndex() {
+        String idxTypeStr = "TIMESTAMP WITH TIME ZONE";
+        Class<Instant> idxCls = Instant.class;
+
+        createPopulateAndVerify(idxTypeStr, idxCls, Instant::compareTo, PK, "BACKUPS=1");
+        createPopulateAndVerify(idxTypeStr, idxCls, Instant::compareTo, PK, "BACKUPS=1,AFFINITY_KEY=idxVal");
+        createPopulateAndVerify(idxTypeStr, idxCls, Instant::compareTo, SECONDARY_DESC, "BACKUPS=1");
+        createPopulateAndVerify(idxTypeStr, idxCls, Instant::compareTo, SECONDARY_ASC, "BACKUPS=1");
+    }
+
+    /** */
+    @Test
     public void testSqlBynaryTypeIndex() {
         String idxTypeStr = "BINARY";
         Class<byte[]> idxCls = byte[].class;
@@ -486,6 +499,9 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
 
         if (cls.isAssignableFrom(Timestamp.class))
             return cls.cast(new Timestamp(ThreadLocalRandom.current().nextLong()));
+
+        if (cls.isAssignableFrom(Instant.class))
+            return cls.cast(Instant.ofEpochMilli(ThreadLocalRandom.current().nextLong()));
 
         if (cls.isAssignableFrom(UUID.class))
             return cls.cast(new UUID(

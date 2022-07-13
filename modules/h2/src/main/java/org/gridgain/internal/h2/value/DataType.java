@@ -868,7 +868,7 @@ public class DataType {
                 return LocalDateTimeUtils.OFFSET_DATE_TIME.getName();
             }
             // "org.gridgain.internal.h2.api.TimestampWithTimeZone";
-            return TimestampWithTimeZone.class.getName();
+            return LocalDateTimeUtils.INSTANT.getName();
         case Value.BYTES:
         case Value.UUID:
             // "[B", not "byte[]";
