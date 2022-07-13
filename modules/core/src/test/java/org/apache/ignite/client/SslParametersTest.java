@@ -17,6 +17,7 @@
 package org.apache.ignite.client;
 
 import java.util.concurrent.Callable;
+import javax.net.ssl.SSLHandshakeException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -238,8 +239,8 @@ public class SslParametersTest extends GridCommonAbstractTest {
             new String[] {
                 "TLSv1.1",
             },
-            ClientConnectionException.class,
-            "SSL handshake failed (connection closed)"
+            SSLHandshakeException.class,
+            "No appropriate protocol (protocol is disabled or cipher suites are inappropriate)"
         );
     }
 
