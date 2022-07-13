@@ -69,6 +69,9 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
     /** Whether direct mode is used. */
     private boolean directMode;
 
+    /** Exception during onSessionOpened */
+    @Nullable private Exception onSessionOpenedException;
+
     /** Metric that indicates sessions count that were rejected due to SSL errors. */
     @Nullable private final IntMetricImpl rejectedSesCnt;
 
@@ -139,7 +142,9 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             try {
                 engine = sslCtx.createSSLEngine();
             } catch (IllegalArgumentException e) {
-                throw new IgniteCheckedException("Failed connect to cluster. Check SSL configuration.", e);
+                IgniteCheckedException ex = new IgniteCheckedException("Failed connect to cluster. Check SSL configuration.", e);
+                onSessionOpenedException = ex;
+                throw ex;
             }
 
             boolean clientMode = !ses.accepted();
@@ -196,6 +201,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
                 proceedMessageReceived(ses, alreadyDecoded);
         }
         catch (SSLException e) {
+            onSessionOpenedException = e;
             U.error(log, "Failed to start SSL handshake (will close inbound connection): " + ses, e);
 
             if (rejectedSesCnt != null)
@@ -211,7 +217,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             GridNioFutureImpl<?> fut = ses.removeMeta(HANDSHAKE_FUT_META_KEY);
 
             if (fut != null)
-                fut.onDone(new IgniteCheckedException("SSL handshake failed (connection closed)."));
+                fut.onDone(new IgniteCheckedException("SSL handshake failed (connection closed).", onSessionOpenedException));
 
             if (ses.meta(SSL_META.ordinal()) == null)
                 return;
