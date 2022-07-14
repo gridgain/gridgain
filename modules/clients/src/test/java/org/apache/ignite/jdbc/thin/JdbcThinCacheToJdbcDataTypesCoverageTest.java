@@ -56,7 +56,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheDataTypesCoverageTes
 import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.gridgain.internal.h2.api.TimestampWithTimeZone;
 import org.gridgain.internal.h2.util.LocalDateTimeUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -104,7 +103,7 @@ public class JdbcThinCacheToJdbcDataTypesCoverageTest extends GridCacheDataTypes
         innerMap.put(LocalDate.class, new IgniteBiTuple<>(Types.DATE, java.sql.Date.class));
         innerMap.put(LocalDateTime.class, new IgniteBiTuple<>(Types.TIMESTAMP, java.sql.Timestamp.class));
         innerMap.put(LocalTime.class, new IgniteBiTuple<>(Types.TIME, java.sql.Time.class));
-        innerMap.put(Instant.class, new IgniteBiTuple<>(Types.OTHER, TimestampWithTimeZone.class));
+        innerMap.put(Instant.class, new IgniteBiTuple<>(Types.TIMESTAMP_WITH_TIMEZONE, Instant.class));
 
         javaClsToSqlTypeMap = Collections.unmodifiableMap(innerMap);
     }
