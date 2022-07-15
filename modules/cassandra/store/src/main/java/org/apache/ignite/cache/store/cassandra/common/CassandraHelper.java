@@ -18,14 +18,12 @@ package org.apache.ignite.cache.store.cassandra.common;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
-import com.datastax.driver.core.EndPoint;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.exceptions.DriverException;
 import com.datastax.driver.core.exceptions.InvalidQueryException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.ReadTimeoutException;
 import java.net.InetSocketAddress;
-import java.util.Collection;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -108,7 +106,8 @@ public class CassandraHelper {
             if (e instanceof NoHostAvailableException && ((NoHostAvailableException) e).getErrors() != null) {
                 NoHostAvailableException ex = (NoHostAvailableException)e;
 
-                for (Throwable error :ex.getErrors().values()) {
+                for (Map.Entry<InetSocketAddress, Throwable> entry : ex.getErrors().entrySet()) {
+                    Throwable error = entry.getValue();
                     if (error instanceof DriverException &&
                         (error.getMessage().contains(TABLE_EXIST_ERROR2) ||
                              KEYSPACE_EXIST_ERROR3.matcher(error.getMessage()).matches()))
