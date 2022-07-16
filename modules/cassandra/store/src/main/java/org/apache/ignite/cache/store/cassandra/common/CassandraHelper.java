@@ -108,6 +108,7 @@ public class CassandraHelper {
 
                 for (Map.Entry<InetSocketAddress, Throwable> entry : ex.getErrors().entrySet()) {
                     Throwable error = entry.getValue();
+
                     if (error instanceof DriverException &&
                         (error.getMessage().contains(TABLE_EXIST_ERROR2) ||
                              KEYSPACE_EXIST_ERROR3.matcher(error.getMessage()).matches()))
