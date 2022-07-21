@@ -1174,13 +1174,24 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     private void initAddresses() {
         if (addrs == null) {
             try {
-                addrs = U.resolveLocalAddresses(locHost);
+                addrs = resolveLocalAddresses(locHost);
             }
             catch (IOException e) {
                 throw new IgniteSpiException("Failed to resolve local host to set of external addresses: " + locHost,
                     e);
             }
         }
+    }
+
+    /**
+     * Returns local addresses.
+     *
+     * @param locHost Local address to resolve.
+     * @return Tuple of local addresses and hostnames.
+     * @throws IOException If failed to resolve local addresses.
+     */
+    protected IgniteBiTuple<Collection<String>, Collection<String>> resolveLocalAddresses(InetAddress locHost) throws IOException {
+        return U.resolveLocalAddresses(locHost);
     }
 
     /**
