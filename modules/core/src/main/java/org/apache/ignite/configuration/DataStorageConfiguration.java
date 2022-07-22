@@ -26,6 +26,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.mem.MemoryAllocator;
 import org.apache.ignite.mxbean.MetricsMxBean;
 import org.jetbrains.annotations.Nullable;
 
@@ -330,6 +331,9 @@ public class DataStorageConfiguration implements Serializable {
 
     /** Minimum size of wal archive folder, in bytes. */
     private long minWalArchiveSize = HALF_MAX_WAL_ARCHIVE_SIZE;
+
+    /** Default memory allocator for all data regions. */
+    @Nullable private MemoryAllocator memoryAllocator = null;
 
     /**
      * Creates valid durable memory configuration with all default values.
@@ -1254,6 +1258,27 @@ public class DataStorageConfiguration implements Serializable {
         }
 
         this.minWalArchiveSize = walArchiveMinSize;
+
+        return this;
+    }
+
+    /**
+     * @return Memory allocator instance.
+     */
+    @Nullable public MemoryAllocator getMemoryAllocator() {
+        return memoryAllocator;
+    }
+
+    /**
+     * Sets default memory allocator for all memory regions. If not specified, default, based on {@code Unsafe}
+     * allocator will be used. Allocator can be overrided for data region using
+     * {@link DataRegionConfiguration#setMemoryAllocator(MemoryAllocator)}
+     *
+     * @param allocator Memory allocator instance.
+     * @return {@code this} for chaining.
+     */
+    public DataStorageConfiguration setMemoryAllocator(MemoryAllocator allocator) {
+        memoryAllocator = allocator;
 
         return this;
     }
