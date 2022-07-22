@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Optional;
 import org.apache.ignite.cluster.ClusterNode;
@@ -24,6 +23,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -62,15 +62,15 @@ public class TcpDiscoveryDeadNodeAddressResolvingTest extends GridCommonAbstract
 
         GridDiscoveryManager discovery = grid3.context().discovery();
         // Only grid0.
-        checkNoNode(discovery,1, consistentId);
+        checkNoNode(discovery, 1, consistentId);
 
         // grid1 must be in topology snapshots but as it has already left the cluster, its address should not be resolved.
         checkSockAddrsNull(discovery, 2, consistentId);
         checkSockAddrsNull(discovery, 3, consistentId);
 
         // grid1 will not be present in these topology snapshots.
-        checkNoNode(discovery,4, consistentId);
-        checkNoNode(discovery,5, consistentId);
+        checkNoNode(discovery, 4, consistentId);
+        checkNoNode(discovery, 5, consistentId);
     }
 
     /**
@@ -99,10 +99,7 @@ public class TcpDiscoveryDeadNodeAddressResolvingTest extends GridCommonAbstract
 
         ClusterNode clusterNode = node.get();
 
-        Field sockAddrsField = TcpDiscoveryNode.class.getDeclaredField("sockAddrs");
-        sockAddrsField.setAccessible(true);
-
-        Object sockAddrs = sockAddrsField.get(clusterNode);
+        Object sockAddrs = GridTestUtils.getFieldValue(clusterNode, "sockAddrs");
         assertNull(sockAddrs);
     }
 
