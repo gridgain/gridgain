@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
  * Memory will be allocated using {@code void* numa_alloc_onnode(size_t)} of {@code lubnuma}.
  */
 public class LocalNumaAllocationStrategy implements NumaAllocationStrategy, Serializable {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
