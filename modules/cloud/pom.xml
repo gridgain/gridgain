@@ -32,7 +32,7 @@
     <url>http://ignite.apache.org</url>
 
     <properties>
-        <jcloud.version>2.5.0</jcloud.version>
+        <jcloud.version>2.2.1</jcloud.version>
     </properties>
 
     <dependencies>
