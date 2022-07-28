@@ -87,7 +87,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    TcpDiscoveryVmIpFinderDnsResolveTest.class,
+    /*TcpDiscoveryVmIpFinderDnsResolveTest.class,
     TcpDiscoveryVmIpFinderSelfTest.class,
     TcpDiscoverySharedFsIpFinderSelfTest.class,
     TcpDiscoveryJdbcIpFinderSelfTest.class,
@@ -154,8 +154,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
     // SSL.
     TcpDiscoverySslSelfTest.class,
     TcpDiscoverySslTrustedSelfTest.class,
-    TcpDiscoverySslSecuredUnsecuredTest.class,
-    TcpDiscoverySslTrustedUntrustedTest.class,
+    TcpDiscoverySslSecuredUnsecuredTest.class,*/
+    TcpDiscoverySslTrustedUntrustedTest.class/*,
     TcpDiscoverySslParametersTest.class,
 
     // Disco cache reuse.
@@ -176,7 +176,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_OVERRIDE_MCAST_GRP
 
     GridDiscoveryManagerChangeCoordinatorTest.class,
 
-    TcpDiscoveryIpFinderFailureTest.class
+    TcpDiscoveryIpFinderFailureTest.class*/
 })
 public class IgniteSpiDiscoverySelfTestSuite {
     /** */
