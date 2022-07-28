@@ -16,12 +16,15 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import java.util.Arrays;
 import java.util.concurrent.Callable;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import javax.net.ssl.SSLContext;
 
 /**
  * Tests cases when node connects to cluster with different SSL configuration.
@@ -125,6 +128,8 @@ public class TcpDiscoverySslTrustedUntrustedTest extends GridCommonAbstractTest 
      */
     @Test
     public void testExpired() throws Exception {
+        System.out.println("SSL protos: " + Arrays.toString(SSLContext.getDefault().createSSLEngine().getEnabledProtocols()));
+
         checkDiscoveryFailure("node02old", "trusttwo", "node03", "trusttwo");
     }
 
