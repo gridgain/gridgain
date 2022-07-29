@@ -37,6 +37,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.INC_TRANSFER;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
@@ -97,6 +98,12 @@ public class DrCommand extends AbstractCommand<Object> {
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
             optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Incremental !!!!!",
+            DATA_CENTER_REPLICATION,
+            INC_TRANSFER.toString(),
+            "<remoteDataCenterId>", "<remoteDataCenterId>", "<remoteDataCenterId>" // !!!
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",
