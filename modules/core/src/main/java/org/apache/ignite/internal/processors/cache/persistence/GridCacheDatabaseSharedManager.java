@@ -1980,6 +1980,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 dumpPartitionsInfo(cctx, log);
             }
 
+            // After recovery is complete, save the cache store metadata to disk (for persistent caches). This is needed
+            // in case a cache gets restarted because of its schema change (see GridCacheProcessor#prepareCacheContext),
+            // otherwise this metadata will be lost, since it is kept in-memory at this stage.
+            // See https://ggsystems.atlassian.net/browse/GG-35559 for more details.
+            for (CacheGroupContext grpCtx : cctx.cache().cacheGroups())
+                if (grpCtx.offheap() instanceof GridCacheOffheapManager)
+                    ((GridCacheOffheapManager) grpCtx.offheap()).syncMetadata(null, null, false);
+
             startTimer.finishGlobalStage("Restore logical state");
         }
         catch (IgniteCheckedException e) {
