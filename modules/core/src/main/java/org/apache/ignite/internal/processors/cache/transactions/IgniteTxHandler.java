@@ -2390,8 +2390,7 @@ public class IgniteTxHandler {
                                     }
 
                                     if (ctx0.dr().enabled() && part.primary(topVer)) {
-                                        for (int cntr = 1; cntr <= delta; cntr++)
-                                            ctx0.dr().skipUpdateCounter(part.id(), start + cntr);
+                                        ctx0.dr().updateCounter(part.id(), start, delta);
                                     }
                                 }
                                 else
