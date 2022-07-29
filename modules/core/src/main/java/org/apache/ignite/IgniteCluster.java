@@ -547,7 +547,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      * Force checkpointing on whole cluster
      *
-     * @throws IgniteException
+     * @throws IgniteException If error occurs.
      */
     public void checkpoint() throws IgniteException;
 

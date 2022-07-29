@@ -14,22 +14,6 @@
  * limitations under the License.
  */
 
-/*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
- *
- * Licensed under the GridGain Community Edition License (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.ignite.internal.visor.checkpoint;
 
 import java.util.List;
@@ -58,18 +42,18 @@ public class VisorCheckpointTask extends VisorMultiNodeTask<VoidDto, VisorCheckp
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** {@inheritDoc} */
     @Override protected VisorJob<VoidDto, VisorCheckpointJobResult> job(VoidDto arg) {
         return new CheckpointingForceJob(debug);
     }
 
     /**
-     * Collect statuses of underlying checkpoint jobs
+     * Collect statuses of underlying checkpoint jobs.
      *
      * @param results Job results.
-     * @return
-     * @throws IgniteException
+     * @return Collected statuses of underlying checkpoint jobs.
+     * @throws IgniteException If failed.
      */
-    @Nullable
     @Override protected VisorCheckpointTaskResult reduce0(List<ComputeJobResult> results) throws IgniteException {
         VisorCheckpointTaskResult res = new VisorCheckpointTaskResult();
 
@@ -84,7 +68,6 @@ public class VisorCheckpointTask extends VisorMultiNodeTask<VoidDto, VisorCheckp
      * Compute job that does a local checkpoint on a node
      */
     private static class CheckpointingForceJob extends VisorJob<VoidDto, VisorCheckpointJobResult> {
-
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -95,12 +78,13 @@ public class VisorCheckpointTask extends VisorMultiNodeTask<VoidDto, VisorCheckp
         /** */
         private GridFutureAdapter fut;
 
+        /** Checkpoint result. */
         private VisorCheckpointJobResult res;
 
+        /** Checkpoint start time. */
         long startTime;
 
         /**
-         * @param arg Argument.
          * @param debug Debug.
          */
         public CheckpointingForceJob(boolean debug) {

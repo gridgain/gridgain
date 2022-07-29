@@ -19,7 +19,6 @@ package org.apache.ignite.util;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,16 +26,10 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClusterByClassAbstractTest {
-
     /** */
     @Before
     public void init() {
         injectTestSystemOut();
-    }
-
-    /** */
-    @After
-    public void clear() {
     }
 
     /**
@@ -66,5 +59,4 @@ public class GridCommandHandlerCheckpointingTest extends GridCommandHandlerClust
         final int numOfNodes = crd.cluster().forServers().nodes().size();
         assertContains(log, out, "Checkpointing completed successfully on " + numOfNodes + " nodes.");
     }
-
 }

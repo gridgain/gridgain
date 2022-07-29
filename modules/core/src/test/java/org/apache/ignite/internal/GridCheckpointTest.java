@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import org.junit.Test;
 @GridCommonTest(group = "Kernal Self")
 
 /**
- * Checkpointing test
+ * Cluster wide checkpointing test.
  */
 public class GridCheckpointTest extends GridCommonAbstractTest {
     /** */
@@ -155,5 +155,4 @@ public class GridCheckpointTest extends GridCommonAbstractTest {
         assertTrue(numOfCheckpointsAfter > numOfCheckpointsBefore);
         assertNotSame(lastCheckpointBefore, lastCheckpointAfter);
     }
-
 }
