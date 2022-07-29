@@ -1535,9 +1535,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             update(val, expireTime, ttl, newVer, true);
 
-            GridDrType drType0 = drType;
-
-            drReplicate(drType0, val, newVer, topVer);
+            drReplicate(drType, val, newVer, topVer);
 
             recordNodeId(affNodeId, topVer);
 
@@ -2375,9 +2373,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
-                GridDrType drType0 = drType;
-
-                drReplicate(drType0, updateVal, updateVer, topVer);
+                drReplicate(drType, updateVal, updateVer, topVer);
 
                 recordNodeId(affNodeId, topVer);
 
