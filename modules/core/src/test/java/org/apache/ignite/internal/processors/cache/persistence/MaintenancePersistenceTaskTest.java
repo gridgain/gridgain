@@ -36,6 +36,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static java.util.Collections.singletonList;
+import static org.apache.ignite.testframework.GridTestUtils.deleteLastCheckpointEndMarker;
 
 /**
  * Tests for maintenance persistence task.
@@ -98,7 +99,9 @@ public class MaintenancePersistenceTaskTest extends GridCommonAbstractTest {
             fail(e.getMessage());
         }
 
-        server1.close();
+        stopGrid("test1", false);
+
+        deleteLastCheckpointEndMarker(server1);
 
         try {
             server1 = startGrid("test1");

@@ -82,6 +82,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Assert;
@@ -103,7 +104,7 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     public static final int PARTS = 32;
 
     /** */
-    public static final int WAL_HIST_SIZE = 30;
+    private static final int WAL_HIST_SIZE = 30;
 
     /** */
     private int pageSize = 4 * 1024;
@@ -158,11 +159,13 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        stopAllGrids();
         cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        stopAllGrids();
         cleanPersistenceDir();
     }
 
@@ -175,70 +178,65 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
 
         ignite.cluster().active(true);
 
-        try {
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                .cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+            .cache().context().database();
 
-            dbMgr.enableCheckpoints(false).get();
+        dbMgr.enableCheckpoints(false).get();
 
-            IgniteCache<Integer, IndexedValue> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, IndexedValue> cache = ignite.cache(CACHE_NAME);
 
-            int txCnt = 100;
+        int txCnt = 100;
 
-            int keysPerTx = 10;
+        int keysPerTx = 10;
 
-            for (int i = 0; i < txCnt; i++) {
-                try (Transaction tx = ignite.transactions().txStart()) {
-                    for (int j = 0; j < keysPerTx; j++) {
-                        int k = i * keysPerTx + j;
-
-                        cache.put(k, new IndexedValue(k));
-                    }
-
-                    tx.commit();
-                }
-            }
-
-            for (int i = 0; i < txCnt; i++) {
+        for (int i = 0; i < txCnt; i++) {
+            try (Transaction tx = ignite.transactions().txStart()) {
                 for (int j = 0; j < keysPerTx; j++) {
                     int k = i * keysPerTx + j;
 
-                    assertEquals(k, cache.get(k).value());
+                    cache.put(k, new IndexedValue(k));
                 }
-            }
 
-            stopGrid();
-
-            ignite = startGrid();
-
-            ignite.cluster().active(true);
-
-            cache = ignite.cache(CACHE_NAME);
-
-            for (int i = 0; i < txCnt; i++) {
-                for (int j = 0; j < keysPerTx; j++) {
-                    int k = i * keysPerTx + j;
-
-                    assertEquals(k, cache.get(k).value());
-                }
-            }
-
-            for (int i = 0; i < txCnt; i++) {
-                for (int j = 0; j < keysPerTx; j++) {
-                    int k = i * keysPerTx + j;
-
-                    QueryCursor<List<?>> cur = cache.query(
-                        new SqlFieldsQuery("select sVal from IndexedValue where iVal=?").setArgs(k));
-
-                    List<List<?>> vals = cur.getAll();
-
-                    assertEquals(vals.size(), 1);
-                    assertEquals("string-" + k, vals.get(0).get(0));
-                }
+                tx.commit();
             }
         }
-        finally {
-            stopAllGrids();
+
+        for (int i = 0; i < txCnt; i++) {
+            for (int j = 0; j < keysPerTx; j++) {
+                int k = i * keysPerTx + j;
+
+                assertEquals(k, cache.get(k).value());
+            }
+        }
+
+        stopGrid();
+
+        ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        cache = ignite.cache(CACHE_NAME);
+
+        for (int i = 0; i < txCnt; i++) {
+            for (int j = 0; j < keysPerTx; j++) {
+                int k = i * keysPerTx + j;
+
+                assertEquals(k, cache.get(k).value());
+            }
+        }
+
+        for (int i = 0; i < txCnt; i++) {
+            for (int j = 0; j < keysPerTx; j++) {
+                int k = i * keysPerTx + j;
+
+                QueryCursor<List<?>> cur = cache.query(
+                    new SqlFieldsQuery("select sVal from IndexedValue where iVal=?").setArgs(k));
+
+                List<List<?>> vals = cur.getAll();
+
+                assertEquals(vals.size(), 1);
+                assertEquals("string-" + k, vals.get(0).get(0));
+            }
         }
     }
 
@@ -251,268 +249,255 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
 
         ignite.cluster().active(true);
 
-        try {
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                .cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+            .cache().context().database();
 
-            IgniteCache<Integer, IndexedValue> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, IndexedValue> cache = ignite.cache(CACHE_NAME);
 
-            int txCnt = 100;
+        int txCnt = 100;
 
-            int keysPerTx = 10;
+        int keysPerTx = 10;
 
-            for (int i = 0; i < txCnt; i++) {
-                try (Transaction tx = ignite.transactions().txStart()) {
-                    for (int j = 0; j < keysPerTx; j++) {
-                        int k = i * keysPerTx + j;
-
-                        cache.put(k, new IndexedValue(k));
-                    }
-
-                    tx.commit();
-                }
-            }
-
-            for (int i = 0; i < txCnt; i++) {
+        for (int i = 0; i < txCnt; i++) {
+            try (Transaction tx = ignite.transactions().txStart()) {
                 for (int j = 0; j < keysPerTx; j++) {
                     int k = i * keysPerTx + j;
 
-                    assertEquals(k, cache.get(k).value());
+                    cache.put(k, new IndexedValue(k));
                 }
-            }
 
-            dbMgr.waitForCheckpoint("test");
-            dbMgr.enableCheckpoints(false).get();
-
-            for (int i = 0; i < txCnt / 2; i++) {
-                try (Transaction tx = ignite.transactions().txStart()) {
-                    for (int j = 0; j < keysPerTx; j++) {
-                        int k = i * keysPerTx + j;
-
-                        cache.remove(k);
-                    }
-
-                    tx.commit();
-                }
-            }
-
-            stopGrid();
-
-            ignite = startGrid();
-
-            ignite.cluster().active(true);
-
-            cache = ignite.cache(CACHE_NAME);
-
-            for (int i = 0; i < txCnt; i++) {
-                for (int j = 0; j < keysPerTx; j++) {
-                    int k = i * keysPerTx + j;
-
-                    QueryCursor<List<?>> cur = cache.query(
-                        new SqlFieldsQuery("select sVal from IndexedValue where iVal=?").setArgs(k));
-
-                    List<List<?>> vals = cur.getAll();
-
-                    if (i < txCnt / 2) {
-                        assertNull(cache.get(k));
-                        assertTrue(F.isEmpty(vals));
-                    }
-                    else {
-                        assertEquals(k, cache.get(k).value());
-
-                        assertEquals(1, vals.size());
-                        assertEquals("string-" + k, vals.get(0).get(0));
-                    }
-                }
+                tx.commit();
             }
         }
-        finally {
-            stopAllGrids();
+
+        for (int i = 0; i < txCnt; i++) {
+            for (int j = 0; j < keysPerTx; j++) {
+                int k = i * keysPerTx + j;
+
+                assertEquals(k, cache.get(k).value());
+            }
+        }
+
+        dbMgr.waitForCheckpoint("test");
+        dbMgr.enableCheckpoints(false).get();
+
+        for (int i = 0; i < txCnt / 2; i++) {
+            try (Transaction tx = ignite.transactions().txStart()) {
+                for (int j = 0; j < keysPerTx; j++) {
+                    int k = i * keysPerTx + j;
+
+                    cache.remove(k);
+                }
+
+                tx.commit();
+            }
+        }
+
+        stopGrid();
+
+        ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        cache = ignite.cache(CACHE_NAME);
+
+        for (int i = 0; i < txCnt; i++) {
+            for (int j = 0; j < keysPerTx; j++) {
+                int k = i * keysPerTx + j;
+
+                QueryCursor<List<?>> cur = cache.query(
+                    new SqlFieldsQuery("select sVal from IndexedValue where iVal=?").setArgs(k));
+
+                List<List<?>> vals = cur.getAll();
+
+                if (i < txCnt / 2) {
+                    assertNull(cache.get(k));
+                    assertTrue(F.isEmpty(vals));
+                }
+                else {
+                    assertEquals(k, cache.get(k).value());
+
+                    assertEquals(1, vals.size());
+                    assertEquals("string-" + k, vals.get(0).get(0));
+                }
+            }
         }
     }
 
     /**
      * @throws Exception if failed.
      */
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
     @Test
     public void testHistoricalRebalanceIterator() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
-
         extraCcfg = new CacheConfiguration(CACHE_NAME + "2");
         extraCcfg.setAffinity(new RendezvousAffinityFunction(false, PARTS));
 
         Ignite ignite = startGrid();
 
-        try {
-            ignite.cluster().active(true);
+        ignite.cluster().active(true);
 
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                .cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+            .cache().context().database();
+
+        dbMgr.waitForCheckpoint("test");
+
+        // This number depends on wal history size.
+        int entries = 25;
+
+        IgniteCache<Integer, Integer> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, Integer> cache2 = ignite.cache(CACHE_NAME + "2");
+
+        for (int i = 0; i < entries; i++) {
+            // Put to partition 0.
+            cache.put(i * PARTS, i * PARTS);
+
+            // Put to partition 1.
+            cache.put(i * PARTS + 1, i * PARTS + 1);
+
+            // Put to another cache.
+            cache2.put(i, i);
 
             dbMgr.waitForCheckpoint("test");
+        }
 
-            // This number depends on wal history size.
-            int entries = 25;
+        for (int i = 0; i < entries; i++) {
+            assertEquals((Integer)(i * PARTS), cache.get(i * PARTS));
+            assertEquals((Integer)(i * PARTS + 1), cache.get(i * PARTS + 1));
+            assertEquals((Integer)(i), cache2.get(i));
+        }
 
-            IgniteCache<Integer, Integer> cache = ignite.cache(CACHE_NAME);
-            IgniteCache<Integer, Integer> cache2 = ignite.cache(CACHE_NAME + "2");
+        CacheGroupContext grp = ((IgniteEx)ignite).context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
+        IgniteCacheOffheapManager offh = grp.offheap();
+        AffinityTopologyVersion topVer = grp.affinity().lastVersion();
 
-            for (int i = 0; i < entries; i++) {
-                // Put to partition 0.
-                cache.put(i * PARTS, i * PARTS);
+        IgniteDhtDemandedPartitionsMap map;
 
-                // Put to partition 1.
-                cache.put(i * PARTS + 1, i * PARTS + 1);
+        for (int i = 0; i < entries; i++) {
+            map = new IgniteDhtDemandedPartitionsMap();
+            map.addHistorical(0, i, entries, PARTS);
 
-                // Put to another cache.
-                cache2.put(i, i);
+            FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
 
-                dbMgr.waitForCheckpoint("test");
+            try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
+                assertNotNull(it);
+
+                assertTrue("Not historical for iteration: " + i, it.historical(0));
+
+                for (int j = i; j < entries; j++) {
+                    assertTrue("i=" + i + ", j=" + j, it.hasNextX());
+
+                    CacheDataRow row = it.next();
+
+                    assertEquals(j * PARTS, (int)row.key().value(grp.cacheObjectContext(), false));
+                    assertEquals(j * PARTS, (int)row.value().value(grp.cacheObjectContext(), false));
+                }
+
+                assertFalse(it.hasNext());
+            }
+            finally {
+                releaseWalPointerForIterator(grp.shared(), ptr);
             }
 
-            for (int i = 0; i < entries; i++) {
-                assertEquals((Integer)(i * PARTS), cache.get(i * PARTS));
-                assertEquals((Integer)(i * PARTS + 1), cache.get(i * PARTS + 1));
-                assertEquals((Integer)(i), cache2.get(i));
+            map = new IgniteDhtDemandedPartitionsMap();
+            map.addHistorical(1, i, entries, PARTS);
+
+            ptr = reserveWalPointerForIterator(grp.shared());
+
+            try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
+                assertNotNull(it);
+
+                assertTrue("Not historical for iteration: " + i, it.historical(1));
+
+                for (int j = i; j < entries; j++) {
+                    assertTrue(it.hasNextX());
+
+                    CacheDataRow row = it.next();
+
+                    assertEquals(j * PARTS + 1, (int)row.key().value(grp.cacheObjectContext(), false));
+                    assertEquals(j * PARTS + 1, (int)row.value().value(grp.cacheObjectContext(), false));
+                }
+
+                assertFalse(it.hasNext());
             }
-
-            CacheGroupContext grp = ((IgniteEx)ignite).context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
-            IgniteCacheOffheapManager offh = grp.offheap();
-            AffinityTopologyVersion topVer = grp.affinity().lastVersion();
-
-            IgniteDhtDemandedPartitionsMap map;
-
-            for (int i = 0; i < entries; i++) {
-                map = new IgniteDhtDemandedPartitionsMap();
-                map.addHistorical(0, i, entries, PARTS);
-
-                FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
-
-                try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
-                    assertNotNull(it);
-
-                    assertTrue("Not historical for iteration: " + i, it.historical(0));
-
-                    for (int j = i; j < entries; j++) {
-                        assertTrue("i=" + i + ", j=" + j, it.hasNextX());
-
-                        CacheDataRow row = it.next();
-
-                        assertEquals(j * PARTS, (int)row.key().value(grp.cacheObjectContext(), false));
-                        assertEquals(j * PARTS, (int)row.value().value(grp.cacheObjectContext(), false));
-                    }
-
-                    assertFalse(it.hasNext());
-                }
-                finally {
-                    releaseWalPointerForIterator(grp.shared(), ptr);
-                }
-
-                map = new IgniteDhtDemandedPartitionsMap();
-                map.addHistorical(1, i, entries, PARTS);
-
-                ptr = reserveWalPointerForIterator(grp.shared());
-
-                try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
-                    assertNotNull(it);
-
-                    assertTrue("Not historical for iteration: " + i, it.historical(1));
-
-                    for (int j = i; j < entries; j++) {
-                        assertTrue(it.hasNextX());
-
-                        CacheDataRow row = it.next();
-
-                        assertEquals(j * PARTS + 1, (int)row.key().value(grp.cacheObjectContext(), false));
-                        assertEquals(j * PARTS + 1, (int)row.value().value(grp.cacheObjectContext(), false));
-                    }
-
-                    assertFalse(it.hasNext());
-                }
-                finally {
-                    releaseWalPointerForIterator(grp.shared(), ptr);
-                }
-            }
-
-            stopAllGrids();
-
-            // Check that iterator is valid after restart.
-            ignite = startGrid();
-
-            ignite.cluster().active(true);
-
-            grp = ((IgniteEx)ignite).context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
-            offh = grp.offheap();
-            topVer = grp.affinity().lastVersion();
-
-            for (int i = 0; i < entries; i++) {
-                long start = System.currentTimeMillis();
-
-                map = new IgniteDhtDemandedPartitionsMap();
-                map.addHistorical(0, i, entries, PARTS);
-
-                FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
-
-                try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
-                    long end = System.currentTimeMillis();
-
-                    info("Time to get iterator: " + (end - start));
-
-                    assertTrue("Not historical for iteration: " + i, it.historical(0));
-
-                    assertNotNull(it);
-
-                    start = System.currentTimeMillis();
-
-                    for (int j = i; j < entries; j++) {
-                        assertTrue("i=" + i + ", j=" + j, it.hasNextX());
-
-                        CacheDataRow row = it.next();
-
-                        assertEquals(j * PARTS, (int)row.key().value(grp.cacheObjectContext(), false));
-                        assertEquals(j * PARTS, (int)row.value().value(grp.cacheObjectContext(), false));
-                    }
-
-                    end = System.currentTimeMillis();
-
-                    info("Time to iterate: " + (end - start));
-
-                    assertFalse(it.hasNext());
-                }
-                finally {
-                    releaseWalPointerForIterator(grp.shared(), ptr);
-                }
-
-                map = new IgniteDhtDemandedPartitionsMap();
-                map.addHistorical(1, i, entries, PARTS);
-
-                ptr = reserveWalPointerForIterator(grp.shared());
-
-                try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
-                    assertNotNull(it);
-
-                    assertTrue("Not historical for iteration: " + i, it.historical(1));
-
-                    for (int j = i; j < entries; j++) {
-                        assertTrue(it.hasNextX());
-
-                        CacheDataRow row = it.next();
-
-                        assertEquals(j * PARTS + 1, (int)row.key().value(grp.cacheObjectContext(), false));
-                        assertEquals(j * PARTS + 1, (int)row.value().value(grp.cacheObjectContext(), false));
-                    }
-
-                    assertFalse(it.hasNext());
-                }
-                finally {
-                    releaseWalPointerForIterator(grp.shared(), ptr);
-                }
+            finally {
+                releaseWalPointerForIterator(grp.shared(), ptr);
             }
         }
-        finally {
-            stopAllGrids();
 
-            System.clearProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
+        stopAllGrids();
+
+        // Check that iterator is valid after restart.
+        ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        grp = ((IgniteEx)ignite).context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
+        offh = grp.offheap();
+        topVer = grp.affinity().lastVersion();
+
+        for (int i = 0; i < entries; i++) {
+            long start = System.currentTimeMillis();
+
+            map = new IgniteDhtDemandedPartitionsMap();
+            map.addHistorical(0, i, entries, PARTS);
+
+            FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
+
+            try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
+                long end = System.currentTimeMillis();
+
+                info("Time to get iterator: " + (end - start));
+
+                assertTrue("Not historical for iteration: " + i, it.historical(0));
+
+                assertNotNull(it);
+
+                start = System.currentTimeMillis();
+
+                for (int j = i; j < entries; j++) {
+                    assertTrue("i=" + i + ", j=" + j, it.hasNextX());
+
+                    CacheDataRow row = it.next();
+
+                    assertEquals(j * PARTS, (int)row.key().value(grp.cacheObjectContext(), false));
+                    assertEquals(j * PARTS, (int)row.value().value(grp.cacheObjectContext(), false));
+                }
+
+                end = System.currentTimeMillis();
+
+                info("Time to iterate: " + (end - start));
+
+                assertFalse(it.hasNext());
+            }
+            finally {
+                releaseWalPointerForIterator(grp.shared(), ptr);
+            }
+
+            map = new IgniteDhtDemandedPartitionsMap();
+            map.addHistorical(1, i, entries, PARTS);
+
+            ptr = reserveWalPointerForIterator(grp.shared());
+
+            try (IgniteRebalanceIterator it = offh.rebalanceIterator(map, topVer)) {
+                assertNotNull(it);
+
+                assertTrue("Not historical for iteration: " + i, it.historical(1));
+
+                for (int j = i; j < entries; j++) {
+                    assertTrue(it.hasNextX());
+
+                    CacheDataRow row = it.next();
+
+                    assertEquals(j * PARTS + 1, (int)row.key().value(grp.cacheObjectContext(), false));
+                    assertEquals(j * PARTS + 1, (int)row.value().value(grp.cacheObjectContext(), false));
+                }
+
+                assertFalse(it.hasNext());
+            }
+            finally {
+                releaseWalPointerForIterator(grp.shared(), ptr);
+            }
         }
     }
 
@@ -525,76 +510,71 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     public void testHistoricalRebalanceIteratorOverBrokenWAL() throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        try {
-            ignite.cluster().active(true);
+        ignite.cluster().active(true);
 
-            forceCheckpoint();
+        forceCheckpoint();
 
-            GridCacheSharedContext<Object, Object> cctx = ignite.context().cache().context();
+        GridCacheSharedContext<Object, Object> cctx = ignite.context().cache().context();
 
-            int cacheId = CU.cacheId(CACHE_NAME);
+        int cacheId = CU.cacheId(CACHE_NAME);
 
-            int partId1 = 0;
-            int partId2 = 1;
-            int partId3 = 2;
+        int partId1 = 0;
+        int partId2 = 1;
+        int partId3 = 2;
 
-            List<DataRecord> recs = new ArrayList<>();
+        List<DataRecord> recs = new ArrayList<>();
 
-            for (int k = 0; k < 100; k++)
-                recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId1,
-                    GridCacheOperation.CREATE, k + 1, k)));
+        for (int k = 0; k < 100; k++)
+            recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId1,
+                GridCacheOperation.CREATE, k + 1, k)));
 
-            for (int k = 0; k < 200; k++)
-                recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId2,
-                    GridCacheOperation.CREATE, k + 1, k)));
+        for (int k = 0; k < 200; k++)
+            recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId2,
+                GridCacheOperation.CREATE, k + 1, k)));
 
-            for (int k = 0; k < 300; k++)
-                recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId3,
-                    GridCacheOperation.CREATE, k + 1, k)));
+        for (int k = 0; k < 300; k++)
+            recs.add(new DataRecord(entryOp(cctx, CU.cacheId(CACHE_NAME), cacheId, partId3,
+                GridCacheOperation.CREATE, k + 1, k)));
 
-            recs.remove(599);
-            recs.remove(299);
-            recs.remove(99);
+        recs.remove(599);
+        recs.remove(299);
+        recs.remove(99);
 
-            Collections.shuffle(recs);
+        Collections.shuffle(recs);
 
-            for (int i = 0; i < 20; i++)
-                recs.remove(ThreadLocalRandom.current().nextInt(recs.size()));
+        for (int i = 0; i < 20; i++)
+            recs.remove(ThreadLocalRandom.current().nextInt(recs.size()));
 
-            for (DataRecord rec : recs)
-                cctx.wal().log(rec);
+        for (DataRecord rec : recs)
+            cctx.wal().log(rec);
 
-            CacheGroupContext grp = ignite.context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
-            IgniteCacheOffheapManager offh = grp.offheap();
-            AffinityTopologyVersion topVer = grp.affinity().lastVersion();
+        CacheGroupContext grp = ignite.context().cache().cacheGroup(CU.cacheId(CACHE_NAME));
+        IgniteCacheOffheapManager offh = grp.offheap();
+        AffinityTopologyVersion topVer = grp.affinity().lastVersion();
 
-            IgniteDhtDemandedPartitionsMap parts = new IgniteDhtDemandedPartitionsMap();
-            parts.addHistorical(partId1, 0, 100, PARTS);
-            parts.addHistorical(partId2, 0, 200, PARTS);
-            parts.addHistorical(partId3, 0, 300, PARTS);
+        IgniteDhtDemandedPartitionsMap parts = new IgniteDhtDemandedPartitionsMap();
+        parts.addHistorical(partId1, 0, 100, PARTS);
+        parts.addHistorical(partId2, 0, 200, PARTS);
+        parts.addHistorical(partId3, 0, 300, PARTS);
 
-            FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
+        FileWALPointer ptr = reserveWalPointerForIterator(grp.shared());
 
-            try (IgniteRebalanceIterator iter = offh.rebalanceIterator(parts, topVer)) {
+        try (IgniteRebalanceIterator iter = offh.rebalanceIterator(parts, topVer)) {
 
-                int exp = 0;
-                while (iter.hasNext()) {
-                    iter.next();
+            int exp = 0;
+            while (iter.hasNext()) {
+                iter.next();
 
-                    exp++;
-                }
-
-                assertEquals(100 + 200 + 300 - 20 - 3, exp);
-                assertTrue(iter.isPartitionDone(partId1));
-                assertTrue(iter.isPartitionDone(partId2));
-                assertTrue(iter.isPartitionDone(partId3));
+                exp++;
             }
-            finally {
-                releaseWalPointerForIterator(grp.shared(), ptr);
-            }
+
+            assertEquals(100 + 200 + 300 - 20 - 3, exp);
+            assertTrue(iter.isPartitionDone(partId1));
+            assertTrue(iter.isPartitionDone(partId2));
+            assertTrue(iter.isPartitionDone(partId3));
         }
         finally {
-            stopAllGrids();
+            releaseWalPointerForIterator(grp.shared(), ptr);
         }
     }
 
@@ -607,38 +587,33 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
 
         ignite.cluster().active(true);
 
-        try {
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                .cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+            .cache().context().database();
 
-            dbMgr.enableCheckpoints(false).get();
+        dbMgr.enableCheckpoints(false).get();
 
-            int entries = 100;
+        int entries = 100;
 
-            try (IgniteDataStreamer<Integer, Integer> streamer = ignite.dataStreamer(CACHE_NAME)) {
-                for (int i = 0; i < entries; i++)
-                    streamer.addData(i, i);
-            }
-
-            IgniteCache<Integer, Integer> cache = ignite.cache(CACHE_NAME);
-
+        try (IgniteDataStreamer<Integer, Integer> streamer = ignite.dataStreamer(CACHE_NAME)) {
             for (int i = 0; i < entries; i++)
-                assertEquals(new Integer(i), cache.get(i));
-
-            stopGrid();
-
-            ignite = startGrid();
-
-            ignite.cluster().active(true);
-
-            cache = ignite.cache(CACHE_NAME);
-
-            for (int i = 0; i < entries; i++)
-                assertEquals(new Integer(i), cache.get(i));
+                streamer.addData(i, i);
         }
-        finally {
-            stopAllGrids();
-        }
+
+        IgniteCache<Integer, Integer> cache = ignite.cache(CACHE_NAME);
+
+        for (int i = 0; i < entries; i++)
+            assertEquals(new Integer(i), cache.get(i));
+
+        stopGrid();
+
+        ignite = startGrid();
+
+        ignite.cluster().active(true);
+
+        cache = ignite.cache(CACHE_NAME);
+
+        for (int i = 0; i < entries; i++)
+            assertEquals(new Integer(i), cache.get(i));
     }
 
     /**
@@ -680,57 +655,52 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRecoveryRandomPutRemove() throws Exception {
-        try {
-            pageSize = 1024;
+        pageSize = 1024;
 
-            extraCcfg = new CacheConfiguration(CACHE2_NAME);
-            extraCcfg.setAffinity(new RendezvousAffinityFunction(false, PARTS));
+        extraCcfg = new CacheConfiguration(CACHE2_NAME);
+        extraCcfg.setAffinity(new RendezvousAffinityFunction(false, PARTS));
 
-            Ignite ignite = startGrid(0);
+        Ignite ignite = startGrid(0);
 
-            ignite.cluster().active(true);
+        ignite.cluster().active(true);
 
-            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                .cache().context().database();
+        GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+            .cache().context().database();
 
-            dbMgr.enableCheckpoints(false).get();
+        dbMgr.enableCheckpoints(false).get();
 
-            IgniteCache<Integer, IndexedValue> cache1 = ignite.cache(CACHE_NAME);
-            IgniteCache<Object, Object> cache2 = ignite.cache(CACHE2_NAME);
+        IgniteCache<Integer, IndexedValue> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE2_NAME);
 
-            final int KEYS1 = 100;
+        final int KEYS1 = 100;
 
-            for (int i = 0; i < KEYS1; i++)
-                cache1.put(i, new IndexedValue(i));
+        for (int i = 0; i < KEYS1; i++)
+            cache1.put(i, new IndexedValue(i));
 
-            for (int i = 0; i < KEYS1; i++) {
-                if (i % 2 == 0)
-                    cache1.remove(i);
-            }
+        for (int i = 0; i < KEYS1; i++) {
+            if (i % 2 == 0)
+                cache1.remove(i);
+        }
 
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-            for (int i = 0; i < KEYS1; i++) {
+        for (int i = 0; i < KEYS1; i++) {
+            cache2.put(i, new byte[rnd.nextInt(512)]);
+
+            if (rnd.nextBoolean())
                 cache2.put(i, new byte[rnd.nextInt(512)]);
 
-                if (rnd.nextBoolean())
-                    cache2.put(i, new byte[rnd.nextInt(512)]);
-
-                if (rnd.nextBoolean())
-                    cache2.remove(i);
-            }
-
-            ignite.close();
-
-            ignite = startGrid(0);
-
-            ignite.cluster().active(true);
-
-            ignite.cache(CACHE_NAME).put(1, new IndexedValue(0));
+            if (rnd.nextBoolean())
+                cache2.remove(i);
         }
-        finally {
-            stopAllGrids();
-        }
+
+        ignite.close();
+
+        ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        ignite.cache(CACHE_NAME).put(1, new IndexedValue(0));
     }
 
     /**
@@ -756,55 +726,50 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRecoveryNoPageLost3() throws Exception {
-        try {
-            pageSize = 1024;
-            checkpointFreq = 100L;
-            extraCcfg = new CacheConfiguration(CACHE2_NAME);
-            extraCcfg.setAffinity(new RendezvousAffinityFunction(false, 32));
+        pageSize = 1024;
+        checkpointFreq = 100L;
+        extraCcfg = new CacheConfiguration(CACHE2_NAME);
+        extraCcfg.setAffinity(new RendezvousAffinityFunction(false, 32));
 
-            List<Integer> pages = null;
+        List<Integer> pages = null;
 
-            for (int iter = 0; iter < 5; iter++) {
-                log.info("Start node: " + iter);
+        for (int iter = 0; iter < 5; iter++) {
+            log.info("Start node: " + iter);
 
-                Ignite ignite = startGrid(0);
+            Ignite ignite = startGrid(0);
 
-                ignite.cluster().active(true);
+            ignite.cluster().active(true);
 
-                if (pages != null) {
-                    List<Integer> curPags = allocatedPages(ignite, CACHE2_NAME);
+            if (pages != null) {
+                List<Integer> curPags = allocatedPages(ignite, CACHE2_NAME);
 
-                    assertEquals("Iter = " + iter, pages, curPags);
-                }
-
-                final IgniteCache<Integer, Object> cache = ignite.cache(CACHE2_NAME);
-
-                final int ops = ThreadLocalRandom.current().nextInt(10) + 10;
-
-                GridTestUtils.runMultiThreaded(new Callable<Void>() {
-                    @Override public Void call() throws Exception {
-                        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-
-                        for (int i = 0; i < ops; i++) {
-                            Integer key = rnd.nextInt(1000);
-
-                            cache.put(key, new byte[rnd.nextInt(512)]);
-
-                            if (rnd.nextBoolean())
-                                cache.remove(key);
-                        }
-
-                        return null;
-                    }
-                }, 10, "update");
-
-                pages = allocatedPages(ignite, CACHE2_NAME);
-
-                Ignition.stop(ignite.name(), false); //will make checkpoint
+                assertEquals("Iter = " + iter, pages, curPags);
             }
-        }
-        finally {
-            stopAllGrids();
+
+            final IgniteCache<Integer, Object> cache = ignite.cache(CACHE2_NAME);
+
+            final int ops = ThreadLocalRandom.current().nextInt(10) + 10;
+
+            GridTestUtils.runMultiThreaded(new Callable<Void>() {
+                @Override public Void call() throws Exception {
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+
+                    for (int i = 0; i < ops; i++) {
+                        Integer key = rnd.nextInt(1000);
+
+                        cache.put(key, new byte[rnd.nextInt(512)]);
+
+                        if (rnd.nextBoolean())
+                            cache.remove(key);
+                    }
+
+                    return null;
+                }
+            }, 10, "update");
+
+            pages = allocatedPages(ignite, CACHE2_NAME);
+
+            Ignition.stop(ignite.name(), false); //will make checkpoint
         }
     }
 
@@ -813,46 +778,41 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void recoveryNoPageLost(boolean checkpoint) throws Exception {
-        try {
-            pageSize = 1024;
-            extraCcfg = new CacheConfiguration(CACHE2_NAME);
-            extraCcfg.setAffinity(new RendezvousAffinityFunction(false, 32));
+        pageSize = 1024;
+        extraCcfg = new CacheConfiguration(CACHE2_NAME);
+        extraCcfg.setAffinity(new RendezvousAffinityFunction(false, 32));
 
-            List<Integer> pages = null;
+        List<Integer> pages = null;
 
-            AtomicInteger cnt = new AtomicInteger();
+        AtomicInteger cnt = new AtomicInteger();
 
-            for (int iter = 0; iter < 5; iter++) {
-                log.info("Start node: " + iter);
+        for (int iter = 0; iter < 5; iter++) {
+            log.info("Start node: " + iter);
 
-                Ignite ignite = startGrid(0);
+            Ignite ignite = startGrid(0);
 
-                ignite.cluster().active(true);
+            ignite.cluster().active(true);
 
-                GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
-                    .cache().context().database();
+            GridCacheDatabaseSharedManager dbMgr = (GridCacheDatabaseSharedManager)((IgniteEx)ignite).context()
+                .cache().context().database();
 
-                if (!checkpoint)
-                    dbMgr.enableCheckpoints(false).get();
+            if (!checkpoint)
+                dbMgr.enableCheckpoints(false).get();
 
-                if (pages != null) {
-                    List<Integer> curPags = allocatedPages(ignite, CACHE2_NAME);
+            if (pages != null) {
+                List<Integer> curPags = allocatedPages(ignite, CACHE2_NAME);
 
-                    assertEquals(pages, curPags);
-                }
-
-                IgniteCache<Integer, Object> cache = ignite.cache(CACHE2_NAME);
-
-                for (int i = 0; i < 128; i++)
-                    cache.put(cnt.incrementAndGet(), new byte[256 + iter * 100]);
-
-                pages = allocatedPages(ignite, CACHE2_NAME);
-
-                stopGrid(0, true);
+                assertEquals(pages, curPags);
             }
-        }
-        finally {
-            stopAllGrids();
+
+            IgniteCache<Integer, Object> cache = ignite.cache(CACHE2_NAME);
+
+            for (int i = 0; i < 128; i++)
+                cache.put(cnt.incrementAndGet(), new byte[256 + iter * 100]);
+
+            pages = allocatedPages(ignite, CACHE2_NAME);
+
+            stopGrid(0, true);
         }
     }
 
@@ -909,71 +869,66 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFreeListRecovery() throws Exception {
-        try {
-            pageSize = 1024;
-            extraCcfg = new CacheConfiguration(CACHE2_NAME);
+        pageSize = 1024;
+        extraCcfg = new CacheConfiguration(CACHE2_NAME);
 
-            Ignite ignite = startGrid(0);
+        Ignite ignite = startGrid(0);
 
-            ignite.cluster().active(true);
+        ignite.cluster().active(true);
 
-            IgniteCache<Integer, IndexedValue> cache1 = ignite.cache(CACHE_NAME);
-            IgniteCache<Object, Object> cache2 = ignite.cache(CACHE2_NAME);
+        IgniteCache<Integer, IndexedValue> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE2_NAME);
 
-            final int KEYS1 = 2048;
+        final int KEYS1 = 2048;
 
-            for (int i = 0; i < KEYS1; i++)
-                cache1.put(i, new IndexedValue(i));
+        for (int i = 0; i < KEYS1; i++)
+            cache1.put(i, new IndexedValue(i));
 
-            for (int i = 0; i < KEYS1; i++) {
-                if (i % 2 == 0)
-                    cache1.remove(i);
-            }
+        for (int i = 0; i < KEYS1; i++) {
+            if (i % 2 == 0)
+                cache1.remove(i);
+        }
 
-            ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-            for (int i = 0; i < KEYS1; i++) {
+        for (int i = 0; i < KEYS1; i++) {
+            cache2.put(i, new byte[rnd.nextInt(512)]);
+
+            if (rnd.nextBoolean())
                 cache2.put(i, new byte[rnd.nextInt(512)]);
 
-                if (rnd.nextBoolean())
-                    cache2.put(i, new byte[rnd.nextInt(512)]);
-
-                if (rnd.nextBoolean())
-                    cache2.remove(i);
-            }
-
-            Map<Integer, T2<Map<Integer, long[]>, int[]>> cache1_1 = getFreeListData(ignite, CACHE_NAME);
-            Map<Integer, T2<Map<Integer, long[]>, int[]>> cache2_1 = getFreeListData(ignite, CACHE2_NAME);
-            T2<long[], Integer> rl1_1 = getReuseListData(ignite, CACHE_NAME);
-            T2<long[], Integer> rl2_1 = getReuseListData(ignite, CACHE2_NAME);
-
-            ignite.close();
-
-            ignite = startGrid(0);
-
-            ignite.cluster().active(true);
-
-            cache1 = ignite.cache(CACHE_NAME);
-            cache2 = ignite.cache(CACHE2_NAME);
-
-            for (int i = 0; i < KEYS1; i++) {
-                cache1.get(i);
-                cache2.get(i);
-            }
-
-            Map<Integer, T2<Map<Integer, long[]>, int[]>> cache1_2 = getFreeListData(ignite, CACHE_NAME);
-            Map<Integer, T2<Map<Integer, long[]>, int[]>> cache2_2 = getFreeListData(ignite, CACHE2_NAME);
-            T2<long[], Integer> rl1_2 = getReuseListData(ignite, CACHE_NAME);
-            T2<long[], Integer> rl2_2 = getReuseListData(ignite, CACHE2_NAME);
-
-            checkEquals(cache1_1, cache1_2);
-            checkEquals(cache2_1, cache2_2);
-            checkEquals(rl1_1, rl1_2);
-            checkEquals(rl2_1, rl2_2);
+            if (rnd.nextBoolean())
+                cache2.remove(i);
         }
-        finally {
-            stopAllGrids();
+
+        Map<Integer, T2<Map<Integer, long[]>, int[]>> cache1_1 = getFreeListData(ignite, CACHE_NAME);
+        Map<Integer, T2<Map<Integer, long[]>, int[]>> cache2_1 = getFreeListData(ignite, CACHE2_NAME);
+        T2<long[], Integer> rl1_1 = getReuseListData(ignite, CACHE_NAME);
+        T2<long[], Integer> rl2_1 = getReuseListData(ignite, CACHE2_NAME);
+
+        stopGrid(0, false);
+
+        ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        cache1 = ignite.cache(CACHE_NAME);
+        cache2 = ignite.cache(CACHE2_NAME);
+
+        for (int i = 0; i < KEYS1; i++) {
+            cache1.get(i);
+            cache2.get(i);
         }
+
+        Map<Integer, T2<Map<Integer, long[]>, int[]>> cache1_2 = getFreeListData(ignite, CACHE_NAME);
+        Map<Integer, T2<Map<Integer, long[]>, int[]>> cache2_2 = getFreeListData(ignite, CACHE2_NAME);
+        T2<long[], Integer> rl1_2 = getReuseListData(ignite, CACHE_NAME);
+        T2<long[], Integer> rl2_2 = getReuseListData(ignite, CACHE2_NAME);
+
+        checkEquals(cache1_1, cache1_2);
+        checkEquals(cache2_1, cache2_2);
+        checkEquals(rl1_1, rl1_2);
+        checkEquals(rl2_1, rl2_2);
     }
 
     /**
@@ -1006,76 +961,68 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
     /**
      * Tests if history iterator work correctly if partition contains missed due to rollback updates.
      */
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
     @Test
     public void testWalIteratorOverPartitionWithMissingEntries() throws Exception {
-        System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0");
+        Ignite ignite = startGrid();
 
-        try {
-            Ignite ignite = startGrid();
+        ignite.cluster().active(true);
 
-            ignite.cluster().active(true);
+        awaitPartitionMapExchange();
 
-            awaitPartitionMapExchange();
+        int totalKeys = 30;
 
-            int totalKeys = 30;
+        final int part = 1;
 
-            final int part = 1;
+        List<Integer> keys = partitionKeys(ignite.cache(CACHE_NAME), part, totalKeys, 0);
 
-            List<Integer> keys = partitionKeys(ignite.cache(CACHE_NAME), part, totalKeys, 0);
+        ignite.cache(CACHE_NAME).put(keys.get(0), keys.get(0));
+        ignite.cache(CACHE_NAME).put(keys.get(1), keys.get(1));
 
-            ignite.cache(CACHE_NAME).put(keys.get(0), keys.get(0));
-            ignite.cache(CACHE_NAME).put(keys.get(1), keys.get(1));
+        int rolledBack = 0;
 
-            int rolledBack = 0;
+        rolledBack += prepareTx(ignite, keys.subList(2, 6));
 
-            rolledBack += prepareTx(ignite, keys.subList(2, 6));
+        for (Integer key : keys.subList(6, 10))
+            ignite.cache(CACHE_NAME).put(key, key);
 
-            for (Integer key : keys.subList(6, 10))
-                ignite.cache(CACHE_NAME).put(key, key);
+        rolledBack += prepareTx(ignite, keys.subList(10, 14));
 
-            rolledBack += prepareTx(ignite, keys.subList(10, 14));
+        for (Integer key : keys.subList(14, 20))
+            ignite.cache(CACHE_NAME).put(key, key);
 
-            for (Integer key : keys.subList(14, 20))
-                ignite.cache(CACHE_NAME).put(key, key);
+        rolledBack += prepareTx(ignite, keys.subList(20, 25));
 
-            rolledBack += prepareTx(ignite, keys.subList(20, 25));
+        for (Integer key : keys.subList(25, 30))
+            ignite.cache(CACHE_NAME).put(key, key);
 
-            for (Integer key : keys.subList(25, 30))
-                ignite.cache(CACHE_NAME).put(key, key);
+        assertEquals(totalKeys - rolledBack, ignite.cache(CACHE_NAME).size());
 
-            assertEquals(totalKeys - rolledBack, ignite.cache(CACHE_NAME).size());
+        // Expecting counters: 1-2, missed 3-6, 7-10, missed 11-14, 15-20, missed 21-25, 26-30
+        List<CacheDataRow> rows = rows(ignite, part, 0, 4);
 
-            // Expecting counters: 1-2, missed 3-6, 7-10, missed 11-14, 15-20, missed 21-25, 26-30
-            List<CacheDataRow> rows = rows(ignite, part, 0, 4);
+        assertEquals(2, rows.size());
+        assertEquals(keys.get(0), rows.get(0).key().value(null, false));
+        assertEquals(keys.get(1), rows.get(1).key().value(null, false));
 
-            assertEquals(2, rows.size());
-            assertEquals(keys.get(0), rows.get(0).key().value(null, false));
-            assertEquals(keys.get(1), rows.get(1).key().value(null, false));
+        rows = rows(ignite, part, 3, 4);
+        assertEquals(0, rows.size());
 
-            rows = rows(ignite, part, 3, 4);
-            assertEquals(0, rows.size());
+        rows = rows(ignite, part, 4, 23);
+        assertEquals(10, rows.size());
 
-            rows = rows(ignite, part, 4, 23);
-            assertEquals(10, rows.size());
+        int i = 0;
+        for (Integer key : keys.subList(6, 10))
+            assertEquals(key, rows.get(i++).key().value(null, false));
+        for (Integer key : keys.subList(14, 20))
+            assertEquals(key, rows.get(i++).key().value(null, false));
 
-            int i = 0;
-            for (Integer key : keys.subList(6, 10))
-                assertEquals(key, rows.get(i++).key().value(null, false));
-            for (Integer key : keys.subList(14, 20))
-                assertEquals(key, rows.get(i++).key().value(null, false));
-
-            i = 0;
-            rows = rows(ignite, part, 16, 26);
-            assertEquals(5, rows.size());
-            for (Integer key : keys.subList(16, 20))
-                assertEquals(key, rows.get(i++).key().value(null, false));
-            assertEquals(keys.get(25), rows.get(i).key().value(null, false));
-        }
-        finally {
-            stopAllGrids();
-
-            System.clearProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD);
-        }
+        i = 0;
+        rows = rows(ignite, part, 16, 26);
+        assertEquals(5, rows.size());
+        for (Integer key : keys.subList(16, 20))
+            assertEquals(key, rows.get(i++).key().value(null, false));
+        assertEquals(keys.get(25), rows.get(i).key().value(null, false));
     }
 
     /**

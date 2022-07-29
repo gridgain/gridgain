@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -627,7 +626,7 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         clearTombstones(cache);
 
-        crd.close();
+        stopGrid(0, false);
 
         crd = startGrid(0);
 
@@ -637,12 +636,13 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
         assertTrue(U.delete(U.resolveWorkDirectory(dflt, DFLT_STORE_DIR + "/wal/archive/" + crd.name(), true)));
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
-        IgniteEx g2 = startGrid(1, rslvr);
+
+        startGrid(1, rslvr);
 
         awaitPartitionMapExchange();
 
         assertTrue(historical(1).isEmpty());
-        assertTrue(rslvr.reason == PartitionsEvictManager.EvictReason.CLEARING);
+        assertSame(PartitionsEvictManager.EvictReason.CLEARING, rslvr.reason);
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
@@ -676,12 +676,10 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
 
         TrackingResolver rslvr = new TrackingResolver(testPart);
 
-        IgniteInternalFuture<Void> startFut = GridTestUtils.runAsync(new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                startGrid(cfg1, rslvr);
+        IgniteInternalFuture<Void> startFut = GridTestUtils.runAsync(() -> {
+            startGrid(cfg1, rslvr);
 
-                return null;
-            }
+            return null;
         });
 
         spi1.waitForBlocked();
