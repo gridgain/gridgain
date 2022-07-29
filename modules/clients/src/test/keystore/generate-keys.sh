@@ -91,3 +91,6 @@ createStore node01 oneca
 createStore node02 twoca
 createStore node03 twoca
 createStore node02old twoca true
+
+keytool -importkeystore -srckeystore node01.jks -destkeystore node0102.jks -srcalias node01 -destalias node01 -srcstorepass ${pwd} -deststorepass ${pwd}
+keytool -importkeystore -srckeystore node02.jks -destkeystore node0102.jks -srcalias node02 -destalias node02 -srcstorepass ${pwd} -deststorepass ${pwd}
