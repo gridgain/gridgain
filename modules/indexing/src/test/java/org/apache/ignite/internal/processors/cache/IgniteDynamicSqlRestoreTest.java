@@ -26,6 +26,8 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,6 +36,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -285,90 +288,72 @@ public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implemen
         // Start topology.
         Ignite ignite = startGrids(2);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ClusterState.ACTIVE);
 
         // Create table, add some data.
         int entryCnt = 50;
 
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800")) {
-            executeJdbc(conn,
-                " CREATE TABLE PERSON (\n" +
-                    " FIRST_NAME VARCHAR,\n" +
-                    " LAST_NAME VARCHAR,\n" +
-                    " ADDRESS VARCHAR,\n" +
-                    " LANG VARCHAR,\n" +
-                    " BIRTH_DATE TIMESTAMP,\n" +
-                    " CONSTRAINT PK_PERSON PRIMARY KEY (FIRST_NAME,LAST_NAME,ADDRESS,LANG)\n" +
-                    " ) WITH \"key_type=PersonKeyType, " +
-                    "CACHE_NAME=PersonCache, value_type=PersonValueType, AFFINITY_KEY=FIRST_NAME,template=PARTITIONED,backups=1\"");
+        IgniteCache<?, ?> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
 
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "insert into Person(LANG, FIRST_NAME, ADDRESS, LAST_NAME, BIRTH_DATE) values(?,?,?,?,?)")) {
-                for (int i = 0; i < entryCnt; i++) {
-                    String s = String.valueOf(i);
+        cache.query(new SqlFieldsQuery(
+            " CREATE TABLE PERSON (\n" +
+                " FIRST_NAME VARCHAR,\n" +
+                " LAST_NAME VARCHAR,\n" +
+                " ADDRESS VARCHAR,\n" +
+                " LANG VARCHAR,\n" +
+                " BIRTH_DATE TIMESTAMP,\n" +
+                " CONSTRAINT PK_PERSON PRIMARY KEY (FIRST_NAME,LAST_NAME,ADDRESS,LANG)\n" +
+                " ) WITH \"key_type=PersonKeyType, " +
+                "CACHE_NAME=PersonCache, value_type=PersonValueType, AFFINITY_KEY=FIRST_NAME,template=PARTITIONED,backups=1\""
+        )).getAll();
 
-                    stmt.setString(1, s);
-                    stmt.setString(2, s);
-                    stmt.setString(3, s);
-                    stmt.setString(4, s);
-                    stmt.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
+        for (int i = 0; i < entryCnt; i++) {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "insert into Person(LANG, FIRST_NAME, ADDRESS, LAST_NAME, BIRTH_DATE) values(?,?,?,?,?)"
+            );
 
-                    stmt.executeUpdate();
-                }
-            }
+            String s = String.valueOf(i);
+
+            query.setArgs(s, s, s, s, new Timestamp(System.currentTimeMillis()));
+
+            cache.query(query).getAll();
         }
 
         // Stop second node.
         stopGrid(1, true);
 
         // Create an index on remaining node.
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800")) {
-            executeJdbc(conn, "create index PERSON_FIRST_NAME_IDX on PERSON(FIRST_NAME)");
-        }
+        cache.query(new SqlFieldsQuery("create index PERSON_FIRST_NAME_IDX on PERSON(FIRST_NAME)")).getAll();
 
         // Restart second node.
-        startGrid(1);
+        Ignite restartedNode = startGrid(1);
 
         // Await for index rebuild on started node.
-        assert GridTestUtils.waitForCondition(() -> {
-            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10801")) {
-                try (PreparedStatement stmt = conn.prepareStatement(
-                    "EXPLAIN SELECT * FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=?")) {
-                    stmt.setString(1, String.valueOf(1));
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "EXPLAIN SELECT * FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=1"
+            );
 
-                    StringBuilder fullPlan = new StringBuilder();
+            String fullPlan = restartedNode.cache(DEFAULT_CACHE_NAME)
+                .query(query)
+                .getAll()
+                .stream()
+                .map(l -> l.get(0).toString())
+                .collect(Collectors.joining("; "));
 
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        while (rs.next())
-                            fullPlan.append(rs.getString(1)).append("; ");
-                    }
-
-                    System.out.println("PLAN: " + fullPlan);
-
-                    return fullPlan.toString().contains("PUBLIC.PERSON_FIRST_NAME_IDX");
-                }
-            }
-            catch (Exception e) {
-                throw new RuntimeException("Query failed.", e);
-            }
-        }, 5_000);
+            return fullPlan.contains("PUBLIC.PERSON_FIRST_NAME_IDX");
+        }, 5_000));
 
         // Make sure that data could be queried.
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800")) {
-            try (PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=?")) {
-                for (int i = 0; i < entryCnt; i++) {
-                    stmt.setString(1, String.valueOf(i));
+        for (int i = 0; i < entryCnt; i++) {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "SELECT COUNT(*) FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=?"
+            );
 
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        rs.next();
+            query.setArgs(String.valueOf(i));
 
-                        long cnt = rs.getLong(1);
-
-                        assertEquals(1L, cnt);
-                    }
-                }
-            }
+            for (List<?> result : cache.query(query).getAll())
+                assertEquals(1L, ((Long) result.get(0)).longValue());
         }
     }
 
