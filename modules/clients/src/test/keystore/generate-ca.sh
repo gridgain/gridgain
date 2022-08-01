@@ -91,9 +91,9 @@ cd ..
 # Create four trust stores: trust-one, trust-two, trust-three and trust-both.
 # trust-both contains keys of oneca and twoca.
 
-keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-one.jks
-keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-two.jks
-keytool -import -noprompt -file ca/threeca.pem -alias threeca -keypass ${pwd} -storepass ${pwd} -keystore trust-three.jks
+keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-one.jks -storetype JKS
+keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-two.jks -storetype JKS
+keytool -import -noprompt -file ca/threeca.pem -alias threeca -keypass ${pwd} -storepass ${pwd} -keystore trust-three.jks -storetype JKS
 
-keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks
-keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks
+keytool -import -noprompt -file ca/oneca.pem -alias oneca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks -storetype JKS
+keytool -import -noprompt -file ca/twoca.pem -alias twoca -keypass ${pwd} -storepass ${pwd} -keystore trust-both.jks -storetype JKS

@@ -49,7 +49,7 @@ function createStore {
 
 	echo
 	echo Generate a certificate and private key pair for ${artifact}.
-	keytool -genkey -keyalg RSA -keysize 1024 \
+	keytool -genkey -keyalg RSA -keysize 1024 -storetype JKS \
 	        -dname "emailAddress=${artifact}@ignite.apache.org, CN=${artifact}, OU=Dev, O=Ignite, L=SPb, ST=SPb, C=RU" \
 	        -alias ${artifact} -keypass ${pwd} -keystore ${artifact}.jks -storepass ${pwd}
 
@@ -92,5 +92,5 @@ createStore node02 twoca
 createStore node03 twoca
 createStore node02old twoca true
 
-keytool -importkeystore -srckeystore node01.jks -destkeystore node0102.jks -srcalias node01 -destalias node01 -srcstorepass ${pwd} -deststorepass ${pwd}
-keytool -importkeystore -srckeystore node02.jks -destkeystore node0102.jks -srcalias node02 -destalias node02 -srcstorepass ${pwd} -deststorepass ${pwd}
+keytool -importkeystore -srckeystore node01.jks -destkeystore node0102.jks -srcalias node01 -destalias node01 -srcstorepass ${pwd} -deststorepass ${pwd} -storetype JKS
+keytool -importkeystore -srckeystore node02.jks -destkeystore node0102.jks -srcalias node02 -destalias node02 -srcstorepass ${pwd} -deststorepass ${pwd} -storetype JKS
