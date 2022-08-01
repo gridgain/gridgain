@@ -241,7 +241,7 @@ public class MarshallerContextImpl implements MarshallerContext {
             }
         }
         else {
-            if (transport.stopping())
+            if (transport == null || transport.stopping())
                 return false;
 
             MarshallerMappingItem item = new MarshallerMappingItem(platformId, typeId, clsName);
