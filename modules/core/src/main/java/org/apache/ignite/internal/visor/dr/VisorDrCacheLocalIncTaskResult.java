@@ -12,10 +12,10 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /** */
-    String resultMsg;
+    private String resultMsg;
 
     /** */
-    byte dataCenterId;
+    private byte dataCenterId;
 
     /** */
     public void resultMessage(String resultMessage) {
@@ -27,15 +27,13 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
         this.dataCenterId = dataCenterId;
     }
 
-    /** */
-    public VisorDrCacheLocalIncTaskResult() {
-    }
-
+    /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeByte(dataCenterId);
         out.writeUTF(resultMsg);
     }
 
+    /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         dataCenterId = in.readByte();
         resultMsg = in.readUTF();

@@ -100,10 +100,10 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Incremental !!!!!",
+        usage(log, "Execute full state transfer over snapshot:",
             DATA_CENTER_REPLICATION,
             INC_TRANSFER.toString(),
-            "<remoteDataCenterId>", "<remoteDataCenterId>", "<remoteDataCenterId>" // !!!
+            "<cacheName>", "<snapshotId>", "<remoteDataCenterId>"
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",
