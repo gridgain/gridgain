@@ -158,7 +158,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkSslCommunicationMetrics(reg, 3, 0, 2);
 
         assertThrowsWithCause(() ->
-            getConnection(jdbcConfiguration("thinClient", "trusttwo", null, "TLSv1")),
+            getConnection(jdbcConfiguration("thinClient", "trusttwo", null, "TLSv1.1")),
             SQLException.class);
 
         checkSslCommunicationMetrics(reg, 4, 0, 3);
@@ -201,7 +201,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkSslCommunicationMetrics(reg, 7, 0, 6);
 
         // Tests mismatched protocol versions.
-        try (GridClient ignored = start(gridClientConfiguration("connectorClient", "trustthree", null, "TLSv1"))) {
+        try (GridClient ignored = start(gridClientConfiguration("connectorClient", "trustthree", null, "TLSv1.3"))) {
             // GridClient makes 2 additional  silent connection attempts if an SSL error occurs.
         }
 
@@ -226,8 +226,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkNodeJoinFails(2, false, "node01", "trustone", UNSUPPORTED_CIPHER_SUITE, "TLSv1.2");
 
         // Tests mismatched protocol versions.
-        checkNodeJoinFails(2, true, "client", "trustone", null, "TLSv1");
-        checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1");
+        checkNodeJoinFails(2, true, "client", "trustone", null, "TLSv1.1");
+        checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1.1");
 
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
         assertTrue(waitForCondition(() ->
@@ -306,7 +306,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
 
         // Tests mismatched protocol versions.
         assertThrowsWithCause(() ->
-            startClient(clientConfiguration("thinClient", "trusttwo", null, "TLSv1")),
+            startClient(clientConfiguration("thinClient", "trusttwo", null, "TLSv1.1")),
             ClientConnectionException.class
         );
 
