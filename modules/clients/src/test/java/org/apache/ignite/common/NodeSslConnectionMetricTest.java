@@ -229,11 +229,6 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkNodeJoinFails(2, true, "client", "trustone", null, "TLSv1.1");
         checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1.1");
 
-        synchronized (this) {
-            this.wait(5000);
-        }
-        System.err.println("REJECTS NUM: " + reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value());
-
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
         assertTrue(waitForCondition(() ->
             18 == reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value(),
