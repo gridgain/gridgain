@@ -126,13 +126,10 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.INVOKE_NO_OP;
 import static org.apache.ignite.internal.processors.cache.GridCacheUpdateAtomicResult.UpdateOutcome.REMOVE_NO_VAL;
-import static org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl.CacheDataStoreImpl.replicationRequire;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.MVCC_MAX_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.compareIgnoreOpCounter;
 import static org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter.RowData.NO_KEY;
-import static org.apache.ignite.internal.processors.dr.GridDrType.DR_BACKUP;
-import static org.apache.ignite.internal.processors.dr.GridDrType.DR_IGNORE;
 import static org.apache.ignite.internal.processors.dr.GridDrType.DR_NONE;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.HASH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.SensitiveDataLogging.PLAIN;
@@ -1538,12 +1535,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             update(val, expireTime, ttl, newVer, true);
 
-            GridDrType drType0 = drType;
-
-            if (!replicationRequire(newVer) && drType != DR_BACKUP)
-                drType0 = DR_IGNORE;
-
-            drReplicate(drType0, val, newVer, topVer);
+            drReplicate(drType, val, newVer, topVer);
 
             recordNodeId(affNodeId, topVer);
 
@@ -2381,12 +2373,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 assert updateVal != null : c;
 
-                GridDrType drType0 = drType;
-
-                if (replicationRequire(newVer) && drType != DR_BACKUP)
-                    drType0 = DR_IGNORE;
-
-                drReplicate(drType0, updateVal, updateVer, topVer);
+                drReplicate(drType, updateVal, updateVer, topVer);
 
                 recordNodeId(affNodeId, topVer);
 
