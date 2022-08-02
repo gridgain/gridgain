@@ -201,7 +201,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkSslCommunicationMetrics(reg, 7, 0, 6);
 
         // Tests mismatched protocol versions.
-        try (GridClient ignored = start(gridClientConfiguration("connectorClient", "trustthree", null, "TLSv1.3"))) {
+        try (GridClient ignored = start(gridClientConfiguration("connectorClient", "trustthree", null, "TLSv1.1"))) {
             // GridClient makes 2 additional  silent connection attempts if an SSL error occurs.
         }
 
