@@ -57,12 +57,19 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.record.HeaderRecord;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+
 /**
  * Record data V2 serializer.
  */
 public class RecordDataV2Serializer extends RecordDataV1Serializer {
     /** Length of HEADER record data. */
     private static final int HEADER_RECORD_DATA_SIZE = /*Magic*/8 + /*Version*/4;
+
+    /** */
+    private static final boolean DESERIALIZE_OUT_OF_ORDER_UPDATE_AS_ENCRYPTED =
+        getBoolean(IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE, false);
 
     /** Serializer of {@link TxRecord} records. */
     private final TxRecordSerializer txRecordSerializer;
@@ -244,8 +251,12 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
 
                 entries = new ArrayList<>(entryCnt);
 
-                for (int i = 0; i < entryCnt; i++)
-                    entries.add(readPlainDataEntry(in));
+                for (int i = 0; i < entryCnt; i++) {
+                    if (DESERIALIZE_OUT_OF_ORDER_UPDATE_AS_ENCRYPTED)
+                        entries.add(readEncryptedDataEntry(in));
+                    else
+                        entries.add(readPlainDataEntry(in));
+                }
 
                 return new OutOfOrderDataRecord(entries, timeStamp);
 
