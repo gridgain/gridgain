@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
 import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
@@ -67,9 +68,8 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
     /** Length of HEADER record data. */
     private static final int HEADER_RECORD_DATA_SIZE = /*Magic*/8 + /*Version*/4;
 
-    /** */
-    private static final boolean DESERIALIZE_OUT_OF_ORDER_UPDATE_AS_ENCRYPTED =
-        getBoolean(IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE, false);
+    /** @see IgniteSystemProperties#IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE for the details. */
+    private final boolean deserializeOutOfOrderUpdateAsEncrypted = getBoolean(IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE);
 
     /** Serializer of {@link TxRecord} records. */
     private final TxRecordSerializer txRecordSerializer;
@@ -252,7 +252,7 @@ public class RecordDataV2Serializer extends RecordDataV1Serializer {
                 entries = new ArrayList<>(entryCnt);
 
                 for (int i = 0; i < entryCnt; i++) {
-                    if (DESERIALIZE_OUT_OF_ORDER_UPDATE_AS_ENCRYPTED)
+                    if (deserializeOutOfOrderUpdateAsEncrypted)
                         entries.add(readEncryptedDataEntry(in));
                     else
                         entries.add(readPlainDataEntry(in));
