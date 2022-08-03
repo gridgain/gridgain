@@ -1481,6 +1481,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TEST_ENV = "IGNITE_TEST_ENV";
 
     /**
+     * This property allows to enable de-serializing OUT_OF_ORDER_UPDATE WAL records in the way that all data entries
+     * assumed as encrypted.
+     *
+     * The default value is {@code false}.
+     */
+    public static final String IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE = "IGNITE_ENCRYPTED_OUT_OF_ORDER_UPDATE";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
