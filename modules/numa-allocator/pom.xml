@@ -108,6 +108,9 @@
                     <plugin>
                         <groupId>com.googlecode.cmake-maven-project</groupId>
                         <artifactId>cmake-maven-plugin</artifactId>
+                        <configuration>
+                            <downloadBinaries>false</downloadBinaries>
+                        </configuration>
                         <version>3.7.2-b1</version>
                         <executions>
                             <execution>
