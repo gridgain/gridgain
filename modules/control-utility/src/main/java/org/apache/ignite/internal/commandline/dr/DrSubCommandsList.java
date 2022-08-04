@@ -43,7 +43,7 @@ public enum DrSubCommandsList {
     /** */
     CACHE("cache", new DrCacheCommand()),
     /** */
-    FULL_STATE_TRANSFER("full-state-transfer", new DrFullStateTransferCommand()),
+    FULL_STATE_TRANSFER_NONE("full-state-transfer-none", new DrFullStateTransferCommand()),
     /** */
     PAUSE("pause", new DrPauseCommand()),
     /** */
@@ -53,7 +53,7 @@ public enum DrSubCommandsList {
     /** */
     REPAIR("repair-partition-counters", new DrRepairPartitionCountersCommand()),
     /** */
-    INC_TRANSFER("incremental-transfer", new DrIncrementalTransferCommand());
+    FULL_STATE_TRANSFER("full-state-transfer", new DrIncrementalTransferCommand());
 
     /** */
     private final String name;

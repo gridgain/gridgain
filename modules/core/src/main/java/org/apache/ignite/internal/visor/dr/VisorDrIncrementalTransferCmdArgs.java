@@ -19,8 +19,14 @@ package org.apache.ignite.internal.visor.dr;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Set;
+import org.apache.ignite.internal.commandline.property.PropertyArgs;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteUuid;
+import org.jetbrains.annotations.Nullable;
+import static org.apache.ignite.internal.util.IgniteUtils.readSet;
+import static org.apache.ignite.internal.util.IgniteUtils.writeCollection;
 
 /**
  * DR incremental transfer task args.
@@ -29,14 +35,24 @@ public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject 
     /** Serial version id. */
     private static final long serialVersionUID = 0L;
 
-    /** Cache name. */
-    private String cacheName;
+    /** Cache names. */
+    private Set<String> caches;
 
     /** Snapshot id. */
     private long snapshotId;
 
     /** Data center id. */
-    private byte dcId;
+    private Set<Byte> dcIds;
+
+    /** Action. */
+    private int action;
+
+    /** FST id. */
+    @Nullable private IgniteUuid operationId;
+
+    private int senderGroup;
+
+    private String senderGrpName;
 
     /**
      * Default constructor.
@@ -45,23 +61,43 @@ public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject 
         // No-op.
     }
 
+    public VisorDrIncrementalTransferCmdArgs(int action, @Nullable IgniteUuid operationId) {
+        this.action = action;
+        this.operationId = operationId;
+    }
+
     /** */
-    public VisorDrIncrementalTransferCmdArgs(String cacheName, long snapshotId, byte dcId) {
-        this.cacheName = cacheName;
+    public VisorDrIncrementalTransferCmdArgs(
+        int action,
+        Set<String> caches,
+        long snapshotId,
+        Set<Byte> dcIds,
+        int senderGroup,
+        String senderGrpName
+    ) {
+        this.action = action;
+        this.caches = caches;
         this.snapshotId = snapshotId;
-        this.dcId = dcId;
+        this.dcIds = dcIds;
+        this.senderGroup = senderGroup;
+        this.senderGrpName = senderGrpName;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        out.writeUTF(cacheName);
+        out.writeInt(action);
+        writeCollection(out, caches);
+
         out.writeLong(snapshotId);
         out.writeByte(dcId);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
-        cacheName = in.readUTF();
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+        action = in.readInt();
+        caches = readSet(in);
+
+        
         snapshotId = in.readLong();
         dcId = in.readByte();
     }

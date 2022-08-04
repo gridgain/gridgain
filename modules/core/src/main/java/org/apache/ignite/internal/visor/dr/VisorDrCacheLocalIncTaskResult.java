@@ -34,6 +34,12 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
     private byte dataCenterId;
 
     /** */
+    public VisorDrCacheLocalIncTaskResult(byte dcId, String msg) {
+        dataCenterId = dcId;
+        resultMsg = msg;
+    }
+
+    /** */
     public void resultMessage(String resultMessage) {
         resultMsg = resultMessage;
     }

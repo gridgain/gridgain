@@ -247,7 +247,9 @@ public enum IgniteFeatures {
     FILLS_ABSENT_PKS_WITH_DEFAULTS(64),
 
     /** Whether there is {@link InvalidUserCommandException} class. */
-    HAS_INVALID_USER_COMMAND_EXCEPTION(65);
+    HAS_INVALID_USER_COMMAND_EXCEPTION(65),
+
+    NEW_DR_FST_COMMANDS(66);
 
     /**
      * Unique feature identifier.

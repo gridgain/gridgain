@@ -36,8 +36,8 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER_NONE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.INC_TRANSFER;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
@@ -96,14 +96,34 @@ public class DrCommand extends AbstractCommand<Object> {
 
         usage(log, "Execute full state transfer on all caches in cluster if data center replication is configured:",
             DATA_CENTER_REPLICATION,
-            FULL_STATE_TRANSFER.toString(),
+            FULL_STATE_TRANSFER_NONE.toString(),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Execute full state transfer over snapshot:",
+        usage(log, "Execute full state transfer:",
             DATA_CENTER_REPLICATION,
-            INC_TRANSFER.toString(),
-            "<cacheName>", "<snapshotId>", "<remoteDataCenterId>"
+            FULL_STATE_TRANSFER.toString(),
+            "start", "[--snapshot <snapshotId>]", "[--cache <cacheName>]", "[--sender-group <regExp>]", "--dataCenters <dcId, ...>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Cancel active full state transfer by uid:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            "cancel", "<fullStateTransferUID>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Print list of active full state transfers:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            "list"
+        );
+
+        usage(log, "Deprecated command to start full state transfer on all caches in cluster if data center replication is configured:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            optional(CMD_AUTO_CONFIRMATION)
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",
