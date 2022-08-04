@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteEncryption;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.encryption.GridEncryptionManager;
+import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.ru.IgniteRollingUpgradeStatus;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
@@ -247,7 +248,10 @@ public enum IgniteFeatures {
     FILLS_ABSENT_PKS_WITH_DEFAULTS(64),
 
     /** Whether there is {@link InvalidUserCommandException} class. */
-    HAS_INVALID_USER_COMMAND_EXCEPTION(65);
+    HAS_INVALID_USER_COMMAND_EXCEPTION(65),
+
+    /** This feature indicates that {@link CacheAffinityChangeMessage} is mutable. */
+    MUTABLE_CAHCE_AFFINITY_CHANGE_MESSAGE(66);
 
     /**
      * Unique feature identifier.
