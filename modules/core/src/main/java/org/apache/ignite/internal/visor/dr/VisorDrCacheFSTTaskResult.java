@@ -19,14 +19,11 @@ package org.apache.ignite.internal.visor.dr;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collection;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import static org.apache.ignite.internal.util.IgniteUtils.readSet;
-import static org.apache.ignite.internal.util.IgniteUtils.writeCollection;
 
 /** */
-public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
+public class VisorDrCacheFSTTaskResult extends IgniteDataTransferObject {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
@@ -37,11 +34,11 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
     private byte dataCenterId;
 
     /** */
-    public VisorDrCacheLocalIncTaskResult() {
+    public VisorDrCacheFSTTaskResult() {
     }
 
     /** */
-    public VisorDrCacheLocalIncTaskResult(byte dcId, String msg) {
+    public VisorDrCacheFSTTaskResult(byte dcId, String msg) {
         dataCenterId = dcId;
         resultMsg = msg;
     }
@@ -74,7 +71,7 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(VisorDrCacheLocalIncTaskResult.class, this);
+        return S.toString(VisorDrCacheFSTTaskResult.class, this);
     }
 }
 

@@ -249,6 +249,7 @@ public enum IgniteFeatures {
     /** Whether there is {@link InvalidUserCommandException} class. */
     HAS_INVALID_USER_COMMAND_EXCEPTION(65),
 
+    /** New DR FST commands handling approach. */
     NEW_DR_FST_COMMANDS(66);
 
     /**

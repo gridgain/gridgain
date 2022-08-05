@@ -20,7 +20,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrFullStateTransferCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
-import org.apache.ignite.internal.commandline.dr.subcommands.DrIncrementalTransferCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrPauseCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
@@ -53,7 +53,7 @@ public enum DrSubCommandsList {
     /** */
     REPAIR("repair-partition-counters", new DrRepairPartitionCountersCommand()),
     /** */
-    FULL_STATE_TRANSFER("full-state-transfer", new DrIncrementalTransferCommand());
+    FULL_STATE_TRANSFER("full-state-transfer", new DrFSTCommand());
 
     /** */
     private final String name;

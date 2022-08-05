@@ -36,7 +36,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.visor.dr.VisorDrCacheLocalIncTaskResult;
+import org.apache.ignite.internal.visor.dr.VisorDrCacheFSTTaskResult;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
 import org.apache.ignite.internal.visor.dr.VisorDrFSTCmdArgs;
@@ -50,8 +50,8 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_S
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /** */
-public class DrIncrementalTransferCommand
-    extends DrAbstractRemoteSubCommand<VisorDrFSTCmdArgs, VisorDrCacheLocalIncTaskResult, DrIncrementalTransferCommand.DrFSTArguments> {
+public class DrFSTCommand
+    extends DrAbstractRemoteSubCommand<VisorDrFSTCmdArgs, VisorDrCacheFSTTaskResult, DrFSTCommand.DrFSTArguments> {
     public static final String INC_TRANSFER_WITHOUT_DC_ERR = "Incremental state transfer is possible only if you specify " +
         "single configured remote data center id";
 
@@ -138,7 +138,7 @@ public class DrIncrementalTransferCommand
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(DrIncrementalTransferCommand.Arguments.class, this);
+            return S.toString(DrFSTCommand.Arguments.class, this);
         }
     }
 
@@ -179,7 +179,7 @@ public class DrIncrementalTransferCommand
     }
 
     /** {@inheritDoc} */
-    @Override protected VisorDrCacheLocalIncTaskResult execute0(
+    @Override protected VisorDrCacheFSTTaskResult execute0(
         GridClientConfiguration clientCfg,
         GridClient client
     ) throws Exception {
@@ -196,7 +196,7 @@ public class DrIncrementalTransferCommand
                 else if (res.getResultMessages().isEmpty())
                     completionMessage = "Full state transfer command completed successfully for caches " + res.getCacheNames();
 
-                return new VisorDrCacheLocalIncTaskResult(res.getDataCenterId(), completionMessage);
+                return new VisorDrCacheFSTTaskResult(res.getDataCenterId(), completionMessage);
             } else
                 throw new IgniteException(COMPATIBILITY_WARN);
         }
@@ -227,7 +227,7 @@ public class DrIncrementalTransferCommand
     }
 
     /** {@inheritDoc} */
-    @Override protected void printResult(VisorDrCacheLocalIncTaskResult res, Logger log) {
+    @Override protected void printResult(VisorDrCacheFSTTaskResult res, Logger log) {
         printUnrecognizedNodesMessage(log, false);
 
         log.info("Data Center ID: " + res.dataCenterId());
@@ -244,7 +244,7 @@ public class DrIncrementalTransferCommand
 
     /** {@inheritDoc} */
     @Override protected String visorTaskName() {
-        return "org.gridgain.grid.internal.visor.dr.console.VisorDrStartIncrementalTransferTask";
+        return "org.gridgain.grid.internal.visor.dr.console.VisorDrProcessFSTTask";
     }
 
     /** FST actions. */
