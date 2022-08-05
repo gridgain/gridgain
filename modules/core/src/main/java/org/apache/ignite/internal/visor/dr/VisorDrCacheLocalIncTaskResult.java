@@ -19,8 +19,11 @@ package org.apache.ignite.internal.visor.dr;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collection;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import static org.apache.ignite.internal.util.IgniteUtils.readSet;
+import static org.apache.ignite.internal.util.IgniteUtils.writeCollection;
 
 /** */
 public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
@@ -34,19 +37,13 @@ public class VisorDrCacheLocalIncTaskResult extends IgniteDataTransferObject {
     private byte dataCenterId;
 
     /** */
+    public VisorDrCacheLocalIncTaskResult() {
+    }
+
+    /** */
     public VisorDrCacheLocalIncTaskResult(byte dcId, String msg) {
         dataCenterId = dcId;
         resultMsg = msg;
-    }
-
-    /** */
-    public void resultMessage(String resultMessage) {
-        resultMsg = resultMessage;
-    }
-
-    /** */
-    public void setDataCenterId(byte dataCenterId) {
-        this.dataCenterId = dataCenterId;
     }
 
     /** {@inheritDoc} */

@@ -38,7 +38,7 @@ import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheLocalIncTaskResult;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskArgs;
 import org.apache.ignite.internal.visor.dr.VisorDrCacheTaskResult;
-import org.apache.ignite.internal.visor.dr.VisorDrIncrementalTransferCmdArgs;
+import org.apache.ignite.internal.visor.dr.VisorDrFSTCmdArgs;
 import org.apache.ignite.lang.IgniteUuid;
 import static org.apache.ignite.internal.IgniteFeatures.NEW_DR_FST_COMMANDS;
 import static org.apache.ignite.internal.client.util.GridClientUtils.applyFilter;
@@ -50,11 +50,14 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY
 
 /** */
 public class DrIncrementalTransferCommand
-    extends DrAbstractRemoteSubCommand<VisorDrIncrementalTransferCmdArgs, VisorDrCacheLocalIncTaskResult, DrIncrementalTransferCommand.DrFSTArguments> {
+    extends DrAbstractRemoteSubCommand<VisorDrFSTCmdArgs, VisorDrCacheLocalIncTaskResult, DrIncrementalTransferCommand.DrFSTArguments> {
+    public static final String INC_TRANSFER_WITHOUT_DC_ERR = "Incremental state transfer is possible only if you specify " +
+        "single configured remote data center id";
+
     /**
      * Container for command arguments.
      */
-    static class DrFSTArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrIncrementalTransferCmdArgs> {
+    static class DrFSTArguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrFSTCmdArgs> {
         /** Legacy params support. */
         private DrCacheCommand.DrCacheArguments legacyArgs;
 
@@ -87,20 +90,21 @@ public class DrIncrementalTransferCommand
         }
 
         /** {@inheritDoc} */
-        @Override public VisorDrIncrementalTransferCmdArgs toVisorArgs() {
+        @Override public VisorDrFSTCmdArgs toVisorArgs() {
             switch (action) {
                 case LIST:
-                    return new VisorDrIncrementalTransferCmdArgs(action.ordinal(), null);
+                    return new VisorDrFSTCmdArgs(action.ordinal(), null);
 
                 case START: {
                     StartParams params0 = (StartParams)params;
-                    return new VisorDrIncrementalTransferCmdArgs(action.ordinal(), params0.caches(), params0.snapshotId(),
-                        params0.dcIds(), params0.senderGroup().ordinal(), params0.senderGroupName());
+                    return new VisorDrFSTCmdArgs(action.ordinal(), params0.caches(), params0.snapshotId(),
+                        params0.dcIds(), params0.senderGroup() == null ? VisorDrCacheTaskArgs.SENDER_GROUP_NAMED :
+                        params0.senderGroup().ordinal(), params0.senderGroupName());
                 }
 
                 case CANCEL:
                     CancelParams params0 = (CancelParams)params;
-                    return new VisorDrIncrementalTransferCmdArgs(action.ordinal(), params0.operationId());
+                    return new VisorDrFSTCmdArgs(action.ordinal(), params0.operationId());
 
                 default:
                     throw new IllegalArgumentException("Action [" + action.action() + "] not supported.");
@@ -136,7 +140,7 @@ public class DrIncrementalTransferCommand
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return arg().legacyMode() ?
+        return arg().legacyMode() || arg().action() == Action.START ?
             "Warning: this command will execute full state transfer for all caches. This migth take a long time." : null;
     }
 
@@ -222,12 +226,6 @@ public class DrIncrementalTransferCommand
         log.info("Data Center ID: " + res.dataCenterId());
 
         log.info(DELIM);
-
-        if (res.dataCenterId() == 0) {
-            log.info("Data Replication state: is not configured.");
-
-            return;
-        }
 
         log.info(res.resultMessage());
     }
@@ -339,13 +337,16 @@ public class DrIncrementalTransferCommand
 
         /** */
         StartParams(
-            long snapshotId,
+            Long snapshotId,
             Set<String> caches,
             DrCacheCommand.SenderGroup senderGroup,
             String senderGroupName,
             Set<Byte> dcIds
         ) {
-            this.snapshotId = snapshotId;
+            if (snapshotId != null && (dcIds.size() != 1))
+                throw new IllegalArgumentException(INC_TRANSFER_WITHOUT_DC_ERR);
+
+            this.snapshotId = snapshotId == null ? -1 : snapshotId;
             this.caches = caches;
             this.senderGroup = senderGroup;
             this.senderGroupName = senderGroupName;
@@ -427,7 +428,7 @@ public class DrIncrementalTransferCommand
         public static final String SENDER_GROUP = "--sender-group";
 
         /** Data center id`s. */
-        public static final String DATA_CENTERS = "--dataCenters";
+        public static final String DATA_CENTERS = "--data-centers";
 
         /** {@inheritDoc} */
         @Override public StartParams parse(CommandArgIterator argIter) {
@@ -462,7 +463,7 @@ public class DrIncrementalTransferCommand
                     case SENDER_GROUP:
                         argIter.nextArg(null);
 
-                        String arg = argIter.nextArg("--sender-group parameter value required.");
+                        String arg = argIter.nextArg(SENDER_GROUP + " parameter value required.");
 
                         sndGrp = DrCacheCommand.SenderGroup.parse(arg);
 
@@ -470,6 +471,7 @@ public class DrIncrementalTransferCommand
                             sndGrpName = arg;
 
                         break;
+
                     case DATA_CENTERS:
                         if (!argIter.hasNextSubArg())
                             throw new IllegalArgumentException(
@@ -482,6 +484,9 @@ public class DrIncrementalTransferCommand
                         Set<Byte> dcIds0 = dcIds;
 
                         dcIdsStr.forEach(dc -> dcIds0.add(Byte.parseByte(dc)));
+
+                        break;
+
                     default:
                         throw new IllegalArgumentException("Argument " + nextArg + " is not supported.");
                 }

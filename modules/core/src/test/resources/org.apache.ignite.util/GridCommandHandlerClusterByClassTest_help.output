@@ -128,8 +128,14 @@ This utility can do the following commands:
   Execute full state transfer on all caches in cluster if data center replication is configured:
     control.(sh|bat) --dr full-state-transfer [--yes]
 
-  Execute full state transfer over snapshot:
-    control.(sh|bat) --dr incremental-transfer <cacheName> <snapshotId> <remoteDataCenterId>
+  Execute full state transfer:
+    control.(sh|bat) --dr full-state-transfer start --snapshot <snapshotId> --caches <cacheName> --sender-group <regExp> --data-centers <dcId, ...> [--yes]
+
+  Cancel active full state transfer by id:
+    control.(sh|bat) --dr full-state-transfer cancel <fullStateTransferUID> [--yes]
+
+  Print list of active full state transfers:
+  	control.(sh|bat) --dr full-state-transfer list
 
   Stop data center replication on all caches in cluster:
     control.(sh|bat) --dr pause <remoteDataCenterId> [--yes]

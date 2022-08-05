@@ -19,30 +19,33 @@ package org.apache.ignite.internal.visor.dr;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
-import org.apache.ignite.internal.commandline.property.PropertyArgs;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
+import static org.apache.ignite.internal.util.IgniteUtils.readGridUuid;
 import static org.apache.ignite.internal.util.IgniteUtils.readSet;
 import static org.apache.ignite.internal.util.IgniteUtils.writeCollection;
+import static org.apache.ignite.internal.util.IgniteUtils.writeGridUuid;
 
 /**
- * DR incremental transfer task args.
+ * DR full state transfer task args.
  */
-public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject {
+public class VisorDrFSTCmdArgs extends IgniteDataTransferObject {
     /** Serial version id. */
     private static final long serialVersionUID = 0L;
 
     /** Cache names. */
-    private Set<String> caches;
+    private Set<String> caches = Collections.emptySet();
 
     /** Snapshot id. */
-    private long snapshotId;
+    private long snapshotId = -1;
 
     /** Data center id. */
-    private Set<Byte> dcIds;
+    private Set<Byte> dcIds = Collections.emptySet();
 
     /** Action. */
     private int action;
@@ -50,24 +53,28 @@ public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject 
     /** FST id. */
     @Nullable private IgniteUuid operationId;
 
-    private int senderGroup;
+    /** */
+    private int senderGroup = VisorDrCacheTaskArgs.SENDER_GROUP_NAMED;
 
+    /** */
     private String senderGrpName;
 
     /**
      * Default constructor.
      */
-    public VisorDrIncrementalTransferCmdArgs() {
+    public VisorDrFSTCmdArgs() {
         // No-op.
     }
 
-    public VisorDrIncrementalTransferCmdArgs(int action, @Nullable IgniteUuid operationId) {
+    /** */
+    public VisorDrFSTCmdArgs(int action, @Nullable IgniteUuid operationId) {
         this.action = action;
-        this.operationId = operationId;
+        this.operationId = operationId == null ? IgniteUuid.randomUuid() : operationId;
+        senderGrpName = "";
     }
 
     /** */
-    public VisorDrIncrementalTransferCmdArgs(
+    public VisorDrFSTCmdArgs(
         int action,
         Set<String> caches,
         long snapshotId,
@@ -76,37 +83,33 @@ public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject 
         String senderGrpName
     ) {
         this.action = action;
-        this.caches = caches;
+        this.caches = caches == null ? Collections.emptySet() : caches;
         this.snapshotId = snapshotId;
-        this.dcIds = dcIds;
+        this.dcIds = dcIds == null ? Collections.emptySet() : dcIds;
         this.senderGroup = senderGroup;
-        this.senderGrpName = senderGrpName;
+        this.senderGrpName = senderGrpName == null ? "" : senderGrpName;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeInt(action);
         writeCollection(out, caches);
-
         out.writeLong(snapshotId);
-        out.writeByte(dcId);
+        writeCollection(out, dcIds);
+        out.writeInt(senderGroup);
+        out.writeUTF(senderGrpName);
+        writeGridUuid(out, operationId);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         action = in.readInt();
         caches = readSet(in);
-
-        
         snapshotId = in.readLong();
-        dcId = in.readByte();
-    }
-
-    /**
-     * @return Cache name.
-     */
-    public String cacheName() {
-        return cacheName;
+        dcIds = readSet(in);
+        senderGroup = in.readInt();
+        senderGrpName = in.readUTF();
+        operationId = readGridUuid(in);
     }
 
     /**
@@ -117,14 +120,49 @@ public class VisorDrIncrementalTransferCmdArgs extends IgniteDataTransferObject 
     }
 
     /**
+     * @return Cache names.
+     */
+    public Set<String> caches() {
+        return caches;
+    }
+
+    /**
      * @return Data center id.
      */
-    public byte dcId() {
-        return dcId;
+    public Set<Byte> dcIds() {
+        return dcIds;
+    }
+
+    /**
+     * @return Action.
+     */
+    public int action() {
+        return action;
+    }
+
+    /**
+     * @return FST id.
+     */
+    public @Nullable IgniteUuid operationId() {
+        return operationId;
+    }
+
+    /**
+     * @return Sender group.
+     */
+    public int senderGroup() {
+        return senderGroup;
+    }
+
+    /**
+     * @return Sender group name.
+     */
+    public String senderGroupName() {
+        return senderGrpName;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(VisorDrIncrementalTransferCmdArgs.class, this);
+        return S.toString(VisorDrFSTCmdArgs.class, this);
     }
 }

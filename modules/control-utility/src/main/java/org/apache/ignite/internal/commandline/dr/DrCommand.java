@@ -103,11 +103,11 @@ public class DrCommand extends AbstractCommand<Object> {
         usage(log, "Execute full state transfer:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            "start", "[--snapshot <snapshotId>]", "[--cache <cacheName>]", "[--sender-group <regExp>]", "--dataCenters <dcId, ...>",
+            "start", "[--snapshot <snapshotId>]", "[--caches <cacheName>]", "[--sender-group <regExp>]", "--data-centers <dcId, ...>",
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Cancel active full state transfer by uid:",
+        usage(log, "Cancel active full state transfer by id:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
             "cancel", "<fullStateTransferUID>",

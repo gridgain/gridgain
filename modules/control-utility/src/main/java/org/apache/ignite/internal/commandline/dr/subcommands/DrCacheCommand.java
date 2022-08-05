@@ -137,7 +137,7 @@ public class DrCacheCommand extends
                 case ACTION_PARAM: {
                     argIter.nextArg(null);
 
-                    String errorMsg = "--action parameter value required.";
+                    String errorMsg = ACTION_PARAM + " parameter value required.";
 
                     act = Action.parse(argIter.nextArg(errorMsg));
 
