@@ -23,6 +23,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
@@ -36,7 +37,6 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CACHE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER;
-import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_STATE_TRANSFER_NONE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
@@ -44,6 +44,10 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.CACHES_PARAM;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.DATA_CENTERS;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SENDER_GROUP;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SNAPSHOT_ID;
 
 /** */
 public class DrCommand extends AbstractCommand<Object> {
@@ -94,36 +98,35 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Execute full state transfer on all caches in cluster if data center replication is configured:",
+        usage(log, "Deprecated command to start full state transfer:",
             DATA_CENTER_REPLICATION,
-            FULL_STATE_TRANSFER_NONE.toString(),
+            FULL_STATE_TRANSFER.toString(),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
         usage(log, "Execute full state transfer:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            "start", "[--snapshot <snapshotId>]", "[--caches <cacheName>]", "[--sender-group <regExp>]", "--data-centers <dcId, ...>",
+            DrFSTCommand.Action.START.action(),
+            optional(SNAPSHOT_ID, "<snapshotId>"),
+            optional(CACHES_PARAM, "<cacheName1, ...>"),
+            optional(SENDER_GROUP, "<groupName>|ALL|DEFAULT|NONE"),
+            optional(DATA_CENTERS, "<dcId, ...>"),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
         usage(log, "Cancel active full state transfer by id:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            "cancel", "<fullStateTransferUID>",
+            DrFSTCommand.Action.CANCEL.action(),
+            "<fullStateTransferUID>",
             optional(CMD_AUTO_CONFIRMATION)
         );
 
         usage(log, "Print list of active full state transfers:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            "list"
-        );
-
-        usage(log, "Deprecated command to start full state transfer on all caches in cluster if data center replication is configured:",
-            DATA_CENTER_REPLICATION,
-            FULL_STATE_TRANSFER.toString(),
-            optional(CMD_AUTO_CONFIRMATION)
+            DrFSTCommand.Action.LIST.action()
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",

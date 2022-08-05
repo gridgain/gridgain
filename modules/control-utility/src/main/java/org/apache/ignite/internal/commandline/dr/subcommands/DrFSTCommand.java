@@ -185,7 +185,7 @@ public class DrFSTCommand
     ) throws Exception {
         GridClientCompute compute = client.compute();
 
-        if (!allNodesSupports(compute.nodes(), NEW_DR_FST_COMMANDS)) {
+        if (!allNodesSupports(compute.nodes(), NEW_DR_FST_COMMANDS) || arg().legacyMode()) {
             if (arg().legacyMode()) {
                 VisorDrCacheTaskResult res = DrCacheCommand.execute0(client, arg().legacyArgs());
 
@@ -248,7 +248,7 @@ public class DrFSTCommand
     }
 
     /** FST actions. */
-    enum Action {
+    public enum Action {
         /** Start FST. */
         START("start", new ParseStart()),
 
@@ -424,7 +424,7 @@ public class DrFSTCommand
     }
 
     /** */
-    private static class ParseStart implements ParseAction<StartParams> {
+    public static class ParseStart implements ParseAction<StartParams> {
         /** Snapshot id. */
         public static final String SNAPSHOT_ID = "--snapshot";
 

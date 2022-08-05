@@ -18,7 +18,6 @@ package org.apache.ignite.internal.commandline.dr;
 
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
-import org.apache.ignite.internal.commandline.dr.subcommands.DrFullStateTransferCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
@@ -42,8 +41,6 @@ public enum DrSubCommandsList {
     NODE("node", new DrNodeCommand()),
     /** */
     CACHE("cache", new DrCacheCommand()),
-    /** */
-    FULL_STATE_TRANSFER_NONE("full-state-transfer-none", new DrFullStateTransferCommand()),
     /** */
     PAUSE("pause", new DrPauseCommand()),
     /** */
