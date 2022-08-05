@@ -24,6 +24,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientCompute;
@@ -53,6 +54,9 @@ public class DrIncrementalTransferCommand
     extends DrAbstractRemoteSubCommand<VisorDrFSTCmdArgs, VisorDrCacheLocalIncTaskResult, DrIncrementalTransferCommand.DrFSTArguments> {
     public static final String INC_TRANSFER_WITHOUT_DC_ERR = "Incremental state transfer is possible only if you specify " +
         "single configured remote data center id";
+
+    public static final String COMPATIBILITY_WARN = "Some nodes in cluster doesn't support extended dr fst commands. " +
+        "Only \"--dr full-state-transfer\" available for cluster in rolling upgrade state.";
 
     /**
      * Container for command arguments.
@@ -181,17 +185,20 @@ public class DrIncrementalTransferCommand
     ) throws Exception {
         GridClientCompute compute = client.compute();
 
-        if (!allNodesSupports(compute.nodes(), NEW_DR_FST_COMMANDS) || arg().legacyMode()) {
-            VisorDrCacheTaskResult res = DrCacheCommand.execute0(client, arg().legacyArgs());
+        if (!allNodesSupports(compute.nodes(), NEW_DR_FST_COMMANDS)) {
+            if (arg().legacyMode()) {
+                VisorDrCacheTaskResult res = DrCacheCommand.execute0(client, arg().legacyArgs());
 
-            String completionMessage = "";
+                String completionMessage = "";
 
-            if (res.getCacheNames().isEmpty())
-                completionMessage = "No suitable caches found for transfer.";
-            else if (res.getResultMessages().isEmpty())
-                completionMessage = "Full state transfer command completed successfully for caches " + res.getCacheNames();
+                if (res.getCacheNames().isEmpty())
+                    completionMessage = "No suitable caches found for transfer.";
+                else if (res.getResultMessages().isEmpty())
+                    completionMessage = "Full state transfer command completed successfully for caches " + res.getCacheNames();
 
-            return new VisorDrCacheLocalIncTaskResult(res.getDataCenterId(), completionMessage);
+                return new VisorDrCacheLocalIncTaskResult(res.getDataCenterId(), completionMessage);
+            } else
+                throw new IgniteException(COMPATIBILITY_WARN);
         }
 
         Collection<GridClientNode> connectableNodes = compute.nodes(GridClientNode::connectable);
@@ -199,7 +206,7 @@ public class DrIncrementalTransferCommand
         connectableNodes = applyFilter(connectableNodes, p -> p.supports(NEW_DR_FST_COMMANDS));
 
         if (F.isEmpty(connectableNodes))
-            throw new GridClientDisconnectedException("Connectable nodes not found", null); // TODO !!!
+            throw new GridClientDisconnectedException("Connectable nodes not found", null);
 
         GridClientNode node = compute.balancer().balancedNode(connectableNodes);
 
