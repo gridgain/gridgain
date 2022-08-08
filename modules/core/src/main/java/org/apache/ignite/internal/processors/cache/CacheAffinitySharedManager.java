@@ -233,6 +233,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         msg.exchangeNeeded(exchangeNeeded);
 
+        if (!cctx.discovery().mutableCustomMessages() && !isClient)
+            msg.stopProcess(true);
+
         if (exchangeNeeded) {
             if (log.isDebugEnabled()) {
                 log.debug("Need process affinity change message [lastAffVer=" + lastAffVer +
