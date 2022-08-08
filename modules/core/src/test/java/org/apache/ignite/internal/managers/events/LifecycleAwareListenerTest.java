@@ -64,9 +64,6 @@ public class LifecycleAwareListenerTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public boolean apply(Event evt) {
-
-            System.out.println("event [evt=" + evt + ']');
-
             return true;
         }
 
