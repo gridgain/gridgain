@@ -173,6 +173,9 @@ public class DrFSTCommand
 
         Action action = Action.parse(actionStr);
 
+        if (action == null)
+            throw new IllegalArgumentException("Action [" + actionStr + "] not supported.");
+
         ActionParams params = action.parseAction(argIter);
 
         return new DrFSTArguments(action, params);
