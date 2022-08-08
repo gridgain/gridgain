@@ -85,7 +85,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
-import static org.apache.ignite.internal.IgniteFeatures.MUTABLE_CAHCE_AFFINITY_CHANGE_MESSAGE;
+import static org.apache.ignite.internal.IgniteFeatures.MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.tracing.SpanType.AFFINITY_CALCULATION;
@@ -228,7 +228,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         boolean exchangeNeeded = lastAffVer == null || lastAffVer.equals(msg.topologyVersion());
 
         // Client node should just accept the flag from the mutated message.
-        if (isClient && allNodesSupport(cctx.kernalContext(), MUTABLE_CAHCE_AFFINITY_CHANGE_MESSAGE))
+        if (isClient && allNodesSupport(cctx.kernalContext(), MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE))
             exchangeNeeded = msg.exchangeNeeded();
 
         msg.exchangeNeeded(exchangeNeeded);
