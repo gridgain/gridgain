@@ -58,12 +58,10 @@ public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildParti
             Optional<GridClientNode> firstNodeOpt = client.compute().nodes().stream().findFirst();
 
             if (firstNodeOpt.isPresent()) {
-                GridClientNode node = firstNodeOpt.get();
-
                 VisorDrRebuildTreeTaskResult res = executeTaskByNameOnNode(client,
                     VisorDrRebuildTreeTask.class.getName(),
                     convertArguments(),
-                    node.nodeId(),
+                    null, // Use node from clientCfg.
                     clientCfg
                 );
 
