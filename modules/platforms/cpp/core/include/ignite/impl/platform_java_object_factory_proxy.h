@@ -147,6 +147,18 @@ namespace ignite
         struct IGNITE_IMPORT_EXPORT BinaryType<impl::PlatformJavaObjectFactoryProxy> :
             BinaryTypeDefaultAll<impl::PlatformJavaObjectFactoryProxy>
         {
+            /**
+             * Get binary object type ID.
+             *
+             * @return Type ID.
+             */
+            static int32_t GetTypeId()
+            {
+                enum { PLATFORM_JAVA_OBJECT_FACTORY_PROXY = 99 };
+
+                return PLATFORM_JAVA_OBJECT_FACTORY_PROXY;
+            }
+
             static void GetTypeName(std::string& dst)
             {
                 dst = "PlatformJavaObjectFactoryProxy";
@@ -156,10 +168,9 @@ namespace ignite
             {
                 ignite::binary::BinaryRawWriter rawWriter(writer.RawWriter());
 
-                rawWriter.WriteBool(true);
-
                 rawWriter.WriteInt32(val.factoryType);
                 rawWriter.WriteString(val.factoryClassName);
+                rawWriter.WriteNull(); // Payload is not implemented for now
 
                 if (val.properties.empty())
                 {
