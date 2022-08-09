@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.discovery.DiscoverySpiMutableCustomMessageSupport;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -54,8 +55,18 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
     /** */
     private GridDhtPartitionsFullMessage partsMsg;
 
-    /** */
-    private transient boolean exchangeNeeded;
+    /** If this flag is {@code true} then this message should lead to partition map exchnage. */
+    private boolean exchangeNeeded;
+
+    /**
+     * This flag indicates that this message should not be passed to other nodes except the coordinator.
+     * Instead of this message, the message which is returned by {@link #ackMessage()} will be sent.
+     * See {@link DiscoveryCustomMessage#stopProcess()}.
+     *
+     * This flag is used when discovery SPI does not support mutable custom messages.
+     * See {@link DiscoverySpiMutableCustomMessageSupport}.
+     */
+    private transient boolean stopProc;
 
     /**
      * Constructor used when message is created after cache rebalance finished.
@@ -64,7 +75,8 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
      * @param cacheDeploymentIds Cache deployment ID.
      * @param assignmentChange Assignment changes for compatibility mode.
      */
-    public CacheAffinityChangeMessage(AffinityTopologyVersion topVer,
+    public CacheAffinityChangeMessage(
+        AffinityTopologyVersion topVer,
         @Nullable Map<Integer, Map<Integer, List<UUID>>> assignmentChange,
         Map<Integer, IgniteUuid> cacheDeploymentIds
     ) {
@@ -80,7 +92,8 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
      * @param partsMsg Partitions messages.
      * @param assignmentChange Assignment change.
      */
-    public CacheAffinityChangeMessage(GridDhtPartitionExchangeId exchId,
+    public CacheAffinityChangeMessage(
+        GridDhtPartitionExchangeId exchId,
         GridDhtPartitionsFullMessage partsMsg,
         Map<Integer, Map<Integer, List<UUID>>> assignmentChange
     ) {
@@ -145,22 +158,44 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
 
     /** {@inheritDoc} */
     @Nullable @Override public DiscoveryCustomMessage ackMessage() {
-        return null;
+        if (!stopProc)
+            return null;
+
+        // If stopProc is equal to true, then Discovery SPI does not support mutable custom messages.
+        // Let's return the same message, that was muted on the coordinator node. This message will be sent to all nodes
+        // instead of the original one.
+        return this;
     }
 
     /** {@inheritDoc} */
     @Override public boolean isMutable() {
-        return false;
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public boolean stopProcess() {
-        return false;
+        return stopProc;
+    }
+
+    /**
+     * Sets stop processing flag. If this flag is {@code true} then this message is not passed to other nodes after
+     * the coordinator node notitied its own listner. If method {@link #ackMessage()} returns non-null ack message,
+     * it is sent to all nodes.
+     * This flag is used when discovery SPI does not support mutable custom messages.
+     * See {@link DiscoverySpiMutableCustomMessageSupport}.
+     *
+     * @param stopProc If {@code true} then this message is not passed to other nodes.
+     */
+    public void stopProcess(boolean stopProc) {
+        this.stopProc = stopProc;
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public DiscoCache createDiscoCache(GridDiscoveryManager mgr,
-        AffinityTopologyVersion topVer, DiscoCache discoCache) {
+    @Nullable @Override public DiscoCache createDiscoCache(
+        GridDiscoveryManager mgr,
+        AffinityTopologyVersion topVer,
+        DiscoCache discoCache
+    ) {
         return discoCache.copy(topVer, null);
     }
 
