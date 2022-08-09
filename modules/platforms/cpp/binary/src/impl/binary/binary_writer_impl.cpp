@@ -670,6 +670,24 @@ namespace ignite
             }
 
             template<typename T>
+            void BinaryWriterImpl::WritePrimitiveArrayBase(
+                const T* val,
+                const int32_t len,
+                void(*func)(interop::InteropOutputStream*, const T*, const int32_t),
+                const int8_t hdr
+            )
+            {
+                if (val)
+                {
+                    stream->WriteInt8(hdr);
+                    stream->WriteInt32(len);
+                    func(stream, val, len);
+                }
+                else
+                    stream->WriteInt8(IGNITE_HDR_NULL);
+            }
+
+            template<typename T>
             void BinaryWriterImpl::WritePrimitiveArrayRaw(
                 const T* val,
                 const int32_t len,
@@ -680,14 +698,7 @@ namespace ignite
                 CheckRawMode(true);
                 CheckSingleMode(true);
 
-                if (val)
-                {
-                    stream->WriteInt8(hdr);
-                    stream->WriteInt32(len);
-                    func(stream, val, len);
-                }
-                else
-                    stream->WriteInt8(IGNITE_HDR_NULL);
+                WritePrimitiveArrayBase(val, len, func, hdr);
             }
 
             template<typename T>
@@ -724,16 +735,7 @@ namespace ignite
 
                 WriteFieldId(fieldName, hdr);
 
-                if (val)
-                {
-                    stream->WriteInt8(hdr);
-                    stream->WriteInt32(len);
-                    func(stream, val, len);
-                }
-                else
-                {
-                    stream->WriteInt8(IGNITE_HDR_NULL);
-                }
+                WritePrimitiveArrayBase(val, len, func, hdr);
             }
 
             void BinaryWriterImpl::CheckRawMode(bool expected) const
@@ -868,6 +870,56 @@ namespace ignite
                 stream->WriteInt8(IGNITE_TYPE_STRING);
 
                 BinaryUtils::WriteString(stream, obj0, len);
+            }
+
+            template<>
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int8_t>>(const std::vector<int8_t>& obj)
+            {
+                const int8_t* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt8Array, IGNITE_TYPE_ARRAY_BYTE);
+            }
+
+            template<>
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int16_t>>(const std::vector<int16_t>& obj)
+            {
+                const int16_t* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt16Array, IGNITE_TYPE_ARRAY_SHORT);
+            }
+
+            template<>
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<uint16_t>>(const std::vector<uint16_t>& obj)
+            {
+                const uint16_t* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteUInt16Array, IGNITE_TYPE_ARRAY_CHAR);
+            }
+
+            template<>
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int32_t>>(const std::vector<int32_t>& obj)
+            {
+                const int32_t* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt32Array, IGNITE_TYPE_ARRAY_INT);
+            }
+
+            template<>
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int64_t>>(const std::vector<int64_t>& obj)
+            {
+                const int64_t* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt64Array, IGNITE_TYPE_ARRAY_LONG);
             }
 
             void BinaryWriterImpl::PostWrite()
