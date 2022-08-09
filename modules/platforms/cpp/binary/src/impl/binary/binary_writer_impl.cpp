@@ -669,6 +669,12 @@ namespace ignite
                 func(stream, val);
             }
 
+            void BinaryWriterImpl::WriteArrayEmpty(const int8_t hdr)
+            {
+                stream->WriteInt8(hdr);
+                stream->WriteInt32(0);
+            }
+
             template<typename T>
             void BinaryWriterImpl::WritePrimitiveArrayBase(
                 const T* val,
@@ -875,51 +881,31 @@ namespace ignite
             template<>
             void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int8_t>>(const std::vector<int8_t>& obj)
             {
-                const int8_t* obj0 = &obj[0];
-
-                int32_t len = static_cast<int32_t>(obj.size());
-
-                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt8Array, IGNITE_TYPE_ARRAY_BYTE);
+                WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt8Array, IGNITE_TYPE_ARRAY_BYTE);
             }
 
             template<>
             void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int16_t>>(const std::vector<int16_t>& obj)
             {
-                const int16_t* obj0 = &obj[0];
-
-                int32_t len = static_cast<int32_t>(obj.size());
-
-                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt16Array, IGNITE_TYPE_ARRAY_SHORT);
+                WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt16Array, IGNITE_TYPE_ARRAY_SHORT);
             }
 
             template<>
             void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<uint16_t>>(const std::vector<uint16_t>& obj)
             {
-                const uint16_t* obj0 = &obj[0];
-
-                int32_t len = static_cast<int32_t>(obj.size());
-
-                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteUInt16Array, IGNITE_TYPE_ARRAY_CHAR);
+                WriteTopPrimitiveArray(obj, BinaryUtils::WriteUInt16Array, IGNITE_TYPE_ARRAY_CHAR);
             }
 
             template<>
             void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int32_t>>(const std::vector<int32_t>& obj)
             {
-                const int32_t* obj0 = &obj[0];
-
-                int32_t len = static_cast<int32_t>(obj.size());
-
-                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt32Array, IGNITE_TYPE_ARRAY_INT);
+                WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt32Array, IGNITE_TYPE_ARRAY_INT);
             }
 
             template<>
             void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int64_t>>(const std::vector<int64_t>& obj)
             {
-                const int64_t* obj0 = &obj[0];
-
-                int32_t len = static_cast<int32_t>(obj.size());
-
-                WritePrimitiveArrayBase(obj0, len, BinaryUtils::WriteInt64Array, IGNITE_TYPE_ARRAY_LONG);
+                WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt64Array, IGNITE_TYPE_ARRAY_LONG);
             }
 
             void BinaryWriterImpl::PostWrite()
@@ -979,6 +965,27 @@ namespace ignite
             InteropOutputStream* BinaryWriterImpl::GetStream()
             {
                 return stream;
+            }
+
+            template<typename T>
+            void BinaryWriterImpl::WriteTopPrimitiveArray(
+                const std::vector<T> &obj,
+                void (*func)(interop::InteropOutputStream *, const T *,
+                const int32_t), int8_t hdr
+            )
+            {
+                if (obj.empty())
+                {
+                    WriteArrayEmpty(hdr);
+
+                    return;
+                }
+
+                const T* obj0 = &obj[0];
+
+                int32_t len = static_cast<int32_t>(obj.size());
+
+                WritePrimitiveArrayBase(obj0, len, func, hdr);
             }
         }
     }

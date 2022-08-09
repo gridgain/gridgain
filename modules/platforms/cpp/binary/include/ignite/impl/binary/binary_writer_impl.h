@@ -919,6 +919,13 @@ namespace ignite
                 );
 
                 /**
+                 * Write an empty array to stream without any checks.
+                 *
+                 * @param hdr Header.
+                 */
+                void WriteArrayEmpty(const int8_t hdr);
+
+                /**
                  * Write a primitive array to stream without any checks.
                  *
                  * @param val Value.
@@ -1058,6 +1065,20 @@ namespace ignite
                     stream->WriteInt8(hdr);
                     func(stream, obj);
                 }
+
+                /**
+                 * Write primitive array.
+                 *
+                 * @param obj Array.
+                 * @param func Write function.
+                 * @param hdr Header.
+                 */
+                template<typename T>
+                void WriteTopPrimitiveArray(
+                    const std::vector<T>& obj,
+                    void(*func)(interop::InteropOutputStream*, const T*, const int32_t),
+                    int8_t hdr
+                );
             };
 
             template<>
