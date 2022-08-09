@@ -224,7 +224,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     /**
      * Constructs a partition log tree rebuild maintenance task.
      *
-     * @param groupIds Group id set.v
+     * @param groupIds Group id set.
      * @return Maintenance task.
      */
     public static MaintenanceTask toMaintenanceTask(Set<Integer> groupIds) {
