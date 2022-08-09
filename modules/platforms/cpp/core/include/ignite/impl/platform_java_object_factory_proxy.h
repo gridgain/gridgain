@@ -126,6 +126,8 @@ namespace ignite
             }
 
         private:
+            IGNITE_NO_COPY_ASSIGNMENT(PlatformJavaObjectFactoryProxy);
+
             /** Type of the factory. */
             FactoryType::Type factoryType;
 
@@ -135,6 +137,8 @@ namespace ignite
             /** The properties. */
             std::map<std::string, impl::WritableObjectBase*> properties;
         };
+
+        typedef common::concurrent::SharedPointer<PlatformJavaObjectFactoryProxy> SP_PlatformJavaObjectFactoryProxy;
     }
 
     namespace binary

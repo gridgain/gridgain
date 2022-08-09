@@ -215,7 +215,7 @@ namespace ignite
                     virtual void Write(binary::BinaryWriterImpl& writer)
                     {
                         writer.WriteBool(true);
-                        writer.WriteObject<impl::PlatformJavaObjectFactoryProxy>(filter.factory);
+                        writer.WriteObject<impl::PlatformJavaObjectFactoryProxy>(*filter.factory.Get());
                     }
 
                     /**

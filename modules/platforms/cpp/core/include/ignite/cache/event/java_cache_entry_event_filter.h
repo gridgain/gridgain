@@ -69,7 +69,7 @@ namespace ignite
                  * @param factoryClassName Name of the Java factory class.
                  */
                 JavaCacheEntryEventFilter(const std::string& factoryClassName) :
-                    factory(impl::FactoryType::USER, factoryClassName)
+                    factory(new impl::PlatformJavaObjectFactoryProxy(impl::FactoryType::USER, factoryClassName))
                 {
                     // No-op.
                 }
@@ -89,7 +89,7 @@ namespace ignite
                  */
                 const std::string& GetFactoryClassName() const
                 {
-                    return factory.GetFactoryClassName();
+                    return factory.Get()->GetFactoryClassName();
                 }
 
                 /**
@@ -104,7 +104,7 @@ namespace ignite
                 template<typename T>
                 void SetProperty(const std::string& name, const T& value)
                 {
-                    factory.template SetProperty<T>(name, value);
+                    factory.Get()->template SetProperty<T>(name, value);
                 }
 
                 /**
@@ -113,12 +113,12 @@ namespace ignite
                  */
                 void ClearProperties()
                 {
-                    factory.ClearProperties();
+                    factory.Get()->ClearProperties();
                 }
 
             private:
                 /** Java object factory proxy. */
-                impl::PlatformJavaObjectFactoryProxy factory;
+                impl::SP_PlatformJavaObjectFactoryProxy factory;
             };
         }
     }
