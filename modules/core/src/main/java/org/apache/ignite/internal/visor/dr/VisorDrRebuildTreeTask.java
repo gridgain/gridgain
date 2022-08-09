@@ -52,8 +52,7 @@ public class VisorDrRebuildTreeTask extends VisorOneNodeTask<VisorDrRebuildTreeT
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override
-    protected VisorJob<VisorDrRebuildTreeTaskArgs, VisorDrRebuildTreeTaskResult> job(VisorDrRebuildTreeTaskArgs arg) {
+    @Override protected VisorJob<VisorDrRebuildTreeTaskArgs, VisorDrRebuildTreeTaskResult> job(VisorDrRebuildTreeTaskArgs arg) {
         return new RebuildJob(arg, debug);
     }
 
