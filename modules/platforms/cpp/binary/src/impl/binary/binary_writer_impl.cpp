@@ -879,31 +879,31 @@ namespace ignite
             }
 
             template<>
-            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int8_t>>(const std::vector<int8_t>& obj)
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int8_t> >(const std::vector<int8_t>& obj)
             {
                 WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt8Array, IGNITE_TYPE_ARRAY_BYTE);
             }
 
             template<>
-            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int16_t>>(const std::vector<int16_t>& obj)
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int16_t> >(const std::vector<int16_t>& obj)
             {
                 WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt16Array, IGNITE_TYPE_ARRAY_SHORT);
             }
 
             template<>
-            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<uint16_t>>(const std::vector<uint16_t>& obj)
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<uint16_t> >(const std::vector<uint16_t>& obj)
             {
                 WriteTopPrimitiveArray(obj, BinaryUtils::WriteUInt16Array, IGNITE_TYPE_ARRAY_CHAR);
             }
 
             template<>
-            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int32_t>>(const std::vector<int32_t>& obj)
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int32_t> >(const std::vector<int32_t>& obj)
             {
                 WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt32Array, IGNITE_TYPE_ARRAY_INT);
             }
 
             template<>
-            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int64_t>>(const std::vector<int64_t>& obj)
+            void BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int64_t> >(const std::vector<int64_t>& obj)
             {
                 WriteTopPrimitiveArray(obj, BinaryUtils::WriteInt64Array, IGNITE_TYPE_ARRAY_LONG);
             }

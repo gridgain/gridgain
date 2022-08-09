@@ -188,7 +188,7 @@ namespace ignite
                 }
             }
 
-            static void Read(BinaryReader&, impl::PlatformJavaObjectFactoryProxy& dst)
+            static void Read(BinaryReader&, impl::PlatformJavaObjectFactoryProxy&)
             {
                 throw IgniteError(IgniteError::IGNITE_ERR_GENERIC, "Should never be deserialized on C++ side");
             }
