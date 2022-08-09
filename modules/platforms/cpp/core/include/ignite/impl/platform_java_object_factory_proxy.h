@@ -24,7 +24,7 @@
 #include <ignite/binary/binary_type.h>
 #include <ignite/binary/binary_writer.h>
 
-#include <ignite/impl/cache/query/query_argument.h>
+#include <ignite/impl/writable_object.h>
 
 namespace ignite
 {
@@ -102,14 +102,14 @@ namespace ignite
             template<typename T>
             void SetProperty(const std::string& name, const T& value)
             {
-                std::map<std::string, impl::cache::query::QueryArgumentBase*>::iterator it = properties.find(name);
+                std::map<std::string, impl::WritableObjectBase*>::iterator it = properties.find(name);
                 if (it != properties.end())
                 {
                     delete it->second;
-                    it->second = new impl::cache::query::QueryArgument<T>(value);
+                    it->second = new impl::WritableObject<T>(value);
                 }
                 else
-                    properties.insert(name, new impl::cache::query::QueryArgument<T>(value));
+                    properties.insert(name, new impl::WritableObject<T>(value));
             }
 
             /**
@@ -118,7 +118,7 @@ namespace ignite
              */
             void ClearProperties()
             {
-                std::map<std::string, impl::cache::query::QueryArgumentBase*>::iterator it;
+                std::map<std::string, impl::WritableObjectBase*>::iterator it;
                 for (it = properties.begin(); it != properties.end(); ++it)
                     delete it->second;
 
@@ -133,7 +133,7 @@ namespace ignite
             std::string factoryClassName;
 
             /** The properties. */
-            std::map<std::string, impl::cache::query::QueryArgumentBase*> properties;
+            std::map<std::string, impl::WritableObjectBase*> properties;
         };
     }
 
@@ -165,7 +165,7 @@ namespace ignite
 
                 rawWriter.WriteInt32(static_cast<int32_t>(val.properties.size()));
 
-                std::map<std::string, impl::cache::query::QueryArgumentBase*>::const_iterator it;
+                std::map<std::string, impl::WritableObjectBase*>::const_iterator it;
                 for (it = val.properties.begin(); it != val.properties.end(); ++it)
                 {
                     rawWriter.WriteString(it->first);

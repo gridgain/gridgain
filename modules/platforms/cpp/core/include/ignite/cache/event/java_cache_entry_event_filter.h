@@ -25,7 +25,7 @@
 #include <ignite/cache/event/cache_entry_event.h>
 
 #include <ignite/impl/platform_java_object_factory_proxy.h>
-#include <ignite/impl/cache/query/query_argument.h>
+#include <ignite/impl/writable_object.h>
 #include <ignite/impl/cache/event/cache_entry_event_filter_base.h>
 
 namespace ignite
