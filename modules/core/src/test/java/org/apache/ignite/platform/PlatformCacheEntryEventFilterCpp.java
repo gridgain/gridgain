@@ -23,9 +23,6 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 
 import javax.cache.event.CacheEntryEvent;
 import javax.cache.event.CacheEntryListenerException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.UUID;
 
 /**
