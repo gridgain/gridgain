@@ -109,7 +109,7 @@ namespace ignite
                     it->second = new impl::WritableObject<T>(value);
                 }
                 else
-                    properties.insert(name, new impl::WritableObject<T>(value));
+                    properties[name] = new impl::WritableObject<T>(value);
             }
 
             /**

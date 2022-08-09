@@ -147,10 +147,10 @@ public:
         BOOST_CHECK_EQUAL(event.GetEventType(), eType);
 
         if (oldVal && event.HasOldValue())
-            BOOST_CHECK_EQUAL(event.GetOldValue().value, oldVal->value);
+            BOOST_CHECK_EQUAL(event.GetOldValue(), *oldVal);
 
         if (val && event.HasValue())
-            BOOST_CHECK_EQUAL(event.GetValue().value, val->value);
+            BOOST_CHECK_EQUAL(event.GetValue(), *val);
     }
 
     /*
@@ -246,6 +246,14 @@ struct TestEntry
     TestEntry(int32_t val) : value(val)
     {
         // No-op.
+    }
+
+    /**
+     * Converting to int32_t.
+     */
+    operator int32_t() const
+    {
+        return value;
     }
 
     /* Value */
@@ -743,6 +751,34 @@ BOOST_AUTO_TEST_CASE(TestFilterMultipleNodes)
     lsnr.CheckNextEvent(142, TestEntry(1421), TestEntry(1421), CacheEntryEventType::REMOVE);
 
     lsnr.CheckNextEvent(149, boost::none, TestEntry(1490), CacheEntryEventType::CREATE);
+}
+
+BOOST_AUTO_TEST_CASE(TestJavaFilterFactory)
+{
+    Cache<int, std::string> cacheStr = node.GetCache<int, std::string>("transactional_no_backup");
+
+    Listener<int, std::string> lsnr;
+
+    JavaCacheEntryEventFilter filter("org.apache.ignite.platform.PlatformCacheEntryEventFilterFactory");
+    filter.SetProperty<std::string>("startsWith", "valid");
+
+    ContinuousQuery<int, std::string> qry(MakeReference(lsnr), filter);
+    ContinuousQueryHandle<int, std::string> handle = cacheStr.QueryContinuous(qry);
+
+    cacheStr.Put(1, "notValid");
+    cacheStr.Put(2, "validValue");
+    cacheStr.Put(3, "alsoNotValid");
+    cacheStr.Put(3, "validReplacement");
+
+    cacheStr.Remove(2);
+    cacheStr.Remove(1);
+    cacheStr.Remove(3);
+
+    lsnr.CheckNextEvent(2, boost::none, std::string("validValue"), CacheEntryEventType::CREATE);
+    lsnr.CheckNextEvent(3, std::string("alsoNotValid"), std::string("validReplacement"), CacheEntryEventType::UPDATE);
+
+    lsnr.CheckNextEvent(2, std::string("validValue"), boost::none, CacheEntryEventType::REMOVE);
+    lsnr.CheckNextEvent(3, std::string("validReplacement"), boost::none, CacheEntryEventType::REMOVE);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
