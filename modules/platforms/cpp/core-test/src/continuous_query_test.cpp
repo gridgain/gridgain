@@ -777,8 +777,8 @@ BOOST_AUTO_TEST_CASE(TestJavaFilterFactory)
     lsnr.CheckNextEvent(2, boost::none, std::string("validValue"), CacheEntryEventType::CREATE);
     lsnr.CheckNextEvent(3, std::string("alsoNotValid"), std::string("validReplacement"), CacheEntryEventType::UPDATE);
 
-    lsnr.CheckNextEvent(2, std::string("validValue"), boost::none, CacheEntryEventType::REMOVE);
-    lsnr.CheckNextEvent(3, std::string("validReplacement"), boost::none, CacheEntryEventType::REMOVE);
+    lsnr.CheckNextEvent(2, std::string("validValue"), std::string("validValue"), CacheEntryEventType::REMOVE);
+    lsnr.CheckNextEvent(3, std::string("validReplacement"), std::string("validReplacement"), CacheEntryEventType::REMOVE);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
