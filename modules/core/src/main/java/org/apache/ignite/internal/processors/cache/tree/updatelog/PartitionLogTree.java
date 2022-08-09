@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.tree.updatelog;
 
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -46,7 +50,7 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     public static final String PARAMETER_SEPARATOR_REGEX = "\\|";
 
     /** Maintenance task description. */
-    private static final String TASK_DESCRIPTION = "Partition log tree rebuild";
+    public static final String TASK_DESCRIPTION = "Partition log tree rebuild";
 
     /** */
     public static final Object FULL_ROW = new Object();
@@ -218,6 +222,19 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     }
 
     /**
+     * Constructs a partition log tree rebuild maintenance task.
+     *
+     * @param groupIds Group id set.v
+     * @return Maintenance task.
+     */
+    public static MaintenanceTask toMaintenanceTask(Set<Integer> groupIds) {
+        assert !groupIds.isEmpty();
+
+        return new MaintenanceTask(PART_LOG_TREE_REBUILD_MNTC_TASK_NAME, TASK_DESCRIPTION,
+            groupIds.stream().map(U::hexInt).collect(Collectors.joining(PARAMETER_SEPARATOR)));
+    }
+
+    /**
      * Merges two index rebuild maintenance tasks concatenating their parameters.
      *
      * @param oldTask Old task
@@ -231,10 +248,17 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
         String oldTaskParams = oldTask.parameters();
         String newTaskParams = newTask.parameters();
 
+        assert oldTaskParams != null;
+        assert newTaskParams != null;
+
         if (oldTaskParams.contains(newTaskParams))
             return oldTask;
 
-        String mergedParams = oldTaskParams + PARAMETER_SEPARATOR + newTaskParams;
+        String mergedParams = Stream.concat(
+                Arrays.stream(oldTaskParams.split(PARAMETER_SEPARATOR_REGEX)),
+                Arrays.stream(newTaskParams.split(PARAMETER_SEPARATOR_REGEX)))
+            .distinct()
+            .collect(Collectors.joining(PARAMETER_SEPARATOR));
 
         return new MaintenanceTask(oldTask.name(), oldTask.description(), mergedParams);
     }
