@@ -23,11 +23,23 @@
 #define _IGNITE_CACHE_EVENT_JAVA_CACHE_ENTRY_EVENT_FILTER
 
 #include <ignite/cache/event/cache_entry_event.h>
+
+#include <ignite/impl/platform_java_object_factory_proxy.h>
+#include <ignite/impl/cache/query/query_argument.h>
 #include <ignite/impl/cache/event/cache_entry_event_filter_base.h>
 
 namespace ignite
 {
-    class IgniteBinding;
+    namespace impl
+    {
+        namespace cache
+        {
+            namespace event
+            {
+                class JavaCacheEntryEventFilterHolder;
+            }
+        }
+    }
 
     namespace cache
     {
@@ -38,18 +50,26 @@ namespace ignite
              *
              * All templated types should be default-constructable,
              * copy-constructable and assignable.
-             *
-             * @tparam K Key type.
-             * @tparam V Value type.
              */
-            template<typename K, typename V>
             class JavaCacheEntryEventFilter
             {
+                friend class ignite::impl::cache::event::JavaCacheEntryEventFilterHolder;
             public:
                 /**
                  * Default constructor.
                  */
                 JavaCacheEntryEventFilter()
+                {
+                    // No-op.
+                }
+
+                /**
+                 * Constructor.
+                 *
+                 * @param factoryClassName Name of the Java factory class.
+                 */
+                JavaCacheEntryEventFilter(const std::string& factoryClassName) :
+                    factory(impl::FactoryType::USER, factoryClassName)
                 {
                     // No-op.
                 }
@@ -61,6 +81,44 @@ namespace ignite
                 {
                     // No-op.
                 }
+
+                /**
+                 * Get Java remote filter factory class name.
+                 *
+                 * @return Java factory class name.
+                 */
+                const std::string& GetFactoryClassName() const
+                {
+                    return factory.GetFactoryClassName();
+                }
+
+                /**
+                 * Add property.
+                 *
+                 * Template argument type should be copy-constructable and assignable. Also BinaryType class template
+                 * should be specialized for this type.
+                 *
+                 * @param name Property name.
+                 * @param value Property value.
+                 */
+                template<typename T>
+                void SetProperty(const std::string& name, const T& value)
+                {
+                    factory.template SetProperty<T>(name, value);
+                }
+
+                /**
+                 * Clear set properties.
+                 * Set properties for the filter to empty set.
+                 */
+                void ClearProperties()
+                {
+                    factory.ClearProperties();
+                }
+
+            private:
+                /** Java object factory proxy. */
+                impl::PlatformJavaObjectFactoryProxy factory;
             };
         }
     }
