@@ -71,7 +71,7 @@ public class GridCheckpointTest extends GridCommonAbstractTest {
 
     @Parameterized.Parameters(name = "{0}")
     public static List<Object> testData() {
-        return Arrays.asList(new Object[] {1,2,3,4,5});
+        return Arrays.asList(new Object[] {1,3});
     }
 
     /** */

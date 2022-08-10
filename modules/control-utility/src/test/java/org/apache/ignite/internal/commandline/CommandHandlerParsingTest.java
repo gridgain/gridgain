@@ -1141,7 +1141,6 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WARM_UP ||
             cmd == CommandList.PROPERTY ||
             cmd == CommandList.METRIC ||
-            cmd == CommandList.DEFRAGMENTATION ||
-            cmd == CommandList.CHECKPOINT;
+            cmd == CommandList.DEFRAGMENTATION;
     }
 }
