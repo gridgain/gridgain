@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
+import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
@@ -210,9 +211,12 @@ public enum IgniteFeatures {
 
     /** Snapshot operations with ZSTD, LZ4, SNAPPY algorithms. */
     SNAPSHOT_COMPRESSION_EXTENDED_OPTION(63),
-    
+
     /** Whether the absent PK parts should be filled with defaults or not. */
-    FILLS_ABSENT_PKS_WITH_DEFAULTS(64);
+    FILLS_ABSENT_PKS_WITH_DEFAULTS(64),
+
+    /** This feature indicates that {@link CacheAffinityChangeMessage} is mutable. */
+    MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE(66);
 
     /**
      * Unique feature identifier.
