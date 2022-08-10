@@ -52,7 +52,7 @@ public class DrRepairPartitionCountersCommand extends DrAbstractRemoteSubCommand
     /**
      * Container for command arguments.
      */
-    public class Arguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrRepairPartitionCountersTaskArg> {
+    public static class Arguments implements DrAbstractRemoteSubCommand.Arguments<VisorDrRepairPartitionCountersTaskArg> {
          /** Caches. */
         private final Set<String> caches;
 

@@ -26,6 +26,8 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,6 +36,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -44,10 +47,12 @@ import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -270,6 +275,85 @@ public class IgniteDynamicSqlRestoreTest extends GridCommonAbstractTest implemen
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Tests a scenario when an index gets created when a node is turned off and no checkpoint is issued upon the node
+     * stop.
+     */
+    @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
+    @Test
+    public void testIndexCreationWhenNodeIsStoppedWithoutCheckpoint() throws Exception {
+        // Start topology.
+        Ignite ignite = startGrids(2);
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        // Create table, add some data.
+        int entryCnt = 50;
+
+        IgniteCache<?, ?> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        cache.query(new SqlFieldsQuery(
+            " CREATE TABLE PERSON (\n" +
+                " FIRST_NAME VARCHAR,\n" +
+                " LAST_NAME VARCHAR,\n" +
+                " ADDRESS VARCHAR,\n" +
+                " LANG VARCHAR,\n" +
+                " BIRTH_DATE TIMESTAMP,\n" +
+                " CONSTRAINT PK_PERSON PRIMARY KEY (FIRST_NAME,LAST_NAME,ADDRESS,LANG)\n" +
+                " ) WITH \"key_type=PersonKeyType, " +
+                "CACHE_NAME=PersonCache, value_type=PersonValueType, AFFINITY_KEY=FIRST_NAME,template=PARTITIONED,backups=1\""
+        )).getAll();
+
+        for (int i = 0; i < entryCnt; i++) {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "insert into Person(LANG, FIRST_NAME, ADDRESS, LAST_NAME, BIRTH_DATE) values(?,?,?,?,?)"
+            );
+
+            String s = String.valueOf(i);
+
+            query.setArgs(s, s, s, s, new Timestamp(System.currentTimeMillis()));
+
+            cache.query(query).getAll();
+        }
+
+        // Stop second node.
+        stopGrid(1, true);
+
+        // Create an index on remaining node.
+        cache.query(new SqlFieldsQuery("create index PERSON_FIRST_NAME_IDX on PERSON(FIRST_NAME)")).getAll();
+
+        // Restart second node.
+        Ignite restartedNode = startGrid(1);
+
+        // Await for index rebuild on started node.
+        assertTrue(GridTestUtils.waitForCondition(() -> {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "EXPLAIN SELECT * FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=1"
+            );
+
+            String fullPlan = restartedNode.cache(DEFAULT_CACHE_NAME)
+                .query(query)
+                .getAll()
+                .stream()
+                .map(l -> l.get(0).toString())
+                .collect(Collectors.joining("; "));
+
+            return fullPlan.contains("PUBLIC.PERSON_FIRST_NAME_IDX");
+        }, 5_000));
+
+        // Make sure that data could be queried.
+        for (int i = 0; i < entryCnt; i++) {
+            SqlFieldsQuery query = new SqlFieldsQuery(
+                "SELECT COUNT(*) FROM Person USE INDEX(PERSON_FIRST_NAME_IDX) WHERE FIRST_NAME=?"
+            );
+
+            query.setArgs(String.valueOf(i));
+
+            for (List<?> result : cache.query(query).getAll())
+                assertEquals(1L, ((Long) result.get(0)).longValue());
         }
     }
 

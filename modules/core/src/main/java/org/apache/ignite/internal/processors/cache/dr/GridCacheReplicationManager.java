@@ -112,13 +112,23 @@ public interface GridCacheReplicationManager extends GridCacheManager {
     }
 
     /**
-     * Skip update counter callback.
-     * The method is called when cache groups is used and update counter is reserved for update another cache from the cache group.
+     * Update counter change callback.
      *
      * @param part Partition.
-     * @param updCnt Update counter to skip.
+     * @param updCnt Update counter.
      */
-    default void skipUpdateCounter(int part, long updCnt) {
+    default void updateCounter(int part, long updCnt) {
+        // No op.
+    }
+
+    /**
+     * Update counter change callback.
+     *
+     * @param part Partition.
+     * @param updCnt Start update counter.
+     * @param delta Delta.
+     */
+    default void updateCounter(int part, long updCnt, long delta) {
         // No op.
     }
 }

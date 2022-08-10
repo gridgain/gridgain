@@ -1057,7 +1057,7 @@ public class CacheGroupContext {
                 GridCacheContext cctx = caches.get(i);
 
                 if (cctx.dr().enabled() && cacheId != cctx.cacheId())
-                    cctx.dr().skipUpdateCounter(part, cntr);
+                    cctx.dr().updateCounter(part, cntr);
             }
         }
 

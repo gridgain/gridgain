@@ -24,6 +24,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrRebuildPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrStateCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrTopologyCommand;
@@ -39,6 +40,7 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.FULL_S
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.HELP;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.NODE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.PAUSE;
+import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUILD_TREES;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
@@ -129,6 +131,14 @@ public class DrCommand extends AbstractCommand<Object> {
                 optional(DrRepairPartitionCountersCommand.BATCH_SIZE),
                 optional(DrRepairPartitionCountersCommand.KEEP_BINARY),
                 optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Schedule/run maintenance task for rebuilding DR tries:",
+            DATA_CENTER_REPLICATION,
+            REBUILD_TREES.toString(),
+            optional(DrRebuildPartitionLogCommand.CACHES_ARG, "cacheName1,cacheName2,...,cacheNameN"),
+            optional(DrRebuildPartitionLogCommand.GROUPS_ARG, "groupName1,groupName2,...,groupNameN"),
+            optional(CMD_AUTO_CONFIRMATION)
         );
     }
 

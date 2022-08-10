@@ -23,10 +23,11 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lifecycle.LifecycleAware;
+import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.events.EventType.EVTS_ALL;
+import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
  * Tests local event listener that implements {@link LifecycleAware}.
@@ -39,7 +40,7 @@ public class LifecycleAwareListenerTest extends GridCommonAbstractTest {
     public void testStartStop() throws Exception {
         TestLocalListener lsnr = new TestLocalListener();
 
-        IgniteConfiguration cfg = getConfiguration().setLocalEventListeners(F.asMap(lsnr, EVTS_ALL));
+        IgniteConfiguration cfg = getConfiguration().setLocalEventListeners(F.asMap(lsnr, new int[]{EVT_NODE_JOINED}));
 
         try (Ignite ignite = startGrid(cfg)) {
             assertTrue(lsnr.isStarted);
@@ -57,6 +58,10 @@ public class LifecycleAwareListenerTest extends GridCommonAbstractTest {
         /** Is stopped. */
         private boolean isStopped;
 
+        /** */
+        @IgniteInstanceResource
+        private Ignite ignite;
+
         /** {@inheritDoc} */
         @Override public boolean apply(Event evt) {
             return true;
@@ -65,6 +70,8 @@ public class LifecycleAwareListenerTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override public void start() throws IgniteException {
             assertFalse(isStarted);
+
+            assertNotNull(ignite);
 
             isStarted = true;
         }
