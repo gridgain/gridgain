@@ -94,20 +94,22 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(DrCacheCommand.METRICS_PARAM),
             optional(DrCacheCommand.CACHE_FILTER_PARAM, join("|", DrCacheCommand.CacheFilter.values())),
             optional(DrCacheCommand.SENDER_GROUP_PARAM, "<groupName>|" + join("|", DrCacheCommand.SenderGroup.values())),
-            optional(DrCacheCommand.ACTION_PARAM, join("|", DrCacheCommand.Action.values())),
+            optional(DrCacheCommand.ACTION_PARAM, DrCacheCommand.Action.START.text() + "|" + DrCacheCommand.Action.STOP.text()),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
         usage(log, "Deprecated command to start full state transfer:",
             DATA_CENTER_REPLICATION,
-            FULL_STATE_TRANSFER.toString(),
+            CACHE.toString(),
+            "<regExp> --action full-state-transfer",
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Execute full state transfer:",
+        usage(log, "Execute full state transfer, transfer all caches if not specified in params and " +
+                "data center is configured:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
-            DrFSTCommand.Action.START.action(),
+            optional(DrFSTCommand.Action.START.action()),
             optional(SNAPSHOT_ID, "<snapshotId>"),
             optional(CACHES_PARAM, "<cacheName1, ...>"),
             optional(SENDER_GROUP, "<groupName>|ALL|DEFAULT|NONE"),
