@@ -20,7 +20,7 @@ package org.apache.ignite.internal.visor.dr;
  * Dr rebuild tree sub-commands.
  */
 public enum VisorDrRebuildTreeOperation {
-    /** Default command */
+    /** Default command. */
     DEFAULT,
     /** Status command. */
     STATUS,
