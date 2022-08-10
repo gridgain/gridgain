@@ -16,14 +16,19 @@
 
 package org.apache.ignite.internal;
 
-import org.apache.ignite.IgniteCache;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.EncryptionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -31,20 +36,24 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointHistory;
 import org.apache.ignite.internal.processors.cluster.IgniteClusterMXBeanImpl;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
+import org.apache.ignite.spi.encryption.keystore.KeystoreEncryptionSpi;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.internal.encryption.AbstractEncryptionTest.KEYSTORE_PASSWORD;
+import static org.apache.ignite.internal.encryption.AbstractEncryptionTest.KEYSTORE_PATH;
 
 @GridCommonTest(group = "Kernal Self")
 
 /**
  * Cluster wide checkpointing test.
  */
+@RunWith(Parameterized.class)
 public class GridCheckpointTest extends GridCommonAbstractTest {
-    /** */
-    public GridCheckpointTest() {
-        super(/*start Grid*/false);
-    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -59,6 +68,15 @@ public class GridCheckpointTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
     }
+
+    @Parameterized.Parameters(name = "{0}")
+    public static List<Object> testData() {
+        return Arrays.asList(new Object[] {1,2,3,4,5});
+    }
+
+    /** */
+    @Parameterized.Parameter(0)
+    public int gridSize;
 
     /** */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -90,69 +108,72 @@ public class GridCheckpointTest extends GridCommonAbstractTest {
         return cfg;
     }
 
-    /** */
-    protected CacheConfiguration cacheConfiguration() {
-        CacheConfiguration cc = defaultCacheConfiguration();
-        cc.setName(DEFAULT_CACHE_NAME);
-
-        return cc;
-    }
-
     @Test
     public void testForceCheckpointing() throws Exception {
-        IgniteEx ignite1 = startGrid(1);
+        IgniteEx g1 = startGrids(gridSize);
 
-        final GridCacheDatabaseSharedManager gridDb = (GridCacheDatabaseSharedManager)ignite1.context().cache().context().database();
-        final CheckpointHistory checkpointHist = gridDb.checkpointHistory();
-        ignite1.configuration().getCheckpointSpi();
-        assert null != checkpointHist;
+        for (int i = 0; i < gridSize; i++) {
+            assertEquals("Number of checkpoints for node: " + i, 0, numOfCheckpoints(i));
+            assertNull("Last checkpoint for node: " + i, lastCheckpoint(i));
+        }
 
-        final int numOfCheckpointsBefore = checkpointHist.checkpoints().size();
-        final CheckpointEntry lastCheckpointBefore = checkpointHist.lastCheckpoint();
+        g1.cluster().state(ClusterState.ACTIVE);
 
-        ignite1.cluster().state(ClusterState.ACTIVE);
+        g1.cluster().checkpoint();
 
-        IgniteCache<Object, Object> jcache = jcache(1);
-        jcache.put(1, 1);
-
-        ignite1.cluster().checkpoint();
-
-        final int numOfCheckpointsAfter = checkpointHist.checkpoints().size();
-        final CheckpointEntry lastCheckpointAfter = checkpointHist.lastCheckpoint();
-
-        assertTrue(numOfCheckpointsAfter > numOfCheckpointsBefore);
-        assertNotSame(lastCheckpointBefore, lastCheckpointAfter);
+        for (int i = 0; i < gridSize; i++) {
+            assertEquals("Number of checkpoints for node: " + i, 1, numOfCheckpoints(i));
+            assertNotNull("Last checkpoint for node: " + i, lastCheckpoint(i));
+        }
     }
 
     @Test
     public void testForceCheckpointingJmx() throws Exception {
-        IgniteEx ignite1 = startGrid(1);
+        IgniteEx g1 = startGrids(gridSize);
 
-        final GridCacheDatabaseSharedManager gridDb = (GridCacheDatabaseSharedManager)ignite1.context().cache().context().database();
-        final CheckpointHistory checkpointHist = gridDb.checkpointHistory();
-        ignite1.configuration().getCheckpointSpi();
-        assert null != checkpointHist;
+        for (int i = 0; i < gridSize; i++) {
+            assertEquals("Number of checkpoints for node: " + i, 0, numOfCheckpoints(i));
+            assertNull("Last checkpoint for node: " + i, lastCheckpoint(i));
+        }
 
-        final int numOfCheckpointsBefore = checkpointHist.checkpoints().size();
-        final CheckpointEntry lastCheckpointBefore = checkpointHist.lastCheckpoint();
-
-        ignite1.cluster().state(ClusterState.ACTIVE);
-
-        IgniteCache<Object, Object> jcache = jcache(1);
-        jcache.put(1, 1);
+        g1.cluster().state(ClusterState.ACTIVE);
 
         IgniteClusterMXBean clustMxBean = getMxBean(
-            getTestIgniteInstanceName(1),
+            getTestIgniteInstanceName(0),
             "IgniteCluster",
             IgniteClusterMXBean.class,
             IgniteClusterMXBeanImpl.class
         );
         clustMxBean.checkpoint();
 
-        final int numOfCheckpointsAfter = checkpointHist.checkpoints().size();
-        final CheckpointEntry lastCheckpointAfter = checkpointHist.lastCheckpoint();
+        for (int i = 0; i < gridSize; i++) {
+            assertEquals("Number of checkpoints for node: " + i, 1, numOfCheckpoints(i));
+            assertNotNull("Last checkpoint for node: " + i, lastCheckpoint(i));
+        }
+    }
 
-        assertTrue(numOfCheckpointsAfter > numOfCheckpointsBefore);
-        assertNotSame(lastCheckpointBefore, lastCheckpointAfter);
+    private void loadData(int idx) throws Exception {
+        Map<Integer, String> vals = new HashMap<>();
+
+        for (int i = 1; i <= 10; i++)
+            vals.put(i, Integer.toString(i));
+
+        loadAll(jcache(idx), vals.keySet(), true);
+    }
+
+    int numOfCheckpoints(int idx) {
+        return checkpointHistory(idx).checkpoints().size();
+    }
+
+    CheckpointEntry lastCheckpoint(int idx) {
+        return checkpointHistory(idx).lastCheckpoint();
+    }
+
+    private CheckpointHistory checkpointHistory(int idx) {
+        final GridCacheDatabaseSharedManager gridDb = (GridCacheDatabaseSharedManager)grid(idx).context().cache().context().database();
+        final CheckpointHistory checkpointHist = gridDb.checkpointHistory();
+        assert null != checkpointHist;
+
+        return checkpointHist;
     }
 }
