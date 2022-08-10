@@ -140,6 +140,9 @@ This utility can do the following commands:
   Start partition counters repairing for selected caches:
     control.(sh|bat) --dr repair-partition-counters [--caches cacheName1,cacheName2,...,cacheNameN] [--batch-size] [--keep-binary] [--yes]
 
+  Schedule/run maintenance task for rebuilding DR tries:
+    control.(sh|bat) --dr rebuild-partition-tree [--caches cacheName1,cacheName2,...,cacheNameN] [--groups groupName1,groupName2,...,groupNameN] [--yes]
+
   Print tracing configuration:
     control.(sh|bat) --tracing-configuration
 
