@@ -103,13 +103,14 @@ namespace ignite
             void SetProperty(const std::string& name, const T& value)
             {
                 std::map<std::string, impl::WritableObjectBase*>::iterator it = properties.find(name);
+                std::auto_ptr< impl::WritableObject<T> > newProp(new impl::WritableObject<T>(value));
                 if (it != properties.end())
                 {
                     delete it->second;
-                    it->second = new impl::WritableObject<T>(value);
+                    it->second = newProp.release();
                 }
                 else
-                    properties[name] = new impl::WritableObject<T>(value);
+                    properties[name] = newProp.release();
             }
 
             /**

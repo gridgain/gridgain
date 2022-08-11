@@ -225,6 +225,8 @@ namespace ignite
                      */
                     virtual CacheEntryEventFilterBase* GetFilter()
                     {
+                        // We can not return Java object to C++ code.
+                        // This call should never be called on C++ side.
                         return 0;
                     }
 
