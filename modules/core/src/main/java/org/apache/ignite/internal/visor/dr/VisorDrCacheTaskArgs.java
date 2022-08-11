@@ -67,6 +67,15 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
     /** Action none. */
     public static final int ACTION_NONE = 3;
 
+    /** FST action start. */
+    public static final int FST_ACTION_START = 0;
+
+    /** FST action stop. */
+    public static final int FST_ACTION_CANCEL = 1;
+
+    /** FST action list. */
+    public static final int FST_ACTION_LIST = 2;
+
     /** Regex. */
     private String regex;
 

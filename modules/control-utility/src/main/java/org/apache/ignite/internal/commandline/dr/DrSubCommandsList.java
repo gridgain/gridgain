@@ -18,8 +18,8 @@ package org.apache.ignite.internal.commandline.dr;
 
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
-import org.apache.ignite.internal.commandline.dr.subcommands.DrFullStateTransferCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrHelpCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrPauseCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRebuildPartitionLogCommand;
@@ -43,8 +43,6 @@ public enum DrSubCommandsList {
     /** */
     CACHE("cache", new DrCacheCommand()),
     /** */
-    FULL_STATE_TRANSFER("full-state-transfer", new DrFullStateTransferCommand()),
-    /** */
     PAUSE("pause", new DrPauseCommand()),
     /** */
     RESUME("resume", new DrResumeCommand()),
@@ -53,7 +51,9 @@ public enum DrSubCommandsList {
     /** */
     REPAIR("repair-partition-counters", new DrRepairPartitionCountersCommand()),
     /** */
-    REBUILD_TREES("rebuild-partition-tree", new DrRebuildPartitionLogCommand());
+    REBUILD_TREES("rebuild-partition-tree", new DrRebuildPartitionLogCommand()),
+    /** */
+    FULL_STATE_TRANSFER("full-state-transfer", new DrFSTCommand());
 
     /** */
     private final String name;

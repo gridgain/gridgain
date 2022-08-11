@@ -251,7 +251,10 @@ public enum IgniteFeatures {
     HAS_INVALID_USER_COMMAND_EXCEPTION(65),
 
     /** This feature indicates that {@link CacheAffinityChangeMessage} is mutable. */
-    MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE(66);
+    MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE(66),
+
+    /** New DR FST commands handling approach. */
+    NEW_DR_FST_COMMANDS(67);
 
     /**
      * Unique feature identifier.

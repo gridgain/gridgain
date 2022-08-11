@@ -38,7 +38,8 @@ import org.apache.ignite.internal.visor.dr.VisorDrCheckPartitionCountersTaskResu
 /**
  * DR check partition counters command.
  */
-public class DrCheckPartitionCountersCommand extends DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult, DrCheckPartitionCountersCommand.Arguments> {
+public class DrCheckPartitionCountersCommand extends
+    DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult, DrCheckPartitionCountersCommand.Arguments> {
     /** Check first N entries parameter. */
     public static final String CHECK_FIRST_PARAM = "--check-first";
 

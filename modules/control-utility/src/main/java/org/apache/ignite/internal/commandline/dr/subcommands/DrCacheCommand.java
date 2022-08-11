@@ -124,7 +124,7 @@ public class DrCacheCommand extends
                 case SENDER_GROUP_PARAM: {
                     argIter.nextArg(null);
 
-                    String arg = argIter.nextArg("--sender-group parameter value required.");
+                    String arg = argIter.nextArg(SENDER_GROUP_PARAM + " parameter value required.");
 
                     sndGrp = SenderGroup.parse(arg);
 
@@ -137,7 +137,7 @@ public class DrCacheCommand extends
                 case ACTION_PARAM: {
                     argIter.nextArg(null);
 
-                    String errorMsg = "--action parameter value required.";
+                    String errorMsg = ACTION_PARAM + " parameter value required.";
 
                     act = Action.parse(argIter.nextArg(errorMsg));
 

@@ -23,6 +23,7 @@ import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCacheCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrCheckPartitionCountersCommand;
+import org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrNodeCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRebuildPartitionLogCommand;
 import org.apache.ignite.internal.commandline.dr.subcommands.DrRepairPartitionCountersCommand;
@@ -45,6 +46,10 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REPAIR
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.RESUME;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.STATE;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.TOPOLOGY;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.CACHES_PARAM;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.DATA_CENTERS;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SENDER_GROUP;
+import static org.apache.ignite.internal.commandline.dr.subcommands.DrFSTCommand.ParseStart.SNAPSHOT_ID;
 
 /** */
 public class DrCommand extends AbstractCommand<Object> {
@@ -91,14 +96,41 @@ public class DrCommand extends AbstractCommand<Object> {
             optional(DrCacheCommand.METRICS_PARAM),
             optional(DrCacheCommand.CACHE_FILTER_PARAM, join("|", DrCacheCommand.CacheFilter.values())),
             optional(DrCacheCommand.SENDER_GROUP_PARAM, "<groupName>|" + join("|", DrCacheCommand.SenderGroup.values())),
-            optional(DrCacheCommand.ACTION_PARAM, join("|", DrCacheCommand.Action.values())),
+            optional(DrCacheCommand.ACTION_PARAM, DrCacheCommand.Action.START.text() + "|" + DrCacheCommand.Action.STOP.text()),
             optional(CMD_AUTO_CONFIRMATION)
         );
 
-        usage(log, "Execute full state transfer on all caches in cluster if data center replication is configured:",
+        usage(log, "Deprecated command to start full state transfer:",
+            DATA_CENTER_REPLICATION,
+            CACHE.toString(),
+            "<regExp> --action full-state-transfer",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Execute full state transfer, transfer all caches if not specified in params and " +
+                "data center is configured:",
             DATA_CENTER_REPLICATION,
             FULL_STATE_TRANSFER.toString(),
+            optional(DrFSTCommand.Action.START.action()),
+            optional(SNAPSHOT_ID, "<snapshotId>"),
+            optional(CACHES_PARAM, "<cacheName1, ...>"),
+            optional(SENDER_GROUP, "<groupName>|ALL|DEFAULT|NONE"),
+            optional(DATA_CENTERS, "<dcId, ...>"),
             optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Cancel active full state transfer by id:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            DrFSTCommand.Action.CANCEL.action(),
+            "<fullStateTransferUID>",
+            optional(CMD_AUTO_CONFIRMATION)
+        );
+
+        usage(log, "Print list of active full state transfers:",
+            DATA_CENTER_REPLICATION,
+            FULL_STATE_TRANSFER.toString(),
+            DrFSTCommand.Action.LIST.action()
         );
 
         usage(log, "Stop data center replication on all caches in cluster:",
