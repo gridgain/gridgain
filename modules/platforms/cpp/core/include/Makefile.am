@@ -54,7 +54,6 @@ nobase_include_HEADERS = \
 	ignite/impl/cache/event/cache_entry_event_filter_holder.h \
 	ignite/impl/cache/query/continuous/continuous_query_handle_impl.h \
 	ignite/impl/cache/query/continuous/continuous_query_impl.h \
-	ignite/impl/cache/query/query_argument.h \
 	ignite/impl/cache/query/query_batch.h \
 	ignite/impl/cache/query/query_fields_row_impl.h \
 	ignite/impl/cache/query/query_impl.h \
@@ -79,6 +78,8 @@ nobase_include_HEADERS = \
 	ignite/impl/interop/interop_target.h \
 	ignite/impl/module_manager.h \
 	ignite/impl/operations.h \
+        ignite/impl/platform_java_object_factory_proxy.h \
+        ignite/impl/writable_object.h \
 	ignite/impl/transactions/transactions_impl.h \
 	ignite/impl/transactions/transaction_impl.h \
 	ignite/transactions/transaction.h \

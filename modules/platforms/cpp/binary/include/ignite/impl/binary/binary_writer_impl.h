@@ -919,6 +919,29 @@ namespace ignite
                 );
 
                 /**
+                 * Write an empty array to stream without any checks.
+                 *
+                 * @param hdr Header.
+                 */
+                void WriteArrayEmpty(const int8_t hdr);
+
+                /**
+                 * Write a primitive array to stream without any checks.
+                 *
+                 * @param val Value.
+                 * @param len Array length.
+                 * @param func Stream function.
+                 * @param hdr Header.
+                 */
+                template<typename T>
+                void WritePrimitiveArrayBase(
+                    const T* val,
+                    const int32_t len,
+                    void(*func)(interop::InteropOutputStream*, const T*, const int32_t),
+                    const int8_t hdr
+                );
+
+                /**
                  * Write a primitive array to stream in raw mode.
                  *
                  * @param val Value.
@@ -1042,6 +1065,20 @@ namespace ignite
                     stream->WriteInt8(hdr);
                     func(stream, obj);
                 }
+
+                /**
+                 * Write primitive array.
+                 *
+                 * @param obj Array.
+                 * @param func Write function.
+                 * @param hdr Header.
+                 */
+                template<typename T>
+                void WriteTopPrimitiveArray(
+                    const std::vector<T>& obj,
+                    void(*func)(interop::InteropOutputStream*, const T*, const int32_t),
+                    int8_t hdr
+                );
             };
 
             template<>
@@ -1095,6 +1132,26 @@ namespace ignite
             template<>
             void IGNITE_IMPORT_EXPORT
             BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::string>(const std::string& obj);
+
+            template<>
+            void IGNITE_IMPORT_EXPORT
+            BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int8_t> >(const std::vector<int8_t>& obj);
+
+            template<>
+            void IGNITE_IMPORT_EXPORT
+            BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int16_t> >(const std::vector<int16_t>& obj);
+
+            template<>
+            void IGNITE_IMPORT_EXPORT
+            BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<uint16_t> >(const std::vector<uint16_t>& obj);
+
+            template<>
+            void IGNITE_IMPORT_EXPORT
+            BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int32_t> >(const std::vector<int32_t>& obj);
+
+            template<>
+            void IGNITE_IMPORT_EXPORT
+            BinaryWriterImpl::WriteTopObject0<ignite::binary::BinaryWriter, std::vector<int64_t> >(const std::vector<int64_t>& obj);
         }
     }
 }
