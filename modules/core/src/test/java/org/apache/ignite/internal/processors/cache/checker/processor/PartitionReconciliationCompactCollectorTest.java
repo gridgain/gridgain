@@ -162,6 +162,12 @@ public class PartitionReconciliationCompactCollectorTest extends PartitionReconc
 
         Map<String, Map<Integer, String>> parsedCompactOutput = parseResult(compactRes, cacheNames);
 
+        assertEqualsSets(locOutputRes.nodeIdToFolder().keySet(), compactRes.nodeIdToFolder().keySet());
+        assertEqualsMaps(
+            locOutputRes.partitionReconciliationResult().nodesIdsToConsistentIdsMap(),
+            compactRes.partitionReconciliationResult().nodesIdsToConsistentIdsMap()
+        );
+
         assertEquals(parsedLocOutput, parsedCompactOutput);
     }
 
