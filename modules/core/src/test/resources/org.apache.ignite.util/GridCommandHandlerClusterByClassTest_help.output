@@ -244,6 +244,9 @@ If the file name isn't specified the output file name is: '<typeId>.bin'
   Cancel scheduled or active PDS defragmentation on underlying node:
     control.(sh|bat) --defragmentation cancel
 
+  Start checkpointing process:
+    control.(sh|bat) --checkpoint
+
 By default commands affecting the cluster require interactive confirmation.
 Use --yes option to disable it.
 

@@ -55,4 +55,9 @@ public class IgniteClusterMXBeanImpl implements IgniteClusterMXBean {
     @Override public void tag(String newTag) {
         cluster.tag(newTag);
     }
+
+    /** {@inheritDoc} */
+    @Override public void checkpoint() {
+        cluster.checkpoint();
+    }
 }

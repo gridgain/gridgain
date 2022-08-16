@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.cache.NodeWithFilterRestartTest;
 import org.apache.ignite.internal.ClusterMetricsSelfTest;
+import org.apache.ignite.internal.GridCheckpointTest;
 import org.apache.ignite.internal.GridCommunicationSelfTest;
 import org.apache.ignite.internal.GridDiscoveryEventSelfTest;
 import org.apache.ignite.internal.GridDiscoverySelfTest;
@@ -115,7 +116,8 @@ import org.junit.runners.Suite;
     NodeWithFilterRestartTest.class,
     ClusterActiveStateChangeWithNodeOutOfBaselineTest.class,
     GridMutableLongTest.class,
-    LifecycleAwareListenerTest.class
+    LifecycleAwareListenerTest.class,
+    GridCheckpointTest.class
 })
 public class IgniteKernalSelfTestSuite {
     /** Activate service grid for test it. */
