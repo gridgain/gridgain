@@ -50,7 +50,7 @@ public class GridClientConfiguration {
     public static final GridClientProtocol DFLT_CLIENT_PROTOCOL = GridClientProtocol.TCP;
 
     /** Default topology refresh frequency is 2 sec. */
-    public static final int DFLT_TOP_REFRESH_FREQ = 2000;
+    public static final int DFLT_TOP_REFRESH_FREQ = 30000;
 
     /** Default maximum time connection can be idle. */
     public static final long DFLT_MAX_CONN_IDLE_TIME = 30000;

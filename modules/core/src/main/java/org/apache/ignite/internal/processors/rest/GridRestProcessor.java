@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.ConnectorMessageInterceptor;
@@ -96,7 +97,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
-import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_ILLEGAL_STATE;
@@ -115,7 +115,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
     private static final int SES_TIMEOUT_CHECK_DELAY = 1_000;
 
     /** Default session timeout, in seconds. */
-    public static final int DFLT_SES_TIMEOUT = 30;
+    public static final int DFLT_SES_TIMEOUT = 5;
 
     /** The default interval used to invalidate sessions, in seconds. */
     public static final int DFLT_SES_TOKEN_INVALIDATE_INTERVAL = 5 * 60;
@@ -248,8 +248,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
             }
         }
 
-        if (log.isDebugEnabled())
-            log.debug("Received request from client: " + req);
+       // if (log.isDebugEnabled())
+            log.info("Received request from client: " + req);
 
         boolean authenticationEnabled = ctx.authentication().enabled();
         boolean securityEnabled = ctx.security().enabled();
@@ -463,7 +463,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
                 else {
                     Session ses = sesId2Ses.get(sesId);
 
-                    if (ses == null || !ses.touch())
+                    if (ses == null || !ses.touch(log))
                         continue; // Need to wait while timeout thread complete removing of timed out sessions.
 
                     return ses;
@@ -479,7 +479,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
                     throw new IgniteCheckedException("Failed to handle request - unknown session token " +
                         "(maybe expired session) [sesTok=" + U.byteArray2HexString(sesTok) + "]");
 
-                if (!ses.touch())
+                if (!ses.touch(log))
                     continue; // Need to wait while timeout thread complete removing of timed out sessions.
 
                 return ses;
@@ -499,7 +499,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
                     throw new IgniteCheckedException("Failed to handle request - unknown session token " +
                         "(maybe expired session) [sesTok=" + U.byteArray2HexString(sesTok) + "]");
 
-                if (!ses.touch())
+                if (!ses.touch(log))
                     continue; // Need to wait while timeout thread complete removing of timed out sessions.
 
                 return ses;
@@ -508,6 +508,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
             assert false : "Got an unreachable state.";
         }
     }
+
+    public static CountDownLatch latch = new CountDownLatch(0);
 
     /**
      * @param ctx Context.
@@ -527,9 +529,11 @@ public class GridRestProcessor extends GridProcessorAdapter {
                         for (Map.Entry<UUID, Session> e : sesId2Ses.entrySet()) {
                             Session ses = e.getValue();
 
-                            if (ses.isTimedOut(sesTtl)) {
+                            if (ses.isTimedOut(sesTtl, log)) {
                                 clientId2SesId.remove(ses.clientId, ses.sesId);
                                 sesId2Ses.remove(ses.sesId, ses);
+
+                                latch = new CountDownLatch(1);
 
                                 if (ctx.security().enabled() && ses.secCtx != null && ses.secCtx.subject() != null)
                                     ctx.security().onSessionExpired(ses.secCtx.subject().id());
@@ -1136,15 +1140,24 @@ public class GridRestProcessor extends GridProcessorAdapter {
          *
          * @param sesTimeout Session timeout.
          * @return {@code True} if expired.
-         * @see #touch()
+       //  * @see #touch()
          */
-        boolean isTimedOut(long sesTimeout) {
+        boolean isTimedOut(long sesTimeout, IgniteLogger log) {
             long time0 = lastTouchTime.get();
 
             if (time0 == TIMEDOUT_FLAG)
                 return true;
 
-            return U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_FLAG);
+            if (U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_FLAG)) {
+               // log.info("isTimedOut, SessinId: " + sesId + ", " + "lastTouchTime: " + lastTouchTime);
+                log.error("isTimedOut, sessionId:" + sesId + ", SubId: " + clientId + ", " + "lastTouchTime: " + lastTouchTime, new Exception());
+
+                return true;
+            } else {
+                return false;
+            }
+
+         //   return U.currentTimeMillis() - time0 > sesTimeout && lastTouchTime.compareAndSet(time0, TIMEDOUT_FLAG);
         }
 
         /**
@@ -1161,9 +1174,9 @@ public class GridRestProcessor extends GridProcessorAdapter {
          * Checks whether session at expired state (EXPIRATION_FLAG) or not, if not then tries to update last touch time.
          *
          * @return {@code False} if session timed out (not successfully touched).
-         * @see #isTimedOut(long)
+       //  * @see #isTimedOut(long)
          */
-        boolean touch() {
+        boolean touch(IgniteLogger log) {
             while (true) {
                 long time0 = lastTouchTime.get();
 
@@ -1172,8 +1185,11 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
                 boolean success = lastTouchTime.compareAndSet(time0, U.currentTimeMillis());
 
-                if (success)
+                if (success) {
+                    log.error("touch, SubId: " + clientId + ", " + "lastTouchTime: " + lastTouchTime, new Exception());
+
                     return true;
+                }
             }
         }
 

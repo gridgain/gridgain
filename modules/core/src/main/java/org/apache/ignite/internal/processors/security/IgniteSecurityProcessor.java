@@ -113,13 +113,14 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public OperationSecurityContext withContext(SecurityContext secCtx) {
-        assert secCtx != null;
+             assert secCtx != null;
 
         secPrc.touch(secCtx);
 
         SecurityContext old = curSecCtx.get();
 
         curSecCtx.set(secCtx);
+        //   log.error("set curSecCtx: " + secCtx, new Exception());
 
         return new OperationSecurityContext(this, old);
     }
@@ -132,6 +133,10 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     @Override public OperationSecurityContext withContext(UUID senderNodeId, UUID subjId) {
         ClusterNode node = Optional.ofNullable(ctx.discovery().node(subjId))
             .orElseGet(() -> ctx.discovery().historicalNode(subjId));
+
+        if (Thread.currentThread().getName().contains("mgmt")) {
+            log.error("withContext method", new Exception());
+        }
 
         SecurityContext res = null;
 
@@ -173,8 +178,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         if (res == null) {
             SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
 
-            log.warning("Switched to the 'deny all' policy because of failing to find a security context " +
-                "[subjId=" + subjId + ", type=" + type + ']');
+            log.error("Switched to the 'deny all' policy because of failing to find a security context " +
+                "[subjId=" + subjId + ", type=" + type + ']', new Exception());
 
             res = new DenyAllSecurityContext(subjId, type);
         }
@@ -225,6 +230,10 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     /** {@inheritDoc} */
     @Override public void authorize(String name, SecurityPermission perm) throws SecurityException {
         SecurityContext secCtx = curSecCtx.get();
+
+        if (Thread.currentThread().getName().contains("mgmt")) {
+            log.error("authorize " + secCtx, new Exception());
+        }
 
         assert secCtx != null;
 

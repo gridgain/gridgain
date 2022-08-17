@@ -238,6 +238,12 @@
             <version>${hamcrest.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

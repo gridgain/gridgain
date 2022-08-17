@@ -750,6 +750,8 @@ public class GridJettyRestHandler extends AbstractHandler {
 
                 restReq = restReq0;
 
+//                log.error("GridRestTopologyRequest: " + restReq0.toString(), new Exception());
+
                 break;
             }
 

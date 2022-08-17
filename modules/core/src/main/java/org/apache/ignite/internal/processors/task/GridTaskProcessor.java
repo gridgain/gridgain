@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupp
 import org.apache.ignite.internal.processors.job.ComputeJobStatusEnum;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.rest.GridRestProcessor;
 import org.apache.ignite.internal.processors.task.monitor.ComputeGridMonitor;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatus;
 import org.apache.ignite.internal.processors.task.monitor.ComputeTaskStatusSnapshot;
@@ -634,8 +635,21 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
             // Reset thread-local context.
             thCtx.set(null);
 
-        if (map.get(TC_SKIP_AUTH) == null)
+        if (map.get(TC_SKIP_AUTH) == null) {
+
+            log.warning("startTask");
+
+            if ("org.gridgain.grid.internal.visor.database.snapshot.VisorSnapshotsStatusTask".equals(taskClsName)) {
+                try {
+                    GridRestProcessor.latch.await();
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
             ctx.security().authorize(taskClsName, SecurityPermission.TASK_EXECUTE);
+        }
 
         Long timeout = (Long)map.get(TC_TIMEOUT);
 
