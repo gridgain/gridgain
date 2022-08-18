@@ -237,7 +237,11 @@ public class RunningQueryManager {
                 run.queryType(),
                 run.schemaName(),
                 run.startTime(),
+                run.cancelable(),
                 run.local(),
+                run.enforceJoinOrder(),
+                run.lazy(),
+                run.distributedJoins(),
                 run.queryInitiatorId()
             );
 
@@ -307,8 +311,13 @@ public class RunningQueryManager {
                     qry.schemaName(),
                     qry.startTime(),
                     System.currentTimeMillis(),
+                    qry.cancelable(),
                     qry.local(),
+                    qry.enforceJoinOrder(),
+                    qry.lazy(),
+                    qry.distributedJoins(),
                     failed,
+                    failReason,
                     qry.queryInitiatorId()
                 );
 

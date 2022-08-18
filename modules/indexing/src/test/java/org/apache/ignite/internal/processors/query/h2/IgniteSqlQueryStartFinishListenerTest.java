@@ -181,6 +181,11 @@ public class IgniteSqlQueryStartFinishListenerTest extends AbstractIndexingCommo
             assertEquals(grid(SERVER_NODE_NAME).localNode().id(), startedInfo.nodeId());
             assertEquals(false, startedInfo.local());
             assertEquals(GridCacheQueryType.SQL_FIELDS, startedInfo.queryType());
+            assertEquals(true, startedInfo.cancellable());
+            assertEquals(false, startedInfo.lazy());
+            assertEquals(false, startedInfo.enforceJoinOrder());
+            assertEquals(false, startedInfo.distributedJoins());
+            assertNull(startedInfo.queryInitiatorId());
 
             assertWithTimeout(qryFinished::get, is(notNullValue()), 1_000);
 
@@ -192,6 +197,11 @@ public class IgniteSqlQueryStartFinishListenerTest extends AbstractIndexingCommo
             assertEquals(GridCacheQueryType.SQL_FIELDS, finishedInfo.queryType());
             assertEquals(false, finishedInfo.failed());
             assertThat(finishedInfo.finishTime() - finishedInfo.startTime(), is(greaterOrEqualTo(delay)));
+            assertEquals(true, finishedInfo.cancellable());
+            assertEquals(false, finishedInfo.lazy());
+            assertEquals(false, finishedInfo.enforceJoinOrder());
+            assertEquals(false, finishedInfo.distributedJoins());
+            assertNull(finishedInfo.queryInitiatorId());
 
             qryStarted.set(null);
             qryFinished.set(null);

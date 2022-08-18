@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Info about finished query.
@@ -45,11 +46,27 @@ public class GridQueryFinishedInfo {
     /** */
     private final long finishTime;
 
+    /** Query cancellable flag. */
+    private boolean cancellable;
+
     /** */
     private final boolean loc;
 
-    /** */
+    /** Enforce join order query flag. */
+    private boolean enforceJoinOrder;
+
+    /** Lazy query flag. */
+    private boolean lazy;
+
+    /** Distributed joins query flag. */
+    private boolean distributedJoins;
+
+    /** Whether query is failed or not. */
     private final boolean failed;
+
+    /** Exception that caused query execution fail. */
+    @Nullable
+    private final Throwable failReason;
 
     /** Originator. */
     private final String qryInitiatorId;
@@ -64,8 +81,13 @@ public class GridQueryFinishedInfo {
      * @param schemaName Schema name.
      * @param startTime Query start time.
      * @param finishTime Query finish time.
+     * @param cancellable Query cancellable flag.
      * @param loc Local query flag.
+     * @param enforceJoinOrder Local query flag.
+     * @param lazy Local query flag.
+     * @param distributedJoins Local query flag.
      * @param failed Whether query is failed or not.
+     * @param failReason Exception that caused query execution fail.
      * @param qryInitiatorId Query's initiator identifier.
      */
     public GridQueryFinishedInfo(
@@ -76,8 +98,13 @@ public class GridQueryFinishedInfo {
         String schemaName,
         long startTime,
         long finishTime,
+        boolean cancellable,
         boolean loc,
+        boolean enforceJoinOrder,
+        boolean lazy,
+        boolean distributedJoins,
         boolean failed,
+        @Nullable Throwable failReason,
         String qryInitiatorId
     ) {
         this.id = id;
@@ -87,8 +114,13 @@ public class GridQueryFinishedInfo {
         this.schemaName = schemaName;
         this.startTime = startTime;
         this.finishTime = finishTime;
+        this.cancellable = cancellable;
         this.loc = loc;
+        this.enforceJoinOrder = enforceJoinOrder;
+        this.lazy = lazy;
+        this.distributedJoins = distributedJoins;
         this.failed = failed;
+        this.failReason = failReason;
         this.qryInitiatorId = qryInitiatorId;
     }
 
@@ -142,6 +174,13 @@ public class GridQueryFinishedInfo {
     }
 
     /**
+     * @return {@code true} if query can be cancelled.
+     */
+    public boolean cancellable() {
+        return cancellable;
+    }
+
+    /**
      * @return {@code true} if query is local.
      */
     public boolean local() {
@@ -149,10 +188,39 @@ public class GridQueryFinishedInfo {
     }
 
     /**
+     * @return Enforce join order flag.
+     */
+    public boolean enforceJoinOrder() {
+        return enforceJoinOrder;
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return lazy;
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return distributedJoins;
+    }
+
+    /**
      * @return {@code true} if query is failed.
      */
     public boolean failed() {
         return failed;
+    }
+
+    /**
+     * @return Exception that caused query execution fail, or {@code null} if query succeded.
+     */
+    @Nullable
+    public Throwable failReason() {
+        return failReason;
     }
 
     /**
