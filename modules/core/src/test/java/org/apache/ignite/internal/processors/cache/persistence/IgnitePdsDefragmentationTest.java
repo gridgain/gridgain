@@ -197,7 +197,6 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         forceCheckpoint(ig);
 
-
         createMaintenanceRecord(grid(0));
 
         stopGrid(0);
