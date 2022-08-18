@@ -197,7 +197,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         forceCheckpoint(ig);
 
-        createMaintenanceRecord();
+
+        createMaintenanceRecord(grid(0));
 
         stopGrid(0);
 
@@ -209,7 +210,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         startGrid(0);
 
-        waitForDefragmentation(0);
+        waitForDefragmentation(grid(0));
 
         assertEquals(ClusterState.INACTIVE, grid(0).context().state().clusterState().state());
 
@@ -293,19 +294,15 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
     }
 
     /** */
-    protected void waitForDefragmentation(int idx) throws IgniteCheckedException {
-        IgniteEx ig = grid(idx);
-
-        ((GridCacheDatabaseSharedManager)ig.context().cache().context().database())
+    public static void waitForDefragmentation(IgniteEx grid) throws IgniteCheckedException {
+        ((GridCacheDatabaseSharedManager)grid.context().cache().context().database())
             .defragmentationManager()
             .completionFuture()
             .get();
     }
 
     /** */
-    protected void createMaintenanceRecord(String... cacheNames) throws IgniteCheckedException {
-        IgniteEx grid = grid(0);
-
+    public static void createMaintenanceRecord(IgniteEx grid, String... cacheNames) throws IgniteCheckedException {
         MaintenanceRegistry mntcReg = grid.context().maintenanceRegistry();
 
         final List<String> caches = new ArrayList<>();
@@ -355,7 +352,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
                 throw new IgniteCheckedException(e);
             }
             finally {
-                createMaintenanceRecord();
+                createMaintenanceRecord(grid(0));
 
                 stopGrid(0);
             }
@@ -436,7 +433,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         forceCheckpoint(ig);
 
-        createMaintenanceRecord();
+        createMaintenanceRecord(grid(0));
 
         stopGrid(0);
 
@@ -449,7 +446,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         startGrid(0);
 
-        waitForDefragmentation(0);
+        waitForDefragmentation(grid(0));
 
         stopGrid(0);
 
@@ -537,13 +534,13 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         fillCache(ig.getOrCreateCache(CACHE_2_NAME));
 
-        createMaintenanceRecord();
+        createMaintenanceRecord(grid(0));
 
         stopGrid(0);
 
         startGrid(0);
 
-        waitForDefragmentation(0);
+        waitForDefragmentation(grid(0));
 
         File workDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
 
@@ -633,7 +630,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
             startGrid(0);
 
-            waitForDefragmentation(0);
+            waitForDefragmentation(grid(0));
 
             stopGrid(0);
 

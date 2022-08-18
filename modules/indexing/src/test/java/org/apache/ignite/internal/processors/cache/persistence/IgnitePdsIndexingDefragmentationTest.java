@@ -128,7 +128,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         forceCheckpoint(ig);
 
-        createMaintenanceRecord();
+        createMaintenanceRecord(grid(0));
 
         stopGrid(0);
 
@@ -140,7 +140,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         startGrid(0);
 
-        waitForDefragmentation(0);
+        waitForDefragmentation(grid(0));
 
         long newIdxFileLen = new File(workDir, FilePageStoreManager.INDEX_FILE_NAME).length();
 
@@ -261,7 +261,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         cache.query(new SqlFieldsQuery("DELETE FROM TEST WHERE MOD(ID, 2) = 0"));
 
-        createMaintenanceRecord(cacheName);
+        createMaintenanceRecord(grid(0), cacheName);
 
         CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
 
@@ -310,7 +310,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         cache.query(new SqlFieldsQuery("DELETE FROM TEST WHERE MOD(ID, 2) = 0"));
 
-        createMaintenanceRecord(cacheName);
+        createMaintenanceRecord(grid(0), cacheName);
 
         CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
 
@@ -359,7 +359,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         cache.query(new SqlFieldsQuery("DELETE FROM TEST WHERE MOD(ID, 2) = 0"));
 
-        createMaintenanceRecord(cacheName);
+        createMaintenanceRecord(grid(0), cacheName);
 
         CacheGroupContext grp = grid(0).context().cache().cacheGroup(CU.cacheId(cacheName));
 

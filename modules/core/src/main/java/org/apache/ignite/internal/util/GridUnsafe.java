@@ -27,6 +27,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.jetbrains.annotations.NotNull;
@@ -192,6 +193,33 @@ public abstract class GridUnsafe {
      */
     private GridUnsafe() {
         // No-op.
+    }
+
+    public static void main(String[] args) {
+        int size = 4092;
+
+        long ptr = allocateMemory(size);
+
+//        for (int i = 0; i < 100_000; i++) {
+//            setMemory0(size, ptr);
+//        }
+
+        long start = System.nanoTime();
+
+        for (int i = 0; i < 10_000_000; i++) {
+//            setMemory0(size, ptr);
+            setMemory(ptr, size, (byte)0);
+        }
+
+        long end = System.nanoTime();
+
+        System.out.println(TimeUnit.NANOSECONDS.toMillis(end - start));
+    }
+
+    private static void setMemory0(int size, long ptr) {
+        for (int j = 0; j < size; j++) {
+            putByte(ptr + j, (byte)0);
+        }
     }
 
     /**
