@@ -173,7 +173,6 @@ public class GridDhtPartitionsFullMessage extends GridDhtPartitionsAbstractMessa
 
         GridDhtPartitionsFullMessage cp = (GridDhtPartitionsFullMessage)msg;
 
-        cp.parts = parts;
         if (parts != null) {
             cp.parts = new HashMap<>(parts.size());
 
@@ -188,6 +187,8 @@ public class GridDhtPartitionsFullMessage extends GridDhtPartitionsAbstractMessa
                     false));
             }
         }
+        else
+            cp.parts = null;
 
         cp.dupPartsData = dupPartsData;
         cp.partsBytes = partsBytes;
