@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Unmanaged
 {
+    using System;
     using Apache.Ignite.Core.Impl.Unmanaged.Jni;
 
     /// <summary>
@@ -31,6 +32,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         internal static void IgnitionStart(Env env, string cfgPath, string gridName,
             bool clientMode, bool userLogger, long igniteId, bool redirectConsole)
         {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            Console.WriteLine("================= IgnitionStart stackTrace=" + stackTrace);
+            
             using (var mem = IgniteManager.Memory.Allocate().GetStream())
             using (var cfgPath0 = env.NewStringUtf(cfgPath))
             using (var gridName0 = env.NewStringUtf(gridName))
