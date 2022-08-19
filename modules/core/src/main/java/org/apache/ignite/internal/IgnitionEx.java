@@ -1801,12 +1801,15 @@ public class IgnitionEx {
                 started = true;
             }
             catch (IgniteCheckedException e) {
+                log.warning("Exception: " + e);
+
                 unregisterFactoryMBean();
 
                 throw e;
             }
             // Catch Throwable to protect against any possible failure.
             catch (Throwable e) {
+                log.warning("Exception: " + e);
                 unregisterFactoryMBean();
 
                 if (e instanceof Error)
