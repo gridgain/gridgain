@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
             Console.WriteLine("================= IgnitionStart stackTrace=" + stackTrace);
-            
+
             using (var mem = IgniteManager.Memory.Allocate().GetStream())
             using (var cfgPath0 = env.NewStringUtf(cfgPath))
             using (var gridName0 = env.NewStringUtf(gridName))

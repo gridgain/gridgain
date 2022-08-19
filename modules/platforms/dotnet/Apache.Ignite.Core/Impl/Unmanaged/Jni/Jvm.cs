@@ -262,6 +262,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         /// </summary>
         private static IntPtr CreateJvm(IList<string> options)
         {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            Console.WriteLine("================= CreateJvm stackTrace=" + stackTrace);
+            
             if (IsJava9())
             {
                 options = options == null
