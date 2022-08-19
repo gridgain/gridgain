@@ -159,6 +159,7 @@ namespace Apache.Ignite.Core
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
             
             Console.WriteLine("================= StartFromApplicationConfiguration stackTrace=" + stackTrace);
+            Console.Out.Flush();
             
             IgniteArgumentCheck.NotNullOrEmpty(sectionName, "sectionName");
 
@@ -245,6 +246,7 @@ namespace Apache.Ignite.Core
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
             
             Console.WriteLine("================= Start stackTrace=" + stackTrace);
+            Console.Out.Flush();
             
             IgniteArgumentCheck.NotNull(cfg, "cfg");
 
@@ -579,6 +581,7 @@ namespace Apache.Ignite.Core
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
             
             Console.WriteLine("================= LoadAssembly stackTrace=" + stackTrace);
+            Console.Out.Flush();
             
             // 1. Try loading as directory.
             if (Directory.Exists(asm))

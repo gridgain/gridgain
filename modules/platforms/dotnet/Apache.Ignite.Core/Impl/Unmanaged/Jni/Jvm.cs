@@ -264,6 +264,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
         {
             System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
             Console.WriteLine("================= CreateJvm stackTrace=" + stackTrace);
+            Console.Out.Flush();
             
             if (IsJava9())
             {
