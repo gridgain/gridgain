@@ -270,6 +270,13 @@ public class CachePartitionDefragmentationManager {
         status.onStart(cacheGrpCtxsForDefragmentation, partitionCount);
 
         try {
+            dbMgr.checkpointedDataRegions().removeIf(region -> {
+                String regionName = region.config().getName();
+
+                return !DEFRAGMENTATION_PART_REGION_NAME.equals(regionName)
+                    && !DEFRAGMENTATION_MAPPING_REGION_NAME.equals(regionName);
+            });
+
             // Now the actual process starts.
             IgniteInternalFuture<?> idxDfrgFut = null;
             DataPageEvictionMode prevPageEvictionMode = null;
@@ -321,8 +328,6 @@ public class CachePartitionDefragmentationManager {
                         if (store.tree() != null)
                             cacheDataStores.put(store.partId(), store);
                     }
-
-                    dbMgr.checkpointedDataRegions().remove(oldGrpCtx.dataRegion());
 
                     // Another cheat. Ttl cleanup manager knows too much shit.
                     oldGrpCtx.caches().stream()
@@ -717,7 +722,7 @@ public class CachePartitionDefragmentationManager {
 
                 // "insertDataRow" will corrupt page memory if we don't do this.
                 if (row instanceof DataRow && !partCtx.oldGrpCtx.storeCacheIdInDataPage())
-                    ((DataRow)row).cacheId(CU.UNDEFINED_CACHE_ID);
+                    row.cacheId(CU.UNDEFINED_CACHE_ID);
 
                 CacheObjectContext coctx = partCtx.newGrpCtx.cacheObjectContext();
 
@@ -728,7 +733,7 @@ public class CachePartitionDefragmentationManager {
 
                 // Put it back.
                 if (row instanceof DataRow)
-                    ((DataRow)row).cacheId(cacheId);
+                    row.cacheId(cacheId);
 
                 newTree.putx(row);
 

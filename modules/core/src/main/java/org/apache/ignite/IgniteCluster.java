@@ -545,6 +545,13 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean enableWal(String cacheName) throws IgniteException;
 
     /**
+     * Force checkpointing on whole cluster
+     *
+     * @throws IgniteException If error occurs.
+     */
+    public void checkpoint() throws IgniteException;
+
+    /**
      * Checks if write-ahead logging is enabled for specified cache.
      *
      * @param cacheName Cache name.

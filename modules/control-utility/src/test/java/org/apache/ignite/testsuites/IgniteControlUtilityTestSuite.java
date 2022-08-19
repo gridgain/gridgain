@@ -27,6 +27,7 @@ import org.apache.ignite.internal.commandline.walconverter.IgniteWalConverterTes
 import org.apache.ignite.internal.processors.security.GridCommandHandlerSslWithSecurityTest;
 import org.apache.ignite.util.GridCommandHandlerBrokenIndexTest;
 import org.apache.ignite.util.GridCommandHandlerCheckIndexesInlineSizeTest;
+import org.apache.ignite.util.GridCommandHandlerCheckpointingTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassTest;
 import org.apache.ignite.util.GridCommandHandlerClusterByClassWithSSLTest;
 import org.apache.ignite.util.GridCommandHandlerDefragmentationTest;
@@ -113,7 +114,9 @@ import org.junit.runners.Suite;
     IgniteEncryptedWalConverterTest.class,
     IgniteWalConverterArgumentsTest.class,
     IgniteWalConverterSensitiveDataTest.class,
-    GridCommandHandlerDefragmentationTest.class
+    GridCommandHandlerDefragmentationTest.class,
+
+    GridCommandHandlerCheckpointingTest.class
 })
 public class IgniteControlUtilityTestSuite {
 }

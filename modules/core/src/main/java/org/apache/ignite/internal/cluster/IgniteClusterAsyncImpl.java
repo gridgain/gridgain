@@ -29,6 +29,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterMetrics;
@@ -36,7 +37,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.AsyncSupportAdapter;
-import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -351,6 +351,11 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     /** {@inheritDoc} */
     @Override public boolean enableWal(String cacheName) throws IgniteException {
         return cluster.enableWal(cacheName);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void checkpoint() throws IgniteException {
+        cluster.checkpoint();
     }
 
     /** {@inheritDoc} */

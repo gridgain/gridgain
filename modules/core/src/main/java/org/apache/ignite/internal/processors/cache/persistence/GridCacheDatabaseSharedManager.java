@@ -628,7 +628,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 "oldInitialSize = '" + region.getInitialSize() + "', " +
                 "newInitialSize = '" + newInitSize + "', " +
                 "oldMaxSize = '" + region.getMaxSize() + "', " +
-                "newMaxSize = '" + newSize
+                "newMaxSize = '" + newSize + "'"
             );
 
             region.setMaxSize(newSize);
