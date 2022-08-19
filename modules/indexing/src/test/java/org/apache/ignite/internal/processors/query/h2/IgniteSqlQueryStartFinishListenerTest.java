@@ -197,7 +197,6 @@ public class IgniteSqlQueryStartFinishListenerTest extends AbstractIndexingCommo
             assertEquals(GridCacheQueryType.SQL_FIELDS, finishedInfo.queryType());
             assertEquals(false, finishedInfo.failed());
             assertThat(finishedInfo.finishTime() - finishedInfo.startTime(), is(greaterOrEqualTo(delay)));
-            assertEquals(true, finishedInfo.cancellable());
             assertEquals(false, finishedInfo.lazy());
             assertEquals(false, finishedInfo.enforceJoinOrder());
             assertEquals(false, finishedInfo.distributedJoins());

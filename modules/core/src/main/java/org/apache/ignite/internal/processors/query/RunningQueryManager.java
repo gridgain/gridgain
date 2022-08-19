@@ -311,7 +311,6 @@ public class RunningQueryManager {
                     qry.schemaName(),
                     qry.startTime(),
                     System.currentTimeMillis(),
-                    qry.cancelable(),
                     qry.local(),
                     qry.enforceJoinOrder(),
                     qry.lazy(),

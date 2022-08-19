@@ -46,9 +46,6 @@ public class GridQueryFinishedInfo {
     /** */
     private final long finishTime;
 
-    /** Query cancellable flag. */
-    private boolean cancellable;
-
     /** */
     private final boolean loc;
 
@@ -81,7 +78,6 @@ public class GridQueryFinishedInfo {
      * @param schemaName Schema name.
      * @param startTime Query start time.
      * @param finishTime Query finish time.
-     * @param cancellable Query cancellable flag.
      * @param loc Local query flag.
      * @param enforceJoinOrder Local query flag.
      * @param lazy Local query flag.
@@ -98,7 +94,6 @@ public class GridQueryFinishedInfo {
         String schemaName,
         long startTime,
         long finishTime,
-        boolean cancellable,
         boolean loc,
         boolean enforceJoinOrder,
         boolean lazy,
@@ -114,7 +109,6 @@ public class GridQueryFinishedInfo {
         this.schemaName = schemaName;
         this.startTime = startTime;
         this.finishTime = finishTime;
-        this.cancellable = cancellable;
         this.loc = loc;
         this.enforceJoinOrder = enforceJoinOrder;
         this.lazy = lazy;
@@ -171,13 +165,6 @@ public class GridQueryFinishedInfo {
      */
     public long finishTime() {
         return finishTime;
-    }
-
-    /**
-     * @return {@code true} if query can be cancelled.
-     */
-    public boolean cancellable() {
-        return cancellable;
     }
 
     /**
