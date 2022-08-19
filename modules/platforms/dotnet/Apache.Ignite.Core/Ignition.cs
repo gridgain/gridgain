@@ -156,6 +156,10 @@ namespace Apache.Ignite.Core
         /// <returns>Started Ignite.</returns>
         public static IIgnite StartFromApplicationConfiguration(string sectionName)
         {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            
+            Console.WriteLine("================= StartFromApplicationConfiguration stackTrace=" + stackTrace);
+            
             IgniteArgumentCheck.NotNullOrEmpty(sectionName, "sectionName");
 
             var section = ConfigurationManager.GetSection(sectionName) as IgniteConfigurationSection;
@@ -238,6 +242,10 @@ namespace Apache.Ignite.Core
         /// <returns>Started Ignite.</returns>
         public static IIgnite Start(IgniteConfiguration cfg)
         {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            
+            Console.WriteLine("================= Start stackTrace=" + stackTrace);
+            
             IgniteArgumentCheck.NotNull(cfg, "cfg");
 
             cfg = new IgniteConfiguration(cfg);  // Create a copy so that config can be modified and reused.
@@ -568,6 +576,10 @@ namespace Apache.Ignite.Core
         /// <param name="asm">Assembly file, directory, or full name.</param>
         internal static void LoadAssembly(string asm)
         {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            
+            Console.WriteLine("================= LoadAssembly stackTrace=" + stackTrace);
+            
             // 1. Try loading as directory.
             if (Directory.Exists(asm))
             {
