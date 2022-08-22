@@ -39,7 +39,7 @@ namespace ignite
     {
         namespace binary
         {
-            class IGNITE_IMPORT_EXPORT BinaryUtils;
+            class BinaryUtils;
         }
     }
     namespace binary
