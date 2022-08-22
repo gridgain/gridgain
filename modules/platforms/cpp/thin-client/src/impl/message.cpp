@@ -27,6 +27,22 @@
 
 namespace ignite
 {
+
+    /**
+     * Client platform codes.
+     */
+    struct ClientPlatform
+    {
+        enum Type
+        {
+            UNKNOWN = 0,
+
+            JAVA = 1,
+
+            CPP = 3
+        };
+    };
+
     namespace impl
     {
         namespace thin
@@ -433,7 +449,10 @@ namespace ignite
                 if (!filter)
                     writer.WriteNull();
                 else
+                {
                     writer.WriteTopObject(filter);
+                    writer.WriteInt8(ClientPlatform::JAVA);
+                }
             }
 
             void ContinuousQueryResponse::ReadOnSuccess(binary::BinaryReaderImpl& reader, const ProtocolContext&)
