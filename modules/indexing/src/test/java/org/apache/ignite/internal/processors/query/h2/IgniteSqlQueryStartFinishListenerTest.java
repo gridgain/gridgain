@@ -426,7 +426,7 @@ public class IgniteSqlQueryStartFinishListenerTest extends AbstractIndexingCommo
     /** */
     private List<List<?>> execSql(String schema, String sql, Object... args) {
         return grid(SERVER_NODE_NAME).cache(DEFAULT_CACHE_NAME).query(
-            new SqlFieldsQuery(sql).setSchema(schema).setArgs(args).setLocal(false)
+            new SqlFieldsQuery(sql).setSchema(schema).setArgs(args).setLocal(false).setLazy(false)
         ).getAll();
     }
 
