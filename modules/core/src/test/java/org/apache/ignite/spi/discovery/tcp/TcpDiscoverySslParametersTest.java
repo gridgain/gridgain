@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import org.junit.Test;
  * Tests cases when node connects to cluster with different set of cipher suites.
  */
 public class TcpDiscoverySslParametersTest extends GridCommonAbstractTest {
-
     /** */
     private volatile String[] cipherSuites;
 
@@ -149,12 +148,12 @@ public class TcpDiscoverySslParametersTest extends GridCommonAbstractTest {
             null,
             new String[][] {
                 new String[] {
-                    "TLSv1.1",
+                    "TLSv1.2",
                     "SSLv3"
                 },
                 new String[] {
                     "TLSv1",
-                    "TLSv1.2",
+                    "TLSv1.3",
                 }
             }
         );
@@ -213,7 +212,7 @@ public class TcpDiscoverySslParametersTest extends GridCommonAbstractTest {
                     "TLSv1.2",
                 },
                 new String[] {
-                    "TLSv1.1",
+                    "TLSv1.2",
                     "SSLv3"
                 }
             }
@@ -254,7 +253,12 @@ public class TcpDiscoverySslParametersTest extends GridCommonAbstractTest {
      * @param msg exception message
      * @throws Exception If failed.
      */
-    private void checkDiscoveryFailure(String[][] cipherSuites, String[][] protocols, Class<? extends Throwable> ex, String msg) throws Exception {
+    private void checkDiscoveryFailure(
+        String[][] cipherSuites,
+        String[][] protocols,
+        Class<? extends Throwable> ex,
+        String msg
+    ) throws Exception {
         this.cipherSuites = cipherSuites != null ? cipherSuites[0] : null;
         this.protocols = protocols != null ? protocols[0] : null;
 
@@ -279,5 +283,4 @@ public class TcpDiscoverySslParametersTest extends GridCommonAbstractTest {
             }, ex, msg);
         }
     }
-
 }
