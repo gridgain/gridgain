@@ -30,6 +30,7 @@
 
 #include <ignite/impl/thin/writable.h>
 #include <ignite/impl/thin/readable.h>
+#include <ignite/impl/thin/platform_java_object_factory_proxy.h>
 
 #include "impl/affinity/affinity_topology_version.h"
 #include "impl/affinity/partition_awareness_group.h"
@@ -1052,12 +1053,20 @@ namespace ignite
                  * @param pageSize Page size.
                  * @param timeInterval Time interval.
                  * @param includeExpired Include expired.
+                 * @param filter Remote filter factory.
                  */
-                explicit ContinuousQueryRequest(int32_t cacheId, int32_t pageSize, int64_t timeInterval, bool includeExpired) :
+                explicit ContinuousQueryRequest(
+                    int32_t cacheId,
+                    int32_t pageSize,
+                    int64_t timeInterval,
+                    bool includeExpired,
+                    const PlatformJavaObjectFactoryProxy* filter
+                ) :
                     CacheRequest(cacheId, false),
                     pageSize(pageSize),
                     timeInterval(timeInterval),
-                    includeExpired(includeExpired)
+                    includeExpired(includeExpired),
+                    filter(filter)
                 {
                     // No-op.
                 }
@@ -1086,6 +1095,9 @@ namespace ignite
 
                 /** Include expired. */
                 const bool includeExpired;
+
+                /** Filter. */
+                const PlatformJavaObjectFactoryProxy* filter;
             };
 
             /**

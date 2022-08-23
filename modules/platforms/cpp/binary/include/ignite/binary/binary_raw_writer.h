@@ -35,6 +35,13 @@
 
 namespace ignite
 {
+    namespace impl
+    {
+        namespace binary
+        {
+            class BinaryUtils;
+        }
+    }
     namespace binary
     {
         /**
@@ -53,6 +60,7 @@ namespace ignite
          */
         class IGNITE_IMPORT_EXPORT BinaryRawWriter
         {
+            friend class ignite::impl::binary::BinaryUtils;
         public:
             /**
              * Constructor.
