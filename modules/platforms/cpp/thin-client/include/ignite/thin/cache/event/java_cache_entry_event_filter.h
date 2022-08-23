@@ -53,7 +53,7 @@ namespace ignite
                  */
                 class JavaCacheEntryEventFilter
                 {
-                    friend ignite::impl::thin::cache::CacheClientImpl;
+                    friend class ignite::impl::thin::cache::CacheClientImpl;
                 public:
                     /**
                      * Default constructor.
