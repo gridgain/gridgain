@@ -98,13 +98,19 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
     /** Access to affinityRun() and affinityCall() functions. */
     private final IgniteCompute compute;
 
+    /** */
+    private final boolean keepBinary;
+
+    /** */
+    private final GridCacheSetHeader hdr;
+
     /**
      * @param ctx Cache context.
      * @param name Set name.
      * @param hdr Set header.
      */
     @SuppressWarnings("unchecked")
-    public GridCacheSetImpl(GridCacheContext ctx, String name, GridCacheSetHeader hdr) {
+    public GridCacheSetImpl(GridCacheContext ctx, String name, GridCacheSetHeader hdr, boolean keepBinary) {
         this.ctx = ctx;
         this.name = name;
         this.collocated = hdr.collocated();
@@ -115,6 +121,8 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
         this.log = ctx.logger(GridCacheSetImpl.class);
         this.hdrPart = ctx.affinity().partition(setKey);
         this.separated = hdr.separated();
+        this.hdr = hdr;
+        this.keepBinary = keepBinary;
     }
 
     /** {@inheritDoc} */
@@ -303,7 +311,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
         try {
             onAccess();
 
-            try (GridCloseableIterator<T> iter = iterator0()) {
+            try (GridCloseableIterator<T> iter = iterator0(keepBinary)) {
                 boolean rmv = false;
 
                 Set<SetItemKey> rmvKeys = null;
@@ -341,7 +349,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
         try {
             onAccess();
 
-            try (GridCloseableIterator<T> iter = iterator0()) {
+            try (GridCloseableIterator<T> iter = iterator0(keepBinary)) {
                 Collection<SetItemKey> rmvKeys = new ArrayList<>(BATCH_SIZE);
 
                 for (T val : iter) {
@@ -367,7 +375,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
     @Override public Iterator<T> iterator() {
         onAccess();
 
-        return iterator0();
+        return iterator0(keepBinary);
     }
 
     /** {@inheritDoc} */
@@ -389,6 +397,11 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
     }
 
     /** {@inheritDoc} */
+    @Override public <T1> IgniteSet<T1> withKeepBinary() {
+        return new GridCacheSetImpl<>(ctx, name, hdr, true);
+    }
+
+    /** {@inheritDoc} */
     @Override public void close() {
         try {
             if (rmvd)
@@ -404,9 +417,9 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
     /**
      * @return Closeable iterator.
      */
-    private GridCloseableIterator<T> iterator0() {
+    private GridCloseableIterator<T> iterator0(boolean keepBinary) {
         try {
-            WeakReferenceCloseableIterator<T> it = separated ? separatedCacheIterator() : sharedCacheIterator();
+            WeakReferenceCloseableIterator<T> it = separated ? separatedCacheIterator(keepBinary) : sharedCacheIterator(keepBinary);
 
             if (rmvd) {
                 ctx.itHolder().removeIterator(it);
@@ -425,10 +438,10 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
      * @return Shared cache iterator.
      */
     @SuppressWarnings("unchecked")
-    private WeakReferenceCloseableIterator<T> sharedCacheIterator() throws IgniteCheckedException {
+    private WeakReferenceCloseableIterator<T> sharedCacheIterator(boolean keepBinary) throws IgniteCheckedException {
         CacheQuery qry = new GridCacheQueryAdapter<>(ctx, SET, null, null,
             new GridSetQueryPredicate<>(id, collocated), collocated ? hdrPart : null,
-            false, false, null);
+            false, keepBinary, null);
 
         Collection<ClusterNode> nodes = dataNodes(ctx.affinity().affinityTopologyVersion());
 
@@ -451,9 +464,9 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
      * @return Separated cache iterator.
      */
     @SuppressWarnings("unchecked")
-    private WeakReferenceCloseableIterator<T> separatedCacheIterator() throws IgniteCheckedException {
+    private WeakReferenceCloseableIterator<T> separatedCacheIterator(boolean keepBinary) throws IgniteCheckedException {
         GridCloseableIterator iter =
-            (GridCloseableIterator)cache.scanIterator(false, new IgniteBiPredicate<Object, Object>() {
+            (GridCloseableIterator)cache.scanIterator(keepBinary, new IgniteBiPredicate<Object, Object>() {
                 @Override public boolean apply(Object k, Object v) {
                     return k.getClass() == GridCacheSetItemKey.class;
                 }
