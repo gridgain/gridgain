@@ -42,8 +42,20 @@ public class GridQueryStartedInfo {
     /** */
     private final long startTime;
 
+    /** Query cancellable flag. */
+    private boolean cancellable;
+
     /** */
     private final boolean loc;
+
+    /** Enforce join order query flag. */
+    private boolean enforceJoinOrder;
+
+    /** Lazy query flag. */
+    private boolean lazy;
+
+    /** Distributed joins query flag. */
+    private boolean distributedJoins;
 
     /** Originator. */
     private final String qryInitiatorId;
@@ -57,7 +69,11 @@ public class GridQueryStartedInfo {
      * @param qryType Query type.
      * @param schemaName Schema name.
      * @param startTime Query start time.
+     * @param cancellable Query cancellable flag.
      * @param loc Local query flag.
+     * @param enforceJoinOrder Local query flag.
+     * @param lazy Local query flag.
+     * @param distributedJoins Local query flag.
      * @param qryInitiatorId Query's initiator identifier.
      */
     public GridQueryStartedInfo(
@@ -67,7 +83,11 @@ public class GridQueryStartedInfo {
         GridCacheQueryType qryType,
         String schemaName,
         long startTime,
+        boolean cancellable,
         boolean loc,
+        boolean enforceJoinOrder,
+        boolean lazy,
+        boolean distributedJoins,
         String qryInitiatorId
     ) {
         this.id = id;
@@ -76,7 +96,11 @@ public class GridQueryStartedInfo {
         this.qryType = qryType;
         this.schemaName = schemaName;
         this.startTime = startTime;
+        this.cancellable = cancellable;
         this.loc = loc;
+        this.enforceJoinOrder = enforceJoinOrder;
+        this.lazy = lazy;
+        this.distributedJoins = distributedJoins;
         this.qryInitiatorId = qryInitiatorId;
     }
 
@@ -123,10 +147,38 @@ public class GridQueryStartedInfo {
     }
 
     /**
+     * @return {@code true} if query can be cancelled.
+     */
+    public boolean cancellable() {
+        return cancellable;
+    }
+
+    /**
      * @return {@code true} if query is local.
      */
     public boolean local() {
         return loc;
+    }
+
+    /**
+     * @return Enforce join order flag.
+     */
+    public boolean enforceJoinOrder() {
+        return enforceJoinOrder;
+    }
+
+    /**
+     * @return Lazy flag.
+     */
+    public boolean lazy() {
+        return lazy;
+    }
+
+    /**
+     * @return Distributed joins.
+     */
+    public boolean distributedJoins() {
+        return distributedJoins;
     }
 
     /**
