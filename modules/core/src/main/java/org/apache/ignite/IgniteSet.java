@@ -131,6 +131,9 @@ public interface IgniteSet<T> extends Set<T>, Closeable {
 
     /**
      * Returns Ignite set that operates on binary objects without deserialization.
+     * <p />
+     * NOTE: keepBinary flag is not preserved during IgniteSet serialization.
+     * If you serialize an instance of IgniteSet, make sure to call this method after deserialization as needed.
      *
      * @param <T1> Type of binary objects.
      * @return New set instance for binary objects.
