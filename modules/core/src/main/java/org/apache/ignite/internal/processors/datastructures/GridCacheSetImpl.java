@@ -99,10 +99,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
     private final IgniteCompute compute;
 
     /** */
-    private final boolean keepBinary;
-
-    /** */
-    private final GridCacheSetHeader hdr;
+    private final transient boolean keepBinary;
 
     /**
      * @param ctx Cache context.
@@ -110,7 +107,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
      * @param hdr Set header.
      */
     @SuppressWarnings("unchecked")
-    public GridCacheSetImpl(GridCacheContext ctx, String name, GridCacheSetHeader hdr, boolean keepBinary) {
+    public GridCacheSetImpl(GridCacheContext ctx, String name, GridCacheSetHeader hdr) {
         this.ctx = ctx;
         this.name = name;
         this.collocated = hdr.collocated();
@@ -121,7 +118,46 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
         this.log = ctx.logger(GridCacheSetImpl.class);
         this.hdrPart = ctx.affinity().partition(setKey);
         this.separated = hdr.separated();
-        this.hdr = hdr;
+        this.keepBinary = false;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param ctx Context.
+     * @param cache Cache.
+     * @param log Log.
+     * @param name Name.
+     * @param id Id.
+     * @param collocated Colocated.
+     * @param separated Separated.
+     * @param hdrPart Header part.
+     * @param setKey Key.
+     * @param compute Compute.
+     * @param keepBinary Keep binary.
+     */
+    private GridCacheSetImpl(
+            GridCacheContext ctx,
+            IgniteInternalCache<SetItemKey, Boolean> cache,
+            IgniteLogger log,
+            String name,
+            IgniteUuid id,
+            boolean collocated,
+            boolean separated,
+            int hdrPart,
+            GridCacheSetHeaderKey setKey,
+            IgniteCompute compute,
+            boolean keepBinary) {
+        this.ctx = ctx;
+        this.cache = cache;
+        this.log = log;
+        this.name = name;
+        this.id = id;
+        this.collocated = collocated;
+        this.separated = separated;
+        this.hdrPart = hdrPart;
+        this.setKey = setKey;
+        this.compute = compute;
         this.keepBinary = keepBinary;
     }
 
@@ -398,7 +434,7 @@ public class GridCacheSetImpl<T> extends AbstractCollection<T> implements Ignite
 
     /** {@inheritDoc} */
     @Override public <T1> IgniteSet<T1> withKeepBinary() {
-        return new GridCacheSetImpl<>(ctx, name, hdr, true);
+        return new GridCacheSetImpl<>(ctx, cache, log, name, id, collocated, separated, hdrPart, setKey, compute, true);
     }
 
     /** {@inheritDoc} */
