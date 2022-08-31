@@ -2164,7 +2164,6 @@ public class IgnitionEx {
             cache.setNodeFilter(CacheConfiguration.ALL_NODES);
             cache.setRebalanceOrder(-2); //Prior to user caches.
             cache.setCopyOnRead(false);
-            cache.setMaxConcurrentAsyncOperations(Integer.MAX_VALUE);
 
             return cache;
         }
