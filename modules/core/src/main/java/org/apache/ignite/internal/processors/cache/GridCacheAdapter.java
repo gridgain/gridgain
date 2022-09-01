@@ -3807,6 +3807,11 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      */
     @SuppressWarnings("unchecked")
     IgniteInternalFuture<IgniteInternalTx> commitTxAsync(final GridNearTxLocal tx) {
+        IgniteInternalFuture<IgniteInternalTx> fail = asyncOpAcquire(false);
+
+        if (fail != null)
+            return fail;
+
         FutureHolder holder = lastFut.get();
 
         holder.lock();
