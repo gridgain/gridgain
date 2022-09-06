@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.Che
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointFreeListTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointListenerForRegionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointTempFilesCleanupOnStartupTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.CheckpointTimeoutLockTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.IgniteCheckpointDirtyPagesForLowLoadTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.checkpoint.LightweightCheckpointTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.filename.IgniteUidAsConsistentIdMigrationTest;
@@ -115,97 +116,63 @@ public class IgnitePdsTestSuite2 {
 
         // Metrics test.
         GridTestUtils.addTestIfNeeded(suite, IgniteDataStorageMetricsSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsRebalancingOnNotStableTopologyTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsWholeClusterRestartTest.class, ignoredTests);
 
         // Rebalancing test
         GridTestUtils.addTestIfNeeded(suite, IgniteWalHistoryReservationsTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, SlowHistoricalRebalanceSmallHistoryTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteShutdownOnSupplyMessageFailureTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePersistentStoreDataStructuresTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, FullHistRebalanceOnClientStopTest.class, ignoredTests);
 
         // Failover test
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFlushFailoverTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFlushBackgroundSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFlushBackgroundWithMmapBufferSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFlushLogOnlySelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFlushLogOnlyWithMmapBufferSelfTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalFormatFileFailoverTest.class, ignoredTests);
 
         // Test suite uses Standalone WAL iterator to verify PDS content.
         GridTestUtils.addTestIfNeeded(suite, IgniteWalReaderTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsExchangeDuringCheckpointTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsReserveWalSegmentsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsReserveWalSegmentsWithCompactionTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalReplayingAfterRestartTest.class, ignoredTests);
 
         // new style folders with generated consistent ID test
         GridTestUtils.addTestIfNeeded(suite, IgniteUidAsConsistentIdMigrationTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalSerializerVersionTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WalCompactionTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WalCompactionNoArchiverTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WalCompactionSwitchOnTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WalDeletionArchiveFsyncTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WalDeletionArchiveLogOnlyTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteCheckpointDirtyPagesForLowLoadTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCorruptedStoreTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, CheckpointFailBeforeWriteMarkTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, CheckpointTempFilesCleanupOnStartupTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, CheckpointFreeListTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, CheckpointListenerForRegionTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, LightweightCheckpointTest.class, ignoredTests);
-
+        GridTestUtils.addTestIfNeeded(suite, CheckpointTimeoutLockTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, FreeListCachingTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalIteratorSwitchSegmentTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWalIteratorExceptionDuringReadTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteNodeStoppedDuringDisableWALTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, FilteredWalIteratorTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WalScannerTest.class, ignoredTests);
 
         //GridTestUtils.addTestIfNeeded(suite, IgniteWalRecoverySeveralRestartsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteRebalanceScheduleResendPartitionsTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgniteWALTailIsReachedDuringIterationOverArchiveTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WalRolloverTypesTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, FsyncWalRolloverDoesNotBlockTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsPartitionsStateRecoveryTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WalPreloadingConcurrentTest.class, ignoredTests);
-
         GridTestUtils.addTestIfNeeded(suite, WALPreloadingWithCompactionTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteWalRebalanceLoggingTest.class, ignoredTests);
