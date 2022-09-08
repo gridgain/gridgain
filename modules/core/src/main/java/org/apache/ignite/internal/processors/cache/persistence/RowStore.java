@@ -110,6 +110,7 @@ public class RowStore {
             freeList.insertDataRow(row, statHolder);
         }
         else {
+            //ctx.database().ensureFreeSpaceForInsert(grp.dataRegion(), row);
             ctx.database().checkpointReadLock();
 
             try {

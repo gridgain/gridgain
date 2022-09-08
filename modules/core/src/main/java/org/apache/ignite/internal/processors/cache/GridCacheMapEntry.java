@@ -4199,6 +4199,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     updCntr,
                     DataEntry.flags(primary))));
         }
+//        catch (IllegalArgumentException e) {
+//            throw new IgniteCheckedException("Failed to log ATOMIC cache update [key=" + key + ", op=" + op +
+//                ", val=" + val + ']', e);
+//        }
         catch (StorageException e) {
             throw new IgniteCheckedException("Failed to log ATOMIC cache update [key=" + key + ", op=" + op +
                 ", val=" + val + ']', e);

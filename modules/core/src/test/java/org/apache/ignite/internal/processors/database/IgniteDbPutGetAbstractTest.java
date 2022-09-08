@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.cache.Cache;
+import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -37,6 +38,9 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -50,6 +54,8 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+
+import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_SEGMENT_SIZE;
 
 /**
  *
@@ -269,6 +275,85 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
 
         assertNull(cache.get(0));
         assertNull(cache1.get(1));
+    }
+
+    /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
+
+        dbCfg.setDefaultDataRegionConfiguration(
+            new DataRegionConfiguration()
+                .setPersistenceEnabled(true)
+                .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
+        );
+
+        if (gridName.endsWith("1")) {
+            dbCfg.setWalSegmentSize(512 * 1024);
+            dbCfg.setWalBufferSize(dbCfg.getWalSegmentSize() / 4);
+        }
+
+        cfg.setDataStorageConfiguration(dbCfg);
+
+        return cfg;
+    }
+
+    @Test
+    public void testPutLargeEntryPrimary() throws Exception {
+        IgniteCache<Integer, byte[]> txCache = grid(0).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, byte[]> backupTxCache = grid(1).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, byte[]> atomicCache = grid(0).cache("atomic");
+        IgniteCache<Integer, byte[]> backupAtomicCache = grid(1).cache("atomic");
+
+        // atomic
+        Integer primaryKey = primaryKey(atomicCache);
+        try {
+            atomicCache.put(primaryKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
+        }
+        catch (CacheException expected) {
+            log.warning(">>>>> result on primary =" + atomicCache.get(primaryKey));
+            log.warning(">>>>> result on backup =" + backupAtomicCache.get(primaryKey));
+        }
+
+        // tx
+        primaryKey = primaryKey(txCache);
+        try {
+            txCache.put(primaryKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
+        }
+        catch (CacheException expected) {
+            log.warning(">>>>> result on primary =" + txCache.get(primaryKey));
+            log.warning(">>>>> result on backup =" + backupTxCache.get(primaryKey));
+        }
+    }
+
+    @Test
+    public void testPutLargeEntryBackup() throws Exception {
+        IgniteCache<Integer, byte[]> txCache = grid(0).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, byte[]> backupTxCache = grid(1).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, byte[]> atomicCache = grid(0).cache("atomic");
+        IgniteCache<Integer, byte[]> backupAtomicCache = grid(1).cache("atomic");
+
+        // atomic
+        Integer backupKey = backupKey(atomicCache);
+        try {
+            atomicCache.put(backupKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
+        }
+        catch (CacheException expected) {
+            log.warning(">>>>> result on primary =" + atomicCache.get(backupKey));
+            log.warning(">>>>> result on backup =" + backupAtomicCache.get(backupKey));
+        }
+
+        // tx
+        backupKey = backupKey(txCache);
+        try {
+            txCache.put(backupKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
+        }
+        catch (CacheException expected) {
+            log.warning(">>>>> result on primary =" + txCache.get(backupKey));
+            log.warning(">>>>> result on backup =" + backupTxCache.get(backupKey));
+        }
     }
 
     /**

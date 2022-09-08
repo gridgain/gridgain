@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -187,6 +188,7 @@ public class SegmentedRingByteBuffer {
      * @param size Amount of bytes for reserve.
      * @return {@link WriteSegment} instance that point to {@link ByteBuffer} instance with given {@code size}.
      * {@code null} if buffer space is not enough.
+     * @throws IgniteException If the given {@code size} is greater then capacity of this buffer.
      */
     public WriteSegment offer(int size) {
         return offer0(size, false);
@@ -199,6 +201,7 @@ public class SegmentedRingByteBuffer {
      * @param size Amount of bytes for reserve.
      * @return {@link WriteSegment} instance that point to {@link ByteBuffer} instance with given {@code size}.
      * {@code null} if buffer space is not enough.
+     * @throws IgniteException If the given {@code size} is greater then capacity of this buffer.
      */
     public WriteSegment offerSafe(int size) {
         return offer0(size, true);
@@ -210,7 +213,7 @@ public class SegmentedRingByteBuffer {
      */
     private WriteSegment offer0(int size, boolean safe) {
         if (size > cap)
-            throw new IllegalArgumentException("Record is too long [capacity=" + cap + ", size=" + size + ']');
+            throw new IgniteException("Record is too long [capacity=" + cap + ", size=" + size + ']');
 
         for (;;) {
             if (!waitForConsumer) {

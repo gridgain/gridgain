@@ -68,6 +68,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.mem.DirectMemoryProvider;
 import org.apache.ignite.internal.mem.DirectMemoryRegion;
+import org.apache.ignite.internal.mem.IgniteOutOfMemoryException;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
@@ -3834,5 +3835,58 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             }
         );
+    }
+
+    @Override
+    public void ensureFreeSpaceForInsert(
+        DataRegion region,
+        CacheDataRow row
+    ) throws IgniteOutOfMemoryException, IgniteCheckedException {
+        super.ensureFreeSpaceForInsert(region, row);
+
+//        if (region == null || !region.config().isPersistenceEnabled())
+//            return;
+//
+//        DataStorageConfiguration dsCfg = persistenceCfg;//cctx.gridConfig().getDataStorageConfiguration();
+//        final boolean walFsyncWithDedicatedWorker =
+//            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAL_FSYNC_WITH_DEDICATED_WORKER, false);
+//        if (persistenceCfg.getWalMode() == WALMode.FSYNC && !walFsyncWithDedicatedWorker) {
+//            int capacity = persistenceCfg.getWalSegmentSize();
+//            log.warning(">>>>> debug [segment capacity=" + capacity + ", row=" + row.size() + ']');
+//        }
+//        else {
+//            int capacity = persistenceCfg.getWalBufferSize();
+//            log.warning(">>>>> debug [wal capacity=" + capacity + ", segment capacity=" + persistenceCfg.getWalSegmentSize() + ", row=" + row.size() + ']');
+//            U.dumpStack(log, "stacktrace");
+//        }
+/*
+    private final boolean walFsyncWithDedicatedWorker =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAL_FSYNC_WITH_DEDICATED_WORKER, false);
+
+        if (dsConf.getWalMode() == WALMode.FSYNC && !walFsyncWithDedicatedWorker)
+            return new FsyncFileHandleManagerImpl(
+                cctx,
+                metrics,
+                serializer,
+                currHandleSupplier,
+                dsConf.getWalMode(),
+                dsConf.getWalSegmentSize(),
+                dsConf.getWalFsyncDelayNanos(),
+                dsConf.getWalThreadLocalBufferSize()
+            );
+        else
+            return new FileHandleManagerImpl(
+                cctx,
+                metrics,
+                mmap,
+                serializer,
+                currHandleSupplier,
+                dsConf.getWalMode(),
+                dsConf.getWalBufferSize(),
+                dsConf.getWalSegmentSize(),
+                dsConf.getWalFsyncDelayNanos()
+            );
+    }
+ */
     }
 }
