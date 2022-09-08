@@ -1157,7 +1157,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
 
             int cnt = 0;
 
-            for (Cache.Entry<DbKey, DbValue> e : cache0.localEntries()) {
+            for (Cache.Entry<DbKey, DbValue> e : cache0.localEntries(CachePeekMode.PRIMARY)) {
                 cnt++;
 
                 allKeys.add(e.getKey());
