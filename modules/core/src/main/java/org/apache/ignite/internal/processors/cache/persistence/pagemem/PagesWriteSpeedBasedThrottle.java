@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
-
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -96,7 +96,8 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
             PageMemoryImpl pageMemory,
             IgniteOutClosure<CheckpointProgress> cpProgress,
             CheckpointLockStateChecker stateChecker,
-            IgniteLogger log
+            IgniteLogger log,
+            MetricRegistry mreg
     ) {
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
@@ -106,6 +107,20 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
         cleanPagesProtector = new SpeedBasedMemoryConsumptionThrottlingStrategy(pageMemory, cpProgress,
             markSpeedAndAvgParkTime);
         cpBufferWatchdog = new CheckpointBufferOverflowWatchdog(pageMemory);
+
+        mreg.register("SpeedBasedThrottlingPercentage", this::throttleWeight, "Measurement shows how much throttling time is involved into average marking time.");
+        mreg.register("MarkDirtySpeed", this::getMarkDirtySpeed, "Speed of marking pages dirty. Value from past 750-1000 millis only. Pages/second.");
+        mreg.register("CpWriteSpeed", this::getCpWriteSpeed, "Speed average checkpoint write speed. Current and 3 past checkpoints used. Pages/second.");
+        mreg.register("LastEstimatedSpeedForMarkAll", this::getLastEstimatedSpeedForMarkAll, "Last estimated speed for marking all clear pages as dirty till the end of checkpoint.");
+        mreg.register("CurrDirtyRatio", this::getCurrDirtyRatio, "Current dirty pages ratio.");
+        mreg.register("TargetDirtyRatio", this::getTargetDirtyRatio, "Target (maximum) dirty pages ratio, after which throttling will start.");
+        mreg.register("ThrottleParkTime", this::throttleParkTime, "Exponential backoff counter.");
+        mreg.register("CpTotalPages", cleanPagesProtector::cpTotalPages, "Number of pages in current checkpoint.");
+        mreg.register("CpEvictedPages", cleanPagesProtector::cpEvictedPages, "Number of evicted pages.");
+        mreg.register("CpWrittenPages", this::cpWrittenPages, "Number of written pages.");
+        mreg.register("CpSyncedPages", cleanPagesProtector::cpSyncedPages, "Counter for fsynced checkpoint pages.");
+        mreg.register("CheckpointBufferPagesCount", pageMemory::checkpointBufferPagesCount, "Number of pages used in checkpoint buffer.");
+        mreg.register("CheckpointBufferPagesSize", pageMemory::checkpointBufferPagesSize, "Number of used pages in checkpoint buffer.");
     }
 
     /** {@inheritDoc} */

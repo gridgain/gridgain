@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridLongList;
@@ -101,6 +102,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_DELAYED_REPLACED_P
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
+import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.util.GridUnsafe.wrapPointer;
 
 /**
@@ -429,7 +431,13 @@ public class PageMemoryImpl implements PageMemoryEx {
      */
     private void initWriteThrottle() {
         if (throttlingPlc == ThrottlingPolicy.SPEED_BASED)
-            writeThrottle = new PagesWriteSpeedBasedThrottle(this, cpProgressProvider, stateChecker, log);
+            writeThrottle = new PagesWriteSpeedBasedThrottle(
+                this,
+                cpProgressProvider,
+                stateChecker,
+                log,
+                ctx.kernalContext().metric().registry(MetricUtils.metricName(DATAREGION_METRICS_PREFIX, metrics().getName()))
+            );
         else if (throttlingPlc == ThrottlingPolicy.TARGET_RATIO_BASED)
             writeThrottle = new PagesWriteThrottle(this, cpProgressProvider, stateChecker, false, log);
         else if (throttlingPlc == ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY)
