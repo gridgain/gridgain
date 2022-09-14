@@ -75,18 +75,6 @@ public class IgniteDbSingleNodeTinyPutGetTest extends IgniteDbSingleNodePutGetTe
 
     /** {@inheritDoc} */
     @Test
-    @Override public void testPutLargeEntryPrimary() throws Exception {
-        // No-op
-    }
-
-    /** {@inheritDoc} */
-    @Test
-    @Override public void testPutLargeEntryBackup() throws Exception {
-        // No-op
-    }
-
-    /** {@inheritDoc} */
-    @Test
     @Override public void testPutGetOverwrite() {
         // No-op
     }

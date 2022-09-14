@@ -210,6 +210,7 @@ public class SegmentedRingByteBuffer {
     /**
      * @param size Amount of bytes for reserve.
      * @param safe Safe mode.
+     * @throws IgniteException If the given {@code size} is greater then capacity of this buffer.
      */
     private WriteSegment offer0(int size, boolean safe) {
         if (size > cap)

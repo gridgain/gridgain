@@ -235,8 +235,6 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
             }
             catch (IgniteException e) {
                 // WAL record size is greater than the buffer's capacity.
-                //U.dumpStack(">>>>> WAL record size is greater than the buffer's capacity [err=" + e + ']');
-                log.warning(">>>>> WAL record size is greater than the buffer's capacity [err=" + e + ']');
                 throw new IgniteCheckedException(e);
             }
 

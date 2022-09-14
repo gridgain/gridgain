@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -38,8 +39,6 @@ import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -56,6 +55,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_SEGMENT_SIZE;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  *
@@ -63,6 +63,12 @@ import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_
 public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     /** */
     private static final int KEYS_COUNT = SF.applyLB(10_000, 2_000);
+
+    /** Index of Ignite node with a reduced WAL buffer size. */
+    private final int smallWalBufferSizeNodeIdx = 0;
+
+    /** Set of nodes that indicates system critical failure on a particular node. */
+    private final Set<String> failedNodes = new ConcurrentSkipListSet<>();
 
     /**
      * @return Ignite instance for testing.
@@ -72,6 +78,24 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
             return grid(gridCount());
 
         return grid(0);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        if (getTestIgniteInstanceIndex(gridName) == smallWalBufferSizeNodeIdx) {
+            cfg.getDataStorageConfiguration()
+                .setWalBufferSize(DFLT_WAL_SEGMENT_SIZE / 4)
+                .setWalSegmentSize(DFLT_WAL_SEGMENT_SIZE / 4);
+        }
+
+        cfg.setFailureHandler((ignite, failureCtx) -> {
+            failedNodes.add(ignite.name());
+            return true;
+        });
+
+        return cfg;
     }
 
     /**
@@ -277,82 +301,53 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
         assertNull(cache1.get(1));
     }
 
-    /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
-    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(gridName);
-
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration();
-
-        dbCfg.setDefaultDataRegionConfiguration(
-            new DataRegionConfiguration()
-                .setPersistenceEnabled(true)
-                .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
-        );
-
-        if (gridName.endsWith("1")) {
-            dbCfg.setWalSegmentSize(512 * 1024);
-            dbCfg.setWalBufferSize(dbCfg.getWalSegmentSize() / 4);
-        }
-
-        cfg.setDataStorageConfiguration(dbCfg);
-
-        return cfg;
-    }
-
+    /**
+     * Tests that putting a large entry, which size is greater than WAL buffer/segment size, results in CacheException.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testPutLargeEntryPrimary() throws Exception {
-        IgniteCache<Integer, byte[]> txCache = grid(0).cache(DEFAULT_CACHE_NAME);
-        IgniteCache<Integer, byte[]> backupTxCache = grid(1).cache(DEFAULT_CACHE_NAME);
+    public void testPutLargeEntry() throws Exception {
+        assertTrue(
+            "Primary key should correspond to the node with small wal buffer size.",
+            smallWalBufferSizeNodeIdx == 0);
+
         IgniteCache<Integer, byte[]> atomicCache = grid(0).cache("atomic");
-        IgniteCache<Integer, byte[]> backupAtomicCache = grid(1).cache("atomic");
+        Integer atomicPrimaryKey = primaryKey(atomicCache);
 
-        // atomic
-        Integer primaryKey = primaryKey(atomicCache);
-        try {
-            atomicCache.put(primaryKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
-        }
-        catch (CacheException expected) {
-            log.warning(">>>>> result on primary =" + atomicCache.get(primaryKey));
-            log.warning(">>>>> result on backup =" + backupAtomicCache.get(primaryKey));
-        }
+        // New value which is greater than WAL segment size / WAL buffer.
+        byte[] newVal = new byte[DFLT_WAL_SEGMENT_SIZE / 2];
 
-        // tx
-        primaryKey = primaryKey(txCache);
-        try {
-            txCache.put(primaryKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
-        }
-        catch (CacheException expected) {
-            log.warning(">>>>> result on primary =" + txCache.get(primaryKey));
-            log.warning(">>>>> result on backup =" + backupTxCache.get(primaryKey));
-        }
-    }
+        assertThrows(
+            log,
+            () -> atomicCache.put(atomicPrimaryKey, newVal),
+            CacheException.class,
+            null);
+        assertNull("Unexpected non-null value.", atomicCache.get(atomicPrimaryKey));
+        assertTrue("Unexpected system critical error.", failedNodes.isEmpty());
 
-    @Test
-    public void testPutLargeEntryBackup() throws Exception {
-        IgniteCache<Integer, byte[]> txCache = grid(0).cache(DEFAULT_CACHE_NAME);
-        IgniteCache<Integer, byte[]> backupTxCache = grid(1).cache(DEFAULT_CACHE_NAME);
-        IgniteCache<Integer, byte[]> atomicCache = grid(0).cache("atomic");
-        IgniteCache<Integer, byte[]> backupAtomicCache = grid(1).cache("atomic");
+        // Check backup scenario.
+        if (gridCount() > 1) {
+            Integer atomicBackupKey = backupKey(atomicCache);
+            Ignite primaryNode = primaryNode(atomicBackupKey, atomicCache.getName());
 
-        // atomic
-        Integer backupKey = backupKey(atomicCache);
-        try {
-            atomicCache.put(backupKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
-        }
-        catch (CacheException expected) {
-            log.warning(">>>>> result on primary =" + atomicCache.get(backupKey));
-            log.warning(">>>>> result on backup =" + backupAtomicCache.get(backupKey));
-        }
+            // Primary node should be updated successfully,
+            // however, backup node should fail because of size of the new entry does not allow to write it to WAL.
+            assertThrows(
+                log,
+                () -> atomicCache.put(atomicBackupKey, newVal),
+                CacheException.class,
+                "Failed to update keys");
 
-        // tx
-        backupKey = backupKey(txCache);
-        try {
-            txCache.put(backupKey, new byte[DFLT_WAL_SEGMENT_SIZE / 2]);
-        }
-        catch (CacheException expected) {
-            log.warning(">>>>> result on primary =" + txCache.get(backupKey));
-            log.warning(">>>>> result on backup =" + backupTxCache.get(backupKey));
+            assertTrue(
+                "Unexpected value.",
+                Arrays.equals((byte[])primaryNode.cache(atomicCache.getName()).get(atomicBackupKey), newVal));
+
+            assertTrue(
+                "Failure handler was not triggered on backup node.",
+                failedNodes.contains(grid(0).name()));
+
+            assertFalse("Unexpected system critical error(s).", failedNodes.size() > 1);
         }
     }
 
