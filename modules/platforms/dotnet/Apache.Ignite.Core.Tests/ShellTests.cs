@@ -30,6 +30,14 @@ namespace Apache.Ignite.Core.Tests
     [Order(1)] // Execute first to avoid zombie processes (see https://issues.apache.org/jira/browse/IGNITE-13536).
     public class ShellTests
     {
+        [Test]
+        public void FailingTestBeforeNodeStart()
+        {
+            var dt = DateTime.UtcNow;
+
+            Assert.AreEqual(2000, dt.Year);
+        }
+
         /// <summary>
         /// Tests <see cref="Shell.ExecuteSafe"/> method.
         /// </summary>
