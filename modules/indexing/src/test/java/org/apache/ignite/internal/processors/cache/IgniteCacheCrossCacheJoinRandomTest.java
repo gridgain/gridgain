@@ -21,12 +21,10 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
-
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -318,11 +316,13 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
             Map<Integer, Integer> data = cachesData.get(CACHES - 1);
 
+            ArrayList<Integer> keys = new ArrayList<>(data.keySet());
+
             final int QRY_CNT = CACHES > 4 ? 2 : 50;
 
-            int cnt = 0;
+            for (int i = 0; i < QRY_CNT; i++) {
+                Integer objId = keys.get(rnd.nextInt(keys.size()));
 
-            for (Integer objId : data.keySet()) {
                 compareQueryRes0(cache, createQuery(CACHES, false, objId), distributedJoin, false, args, Ordering.RANDOM);
 
                 if (!hasReplicated) {
@@ -330,9 +330,6 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
                     compareQueryRes0(cache, createQuery(CACHES, true, objId), distributedJoin, true, args, Ordering.RANDOM);
                 }
-
-                if (cnt++ == QRY_CNT)
-                    break;
             }
         }
         finally {
@@ -409,10 +406,10 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
      * @return Generated data.
      */
     private Map<Integer, Integer> createData(int cnt) {
-        Map<Integer, Integer> res = IgniteUtils.newLinkedHashMap(cnt);
+        Map<Integer, Integer> res = IgniteUtils.newHashMap(cnt);
 
-        while (res.size() < cnt)
-            res.put(rnd.nextInt(cnt), rnd.nextInt(OBJECTS + 1));
+        for (int i = 0; i < cnt; i++)
+            res.put(i, rnd.nextInt(OBJECTS + 1));
 
         return res;
     }
