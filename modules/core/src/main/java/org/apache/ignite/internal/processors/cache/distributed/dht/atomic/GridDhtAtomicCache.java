@@ -3331,9 +3331,12 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         if (e instanceof RuntimeException && !X.hasCause(e, IgniteOutOfMemoryException.class))
                             throw (RuntimeException)e;
 
-                        IgniteCheckedException err = new IgniteCheckedException("Failed to update key on backup node: " + key, e);
                         U.error(log, "Failed to update key on backup node: " + key, e);
-                        // treat this error as a critical one.
+
+                        // Trigger failure handler to avoid data inconsistency.
+                        IgniteCheckedException err =
+                            new IgniteCheckedException("Failed to update key on backup node: " + key, e);
+
                         ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, err));
 
                         if (nearRes != null)
