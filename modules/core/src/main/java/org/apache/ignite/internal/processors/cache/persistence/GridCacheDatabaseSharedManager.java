@@ -3836,3 +3836,4 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         );
     }
 }
+smallWalBufferSizeNodeIdx

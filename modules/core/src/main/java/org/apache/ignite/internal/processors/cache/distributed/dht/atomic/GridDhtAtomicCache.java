@@ -3151,7 +3151,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                 return;
             }
 
-            //U.dumpStack(log, ">>>>> processNearAtomicUpdateRequest [nodeId=" + nodeId + ", request=" + req + ']');
             updateAllAsyncInternal(node, req, updateReplyClos);
         }
     }

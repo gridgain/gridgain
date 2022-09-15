@@ -65,7 +65,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     private static final int KEYS_COUNT = SF.applyLB(10_000, 2_000);
 
     /** Index of Ignite node with a reduced WAL buffer size. */
-    private final int smallWalBufferSizeNodeIdx = 0;
+    private static final int smallWalBufSizeNodeIdx = 0;
 
     /** Set of nodes that indicates system critical failure on a particular node. */
     private final Set<String> failedNodes = new ConcurrentSkipListSet<>();
@@ -84,7 +84,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        if (getTestIgniteInstanceIndex(gridName) == smallWalBufferSizeNodeIdx) {
+        if (getTestIgniteInstanceIndex(gridName) == smallWalBufSizeNodeIdx) {
             cfg.getDataStorageConfiguration()
                 .setWalBufferSize(DFLT_WAL_SEGMENT_SIZE / 4)
                 .setWalSegmentSize(DFLT_WAL_SEGMENT_SIZE / 4);
@@ -310,7 +310,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     public void testPutLargeEntry() throws Exception {
         assertTrue(
             "Primary key should correspond to the node with small wal buffer size.",
-            smallWalBufferSizeNodeIdx == 0);
+            smallWalBufSizeNodeIdx == 0);
 
         IgniteCache<Integer, byte[]> atomicCache = grid(0).cache("atomic");
         Integer atomicPrimaryKey = primaryKey(atomicCache);
