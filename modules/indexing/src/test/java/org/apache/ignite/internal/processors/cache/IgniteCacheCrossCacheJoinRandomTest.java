@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
 
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
@@ -35,6 +36,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.h2.sql.AbstractH2CompareQueryTest;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -235,36 +237,38 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
     /**
      * @param cachesData Caches data.
      * @param allModes Modes to test.
-     * @param modes Select modes.
+     * @param selectedModes Selected modes.
      * @param caches Caches number.
      * @throws Exception If failed.
      */
-    private void checkJoin(List<Map<Integer, Integer>> cachesData,
+    private void checkJoin(
+        List<Map<Integer, Integer>> cachesData,
         List<T2<CacheMode, Integer>> allModes,
-        Stack<T2<CacheMode, Integer>> modes,
-        int caches) throws Exception {
-        if (modes.size() == caches) {
+        Stack<T2<CacheMode, Integer>> selectedModes,
+        int caches
+    ) throws Exception {
+        if (selectedModes.size() == caches) {
             List<CacheConfiguration> ccfgs = new ArrayList<>();
 
-            for (int i = 0; i < modes.size(); i++) {
-                T2<CacheMode, Integer> mode = modes.get(i);
+            for (int i = 0; i < selectedModes.size(); i++) {
+                T2<CacheMode, Integer> mode = selectedModes.get(i);
 
                 CacheConfiguration ccfg = configuration("cache" + i, mode.get1(), mode.get2());
 
                 ccfgs.add(ccfg);
             }
 
-            log.info("Check configurations: " + modes);
+            log.info("Check configurations: " + selectedModes);
 
             checkJoinQueries(ccfgs, cachesData);
         }
         else {
             for (T2<CacheMode, Integer> mode : allModes) {
-                modes.push(mode);
+                selectedModes.push(mode);
 
-                checkJoin(cachesData, allModes, modes, caches);
+                checkJoin(cachesData, allModes, selectedModes, caches);
 
-                modes.pop();
+                selectedModes.pop();
             }
         }
     }
@@ -280,23 +284,18 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
         final int CACHES = ccfgs.size();
 
         try {
-            IgniteCache cache = null;
+            client.createCaches(ccfgs);
 
-            boolean hasReplicated = false;
+            for (int i = 0; i < CACHES; i++)
+                insertCache(cachesData.get(i), client.cache(ccfgs.get(i).getName()));
 
-            for (int i = 0; i < CACHES; i++) {
-                CacheConfiguration ccfg = ccfgs.get(i);
+            IgniteCache cache = ccfgs.stream()
+                .filter(c -> c.getCacheMode() == PARTITIONED)
+                .map(c -> client.cache(c.getName()))
+                .findFirst()
+                .orElse(null);
 
-                IgniteCache cache0 = client.createCache(ccfg);
-
-                if (ccfg.getCacheMode() == REPLICATED)
-                    hasReplicated = true;
-
-                if (cache == null && ccfg.getCacheMode() == PARTITIONED)
-                    cache = cache0;
-
-                insertCache(cachesData.get(i), cache0);
-            }
+            boolean hasReplicated = ccfgs.stream().anyMatch(c -> c.getCacheMode() == REPLICATED);
 
             boolean distributedJoin = true;
 
@@ -337,8 +336,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
             }
         }
         finally {
-            for (CacheConfiguration ccfg : ccfgs)
-                client.destroyCache(ccfg.getName());
+            client.destroyCaches(ccfgs.stream().map(c -> c.getName()).collect(Collectors.toList()));
         }
     }
 
@@ -411,7 +409,7 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
      * @return Generated data.
      */
     private Map<Integer, Integer> createData(int cnt) {
-        Map<Integer, Integer> res = new LinkedHashMap<>();
+        Map<Integer, Integer> res = IgniteUtils.newLinkedHashMap(cnt);
 
         while (res.size() < cnt)
             res.put(rnd.nextInt(cnt), rnd.nextInt(OBJECTS + 1));
