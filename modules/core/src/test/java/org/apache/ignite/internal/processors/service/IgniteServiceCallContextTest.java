@@ -34,15 +34,19 @@ import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
+
 /**
  * Tests service caller context.
  */
 @RunWith(Parameterized.class)
+@WithSystemProperty(key = IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, value = "true")
 public class IgniteServiceCallContextTest extends GridCommonAbstractTest {
     /** String attribute name. */
     private static final String STR_ATTR_NAME = "str.attr";
