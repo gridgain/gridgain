@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.service;
 
+import java.io.EOFException;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -583,9 +584,15 @@ public class GridServiceProxy<T> implements Serializable {
             argTypes = U.readClassArray(in);
             args = U.readArray(in);
 
-            if (in.readBoolean()) {
-                callCtx = new ServiceCallContextImpl();
-                callCtx.readExternal(in);
+            try
+            {
+                if (in.readBoolean()) {
+                    callCtx = new ServiceCallContextImpl();
+                    callCtx.readExternal(in);
+                }
+            }
+            catch (EOFException ignore) {
+                // No-op.
             }
         }
 
