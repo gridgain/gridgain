@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.tostring;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,9 +43,11 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 
+import static java.util.Arrays.asList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_MAX_LENGTH;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.identity;
+import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.joinToString;
 
 /**
  * Tests for {@link GridToStringBuilder}.
@@ -672,6 +675,30 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
 
         //field after faulty field was written successfully to string representation
         assertTrue(strRep.contains("str=str"));
+    }
+
+    /**
+     * Test string joiner.
+     *
+     * @see GridToStringBuilder#joinToString(Iterable, String, String, int, int)
+     */
+    @Test
+    public void testJoin() {
+        String trunc = "...";
+        String sep = ",";
+
+        assertEquals("", joinToString(Collections.emptyList(), sep, trunc, 0, 0));
+        assertEquals("", joinToString(null, sep, trunc, 0, 0));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c"), sep, trunc, 0, 3));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c"), sep, trunc, 5, 0));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c"), sep, trunc, 5, 3));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c"), sep, trunc, 0, 0));
+        assertEquals("a,b,c...", joinToString(asList("a", "b", "c", "d", "e"), sep, trunc, 0, 3));
+        assertEquals("a,b,c...", joinToString(asList("a", "b", "c", "d", "e"), sep, trunc, 5, 0));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c", "d", "e"), sep, null, 5, 0));
+        assertEquals("a,b,c", joinToString(asList("a", "b", "c", "d", "e"), sep, null, 0, 3));
+        assertEquals("abcde", joinToString(asList("a", "b", "c", "d", "e"), null, trunc, 5, 0));
+        assertEquals("abcde", joinToString(asList("a", "b", "c", "d", "e"), null, trunc, 0, 5));
     }
 
     /**
