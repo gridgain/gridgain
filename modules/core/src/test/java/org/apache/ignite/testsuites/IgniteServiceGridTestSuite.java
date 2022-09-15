@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.service.GridServiceProxyClientRecon
 import org.apache.ignite.internal.processors.service.GridServiceProxyNodeStopSelfTest;
 import org.apache.ignite.internal.processors.service.GridServiceReassignmentSelfTest;
 import org.apache.ignite.internal.processors.service.GridServiceSerializationSelfTest;
+import org.apache.ignite.internal.processors.service.IgniteServiceCallContextTest;
 import org.apache.ignite.internal.processors.service.IgniteServiceDeployment2ClassLoadersDefaultMarshallerTest;
 import org.apache.ignite.internal.processors.service.IgniteServiceDeployment2ClassLoadersJdkMarshallerTest;
 import org.apache.ignite.internal.processors.service.IgniteServiceDeployment2ClassLoadersOptimizedMarshallerTest;
@@ -118,6 +119,7 @@ import org.junit.runners.Suite;
     ServiceHotRedeploymentViaDeploymentSpiTest.class,
     GridServiceDeployClusterReadOnlyModeTest.class,
     GridServiceClusterReadOnlyModeTest.class,
+    IgniteServiceCallContextTest.class,
 })
 public class IgniteServiceGridTestSuite {
     /** Old service grid property. */
