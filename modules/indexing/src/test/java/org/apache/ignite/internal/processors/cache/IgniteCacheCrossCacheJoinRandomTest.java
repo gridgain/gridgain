@@ -235,38 +235,38 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
     /**
      * @param cachesData Caches data.
      * @param allModes Modes to test.
-     * @param selectedModes Selected modes.
+     * @param modes Selected modes.
      * @param caches Caches number.
      * @throws Exception If failed.
      */
     private void checkJoin(
         List<Map<Integer, Integer>> cachesData,
         List<T2<CacheMode, Integer>> allModes,
-        Stack<T2<CacheMode, Integer>> selectedModes,
+        Stack<T2<CacheMode, Integer>> modes,
         int caches
     ) throws Exception {
-        if (selectedModes.size() == caches) {
+        if (modes.size() == caches) {
             List<CacheConfiguration> ccfgs = new ArrayList<>();
 
-            for (int i = 0; i < selectedModes.size(); i++) {
-                T2<CacheMode, Integer> mode = selectedModes.get(i);
+            for (int i = 0; i < modes.size(); i++) {
+                T2<CacheMode, Integer> mode = modes.get(i);
 
                 CacheConfiguration ccfg = configuration("cache" + i, mode.get1(), mode.get2());
 
                 ccfgs.add(ccfg);
             }
 
-            log.info("Check configurations: " + selectedModes);
+            log.info("Check configurations: " + modes);
 
             checkJoinQueries(ccfgs, cachesData);
         }
         else {
             for (T2<CacheMode, Integer> mode : allModes) {
-                selectedModes.push(mode);
+                modes.push(mode);
 
-                checkJoin(cachesData, allModes, selectedModes, caches);
+                checkJoin(cachesData, allModes, modes, caches);
 
-                selectedModes.pop();
+                modes.pop();
             }
         }
     }
@@ -316,9 +316,11 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
             Map<Integer, Integer> data = cachesData.get(CACHES - 1);
 
+            final int QRY_CNT = CACHES > 4 ? 2 : 50;
+
             ArrayList<Integer> keys = new ArrayList<>(data.keySet());
 
-            for (int i = 0; i < 30; i++) {
+            for (int i = 0; i < QRY_CNT; i++) {
                 Integer objId = keys.get(rnd.nextInt(keys.size()));
 
                 compareQueryRes0(cache, createQuery(CACHES, false, objId), distributedJoin, false, args, Ordering.RANDOM);
