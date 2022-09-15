@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.marshaller;
 
 import java.io.Serializable;
+import java.util.Objects;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -53,6 +54,24 @@ public final class MappedName implements Serializable {
      */
     public boolean accepted() {
         return accepted;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        MappedName name = (MappedName)o;
+
+        return accepted == name.accepted && Objects.equals(clsName, name.clsName);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(clsName, accepted);
     }
 
     /** {@inheritDoc} */
