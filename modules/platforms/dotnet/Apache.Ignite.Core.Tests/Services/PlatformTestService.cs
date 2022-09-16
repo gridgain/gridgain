@@ -44,6 +44,9 @@ namespace Apache.Ignite.Core.Tests.Services
         private bool _cancelled;
 
         /** */
+        private IServiceContext _context;
+
+        /** */
         public PlatformTestService()
         {
             // No-Op.
@@ -59,6 +62,7 @@ namespace Apache.Ignite.Core.Tests.Services
         /** <inheritDoc /> */
         public void Init(IServiceContext context)
         {
+            _context = context;
             _initialized = true;
         }
 
@@ -615,6 +619,12 @@ namespace Apache.Ignite.Core.Tests.Services
         public void sleep(long delayMs)
         {
             throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
+        public object contextAttribute(string name)
+        {
+            return _context.CurrentCallContext.GetAttribute(name);
         }
     }
 }
