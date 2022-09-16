@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Unmanaged
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;

@@ -1174,6 +1174,7 @@ namespace Apache.Ignite.Core.Tests.Services
         /// Creates a test caller context.
         /// </summary>
         /// <returns>Caller context.</returns>
+        // ReSharper disable once InconsistentNaming
         private IServiceCallContext callContext()
         {
             return new ServiceCallContextBuilder().Set("attr", "value").Build();
