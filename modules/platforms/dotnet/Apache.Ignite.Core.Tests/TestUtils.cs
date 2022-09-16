@@ -116,7 +116,7 @@ namespace Apache.Ignite.Core.Tests
 
                     var memInfo = GC.GetGCMemoryInfo();
 
-                    Console.WriteLine($"HeapSizeBytes = {memInfo.HeapSizeBytes}, MemoryLoadBytes = {memInfo.MemoryLoadBytes}, TotalAvailableMemoryBytes = {memInfo.TotalAvailableMemoryBytes}");
+                    TestContextLogger.LastInstance.Warn($"/// HeapSizeBytes = {memInfo.HeapSizeBytes}, MemoryLoadBytes = {memInfo.MemoryLoadBytes}, TotalAvailableMemoryBytes = {memInfo.TotalAvailableMemoryBytes}");
                 }
             }, TaskCreationOptions.LongRunning);
         }
@@ -709,6 +709,8 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public class TestContextLogger : ILogger
         {
+            public static volatile TestContextLogger LastInstance;
+
             private readonly TestExecutionContext _ctx = TestExecutionContext.CurrentContext;
 
             private readonly ITestListener _listener;
@@ -720,6 +722,8 @@ namespace Apache.Ignite.Core.Tests
                 Debug.Assert(prop != null);
 
                 _listener = (ITestListener)prop.GetValue(_ctx);
+
+                LastInstance = this;
             }
 
             /** <inheritdoc /> */
