@@ -41,6 +41,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
@@ -56,6 +57,10 @@ import org.junit.Test;
 
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_SEGMENT_SIZE;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
+
 
 /**
  *
@@ -90,12 +95,14 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
                 .setWalSegmentSize(DFLT_WAL_SEGMENT_SIZE / 4);
         }
 
-        cfg.setFailureHandler((ignite, failureCtx) -> {
+        return cfg;
+    }
+
+    @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
+        return (ignite, failureCtx) -> {
             failedNodes.add(ignite.name());
             return true;
-        });
-
-        return cfg;
+        };
     }
 
     /**
@@ -339,13 +346,15 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
                 CacheException.class,
                 "Failed to update keys");
 
-            assertTrue(
+            assertThat(
                 "Unexpected value.",
-                Arrays.equals((byte[])primaryNode.cache(atomicCache.getName()).get(atomicBackupKey), newVal));
+                primaryNode.cache(atomicCache.getName()).get(atomicBackupKey),
+                is(newVal));
 
-            assertTrue(
+            assertThat(
                 "Failure handler was not triggered on backup node.",
-                failedNodes.contains(grid(0).name()));
+                failedNodes,
+                hasItem(grid(0).name()));
 
             assertFalse("Unexpected system critical error(s).", failedNodes.size() > 1);
         }
