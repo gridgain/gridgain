@@ -27,6 +27,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Linq;
     using System.Reflection;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
@@ -75,7 +76,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 "-Xms2g",
-                "-Xmx6g",
+                "-Xmx4g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
                 "-Duser.timezone=UTC"
@@ -104,6 +105,21 @@ namespace Apache.Ignite.Core.Tests
 
         /** */
         private static int _seed = Environment.TickCount;
+
+        static TestUtils()
+        {
+            Task.Factory.StartNew(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(5000);
+
+                    var memInfo = GC.GetGCMemoryInfo();
+
+                    Console.WriteLine($"HeapSizeBytes = {memInfo.HeapSizeBytes}, MemoryLoadBytes = {memInfo.MemoryLoadBytes}, TotalAvailableMemoryBytes = {memInfo.TotalAvailableMemoryBytes}");
+                }
+            }, TaskCreationOptions.LongRunning);
+        }
 
         /// <summary>
         ///
