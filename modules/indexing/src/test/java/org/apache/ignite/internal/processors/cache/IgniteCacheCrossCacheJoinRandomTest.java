@@ -316,11 +316,9 @@ public class IgniteCacheCrossCacheJoinRandomTest extends AbstractH2CompareQueryT
 
             Map<Integer, Integer> data = cachesData.get(CACHES - 1);
 
-            final int QRY_CNT = CACHES > 4 ? 2 : 50;
-
             ArrayList<Integer> keys = new ArrayList<>(data.keySet());
 
-            for (int i = 0; i < QRY_CNT; i++) {
+            for (int i = 0; i < 10; i++) {
                 Integer objId = keys.get(rnd.nextInt(keys.size()));
 
                 compareQueryRes0(cache, createQuery(CACHES, false, objId), distributedJoin, false, args, Ordering.RANDOM);
