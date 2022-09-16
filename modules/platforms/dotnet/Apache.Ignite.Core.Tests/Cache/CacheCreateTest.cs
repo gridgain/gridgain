@@ -26,14 +26,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     /// </summary>
     public class CacheCreateTest : TestBase
     {
-        [Test]
-        public void FailingTestAfterNodeStart()
-        {
-            var dt = DateTime.UtcNow;
-
-            Assert.AreEqual(2000, dt.Year);
-        }
-
         /// <summary>
         /// Tests cache creation.
         /// </summary>
