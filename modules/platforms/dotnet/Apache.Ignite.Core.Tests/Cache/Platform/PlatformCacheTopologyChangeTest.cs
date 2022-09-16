@@ -32,7 +32,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     /// Tests platform cache behavior when cluster topology changes.
     /// </summary>
     [Category(TestUtils.CategoryIntensive)]
-    [Ignore("GG-35718")]
     public class PlatformCacheTopologyChangeTest
     {
         /** */
