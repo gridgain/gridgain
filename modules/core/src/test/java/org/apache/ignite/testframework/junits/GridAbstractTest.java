@@ -1126,14 +1126,14 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If anything failed.
      */
     protected IgniteEx startClientGrid(String igniteInstanceName, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
-        IgnitionEx.setClientMode(true);
+        IgniteConfiguration cfg = optimize(getConfiguration(igniteInstanceName));
 
-        try {
-            return (IgniteEx)startGrid(igniteInstanceName, cfgOp, null);
-        }
-        finally {
-            IgnitionEx.setClientMode(false);
-        }
+        if (cfgOp != null)
+            cfgOp.apply(cfg);
+
+        cfg.setClientMode(true);
+
+        return (IgniteEx)startGrid(igniteInstanceName, cfg, null);
     }
 
     /**
