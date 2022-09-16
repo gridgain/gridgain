@@ -26,7 +26,7 @@ namespace Apache.Ignite.Core.Services
     /// Service call context builder.
     /// </summary>
     [IgniteExperimental]
-    public class ServiceCallContextBuilder
+    public sealed class ServiceCallContextBuilder
     {
         /** Context attributes. */
         private readonly Hashtable _attrs = new Hashtable();
