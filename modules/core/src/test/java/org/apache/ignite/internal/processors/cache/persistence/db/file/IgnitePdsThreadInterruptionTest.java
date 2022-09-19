@@ -31,6 +31,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.typedef.X;
@@ -72,6 +73,8 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
                     .setInitialSize(10L * 1024L * 1024L)
                     .setMaxSize(10L * 1024L * 1024L)
             ));
+
+        cfg.setFailureHandler(new StopNodeFailureHandler());
 
         cfg.setCacheConfiguration(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME)
