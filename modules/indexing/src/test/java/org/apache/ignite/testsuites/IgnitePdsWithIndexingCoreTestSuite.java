@@ -17,6 +17,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsAtomicCacheHistoricalRebalancingTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsAtomicCacheRebalancingTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinaryMetadataAsyncWritingTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinaryMetadataOnClusterRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTxCacheRebalancingTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTxHistoricalRebalancingTest;
@@ -75,6 +76,8 @@ import org.junit.runners.Suite;
     IgnitePdsCacheDestroyDuringCheckpointTest.class,
 
     IgnitePdsBinaryMetadataOnClusterRestartTest.class,
+
+    IgnitePdsBinaryMetadataAsyncWritingTest.class,
 })
 public class IgnitePdsWithIndexingCoreTestSuite {
 }
