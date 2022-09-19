@@ -156,7 +156,7 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                 // Never deserialize platform service arguments and result: may contain platform-only types.
                 PlatformService proxy = services.serviceProxy(name, PlatformService.class, false, timeout);
 
-                res = proxy.invokeMethod(methodName, keepBinary(), false, args);
+                res = proxy.invokeMethod(methodName, keepBinary(), false, args, null);
             }
             else {
                 // Deserialize Java service arguments when not in keepBinary mode.
@@ -170,13 +170,13 @@ public class ClientServiceInvokeRequest extends ClientRequest {
                 }
 
                 GridServiceProxy<?> proxy = new GridServiceProxy<>(grp, name, Service.class, false, timeout,
-                    ctx.kernalContext());
+                    ctx.kernalContext(), null);
 
                 Method method = resolveMethod(ctx, svcCls);
 
                 PlatformServices.convertArrayArgs(args, method);
 
-                res = proxy.invokeMethod(method, args);
+                res = proxy.invokeMethod(method, args, null);
             }
 
             return new ClientObjectResponse(requestId(), res);

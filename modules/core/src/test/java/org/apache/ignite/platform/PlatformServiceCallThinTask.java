@@ -71,5 +71,9 @@ public class PlatformServiceCallThinTask extends AbstractPlatformServiceCallTask
             }, ClientException.class, "Failed to invoke platform service");
         }
 
+        /** {@inheritDoc} */
+        @Override protected void checkContextAttribute(TestPlatformService srv) {
+            // TODO IGNITE-15829 Remove this method override.
+        }
     }
 }

@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Tests
             {
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 "-Xms2g",
-                "-Xmx6g",
+                "-Xmx4g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
                 "-Duser.timezone=UTC"
@@ -612,7 +612,7 @@ namespace Apache.Ignite.Core.Tests
                         Name = DataStorageConfiguration.DefaultDataRegionName,
                         InitialSize = 128 * 1024 * 1024,
                         MaxSize = Environment.Is64BitProcess
-                            ? DataRegionConfiguration.DefaultMaxSize
+                            ? 512 * 1024 * 1024
                             : 256 * 1024 * 1024
                     }
                 },

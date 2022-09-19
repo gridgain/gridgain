@@ -208,5 +208,8 @@ namespace Apache.Ignite.Core.Tests.Services
 
         /** */
         void sleep(long delayMs);
+
+        /** */
+        object contextAttribute(string name);
     }
 }

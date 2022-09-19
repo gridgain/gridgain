@@ -48,6 +48,7 @@ public class PlatformServiceCallTask extends AbstractPlatformServiceCallTask {
             checkUuidProp(srv);
             checkObjectProp(srv);
             checkErrorMethod(srv);
+            checkContextAttribute(srv);
         }
 
         /** */
@@ -77,6 +78,11 @@ public class PlatformServiceCallTask extends AbstractPlatformServiceCallTask {
                 .getCause();
 
             assertTrue(nativeEx.toString().contains(nativeEx.getClass().getSimpleName()));
+        }
+
+        /** */
+        protected void checkContextAttribute(TestPlatformService srv) {
+            assertEquals("value", srv.contextAttribute("attr"));
         }
     }
 }
