@@ -353,13 +353,15 @@ final class BinaryMetadataTransport {
     }
 
     /**
-     * Allows client node to request latest version of binary metadata for a given typeId from the cluster in case
+     * Allows client node to request the latest version of binary metadata for a given typeId from the cluster in case
      * client is able to detect that it has obsolete metadata in its local cache.
      *
      * @param typeId ID of binary type.
      * @return future to wait for request arrival on.
      */
     GridFutureAdapter<MetadataUpdateResult> requestUpToDateMetadata(int typeId) {
+        assert ctx.clientNode();
+
         ClientMetadataRequestFuture newFut = new ClientMetadataRequestFuture(ctx, typeId, clientReqSyncMap);
 
         ClientMetadataRequestFuture oldFut = clientReqSyncMap.putIfAbsent(typeId, newFut);
@@ -602,35 +604,12 @@ final class BinaryMetadataTransport {
                     fut.onDone(MetadataUpdateResult.createFailureResult(msg.rejectionError()));
                 else {
                     if (clientNode) {
-                        BinaryMetadataHolder newHolder = new BinaryMetadataHolder(msg.metadata(), pendingVer, acceptedVer);
+                        boolean success = casBinaryMetadata(typeId, new BinaryMetadataHolder(msg.metadata(), pendingVer, acceptedVer));
 
-                        holder = metaLocCache.putIfAbsent(typeId, newHolder);
-
-                        if (holder != null) {
-                            boolean obsoleteUpd = false;
-
-                            do {
-                                holder = metaLocCache.get(typeId);
-
-                                if (obsoleteUpdate(
-                                    holder.pendingVersion(),
-                                    holder.acceptedVersion(),
-                                    pendingVer,
-                                    acceptedVer)) {
-                                    obsoleteUpd = true;
-
-                                    fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
-
-                                    break;
-                                }
-                            }
-                            while (!metaLocCache.replace(typeId, holder, newHolder));
-
-                            if (!obsoleteUpd)
-                                initSyncFor(typeId, pendingVer, fut);
-                        }
-                        else
+                        if (success)
                             initSyncFor(typeId, pendingVer, fut);
+                        else
+                            fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
                     }
                     else {
                         initSyncFor(typeId, pendingVer, fut);
@@ -660,24 +639,8 @@ final class BinaryMetadataTransport {
 
                         BinaryMetadataHolder newHolder = new BinaryMetadataHolder(mergedMeta, pendingVer, acceptedVer);
 
-                        if (clientNode) {
-                            holder = metaLocCache.putIfAbsent(typeId, newHolder);
-
-                            if (holder != null) {
-                                do {
-                                    holder = metaLocCache.get(typeId);
-
-                                    if (obsoleteUpdate(
-                                        holder.pendingVersion(),
-                                        holder.acceptedVersion(),
-                                        pendingVer,
-                                        acceptedVer))
-                                        break;
-
-                                }
-                                while (!metaLocCache.replace(typeId, holder, newHolder));
-                            }
-                        }
+                        if (clientNode)
+                            casBinaryMetadata(typeId, newHolder);
                         else {
                             if (log.isDebugEnabled())
                                 log.debug("Updated metadata on server node [holder=" + newHolder +
@@ -718,18 +681,13 @@ final class BinaryMetadataTransport {
             int newAcceptedVer = msg.acceptedVersion();
 
             if (clientNode) {
-                BinaryMetadataHolder newHolder = new BinaryMetadataHolder(holder.metadata(),
-                    holder.pendingVersion(), newAcceptedVer);
+                boolean success = casBinaryMetadata(typeId,
+                    new BinaryMetadataHolder(holder.metadata(), holder.pendingVersion(), newAcceptedVer));
 
-                do {
-                    holder = metaLocCache.get(typeId);
+                ClientMetadataRequestFuture fut = clientReqSyncMap.get(typeId);
 
-                    int oldAcceptedVer = holder.acceptedVersion();
-
-                    if (oldAcceptedVer > newAcceptedVer)
-                        break;
-                }
-                while (!metaLocCache.replace(typeId, holder, newHolder));
+                if (success && fut != null)
+                    fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
             }
             else {
                 int oldAcceptedVer = holder.acceptedVersion();
@@ -782,6 +740,29 @@ final class BinaryMetadataTransport {
             if (fut != null)
                 fut.onDone(MetadataUpdateResult.createSuccessfulResult(newAcceptedVer));
         }
+    }
+
+    /**
+     * @param typeId Type id.
+     * @param newHolder New binary metadata holder.
+     * @return {@code true} if new holder was added successfully.
+     */
+    private boolean casBinaryMetadata(int typeId, BinaryMetadataHolder newHolder) {
+        BinaryMetadataHolder oldHolder;
+
+        do {
+            oldHolder = metaLocCache.putIfAbsent(typeId, newHolder);
+
+            if (oldHolder == null)
+                return true;
+
+            if (obsoleteUpdate(oldHolder.pendingVersion(), oldHolder.acceptedVersion(),
+                newHolder.pendingVersion(), newHolder.acceptedVersion()))
+                return false;
+        }
+        while (!metaLocCache.replace(typeId, oldHolder, newHolder));
+
+        return true;
     }
 
     /**
@@ -916,24 +897,7 @@ final class BinaryMetadataTransport {
             }
 
             try {
-                BinaryMetadataHolder newHolder = U.unmarshal(ctx, binMetaBytes, U.resolveClassLoader(ctx.config()));
-
-                BinaryMetadataHolder oldHolder = metaLocCache.putIfAbsent(typeId, newHolder);
-
-                if (oldHolder != null) {
-                    do {
-                        oldHolder = metaLocCache.get(typeId);
-
-                        // typeId metadata cannot be removed after initialization.
-                        if (obsoleteUpdate(
-                            oldHolder.pendingVersion(),
-                            oldHolder.acceptedVersion(),
-                            newHolder.pendingVersion(),
-                            newHolder.acceptedVersion()))
-                            break;
-                    }
-                    while (!metaLocCache.replace(typeId, oldHolder, newHolder));
-                }
+                casBinaryMetadata(typeId, U.unmarshal(ctx, binMetaBytes, U.resolveClassLoader(ctx.config())));
 
                 fut.onDone(MetadataUpdateResult.createSuccessfulResult(-1));
             }
