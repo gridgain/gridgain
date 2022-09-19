@@ -59,8 +59,8 @@ public class MultipleStatementsSqlQuerySelfTest extends AbstractIndexingCommonTe
             "insert into test (ID, NAME) values (1, 'name_1');" +
             "insert into test (ID, NAME) values (2, 'name_2'), (3, 'name_3');" +
             " -- Query data \n" +
-            "select * from test" +
-            " -- all done."
+            "select * from test;" +
+            " -- All done."
         ).setSchema("PUBLIC");
 
         List<FieldsQueryCursor<List<?>>> res = qryProc.querySqlFields(qry, true, false);
