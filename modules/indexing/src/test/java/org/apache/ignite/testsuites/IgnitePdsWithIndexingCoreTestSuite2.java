@@ -16,15 +16,12 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsBinarySortObjectFieldsTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsMarshallerMappingRestoreOnNodeStartTest;
 import org.apache.ignite.internal.processors.cache.persistence.RestorePartitionStateDuringCheckpointTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteCacheGroupsWithRestartsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryEncryptionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryWithParamsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteSequentialNodeCrashRecoveryTest;
-import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsThreadInterruptionRandomAccessWalTest;
-import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsThreadInterruptionTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -38,9 +35,6 @@ import org.junit.runners.Suite;
     //
 
 
-    IgnitePdsMarshallerMappingRestoreOnNodeStartTest.class,
-    IgnitePdsThreadInterruptionTest.class,
-    IgnitePdsThreadInterruptionRandomAccessWalTest.class,
 
     IgnitePdsBinarySortObjectFieldsTest.class,
 
