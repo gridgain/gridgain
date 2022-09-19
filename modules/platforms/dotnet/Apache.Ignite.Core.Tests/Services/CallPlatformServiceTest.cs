@@ -176,7 +176,7 @@ namespace Apache.Ignite.Core.Tests.Services
             public bool Invoke(IClusterNode node)
             {
                 if (node.TryGetAttribute<string>(NodeTypeAttr, out var attr) 
-                    && string.Compare(attr, _type, true) == 0)
+                    && string.Compare(attr, _type, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     return true;
                 }
@@ -211,6 +211,10 @@ namespace Apache.Ignite.Core.Tests.Services
 
             /** */
             BinarizableTestValue AddOne(BinarizableTestValue val);
+
+            /** */
+            // ReSharper disable once InconsistentNaming
+            string contextAttribute(string name);
         }
 
         #pragma warning disable 649
@@ -221,6 +225,9 @@ namespace Apache.Ignite.Core.Tests.Services
             /** */
             [InstanceResource]
             private IIgnite _grid;
+
+            /** */
+            private IServiceContext _ctx;
 
             /** <inheritdoc /> */
             public Guid NodeId
@@ -273,7 +280,7 @@ namespace Apache.Ignite.Core.Tests.Services
                 {
                     var k = new TestKey(((TestKey) pair.Key).Id + 1);
 
-                    var v = new TestValue()
+                    var v = new TestValue
                     {
                         Id = ((TestValue)pair.Value).Id + 1,
                         Name = ((TestValue)pair.Value).Name
@@ -295,10 +302,15 @@ namespace Apache.Ignite.Core.Tests.Services
                 };
             }
 
+            public string contextAttribute(string name)
+            {
+                return _ctx.CurrentCallContext.GetAttribute(name);
+            }
+
             /** <inheritdoc /> */
             public void Init(IServiceContext context)
             {
-                // No-op.
+                _ctx = context;
             }
 
             /** <inheritdoc /> */

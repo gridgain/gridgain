@@ -74,13 +74,20 @@ public class GridServiceProxy<T> implements Serializable {
     /** */
     private static final Method PLATFORM_SERVICE_INVOKE_METHOD2;
 
+    /** */
+    private static final Method PLATFORM_SERVICE_INVOKE_METHOD3;
+
     static {
         try {
+            // Maintain all overloads to preserve compatibility during rolling
             PLATFORM_SERVICE_INVOKE_METHOD = PlatformService.class.getMethod("invokeMethod", String.class,
                     boolean.class, Object[].class);
 
             PLATFORM_SERVICE_INVOKE_METHOD2 = PlatformService.class.getMethod("invokeMethod", String.class,
                     boolean.class, boolean.class, Object[].class);
+
+            PLATFORM_SERVICE_INVOKE_METHOD3 = PlatformService.class.getMethod("invokeMethod", String.class,
+                    boolean.class, boolean.class, Object[].class, Map.class);
         }
         catch (NoSuchMethodException e) {
             throw new ExceptionInInitializerError("'invokeMethod' is not defined in " + PlatformService.class.getName());
@@ -295,8 +302,12 @@ public class GridServiceProxy<T> implements Serializable {
     ) throws Exception {
         if (svc instanceof PlatformService &&
                 !PLATFORM_SERVICE_INVOKE_METHOD.equals(mtd) &&
-                !PLATFORM_SERVICE_INVOKE_METHOD2.equals(mtd))
-            return ((PlatformService)svc).invokeMethod(methodName(mtd), false, true, args);
+                !PLATFORM_SERVICE_INVOKE_METHOD2.equals(mtd) &&
+                !PLATFORM_SERVICE_INVOKE_METHOD3.equals(mtd)) {
+            Map<String, Object> callAttrs = callCtx == null ? null : ((ServiceCallContextImpl)callCtx).values();
+
+            return ((PlatformService)svc).invokeMethod(methodName(mtd), false, true, args, callAttrs);
+        }
         else
             return callServiceMethod(svc, mtd, args, callCtx);
     }
@@ -539,7 +550,7 @@ public class GridServiceProxy<T> implements Serializable {
         /** */
         private Object callPlatformService(PlatformService srv) {
             try {
-                return srv.invokeMethod(mtdName, false, true, args);
+                return srv.invokeMethod(mtdName, false, true, args, callCtx != null ? ((ServiceCallContextImpl)callCtx).values() : null);
             }
             catch (PlatformNativeException ne) {
                 throw new ServiceProxyException(U.convertException(ne));
