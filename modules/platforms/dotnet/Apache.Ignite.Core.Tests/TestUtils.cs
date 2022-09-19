@@ -27,7 +27,6 @@ namespace Apache.Ignite.Core.Tests
     using System.Linq;
     using System.Reflection;
     using System.Threading;
-    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
@@ -105,21 +104,6 @@ namespace Apache.Ignite.Core.Tests
 
         /** */
         private static int _seed = Environment.TickCount;
-
-        static TestUtils()
-        {
-            Task.Factory.StartNew(() =>
-            {
-                while (true)
-                {
-                    Thread.Sleep(5000);
-
-                    var memInfo = GC.GetGCMemoryInfo();
-
-                    TestContextLogger.LastInstance.Warn($"/// HeapSizeBytes = {memInfo.HeapSizeBytes}, MemoryLoadBytes = {memInfo.MemoryLoadBytes}, TotalAvailableMemoryBytes = {memInfo.TotalAvailableMemoryBytes}");
-                }
-            }, TaskCreationOptions.LongRunning);
-        }
 
         /// <summary>
         ///
@@ -628,7 +612,7 @@ namespace Apache.Ignite.Core.Tests
                         Name = DataStorageConfiguration.DefaultDataRegionName,
                         InitialSize = 128 * 1024 * 1024,
                         MaxSize = Environment.Is64BitProcess
-                            ? DataRegionConfiguration.DefaultMaxSize
+                            ? 512 * 1024 * 1024
                             : 256 * 1024 * 1024
                     }
                 },
@@ -709,8 +693,6 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public class TestContextLogger : ILogger
         {
-            public static volatile TestContextLogger LastInstance;
-
             private readonly TestExecutionContext _ctx = TestExecutionContext.CurrentContext;
 
             private readonly ITestListener _listener;
@@ -722,8 +704,6 @@ namespace Apache.Ignite.Core.Tests
                 Debug.Assert(prop != null);
 
                 _listener = (ITestListener)prop.GetValue(_ctx);
-
-                LastInstance = this;
             }
 
             /** <inheritdoc /> */
