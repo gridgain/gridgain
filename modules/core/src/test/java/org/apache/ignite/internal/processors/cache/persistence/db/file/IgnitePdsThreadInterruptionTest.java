@@ -98,7 +98,7 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-    @Test
+//    @Test
     public void testInterruptsOnRead() throws Exception {
         Ignite ignite = startGrid();
 
@@ -185,7 +185,7 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
      *
      * @throws Exception If failed.
      */
-//    @Test
+    @Test
     public void testInterruptsOnWALWrite() throws Exception {
         Ignite ignite = startGrid();
 
