@@ -63,6 +63,7 @@ public class ConditionAndOr extends Condition {
     @Override
     public void createIndexConditions(Session session, TableFilter filter) {
         if (andOrType == AND) {
+            System.out.println(">xxx> left =" + left.getClass().getSimpleName() + " right=" + right.getClass().getSimpleName());
             left.createIndexConditions(session, filter);
             right.createIndexConditions(session, filter);
         }

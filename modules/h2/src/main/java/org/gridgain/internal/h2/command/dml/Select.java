@@ -295,6 +295,8 @@ public class Select extends Query {
      * @param cond the condition to add
      */
     public void addCondition(Expression cond) {
+        System.out.println(">xxx> add condition");
+
         if (condition == null) {
             condition = cond;
         } else {
@@ -461,7 +463,13 @@ public class Select extends Query {
     }
 
     boolean isConditionMet() {
-        return condition == null || condition.getBooleanValue(session);
+        boolean exprRes = condition == null || condition.getBooleanValue(session);
+
+        if (exprRes) {
+            System.out.println(">xxx> condition = " + condition);
+        }
+
+        return exprRes;
     }
 
     private void queryWindow(int columnCount, LocalResult result, long offset, boolean quickOffset) {
@@ -750,6 +758,8 @@ public class Select extends Query {
         Value[] row = null;
         while (result.getRowCount() < limitRows && lazyResult.next()) {
             row = lazyResult.currentRow();
+            System.out.println(">xxx> row=" + row);
+
             result.addRow(row);
         }
         if (limitRows != Long.MAX_VALUE && withTies && sort != null && row != null) {
@@ -1291,6 +1301,8 @@ public class Select extends Query {
                 // select p, c from parent
                 // left outer join child on p = pc where c is null;
                 if (!f.isJoinOuter() && !f.isJoinOuterIndirect()) {
+                    System.err.println(">xxx> createIndexConditions " + condition.getClass().getSimpleName());
+
                     condition.createIndexConditions(session, f);
                 }
             }

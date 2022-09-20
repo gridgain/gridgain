@@ -5,7 +5,11 @@
  */
 package org.gridgain.internal.h2.index;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.message.DbException;
@@ -91,10 +95,13 @@ public class IndexCursor implements Cursor, AutoCloseable {
             if (condition.getCompareType() == Comparison.IN_LIST) {
                 if (start == null && end == null) {
                     if (canUseIndexForIn(column)) {
+                        System.out.println(">xxx> optimized branch");
                         this.inColumn = column;
                         inList = condition.getCurrentValueList(s);
                         inListIndex = 0;
                     }
+                    else
+                        System.out.println(">xxx> not optimized :(");
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
                 if (start == null && end == null) {
@@ -154,16 +161,21 @@ public class IndexCursor implements Cursor, AutoCloseable {
      * @param indexConditions the index conditions
      */
     public void find(Session s, ArrayList<IndexCondition> indexConditions) {
+        System.out.println(">xxx> prepare=" + indexConditions.size());
         prepare(s, indexConditions);
+
         if (inColumn != null) {
             return;
         }
+
         if (!alwaysFalse) {
             if (intersects != null && index instanceof SpatialIndex) {
                 cursor = ((SpatialIndex) index).findByGeometry(tableFilter,
                         start, end, intersects);
             } else if (index != null) {
                 cursor = index.find(tableFilter, start, end);
+
+                System.out.println(">xxx> find [" + start + " - " + end + "] cur=" + (cursor != null ? cursor.getClass().getSimpleName() : null));
             }
         }
     }
@@ -171,9 +183,16 @@ public class IndexCursor implements Cursor, AutoCloseable {
     private boolean canUseIndexForIn(Column column) {
         if (inColumn != null) {
             // only one IN(..) condition can be used at the same time
+            System.out.println(">xxx> only one IN(..) condition can be used at the same time");
             return false;
         }
         return canUseIndexFor(column);
+    }
+
+
+    private void dumpStack(String msg) {
+        new Exception("<DEBUG><" +
+                Thread.currentThread().getName() + '>' + ' ' + msg).printStackTrace(System.err);
     }
 
     private boolean canUseIndexFor(Column column) {
@@ -186,7 +205,16 @@ public class IndexCursor implements Cursor, AutoCloseable {
             return true;
         }
         IndexColumn idxCol = cols[0];
-        return idxCol == null || idxCol.column == column;
+
+        if (idxCol != null)
+            System.out.println(">xxx> " + Objects.equals(idxCol.column, column) + " " + idxCol.column + " vs " + column + ", cols " + Arrays.toString(cols));
+
+        // todo
+        boolean res = idxCol == null || idxCol.column == column || (cols.length > 1 && cols[1].column == column);
+
+        System.out.println(">xxx> canUseIndexFor = " + res + ", inColumn=" +inColumn);
+
+        return res;
     }
 
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
@@ -267,6 +295,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     private void nextCursor() {
         if (inList != null) {
+            System.out.println(">xxx> inList handling");
             while (inListIndex < inList.length) {
                 Value v = inList[inListIndex++];
                 if (v != ValueNull.INSTANCE) {
@@ -286,9 +315,18 @@ public class IndexCursor implements Cursor, AutoCloseable {
     }
 
     private void find(Value v) {
-        v = inColumn.convert(v);
-        int id = inColumn.getColumnId();
-        start.setValue(id, v);
+        start.setValue(inColumn.getColumnId(), inColumn.convert(v));
+
+        // todo
+        ArrayList<IndexCondition> idxConds = tableFilter.getIndexConditions();
+
+        IndexCondition cond = tableFilter.getIndexConditions().get(1);
+
+        for (IndexCondition c : idxConds) {
+            if (c.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant())
+                start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
+        }
+
         cursor = index.find(tableFilter, start, start);
     }
 

@@ -32,12 +32,16 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -50,17 +54,30 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
-import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2TableDescriptor;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -69,6 +86,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
@@ -76,6 +94,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
@@ -100,6 +119,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** Default table name. */
     private static final String TEST_TBL_NAME = "PUBLIC.TEST_TABLE";
+
+    /** The number of cursor scans. */
+    private static final AtomicInteger scanCntr = new AtomicInteger();
 
     /** */
     private Collection<QueryIndex> indexes = Collections.emptyList();
@@ -130,6 +152,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         igniteCfg.setConsistentId(igniteInstanceName);
 
+        igniteCfg.setSqlConfiguration(new SqlConfiguration().setLongQueryWarningTimeout(0));
+
         if (igniteInstanceName.startsWith(CLIENT_NAME)) {
             igniteCfg.setClientMode(true);
 
@@ -142,9 +166,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
-        fields.put("keyStr", String.class.getName());
-        fields.put("keyLong", Long.class.getName());
-        fields.put("keyPojo", Pojo.class.getName());
+        fields.put("keyLong1", Long.class.getName());
+        fields.put("keyLong2", Long.class.getName());
         fields.put("valStr", String.class.getName());
         fields.put("valLong", Long.class.getName());
         fields.put("valPojo", Pojo.class.getName());
@@ -159,7 +182,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                     .setKeyType(Key.class.getName())
                     .setValueType(Val.class.getName())
                     .setFields(fields)
-                    .setKeyFields(new HashSet<>(Arrays.asList("keyStr", "keyLong", "keyPojo")))
+                    .setKeyFields(new HashSet<>(Arrays.asList("keyLong1", "keyLong2")))
                     .setIndexes(indexes)
                     .setAliases(Collections.singletonMap(QueryUtils.KEY_FIELD_NAME, "pk_id"))
             ))
@@ -227,6 +250,46 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             stopAllGrids();
         }
+    }
+
+    /** */
+    @Test
+    public void test0_NonOptimal() throws Exception {
+        H2TreeIndex.h2TreeFactory = TestH2Tree::new;
+
+        inlineSize = 20;
+
+        IgniteEx ig0 = startGrid();
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        String create = "CREATE TABLE PUBLIC.TEST_TABLE (f1 int, f2 int, f3 int, CONSTRAINT PK_IDX PRIMARY KEY (f1, f2))";
+        String createIdx = "CREATE INDEX PK_IDX ON PUBLIC.TEST_TABLE (f1, f2) INLINE_SIZE 30";
+        String insert = "INSERT INTO PUBLIC.TEST_TABLE (f1, f2, f3) values (%d, %d, 2)";
+
+        Function<String, FieldsQueryCursor<List<?>>> execSql =
+                sql0 -> qryProc.querySqlFields(new SqlFieldsQuery(sql0), true);
+
+        execSql.apply(create);
+        execSql.apply(createIdx);
+
+        for (int i = 0; i < 50; ++i)
+            for (int j = 0; j < 50; ++j)
+                execSql.apply(String.format(insert, i, j));
+
+        Consumer<String> execAssert = sql -> {
+            scanCntr.set(0);
+
+            FieldsQueryCursor<List<?>> res =
+                execSql.apply(sql);
+
+            assertEquals(4, res.getAll().size());
+            assertEquals(4, scanCntr.get());
+        };
+
+        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 in (1, 5, 10, 49)");
+        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 in (1, 5, 10, 49)");
+        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 in (1, 5, 10, 49) and f2 = 8");
+        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 in (1, 5, 10, 49) and f2 = 8");
     }
 
     /** */
@@ -2044,7 +2107,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
@@ -2103,13 +2166,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
             assertEquals(val(i), val);
 
-            assertTrue(key.keyStr.startsWith(PREFIX));
+            //assertTrue(key.keyStr.startsWith(PREFIX));
         }
     }
 
@@ -2131,7 +2194,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
@@ -2174,7 +2237,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** Key object factory method. */
     private static Key key(long i) {
-        return new Key(String.format("foo%03d", i), i, new Pojo(i));
+        return new Key(i, i);
     }
 
     /** Value object factory method.*/
@@ -2205,19 +2268,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Key object. */
     private static class Key {
         /** */
-        private String keyStr;
+        private long keyLong1;
 
         /** */
-        private long keyLong;
+        private long keyLong2;
 
         /** */
-        private Pojo keyPojo;
-
-        /** */
-        private Key(String str, long aLong, Pojo pojo) {
-            keyStr = str;
-            keyLong = aLong;
-            keyPojo = pojo;
+        private Key(long f1, long f2) {
+            this.keyLong1 = f1;
+            this.keyLong2 = f2;
         }
 
         /** {@inheritDoc} */
@@ -2230,14 +2289,12 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Key key = (Key) o;
 
-            return keyLong == key.keyLong &&
-                Objects.equals(keyStr, key.keyStr) &&
-                Objects.equals(keyPojo, key.keyPojo);
+            return keyLong1 == key.keyLong1 && keyLong2 == key.keyLong2;
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Objects.hash(keyStr, keyLong, keyPojo);
+            return Objects.hash(keyLong1, keyLong2);
         }
 
         /** {@inheritDoc} */
@@ -2391,6 +2448,71 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         /** */
         SqlDataType(Object javaType) {
             this.javaType = javaType;
+        }
+    }
+
+    /** */
+    static class TestH2Tree extends H2Tree {
+        /** */
+        public TestH2Tree(GridCacheContext<?, ?> cctx, GridH2Table table, String name, String idxName, String cacheName,
+                          String tblName, ReuseList reuseList, int grpId, String grpName, PageMemory pageMem,
+                          IgniteWriteAheadLogManager wal, AtomicLong globalRmvId, long metaPageId, boolean initNew,
+                          List<IndexColumn> unwrappedCols, List<IndexColumn> wrappedCols, AtomicInteger maxInlineSize,
+                          boolean pk, boolean affinityKey, boolean mvccEnabled, H2RowCache rowCache,
+                          FailureProcessor failProc, PageLockTrackerManager pageLockTrackMgr,
+                          IgniteLogger log, IoStatisticsHolder stats, InlineIndexColumnFactory factory,
+                          int configuredInlineSize, PageIoResolver pageIoRslvr) throws IgniteCheckedException {
+            super(cctx, table, name, idxName, cacheName, tblName, reuseList, grpId, grpName, pageMem, wal, globalRmvId,
+                    metaPageId, initNew, unwrappedCols, wrappedCols, maxInlineSize, pk, affinityKey, mvccEnabled,
+                    rowCache, failProc, pageLockTrackMgr, log, stats, factory, configuredInlineSize, pageIoRslvr);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public GridCursor<H2Row> find(H2Row lower, H2Row upper, TreeRowClosure<H2Row, H2Row> c, Object x) throws IgniteCheckedException {
+            return new ScanCountAwareCursor(super.find(lower, upper, c, x));
+        }
+
+        /** {@inheritDoc} */
+        @Override public <R> R findOne(H2Row row, TreeRowClosure<H2Row, H2Row> c, Object x) throws IgniteCheckedException {
+            H2Row v = super.findOne(row, c, x);
+
+            if (v != null)
+                scanCntr.incrementAndGet();
+
+            return (R)v;
+        }
+    }
+
+    /** */
+    private static class ScanCountAwareCursor implements GridCursor<H2Row> {
+        /** Delegated cursor. */
+        private final GridCursor<H2Row> delegate;
+
+        /** @param cur Delegated cursor. */
+        private ScanCountAwareCursor(GridCursor<H2Row> cur) {
+            delegate = cur;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean next() throws IgniteCheckedException {
+            if (delegate.next()) {
+                scanCntr.incrementAndGet();
+
+                return true;
+            }
+
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public H2Row get() throws IgniteCheckedException {
+            return delegate.get();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() throws Exception {
+            delegate.close();
         }
     }
 }

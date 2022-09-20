@@ -302,6 +302,8 @@ public class TreeIndex extends BaseIndex {
     }
 
     private Cursor find(SearchRow first, SearchRow last) {
+//        System.out.println(">xxx> search " + first.getValue(0) + ">xxx> last " + last.getValue(0));
+
         if (first == null) {
             TreeNode x = root, n;
             while (x != null) {
