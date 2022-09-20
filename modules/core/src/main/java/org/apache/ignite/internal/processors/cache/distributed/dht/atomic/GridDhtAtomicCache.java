@@ -36,6 +36,8 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryInvalidTypeException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.UnregisteredBinaryTypeException;
@@ -3329,12 +3331,17 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                         if (e instanceof RuntimeException && !X.hasCause(e, IgniteOutOfMemoryException.class))
                             throw (RuntimeException)e;
 
-                        IgniteCheckedException err = new IgniteCheckedException("Failed to update key on backup node: " + key, e);
+                        U.error(log, "Failed to update key on backup node: " + key, e);
+
+                        // Trigger failure handler to avoid data inconsistency.
+                        IgniteCheckedException err =
+                            new IgniteCheckedException("Failed to update key on backup node: " + key, e);
+
+                        ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, err));
 
                         if (nearRes != null)
                             nearRes.addFailedKey(key, err);
 
-                        U.error(log, "Failed to update key on backup node: " + key, e);
                     }
                 }
             }
