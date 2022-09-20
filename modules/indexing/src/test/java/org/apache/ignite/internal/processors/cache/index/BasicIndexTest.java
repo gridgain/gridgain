@@ -50,6 +50,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
@@ -130,6 +131,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         igniteCfg.setConsistentId(igniteInstanceName);
 
+        igniteCfg.setSqlConfiguration(new SqlConfiguration().setLongQueryWarningTimeout(0));
+
         if (igniteInstanceName.startsWith(CLIENT_NAME)) {
             igniteCfg.setClientMode(true);
 
@@ -142,9 +145,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
-        fields.put("keyStr", String.class.getName());
-        fields.put("keyLong", Long.class.getName());
-        fields.put("keyPojo", Pojo.class.getName());
+        fields.put("keyLong1", Long.class.getName());
+        fields.put("keyLong2", Long.class.getName());
         fields.put("valStr", String.class.getName());
         fields.put("valLong", Long.class.getName());
         fields.put("valPojo", Pojo.class.getName());
@@ -159,7 +161,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                     .setKeyType(Key.class.getName())
                     .setValueType(Val.class.getName())
                     .setFields(fields)
-                    .setKeyFields(new HashSet<>(Arrays.asList("keyStr", "keyLong", "keyPojo")))
+                    .setKeyFields(new HashSet<>(Arrays.asList("keyLong1", "keyLong2")))
                     .setIndexes(indexes)
                     .setAliases(Collections.singletonMap(QueryUtils.KEY_FIELD_NAME, "pk_id"))
             ))
@@ -227,6 +229,84 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             stopAllGrids();
         }
+    }
+
+    @Test
+    public void test0() throws Exception {
+        inlineSize = 20;
+
+        srvLog = new ListeningTestLogger(log);
+
+        IgniteEx ig0 = startGrids(3);
+
+        IgniteEx cli = startClientGrid("cli");
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        String create = "CREATE TABLE PUBLIC.TEST_TABLE (f1 int, f2 int, f3 int, " +
+            "CONSTRAINT PK_IDX PRIMARY KEY (f1, f2))";
+
+        //String create = "CREATE TABLE PUBLIC.TEST_TABLE (f1 int primary key, f2 int, f3 int)";
+
+        String createIdx = "CREATE INDEX PK_IDX ON PUBLIC.TEST_TABLE (f1, f2) INLINE_SIZE 30";
+
+        String insert = "INSERT INTO PUBLIC.TEST_TABLE (f1, f2, f3) values (%d, %d, 2)";
+
+        String selectWithoutIn = "SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 = 50";
+
+        //String selectWithIn = "SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 in (1, 5, 10, 49)";
+
+        String selectWithIn = "SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 in (1, 5, 10, 29)";
+
+        //String selectWithIn = "SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE (f1 > 8 and f1 < 10) and (f2 > 5 and f2 < 49)";
+
+/*        String selectWithIn = "SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE (f1 = 8 and f2 = 1) or " +
+            "(f1 = 8 and f2 = 5) or (f1 = 8 and f2 = 10) or (f1 = 8 and f2 = 49)";*/
+
+        qryProc.querySqlFields(new SqlFieldsQuery(create), true);
+
+        for (int i = 0; i < 30; ++i)
+            for (int j = 0; j < 50; ++j)
+                qryProc.querySqlFields(new SqlFieldsQuery(String.format(insert, i, j)), true);
+
+        GridQueryProcessor cliQryProc = cli.context().query();
+
+        cliQryProc.querySqlFields(new SqlFieldsQuery(createIdx), true).getAll();
+
+/*        FieldsQueryCursor<List<?>> res = cliQryProc.querySqlFields(new SqlFieldsQuery(selectWithoutIn), true);
+
+        System.err.println("!!! not in: " + res.getAll().get(0));*/
+
+        FieldsQueryCursor<List<?>> res1 = cliQryProc.querySqlFields(new SqlFieldsQuery(selectWithIn), true);
+
+        System.err.println("!!! with in: " + res1.getAll().size());
+    }
+
+    @Test
+    public void test1() throws Exception {
+        inlineSize = 10;
+
+        indexes = Arrays.asList(
+            new QueryIndex(Arrays.asList("keyLong1", "keyLong2"), QueryIndexType.SORTED)
+        );
+
+        IgniteEx ig0 = startGrids(3);
+
+        IgniteEx cli = startClientGrid("cli");
+
+        populateCache();
+
+        IgniteCache<Key, Val> cache = cli.cache(DEFAULT_CACHE_NAME);
+
+/*        List<List<?>> data = cache.query(new SqlFieldsQuery("select * from Val where keyLong1 = ? and keyLong2 = ?")
+            .setArgs(50, 50))
+            .getAll();*/
+
+        List<List<?>> data = cache.query(new SqlFieldsQuery("select * from Val where keyLong1 = ? and keyLong2 in (50, 51, 52, 53, 54)")
+            .setArgs(50))
+            .getAll();
+
+        System.err.println("!!! " + data.get(0));
     }
 
     /** */
@@ -2044,7 +2124,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
@@ -2103,13 +2183,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
             assertEquals(val(i), val);
 
-            assertTrue(key.keyStr.startsWith(PREFIX));
+            //assertTrue(key.keyStr.startsWith(PREFIX));
         }
     }
 
@@ -2131,7 +2211,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong;
+            long i = key.keyLong1;
 
             assertEquals(key(i), key);
 
@@ -2174,7 +2254,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** Key object factory method. */
     private static Key key(long i) {
-        return new Key(String.format("foo%03d", i), i, new Pojo(i));
+        return new Key(i, i);
     }
 
     /** Value object factory method.*/
@@ -2205,19 +2285,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Key object. */
     private static class Key {
         /** */
-        private String keyStr;
+        private long keyLong1;
 
         /** */
-        private long keyLong;
+        private long keyLong2;
 
         /** */
-        private Pojo keyPojo;
-
-        /** */
-        private Key(String str, long aLong, Pojo pojo) {
-            keyStr = str;
-            keyLong = aLong;
-            keyPojo = pojo;
+        private Key(long f1, long f2) {
+            this.keyLong1 = f1;
+            this.keyLong2 = f2;
         }
 
         /** {@inheritDoc} */
@@ -2230,14 +2306,12 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Key key = (Key) o;
 
-            return keyLong == key.keyLong &&
-                Objects.equals(keyStr, key.keyStr) &&
-                Objects.equals(keyPojo, key.keyPojo);
+            return keyLong1 == key.keyLong1 && keyLong2 == key.keyLong2;
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Objects.hash(keyStr, keyLong, keyPojo);
+            return Objects.hash(keyLong1, keyLong2);
         }
 
         /** {@inheritDoc} */
