@@ -22,7 +22,6 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalR
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteLogicalRecoveryWithParamsTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteSequentialNodeCrashRecoveryTest;
-import org.apache.ignite.internal.processors.cache.persistence.db.file.IgnitePdsThreadInterruptionRandomAccessWalTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -31,7 +30,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    IgnitePdsThreadInterruptionRandomAccessWalTest.class,
+
 
 
     //
