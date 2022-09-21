@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.util;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 
 /**
@@ -40,7 +41,8 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 @GridToStringExclude
 public class GridSpinBusyLock {
     /** Underlying read-write lock. */
-    private final GridSpinReadWriteLock lock = new GridSpinReadWriteLock();
+//    private final GridSpinReadWriteLock lock = new GridSpinReadWriteLock();
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
      * Enters "busy" state.
@@ -48,7 +50,7 @@ public class GridSpinBusyLock {
      * @return {@code true} if entered to busy state.
      */
     public boolean enterBusy() {
-        return !lock.writeLockedByCurrentThread() && lock.tryReadLock();
+        return !lock.isWriteLockedByCurrentThread() && lock.readLock().tryLock();
     }
 
     /**
@@ -57,14 +59,14 @@ public class GridSpinBusyLock {
      * @return {@code True} if busy lock was blocked by current thread.
      */
     public boolean blockedByCurrentThread() {
-        return lock.writeLockedByCurrentThread();
+        return lock.isWriteLockedByCurrentThread();
     }
 
     /**
      * Leaves "busy" state.
      */
     public void leaveBusy() {
-        lock.readUnlock();
+        lock.readLock().unlock();
     }
 
     /**
@@ -72,7 +74,7 @@ public class GridSpinBusyLock {
      * and prevents them from further entering to "busy" state.
      */
     public void block() {
-        lock.writeLock();
+        lock.writeLock().lock();
     }
 
     /**
@@ -81,13 +83,13 @@ public class GridSpinBusyLock {
      * @throws InterruptedException If interrupted.
      */
     public boolean tryBlock(long millis) throws InterruptedException {
-        return lock.tryWriteLock(millis, TimeUnit.MILLISECONDS);
+        return lock.writeLock().tryLock(millis, TimeUnit.MILLISECONDS);
     }
 
     /**
      * Makes possible for activities entering busy state again.
      */
     public void unblock() {
-        lock.writeUnlock();
+        lock.writeLock().unlock();
     }
 }
