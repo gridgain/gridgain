@@ -1228,7 +1228,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         assert cmd != null;
 
-                        if (cmd.noOp() && parseRes.remainingQuery() == null && parseRes.queryDescriptor().sql().isEmpty())
+                        if (cmd.noOp() && remainingQry == null && newQryDesc.sql().isEmpty())
                             continue;
 
                         FieldsQueryCursor<List<?>> cmdRes = executeCommand(
