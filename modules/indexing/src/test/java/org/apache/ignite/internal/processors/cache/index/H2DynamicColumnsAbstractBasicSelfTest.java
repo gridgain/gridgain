@@ -443,7 +443,7 @@ public abstract class H2DynamicColumnsAbstractBasicSelfTest extends DynamicColum
                 new QueryField("A", Integer.class.getName(), true),
                 new QueryField("B", String.class.getName(), true)));
 
-            run("ALTER TABLE test DROP COLUMN a");
+            run("ALTER TABLE PUBLIC.test DROP COLUMN a");
 
             assertEquals(0, checkTableState(QueryUtils.DFLT_SCHEMA, "TEST",
                 new QueryField("ID", Integer.class.getName(), true),
