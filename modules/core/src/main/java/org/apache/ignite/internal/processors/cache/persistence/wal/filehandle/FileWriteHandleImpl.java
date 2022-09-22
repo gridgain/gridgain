@@ -345,7 +345,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
      * @return Pointer to the end of the last written record (probably not fsync-ed).
      */
     @Override public FileWALPointer position() {
-        lock.lock();
+        doLock();
 
         try {
             return new FileWALPointer(getSegmentId(), (int)written, 0);
@@ -355,12 +355,17 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
         }
     }
 
+    private void doLock() {
+        lock.lock();
+        log.error("Locked FileWriteHandleImpl from " + Thread.currentThread(), new Exception());
+    }
+
     /**
      * @param ptr Pointer to sync.
      * @throws StorageException If failed.
      */
     @Override public void fsync(FileWALPointer ptr) throws StorageException, IgniteCheckedException {
-        lock.lock();
+        doLock();
 
         try {
             if (ptr != null) {
@@ -450,7 +455,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
      */
     @Override public boolean close(boolean rollOver) throws IgniteCheckedException, StorageException {
         if (stop.compareAndSet(false, true)) {
-            lock.lock();
+            doLock();
 
             try {
                 flushOrWait(null);
@@ -534,7 +539,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
      * Signals next segment available to wake up other worker threads waiting for WAL to write.
      */
     @Override public void signalNextAvailable() {
-        lock.lock();
+        doLock();
 
         try {
             assert cctx.kernalContext().invalid() ||
@@ -552,7 +557,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
 
     /** {@inheritDoc} */
     @Override public void awaitNext() {
-        lock.lock();
+        doLock();
 
         try {
             while (fileIO != null)
