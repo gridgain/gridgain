@@ -187,6 +187,15 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
      */
     @Test
     public void testInterruptsOnWALWrite() throws Exception {
+        try {
+            doTest();
+        } catch (Exception | Error e) {
+            log.error("Oops, an exception", e);
+            throw e;
+        }
+    }
+
+    private void doTest() throws Exception {
         Ignite ignite = startGrid();
 
         ignite.cluster().active(true);
@@ -210,6 +219,8 @@ public class IgnitePdsThreadInterruptionTest extends GridCommonAbstractTest {
 
                     keysToCheck.add(key);
                 }
+
+                log.info("Worker done: " + Thread.currentThread().getName());
             });
 
             workers[i].setName("writer-" + i);
