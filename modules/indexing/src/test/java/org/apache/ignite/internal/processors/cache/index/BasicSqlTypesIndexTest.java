@@ -353,6 +353,66 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Test using index hints with group by statements.
+     *
+     * Expected behavior:
+     * <li>
+     *     <b>Hint</b> contains index not participating in group by statement but suitable for predicates -
+     *     hint index must be used.
+     * </li>
+     * <li>
+     *     <b>Hint</b> is empty - prefer index which contains group by columns.
+     * </li>
+     */
+    @Test
+    public void testGroupByAndIndexHint() {
+        execSql("CREATE TABLE T1 (id INT PRIMARY KEY, val1 INT, val2 INT, val3 INT)");
+
+        execSql("CREATE TABLE T2 (id INT PRIMARY KEY, val1 INT, val2 INT, val3 INT)");
+
+        execSql("CREATE INDEX IDX_ON_PREDICATE ON T1(val1)");
+        execSql("CREATE INDEX IDX_ON_GRP ON T1(val2)");
+        execSql("CREATE INDEX IDX_NOT_CHOOSE ON T1(val3)");
+
+        // Use idx from hint
+        List<List<?>> res = execSql("EXPLAIN SELECT T1.id FROM T1 USE INDEX(IDX_ON_PREDICATE) INNER JOIN T2 ON T1.id = T2.id " +
+            "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
+            "GROUP BY T1.val2");
+
+        String explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
+
+        // Choose correct idx
+        res = execSql("EXPLAIN SELECT T1.id FROM T1 USE INDEX(IDX_NOT_CHOOSE, IDX_ON_PREDICATE) INNER JOIN T2 ON T1.id = T2.id " +
+            "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
+            "GROUP BY T1.val2");
+
+        explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
+
+        // If no hint - choose closer to group by conditions
+        res = execSql("EXPLAIN SELECT T1.id FROM T1 INNER JOIN T2 ON T1.id = T2.id " +
+            "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
+            "GROUP BY T1.val2");
+
+        explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_GRP"));
+
+        execSql("DROP INDEX IDX_ON_GRP");
+        
+        res = execSql("EXPLAIN SELECT T1.id FROM T1 INNER JOIN T2 ON T1.id = T2.id " +
+            "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
+            "GROUP BY T1.val2");
+
+        explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
+    }
+
+    /**
      * Executes test scenario: <ul>
      *     <li>Create table</li>
      *     <li>Create necessary indexes</li>
