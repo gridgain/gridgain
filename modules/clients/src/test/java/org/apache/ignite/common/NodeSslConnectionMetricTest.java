@@ -165,8 +165,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             getConnection(jdbcConfiguration("thinClient", "trusttwo", null, "TLSv1.1")),
             SQLException.class);
 
-        // Not rejected by server, but by client, so rejectedSesCnt is the same.
-        checkSslCommunicationMetrics(reg, 4, 0, 2);
+        checkSslCommunicationMetrics(reg, 4, 0, 3);
     }
 
     /** Tests SSL metrics produced by REST TCP client connection. */
@@ -210,8 +209,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             // GridClient makes 2 additional  silent connection attempts if an SSL error occurs.
         }
 
-        // Not rejected by server, but by client, so rejectedSesCnt is the same.
-        checkSslCommunicationMetrics(reg, 10, 0, 6);
+        checkSslCommunicationMetrics(reg, 10, 0, 9);
     }
 
     /** Tests SSL discovery metrics produced by node connection. */
@@ -316,8 +314,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             ClientConnectionException.class
         );
 
-        // Not rejected by server, but by client, so rejectedSesCnt is the same.
-        checkSslCommunicationMetrics(reg, 4, 0, 2);
+        checkSslCommunicationMetrics(reg, 4, 0, 3);
     }
 
     /** Starts node that imitates a cluster server node to which connections will be performed. */
