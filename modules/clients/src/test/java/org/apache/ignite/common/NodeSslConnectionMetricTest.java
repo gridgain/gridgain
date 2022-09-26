@@ -209,7 +209,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             // GridClient makes 2 additional  silent connection attempts if an SSL error occurs.
         }
 
-        checkSslCommunicationMetrics(reg, 10, 0, 9);
+        // Not rejected by server, but by client, so rejectedSesCnt is the same.
+        checkSslCommunicationMetrics(reg, 10, 0, 6);
     }
 
     /** Tests SSL discovery metrics produced by node connection. */
