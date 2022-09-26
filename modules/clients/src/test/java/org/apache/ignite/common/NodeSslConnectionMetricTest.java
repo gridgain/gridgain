@@ -235,7 +235,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1.1");
 
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
-        waitForMetric("RejectedSslConnectionsCount", 12,
+        waitForMetricGreaterOrEqual("RejectedSslConnectionsCount", 12,
                 () -> reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value());
     }
 
@@ -439,6 +439,13 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         assertTrue(
             "Metric " + name + " expected " + expected + " but was " + supplier.get(),
                 waitForCondition(() -> expected == supplier.get(), TIMEOUT));
+    }
+
+    /** Wait for metric value. */
+    private void waitForMetricGreaterOrEqual(String name, int expected, Supplier<Integer> supplier) throws Exception {
+        assertTrue(
+            "Metric " + name + " expected greater or equal than " + expected + " but was " + supplier.get(),
+                waitForCondition(() -> expected <= supplier.get(), TIMEOUT));
     }
 
     /** Creates {@link SslContextFactory} with specified options. */
