@@ -73,7 +73,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     private static final String UNSUPPORTED_CIPHER_SUITE = "TLS_RSA_WITH_AES_128_GCM_SHA256";
 
     /** Metric timeout. */
-    private static final long TIMEOUT = 5_000;
+    private static final long TIMEOUT = 3_000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -165,7 +165,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             getConnection(jdbcConfiguration("thinClient", "trusttwo", null, "TLSv1.1")),
             SQLException.class);
 
-        checkSslCommunicationMetrics(reg, 4, 0, 3);
+        // Not rejected by server, but by client, so rejectedSesCnt is the same.
+        checkSslCommunicationMetrics(reg, 4, 0, 2);
     }
 
     /** Tests SSL metrics produced by REST TCP client connection. */
@@ -235,9 +236,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1.1");
 
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
-        assertTrue(waitForCondition(() ->
-            18 == reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value(),
-            TIMEOUT));
+        waitForMetric("RejectedSslConnectionsCount", 13,
+                () -> reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value());
     }
 
     /** Tests SSL communication metrics produced by node connection. */
@@ -315,7 +315,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
             ClientConnectionException.class
         );
 
-        checkSslCommunicationMetrics(reg, 4, 0, 3);
+        // Not rejected by server, but by client, so rejectedSesCnt is the same.
+        checkSslCommunicationMetrics(reg, 4, 0, 2);
     }
 
     /** Starts node that imitates a cluster server node to which connections will be performed. */
