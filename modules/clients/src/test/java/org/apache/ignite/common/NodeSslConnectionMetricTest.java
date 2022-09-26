@@ -430,7 +430,6 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         waitForMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME, handshakeCnt, () -> (int) Arrays.stream(
                 mreg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME).value()).sum());
 
-
         waitForMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME, rejectedSesCnt,
                 () -> mreg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME).value());
     }
