@@ -1379,7 +1379,9 @@ public class Select extends Query {
             else if ((groupIndex = getGroupSortedIndex()) != null) {
                 IndexHints idxHints = topTableFilter.getIndexHints();
 
-                if (idxHints == null || idxHints.allowIndex(groupIndex)) {
+                if (idxHints == null || idxHints.allowIndex(groupIndex) || topTableFilter.getIndex() == null ||
+                    topTableFilter.getIndex().getIndexType().isScan())
+                {
                     topTableFilter.setIndex(groupIndex);
                     isGroupSortedQuery = true;
                 }

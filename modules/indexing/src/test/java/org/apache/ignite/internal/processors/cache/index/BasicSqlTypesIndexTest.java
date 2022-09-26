@@ -402,7 +402,7 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
         assertTrue(explainPlan, explainPlan.contains("IDX_ON_GRP"));
 
         execSql("DROP INDEX IDX_ON_GRP");
-        
+
         res = execSql("EXPLAIN SELECT T1.id FROM T1 INNER JOIN T2 ON T1.id = T2.id " +
             "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
             "GROUP BY T1.val2");
@@ -410,6 +410,18 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
         explainPlan = (String)res.get(0).get(0);
 
         assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
+
+        execSql("DROP INDEX IDX_ON_PREDICATE");
+
+        execSql("CREATE INDEX IDX_ON_GRP ON T1(val2)");
+
+        res = execSql("EXPLAIN SELECT T1.id FROM T1 USE INDEX(IDX_NOT_CHOOSE) INNER JOIN T2 ON T1.id = T2.id " +
+            "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
+            "GROUP BY T1.val2");
+
+        explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_GRP"));
     }
 
     /**
