@@ -20,6 +20,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.Config;
@@ -70,6 +71,9 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
 
     /** Cipher suite not supported by cluster nodes. */
     private static final String UNSUPPORTED_CIPHER_SUITE = "TLS_RSA_WITH_AES_128_GCM_SHA256";
+
+    /** Metric timeout. */
+    private static final long TIMEOUT = 5_000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -232,7 +236,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
         assertTrue(waitForCondition(() ->
             18 == reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value(),
-            getTestTimeout()));
+            TIMEOUT));
     }
 
     /** Tests SSL communication metrics produced by node connection. */
@@ -415,22 +419,27 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     /** Checks SSL communication metrics. */
     private void checkSslCommunicationMetrics(
         MetricRegistry mreg,
-        long handshakeCnt,
+        int handshakeCnt,
         int sesCnt,
         int rejectedSesCnt
     ) throws Exception {
         assertEquals(true, mreg.<BooleanMetric>findMetric(SSL_ENABLED_METRIC_NAME).value());
-        assertTrue(waitForCondition(() ->
-            sesCnt == mreg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value(),
-            getTestTimeout()));
-        assertTrue(waitForCondition(() ->
-            handshakeCnt == Arrays.stream(
-                mreg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME).value()
-            ).sum(),
-            getTestTimeout()));
-        assertTrue(waitForCondition(() ->
-            rejectedSesCnt == mreg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME).value(),
-            getTestTimeout()));
+
+        waitForMetric(SESSIONS_CNT_METRIC_NAME, sesCnt, () -> mreg.<IntMetric>findMetric(SESSIONS_CNT_METRIC_NAME).value());
+
+        waitForMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME, handshakeCnt, () -> (int) Arrays.stream(
+                mreg.<HistogramMetric>findMetric(SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME).value()).sum());
+
+
+        waitForMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME, rejectedSesCnt,
+                () -> mreg.<IntMetric>findMetric(SSL_REJECTED_SESSIONS_CNT_METRIC_NAME).value());
+    }
+
+    /** Wait for metric value. */
+    private void waitForMetric(String name, int expected, Supplier<Integer> supplier) throws Exception {
+        assertTrue(
+            "Metric " + name + " expected " + expected + " but was " + supplier.get(),
+                waitForCondition(() -> expected == supplier.get(), TIMEOUT));
     }
 
     /** Creates {@link SslContextFactory} with specified options. */
