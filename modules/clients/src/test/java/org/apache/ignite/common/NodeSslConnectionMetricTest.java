@@ -73,7 +73,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     private static final String UNSUPPORTED_CIPHER_SUITE = "TLS_RSA_WITH_AES_128_GCM_SHA256";
 
     /** Metric timeout. */
-    private static final long TIMEOUT = 3_000;
+    private static final long TIMEOUT = 7_000;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -227,6 +227,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         // Tests untrusted certificate.
         checkNodeJoinFails(2, true, "thinClient", "trusttwo", CIPHER_SUITE, "TLSv1.2");
         checkNodeJoinFails(2, false, "thinClient", "trusttwo", CIPHER_SUITE, "TLSv1.2");
+
         // Tests untrusted cipher suites.
         checkNodeJoinFails(2, true, "client", "trustone", UNSUPPORTED_CIPHER_SUITE, "TLSv1.2");
         checkNodeJoinFails(2, false, "node01", "trustone", UNSUPPORTED_CIPHER_SUITE, "TLSv1.2");
@@ -236,7 +237,7 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
         checkNodeJoinFails(2, false, "node01", "trustone", null, "TLSv1.1");
 
         // In case of an SSL error, the client and server nodes make 2 additional connection attempts.
-        waitForMetric("RejectedSslConnectionsCount", 13,
+        waitForMetric("RejectedSslConnectionsCount", 12,
                 () -> reg.<IntMetric>findMetric("RejectedSslConnectionsCount").value());
     }
 
