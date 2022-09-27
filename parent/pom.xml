@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
- Copyright 2019 GridGain Systems, Inc. and Contributors.
+ Copyright 2022 GridGain Systems, Inc. and Contributors.
 
  Licensed under the GridGain Community Edition License (the "License");
  you may not use this file except in compliance with the License.
@@ -1288,6 +1288,10 @@
                                 <arg>java.base/java.util=ALL-UNNAMED</arg>
                                 <arg>--add-exports</arg>
                                 <arg>java.base/java.lang=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.base/java.lang.invoke=ALL-UNNAMED</arg>
+                                <arg>--add-exports</arg>
+                                <arg>java.sql/java.sql=ALL-UNNAMED</arg>
                             </compilerArgs>
                         </configuration>
                     </plugin>
@@ -1309,6 +1313,8 @@
                                 --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
                                 --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED
                                 --add-opens=java.base/java.lang=ALL-UNNAMED
+                                --add-opens=java.base/java.lang.invoke=ALL-UNNAMED
+                                --add-opens=java.sql/java.sql=ALL-UNNAMED
                             </argLine>
                         </configuration>
                     </plugin>
