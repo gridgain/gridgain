@@ -43,6 +43,7 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.ColumnResolver;
 import org.gridgain.internal.h2.table.IndexColumn;
+import org.gridgain.internal.h2.table.IndexHints;
 import org.gridgain.internal.h2.table.JoinBatch;
 import org.gridgain.internal.h2.table.Table;
 import org.gridgain.internal.h2.table.TableFilter;
@@ -1376,8 +1377,14 @@ public class Select extends Query {
                 isGroupSortedQuery = true;
             }
             else if ((groupIndex = getGroupSortedIndex()) != null) {
-                topTableFilter.setIndex(groupIndex);
-                isGroupSortedQuery = true;
+                IndexHints idxHints = topTableFilter.getIndexHints();
+
+                if (idxHints == null || idxHints.allowIndex(groupIndex) || topTableFilter.getIndex() == null ||
+                    topTableFilter.getIndex().getIndexType().isScan())
+                {
+                    topTableFilter.setIndex(groupIndex);
+                    isGroupSortedQuery = true;
+                }
             }
         }
         expressionArray = expressions.toArray(new Expression[0]);
