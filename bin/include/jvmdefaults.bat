@@ -1,5 +1,5 @@
 ::
-:: Copyright 2021 GridGain Systems, Inc. and Contributors.
+:: Copyright 2022 GridGain Systems, Inc. and Contributors.
 ::
 :: Licensed under the GridGain Community Edition License (the "License");
 :: you may not use this file except in compliance with the License.
@@ -68,6 +68,8 @@ if %java_version% GEQ 15 (
     --add-opens=java.base/java.util.concurrent=ALL-UNNAMED ^
     --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED ^
     --add-opens=java.base/java.lang=ALL-UNNAMED ^
+    --add-opens=java.base/java.lang.invoke=ALL-UNNAMED ^
+    --add-opens=java.sql/java.sql=ALL-UNNAMED ^
     %current_value%
 )
 
