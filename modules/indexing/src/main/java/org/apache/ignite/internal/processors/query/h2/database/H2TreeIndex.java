@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.query.h2.database;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -86,6 +88,8 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.CIX2;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -99,8 +103,10 @@ import org.gridgain.internal.h2.index.IndexType;
 import org.gridgain.internal.h2.index.SingleRowCursor;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -410,6 +416,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
         assert upper == null || upper instanceof H2Row : upper;
 
         try {
+            T2<SearchRow, SearchRow> searchBound = prepareSearchRows(lower, upper);
+
             QueryContext qctx = ses != null ? H2Utils.context(ses) : null;
 
             int seg = segment(qctx);
@@ -417,8 +425,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
             H2Tree tree = treeForRead(seg);
 
             // If it is known that only one row will be returned an optimization is employed
-            if (isSingleRowLookup(lower, upper, tree)) {
-                H2Row row = tree.findOne((H2Row)lower, filter(qctx), null);
+            if (isSingleRowLookup(searchBound.get1(), searchBound.get2(), tree)) {
+                H2Row row = tree.findOne((H2Row)searchBound.get1(), filter(qctx), null);
 
                 if (row == null || isExpired(row))
                     return GridH2Cursor.EMPTY;
@@ -426,13 +434,71 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 return new SingleRowCursor(row);
             }
             else {
-                return new H2Cursor(tree.find((H2Row)lower,
-                    (H2Row)upper, filter(qctx), null));
+                return new H2Cursor(tree.find((H2Row)searchBound.get1(),
+                    (H2Row)searchBound.get2(), filter(qctx), null));
             }
         }
         catch (IgniteCheckedException e) {
             throw DbException.convert(e);
         }
+    }
+
+    private T2<SearchRow, SearchRow> prepareSearchRows(SearchRow lower, SearchRow upper) {
+        return new T2<>(prepareSearchRow(lower), prepareSearchRow(upper));
+    }
+
+    private SearchRow prepareSearchRow(SearchRow row) {
+        if (row == null)
+            return null;
+
+        int idxColsLen = indexColumns.length;
+
+        for (int i = 0; i < idxColsLen; ++i) {
+            Column col = indexColumns[i].column;
+            int colId = col.getColumnId();
+
+            Value v = row.getValue(colId);
+
+            if (v == null)
+                break;
+
+            TypeInfo colType = col.getType();
+            TypeInfo valType = v.getType();
+
+            if (colType.getValueType() != valType.getValueType()) {
+                if (Value.getHigherOrder(colType.getValueType(), valType.getValueType()) == colType.getValueType())
+                    row.setValue(colId, v.convertTo(colType.getValueType()));
+                else {
+                    if (isComparableTypes(colType, valType)) {
+                        continue;
+                    }
+
+                    for (int j = i; j < idxColsLen; ++j)
+                        row.setValue(indexColumns[i].column.getColumnId(), null);
+
+                    LT.warn(log, "Provided value can't be used as index search bound due to column data type " +
+                        "mismatch. This can lead to full index scans instead of range index scans. [index=" +
+                        idxName + ", colType=" + colType.getValueType() + ", valType=" + valType.getValueType() +']');
+
+                    break;
+                }
+            }
+        }
+
+        return row;
+    }
+
+    private boolean isComparableTypes(TypeInfo type1, TypeInfo type2) {
+        if(type1 == type2)
+            return true;
+
+        KindOfTypeInfo t1 = KindOfTypeInfo.getType(type1);
+        KindOfTypeInfo t2 = KindOfTypeInfo.getType(type2);
+
+        if(t1 != KindOfTypeInfo.OTHER && t2 != KindOfTypeInfo.OTHER)
+            return t1 == t2;
+
+        return false;
     }
 
     /** */
@@ -1099,5 +1165,27 @@ public class H2TreeIndex extends H2TreeIndexBase {
             PageIoResolver.DEFAULT_PAGE_IO_RESOLVER,
             log
         );
+    }
+
+    enum KindOfTypeInfo {
+        NUMERIC(TypeInfo.TYPE_BOOLEAN, TypeInfo.TYPE_BYTE, TypeInfo.TYPE_DOUBLE, TypeInfo.TYPE_FLOAT, TypeInfo.TYPE_INT, TypeInfo.TYPE_LONG, TypeInfo.TYPE_SHORT),
+        DATE_TIME(TypeInfo.TYPE_DATE, TypeInfo.TYPE_TIMESTAMP),
+        OTHER();
+
+        private Set<TypeInfo> typesMap = new HashSet<>();
+
+        KindOfTypeInfo(TypeInfo... types) {
+            for (TypeInfo type : types) {
+                typesMap.add(type);
+            }
+        }
+
+        static KindOfTypeInfo getType(TypeInfo t) {
+            if (NUMERIC.typesMap.contains(t))
+                return NUMERIC;
+            if (DATE_TIME.typesMap.contains(t))
+                return DATE_TIME;
+            return OTHER;
+        }
     }
 }
