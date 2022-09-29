@@ -95,7 +95,8 @@ public class FastSessionMoveAndKeyCancellationTest extends GridCommonAbstractTes
 
             try {
                 assertFalse("CancelledKeyException was thrown", failureLogMessagesLatch.await(1, TimeUnit.MINUTES));
-            } finally {
+            }
+            finally {
                 clientJobsFuture.cancel();
             }
         }
