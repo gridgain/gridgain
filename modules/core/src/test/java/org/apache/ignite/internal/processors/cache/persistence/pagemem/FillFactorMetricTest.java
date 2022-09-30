@@ -218,8 +218,10 @@ public class FillFactorMetricTest extends GridCommonAbstractTest {
 
             doSleep(1100);
 
+            // Since refactoring of AbstractFreeList with recycling empty data pages,
+            // fill factor after cache cleaning will about 0.99, no more obsolete typically value 0.8
             for (float fillFactor : curFillFactor)
-                assertTrue("FillFactor too low: " + fillFactor, fillFactor > 0.6);
+                assertTrue("FillFactor too low: " + fillFactor, fillFactor > 0.9);
         }
 
         doneFlag.set(true);
