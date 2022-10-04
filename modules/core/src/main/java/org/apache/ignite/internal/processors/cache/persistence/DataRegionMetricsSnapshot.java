@@ -23,73 +23,73 @@ import org.apache.ignite.DataRegionMetrics;
  */
 public class DataRegionMetricsSnapshot implements DataRegionMetrics {
     /** */
-    private String name;
+    private final String name;
 
     /** */
-    private long totalAllocatedPages;
+    private final long totalAllocatedPages;
 
     /** */
-    private long totalUsedPages;
+    private final long totalAllocatedSize;
 
     /** */
-    private long totalAllocatedSize;
+    private final long totalUsedPages;
 
     /** */
-    private long totalUsedSize;
+    private final long totalUsedSize;
 
     /** */
-    private float allocationRate;
+    private final float allocationRate;
 
     /** */
-    private float evictionRate;
+    private final float evictionRate;
 
     /** */
-    private float largeEntriesPagesPercentage;
+    private final float largeEntriesPagesPercentage;
 
     /** */
-    private float pagesFillFactor;
+    private final float pagesFillFactor;
 
     /** */
-    private long dirtyPages;
+    private final long dirtyPages;
 
     /** */
-    private float pageReplaceRate;
+    private final float pageReplaceRate;
 
     /** */
-    private float pageReplaceAge;
+    private final float pageReplaceAge;
 
     /** */
-    private long physicalMemoryPages;
+    private final long physicalMemoryPages;
 
     /** */
-    private long physicalMemorySize;
+    private final long physicalMemorySize;
 
     /** */
-    private long usedCheckpointBufferPages;
+    private final long usedCheckpointBufferPages;
 
     /** */
-    private long usedCheckpointBufferSize;
+    private final long usedCheckpointBufferSize;
 
     /** */
-    private long checkpointBufferSize;
+    private final long checkpointBufferSize;
 
     /** */
-    private int pageSize;
+    private final int pageSize;
 
     /** */
-    private long readPages;
+    private final long readPages;
 
     /** */
-    private long writtenPages;
+    private final long writtenPages;
 
     /** */
-    private long replacedPage;
+    private final long replacedPage;
 
     /** */
-    private long offHeapSize;
+    private final long offHeapSize;
 
     /** */
-    private long offHeapUsedSize;
+    private final long offHeapUsedSize;
 
     /**
      * @param metrics Metrics instance to take a copy.
@@ -97,8 +97,8 @@ public class DataRegionMetricsSnapshot implements DataRegionMetrics {
     public DataRegionMetricsSnapshot(DataRegionMetrics metrics) {
         name = metrics.getName();
         totalAllocatedPages = metrics.getTotalAllocatedPages();
-        totalUsedPages = metrics.getTotalUsedPages();
         totalAllocatedSize = metrics.getTotalAllocatedSize();
+        totalUsedPages = metrics.getTotalUsedPages();
         totalUsedSize = metrics.getTotalUsedSize();
         allocationRate = metrics.getAllocationRate();
         evictionRate = metrics.getEvictionRate();
@@ -131,15 +131,16 @@ public class DataRegionMetricsSnapshot implements DataRegionMetrics {
     }
 
     /** {@inheritDoc} */
+    @Override public long getTotalAllocatedSize() {
+        return totalAllocatedSize;
+    }
+
+    /** {@inheritDoc} */
     @Override public long getTotalUsedPages() {
         return totalUsedPages;
     }
 
     /** {@inheritDoc} */
-    @Override public long getTotalAllocatedSize() {
-        return totalAllocatedSize;
-    }
-
     @Override public long getTotalUsedSize() {
         return totalUsedSize;
     }
