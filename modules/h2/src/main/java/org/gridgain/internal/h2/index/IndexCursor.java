@@ -5,11 +5,7 @@
  */
 package org.gridgain.internal.h2.index;
 
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Objects;
-
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.message.DbException;
@@ -81,6 +77,40 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inColumn = null;
         inResult = null;
         intersects = null;
+
+        // todo
+        int maxColId = 0;
+
+        for (IndexCondition condition : indexConditions)
+            maxColId = Math.max(condition.getColumn().getColumnId(), maxColId);
+
+        int[] columns = new int[maxColId + 1];
+
+        // todo
+        for (IndexCondition condition : indexConditions) {
+            if (condition.getCompareType() == Comparison.IN_LIST ||
+                condition.getCompareType() == Comparison.IN_QUERY)
+                columns[condition.getColumn().getColumnId()] = -1;
+
+            if (condition.getExpression() != null && condition.getExpression().isConstant())
+                columns[condition.getColumn().getColumnId()] = 1;
+        }
+
+        boolean useColumnAnyway = false;
+
+        for (int n : columns) {
+            if (n == 0) {
+                useColumnAnyway = false;
+
+                break;
+            }
+            if (n == -1)
+                break;
+
+            if (n == 1)
+                useColumnAnyway = true;
+        }
+
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
                 alwaysFalse = true;
@@ -94,7 +124,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
             Column column = condition.getColumn();
             if (condition.getCompareType() == Comparison.IN_LIST) {
                 if (start == null && end == null) {
-                    if (canUseIndexForIn(column)) {
+                    if (canUseIndexForIn(column, useColumnAnyway)) {
                         System.out.println(">xxx> optimized branch");
                         this.inColumn = column;
                         inList = condition.getCurrentValueList(s);
@@ -105,7 +135,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
                 if (start == null && end == null) {
-                    if (canUseIndexForIn(column)) {
+                    if (canUseIndexForIn(column, useColumnAnyway)) {
                         this.inColumn = column;
                         inResult = condition.getCurrentResult();
                     }
@@ -138,7 +168,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 }
                 // An X=? condition will produce less rows than
                 // an X IN(..) condition, unless the X IN condition can use the index.
-                if ((isStart || isEnd) && !canUseIndexFor(inColumn)) {
+                if ((isStart || isEnd) && !useColumnAnyway && !canUseIndexFor(inColumn)) {
                     inColumn = null;
                     inList = null;
 
@@ -175,24 +205,17 @@ public class IndexCursor implements Cursor, AutoCloseable {
             } else if (index != null) {
                 cursor = index.find(tableFilter, start, end);
 
-                System.out.println(">xxx> find [" + start + " - " + end + "] cur=" + (cursor != null ? cursor.getClass().getSimpleName() : null));
+//                System.out.println(">xxx> find [" + start + " - " + end + "] cur=" + (cursor != null ? cursor.getClass().getSimpleName() : null));
             }
         }
     }
 
-    private boolean canUseIndexForIn(Column column) {
+    private boolean canUseIndexForIn(Column column, boolean useColumnAnyway) {
         if (inColumn != null) {
             // only one IN(..) condition can be used at the same time
-            System.out.println(">xxx> only one IN(..) condition can be used at the same time");
             return false;
         }
-        return canUseIndexFor(column);
-    }
-
-
-    private void dumpStack(String msg) {
-        new Exception("<DEBUG><" +
-                Thread.currentThread().getName() + '>' + ' ' + msg).printStackTrace(System.err);
+        return useColumnAnyway || canUseIndexFor(column);
     }
 
     private boolean canUseIndexFor(Column column) {
@@ -204,17 +227,12 @@ public class IndexCursor implements Cursor, AutoCloseable {
         if (cols == null) {
             return true;
         }
+
+        if (true)
+            return true;
         IndexColumn idxCol = cols[0];
 
-        if (idxCol != null)
-            System.out.println(">xxx> " + Objects.equals(idxCol.column, column) + " " + idxCol.column + " vs " + column + ", cols " + Arrays.toString(cols));
-
-        // todo
-        boolean res = idxCol == null || idxCol.column == column || (cols.length > 1 && cols[1].column == column);
-
-        System.out.println(">xxx> canUseIndexFor = " + res + ", inColumn=" +inColumn);
-
-        return res;
+        return idxCol == null || idxCol.column == column;
     }
 
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
