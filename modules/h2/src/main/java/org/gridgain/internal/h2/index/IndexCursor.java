@@ -92,7 +92,9 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 condition.getCompareType() == Comparison.IN_QUERY)
                 columns[condition.getColumn().getColumnId()] = -1;
 
-            if (condition.getExpression() != null && condition.getExpression().isConstant())
+            if (condition.getExpression() != null &&
+                condition.getCompareType() == Comparison.EQUAL &&
+                condition.getExpression().isConstant())
                 columns[condition.getColumn().getColumnId()] = 1;
         }
 
@@ -338,10 +340,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
         // todo
         ArrayList<IndexCondition> idxConds = tableFilter.getIndexConditions();
 
-        IndexCondition cond = tableFilter.getIndexConditions().get(1);
-
-        for (IndexCondition c : idxConds) {
-            if (c.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant())
+        for (IndexCondition cond : idxConds) {
+            if (cond.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant())
                 start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
         }
 
