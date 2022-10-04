@@ -82,6 +82,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
         int maxColId = 0;
 
         for (IndexCondition condition : indexConditions) {
+            assert condition != null;
+
             if (condition.getColumn() == null)
                 continue;
 
@@ -197,7 +199,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
      * @param indexConditions the index conditions
      */
     public void find(Session s, ArrayList<IndexCondition> indexConditions) {
-        System.out.println(">xxx> prepare=" + indexConditions.size());
+//        System.out.println(">xxx> prepare=" + indexConditions.size());
         prepare(s, indexConditions);
 
         if (inColumn != null) {

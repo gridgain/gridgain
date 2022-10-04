@@ -57,7 +57,7 @@ public class H2Cursor implements Cursor, AutoCloseable {
         return get();
     }
 
-private static volatile boolean FIRST_TIME = true;
+//private static volatile boolean FIRST_TIME = true;
 
     /** {@inheritDoc} */
     @Override public boolean next() {
@@ -65,11 +65,11 @@ private static volatile boolean FIRST_TIME = true;
             while (cursor.next()) {
                 H2Row row = cursor.get();
 
-                if (FIRST_TIME) {
-                    FIRST_TIME = false;
-
-                    U.dumpStack(">xxx> rowH2=" + row);
-                }
+//                if (FIRST_TIME) {
+//                    FIRST_TIME = false;
+//
+//                    U.dumpStack(">xxx> rowH2=" + row);
+//                }
 
                 if (row.expireTime() > 0 && row.expireTime() <= time)
                     continue;
