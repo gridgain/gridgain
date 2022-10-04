@@ -2468,8 +2468,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        public GridCursor<H2Row> find(H2Row lower, H2Row upper, TreeRowClosure<H2Row, H2Row> c, Object x) throws IgniteCheckedException {
+        @Override public GridCursor<H2Row> find(H2Row lower, H2Row upper, TreeRowClosure<H2Row, H2Row> c, Object x) throws IgniteCheckedException {
             return new ScanCountAwareCursor(super.find(lower, upper, c, x));
         }
 
