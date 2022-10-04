@@ -343,12 +343,13 @@ public class IndexCursor implements Cursor, AutoCloseable {
     private void find(Value v) {
         start.setValue(inColumn.getColumnId(), inColumn.convert(v));
 
-        ArrayList<IndexCondition> idxConds = tableFilter.getIndexConditions();
+        for (IndexCondition cond : tableFilter.getIndexConditions()) {
+            if (!cond.getExpression().isConstant() ||
+                cond.getCompareType() != Comparison.EQUAL ||
+                cond.getColumn().getColumnId() == inColumn.getColumnId())
+                continue;
 
-        for (IndexCondition cond : idxConds) {
-            if (cond.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant() &&
-                inColumn.getColumnId() != cond.getColumn().getColumnId())
-                start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
+            start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
         }
 
         cursor = index.find(tableFilter, start, start);
