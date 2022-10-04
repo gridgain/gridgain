@@ -133,13 +133,13 @@ public class IndexCursor implements Cursor, AutoCloseable {
             if (condition.getCompareType() == Comparison.IN_LIST) {
                 if (start == null && end == null) {
                     if (canUseIndexForIn(column, useColumnAnyway)) {
-                        System.out.println(">xxx> optimized branch");
+//                        System.out.println(">xxx> optimized branch");
                         this.inColumn = column;
                         inList = condition.getCurrentValueList(s);
                         inListIndex = 0;
                     }
-                    else
-                        System.out.println(">xxx> not optimized :(");
+//                    else
+//                        System.out.println(">xxx> not optimized :(");
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
                 if (start == null && end == null) {
@@ -321,7 +321,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     private void nextCursor() {
         if (inList != null) {
-            System.out.println(">xxx> inList handling");
+//            System.out.println(">xxx> inList handling");
             while (inListIndex < inList.length) {
                 Value v = inList[inListIndex++];
                 if (v != ValueNull.INSTANCE) {
@@ -343,11 +343,11 @@ public class IndexCursor implements Cursor, AutoCloseable {
     private void find(Value v) {
         start.setValue(inColumn.getColumnId(), inColumn.convert(v));
 
-        // todo
         ArrayList<IndexCondition> idxConds = tableFilter.getIndexConditions();
 
         for (IndexCondition cond : idxConds) {
-            if (cond.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant())
+            if (cond.getCompareType() == Comparison.EQUAL && cond.getExpression().isConstant() &&
+                inColumn.getColumnId() != cond.getColumn().getColumnId())
                 start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
         }
 
