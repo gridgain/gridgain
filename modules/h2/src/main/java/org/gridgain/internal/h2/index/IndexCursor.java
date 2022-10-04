@@ -81,8 +81,12 @@ public class IndexCursor implements Cursor, AutoCloseable {
         // todo
         int maxColId = 0;
 
-        for (IndexCondition condition : indexConditions)
+        for (IndexCondition condition : indexConditions) {
+            if (condition.getColumn() == null)
+                continue;
+
             maxColId = Math.max(condition.getColumn().getColumnId(), maxColId);
+        }
 
         int[] columns = new int[maxColId + 1];
 

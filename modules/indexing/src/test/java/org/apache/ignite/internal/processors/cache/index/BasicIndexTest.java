@@ -54,7 +54,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
@@ -152,8 +151,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         igniteCfg.setConsistentId(igniteInstanceName);
 
-        igniteCfg.setSqlConfiguration(new SqlConfiguration().setLongQueryWarningTimeout(0));
-
         if (igniteInstanceName.startsWith(CLIENT_NAME)) {
             igniteCfg.setClientMode(true);
 
@@ -166,8 +163,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         }
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
-        fields.put("keyLong1", Long.class.getName());
-        fields.put("keyLong2", Long.class.getName());
+        fields.put("keyStr", String.class.getName());
+        fields.put("keyLong", Long.class.getName());
+        fields.put("keyPojo", Pojo.class.getName());
         fields.put("valStr", String.class.getName());
         fields.put("valLong", Long.class.getName());
         fields.put("valPojo", Pojo.class.getName());
@@ -182,7 +180,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                     .setKeyType(Key.class.getName())
                     .setValueType(Val.class.getName())
                     .setFields(fields)
-                    .setKeyFields(new HashSet<>(Arrays.asList("keyLong1", "keyLong2")))
+                    .setKeyFields(new HashSet<>(Arrays.asList("keyStr", "keyLong", "keyPojo")))
                     .setIndexes(indexes)
                     .setAliases(Collections.singletonMap(QueryUtils.KEY_FIELD_NAME, "pk_id"))
             ))
@@ -2107,7 +2105,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong1;
+            long i = key.keyLong;
 
             assertEquals(key(i), key);
 
@@ -2166,13 +2164,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong1;
+            long i = key.keyLong;
 
             assertEquals(key(i), key);
 
             assertEquals(val(i), val);
 
-            //assertTrue(key.keyStr.startsWith(PREFIX));
+            assertTrue(key.keyStr.startsWith(PREFIX));
         }
     }
 
@@ -2194,7 +2192,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Val val = (Val) row.get(1);
 
-            long i = key.keyLong1;
+            long i = key.keyLong;
 
             assertEquals(key(i), key);
 
@@ -2237,7 +2235,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** Key object factory method. */
     private static Key key(long i) {
-        return new Key(i, i);
+        return new Key(String.format("foo%03d", i), i, new Pojo(i));
     }
 
     /** Value object factory method.*/
@@ -2268,15 +2266,19 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** Key object. */
     private static class Key {
         /** */
-        private long keyLong1;
+        private String keyStr;
 
         /** */
-        private long keyLong2;
+        private long keyLong;
 
         /** */
-        private Key(long f1, long f2) {
-            this.keyLong1 = f1;
-            this.keyLong2 = f2;
+        private Pojo keyPojo;
+
+        /** */
+        private Key(String str, long aLong, Pojo pojo) {
+            keyStr = str;
+            keyLong = aLong;
+            keyPojo = pojo;
         }
 
         /** {@inheritDoc} */
@@ -2289,12 +2291,14 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             Key key = (Key) o;
 
-            return keyLong1 == key.keyLong1 && keyLong2 == key.keyLong2;
+            return keyLong == key.keyLong &&
+                Objects.equals(keyStr, key.keyStr) &&
+                Objects.equals(keyPojo, key.keyPojo);
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Objects.hash(keyLong1, keyLong2);
+            return Objects.hash(keyStr, keyLong, keyPojo);
         }
 
         /** {@inheritDoc} */
