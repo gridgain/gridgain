@@ -79,48 +79,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inColumn = null;
         inResult = null;
         intersects = null;
-
-        // todo
-        int maxColId = 0;
-
-        for (IndexCondition condition : indexConditions) {
-            assert condition != null;
-
-            if (condition.getColumn() == null)
-                continue;
-
-            maxColId = Math.max(condition.getColumn().getColumnId(), maxColId);
-        }
-
-        int[] columns = new int[maxColId + 1];
-
-        // todo
-        for (IndexCondition condition : indexConditions) {
-            if (condition.getCompareType() == Comparison.IN_LIST ||
-                condition.getCompareType() == Comparison.IN_QUERY)
-                columns[condition.getColumn().getColumnId()] = -1;
-
-            if (condition.getExpression() != null &&
-                condition.getCompareType() == Comparison.EQUAL &&
-                condition.getExpression().isConstant() &&
-                condition.getColumn().getColumnId() != ROWID_INDEX)
-                columns[condition.getColumn().getColumnId()] = 1;
-        }
-
-        boolean useColumnAnyway = false;
-
-        for (int n : columns) {
-            if (n == 0) {
-                useColumnAnyway = false;
-
-                break;
-            }
-            if (n == -1)
-                break;
-
-            if (n == 1)
-                useColumnAnyway = true;
-        }
+        boolean isConst = true;
 
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
@@ -133,25 +92,26 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 continue;
             }
             Column column = condition.getColumn();
-            if (condition.getCompareType() == Comparison.IN_LIST) {
-                if (start == null && end == null) {
-                    if (canUseIndexForIn(column, useColumnAnyway)) {
-//                        System.out.println(">xxx> optimized branch");
-                        this.inColumn = column;
-                        inList = condition.getCurrentValueList(s);
-                        inListIndex = 0;
-                    }
-//                    else
-//                        System.out.println(">xxx> not optimized :(");
-                }
-            } else if (condition.getCompareType() == Comparison.IN_QUERY) {
-                if (start == null && end == null) {
-                    if (canUseIndexForIn(column, useColumnAnyway)) {
-                        this.inColumn = column;
-                        inResult = condition.getCurrentResult();
-                    }
-                }
+
+            boolean inListComparison;
+            boolean inQueryComparison = false;;
+
+            if ((inListComparison = (condition.getCompareType() == Comparison.IN_LIST)) ||
+                (inQueryComparison = (condition.getCompareType() == Comparison.IN_QUERY))) {
+                if (inColumn != null && inColumn.getColumnId() < column.getColumnId())
+                    continue;
+
+                inColumn = column;
+
+                if (inListComparison)
+                    inList = condition.getCurrentValueList(s);
+
+                if (inQueryComparison)
+                    inResult = condition.getCurrentResult();
             } else {
+                isConst &= condition.getCompareType() == Comparison.EQUAL &&
+                    condition.getExpression().isConstant();
+
                 Value v = condition.getCurrentValue(s);
                 boolean isStart = condition.isStart();
                 boolean isEnd = condition.isEnd();
@@ -177,20 +137,22 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
-                // An X=? condition will produce less rows than
-                // an X IN(..) condition, unless the X IN condition can use the index.
-                if ((isStart || isEnd) && !useColumnAnyway && !canUseIndexFor(inColumn)) {
-                    inColumn = null;
-                    inList = null;
-
-                    if (inResult != null)
-                        inResult.close();
-
-                    inResult = null;
-                }
             }
         }
-        if (inColumn != null) {
+
+        // An X=? condition will produce less rows than
+        // an X IN(..) condition, unless the X IN condition can use the index.
+        if (!isConst) {
+            inColumn = null;
+            inList = null;
+
+            if (inResult != null)
+                inResult.close();
+
+            inResult = null;
+        }
+
+        if (inColumn != null && start == null) {
             start = table.getTemplateRow();
         }
     }
@@ -202,7 +164,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
      * @param indexConditions the index conditions
      */
     public void find(Session s, ArrayList<IndexCondition> indexConditions) {
-//        System.out.println(">xxx> prepare=" + indexConditions.size());
         prepare(s, indexConditions);
 
         if (inColumn != null) {
@@ -215,35 +176,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
                         start, end, intersects);
             } else if (index != null) {
                 cursor = index.find(tableFilter, start, end);
-
-//                System.out.println(">xxx> find [" + start + " - " + end + "] cur=" + (cursor != null ? cursor.getClass().getSimpleName() : null));
             }
         }
-    }
-
-    private boolean canUseIndexForIn(Column column, boolean useColumnAnyway) {
-        if (inColumn != null) {
-            // only one IN(..) condition can be used at the same time
-            return false;
-        }
-        return useColumnAnyway || canUseIndexFor(column);
-    }
-
-    private boolean canUseIndexFor(Column column) {
-        // The first column of the index must match this column,
-        // or it must be a VIEW index (where the column is null).
-        // Multiple IN conditions with views are not supported, see
-        // IndexCondition.getMask.
-        IndexColumn[] cols = index.getIndexColumns();
-        if (cols == null) {
-            return true;
-        }
-
-        if (true)
-            return true;
-        IndexColumn idxCol = cols[0];
-
-        return idxCol == null || idxCol.column == column;
     }
 
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
@@ -324,7 +258,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     private void nextCursor() {
         if (inList != null) {
-//            System.out.println(">xxx> inList handling");
             while (inListIndex < inList.length) {
                 Value v = inList[inListIndex++];
                 if (v != ValueNull.INSTANCE) {
@@ -345,17 +278,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     private void find(Value v) {
         start.setValue(inColumn.getColumnId(), inColumn.convert(v));
-
-        for (IndexCondition cond : tableFilter.getIndexConditions()) {
-            if (cond.getExpression() == null ||
-                !cond.getExpression().isConstant() ||
-                cond.getCompareType() != Comparison.EQUAL ||
-                cond.getColumn().getColumnId() == inColumn.getColumnId())
-                continue;
-
-            start.setValue(cond.getColumn().getColumnId(), cond.getExpression().getValue(null));
-        }
-
         cursor = index.find(tableFilter, start, start);
     }
 
