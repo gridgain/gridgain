@@ -100,12 +100,18 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     continue;
 
                 inColumn = column;
+                inList = null;
 
-                if (inListComparison)
+                if (inResult != null)
+                    inResult.close();
+
+                if (inListComparison) {
                     inList = condition.getCurrentValueList(s);
-
-                if (inQueryComparison)
+                    inListIndex = 0;
+                }
+                else if (inQueryComparison) {
                     inResult = condition.getCurrentResult();
+                }
             } else {
                 isConst &= condition.getCompareType() == Comparison.EQUAL &&
                     condition.getExpression().isConstant();
