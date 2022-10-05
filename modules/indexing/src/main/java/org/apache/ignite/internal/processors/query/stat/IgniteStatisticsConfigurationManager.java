@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
@@ -51,8 +52,11 @@ import org.apache.ignite.internal.processors.query.stat.config.StatisticsColumnC
 import org.apache.ignite.internal.processors.query.stat.config.StatisticsObjectConfiguration;
 import org.apache.ignite.internal.processors.query.stat.view.ColumnConfigurationViewSupplier;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
+import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.jetbrains.annotations.NotNull;
 
@@ -61,13 +65,13 @@ import org.jetbrains.annotations.NotNull;
  * and match local statistics with target statistic configuration.
  */
 public class IgniteStatisticsConfigurationManager {
-    /** */
+    /**  */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
-    /** */
+    /**  */
     private static final String STAT_CFG_VIEW_NAME = "statistics.configuration";
 
-    /** */
+    /**  */
     private static final String STAT_CFG_VIEW_DESCRIPTION = "Statistics configuration";
 
     /** Empty strings array. */
@@ -82,7 +86,7 @@ public class IgniteStatisticsConfigurationManager {
     /** Statistic processor. */
     private final StatisticsProcessor statProc;
 
-    /** */
+    /**  */
     private final BusyExecutor mgmtBusyExecutor;
 
     /** Persistence enabled flag. */
@@ -103,40 +107,44 @@ public class IgniteStatisticsConfigurationManager {
     /** Change statistics configuration listener to update particular object statistics. */
     private final DistributedMetastorageLifecycleListener distrMetaStoreLsnr =
         new DistributedMetastorageLifecycleListener() {
-        @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
-            distrMetaStorage = metastorage;
+            @Override public void onReadyForWrite(DistributedMetaStorage metastorage) {
+                distrMetaStorage = metastorage;
 
-            distrMetaStorage.listen(
-                (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
-                (k, oldV, newV) -> {
-                    // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
-                    // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
-                    // called on exchange done.
-                    if (topVer == null)
-                        return;
+                distrMetaStorage.listen(
+                    (metaKey) -> metaKey.startsWith(STAT_OBJ_PREFIX),
+                    (k, oldV, newV) -> {
+                        // Skip invoke on start node (see 'ReadableDistributedMetaStorage#listen' the second case)
+                        // The update statistics on start node is handled by 'scanAndCheckLocalStatistic' method
+                        // called on exchange done.
+                        if (topVer == null)
+                            return;
 
-                    mgmtBusyExecutor.execute(() -> {
-                        StatisticsObjectConfiguration newStatCfg = (StatisticsObjectConfiguration)newV;
-
-                        updateLocalStatistics(newStatCfg);
-                    });
-                }
-            );
-        }
-    };
+                        mgmtBusyExecutor.execute(() -> {
+                            try {
+                                while (!updateLocalStatisticsAsync((StatisticsObjectConfiguration)newV).get())
+                                    ;
+                            }
+                            catch (IgniteCheckedException e) {
+                                log.warning("Unexpected error during statistics collection: " + e.getMessage(), e);
+                            }
+                        });
+                    }
+                );
+            }
+        };
 
     /**
      * Constructor.
      *
-     * @param schemaMgr Schema manager.
+     * @param schemaMgr             Schema manager.
      * @param subscriptionProcessor Subscription processor.
-     * @param sysViewMgr System view manager.
-     * @param cluster Cluster state processor.
-     * @param statProc Staitistics processor.
-     * @param persistence Persistence enabled flag.
-     * @param mgmtPool Statistics management pool
-     * @param logSupplier Log supplier.
-     * @param isServerNode Server node flag.
+     * @param sysViewMgr            System view manager.
+     * @param cluster               Cluster state processor.
+     * @param statProc              Staitistics processor.
+     * @param persistence           Persistence enabled flag.
+     * @param mgmtPool              Statistics management pool
+     * @param logSupplier           Log supplier.
+     * @param isServerNode          Server node flag.
      */
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
@@ -191,7 +199,7 @@ public class IgniteStatisticsConfigurationManager {
                 return;
         }
 
-        mgmtBusyExecutor.execute(this::updateAllLocalStatistics);
+        mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
     }
 
     /** Drop columns listener to clean its statistics configuration. */
@@ -204,7 +212,7 @@ public class IgniteStatisticsConfigurationManager {
          */
         @Override public void accept(GridH2Table tbl, List<String> cols) {
             assert !F.isEmpty(cols);
-                dropStatistics(Collections.singletonList(
+            dropStatistics(Collections.singletonList(
                     new StatisticsTarget(
                         tbl.identifier().schema(),
                         tbl.getName(),
@@ -246,7 +254,7 @@ public class IgniteStatisticsConfigurationManager {
      *
      * @param cfg Statistics object configuration to update statistics by.
      */
-    private void updateLocalStatistics(StatisticsObjectConfiguration cfg) {
+    private IgniteInternalFuture<Boolean> updateLocalStatisticsAsync(StatisticsObjectConfiguration cfg) {
         GridH2Table tbl = schemaMgr.dataTable(cfg.key().schema(), cfg.key().obj());
 
         if (tbl == null || cfg.columns().isEmpty()) {
@@ -268,10 +276,10 @@ public class IgniteStatisticsConfigurationManager {
                 if (log.isDebugEnabled())
                     log.debug("Removing config for non existing object " + cfg.key());
 
-                dropStatistics(Collections.singletonList(new StatisticsTarget(cfg.key())), false);
+                return dropStatisticsAsync(Collections.singletonList(new StatisticsTarget(cfg.key())), false);
             }
 
-            return;
+            return new GridFinishedFuture<>(true);
         }
 
         GridCacheContext<?, ?> cctx = tbl.cacheContext();
@@ -280,7 +288,7 @@ public class IgniteStatisticsConfigurationManager {
             if (log.isDebugEnabled())
                 log.debug("Unable to lock table by key " + cfg.key() + ". Skipping statistics collection.");
 
-            return;
+            return new GridFinishedFuture<>(true);
         }
 
         try {
@@ -298,6 +306,8 @@ public class IgniteStatisticsConfigurationManager {
         finally {
             cctx.gate().leave();
         }
+
+        return new GridFinishedFuture<>(true);
     }
 
     /**
@@ -309,7 +319,7 @@ public class IgniteStatisticsConfigurationManager {
     public Collection<StatisticsObjectConfiguration> getAllConfig() throws IgniteCheckedException {
         List<StatisticsObjectConfiguration> res = new ArrayList<>();
 
-        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> res.add((StatisticsObjectConfiguration) v));
+        distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> res.add((StatisticsObjectConfiguration)v));
 
         return res;
     }
@@ -332,18 +342,25 @@ public class IgniteStatisticsConfigurationManager {
             log.debug("Statistics configuration manager started.");
 
         if (distrMetaStorage != null && isServerNode)
-            mgmtBusyExecutor.execute(this::updateAllLocalStatistics);
+            mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
     }
 
     /**
      * Scan statistics configuration and update each key it contains.
      */
-    public void updateAllLocalStatistics() {
+    public void updateAllLocalStatisticsAsync() {
         try {
+            GridCompoundFuture<Boolean, Boolean> compoundFuture = new GridCompoundFuture<>(CU.boolReducer());
+
             distrMetaStorage.iterate(STAT_OBJ_PREFIX, (k, v) -> {
                 StatisticsObjectConfiguration cfg = (StatisticsObjectConfiguration)v;
 
-                updateLocalStatistics(cfg);
+                compoundFuture.add(updateLocalStatisticsAsync(cfg));
+            });
+
+            compoundFuture.listen(future -> {
+                if (future.error() == null && !future.result())
+                    mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
             });
         }
         catch (IgniteCheckedException e) {
@@ -363,7 +380,8 @@ public class IgniteStatisticsConfigurationManager {
             schemaMgr.unregisterDropTableListener(dropTblLsnr);
         }
 
-        mgmtBusyExecutor.deactivate(() -> {});
+        mgmtBusyExecutor.deactivate(() -> {
+        });
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager stopped.");
@@ -421,42 +439,83 @@ public class IgniteStatisticsConfigurationManager {
      * Drop local statistic for specified database objects on the cluster.
      * Remove local aggregated and partitioned statistics that are stored at the local metastorage.
      *
-     * @param targets DB objects to update statistics by.
+     * @param targets  DB objects to update statistics by.
      * @param validate if {@code true} - validate statistics existence, otherwise - just try to remove.
      */
     public void dropStatistics(List<StatisticsTarget> targets, boolean validate) {
+        try {
+            while (!dropStatisticsAsync(targets, validate).get())
+                ;
+        }
+        catch (IgniteCheckedException ex) {
+           throw new IgniteSQLException("Error on get or update statistic schema",
+                IgniteQueryErrorCode.UNKNOWN, ex);
+        }
+    }
+
+    /**
+     * Drop local statistic for specified database objects on the cluster.
+     * Remove local aggregated and partitioned statistics that are stored at the local metastorage.
+     *
+     * @param targets  DB objects to update statistics by.
+     * @param validate if {@code true} - validate statistics existence, otherwise - just try to remove.
+     */
+    public IgniteInternalFuture<Boolean> dropStatisticsAsync(List<StatisticsTarget> targets, boolean validate) {
         if (log.isDebugEnabled())
             log.debug("Drop statistics [targets=" + targets + ']');
 
+        IgniteInternalFuture<Boolean> resultFuture = new GridFinishedFuture<>(true);
+
         for (StatisticsTarget target : targets) {
-            String key = key2String(target.key());
+            resultFuture = resultFuture.chainCompose(f -> {
+                if (f.error() != null)
+                    return f;
 
-            try {
-                while (true) {
-                    StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
+                if (f.result() == null)
+                    return f; // Skip the rest of chain.
 
-                    if (validate)
-                        validateDropRefresh(target, oldCfg);
+                if (f.result())
+                    return removeStatisticsTarget(validate, target);
 
-                    if (oldCfg == null)
-                        return;
+                return f;
+            });
+        }
 
-                    Set<String> dropColNames = (target.columns() == null) ? Collections.emptySet() :
-                        Arrays.stream(target.columns()).collect(Collectors.toSet());
+        return resultFuture.chainCompose(f -> {
+            if (f.error() != null)
+                return f;
 
-                    StatisticsObjectConfiguration newCfg = oldCfg.dropColumns(dropColNames);
+            if (f.result() == null)
+                return new GridFinishedFuture<>(true);
 
-                    if (oldCfg.equals(newCfg))
-                        break;
+            return f;
+        });
+    }
 
-                    if (distrMetaStorage.compareAndSet(key, oldCfg, newCfg))
-                        break;
-                }
-            }
-            catch (IgniteCheckedException ex) {
-                throw new IgniteSQLException(
-                    "Error on get or update statistic schema", IgniteQueryErrorCode.UNKNOWN, ex);
-            }
+    private IgniteInternalFuture<Boolean> removeStatisticsTarget(boolean validate, StatisticsTarget target) {
+        String key = key2String(target.key());
+
+        try {
+            StatisticsObjectConfiguration oldCfg = distrMetaStorage.read(key);
+
+            if (validate)
+                validateDropRefresh(target, oldCfg);
+
+            if (oldCfg == null)
+                return new GridFinishedFuture<>(null); //Stop future chaining. Other thread\node makes the progress.
+
+            Set<String> dropColNames = (target.columns() == null) ? Collections.emptySet() :
+                Arrays.stream(target.columns()).collect(Collectors.toSet());
+
+            StatisticsObjectConfiguration newCfg = oldCfg.dropColumns(dropColNames);
+
+            if (!oldCfg.equals(newCfg))
+                return new GridFinishedFuture<>(true); //Skip. Nothing to do.
+
+            return distrMetaStorage.compareAndSetAsync(key, oldCfg, newCfg);
+        }
+        catch (IgniteCheckedException ex) {
+            return new GridFinishedFuture<>(ex);
         }
     }
 
@@ -528,7 +587,7 @@ public class IgniteStatisticsConfigurationManager {
      * Validate that drop/refresh target exists in specified configuration. For statistics refresh/drop operations.
      *
      * @param target Operation targer.
-     * @param cfg Current statistics configuration.
+     * @param cfg    Current statistics configuration.
      */
     private void validateDropRefresh(@NotNull StatisticsTarget target, @NotNull StatisticsObjectConfiguration cfg) {
         if (cfg == null || F.isEmpty(cfg.columns())) {
