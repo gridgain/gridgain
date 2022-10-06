@@ -488,7 +488,7 @@ public class IgniteStatisticsConfigurationManager {
                 resultFuture.onDone(f.result() == null || f.result().booleanValue());
         });
 
-        return chainFuture;
+        return resultFuture;
     }
 
     private IgniteInternalFuture<Boolean> removeFromMetastore(StatisticsTarget target, boolean validate) {
