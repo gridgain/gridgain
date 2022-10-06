@@ -479,7 +479,10 @@ public class IgniteStatisticsConfigurationManager {
         }
 
         chainFuture.listen(f -> {
-            resultFuture.onDone(f.result(), f.error());
+            if (f.error() != null)
+                resultFuture.onDone(f.error());
+            else
+                resultFuture.onDone(f.result() == null || f.result().booleanValue());
         });
 
         return resultFuture;
