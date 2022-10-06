@@ -77,7 +77,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inColumn = null;
         inResult = null;
         intersects = null;
-        boolean isConst = true;
+
+        boolean isConstEqualConditionsOnly = true;
 
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
@@ -96,7 +97,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
             if ((inListComparison = (condition.getCompareType() == Comparison.IN_LIST)) ||
                 (inQueryComparison = (condition.getCompareType() == Comparison.IN_QUERY))) {
-                if (inColumn != null && inColumn.getColumnId() < column.getColumnId())
+                // We can handle only one IN(...) index scan.
+                if (inColumn != null && index.getColumnIndex(inColumn) < index.getColumnIndex(column))
                     continue;
 
                 inColumn = column;
@@ -113,7 +115,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     inResult = condition.getCurrentResult();
                 }
             } else {
-                isConst &= condition.getCompareType() == Comparison.EQUAL &&
+                isConstEqualConditionsOnly &= condition.getCompareType() == Comparison.EQUAL &&
                     condition.getExpression().isConstant();
 
                 Value v = condition.getCurrentValue(s);
@@ -146,7 +148,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
         // An X=? condition will produce less rows than
         // an X IN(..) condition, unless the X IN condition can use the index.
-        if (!isConst) {
+        if (!isConstEqualConditionsOnly && !canUseIndexFor(inColumn)) {
             inColumn = null;
             inList = null;
 
@@ -180,6 +182,19 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 cursor = index.find(tableFilter, start, end);
             }
         }
+    }
+
+    private boolean canUseIndexFor(Column column) {
+        // The first column of the index must match this column,
+        // or it must be a VIEW index (where the column is null).
+        // Multiple IN conditions with views are not supported, see
+        // IndexCondition.getMask.
+        IndexColumn[] cols = index.getIndexColumns();
+        if (cols == null) {
+            return true;
+        }
+        IndexColumn idxCol = cols[0];
+        return idxCol == null || idxCol.column == column;
     }
 
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {

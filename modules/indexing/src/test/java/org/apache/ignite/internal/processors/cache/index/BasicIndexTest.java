@@ -122,6 +122,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** The number of cursor scans. */
     private static final AtomicInteger scanCntr = new AtomicInteger();
 
+    /** Origin H2TreeFactory. */
+    private static H2TreeIndex.H2TreeFactory originTreeFactory;
+
     /** */
     private Collection<QueryIndex> indexes = Collections.emptyList();
 
@@ -208,6 +211,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        originTreeFactory = H2TreeIndex.h2TreeFactory;
     }
 
     /** {@inheritDoc} */
@@ -215,6 +220,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        H2TreeIndex.h2TreeFactory = originTreeFactory;
 
         srvLog = clientLog = null;
 
@@ -252,7 +259,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void test0_NonOptimal() throws Exception {
+    public void testInStatementUseIndex() throws Exception {
         H2TreeIndex.h2TreeFactory = TestH2Tree::new;
 
         inlineSize = 20;
