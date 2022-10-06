@@ -450,6 +450,9 @@ public class IgniteStatisticsConfigurationManager {
                 ;
         }
         catch (IgniteCheckedException ex) {
+            if (ex.getCause() instanceof IgniteSQLException)
+                throw (IgniteSQLException)ex.getCause();
+
             throw new IgniteSQLException("Error occurs while updating statistics schema",
                 IgniteQueryErrorCode.UNKNOWN, ex);
         }
@@ -485,7 +488,7 @@ public class IgniteStatisticsConfigurationManager {
                 resultFuture.onDone(f.result() == null || f.result().booleanValue());
         });
 
-        return resultFuture;
+        return chainFuture;
     }
 
     private IgniteInternalFuture<Boolean> removeFromMetastore(StatisticsTarget target, boolean validate) {
@@ -510,7 +513,7 @@ public class IgniteStatisticsConfigurationManager {
 
             return distrMetaStorage.compareAndSetAsync(key, oldCfg, newCfg);
         }
-        catch (IgniteCheckedException ex) {
+        catch (Throwable ex) {
             return new GridFinishedFuture<>(ex);
         }
     }
