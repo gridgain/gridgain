@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.query.stat.view.ColumnConfiguration
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -199,7 +200,7 @@ public class IgniteStatisticsConfigurationManager {
                 return;
         }
 
-        mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
+        mgmtBusyExecutor.execute(this::updateAllLocalStatistics);
     }
 
     /** Drop columns listener to clean its statistics configuration. */
@@ -342,13 +343,13 @@ public class IgniteStatisticsConfigurationManager {
             log.debug("Statistics configuration manager started.");
 
         if (distrMetaStorage != null && isServerNode)
-            mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
+            mgmtBusyExecutor.execute(this::updateAllLocalStatistics);
     }
 
     /**
      * Scan statistics configuration and update each key it contains.
      */
-    public void updateAllLocalStatisticsAsync() {
+    public void updateAllLocalStatistics() {
         try {
             GridCompoundFuture<Boolean, Boolean> compoundFuture = new GridCompoundFuture<>(CU.boolReducer());
 
@@ -358,9 +359,11 @@ public class IgniteStatisticsConfigurationManager {
                 compoundFuture.add(updateLocalStatisticsAsync(cfg));
             });
 
+            compoundFuture.markInitialized();
+
             compoundFuture.listen(future -> {
                 if (future.error() == null && !future.result())
-                    mgmtBusyExecutor.execute(this::updateAllLocalStatisticsAsync);
+                    mgmtBusyExecutor.execute(this::updateAllLocalStatistics);
             });
         }
         catch (IgniteCheckedException e) {
@@ -380,8 +383,7 @@ public class IgniteStatisticsConfigurationManager {
             schemaMgr.unregisterDropTableListener(dropTblLsnr);
         }
 
-        mgmtBusyExecutor.deactivate(() -> {
-        });
+        mgmtBusyExecutor.deactivate(() -> {});
 
         if (log.isDebugEnabled())
             log.debug("Statistics configuration manager stopped.");
@@ -448,7 +450,7 @@ public class IgniteStatisticsConfigurationManager {
                 ;
         }
         catch (IgniteCheckedException ex) {
-           throw new IgniteSQLException("Error on get or update statistic schema",
+            throw new IgniteSQLException("Error occurs while updating statistics schema",
                 IgniteQueryErrorCode.UNKNOWN, ex);
         }
     }
@@ -464,35 +466,26 @@ public class IgniteStatisticsConfigurationManager {
         if (log.isDebugEnabled())
             log.debug("Drop statistics [targets=" + targets + ']');
 
-        IgniteInternalFuture<Boolean> resultFuture = new GridFinishedFuture<>(true);
+        GridFutureAdapter<Boolean> resultFuture = new GridFutureAdapter<>();
+        IgniteInternalFuture<Boolean> chainFuture = new GridFinishedFuture<>(true);
 
         for (StatisticsTarget target : targets) {
-            resultFuture = resultFuture.chainCompose(f -> {
-                if (f.error() != null)
-                    return f;
-
-                if (f.result() == null)
-                    return f; // Skip the rest of chain.
-
-                if (f.result())
-                    return removeStatisticsTarget(validate, target);
+            chainFuture = chainFuture.chainCompose(f -> {
+                if (f.error() == null && f.result() == Boolean.TRUE)
+                    return removeFromMetastore(target, validate);
 
                 return f;
             });
         }
 
-        return resultFuture.chainCompose(f -> {
-            if (f.error() != null)
-                return f;
-
-            if (f.result() == null)
-                return new GridFinishedFuture<>(true);
-
-            return f;
+        chainFuture.listen(f -> {
+            resultFuture.onDone(f.result(), f.error());
         });
+
+        return resultFuture;
     }
 
-    private IgniteInternalFuture<Boolean> removeStatisticsTarget(boolean validate, StatisticsTarget target) {
+    private IgniteInternalFuture<Boolean> removeFromMetastore(StatisticsTarget target, boolean validate) {
         String key = key2String(target.key());
 
         try {
@@ -509,7 +502,7 @@ public class IgniteStatisticsConfigurationManager {
 
             StatisticsObjectConfiguration newCfg = oldCfg.dropColumns(dropColNames);
 
-            if (!oldCfg.equals(newCfg))
+            if (oldCfg.equals(newCfg))
                 return new GridFinishedFuture<>(true); //Skip. Nothing to do.
 
             return distrMetaStorage.compareAndSetAsync(key, oldCfg, newCfg);
