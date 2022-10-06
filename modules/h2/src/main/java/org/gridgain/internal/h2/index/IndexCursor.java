@@ -98,7 +98,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
             if ((inListComparison = (condition.getCompareType() == Comparison.IN_LIST)) ||
                 (inQueryComparison = (condition.getCompareType() == Comparison.IN_QUERY))) {
                 // We can handle only one IN(...) index scan.
-                if (inColumn != null && index.getColumnIndex(inColumn) < index.getColumnIndex(column))
+                if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
                     continue;
 
                 inColumn = column;
