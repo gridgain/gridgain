@@ -262,25 +262,23 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testInStatementUsesIndex() throws Exception {
         H2TreeIndex.h2TreeFactory = TestH2Tree::new;
 
-        inlineSize = 20;
+        inlineSize = 30;
 
         IgniteEx ig0 = startGrid();
         GridQueryProcessor qryProc = ig0.context().query();
 
-        String create = "CREATE TABLE PUBLIC.TEST_TABLE (f1 int, f2 int, f3 int, f4 int, CONSTRAINT PK_IDX PRIMARY KEY (f1, f2, f3))";
-        String createIdx = "CREATE INDEX PK_IDX ON PUBLIC.TEST_TABLE (f1, f2) INLINE_SIZE 30";
-        String insert = "INSERT INTO PUBLIC.TEST_TABLE (f1, f2, f3, f4) values (%d, %d, %d, 2)";
-
         Function<String, FieldsQueryCursor<List<?>>> execSql =
-                sql0 -> qryProc.querySqlFields(new SqlFieldsQuery(sql0), true);
+            sql0 -> qryProc.querySqlFields(new SqlFieldsQuery(sql0), true);
 
-        execSql.apply(create);
-        execSql.apply(createIdx);
+        execSql.apply("CREATE TABLE PUBLIC.TEST_TABLE (f1 int, f2 int, f3 int, f4 int, PRIMARY KEY (f1, f2, f3))");
+        execSql.apply("CREATE INDEX PK_IDX ON PUBLIC.TEST_TABLE (f1, f2, f3)");
+
+        String sqlInsert = "INSERT INTO PUBLIC.TEST_TABLE (f1, f2, f3, f4) values (%d, %d, %d, 2)";
 
         for (int i = 0; i < 10; ++i)
             for (int j = 0; j < 10; ++j)
                 for (int k = 0; k < 10; ++k)
-                    execSql.apply(String.format(insert, i, j, k));
+                    execSql.apply(String.format(sqlInsert, i, j, k));
 
         Consumer<String> execAssert = sql -> {
             scanCntr.set(0);
@@ -292,10 +290,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             assertEquals(4, scanCntr.get());
         };
 
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 in (1, 5, 3, 7) and f3 = 5");
         execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 in (1, 5, 3, 7) and f3 = 5");
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 in (1, 5, 3, 7) and f2 = 8 and f3 = 5");
         execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 in (1, 5, 3, 7) and f2 = 8 and f3 = 5");
+        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 = 5 and f3 in (1, 5, 3, 7)");
     }
 
     /** */
