@@ -259,7 +259,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testInStatementUseIndex() throws Exception {
+    public void testInStatementUsesIndex() throws Exception {
         H2TreeIndex.h2TreeFactory = TestH2Tree::new;
 
         inlineSize = 20;
