@@ -1423,7 +1423,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
         }
 
-        return new IgniteProcessProxy(cfg, log, (x) -> locNode, resetDiscovery, additionalRemoteJvmArgs());
+        return new IgniteProcessProxy(cfg, log, () -> locNode, resetDiscovery, additionalRemoteJvmArgs());
     }
 
     /**
