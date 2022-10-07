@@ -986,13 +986,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
-            if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
+            if (qryInfo != null && qryInfo.time() >= longRunningQryMgr.getTimeout())
                 qryInfo.printLogMessage(log, "Long running query is finished", null);
 
             return rs;
         }
         catch (Throwable e) {
-            if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
+            if (qryInfo != null && qryInfo.time() >= longRunningQryMgr.getTimeout()) {
                 qryInfo.printLogMessage(log, "Long running query is finished with error: "
                     + e.getMessage(), null);
             }

@@ -1497,7 +1497,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Found result or {@code null}.
      * @throws IgniteCheckedException If failed.
      */
-    public <R> R findOne(L row, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
+    public final <R> R findOne(L row, TreeRowClosure<L, T> c, Object x) throws IgniteCheckedException {
         checkDestroyed();
 
         GetOne g = new GetOne(row, c, x, false);
