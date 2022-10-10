@@ -480,7 +480,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
                     LT.warn(log, "Provided value can't be used as index search bound due to column data type " +
                         "mismatch. This can lead to full index scans instead of range index scans. [index=" +
-                        idxName + ", colType=" + colType.getValueType() + ", valType=" + valType.getValueType() +']');
+                        idxName + ", colType=" + colType.getValueType() + ", valType=" + valType.getValueType() + ']');
 
                     break;
                 }
@@ -493,13 +493,13 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     private boolean isComparableTypes(TypeInfo type1, TypeInfo type2) {
-        if(type1 == type2)
+        if (type1 == type2)
             return true;
 
         KindOfTypeInfo t1 = KindOfTypeInfo.getType(type1);
         KindOfTypeInfo t2 = KindOfTypeInfo.getType(type2);
 
-        if(t1 != KindOfTypeInfo.OTHER && t2 != KindOfTypeInfo.OTHER)
+        if (t1 != KindOfTypeInfo.OTHER && t2 != KindOfTypeInfo.OTHER)
             return t1 == t2;
 
         return false;
