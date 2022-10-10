@@ -1423,7 +1423,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
         }
 
-        return new IgniteProcessProxy(cfg, log, (x) -> locNode, resetDiscovery, additionalRemoteJvmArgs());
+        return new IgniteProcessProxy(cfg, log, () -> locNode, resetDiscovery, additionalRemoteJvmArgs());
     }
 
     /**
@@ -1612,6 +1612,15 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         finally {
             IgniteProcessProxy.killAll(); // In multi-JVM case.
         }
+    }
+
+    /**
+     * Stops all grids (even those grids that have not been started successfully are tried to be stopped).
+     * This differs from {@link #stopAllGrids()} in one aspect: {@code stopAllGrids()} waits for all grids
+     * to be started, and, if any of them hangs during startup, it hangs as well.
+     */
+    protected void stopAllGridsNoWait() {
+        stopAllGrids(true, false);
     }
 
     /**
