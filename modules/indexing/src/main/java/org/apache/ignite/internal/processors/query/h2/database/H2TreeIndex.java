@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2CacheRow;
+import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRow;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
@@ -453,6 +454,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
         int idxColsLen = indexColumns.length;
 
+        Value[] keys = new Value[row.getColumnCount()];
+
         for (int i = 0; i < idxColsLen; ++i) {
             Column col = indexColumns[i].column;
             int colId = col.getColumnId();
@@ -467,14 +470,13 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
             if (colType.getValueType() != valType.getValueType()) {
                 if (Value.getHigherOrder(colType.getValueType(), valType.getValueType()) == colType.getValueType())
-                    row.setValue(colId, v.convertTo(colType.getValueType()));
+                    v = v.convertTo(colType.getValueType());
                 else {
                     if (isComparableTypes(colType, valType)) {
+                        keys[colId] = v;
+
                         continue;
                     }
-
-                    for (int j = i; j < idxColsLen; ++j)
-                        row.setValue(indexColumns[i].column.getColumnId(), null);
 
                     LT.warn(log, "Provided value can't be used as index search bound due to column data type " +
                         "mismatch. This can lead to full index scans instead of range index scans. [index=" +
@@ -483,9 +485,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     break;
                 }
             }
+
+            keys[colId] = v;
         }
 
-        return row;
+        return new H2PlainRow(keys);
     }
 
     private boolean isComparableTypes(TypeInfo type1, TypeInfo type2) {
