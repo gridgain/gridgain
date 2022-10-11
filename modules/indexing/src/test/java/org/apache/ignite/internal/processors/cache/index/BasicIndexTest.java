@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -241,13 +241,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         Pattern scansPattern = Pattern.compile("/\\* scanCount: (?<scans>\\d+) \\*/");
 
-        AtomicInteger scanCntr = new AtomicInteger();
+        AtomicReference<Integer> scanCnt = new AtomicReference<>();
 
         srvLog.registerListener(str -> {
             Matcher matcher = scansPattern.matcher(str);
 
             if (matcher.find())
-                scanCntr.set(Integer.parseInt(matcher.group("scans")));
+                scanCnt.set(Integer.parseInt(matcher.group("scans")));
         });
 
         IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(0));
@@ -270,13 +270,13 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                     execSql.apply(String.format(sqlInsert, (i * 100) + (j * 10) + k, i, j, k));
 
         Consumer<String> execAssert = sql -> {
-            scanCntr.set(-1);
+            scanCnt.set(-1);
 
             FieldsQueryCursor<List<?>> res =
                 execSql.apply(sql);
 
             assertEquals(4, res.getAll().size());
-            assertEquals(5, scanCntr.get());
+            assertEquals(5, (int)scanCnt.get());
         };
 
         execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 in (1, 5, 3, 7) and f3 = 5");
