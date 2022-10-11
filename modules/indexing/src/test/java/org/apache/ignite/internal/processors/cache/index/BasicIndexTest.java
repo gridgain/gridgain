@@ -32,12 +32,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -56,6 +53,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.SupportFeaturesUtils;
+import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -78,7 +76,6 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
-import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
 import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_IDX_NAME;
@@ -230,62 +227,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
             stopAllGrids();
         }
-    }
-
-    /** */
-    @Test
-    public void testInStatementUsesIndex() throws Exception {
-        inlineSize = 30;
-
-        srvLog  = new ListeningTestLogger(log);
-
-        Pattern scansPattern = Pattern.compile("/\\* scanCount: (?<scans>\\d+) \\*/");
-
-        AtomicReference<Integer> scanCnt = new AtomicReference<>();
-
-        srvLog.registerListener(str -> {
-            Matcher matcher = scansPattern.matcher(str);
-
-            if (matcher.find())
-                scanCnt.set(Integer.parseInt(matcher.group("scans")));
-        });
-
-        IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(0));
-        cfg.getSqlConfiguration().setLongQueryWarningTimeout(0);
-
-        IgniteEx ig0 = startGrid(cfg);
-        GridQueryProcessor qryProc = ig0.context().query();
-
-        Function<String, FieldsQueryCursor<List<?>>> execSql =
-            sql0 -> qryProc.querySqlFields(new SqlFieldsQuery(sql0), true);
-
-        execSql.apply("CREATE TABLE PUBLIC.TEST_TABLE (f0 int, f1 int, f2 int, f3 int, f4 int, PRIMARY KEY (f0))");
-        execSql.apply("CREATE INDEX PK_IDX ON PUBLIC.TEST_TABLE (f1, f2, f3)");
-
-        String sqlInsert = "INSERT INTO PUBLIC.TEST_TABLE (f0, f1, f2, f3, f4) values (%d, %d, %d, %d, 2)";
-
-        for (int i = 1; i <= 10; ++i)
-            for (int j = 1; j <= 10; ++j)
-                for (int k = 1; k <= 10; ++k)
-                    execSql.apply(String.format(sqlInsert, (i * 100) + (j * 10) + k, i, j, k));
-
-        Consumer<String> execAssert = sql -> {
-            scanCnt.set(-1);
-
-            FieldsQueryCursor<List<?>> res =
-                execSql.apply(sql);
-
-            assertEquals(4, res.getAll().size());
-            assertEquals(5, (int)scanCnt.get());
-        };
-
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 in (1, 5, 3, 7) and f3 = 5");
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 in (1, 5, 3, 7) and f2 = 8 and f3 = 5");
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE WHERE f1 = 8 and f2 = 5 and f3 in (1, 5, 3, 7)");
-
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 in (1, 5, 3, 7) and f3 = 5");
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 in (1, 5, 3, 7) and f2 = 8 and f3 = 5");
-        execAssert.accept("SELECT * FROM PUBLIC.TEST_TABLE USE INDEX(PK_IDX) WHERE f1 = 8 and f2 = 5 and f3 in (1, 5, 3, 7)");
     }
 
     /** */
