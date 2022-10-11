@@ -2192,20 +2192,19 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
          * @return Store delegate.
          * @throws IgniteCheckedException If failed.
          */
-        private CacheDataStore init0(boolean checkExists) throws IgniteCheckedException {
+        private @Nullable CacheDataStore init0(boolean checkExists) throws IgniteCheckedException {
             CacheDataStoreImpl delegate0 = delegate;
 
             if (delegate0 != null)
                 return delegate0;
 
-            if (checkExists) {
-                if (!exists)
-                    return null;
-            }
+            if (checkExists && !exists)
+                return null;
 
-            GridCacheSharedContext ctx = grp.shared();
+            GridCacheSharedContext<?, ?> ctx = grp.shared();
 
-            AtomicLong pageListCacheLimit = ((GridCacheDatabaseSharedManager) ctx.database()).pageListCacheLimitHolder(grp.dataRegion());
+            AtomicLong pageListCacheLimit = ((GridCacheDatabaseSharedManager) ctx.database())
+                .pageListCacheLimitHolder(grp.dataRegion());
 
             IgniteCacheDatabaseSharedManager dbMgr = ctx.database();
 
@@ -3405,7 +3404,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         }
 
         /**
-         * Drops {@link PartitionLogTree} and force three re-creation.
+         * Drops {@link PartitionLogTree} and forces tree re-creation.
          *
          * @throws IgniteCheckedException If failed.
          */
@@ -3420,9 +3419,12 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             // Zero link will force tree creation on initialization.
             resetUpdateLogTreeLink();
 
-            // Force initialization of CacheStore with all its structures on the next access.
-            if (init.compareAndSet(true, false))
+            // Force initialization of CacheStore with all its structures.
+            if (init.compareAndSet(true, false)) {
                 delegate = null;
+
+                init0(false);
+            }
         }
 
         private void resetUpdateLogTreeLink() throws IgniteCheckedException {

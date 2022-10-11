@@ -1191,7 +1191,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startTimer.finishGlobalStage("Start processors");
 
                 // Start plugins.
-                for (PluginProvider provider : ctx.plugins().allProviders()) {
+                for (PluginProvider<?> provider : ctx.plugins().allProviders()) {
                     ctx.add(new GridPluginComponent(provider));
 
                     provider.start(ctx.plugins().pluginContextForProvider(provider));
@@ -1232,7 +1232,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 throw e;
             }
 
-            // All components exept Discovery are started, time to check if maintenance is still needed.
+            // All components except Discovery are started, time to check if maintenance is still needed.
             mntcProcessor.prepareAndExecuteMaintenance();
 
             gw.writeLock();
