@@ -400,8 +400,9 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
      * - Start the grid, create table and collect statistics.
      * - Ensure statistics for the table exists.
      * - Disable StatisticsManagerConfiguration to prevent configuration changes in metastorage.
+     * - Drop table.
      * - Re-activate the grid.
-     * - Ensures statistics for the table was dropped.
+     * - Ensures statistics for the table was dropped as well.
      *
      * @throws Exception If failed.
      */
@@ -423,11 +424,19 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
 
         dropSmallTable(null);
 
+        waitForStats(SCHEMA, "SMALL", TIMEOUT, (stats) -> stats.forEach(s -> assertNotNull(s)));
+
+        checkStatisticsInMetastore(grid(0).context().cache().context().database(), TIMEOUT,
+            SCHEMA, "SMALL", (s -> assertNotNull(s.data().get("A"))));
+
         // Restarts StatisticsConfigurationManager and trigger cleanup of orphan record in metastorage.
         grid(0).cluster().state(ClusterState.INACTIVE);
         grid(0).cluster().state(ClusterState.ACTIVE);
 
         waitForStats(SCHEMA, "SMALL", TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
+
+        checkStatisticsInMetastore(grid(0).context().cache().context().database(), TIMEOUT,
+            SCHEMA, "SMALL", (s -> assertNull(s.data().get("A"))));
     }
 
     /**
