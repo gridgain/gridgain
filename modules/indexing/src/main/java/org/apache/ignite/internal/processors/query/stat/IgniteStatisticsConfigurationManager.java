@@ -66,13 +66,13 @@ import org.jetbrains.annotations.NotNull;
  * and match local statistics with target statistic configuration.
  */
 public class IgniteStatisticsConfigurationManager {
-    /**  */
+    /** */
     private static final String STAT_OBJ_PREFIX = "sql.statobj.";
 
-    /**  */
+    /** */
     private static final String STAT_CFG_VIEW_NAME = "statistics.configuration";
 
-    /**  */
+    /** */
     private static final String STAT_CFG_VIEW_DESCRIPTION = "Statistics configuration";
 
     /** Empty strings array. */
@@ -87,7 +87,7 @@ public class IgniteStatisticsConfigurationManager {
     /** Statistic processor. */
     private final StatisticsProcessor statProc;
 
-    /**  */
+    /** */
     private final BusyExecutor mgmtBusyExecutor;
 
     /** Persistence enabled flag. */
@@ -137,15 +137,15 @@ public class IgniteStatisticsConfigurationManager {
     /**
      * Constructor.
      *
-     * @param schemaMgr             Schema manager.
+     * @param schemaMgr Schema manager.
      * @param subscriptionProcessor Subscription processor.
-     * @param sysViewMgr            System view manager.
-     * @param cluster               Cluster state processor.
-     * @param statProc              Staitistics processor.
-     * @param persistence           Persistence enabled flag.
-     * @param mgmtPool              Statistics management pool
-     * @param logSupplier           Log supplier.
-     * @param isServerNode          Server node flag.
+     * @param sysViewMgr System view manager.
+     * @param cluster Cluster state processor.
+     * @param statProc Staitistics processor.
+     * @param persistence Persistence enabled flag.
+     * @param mgmtPool Statistics management pool
+     * @param logSupplier Log supplier.
+     * @param isServerNode Server node flag.
      */
     public IgniteStatisticsConfigurationManager(
         SchemaManager schemaMgr,
@@ -213,6 +213,7 @@ public class IgniteStatisticsConfigurationManager {
          */
         @Override public void accept(GridH2Table tbl, List<String> cols) {
             assert !F.isEmpty(cols);
+
             dropStatistics(Collections.singletonList(
                     new StatisticsTarget(
                         tbl.identifier().schema(),
@@ -586,7 +587,7 @@ public class IgniteStatisticsConfigurationManager {
      * Validate that drop/refresh target exists in specified configuration. For statistics refresh/drop operations.
      *
      * @param target Operation targer.
-     * @param cfg    Current statistics configuration.
+     * @param cfg Current statistics configuration.
      */
     private void validateDropRefresh(@NotNull StatisticsTarget target, @NotNull StatisticsObjectConfiguration cfg) {
         if (cfg == null || F.isEmpty(cfg.columns())) {
