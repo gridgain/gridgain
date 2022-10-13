@@ -396,6 +396,41 @@ public class StatisticsConfigurationTest extends StatisticsAbstractTest {
     }
 
     /**
+     * Checks orphan records cleanup on activation doesn't lead to grid hanging.
+     * - Start the grid, create table and collect statistics.
+     * - Ensure statistics for the table exists.
+     * - Disable StatisticsManagerConfiguration to prevent configuration changes in metastorage.
+     * - Re-activate the grid.
+     * - Ensures statistics for the table was dropped.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testOrphanDataCleanup() throws Exception {
+        startGrids(2);
+
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        createSmallTable(null);
+
+        collectStatistics(SMALL_TARGET);
+
+        waitForStats(SCHEMA, "SMALL", TIMEOUT, checkTotalRows, checkColumStats);
+
+        // Stop StatisticsConfigurationManager with all it's listeners, so metastorage won't be updated.
+        statisticsMgr(0).statisticConfiguration().stop();
+        statisticsMgr(1).statisticConfiguration().stop();
+
+        dropSmallTable(null);
+
+        // Restarts StatisticsConfigurationManager and trigger cleanup of orphan record in metastorage.
+        grid(0).cluster().state(ClusterState.INACTIVE);
+        grid(0).cluster().state(ClusterState.ACTIVE);
+
+        waitForStats(SCHEMA, "SMALL", TIMEOUT, (stats) -> stats.forEach(s -> assertNull(s)));
+    }
+
+    /**
      * Check drop statistics when table is dropped.
      */
     @Test
