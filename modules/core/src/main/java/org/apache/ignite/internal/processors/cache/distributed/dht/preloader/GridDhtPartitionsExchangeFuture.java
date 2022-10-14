@@ -3494,7 +3494,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         for (Map.Entry<Integer, TreeSet<Long>> sortedCnrs : varCntrs.entrySet()) {
             Integer part = sortedCnrs.getKey();
 
-            // Check if all owners are eligible for fast full rebalancing by comparting tombstone clear counter(TSCC) and
+            // Check if all owners are eligible for fast full rebalancing by comparing tombstone clear counter(TSCC) and
             // partition's LWM. If LWM is after TSCC, partition can be safely fast rebalanced, because doesn't require
             // cleared tombstone to restore consistency.
             Long maxClearCntr = maxClearCntrs.getOrDefault(part, 0L);
