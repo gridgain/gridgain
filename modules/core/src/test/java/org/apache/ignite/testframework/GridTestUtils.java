@@ -50,6 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Scanner;
@@ -73,6 +74,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import javax.management.Attribute;
@@ -102,6 +104,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.port.GridPortRecord;
@@ -130,6 +134,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 
+import static java.lang.Long.parseLong;
+import static java.util.Comparator.comparingLong;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
@@ -2360,6 +2366,29 @@ public final class GridTestUtils {
     }
 
     /**
+     * Removes the last checkpoint end marker for the given node.
+     *
+     * @param ignite Ignite node.
+     */
+    public static void deleteLastCheckpointEndMarker(IgniteEx ignite) throws IOException {
+        IgniteCacheDatabaseSharedManager dbSharedMgr = ignite.context().cache().context().database();
+
+        Path cpDir = ((GridCacheDatabaseSharedManager)dbSharedMgr).checkpointDirectory().toPath();
+
+        try (Stream<Path> files = Files.list(cpDir)) {
+            Optional<Path> endMarker = files
+                .map(path -> path.getFileName().toString())
+                .filter(fileName -> fileName.endsWith("START.bin"))
+                .max(comparingLong(fileName -> parseLong(fileName.split("-")[0])))
+                .map(fileName -> fileName.replace("START.bin", "END.bin"))
+                .map(cpDir::resolve);
+
+            if (endMarker.isPresent())
+                Files.delete(endMarker.get());
+        }
+    }
+
+    /**
      * {@link Class#getSimpleName()} does not return outer class name prefix for inner classes, for example,
      * getSimpleName() returns "RegularDiscovery" instead of "GridDiscoveryManagerSelfTest$RegularDiscovery"
      * This method return correct simple name for inner classes.
@@ -2667,7 +2696,7 @@ public final class GridTestUtils {
          */
         void runx() throws Exception;
 
-        /** {@inheritdoc} */
+        /** {@inheritDoc} */
         @Override default void run() {
             try {
                 runx();
@@ -2693,7 +2722,7 @@ public final class GridTestUtils {
          */
         void runx() throws Exception;
 
-        /** {@inheritdoc} */
+        /** {@inheritDoc} */
         @Override default void run() {
             try {
                 runx();
