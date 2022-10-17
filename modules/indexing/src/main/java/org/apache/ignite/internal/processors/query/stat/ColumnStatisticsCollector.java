@@ -158,7 +158,6 @@ public class ColumnStatisticsCollector {
      * @return Aggregated column statistics.
      */
     public ColumnStatistics finish() {
-
         int averageSize = averageSize(size, total, nullsCnt);
 
         return new ColumnStatistics(min, max, nullsCnt, hll.cardinality(), total, averageSize, hll.toBytes(), ver,
