@@ -48,6 +48,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridAbstractLifecycleAwareSelfTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -55,6 +56,7 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 /**
  * Test for {@link LifecycleAware} support in {@link CacheConfiguration}.
  */
+@Ignore("https://ggsystems.atlassian.net/browse/GG-35130")
 public class GridCacheLifecycleAwareSelfTest extends GridAbstractLifecycleAwareSelfTest {
     /** */
     private static final String CACHE_NAME = "cache";
