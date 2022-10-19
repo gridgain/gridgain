@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -234,23 +235,28 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// <returns>Lost partition id.</returns>
         private static int PrepareTopology()
         {
-            using (var ignite = Ignition.Start(TestUtils.GetTestConfiguration(name: "ignite-2")))
-            {
-                var cache = ignite.GetCache<int, int>(CacheName);
+            var ignite = Ignition.Start(TestUtils.GetTestConfiguration(name: "ignite-2"));
+            var cache = ignite.GetCache<int, int>(CacheName);
 
-                var affinity = ignite.GetAffinity(CacheName);
+            var affinity = ignite.GetAffinity(CacheName);
 
-                var keys = Enumerable.Range(1, affinity.Partitions).ToArray();
+            var keys = Enumerable.Range(1, affinity.Partitions).ToArray();
 
-                cache.PutAll(keys.ToDictionary(x => x, x => x));
+            cache.PutAll(keys.ToDictionary(x => x, x => x));
 
-                cache.Rebalance();
+            cache.Rebalance();
 
-                // Wait for rebalance to complete.
-                TestUtils.WaitForTrueCondition(() => cache.GetLocalSize(CachePeekMode.Primary) == 19, 3000);
+            // Wait for rebalance to complete.
+            TestUtils.WaitForTrueCondition(() => cache.GetLocalSize(CachePeekMode.Primary) == 19, 3000);
 
-                return cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
-            }
+            var res = cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
+
+            Ignition.Stop(ignite.Name, true);
+
+            // TODO: Remove me.
+            Thread.Sleep(20_000);
+
+            return res;
         }
     }
 }
