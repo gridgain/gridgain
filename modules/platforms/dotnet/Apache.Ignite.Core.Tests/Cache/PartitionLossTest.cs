@@ -129,7 +129,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 3000);
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 9000);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
