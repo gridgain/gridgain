@@ -119,7 +119,14 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 45000);
+            Console.WriteLine("Cache size after PrepareTopology: " + cache.GetSize());
+
+            TestUtils.WaitForTrueCondition(() =>
+            {
+                Console.WriteLine("Cache size in WaitForTrueCondition: " + cache.GetSize());
+
+                return cache.GetLostPartitions().Any();
+            }, 45000);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -239,6 +246,8 @@ namespace Apache.Ignite.Core.Tests.Cache
             TestUtils.WaitForTrueCondition(() => cache.GetLocalSize(CachePeekMode.Primary) == 19, 3000);
 
             var res = cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
+
+            Console.WriteLine("]]] Cache size before one node stop: " + cache.GetSize());
 
             Ignition.Stop(ignite.Name, true);
 
