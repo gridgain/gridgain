@@ -121,6 +121,12 @@ namespace Apache.Ignite.Core.Tests.Cache
             var lostPart = PrepareTopology();
             Console.WriteLine("Cache size after PrepareTopology: " + cache.GetSize());
 
+            // TODO: How does the following happen? Not all partitions are moved?
+            // ]]] Cache size before one node stop: 32
+            // Cache size after PrepareTopology: 13
+            // Cache size in WaitForTrueCondition: 13
+            // Cache size in WaitForTrueCondition: 32
+            // Cache size in WaitForTrueCondition: 32
             TestUtils.WaitForTrueCondition(() =>
             {
                 Console.WriteLine("Cache size in WaitForTrueCondition: " + cache.GetSize());
