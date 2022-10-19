@@ -126,7 +126,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Console.WriteLine("Cache size in WaitForTrueCondition: " + cache.GetSize());
 
                 return cache.GetLostPartitions().Any();
-            }, 245000);
+            }, 45000);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -241,6 +241,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             var res = cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
 
             Console.WriteLine("]]] Cache size before one node stop: " + cache.GetSize());
+
+            Thread.Sleep(10000);
+
+            Console.WriteLine("]]] Cache size before one node stop 2: " + cache.GetSize());
 
             Ignition.Stop(ignite.Name, true);
 
