@@ -126,7 +126,7 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Console.WriteLine("Cache size in WaitForTrueCondition: " + cache.GetSize());
 
                 return cache.GetLostPartitions().Any();
-            }, 45000);
+            }, 245000);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -144,13 +144,6 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Reset and verify.
             ignite.ResetLostPartitions(CacheName);
-            Assert.IsEmpty(cache.GetLostPartitions());
-
-            // Check another ResetLostPartitions overload.
-            PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 45000);
-            Assert.IsNotEmpty(cache.GetLostPartitions());
-            ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
             Assert.IsEmpty(cache.GetLostPartitions());
         }
 
