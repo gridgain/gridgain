@@ -38,8 +38,8 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// <summary>
         /// Fixture set up.
         /// </summary>
-        [TestFixtureSetUp]
-        public void FixtureSetUp()
+        [SetUp]
+        public void SetUp()
         {
             Ignition.Start(TestUtils.GetTestConfiguration());
         }
@@ -47,21 +47,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// <summary>
         /// Fixture tear down.
         /// </summary>
-        [TestFixtureTearDown]
-        public void FixtureTearDown()
-        {
-            Ignition.StopAll(true);
-        }
-
-        /// <summary>
-        /// Test teardown.
-        /// </summary>
         [TearDown]
         public void TearDown()
         {
-            var ignite = Ignition.GetIgnite();
-
-            ignite.GetCacheNames().ToList().ForEach(ignite.DestroyCache);
+            Ignition.StopAll(true);
         }
 
         /// <summary>
@@ -252,9 +241,6 @@ namespace Apache.Ignite.Core.Tests.Cache
             var res = cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
 
             Ignition.Stop(ignite.Name, true);
-
-            // TODO: Remove me.
-            Thread.Sleep(20_000);
 
             return res;
         }
