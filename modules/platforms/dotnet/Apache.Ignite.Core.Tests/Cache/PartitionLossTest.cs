@@ -254,8 +254,9 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // TODO: This delay works. Which means we don't wait for rebalance properly. See how Java does it.
             // Thread.Sleep(10000);
-            ignite.GetCompute().ExecuteJavaTask<bool>(WaitForRebalanceTask,
-                new object[] { CacheName, 2L, 1, 9000L });
+            Assert.IsTrue(
+                ignite.GetCompute().ExecuteJavaTask<bool>(WaitForRebalanceTask,
+                    new object[] { CacheName, 2L, 1, 9000L }));
 
             Console.WriteLine("]]] Cache size before one node stop 2: " + cache.GetSize());
 
