@@ -141,8 +141,16 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Assert.IsFalse(recoverCache.TryGet(part, out unused));
             }
 
-            // Reset and verify.
-            ignite.ResetLostPartitions(CacheName);
+            // Reset and verify. Test different ResetLostPartitions overloads.
+            if (canWrite)
+            {
+                ignite.ResetLostPartitions(CacheName);
+            }
+            else
+            {
+                ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
+            }
+
             Assert.IsEmpty(cache.GetLostPartitions());
         }
 
