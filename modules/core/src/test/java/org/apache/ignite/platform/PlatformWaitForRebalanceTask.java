@@ -88,7 +88,7 @@ public class PlatformWaitForRebalanceTask extends ComputeTaskAdapter<Object[], B
             try {
 
                 return GridTestUtils.waitForCondition(() -> {
-                    System.out.println("PlatformWaitForRebalanceTask.Job: Waiting for rebalance to complete [expectedTopVer="
+                    ignite.log().info("PlatformWaitForRebalanceTask.Job: Waiting for rebalance to complete [expectedTopVer="
                             + topVer + ", readyTopVer=" + top.readyTopologyVersion() + ']');
 
                     return top.rebalanceFinished(topVer);

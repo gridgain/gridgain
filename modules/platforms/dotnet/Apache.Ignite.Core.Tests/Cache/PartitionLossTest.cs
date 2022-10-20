@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
@@ -37,7 +36,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         private const string CacheName = "lossTestCache";
 
         /** */
-        public const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
+        private const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
+
+        /** */
+        private const int TimeoutMs = 7000;
 
         /// <summary>
         /// Fixture set up.
@@ -123,20 +125,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
-            Console.WriteLine("Cache size after PrepareTopology: " + cache.GetSize());
-
-            // TODO: How does the following happen? Not all partitions are moved?
-            // ]]] Cache size before one node stop: 32
-            // Cache size after PrepareTopology: 13
-            // Cache size in WaitForTrueCondition: 13
-            // Cache size in WaitForTrueCondition: 32
-            // Cache size in WaitForTrueCondition: 32
-            TestUtils.WaitForTrueCondition(() =>
-            {
-                Console.WriteLine("Cache size in WaitForTrueCondition: " + cache.GetSize());
-
-                return cache.GetLostPartitions().Any();
-            }, 45000);
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), TimeoutMs);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -234,35 +223,31 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// <returns>Lost partition id.</returns>
         private static int PrepareTopology()
         {
-            var ignite = Ignition.Start(TestUtils.GetTestConfiguration(name: "ignite-2"));
-            var cache = ignite.GetCache<int, int>(CacheName);
+            using (var ignite = Ignition.Start(TestUtils.GetTestConfiguration(name: "ignite-2")))
+            {
+                var cache = ignite.GetCache<int, int>(CacheName);
 
-            var affinity = ignite.GetAffinity(CacheName);
+                var affinity = ignite.GetAffinity(CacheName);
 
-            var keys = Enumerable.Range(1, affinity.Partitions).ToArray();
+                var keys = Enumerable.Range(1, affinity.Partitions).ToArray();
 
-            cache.PutAll(keys.ToDictionary(x => x, x => x));
+                cache.PutAll(keys.ToDictionary(x => x, x => x));
 
-            cache.Rebalance();
+                cache.Rebalance();
 
-            // Wait for rebalance to complete.
-            TestUtils.WaitForTrueCondition(() => cache.GetLocalSize(CachePeekMode.Primary) == 19, 3000);
+                // Wait for rebalance to complete.
+                var node = ignite.GetCluster().GetLocalNode();
+                Func<int, bool> isPrimary = x => affinity.IsPrimary(node, x);
+                TestUtils.WaitForTrueCondition(() => keys.Any(isPrimary), TimeoutMs);
 
-            var res = cache.GetLocalEntries(CachePeekMode.Primary).Select(x => x.Key).First();
+                var expectedTopVer = new AffinityTopologyVersion(2, 1);
 
-            Console.WriteLine("]]] Cache size before one node stop: " + cache.GetSize());
+                Assert.IsTrue(ignite.GetCompute().ExecuteJavaTask<bool>(
+                    WaitForRebalanceTask,
+                    new object[] { CacheName, expectedTopVer.Version, expectedTopVer.MinorVersion, (long)TimeoutMs }));
 
-            // TODO: This delay works. Which means we don't wait for rebalance properly. See how Java does it.
-            // Thread.Sleep(10000);
-            Assert.IsTrue(
-                ignite.GetCompute().ExecuteJavaTask<bool>(WaitForRebalanceTask,
-                    new object[] { CacheName, 2L, 1, 9000L }));
-
-            Console.WriteLine("]]] Cache size before one node stop 2: " + cache.GetSize());
-
-            Ignition.Stop(ignite.Name, true);
-
-            return res;
+                return keys.First(isPrimary);
+            }
         }
     }
 }
