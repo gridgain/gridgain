@@ -12854,4 +12854,20 @@ public abstract class IgniteUtils {
             }
         }
     }
+
+    public static boolean isLambda(Class<?> objectClass) {
+        return !objectClass.isPrimitive() && !objectClass.isArray()
+                && !objectClass.isAnonymousClass() && !objectClass.isLocalClass()
+                && objectClass.isSynthetic()
+                && classCannotBeLoadedByName(objectClass);
+    }
+
+    public static boolean classCannotBeLoadedByName(Class<?> objectClass) {
+        try {
+            Class.forName(objectClass.getName());
+            return false;
+        } catch (ClassNotFoundException e) {
+            return true;
+        }
+    }
 }
