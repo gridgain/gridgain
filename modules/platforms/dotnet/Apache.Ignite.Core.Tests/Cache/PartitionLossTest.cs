@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.Collections.Generic;
     using System.Linq;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -34,11 +35,17 @@ namespace Apache.Ignite.Core.Tests.Cache
         /** */
         private const string CacheName = "lossTestCache";
 
+        /** */
+        private const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
+
+        /** */
+        private const int TimeoutMs = 7000;
+
         /// <summary>
         /// Fixture set up.
         /// </summary>
-        [TestFixtureSetUp]
-        public void FixtureSetUp()
+        [SetUp]
+        public void SetUp()
         {
             Ignition.Start(TestUtils.GetTestConfiguration());
         }
@@ -46,21 +53,10 @@ namespace Apache.Ignite.Core.Tests.Cache
         /// <summary>
         /// Fixture tear down.
         /// </summary>
-        [TestFixtureTearDown]
-        public void FixtureTearDown()
-        {
-            Ignition.StopAll(true);
-        }
-
-        /// <summary>
-        /// Test teardown.
-        /// </summary>
         [TearDown]
         public void TearDown()
         {
-            var ignite = Ignition.GetIgnite();
-
-            ignite.GetCacheNames().ToList().ForEach(ignite.DestroyCache);
+            Ignition.StopAll(true);
         }
 
         /// <summary>
@@ -129,7 +125,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             // Loose data and verify lost partition.
             var lostPart = PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 3000);
+            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), TimeoutMs);
             var lostParts = cache.GetLostPartitions();
             Assert.IsTrue(lostParts.Contains(lostPart));
 
@@ -145,15 +141,16 @@ namespace Apache.Ignite.Core.Tests.Cache
                 Assert.IsFalse(recoverCache.TryGet(part, out unused));
             }
 
-            // Reset and verify.
-            ignite.ResetLostPartitions(CacheName);
-            Assert.IsEmpty(cache.GetLostPartitions());
+            // Reset and verify. Test different ResetLostPartitions overloads.
+            if (canWrite)
+            {
+                ignite.ResetLostPartitions(CacheName);
+            }
+            else
+            {
+                ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
+            }
 
-            // Check another ResetLostPartitions overload.
-            PrepareTopology();
-            TestUtils.WaitForTrueCondition(() => cache.GetLostPartitions().Any(), 3000);
-            Assert.IsNotEmpty(cache.GetLostPartitions());
-            ignite.ResetLostPartitions(new List<string> {CacheName, "foo"});
             Assert.IsEmpty(cache.GetLostPartitions());
         }
 
@@ -249,7 +246,13 @@ namespace Apache.Ignite.Core.Tests.Cache
                 // Wait for rebalance to complete.
                 var node = ignite.GetCluster().GetLocalNode();
                 Func<int, bool> isPrimary = x => affinity.IsPrimary(node, x);
-                TestUtils.WaitForTrueCondition(() => keys.Any(isPrimary));
+                TestUtils.WaitForTrueCondition(() => keys.Any(isPrimary), TimeoutMs);
+
+                var expectedTopVer = new AffinityTopologyVersion(2, 1);
+
+                Assert.IsTrue(ignite.GetCompute().ExecuteJavaTask<bool>(
+                    WaitForRebalanceTask,
+                    new object[] { CacheName, expectedTopVer.Version, expectedTopVer.MinorVersion, (long)TimeoutMs }));
 
                 return keys.First(isPrimary);
             }
