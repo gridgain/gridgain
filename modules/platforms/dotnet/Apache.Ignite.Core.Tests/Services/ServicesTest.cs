@@ -298,7 +298,7 @@ namespace Apache.Ignite.Core.Tests.Services
                     .Build();
 
                 var proxy = grid.GetServices().GetServiceProxy<ITestIgniteService>(SvcName, false, ctx);
-                
+
                 Assert.IsNull(proxy.ContextAttribute("not-exist-attribute"));
                 Assert.IsNull(proxy.ContextBinaryAttribute("not-exist-attribute"));
 
@@ -310,7 +310,7 @@ namespace Apache.Ignite.Core.Tests.Services
                 Assert.AreEqual(attrValue, stickyProxy.ContextAttribute(attrName));
                 Assert.AreEqual(attrValue, dynamicProxy.ContextAttribute(attrName));
                 Assert.AreEqual(attrValue, dynamicStickyProxy.ContextAttribute(attrName));
-                
+
                 Assert.AreEqual(attrBinValue, proxy.ContextBinaryAttribute(attrBinName));
                 Assert.AreEqual(attrBinValue, stickyProxy.ContextBinaryAttribute(attrBinName));
                 Assert.AreEqual(attrBinValue, dynamicProxy.ContextBinaryAttribute(attrBinName));
@@ -1288,6 +1288,41 @@ namespace Apache.Ignite.Core.Tests.Services
             }
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests service method with default interface implementation.
+        /// </summary>
+        [Test]
+        public void TestDefaultInterfaceMethod()
+        {
+            var name = nameof(TestDefaultInterfaceMethod);
+            Services.DeployClusterSingleton(name, new TestServiceWithDefaultImpl());
+
+            var prx = Services.GetServiceProxy<ITestServiceWithDefaultImpl>(name);
+            var res = prx.GetInt();
+
+            Assert.AreEqual(42, res);
+        }
+
+        /// <summary>
+        /// Tests service method with default interface implementation that is overridden in the class.
+        /// </summary>
+        [Test]
+        public void TestDefaultInterfaceMethodOverridden()
+        {
+            var svcImpl = new TestServiceWithDefaultImplOverridden();
+
+            var name = nameof(TestDefaultInterfaceMethodOverridden);
+            Services.DeployClusterSingleton(name, svcImpl);
+
+            var prx = Services.GetServiceProxy<ITestServiceWithDefaultImpl>(name);
+            var res = prx.GetInt();
+
+            Assert.AreEqual(43, ((ITestServiceWithDefaultImpl)svcImpl).GetInt());
+            Assert.AreEqual(43, res);
+        }
+#endif
+
         /// <summary>
         /// Starts the grids.
         /// </summary>
@@ -1528,7 +1563,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
             /** */
             object ContextAttribute(string name);
-            
+
             /** */
             object ContextBinaryAttribute(string name);
         }
@@ -1660,15 +1695,15 @@ namespace Apache.Ignite.Core.Tests.Services
             public object ContextAttribute(string name)
             {
                 IServiceCallContext ctx = _context.CurrentCallContext;
-                
+
                 return ctx == null ? null : ctx.GetAttribute(name);
             }
-            
+
             /** <inheritdoc /> */
             public object ContextBinaryAttribute(string name)
             {
                 IServiceCallContext ctx = _context.CurrentCallContext;
-                
+
                 return ctx == null ? null : ctx.GetBinaryAttribute(name);
             }
 
@@ -1853,6 +1888,54 @@ namespace Apache.Ignite.Core.Tests.Services
         }
 
 #if NETCOREAPP
+        public interface ITestServiceWithDefaultImpl
+        {
+            int GetInt() => 42;
+
+            int GetInt(int x) => x + 42;
+        }
+
+        private class TestServiceWithDefaultImpl : ITestServiceWithDefaultImpl, IService
+        {
+            public void Init(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            public void Execute(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            public void Cancel(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            // ReSharper disable once UnusedMember.Local (ensure overload resolution)
+            int GetInt(string x) => x.Length;
+        }
+
+        private class TestServiceWithDefaultImplOverridden : ITestServiceWithDefaultImpl, IService
+        {
+            public void Init(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            public void Execute(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            public void Cancel(IServiceContext context)
+            {
+                // No-op.
+            }
+
+            int ITestServiceWithDefaultImpl.GetInt() => 43;
+        }
+
         /// <summary>
         /// Adds support of the local dates to the Ignite timestamp serialization.
         /// </summary>
