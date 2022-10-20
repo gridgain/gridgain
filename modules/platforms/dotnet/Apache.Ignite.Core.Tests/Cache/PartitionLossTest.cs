@@ -248,6 +248,7 @@ namespace Apache.Ignite.Core.Tests.Cache
 
             Console.WriteLine("]]] Cache size before one node stop: " + cache.GetSize());
 
+            // TODO: This delay works. Which means we don't wait for rebalance properly. See how Java does it.
             Thread.Sleep(10000);
 
             Console.WriteLine("]]] Cache size before one node stop 2: " + cache.GetSize());
