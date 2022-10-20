@@ -75,9 +75,9 @@ public class PlatformWaitForRebalanceTask extends ComputeTaskAdapter<Object[], B
          * @param args Args.
          */
         private Job(Object[] args) {
-            topVer = (AffinityTopologyVersion) args[0];
-            cacheName = (String) args[1];
-            timeout = (Long) args[2];
+            cacheName = (String) args[0];
+            topVer = new AffinityTopologyVersion((Long) args[1], (Integer) args[2]);
+            timeout = (Long) args[3];
         }
 
         /** {@inheritDoc} */
@@ -86,7 +86,13 @@ public class PlatformWaitForRebalanceTask extends ComputeTaskAdapter<Object[], B
                     ((IgniteEx) ignite).context().cache().context().cacheContext(CU.cacheId(cacheName)).topology();
 
             try {
-                return GridTestUtils.waitForCondition(() -> top.rebalanceFinished(topVer), timeout);
+
+                return GridTestUtils.waitForCondition(() -> {
+                    System.out.println("PlatformWaitForRebalanceTask.Job: Waiting for rebalance to complete [expectedTopVer="
+                            + topVer + ", readyTopVer=" + top.readyTopologyVersion() + ']');
+
+                    return top.rebalanceFinished(topVer);
+                }, timeout);
             } catch (IgniteInterruptedCheckedException e) {
                 throw new RuntimeException(e);
             }

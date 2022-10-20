@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.Linq;
     using System.Threading;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -34,6 +35,9 @@ namespace Apache.Ignite.Core.Tests.Cache
     {
         /** */
         private const string CacheName = "lossTestCache";
+
+        /** */
+        public const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
 
         /// <summary>
         /// Fixture set up.
@@ -249,7 +253,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             Console.WriteLine("]]] Cache size before one node stop: " + cache.GetSize());
 
             // TODO: This delay works. Which means we don't wait for rebalance properly. See how Java does it.
-            Thread.Sleep(10000);
+            // Thread.Sleep(10000);
+            ignite.GetCompute().ExecuteJavaTask<bool>(WaitForRebalanceTask,
+                new object[] { CacheName, 2L, 1, 9000L });
 
             Console.WriteLine("]]] Cache size before one node stop 2: " + cache.GetSize());
 
