@@ -27,6 +27,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
+import org.apache.log4j.Level;
 
 /**
  * Abstract thin client test.
@@ -36,7 +38,12 @@ public abstract class AbstractThinClientTest extends GridCommonAbstractTest {
      * Gets default client configuration.
      */
     protected ClientConfiguration getClientConfiguration() {
-        return new ClientConfiguration().setAffinityAwarenessEnabled(false);
+        GridTestLog4jLogger log = new GridTestLog4jLogger();
+        log.setLevel(Level.ALL);
+
+        return new ClientConfiguration()
+                .setAffinityAwarenessEnabled(false)
+                .setLogger(log);
     }
 
     /**
