@@ -1625,7 +1625,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     // Test inner class.
-    private static class TestInnerClass {
+    private class TestInnerClass {
     }
 
     /**
