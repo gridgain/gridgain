@@ -63,8 +63,11 @@ public class IgniteExplicitImplicitDeploymentSelfTest extends GridCommonAbstract
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         // Override P2P configuration to exclude Task and Job classes
-        cfg.setPeerClassLoadingLocalClassPathExclude(GridDeploymentResourceTestTask.class.getName(),
-            GridDeploymentResourceTestJob.class.getName());
+        cfg.setPeerClassLoadingLocalClassPathExclude(
+            IgniteExplicitImplicitDeploymentSelfTest.class.getName(),
+            GridDeploymentResourceTestTask.class.getName(),
+            GridDeploymentResourceTestJob.class.getName()
+        );
 
         cfg.setDeploymentMode(DeploymentMode.ISOLATED);
 
@@ -313,6 +316,7 @@ public class IgniteExplicitImplicitDeploymentSelfTest extends GridCommonAbstract
            ClassLoader ldr1 = new GridTestClassLoader(
                Collections.singletonMap("testResource", "1"),
                getClass().getClassLoader(),
+               IgniteExplicitImplicitDeploymentSelfTest.class.getName(),
                GridDeploymentResourceTestTask.class.getName(),
                GridDeploymentResourceTestJob.class.getName()
            );
@@ -320,6 +324,7 @@ public class IgniteExplicitImplicitDeploymentSelfTest extends GridCommonAbstract
            ClassLoader ldr2 = new GridTestClassLoader(
                Collections.singletonMap("testResource", "2"),
                getClass().getClassLoader(),
+               IgniteExplicitImplicitDeploymentSelfTest.class.getName(),
                GridDeploymentResourceTestTask.class.getName(),
                GridDeploymentResourceTestJob.class.getName()
            );
