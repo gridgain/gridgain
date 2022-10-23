@@ -639,6 +639,8 @@ public class IgniteCacheClientNodeChangingTopologyTest extends GridCommonAbstrac
 
         startGrid(3);
 
+        awaitPartitionMapExchange();
+
         log.info("Stop block2.");
 
         spi.stopBlock();
