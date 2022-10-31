@@ -333,6 +333,14 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         return memoryLimit() - reserved();
     }
 
+    /**
+     * @return Percent of currently available memory for SQL queries on the node.
+     */
+    public double freeMemoryPercentage() {
+        return memoryLimit() == 0
+            ? 1.0
+            : 1.0 - 1.0 * reserved() / memoryLimit();
+    }
 
     /** {@inheritDoc} */
     @Override public void spill(long size) {

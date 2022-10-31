@@ -95,4 +95,32 @@ public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest 
 
         validator.validate(free, maxMem);
     }
+
+    /**
+     * Functional interface to validate memory metrics values.
+     */
+    private interface MemValidator {
+        /**
+         *
+         * @param free freeMem metric value.
+         * @param max maxMem metric value.
+         */
+        void validate(long free, long max);
+    }
+
+    /**
+     * This callback validates that no "sql" memory is reserved.
+     */
+    private final MemValidator MEMORY_IS_FREE = (freeMem, maxMem) -> {
+        if (freeMem < maxMem)
+            fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
+    };
+
+    /**
+     * This callback validates that some memory is reserved.
+     */
+    private final MemValidator MEMORY_IS_USED = (freeMem, maxMem) -> {
+        if (freeMem == maxMem)
+            fail("Expected some memory reserved.");
+    };
 }

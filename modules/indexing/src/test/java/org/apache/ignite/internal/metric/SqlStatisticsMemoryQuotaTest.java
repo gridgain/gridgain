@@ -23,6 +23,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.junit.After;
@@ -71,6 +72,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         assertEquals(longMetricValue(0, "maxMem"), longMetricValue(0, "freeMem"));
         assertEquals(longMetricValue(1, "maxMem"), longMetricValue(1, "freeMem"));
+        assertTrue(isMaximumAvailableMemory(doubleMetricValue(0, "freeMemPercentage")));
+        assertTrue(isMaximumAvailableMemory(doubleMetricValue(1, "freeMemPercentage")));
     }
 
     /**
@@ -212,9 +215,10 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      */
     @Test
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
-        final MemValidator quotaUnlim = (free, max) -> {
+        final MemValidator quotaUnlim = (free, max, freePercentage) -> {
             assertEquals(0, max);
             assertTrue(0 >= free);
+            assertTrue(isMaximumAvailableMemory(freePercentage));
         };
 
         int connNodeIdx = 1;
@@ -259,12 +263,13 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     private void validateMemoryUsageOn(int nodeIdx, MemValidator validator) {
         long free = longMetricValue(nodeIdx, "freeMem");
         long maxMem = longMetricValue(nodeIdx, "maxMem");
+        double freePercentage = doubleMetricValue(nodeIdx, "freeMemPercentage");
 
         if (free > maxMem)
             fail(String.format("Illegal state: there's more free memory (%s) than " +
                 "maximum available for sql (%s) on the node %d", free, maxMem, nodeIdx));
 
-        validator.validate(free, maxMem);
+        validator.validate(free, maxMem, freePercentage);
     }
 
     /**
@@ -274,15 +279,36 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @param metricName short name of the metric from the "sql memory" metric registry.
      */
     private long longMetricValue(int gridIdx, String metricName) {
+        return ((LongMetric)metric(gridIdx, metricName, LongMetric.class)).value();
+    }
+
+    /**
+     * Finds DoubleMetric from sql memory registry by specified metric name and returns it's value.
+     *
+     * @param gridIdx index of a grid which metric value to find.
+     * @param metricName short name of the metric from the "sql memory" metric registry.
+     */
+    private double doubleMetricValue(int gridIdx, String metricName) {
+        return ((DoubleMetric)metric(gridIdx, metricName, DoubleMetric.class)).value();
+    }
+
+    /**
+     * Finds Metric from sql memory registry by specified metric name.
+     *
+     * @param gridIdx index of a grid which metric value to find.
+     * @param metricName short name of the metric from the "sql memory" metric registry.
+     * @param metricCls metric type class.
+     */
+    private Metric metric(int gridIdx, String metricName, Class<? extends Metric> metricCls) {
         MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME);
 
         Metric metric = sqlMemReg.findMetric(metricName);
 
         Assert.assertNotNull("Didn't find metric " + metricName, metric);
 
-        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metric instanceof LongMetric);
+        Assert.assertTrue("Expected long metric, but got " + metric.getClass(), metricCls.isInstance(metric));
 
-        return ((LongMetric)metric).value();
+        return metric;
     }
 
     /**

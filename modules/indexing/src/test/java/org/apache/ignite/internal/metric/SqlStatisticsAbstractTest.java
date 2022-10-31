@@ -237,24 +237,33 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
          * @param free freeMem metric value.
          * @param max maxMem metric value.
          */
-        void validate(long free, long max);
+        void validate(long free, long max, double freePercentage);
     }
 
     /**
      * This callback validates that some memory is reserved.
      */
-    protected static final MemValidator MEMORY_IS_USED = (freeMem, maxMem) -> {
+    protected static final MemValidator MEMORY_IS_USED = (freeMem, maxMem, freeMemPercentage) -> {
         if (freeMem == maxMem)
             fail("Expected some memory reserved.");
+        assertTrue(1.0 - freeMemPercentage > Double.MIN_NORMAL);
     };
 
     /**
      * This callback validates that no "sql" memory is reserved.
      */
-    protected static final MemValidator MEMORY_IS_FREE = (freeMem, maxMem) -> {
+    protected static final MemValidator MEMORY_IS_FREE = (freeMem, maxMem, freeMemPercentage) -> {
         if (freeMem < maxMem)
             fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));
+        assertTrue(isMaximumAvailableMemory(freeMemPercentage));
     };
+
+    /**
+     * Validate that freeMemPercentage shows maximum available memory
+     */
+    protected static boolean isMaximumAvailableMemory(double freeMemPercentage) {
+        return Math.abs(freeMemPercentage - 1.0) < Double.MIN_NORMAL;
+    }
 
     /**
      * Checks that a bean with the specified group and name is available and has the expected attribute

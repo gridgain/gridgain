@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.util.function.LongSupplier;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
@@ -61,25 +60,25 @@ public class SqlMemoryStatisticsHolder {
         offloadedQueriesNum = quotasMetrics.longAdderMetric("OffloadedQueriesNumber",
             "Metrics that indicates the number of queries were offloaded to disk locally.");
 
-        quotasMetrics.register("maxMem",
-            new LongSupplier() {
-                @Override public long getAsLong() {
-                    return memMgr.memoryLimit();
-                }
-            },
+        quotasMetrics.register(
+            "maxMem",
+            memMgr::memoryLimit,
             "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
                 "Negative value if sql memory quotas are disabled. " +
                 "Individual queries have additional per query quotas."
         );
 
-        quotasMetrics.register("freeMem",
-            new LongSupplier() {
-                @Override public long getAsLong() {
-                    return memMgr.freeMemory();
-                }
-            },
+        quotasMetrics.register(
+            "freeMem",
+            memMgr::freeMemory,
             "How much memory in bytes currently left available for the queries on this node. " +
                 "Negative value if sql memory quotas are disabled."
+        );
+
+        quotasMetrics.register(
+            "freeMemPercentage",
+            memMgr::freeMemoryPercentage,
+            "Available memory in percents for the queries on this node."
         );
     }
 
