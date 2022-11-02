@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.metric;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -44,6 +46,9 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
 
     /** */
     public static final String CACHE_PUTS = "CachePuts";
+
+    /** */
+    public static final String CACHE_SIZE = "CacheSize";
 
     /** Cache modes. */
     @Parameterized.Parameters(name = "cacheMode={0},nearEnabled={1}")
@@ -113,6 +118,8 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
 
         checkMetricsNotEmpty(cachePrefix);
 
+        List<String> sz = collectCacheSizes(cachePrefix);
+
         //Cache will be stopped during deactivation.
         grid("client").cluster().state(ClusterState.INACTIVE);
 
@@ -123,6 +130,8 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
         assertEquals(1L, grid("client").cache("other-cache").get(1L));
 
         checkMetricsNotEmpty(cachePrefix);
+
+        checkCacheSizeMetric(cachePrefix, sz);
 
         destroyCache();
 
@@ -198,6 +207,33 @@ public class CacheMetricsAddRemoveTest extends GridCommonAbstractTest {
                 assertNull(mreg.findMetric(CACHE_PUTS));
             }
         }
+    }
+
+    /** */
+    private List<String> collectCacheSizes(String cachePrefix) {
+        List<String> res = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            GridMetricManager mmgr = metricManager(i);
+
+            MetricRegistry mreg = mmgr.registry(cachePrefix);
+
+            res.add(mreg.findMetric(CACHE_SIZE).getAsString());
+
+            if (nearEnabled) {
+                mreg = mmgr.registry(metricName(cachePrefix, "near"));
+
+                res.add(mreg.findMetric(CACHE_SIZE).getAsString());
+            }
+        }
+
+        return res;
+    }
+
+    /** */
+    private void checkCacheSizeMetric(String cachePrefix, List<String> exp) {
+        List<String> actual = collectCacheSizes(cachePrefix);
+
+        assertEqualsCollections(exp, actual);
     }
 
     /** */
