@@ -90,13 +90,13 @@ public class CacheGroupMetricsImpl {
 
         MetricRegistry mreg = kernalCtx.metric().registry(metricGroupName());
 
-        mreg.register("Caches", this::getCaches, List.class, null);
+        mreg.replaceOrRegister("Caches", this::getCaches, List.class, null);
 
-        storageSize = mreg.register("StorageSize",
+        storageSize = mreg.replaceOrRegister("StorageSize",
             () -> persistenceEnabled ? database().forGroupPageStores(ctx, PageStore::size) : 0,
             "Storage space allocated for group, in bytes.");
 
-        sparseStorageSize = mreg.register("SparseStorageSize",
+        sparseStorageSize = mreg.replaceOrRegister("SparseStorageSize",
             () -> persistenceEnabled ? database().forGroupPageStores(ctx, PageStore::getSparseSize) : 0,
             "Storage space allocated for group adjusted for possible sparsity, in bytes.");
 
@@ -116,64 +116,64 @@ public class CacheGroupMetricsImpl {
     public void onTopologyInitialized() {
         MetricRegistry mreg = ctx.shared().kernalContext().metric().registry(metricGroupName());
 
-        mreg.register("MinimumNumberOfPartitionCopies",
+        mreg.replaceOrRegister("MinimumNumberOfPartitionCopies",
             this::getMinimumNumberOfPartitionCopies,
             "Minimum number of partition copies for all partitions of this cache group.");
 
-        mreg.register("MaximumNumberOfPartitionCopies",
+        mreg.replaceOrRegister("MaximumNumberOfPartitionCopies",
             this::getMaximumNumberOfPartitionCopies,
             "Maximum number of partition copies for all partitions of this cache group.");
 
-        mreg.register("LocalNodeOwningPartitionsCount",
+        mreg.replaceOrRegister("LocalNodeOwningPartitionsCount",
             this::getLocalNodeOwningPartitionsCount,
             "Count of partitions with state OWNING for this cache group located on this node.");
 
-        mreg.register("LocalNodeMovingPartitionsCount",
+        mreg.replaceOrRegister("LocalNodeMovingPartitionsCount",
             this::getLocalNodeMovingPartitionsCount,
             "Count of partitions with state MOVING for this cache group located on this node.");
 
-        mreg.register("LocalNodeRentingPartitionsCount",
+        mreg.replaceOrRegister("LocalNodeRentingPartitionsCount",
             this::getLocalNodeRentingPartitionsCount,
             "Count of partitions with state RENTING for this cache group located on this node.");
 
-        mreg.register("LocalNodeRentingEntriesCount",
+        mreg.replaceOrRegister("LocalNodeRentingEntriesCount",
             this::getLocalNodeRentingEntriesCount,
             "Count of entries remains to evict in RENTING partitions located on this node for this cache group.");
 
-        mreg.register("OwningPartitionsAllocationMap",
+        mreg.replaceOrRegister("OwningPartitionsAllocationMap",
             this::getOwningPartitionsAllocationMap,
             Map.class,
             "Allocation map of partitions with state OWNING in the cluster.");
 
-        mreg.register("MovingPartitionsAllocationMap",
+        mreg.replaceOrRegister("MovingPartitionsAllocationMap",
             this::getMovingPartitionsAllocationMap,
             Map.class,
             "Allocation map of partitions with state MOVING in the cluster.");
 
-        mreg.register("AffinityPartitionsAssignmentMap",
+        mreg.replaceOrRegister("AffinityPartitionsAssignmentMap",
             this::getAffinityPartitionsAssignmentMap,
             Map.class,
             "Affinity partitions assignment map.");
 
-        mreg.register("PartitionIds",
+        mreg.replaceOrRegister("PartitionIds",
             this::getPartitionIds,
             List.class,
             "Local partition ids.");
 
-        mreg.register("TotalAllocatedSize",
+        mreg.replaceOrRegister("TotalAllocatedSize",
             this::getTotalAllocatedSize,
             "Total size of memory allocated for group, in bytes.");
 
-        mreg.register("Tombstones",
+        mreg.replaceOrRegister("Tombstones",
             this::getTombstones,
             "Number of tombstone entries.");
 
         if (ctx.config().isEncryptionEnabled()) {
-            mreg.register("ReencryptionFinished",
+            mreg.replaceOrRegister("ReencryptionFinished",
                 () -> !ctx.shared().kernalContext().encryption().reencryptionInProgress(ctx.groupId()),
                 "The flag indicates whether reencryption is finished or not.");
 
-            mreg.register("ReencryptionBytesLeft",
+            mreg.replaceOrRegister("ReencryptionBytesLeft",
                 () -> ctx.shared().kernalContext().encryption().getBytesLeftForReencryption(ctx.groupId()),
                 "The number of bytes left for re-ecryption.");
         }

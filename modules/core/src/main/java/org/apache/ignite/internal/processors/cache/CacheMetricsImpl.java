@@ -377,7 +377,7 @@ public class CacheMetricsImpl implements CacheMetrics {
         mreg.register("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
             "True if index rebuild is in progress.");
 
-        mreg.register("IsIndexRebuildInProgress", () -> {
+        mreg.replaceOrRegister("IsIndexRebuildInProgress", () -> {
             IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
 
             return fut != null && !fut.isDone();
@@ -393,26 +393,26 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
-        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
+        mreg.replaceOrRegister("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
             "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric shows " +
             "corresponding keys.");
 
         idxRebuildKeyProcessed = mreg.longAdderMetric("IndexRebuildKeyProcessed",
             "Number of keys processed during index rebuilding.");
 
-        offHeapEntriesCnt = mreg.register("OffHeapEntriesCount",
+        offHeapEntriesCnt = mreg.replaceOrRegister("OffHeapEntriesCount",
             () -> getEntriesStat().offHeapEntriesCount(), "Offheap entries count.");
 
-        offHeapPrimaryEntriesCnt = mreg.register("OffHeapPrimaryEntriesCount",
+        offHeapPrimaryEntriesCnt = mreg.replaceOrRegister("OffHeapPrimaryEntriesCount",
             () -> getEntriesStat().offHeapPrimaryEntriesCount(), "Offheap primary entries count.");
 
-        offHeapBackupEntriesCnt = mreg.register("OffHeapBackupEntriesCount",
+        offHeapBackupEntriesCnt = mreg.replaceOrRegister("OffHeapBackupEntriesCount",
             () -> getEntriesStat().offHeapBackupEntriesCount(), "Offheap backup entries count.");
 
-        heapEntriesCnt = mreg.register("HeapEntriesCount",
+        heapEntriesCnt = mreg.replaceOrRegister("HeapEntriesCount",
             () -> getEntriesStat().heapEntriesCount(), "Onheap entries count.");
 
-        cacheSize = mreg.register("CacheSize",
+        cacheSize = mreg.replaceOrRegister("CacheSize",
             () -> getEntriesStat().cacheSize(), "Local cache size.");
     }
 
