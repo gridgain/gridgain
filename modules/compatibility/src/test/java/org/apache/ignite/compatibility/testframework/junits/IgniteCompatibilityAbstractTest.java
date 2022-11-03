@@ -36,6 +36,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.jetbrains.annotations.NotNull;
@@ -242,6 +243,11 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
 
         dependencies.add(new Dependency("core", "ignite-core", false));
         dependencies.add(new Dependency("core", "ignite-core", true));
+
+        if (IgniteProductVersion.fromString("2.14.0").compareTo(IgniteProductVersion.fromString(igniteVer)) <= 0) {
+            dependencies.add(new Dependency("", "org.apache.logging.log4j", "log4j-api", "2.18.0", false));
+            dependencies.add(new Dependency("", "org.apache.logging.log4j", "log4j-core", "2.18.0", false));
+        }
 
         return dependencies;
     }
