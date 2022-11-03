@@ -663,9 +663,21 @@ public interface IgniteMXBean {
      *
      * @return String representation of current cluster state.
      * See {@link ClusterState}.
+     *
+     * @deprecated Use {@link #getClusterState()} instead.
      */
+    @Deprecated
     @MXBeanDescription(CLUSTER_STATE_DESC)
     public String clusterState();
+
+    /**
+     * Checks cluster state.
+     *
+     * @return String representation of current cluster state.
+     * See {@link ClusterState}.
+     */
+    @MXBeanDescription(CLUSTER_STATE_DESC)
+    public String getClusterState();
 
     /**
      * Changes current cluster state.
