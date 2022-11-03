@@ -110,6 +110,7 @@ namespace Apache.Ignite.Core.Tests
             var formatter = new BinaryFormatter();
             using (var ms = new MemoryStream())
             {
+#pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
                 formatter.Serialize(ms, ex);
 
                 ms.Seek(0, SeekOrigin.Begin);
@@ -130,6 +131,7 @@ namespace Apache.Ignite.Core.Tests
                 Assert.AreEqual(javaEx.StackTrace, resJavaEx.StackTrace);
                 Assert.AreEqual(javaEx.Source, resJavaEx.Source);
                 Assert.AreEqual(javaEx.HelpLink, resJavaEx.HelpLink);
+#pragma warning restore SYSLIB0011 // BinaryFormatter is obsolete
             }
         }
 
@@ -211,11 +213,13 @@ namespace Apache.Ignite.Core.Tests
                 var stream = new MemoryStream();
                 var formatter = new BinaryFormatter();
 
+#pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
                 formatter.Serialize(stream, ex);
                 stream.Seek(0, SeekOrigin.Begin);
 
                 ex = (Exception) formatter.Deserialize(stream);
                 Assert.AreEqual("myMessage", ex.Message);
+#pragma warning restore SYSLIB0011 // BinaryFormatter is obsolete
 
                 // Message+cause ctor.
                 var msgCauseCtor = type.GetConstructor(new[] { typeof(string), typeof(Exception) });
@@ -237,11 +241,13 @@ namespace Apache.Ignite.Core.Tests
 
             var stream = new MemoryStream();
 
+#pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
             formatter.Serialize(stream, ex);
 
             stream.Seek(0, SeekOrigin.Begin);
 
             var ex0 = (Exception) formatter.Deserialize(stream);
+#pragma warning restore SYSLIB0011 // BinaryFormatter is obsolete
 
             var updateEx = ((CachePartialUpdateException) ex);
 

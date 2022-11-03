@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Tests.Services
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Runtime.Serialization.Formatters.Binary;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cluster;
@@ -751,6 +750,7 @@ namespace Apache.Ignite.Core.Tests.Services
             Assert.IsTrue(argException.Message.Contains("configurations[0].Name"));
         }
 
+#if !NETCOREAPP
         /// <summary>
         /// Tests [Serializable] usage of ServiceDeploymentException.
         /// </summary>
@@ -770,7 +770,7 @@ namespace Apache.Ignite.Core.Tests.Services
 
             var ex = new ServiceDeploymentException("msg", new Exception("in"), new[] {cfg});
 
-            var formatter = new BinaryFormatter();
+            var formatter = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
             var stream = new MemoryStream();
             formatter.Serialize(stream, ex);
             stream.Seek(0, SeekOrigin.Begin);
@@ -791,6 +791,7 @@ namespace Apache.Ignite.Core.Tests.Services
             Assert.IsInstanceOf<TestIgniteServiceSerializable>(cfg.Service);
             Assert.IsInstanceOf<NodeIdFilter>(cfg.NodeFilter);
         }
+#endif
 
         /// <summary>
         /// Verifies the deployment exception.
