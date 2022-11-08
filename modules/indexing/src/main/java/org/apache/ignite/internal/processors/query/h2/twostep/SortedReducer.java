@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
