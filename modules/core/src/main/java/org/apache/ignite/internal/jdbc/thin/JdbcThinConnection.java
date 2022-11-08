@@ -1759,8 +1759,6 @@ public class JdbcThinConnection implements Connection {
                         try {
                             JdbcThinTcpIo cliIo = new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, netTimeout);
 
-                            cliIo.timeout(netTimeout);
-
                             singleIo = cliIo;
 
                             connCnt.incrementAndGet();
@@ -1865,8 +1863,6 @@ public class JdbcThinConnection implements Connection {
                                     "is smaller than the base one [" + baseEndpointVer + "].",
                                     INTERNAL_ERROR);
                             }
-
-                            cliIo.timeout(netTimeout);
 
                             JdbcThinTcpIo ioToSameNode = ios.putIfAbsent(cliIo.nodeId(), cliIo);
 
@@ -2116,8 +2112,6 @@ public class JdbcThinConnection implements Connection {
 
                                         continue;
                                     }
-
-                                    cliIo.timeout(netTimeout);
 
                                     JdbcThinTcpIo ioToSameNode = ios.putIfAbsent(cliIo.nodeId(), cliIo);
 

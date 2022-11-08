@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
@@ -51,8 +52,11 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /** URL. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1/";
 
-    /** URL. */
-    private static final String INCORRECT_URL = "jdbc:ignite:thin://153.1.1.89/";
+    /** Unreachable URL for fast connection timeout. */
+    private static final String INCORRECT_URL = "jdbc:ignite:thin://192.0.0.8/";
+
+    /** Timeout for connection establishing test. */
+    private static final int IMMEDIATE_TIMEOUT = 1;
 
     /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
@@ -238,12 +242,12 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      * @throws Exception If failed.
      */
     @Test
-    public void testUrlImmediateConnectionTimeoutProperty() {
-        GridTestUtils.assertThrows(log, () -> {
+    public void testUrlImmediateConnectionTimeoutProperty() throws Exception {
+        GridTestUtils.assertTimeout(IMMEDIATE_TIMEOUT, TimeUnit.SECONDS, () -> GridTestUtils.assertThrows(log, () -> {
             try (final Connection conn = DriverManager.getConnection(INCORRECT_URL + "?connectionTimeout=1")) {
                 fail("Connection was established to " + conn.getMetaData().getURL());
             }
-        }, IgniteException.class, "Failed to connect to server");
+        }, IgniteException.class, "Failed to connect to server"));
     }
 
     /**
