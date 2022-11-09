@@ -825,7 +825,7 @@ public class GridReduceQueryExecutor {
             r.reducers().add(reducer);
         }
 
-        int cnt = nodeToSegmentsCnt.values().stream().map(BitSet::cardinality).mapToInt(Integer::intValue).sum();
+        int cnt = nodeToSegmentsCnt.values().stream().mapToInt(BitSet::cardinality).sum();
 
         r.init( (r.reducers().size() - replicatedQrysCnt) * cnt + replicatedQrysCnt);
 

@@ -59,8 +59,7 @@ public abstract class UnsortedBaseReducer extends AbstractReducer {
     @Override public void setSources(Map<ClusterNode, BitSet> nodesToSegmentsCnt) {
         super.setSources(nodesToSegmentsCnt);
 
-        int totalSegmentsCnt = nodesToSegmentsCnt.values().stream().map(BitSet::cardinality)
-            .mapToInt(Integer::intValue).sum();
+        int totalSegmentsCnt = nodesToSegmentsCnt.values().stream().mapToInt(BitSet::cardinality).sum();
 
         assert totalSegmentsCnt > 0 : totalSegmentsCnt;
 
