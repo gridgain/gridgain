@@ -334,7 +334,7 @@ public class ReducePartitionMapper {
                 IntArray partIds = mapping.get(prim);
 
                 if (partIds == null) {
-                    partIds = new IntArray();
+                    partIds = new IntArray(parts.length);
 
                     mapping.put(prim, partIds);
                 }
