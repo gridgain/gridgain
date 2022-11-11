@@ -366,14 +366,22 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void beginRecover() {
-        List<String> groupsWithWalDisabled = checkCachesWithDisabledWal();
+        List<CacheConfiguration> cacheCfgs = findCacheGroupsWithDisabledWal();
+
+        List<String> groupsWithWalDisabled = cacheCfgs.stream()
+            .map(ccfg -> cacheWorkDir(ccfg).getName())
+            .collect(Collectors.toList());
 
         if (!groupsWithWalDisabled.isEmpty()) {
-            String errorMsg = "Cache groups with potentially corrupted partition files found. " +
-                "To cleanup them maintenance is needed, node will enter maintenance mode on next restart. " +
-                "Cleanup cache group folders manually or trigger maintenance action to do that and restart the node. " +
-                "Corrupted files are located in subdirectories " + groupsWithWalDisabled +
-                " in a work dir " + storeWorkDir;
+            List<String> cacheGroupNames = cacheCfgs.stream()
+                .map(ccfg -> ccfg.getGroupName() != null ? ccfg.getGroupName() : ccfg.getName())
+                .collect(Collectors.toList());
+
+            String errorMsg = "Ignite node with disabled WAL was stopped in the middle of checkpoint, " +
+                "data files may be corrupted. Node will stop and enter Maintenance Mode on next start. " +
+                "In Maintenance Mode, use the Control Utility *persistence* command " +
+                "to clean and optionally back up corrupted files. When cleaning is done, restart the node manually. " +
+                "Possible corruption affects the following cache groups: " + cacheGroupNames;
 
             log.warning(errorMsg);
 
@@ -400,12 +408,12 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /**
-     * Checks cache groups' settings and returns groups names with disabled WAL.
+     * Checks cache groups' settings and returns configurations of cache groups with disabled WAL.
      *
-     * @return List of cache groups names that had WAL disabled before node stop.
+     * @return List of cache groups' configurations that had WAL disabled before node stop.
      */
-    private List<String> checkCachesWithDisabledWal() {
-        List<String> corruptedCachesDirs = new ArrayList<>();
+    private List<CacheConfiguration> findCacheGroupsWithDisabledWal() {
+        List<CacheConfiguration> corruptedCacheGroups = new ArrayList<>();
 
         for (Integer grpDescId : idxCacheStores.keySet()) {
             CacheGroupDescriptor desc = cctx.cache().cacheGroupDescriptor(grpDescId);
@@ -418,17 +426,15 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                     File dir = cacheWorkDir(desc.config());
 
                     if (Arrays.stream(
-                        dir.listFiles())
-                        .filter(f -> !f.getName().equals(CACHE_DATA_FILENAME))
-                        .count() > 0)
+                        dir.listFiles()).anyMatch(f -> !f.getName().equals(CACHE_DATA_FILENAME)))
                     {
-                        corruptedCachesDirs.add(dir.getName());
+                        corruptedCacheGroups.add(desc.config());
                     }
                 }
             }
         }
 
-        return corruptedCachesDirs;
+        return corruptedCacheGroups;
     }
 
     /** {@inheritDoc} */
