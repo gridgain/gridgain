@@ -368,18 +368,14 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     @Override public void beginRecover() {
         List<CacheConfiguration> cacheCfgs = findCacheGroupsWithDisabledWal();
 
-        List<String> groupsWithWalDisabled = cacheCfgs.stream()
-            .map(ccfg -> cacheWorkDir(ccfg).getName())
-            .collect(Collectors.toList());
-
-        if (!groupsWithWalDisabled.isEmpty()) {
+        if (!cacheCfgs.isEmpty()) {
             List<String> cacheGroupNames = cacheCfgs.stream()
                 .map(ccfg -> ccfg.getGroupName() != null ? ccfg.getGroupName() : ccfg.getName())
                 .collect(Collectors.toList());
 
-            String errorMsg = "Ignite node with disabled WAL was stopped in the middle of checkpoint, " +
-                "data files may be corrupted. Node will stop and enter Maintenance Mode on next start. " +
-                "In Maintenance Mode, use the Control Utility *persistence* command " +
+            String errorMsg = "Ignite node with disabled WAL was stopped in the middle of a checkpoint, " +
+                "data files may be corrupted. Node will stop and enter the Maintenance Mode on next start. " +
+                "In the Maintenance Mode, use the Control Utility *persistence* command " +
                 "to clean and optionally back up corrupted files. When cleaning is done, restart the node manually. " +
                 "Possible corruption affects the following cache groups: " + cacheGroupNames;
 
@@ -390,7 +386,9 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
                     .registerMaintenanceTask(
                         new MaintenanceTask(CORRUPTED_DATA_FILES_MNTC_TASK_NAME,
                             "Corrupted cache groups found",
-                            groupsWithWalDisabled.stream().collect(Collectors.joining(File.separator)))
+                            cacheCfgs.stream()
+                                .map(ccfg -> cacheWorkDir(ccfg).getName())
+                                .collect(Collectors.joining(File.separator)))
                     );
             } catch (IgniteCheckedException e) {
                 log.warning("Failed to register maintenance record for corrupted partition files.", e);
