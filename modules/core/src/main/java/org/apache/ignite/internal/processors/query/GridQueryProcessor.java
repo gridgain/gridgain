@@ -331,8 +331,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (cancel && idx != null) {
             try {
-                while (!busyLock.tryBlock(500))
+                log.info("Try get busy lock for 500 ms");
+
+                while (!busyLock.tryBlock(500)) {
                     idx.onKernalStop();
+
+                    log.warning("Was not able to get busy lock for 500 ms");
+                }
 
                 return;
             }
