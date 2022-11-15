@@ -102,14 +102,17 @@ namespace ignite
 
                 dataType = reader.ReadInt8();
 
+                precision = -1;
+                scale = -1;
                 if (ver >= ProtocolVersion::VERSION_2_7_0)
                 {
                     precision = reader.ReadInt32();
                     scale = reader.ReadInt32();
                 }
 
+                nullability = Nullability::NULLABILITY_UNKNOWN;
                 if (ver >= ProtocolVersion::VERSION_2_8_0)
-                    nullability = reader.ReadInt8();
+                    nullability = static_cast<int32_t>(reader.ReadInt8());
             }
 
             bool ColumnMeta::GetAttribute(uint16_t fieldId, std::string& value) const 
