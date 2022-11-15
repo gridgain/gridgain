@@ -374,14 +374,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         evictingPartitions = mreg.longMetric("EvictingPartitionsLeft",
             "The number of non-affinity partitions scheduled for eviction.");
 
-        mreg.register("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
+        mreg.registerOrReplace("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
             "True if index rebuild is in progress.");
-
-        mreg.registerOrReplace("IsIndexRebuildInProgress", () -> {
-            IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
-
-            return fut != null && !fut.isDone();
-        }, "True if index rebuild is in progress.");
 
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
