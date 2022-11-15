@@ -1005,7 +1005,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (qryInfo != null) {
                 longRunningQryMgr.unregisterQuery(qryInfo);
 
-                H2Utils.session(conn).queryDescription(null);
+                Session session = session(conn);
+
+                if (session != null)
+                    session.queryDescription(null);
             }
         }
     }

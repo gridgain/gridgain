@@ -96,8 +96,12 @@ public class IgniteCacheQueryNodeFailTest extends GridCommonAbstractTest {
 
         final IgniteCache<Integer, Integer> cache = client.cache(DEFAULT_CACHE_NAME);
 
+        log.info(">xxx> LOAD DATA");
+
         for (int i = 0; i < 100_000; i++)
             cache.put(i, i);
+
+        log.info(">xxx> DATA LOADED");
 
         final AtomicBoolean stop = new AtomicBoolean();
 
@@ -107,7 +111,11 @@ public class IgniteCacheQueryNodeFailTest extends GridCommonAbstractTest {
 
                 while (!stop.get()) {
                     try {
+                        log.info(">xxx> execute query");
+
                         cache.query(fieldsQry).getAll();
+
+                        log.info(">xxx> query executed");
                     }
                     catch (CacheException e) {
                         Throwable cause = e.getCause();
