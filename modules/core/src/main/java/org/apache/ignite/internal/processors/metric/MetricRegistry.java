@@ -133,6 +133,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named gauge.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param type Type.
@@ -157,12 +158,14 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Register existing metrics in this group with the specified name.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param metric Metric.
+     * @return registered metric.
      */
-    public void register(String name, Metric metric) {
-        addMetric(name, metric);
+    public Metric register(String name, Metric metric) {
+        return addMetric(name, metric);
     }
 
     /**
@@ -176,39 +179,118 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link BooleanMetric} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
      * @param desc Description.
+     * @return registered metric.
      */
-    public void register(String name, BooleanSupplier supplier, @Nullable String desc) {
-        addMetric(name, new BooleanGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    public BooleanGauge register(String name, BooleanSupplier supplier, @Nullable String desc) {
+        return addMetric(name, new BooleanGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    }
+
+    /**
+     * Registers {@link BooleanMetric} which value will be queried from the specified supplier.
+     *
+     * This method is equivalent to the following code:
+     *
+     * <pre> {@code
+     * metricRegistery.remove(name);
+     * metricRegistery.register(name, supplier, desc);
+     * }</pre>
+     *
+     * This method can be useful in case the given supplier depends on a context.
+     * For example, lambda expression which captures a local context or variable that can be invalidated later.
+     *
+     * @param name Name.
+     * @param supplier Supplier.
+     * @param desc Description.
+     * @return registered metric.
+     */
+    public BooleanGauge registerOrReplace(String name, BooleanSupplier supplier, @Nullable String desc) {
+        return replaceMetric(
+            name,
+            new BooleanGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
     }
 
     /**
      * Registers {@link DoubleSupplier} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
      * @param desc Description.
+     * @return registered metric.
      */
-    public void register(String name, DoubleSupplier supplier, @Nullable String desc) {
-        addMetric(name, new DoubleGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    public DoubleGauge register(String name, DoubleSupplier supplier, @Nullable String desc) {
+        return addMetric(name, new DoubleGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    }
+
+    /**
+     * Registers {@link DoubleSupplier} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * This method is equivalent to the following code:
+     *
+     * <pre> {@code
+     * metricRegistery.remove(name);
+     * metricRegistery.register(name, supplier, desc);
+     * }</pre>
+     *
+     * This method can be useful in case the given supplier depends on a context.
+     * For example, lambda expression which captures a local context or variable that can be invalidated later.
+     *
+     * @param name Name.
+     * @param supplier Supplier.
+     * @param desc Description.
+     * @return registered metric.
+     */
+    public DoubleGauge registerOrReplace(String name, DoubleSupplier supplier, @Nullable String desc) {
+        return replaceMetric(
+            name,
+            new DoubleGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
     }
 
     /**
      * Registers {@link IntMetric} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
      * @param desc Description.
+     * @return registered metric.
      */
-    public void register(String name, IntSupplier supplier, @Nullable String desc) {
-        addMetric(name, new IntGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    public IntGauge register(String name, IntSupplier supplier, @Nullable String desc) {
+        return addMetric(name, new IntGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    }
+
+    /**
+     * Registers {@link IntMetric} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * This method is equivalent to the following code:
+     *
+     * <pre> {@code
+     * metricRegistery.remove(name);
+     * metricRegistery.register(name, supplier, desc);
+     * }</pre>
+     *
+     * This method can be useful in case the given supplier depends on a context.
+     * For example, lambda expression which captures a local context or variable that can be invalidated later.
+     *
+     * @param name Name.
+     * @param supplier Supplier.
+     * @param desc Description.
+     * @return registered metric.
+     */
+    public IntGauge registerOrReplace(String name, IntSupplier supplier, @Nullable String desc) {
+        return replaceMetric(name, new IntGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
     }
 
     /**
      * Registers {@link LongGauge} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -220,21 +302,79 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     }
 
     /**
+     * Registers {@link LongGauge} which value will be queried from the specified supplier.
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * This method is equivalent to the following code:
+     *
+     * <pre> {@code
+     * metricRegistery.remove(name);
+     * metricRegistery.register(name, supplier, desc);
+     * }</pre>
+     *
+     * This method can be useful in case the given supplier depends on a context.
+     * For example, lambda expression which captures a local context or variable that can be invalidated later.
+     *
+     * @param name Name.
+     * @param supplier Supplier.
+     * @param desc Description.
+     * @return Metric of type {@link LongGauge}.
+     */
+    public LongGauge registerOrReplace(String name, LongSupplier supplier, @Nullable String desc) {
+        return replaceMetric(name, new LongGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
+    }
+
+    /**
      * Registers {@link ObjectGauge} which value will be queried from the specified {@link Supplier}.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
      * @param type Type.
      * @param desc Description.
+     * @return registered metric.
      */
-    public <T> void register(String name, Supplier<T> supplier, Class<T> type, @Nullable String desc) {
-        addMetric(name, new ObjectGauge<>(metricName(regName, name), desc,
-            nonThrowableSupplier(supplier, log), type));
+    public <T> ObjectGauge<T> register(String name, Supplier<T> supplier, Class<T> type, @Nullable String desc) {
+        return addMetric(
+            name,
+            new ObjectGauge<>(metricName(regName, name), desc, nonThrowableSupplier(supplier, log), type));
+    }
+
+    /**
+     * Registers {@link ObjectGauge} which value will be queried from the specified {@link Supplier}.
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * This method is equivalent to the following code:
+     *
+     * <pre> {@code
+     * metricRegistery.remove(name);
+     * metricRegistery.register(name, supplier, type, desc);
+     * }</pre>
+     *
+     * This method can be useful in case the given supplier depends on a context.
+     * For example, lambda expression which captures a local context or variable that can be invalidated later.
+     *
+     * @param name Name.
+     * @param supplier Supplier.
+     * @param type Type.
+     * @param desc Description.
+     * @return registered metric.
+     */
+    public <T> ObjectGauge<T> registerOrReplace(
+        String name,
+        Supplier<T> supplier,
+        Class<T> type,
+        @Nullable String desc
+    ) {
+        return replaceMetric(
+            name,
+            new ObjectGauge<>(metricName(regName, name), desc, nonThrowableSupplier(supplier, log), type));
     }
 
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -247,6 +387,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -259,6 +400,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -271,6 +413,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -283,6 +426,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param delegate Delegate to which all updates from new metric will be delegated to.
@@ -301,6 +445,8 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * It will accumulates approximate hit rate statistics.
      * Calculates number of hits in last rateTimeInterval milliseconds.
      *
+     * This method does nothing in case a metric with the given name already exists.
+
      * @param rateTimeInterval Rate time interval.
      * @param size Array size for underlying calculations.
      * @return {@link HitRateMetric}
@@ -322,6 +468,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named gauge.
      * Returned instance are thread safe.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -333,6 +480,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Creates and registre named histogram gauge.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name
      * @param bounds Bounds of measurements.
@@ -365,6 +513,20 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
         if (old != null)
             return old;
+
+        return metric;
+    }
+
+    /**
+     * Registers the provided metric even though a metric with the given name already exists.
+     *
+     * @param name Name.
+     * @param metric Metric
+     * @param <T> Type of metric.
+     * @return Registered metric.
+     */
+    private <T extends Metric> T replaceMetric(String name, T metric) {
+        metrics.put(name, metric);
 
         return metric;
     }

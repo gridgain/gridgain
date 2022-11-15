@@ -374,14 +374,8 @@ public class CacheMetricsImpl implements CacheMetrics {
         evictingPartitions = mreg.longMetric("EvictingPartitionsLeft",
             "The number of non-affinity partitions scheduled for eviction.");
 
-        mreg.register("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
+        mreg.registerOrReplace("IsIndexRebuildInProgress", this::isIndexRebuildInProgress,
             "True if index rebuild is in progress.");
-
-        mreg.register("IsIndexRebuildInProgress", () -> {
-            IgniteInternalFuture fut = cctx.shared().kernalContext().query().indexRebuildFuture(cctx.cacheId());
-
-            return fut != null && !fut.isDone();
-        }, "True if index rebuild is in progress.");
 
         getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
 
@@ -393,26 +387,26 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
 
-        mreg.register("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
+        mreg.registerOrReplace("TxKeyCollisions", this::getTxKeyCollisions, String.class, "Tx key collisions. " +
             "Show keys and collisions queue size. Due transactional payload some keys become hot. Metric shows " +
             "corresponding keys.");
 
         idxRebuildKeyProcessed = mreg.longAdderMetric("IndexRebuildKeyProcessed",
             "Number of keys processed during index rebuilding.");
 
-        offHeapEntriesCnt = mreg.register("OffHeapEntriesCount",
+        offHeapEntriesCnt = mreg.registerOrReplace("OffHeapEntriesCount",
             () -> getEntriesStat().offHeapEntriesCount(), "Offheap entries count.");
 
-        offHeapPrimaryEntriesCnt = mreg.register("OffHeapPrimaryEntriesCount",
+        offHeapPrimaryEntriesCnt = mreg.registerOrReplace("OffHeapPrimaryEntriesCount",
             () -> getEntriesStat().offHeapPrimaryEntriesCount(), "Offheap primary entries count.");
 
-        offHeapBackupEntriesCnt = mreg.register("OffHeapBackupEntriesCount",
+        offHeapBackupEntriesCnt = mreg.registerOrReplace("OffHeapBackupEntriesCount",
             () -> getEntriesStat().offHeapBackupEntriesCount(), "Offheap backup entries count.");
 
-        heapEntriesCnt = mreg.register("HeapEntriesCount",
+        heapEntriesCnt = mreg.registerOrReplace("HeapEntriesCount",
             () -> getEntriesStat().heapEntriesCount(), "Onheap entries count.");
 
-        cacheSize = mreg.register("CacheSize",
+        cacheSize = mreg.registerOrReplace("CacheSize",
             () -> getEntriesStat().cacheSize(), "Local cache size.");
     }
 
