@@ -208,7 +208,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return registred metric.
      */
-    public BooleanGauge replaceOrRegister(String name, BooleanSupplier supplier, @Nullable String desc) {
+    public BooleanGauge registerOrReplace(String name, BooleanSupplier supplier, @Nullable String desc) {
         return replaceMetric(
             name,
             new BooleanGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
@@ -246,7 +246,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return registred metric.
      */
-    public DoubleGauge replaceOrRegister(String name, DoubleSupplier supplier, @Nullable String desc) {
+    public DoubleGauge registerOrReplace(String name, DoubleSupplier supplier, @Nullable String desc) {
         return replaceMetric(
             name,
             new DoubleGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
@@ -284,7 +284,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return registred metric.
      */
-    public IntGauge replaceOrRegister(String name, IntSupplier supplier, @Nullable String desc) {
+    public IntGauge registerOrReplace(String name, IntSupplier supplier, @Nullable String desc) {
         return replaceMetric(name, new IntGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
     }
 
@@ -320,7 +320,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return Metric of type {@link LongGauge}.
      */
-    public LongGauge replaceOrRegister(String name, LongSupplier supplier, @Nullable String desc) {
+    public LongGauge registerOrReplace(String name, LongSupplier supplier, @Nullable String desc) {
         return replaceMetric(name, new LongGauge(metricName(regName, name), desc, nonThrowableSupplier(supplier, log)));
     }
 
@@ -360,7 +360,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @param desc Description.
      * @return registred metric.
      */
-    public <T> ObjectGauge<T> replaceOrRegister(
+    public <T> ObjectGauge<T> registerOrReplace(
         String name,
         Supplier<T> supplier,
         Class<T> type,
