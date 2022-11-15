@@ -133,7 +133,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named gauge.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param type Type.
@@ -158,7 +158,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Register existing metrics in this group with the specified name.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param metric Metric.
@@ -179,7 +179,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link BooleanMetric} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -193,7 +193,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Registers {@link BooleanMetric} which value will be queried from the specified supplier.
      *
-     * This method is equivalent to, for this
+     * This method is equivalent to the following code:
      *
      * <pre> {@code
      * metricRegistery.remove(name);
@@ -216,7 +216,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link DoubleSupplier} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -229,9 +229,9 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link DoubleSupplier} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
-     * This method is equivalent to, for this
+     * This method is equivalent to the following code:
      *
      * <pre> {@code
      * metricRegistery.remove(name);
@@ -254,7 +254,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link IntMetric} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -267,9 +267,9 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link IntMetric} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
-     * This method is equivalent to, for this
+     * This method is equivalent to the following code:
      *
      * <pre> {@code
      * metricRegistery.remove(name);
@@ -290,7 +290,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link LongGauge} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -303,9 +303,9 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link LongGauge} which value will be queried from the specified supplier.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
-     * This method is equivalent to, for this
+     * This method is equivalent to the following code:
      *
      * <pre> {@code
      * metricRegistery.remove(name);
@@ -326,7 +326,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link ObjectGauge} which value will be queried from the specified {@link Supplier}.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param supplier Supplier.
@@ -342,9 +342,9 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Registers {@link ObjectGauge} which value will be queried from the specified {@link Supplier}.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
-     * This method is equivalent to, for this
+     * This method is equivalent to the following code:
      *
      * <pre> {@code
      * metricRegistery.remove(name);
@@ -374,7 +374,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -387,7 +387,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -400,7 +400,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -413,7 +413,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -426,7 +426,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named metric.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param delegate Delegate to which all updates from new metric will be delegated to.
@@ -445,7 +445,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * It will accumulates approximate hit rate statistics.
      * Calculates number of hits in last rateTimeInterval milliseconds.
      *
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
 
      * @param rateTimeInterval Rate time interval.
      * @param size Array size for underlying calculations.
@@ -468,7 +468,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
     /**
      * Creates and register named gauge.
      * Returned instance are thread safe.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name.
      * @param desc Description.
@@ -480,7 +480,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
 
     /**
      * Creates and registre named histogram gauge.
-     * This method do nothing in case a metric with the given name already exists.
+     * This method does nothing in case a metric with the given name already exists.
      *
      * @param name Name
      * @param bounds Bounds of measurements.
