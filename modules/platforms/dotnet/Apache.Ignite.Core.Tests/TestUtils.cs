@@ -78,7 +78,8 @@ namespace Apache.Ignite.Core.Tests
                 "-Xmx4g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
-                "-Duser.timezone=UTC"
+                "-Duser.timezone=UTC",
+                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
             }
             : new List<string>
             {
@@ -88,7 +89,8 @@ namespace Apache.Ignite.Core.Tests
                 "-ea",
                 "-DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000",
                 "-DIGNITE_QUIET=true",
-                "-Duser.timezone=UTC"
+                "-Duser.timezone=UTC",
+                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
             };
 
         /** */
