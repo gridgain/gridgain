@@ -1009,7 +1009,8 @@ namespace Apache.Ignite.Core.Tests.Client
 
             var ex = Assert.Catch<Exception>(() =>
                 client.GetServices().GetServiceProxy<IJavaService>(svcName).testException("")).GetBaseException();
-            
+
+            // Those details are included only when IGNITE_SENSITIVE_DATA_LOGGING is set to PLAIN.
             StringAssert.Contains("ClassName=System.NotImplementedException", ex.Message);
             StringAssert.Contains("Message=The method or operation is not implemented.", ex.Message);
         }
