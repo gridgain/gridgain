@@ -1757,7 +1757,7 @@ public class JdbcThinConnection implements Connection {
                 for (InetAddress addr : addrs) {
                     for (int port = srv.portFrom(); port <= srv.portTo(); ++port) {
                         try {
-                            JdbcThinTcpIo cliIo = new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, 0);
+                            JdbcThinTcpIo cliIo = new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, netTimeout);
 
                             cliIo.timeout(netTimeout);
 
@@ -1843,7 +1843,7 @@ public class JdbcThinConnection implements Connection {
                     for (int port = srv.portFrom(); port <= srv.portTo(); ++port) {
                         try {
                             JdbcThinTcpIo cliIo =
-                                new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, 0);
+                                new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, netTimeout);
 
                             if (!cliIo.isPartitionAwarenessSupported()) {
                                 cliIo.close();
@@ -2089,7 +2089,7 @@ public class JdbcThinConnection implements Connection {
                                     }
 
                                     JdbcThinTcpIo cliIo =
-                                        new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, 0);
+                                        new JdbcThinTcpIo(connProps, new InetSocketAddress(addr, port), ctx, netTimeout);
 
                                     if (!cliIo.isPartitionAwarenessSupported()) {
                                         processDelay(sockAddr);
