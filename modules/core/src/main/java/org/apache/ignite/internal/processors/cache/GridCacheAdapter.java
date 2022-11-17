@@ -4429,6 +4429,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param m Map to examine.
      */
     protected void warnIfUnordered(Map<?, ?> m, BulkOperation op) {
+        if (ctx.atomic())
+            return;
+
         if (m == null || m.size() <= 1)
             return;
 
@@ -4453,6 +4456,9 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
      * @param coll Collection to examine.
      */
     protected void warnIfUnordered(Collection<?> coll, BulkOperation op) {
+        if (ctx.atomic())
+            return;
+
         if (coll == null || coll.size() <= 1)
             return;
 
