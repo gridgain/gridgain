@@ -33,6 +33,9 @@ namespace Apache.Ignite.Core.Tests
         /** */
         private const string ClassPlatformStartIgniteUtils = "org/apache/ignite/platform/PlatformStartIgniteUtils";
 
+        /** */
+        private const string ClassPlatformTestUtils = "org/apache/ignite/platform/PlatformTestUtils";
+
         /// <summary>
         /// Suspend Ignite threads for the given grid.
         /// </summary>
@@ -119,6 +122,11 @@ namespace Apache.Ignite.Core.Tests
             CallStringMethod(ClassPlatformStartIgniteUtils, "stop", "(Ljava/lang/String;)V", name);
         }
 
+        public static int GetJavaMajorVersion()
+        {
+            return CallIntMethod(ClassPlatformTestUtils, "majorJavaVersion", "()I");
+        }
+
         /** */
         private static unsafe void CallStringMethod(string className, string methodName, string methodSig, string arg)
         {
@@ -156,6 +164,17 @@ namespace Apache.Ignite.Core.Tests
                 var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
                 var res = env.CallStaticObjectMethod(cls, methodId);
                 return env.JStringToString(res.Target);
+            }
+        }
+
+        /** */
+        private static unsafe int CallIntMethod(string className, string methodName, string methodSig)
+        {
+            var env = Jvm.Get().AttachCurrentThread();
+            using (var cls = env.FindClass(className))
+            {
+                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
+                return env.CallStaticIntMethod(cls, methodId);
             }
         }
     }

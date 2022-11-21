@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client.Compatibility
 {
     using System;
+    using System.Collections;
     using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Expiry;
@@ -34,15 +35,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
     /// Differs from <see cref="ClientProtocolCompatibilityTest"/>:
     /// here we actually download and run old Ignite versions instead of changing the protocol version in handshake.
     /// </summary>
-    [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", 0)]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", 1)]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", 1)]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", 2)]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.8.0", 6)]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", 2)]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", 2)]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", 4)]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.9", 4)]
+    [TestFixtureSource(typeof(FixtureSource))]
     [Category(TestUtils.CategoryIntensive)]
     public class ClientServerCompatibilityTest
     {
@@ -288,6 +281,28 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
             public IExpiryPolicy CreateInstance()
             {
                 return new ExpiryPolicy(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
+            }
+        }
+
+        private class FixtureSource : IEnumerable
+        {
+            public IEnumerator GetEnumerator()
+            {
+                TestUtils.EnsureJvmCreated();
+
+                if (TestUtilsJni.GetJavaMajorVersion() <= 11)
+                {
+                    // Old Ignite versions can't start on new JDKs (support was not yet added).
+                    yield return new object[] { JavaServer.GroupIdIgnite, "2.4.0", 0 };
+                    yield return new object[] { JavaServer.GroupIdIgnite, "2.6.0", 1 };
+                }
+
+                yield return new object[] { JavaServer.GroupIdIgnite, "2.7.6", 2 };
+                yield return new object[] { JavaServer.GroupIdIgnite, "2.8.0", 6 };
+
+                yield return new object[] { JavaServer.GroupIdGridGain, "8.7.6", 2 };
+                yield return new object[] { JavaServer.GroupIdGridGain, "8.7.8", 4 };
+                yield return new object[] { JavaServer.GroupIdGridGain, "8.8.3", 6 };
             }
         }
     }

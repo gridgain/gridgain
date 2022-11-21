@@ -18,6 +18,7 @@ package org.apache.ignite.platform;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,6 +49,8 @@ public class PlatformProcessUtils {
             throws Exception {
         if (process != null)
             throw new Exception("PlatformProcessUtils can't start more than one process at a time.");
+
+        Thread.sleep(5000);
 
         ProcessBuilder pb = new ProcessBuilder(file, arg1, arg2);
         pb.directory(new File(workDir));
@@ -80,8 +83,10 @@ public class PlatformProcessUtils {
                             if (line.contains(waitForOutput))
                                 return;
                         }
-                    } catch (Exception ignored) {
-                        // No-op.
+
+                        throw new RuntimeException("Expected output not found: " + waitForOutput);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 });
 
