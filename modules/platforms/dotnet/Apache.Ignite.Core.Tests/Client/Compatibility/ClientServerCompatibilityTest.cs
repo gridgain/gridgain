@@ -302,7 +302,6 @@ namespace Apache.Ignite.Core.Tests.Client.Compatibility
 
                 yield return new object[] { JavaServer.GroupIdGridGain, "8.7.6", 2 };
                 yield return new object[] { JavaServer.GroupIdGridGain, "8.7.8", 4 };
-                yield return new object[] { JavaServer.GroupIdGridGain, "8.8.3", 6 };
             }
         }
     }
