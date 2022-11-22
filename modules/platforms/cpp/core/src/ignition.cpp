@@ -268,7 +268,7 @@ namespace ignite
         JvmOptions opts;
         opts.FromConfiguration(cfg, home, cp);
 
-        // This is the instance that allows us keep IgniteEnvironment alive
+        // This is the instance that allows us to keep IgniteEnvironment alive
         // till the end of the method call
         SharedPointer<IgniteEnvironment> env = SharedPointer<IgniteEnvironment>(new IgniteEnvironment(cfg0, logger));
 
@@ -330,7 +330,7 @@ namespace ignite
 
         // We successfully created Java Ignite instance by this point, so we
         // give control over C++ instance to Java. Still, we keep holding env
-        // instance so it will keep living till the end of the scope.
+        // instance, so it will keep living till the end of the scope.
         envGuard.release();
 
         env.Get()->ProcessorReleaseStart();
