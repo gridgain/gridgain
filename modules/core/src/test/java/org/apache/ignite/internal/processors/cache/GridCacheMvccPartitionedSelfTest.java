@@ -207,397 +207,397 @@ public class GridCacheMvccPartitionedSelfTest extends GridCommonAbstractTest {
         checkLocal(c1, ver1, false, false, false);
     }
 
-    /**
-     * Tests remote candidates.
-     */
-    @Test
-    public void testNearLocalsWithOwned() {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(1);
-        GridCacheVersion ver2 = version(2);
-
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(ver2, nearLocCands.iterator().next().version());
-
-        assertEquals(1, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        entry.orderOwned(ver1, ver2);
-
-        entry.readyNearLocal(ver2, ver2, empty(), empty(), empty());
-
-        checkRemote(c1, ver1, false, false);
-
-        assertFalse(c1.owner());
-
-        checkLocalOwner(c2, ver2, false);
-
-        assertNotNull(entry.anyOwner());
-        assertEquals(ver2, entry.anyOwner().version());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAddPendingRemote0() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver0 = version(0);
-        GridCacheVersion ver1 = version(1);
-
-        entry.addNearLocal(node1, 1, ver1, true);
-
-        entry.readyNearLocal(ver1, ver1, empty(), empty(), Collections.singletonList(ver0));
-
-        entry.addRemote(node1, 1, ver0, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(ver1, nearLocCands.iterator().next().version());
-
-        assertEquals(1, rmtCands.size());
-        assertEquals(ver0, rmtCands.iterator().next().version());
-
-        assertNotNull(entry.anyOwner());
-        assertEquals(ver1, entry.anyOwner().version());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAddPendingRemote1() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver0 = version(0);
-        GridCacheVersion ver1 = version(1);
-        GridCacheVersion ver2 = version(2);
-        GridCacheVersion ver3 = version(3);
-
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
-
-        entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
-
-        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2, true);
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-
-        assert rmtCands.size() == 3;
-
-        // DHT remote candidates are not reordered and sorted.
-        GridCacheMvccCandidate[] candArr = new GridCacheMvccCandidate[] {c2, c1, c0};
-
-        rmtCands = entry.remoteMvccSnapshot();
-
-        int i = 0;
-
-        for (GridCacheMvccCandidate cand : rmtCands) {
-            assert cand == candArr[i] : "Invalid candidate in position " + i;
-
-            i++;
-        }
-
-        assertEquals(c3, entry.anyOwner());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testAddPendingRemote2() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver0 = version(0);
-        GridCacheVersion ver1 = version(1);
-        GridCacheVersion ver2 = version(2);
-        GridCacheVersion ver3 = version(3);
-
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
-        entry.addNearLocal(node1, 1, ver2, true);
-
-        entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
-
-        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
-        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-
-        assertEquals(2, rmtCands.size());
-
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(2, nearLocCands.size());
-
-        GridCacheMvccCandidate[] candArr = new GridCacheMvccCandidate[] {c1, c0};
-
-        int i = 0;
-
-        for (GridCacheMvccCandidate cand : rmtCands) {
-            assert cand == candArr[i] : "Invalid candidate in position " + i;
-
-            i++;
-        }
-
-        assertEquals(c3, entry.anyOwner());
-    }
-
-    /**
-     * Tests salvageRemote method
-     */
-    @Test
-    public void testSalvageRemote() {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(1);
-        GridCacheVersion ver2 = version(2);
-        GridCacheVersion ver3 = version(3);
-        GridCacheVersion ver4 = version(4);
-        GridCacheVersion ver5 = version(5);
-        GridCacheVersion ver6 = version(6);
-
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addRemote(node1, 1, ver2, true);
-        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
-        GridCacheMvccCandidate c4 = entry.addRemote(node1, 1, ver4, true);
-        entry.addRemote(node1, 1, ver5, true);
-        entry.addRemote(node1, 1, ver6, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-
-        assertEquals(5, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(ver3, nearLocCands.iterator().next().version());
-
-        entry.salvageRemote(ver4);
-
-        rmtCands = entry.remoteMvccSnapshot();
-
-        boolean before = true;
-
-        for (GridCacheMvccCandidate cand : rmtCands) {
-            if (cand == c4) {
-                before = false;
-
-                continue;
-            }
-
-            if (before && cand != c3) {
-                assertTrue(cand.owner());
-                assertTrue(cand.used());
-            }
-            else {
-                assertFalse(cand.owner());
-                assertFalse(cand.used());
-            }
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNearRemoteConsistentOrdering0() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(10);
-        GridCacheVersion nearVer2 = version(5);
-        GridCacheVersion ver2 = version(20);
-        GridCacheVersion ver3 = version(30);
-
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(nearVer2, nearLocCands.iterator().next().version());
-
-        assertEquals(2, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), empty());
-
-        assertNull(entry.anyOwner());
-
-        rmtCands = entry.remoteMvccSnapshot();
-
-        assertEquals(ver1, rmtCands.iterator().next().version());
-        assertTrue(rmtCands.iterator().next().owner());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNearRemoteConsistentOrdering1() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(10);
-        GridCacheVersion nearVer2 = version(5);
-        GridCacheVersion ver2 = version(20);
-        GridCacheVersion ver3 = version(30);
-
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(nearVer2, nearLocCands.iterator().next().version());
-
-        assertEquals(2, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        entry.orderCompleted(nearVer2, Arrays.asList(ver3), empty());
-        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
-
-        nearLocCands = entry.localCandidates();
-        rmtCands = entry.remoteMvccSnapshot();
-
-        assertNull(entry.anyOwner());
-        assertEquals(ver3, rmtCands.iterator().next().version());
-        assertTrue(rmtCands.iterator().next().owner());
-
-        GridCacheMvccCandidate cand = nearLocCands.iterator().next();
-
-        assertTrue(cand.ready());
-        assertFalse(cand.owner());
-        assertFalse(cand.used());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNearRemoteConsistentOrdering2() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(10);
-        GridCacheVersion nearVer2 = version(5);
-        GridCacheVersion ver2 = version(20);
-        GridCacheVersion ver3 = version(30);
-
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(nearVer2, nearLocCands.iterator().next().version());
-
-        assertEquals(2, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        entry.orderCompleted(nearVer2, empty(), empty());
-        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), empty());
-
-        nearLocCands = entry.localCandidates();
-        rmtCands = entry.remoteMvccSnapshot();
-
-        assertNull(entry.anyOwner());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-        assertTrue(rmtCands.iterator().next().owner());
-
-        GridCacheMvccCandidate cand = nearLocCands.iterator().next();
-
-        assertTrue(cand.ready());
-        assertFalse(cand.used());
-        assertFalse(cand.owner());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testNearRemoteConsistentOrdering3() throws Exception {
-        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
-
-        UUID node1 = UUID.randomUUID();
-
-        GridCacheVersion ver1 = version(10);
-        GridCacheVersion nearVer2 = version(5);
-        GridCacheVersion ver2 = version(20);
-        GridCacheVersion ver3 = version(30);
-
-        entry.addRemote(node1, 1, ver1, true);
-        entry.addNearLocal(node1, 1, nearVer2, true);
-        entry.addRemote(node1, 1, ver3, true);
-
-        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
-        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
-
-        assertEquals(1, nearLocCands.size());
-        assertEquals(nearVer2, nearLocCands.iterator().next().version());
-
-        assertEquals(2, rmtCands.size());
-        assertEquals(ver1, rmtCands.iterator().next().version());
-
-        entry.orderCompleted(nearVer2, empty(), empty());
-        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
-
-        rmtCands = entry.remoteMvccSnapshot();
-
-        assertNotNull(entry.anyOwner());
-        checkLocalOwner(entry.anyOwner(), nearVer2, false);
-
-        assertEquals(ver1, rmtCands.iterator().next().version());
-    }
+//    /**
+//     * Tests remote candidates.
+//     */
+//    @Test
+//    public void testNearLocalsWithOwned() {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(1);
+//        GridCacheVersion ver2 = version(2);
+//
+//        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
+//        GridCacheMvccCandidate c2 = entry.addNearLocal(node1, 1, ver2, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(ver2, nearLocCands.iterator().next().version());
+//
+//        assertEquals(1, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        entry.orderOwned(ver1, ver2);
+//
+//        entry.readyNearLocal(ver2, ver2, empty(), empty(), empty());
+//
+//        checkRemote(c1, ver1, false, false);
+//
+//        assertFalse(c1.owner());
+//
+//        checkLocalOwner(c2, ver2, false);
+//
+//        assertNotNull(entry.anyOwner());
+//        assertEquals(ver2, entry.anyOwner().version());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testAddPendingRemote0() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver0 = version(0);
+//        GridCacheVersion ver1 = version(1);
+//
+//        entry.addNearLocal(node1, 1, ver1, true);
+//
+//        entry.readyNearLocal(ver1, ver1, empty(), empty(), Collections.singletonList(ver0));
+//
+//        entry.addRemote(node1, 1, ver0, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(ver1, nearLocCands.iterator().next().version());
+//
+//        assertEquals(1, rmtCands.size());
+//        assertEquals(ver0, rmtCands.iterator().next().version());
+//
+//        assertNotNull(entry.anyOwner());
+//        assertEquals(ver1, entry.anyOwner().version());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testAddPendingRemote1() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver0 = version(0);
+//        GridCacheVersion ver1 = version(1);
+//        GridCacheVersion ver2 = version(2);
+//        GridCacheVersion ver3 = version(3);
+//
+//        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
+//
+//        entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
+//
+//        GridCacheMvccCandidate c2 = entry.addRemote(node1, 1, ver2, true);
+//        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
+//        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//
+//        assert rmtCands.size() == 3;
+//
+//        // DHT remote candidates are not reordered and sorted.
+//        GridCacheMvccCandidate[] candArr = new GridCacheMvccCandidate[] {c2, c1, c0};
+//
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        int i = 0;
+//
+//        for (GridCacheMvccCandidate cand : rmtCands) {
+//            assert cand == candArr[i] : "Invalid candidate in position " + i;
+//
+//            i++;
+//        }
+//
+//        assertEquals(c3, entry.anyOwner());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testAddPendingRemote2() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver0 = version(0);
+//        GridCacheVersion ver1 = version(1);
+//        GridCacheVersion ver2 = version(2);
+//        GridCacheVersion ver3 = version(3);
+//
+//        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
+//        entry.addNearLocal(node1, 1, ver2, true);
+//
+//        entry.readyNearLocal(ver3, ver3, empty(), empty(), Arrays.asList(ver0, ver1, ver2));
+//
+//        GridCacheMvccCandidate c1 = entry.addRemote(node1, 1, ver1, true);
+//        GridCacheMvccCandidate c0 = entry.addRemote(node1, 1, ver0, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertEquals(2, rmtCands.size());
+//
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(2, nearLocCands.size());
+//
+//        GridCacheMvccCandidate[] candArr = new GridCacheMvccCandidate[] {c1, c0};
+//
+//        int i = 0;
+//
+//        for (GridCacheMvccCandidate cand : rmtCands) {
+//            assert cand == candArr[i] : "Invalid candidate in position " + i;
+//
+//            i++;
+//        }
+//
+//        assertEquals(c3, entry.anyOwner());
+//    }
+//
+//    /**
+//     * Tests salvageRemote method
+//     */
+//    @Test
+//    public void testSalvageRemote() {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(1);
+//        GridCacheVersion ver2 = version(2);
+//        GridCacheVersion ver3 = version(3);
+//        GridCacheVersion ver4 = version(4);
+//        GridCacheVersion ver5 = version(5);
+//        GridCacheVersion ver6 = version(6);
+//
+//        entry.addRemote(node1, 1, ver1, true);
+//        entry.addRemote(node1, 1, ver2, true);
+//        GridCacheMvccCandidate c3 = entry.addNearLocal(node1, 1, ver3, true);
+//        GridCacheMvccCandidate c4 = entry.addRemote(node1, 1, ver4, true);
+//        entry.addRemote(node1, 1, ver5, true);
+//        entry.addRemote(node1, 1, ver6, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertEquals(5, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(ver3, nearLocCands.iterator().next().version());
+//
+//        entry.salvageRemote(ver4);
+//
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        boolean before = true;
+//
+//        for (GridCacheMvccCandidate cand : rmtCands) {
+//            if (cand == c4) {
+//                before = false;
+//
+//                continue;
+//            }
+//
+//            if (before && cand != c3) {
+//                assertTrue(cand.owner());
+//                assertTrue(cand.used());
+//            }
+//            else {
+//                assertFalse(cand.owner());
+//                assertFalse(cand.used());
+//            }
+//        }
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testNearRemoteConsistentOrdering0() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(10);
+//        GridCacheVersion nearVer2 = version(5);
+//        GridCacheVersion ver2 = version(20);
+//        GridCacheVersion ver3 = version(30);
+//
+//        entry.addRemote(node1, 1, ver1, true);
+//        entry.addNearLocal(node1, 1, nearVer2, true);
+//        entry.addRemote(node1, 1, ver3, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(nearVer2, nearLocCands.iterator().next().version());
+//
+//        assertEquals(2, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), empty());
+//
+//        assertNull(entry.anyOwner());
+//
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//        assertTrue(rmtCands.iterator().next().owner());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testNearRemoteConsistentOrdering1() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(10);
+//        GridCacheVersion nearVer2 = version(5);
+//        GridCacheVersion ver2 = version(20);
+//        GridCacheVersion ver3 = version(30);
+//
+//        entry.addRemote(node1, 1, ver1, true);
+//        entry.addNearLocal(node1, 1, nearVer2, true);
+//        entry.addRemote(node1, 1, ver3, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(nearVer2, nearLocCands.iterator().next().version());
+//
+//        assertEquals(2, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        entry.orderCompleted(nearVer2, Arrays.asList(ver3), empty());
+//        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
+//
+//        nearLocCands = entry.localCandidates();
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertNull(entry.anyOwner());
+//        assertEquals(ver3, rmtCands.iterator().next().version());
+//        assertTrue(rmtCands.iterator().next().owner());
+//
+//        GridCacheMvccCandidate cand = nearLocCands.iterator().next();
+//
+//        assertTrue(cand.ready());
+//        assertFalse(cand.owner());
+//        assertFalse(cand.used());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testNearRemoteConsistentOrdering2() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(10);
+//        GridCacheVersion nearVer2 = version(5);
+//        GridCacheVersion ver2 = version(20);
+//        GridCacheVersion ver3 = version(30);
+//
+//        entry.addRemote(node1, 1, ver1, true);
+//        entry.addNearLocal(node1, 1, nearVer2, true);
+//        entry.addRemote(node1, 1, ver3, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(nearVer2, nearLocCands.iterator().next().version());
+//
+//        assertEquals(2, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        entry.orderCompleted(nearVer2, empty(), empty());
+//        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), empty());
+//
+//        nearLocCands = entry.localCandidates();
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertNull(entry.anyOwner());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//        assertTrue(rmtCands.iterator().next().owner());
+//
+//        GridCacheMvccCandidate cand = nearLocCands.iterator().next();
+//
+//        assertTrue(cand.ready());
+//        assertFalse(cand.used());
+//        assertFalse(cand.owner());
+//    }
+//
+//    /**
+//     * @throws Exception If failed.
+//     */
+//    @Test
+//    public void testNearRemoteConsistentOrdering3() throws Exception {
+//        GridCacheAdapter<String, String> cache = grid.internalCache(DEFAULT_CACHE_NAME);
+//
+//        GridCacheTestEntryEx entry = new GridCacheTestEntryEx(cache.context(), "1");
+//
+//        UUID node1 = UUID.randomUUID();
+//
+//        GridCacheVersion ver1 = version(10);
+//        GridCacheVersion nearVer2 = version(5);
+//        GridCacheVersion ver2 = version(20);
+//        GridCacheVersion ver3 = version(30);
+//
+//        entry.addRemote(node1, 1, ver1, true);
+//        entry.addNearLocal(node1, 1, nearVer2, true);
+//        entry.addRemote(node1, 1, ver3, true);
+//
+//        Collection<GridCacheMvccCandidate> rmtCands = entry.remoteMvccSnapshot();
+//        Collection<GridCacheMvccCandidate> nearLocCands = entry.localCandidates();
+//
+//        assertEquals(1, nearLocCands.size());
+//        assertEquals(nearVer2, nearLocCands.iterator().next().version());
+//
+//        assertEquals(2, rmtCands.size());
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//
+//        entry.orderCompleted(nearVer2, empty(), empty());
+//        entry.readyNearLocal(nearVer2, ver2, empty(), empty(), Arrays.asList(ver1));
+//
+//        rmtCands = entry.remoteMvccSnapshot();
+//
+//        assertNotNull(entry.anyOwner());
+//        checkLocalOwner(entry.anyOwner(), nearVer2, false);
+//
+//        assertEquals(ver1, rmtCands.iterator().next().version());
+//    }
 
     /**
      * @throws Exception If failed.

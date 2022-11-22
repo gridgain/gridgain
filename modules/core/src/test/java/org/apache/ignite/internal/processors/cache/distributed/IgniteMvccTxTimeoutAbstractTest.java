@@ -19,9 +19,14 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.Random;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TransactionConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -32,6 +37,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  * Simple cache test.
@@ -56,13 +62,43 @@ public class IgniteMvccTxTimeoutAbstractTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration c = super.getConfiguration(igniteInstanceName);
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        TransactionConfiguration txCfg = c.getTransactionConfiguration();
+        TestRecordingCommunicationSpi spi = new TestRecordingCommunicationSpi();
 
-        txCfg.setDefaultTxTimeout(TIMEOUT);
+//        if (blockRebalancing())
+//            spi.blockMessages(TestRecordingCommunicationSpi.blockDemandMessageForGroup(CU.cacheId(DEFAULT_CACHE_NAME)));
 
-        return c;
+        cfg.setCommunicationSpi(spi);
+
+        cfg.setConsistentId(igniteInstanceName);
+
+        if (igniteInstanceName.contains("client"))
+            cfg.setClientMode(true);
+
+//        cfg.setTracingSpi(getTracingSpi());
+
+        CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
+
+        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+        ccfg.setBackups(2);
+
+        cfg.setCacheConfiguration(ccfg);
+
+        return cfg;
+    }
+
+    @Test
+    public void testFooBar4() throws Exception {
+        IgniteEx client = startGrid("client");
+
+        for (int i = 0; i < 30_000; i++) {
+            Transaction tx = client.transactions().withLabel("label1").txStart(PESSIMISTIC, SERIALIZABLE);
+
+            client.cache(DEFAULT_CACHE_NAME).put(i, i + "aaa");
+
+            tx.commit();
+        }
     }
 
     /**
