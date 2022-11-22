@@ -323,7 +323,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param tombstone {@code True} for tombstones.
      * @return The queue.
      */
-    @TestOnly
     public FastSizeDeque<PendingRow> evictQueue(boolean tombstone) {
         return tombstone ? tombstoneEvictQueue : ttlEvictQueue;
     }
@@ -406,6 +405,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         PendingRow row;
 
         int cleared = 0;
+        int putAside = 0;
+
+        GridCacheEntryEx entryAside = null;
+        GridCacheContext<Object, Object> entryAsideCtx = null;
+
 
         cctx.database().checkpointReadLock();
 
@@ -423,7 +427,15 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     try {
                         GridCacheEntryEx entry = ctx.cache().entryEx(row.key);
 
-                        c.apply(entry, now); // Second argument is used for "forced expiration" logic.
+                        if (c.apply(entry, now))
+                            cleared++;
+                        else {
+                            putAside++;
+
+                            entryAside = entry;
+                            entryAsideCtx = ctx;
+                        }
+                        // Second argument is used for "forced expiration" logic.
                     }
                     catch (GridDhtInvalidPartitionException ignored) {
                         // The row belongs to obsolete partition, remove it.
@@ -436,8 +448,6 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     }
                 }
 
-                cleared++;
-
                 if ((cleared & 127) == 0) {
                     cctx.database().checkpointReadUnlock();
                     cctx.database().checkpointReadLock();
@@ -447,9 +457,25 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     break;
             }
 
-            if (cleared > 0 && log.isDebugEnabled()) {
-                log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
-                    ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
+            if (log.isInfoEnabled()) {
+                if (cleared > 0) {
+                    log.info("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
+                        ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
+                }
+
+                if (putAside > 0) {
+                    log.info("After the expiration [putAside=" + putAside + ", tombstone=" + tombstone +
+                        ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
+
+                    try {
+                        log.info("Example of entry which was put aside for again pass [entry=" +
+                            entryAside.key().value(entryAsideCtx.cacheObjectContext(), false) +
+                            ", part=" + entryAsideCtx.config().getAffinity().partition(entryAsideCtx.affinity().affinityKey(entryAside.key())) + ']');
+                    }
+                    catch (Exception e) {
+                        log.info("Example entry is not deserialized.");
+                    }
+                }
             }
 
             if (queue.isEmptyx()) {
