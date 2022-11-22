@@ -74,7 +74,14 @@ namespace ignite
                 /**
                  * Default constructor.
                  */
-                ColumnMeta()
+                ColumnMeta() :
+                    schemaName(),
+                    tableName(),
+                    columnName(),
+                    dataType(-1),
+                    precision(-1),
+                    scale(-1),
+                    nullability(Nullability::NULLABILITY_UNKNOWN)
                 {
                     // No-op.
                 }
@@ -90,8 +97,13 @@ namespace ignite
                  */
                 ColumnMeta(const std::string& schemaName, const std::string& tableName,
                            const std::string& columnName, int8_t dataType) :
-                    schemaName(schemaName), tableName(tableName), columnName(columnName), dataType(dataType),
-                    precision(-1), scale(-1), nullability(Nullability::NULLABILITY_UNKNOWN)
+                    schemaName(schemaName),
+                    tableName(tableName),
+                    columnName(columnName),
+                    dataType(dataType),
+                    precision(-1),
+                    scale(-1),
+                    nullability(Nullability::NULLABILITY_UNKNOWN)
                 {
                     // No-op.
                 }
