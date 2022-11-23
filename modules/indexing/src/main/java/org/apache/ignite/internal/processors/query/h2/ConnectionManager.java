@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngine;
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
+import org.apache.ignite.internal.util.GridBusyLock;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.Driver;
 import org.gridgain.internal.h2.api.JavaObjectSerializer;
@@ -92,10 +93,13 @@ public class ConnectionManager {
     private final ConcurrentStripedPool<H2Connection> connPool;
 
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
-    private volatile Connection sysConn;
+    private final Connection sysConn;
 
     /** H2 data handler. Primarily used for serialization. */
     private final DataHandler dataNhd;
+
+    /** Busy lock. */
+    private final GridBusyLock busyLock = new GridBusyLock();
 
     /**
      * Constructor.
@@ -120,11 +124,7 @@ public class ConnectionManager {
 
             sysConn.setSchema(QueryUtils.SCHEMA_INFORMATION);
 
-            assert sysConn instanceof JdbcConnection : sysConn;
-
-            JdbcConnection conn = (JdbcConnection)sysConn;
-
-            dataNhd = conn.getSession().getDataHandler();
+            dataNhd = sysConn.unwrap(JdbcConnection.class).getSession().getDataHandler();
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
@@ -188,6 +188,8 @@ public class ConnectionManager {
      * Close all connections.
      */
     private void closeConnections() {
+        busyLock.block();
+
         connPool.forEach(c -> U.close(c.connection(), log));
         connPool.clear();
 
@@ -267,6 +269,9 @@ public class ConnectionManager {
      * @return H2 connection wrapper.
      */
     public H2PooledConnection connection() {
+        if (!busyLock.enterBusy())
+            throw new IllegalStateException("Failed to initialize DB connection (grid is stopping)");
+
         try {
             H2Connection conn = connPool.borrow();
 
@@ -283,6 +288,9 @@ public class ConnectionManager {
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
+        }
+        finally {
+            busyLock.leaveBusy();
         }
     }
 
@@ -306,12 +314,20 @@ public class ConnectionManager {
      * @param conn Connection.
      */
     void recycle(H2Connection conn) {
-        boolean rmv = usedConns.remove(conn);
+        if (!busyLock.enterBusy())
+            return;
 
-        assert rmv : "Connection isn't tracked [conn=" + conn + ']';
+        try {
+            boolean rmv = usedConns.remove(conn);
 
-        if (!connPool.recycle(conn))
-            conn.close();
+            assert rmv : "Connection isn't tracked [conn=" + conn + ']';
+
+            if (!connPool.recycle(conn))
+                conn.close();
+        }
+        finally {
+            busyLock.leaveBusy();
+        }
     }
 
     /**
