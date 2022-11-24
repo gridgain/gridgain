@@ -130,7 +130,7 @@ public class ThinClientConfiguration {
      * @return {@code this} for chaining.
      */
     public ThinClientConfiguration setSendServerExceptionStackTraceToClient(boolean sendServerExcStackTraceToClient) {
-        sendServerExcStackTraceToClient = sendServerExcStackTraceToClient;
+        this.sendServerExcStackTraceToClient = sendServerExcStackTraceToClient;
 
         return this;
     }
