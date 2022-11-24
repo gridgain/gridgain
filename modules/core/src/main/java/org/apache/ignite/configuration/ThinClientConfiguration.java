@@ -99,17 +99,37 @@ public class ThinClientConfiguration {
     }
 
     /**
-     * @return If {@code true} sends a server exception stack to the client side.
+     * Gets a value indicating whether full exception stack trace should be sent to the client.
+     *
+     * @return If {@code true} sends a server exception stack to the client side; otherwise, sends only exception message.
      */
     public boolean sendServerExceptionStackTraceToClient() {
         return sendServerExcStackTraceToClient;
     }
 
     /**
-     * @param sendServerExcStackTraceToClient If {@code true} sends a server exception stack to the client side.
+     * Sets a value indicating whether full exception stack trace should be sent to the client.
+     *
+     * @param sendServerExcStackTraceToClient If {@code true} sends full server exception stack to the client side;
+     *                                        otherwise, sends only exception message.
+     * @return {@code this} for chaining.
+     * @deprecated Use {@link #setSendServerExceptionStackTraceToClient(boolean)} instead.
+     */
+    @Deprecated
+    public ThinClientConfiguration sendServerExceptionStackTraceToClient(boolean sendServerExcStackTraceToClient) {
+        this.sendServerExcStackTraceToClient = sendServerExcStackTraceToClient;
+
+        return this;
+    }
+
+    /**
+     * Sets a value indicating whether full exception stack trace should be sent to the client.
+     *
+     * @param sendServerExcStackTraceToClient If {@code true} sends full server exception stack to the client side;
+     *                                        otherwise, sends only exception message.
      * @return {@code this} for chaining.
      */
-    public ThinClientConfiguration sendServerExceptionStackTraceToClient(boolean sendServerExcStackTraceToClient) {
+    public ThinClientConfiguration setSendServerExceptionStackTraceToClient(boolean sendServerExcStackTraceToClient) {
         this.sendServerExcStackTraceToClient = sendServerExcStackTraceToClient;
 
         return this;
