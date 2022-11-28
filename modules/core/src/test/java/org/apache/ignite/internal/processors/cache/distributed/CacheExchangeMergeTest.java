@@ -578,17 +578,19 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = "IGNITE_EXCHANGE_HISTORY_SIZE", value = "5")
     public void testMergeAndHistoryCleanup() throws Exception {
         final int histSize = getInteger(IGNITE_EXCHANGE_HISTORY_SIZE, 5);
+        int iterNum = GridTestUtils.SF.applyLB(2, 1);
+        final int concurrentNodesNumber = GridTestUtils.SF.applyLB(3, 2);
 
         final Ignite srv0 = startGrid(0);
 
         int topVer = 1;
 
-        for (int i = 0; i < 3; i++) {
-            mergeExchangeWaitVersion(srv0, topVer + 3);
+        for (int i = 0; i < iterNum; i++) {
+            mergeExchangeWaitVersion(srv0, topVer + concurrentNodesNumber);
 
-            startGridsAsync(srv0, topVer, 3).get();
+            startGridsAsync(srv0, topVer, concurrentNodesNumber).get();
 
-            topVer += 3;
+            topVer += concurrentNodesNumber;
         }
 
         checkHistorySize(histSize);
