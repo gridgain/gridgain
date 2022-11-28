@@ -28,6 +28,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Ignore;
@@ -38,10 +39,10 @@ import org.junit.Test;
  */
 public class CacheParallelStartTest extends GridCommonAbstractTest {
     /** */
-    private static final int CACHES_COUNT = 5000;
+    private static final int CACHES_COUNT = GridTestUtils.SF.applyLB(1000, 500);
 
     /** */
-    private static final int GROUPS_COUNT = 50;
+    private static final int GROUPS_COUNT = GridTestUtils.SF.applyLB(10, 5);
 
     /** */
     private static final String STATIC_CACHE_PREFIX = "static-cache-";
