@@ -35,6 +35,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -1452,6 +1453,13 @@ public class GridH2Table extends TableBase {
         return qctx.local();
     }
 
+    private static final long IGNITE_DEFAULT_FALLBACK_STATISTICS_PRIMARY_COUNT = 10_000;
+
+    private static final long IGNITE_FALLBACK_STATISTICS_PRIMARY_COUNT = IgniteSystemProperties.getLong(
+        "IGNITE_FALLBACK_STATISTICS_PRIMARY_COUNT",
+        IGNITE_DEFAULT_FALLBACK_STATISTICS_PRIMARY_COUNT
+    );
+
     /**
      * Refreshes table stats if they are outdated.
      */
@@ -1465,6 +1473,22 @@ public class GridH2Table extends TableBase {
         if (needRefreshStats(statsTotalRowCnt, curTotalRowCnt) && cacheInfo.affinityNode()) {
             long primaryRowCnt = cacheSize(CachePeekMode.PRIMARY);
             long totalRowCnt = cacheSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
+
+            // Fix for case when query processing come here while node is under rebalancing and doesn't have primary
+            // partitions, so we override with 10k to make basic scan index cost consistent with cost of three indexes
+            primaryRowCnt = primaryRowCnt == 0 && totalRowCnt != 0
+                ? IGNITE_FALLBACK_STATISTICS_PRIMARY_COUNT
+                : primaryRowCnt;
+
+            if (IGNITE_SHOW_ORDER_OF_INDEXES) {
+                log.info("Refresh statistics: " + this.identifierStr + " [" +
+                        "statsTotalRowCnt=" + statsTotalRowCnt + ", " +
+                        "curTotalRowCnt=" + curTotalRowCnt + ", " +
+                        "primaryRowCnt=" + primaryRowCnt + ", " +
+                        "totalRowCnt=" + totalRowCnt +
+                        "]"
+                );
+            }
 
             size.reset();
             size.add(totalRowCnt);

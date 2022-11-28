@@ -101,6 +101,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
 
                 break;
 
+            case COMPATIBLE_8_7_6_X:
+                constFunc = this::getCostRangeIndex_8_7_6_x;
+
+                break;
+
             case COMPATIBLE_8_7_28:
                 constFunc = this::getCostRangeIndex_8_7_28;
 
@@ -506,9 +511,28 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     }
 
     /**
-     * Re-implement {@link BaseIndex#getCostRangeIndex} to suppor  compatibility with versions 8.7.6 and older.
+     * Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions 8.7.6 and older (honors row count)
      */
     private final long getCostRangeIndex_8_7_6(
+        Session ses,
+        int[] masks,
+        long rowCount,
+        TableFilter[] filters,
+        int filter,
+        SortOrder sortOrder,
+        boolean isScanIndex,
+        AllColumnsForPlan allColumnsSet
+    ) {
+        // Compatibility with old version without statistics.
+        rowCount = 10_000;
+
+        return getCostRangeIndex_8_7_6_x(ses, masks, rowCount, filters, filter, sortOrder, isScanIndex, allColumnsSet);
+    }
+
+    /**
+     * Re-implement {@link BaseIndex#getCostRangeIndex} to support compatibility with versions 8.7.6 and older.
+     */
+    private final long getCostRangeIndex_8_7_6_x(
             Session ses,
             int[] masks,
             long rowCount,
@@ -518,9 +542,6 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             boolean isScanIndex,
             AllColumnsForPlan allColumnsSet
     ) {
-        // Compatibility with old version without statistics.
-        rowCount = 10_000;
-
         rowCount += Constants.COST_ROW_OFFSET;
         int totalSelectivity = 0;
         long rowsCost = rowCount;
@@ -706,7 +727,12 @@ public abstract class H2IndexCostedBase extends BaseIndex {
         /**
          * Compatible with ver. 8.7.6.
          */
-        COMPATIBLE_8_7_6
+        COMPATIBLE_8_7_6,
+
+        /**
+         * Compatible with ver. 8.7.6. but honors row count
+         */
+        COMPATIBLE_8_7_6_X
     }
 
     /**

@@ -10,7 +10,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.gridgain.internal.h2.command.Prepared;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
@@ -727,6 +729,26 @@ public abstract class Table extends SchemaObjectBase {
         return columnMap.containsKey(columnName);
     }
 
+    protected static boolean getBoolean(String name, boolean dflt) {
+        assert name != null;
+
+        String v = System.getProperty(name);
+
+        if (v == null)
+            v = System.getenv(name);
+
+        return v == null ? dflt : Boolean.parseBoolean(v);
+    }
+
+    public static final boolean IGNITE_SHOW_ORDER_OF_INDEXES = getBoolean("IGNITE_SHOW_ORDER_OF_INDEXES", false);
+
+    public static final boolean IGNITE_SHOW_INDEX_CANDIDATES = getBoolean("IGNITE_SHOW_INDEX_CANDIDATES", false);
+
+    public static final boolean IGNITE_SHOW_INDEX_PRETTY_PRINT = IGNITE_SHOW_INDEX_CANDIDATES
+        && getBoolean("IGNITE_SHOW_INDEX_PRETTY_PRINT", false);
+
+    public static final String PRETTY_PRINT_DELIMITER = IGNITE_SHOW_INDEX_PRETTY_PRINT ? "\n" : ", ";
+
     /**
      * Get the best plan for the given search mask.
      *
@@ -746,9 +768,14 @@ public abstract class Table extends SchemaObjectBase {
         item.setIndex(getScanIndex(session));
         item.cost = item.getIndex().getCost(session, null, filters, filter, sortOrder, allColumnsSet);
         Trace t = session.getTrace();
+
+        StringBuilder planLog = new StringBuilder(">>> " + this.getClass().getSimpleName())
+            .append(" [")
+            .append(item.getIndex().getClass().getSimpleName()).append(" cost=").append(item.cost).append(" plan=").append(item.getIndex().getPlanSQL())
+            .append("] ");
+
         if (t.isDebugEnabled()) {
-            t.debug("Table      :     potential plan item cost {0} index {1}",
-                    item.cost, item.getIndex().getPlanSQL());
+            t.debug("Table      :     potential plan item cost {0} index {1}", item.cost, item.getIndex().getPlanSQL());
         }
 
         ArrayList<Index> indexes = getIndexes() == null ? null : new ArrayList<>(getIndexes());
@@ -764,13 +791,25 @@ public abstract class Table extends SchemaObjectBase {
                 item.cost = cost;
                 item.setIndex(hjIdx);
 
+                if (IGNITE_SHOW_ORDER_OF_INDEXES) {
+                    planLog.append(IGNITE_SHOW_INDEX_PRETTY_PRINT ? "\n    " : " ");
+                    planLog.append("chosen: ")
+                        .append(hjIdx.getClass().getSimpleName()).append(" [").append(item.cost).append(" / ").append(hjIdx.getPlanSQL()).append("]");
+                    System.out.println(planLog);
+                }
+
                 return item;
             }
             else if (session.isHashJoinEnabled())
                 indexes.add(hjIdx);
         }
 
+        TreeMap<Double, Index> candidates = new TreeMap<>();
+        int maxCandidateClassLength = 0;
+        int maxCandidateCostLength = 0;
+
         if (indexes != null && masks != null) {
+
             for (int i = 1, size = indexes.size(); i < size; i++) {
                 Index index = indexes.get(i);
 
@@ -786,11 +825,62 @@ public abstract class Table extends SchemaObjectBase {
                 }
 
                 if (cost < item.cost) {
+                    // Store repressed index as a candidate
+                    if (IGNITE_SHOW_ORDER_OF_INDEXES && IGNITE_SHOW_INDEX_CANDIDATES) {
+                        candidates.put(item.cost, item.getIndex());
+                        if (IGNITE_SHOW_INDEX_PRETTY_PRINT) {
+                            maxCandidateClassLength = Math.max(maxCandidateClassLength, item.getIndex().getClass().getSimpleName().length());
+                            maxCandidateCostLength = Math.max(maxCandidateCostLength, String.valueOf(cost).length());
+                        }
+                    }
+
                     item.cost = cost;
                     item.setIndex(index);
+                } else {
+                    if (IGNITE_SHOW_ORDER_OF_INDEXES && IGNITE_SHOW_INDEX_CANDIDATES) {
+                        candidates.put(cost, index);
+                        if (IGNITE_SHOW_INDEX_PRETTY_PRINT) {
+                            maxCandidateClassLength = Math.max(maxCandidateClassLength, item.getIndex().getClass().getSimpleName().length());
+                            maxCandidateCostLength = Math.max(maxCandidateCostLength, String.valueOf(cost).length());
+                        }
+                    }
                 }
             }
         }
+
+        if (IGNITE_SHOW_ORDER_OF_INDEXES) {
+            Index chosen = item.getIndex();
+            planLog.append(IGNITE_SHOW_INDEX_PRETTY_PRINT ? "\n    " : " ");
+            planLog.append("chosen: ").append(chosen.getClass().getSimpleName()).append(" [").append(item.cost).append(" / ").append(chosen.getPlanSQL()).append("]");
+
+            if (IGNITE_SHOW_INDEX_CANDIDATES && !candidates.isEmpty()) {
+                planLog.append(IGNITE_SHOW_INDEX_PRETTY_PRINT ? "\n    " : "  ");
+                planLog.append("candidates:");
+                planLog.append(IGNITE_SHOW_INDEX_PRETTY_PRINT ? "\n" : " ");
+                for (Map.Entry<Double, Index> c : candidates.entrySet()) {
+                    planLog.append(IGNITE_SHOW_INDEX_PRETTY_PRINT ? "        " : "");
+                    if (IGNITE_SHOW_INDEX_PRETTY_PRINT) {
+                        planLog.append(String.format(
+                            "%-" + maxCandidateClassLength + "s %" + maxCandidateCostLength + "s / %s",
+                            c.getValue().getClass().getSimpleName(),
+                            c.getKey(),
+                            c.getValue().getPlanSQL()
+                        ));
+                    } else {
+                        planLog.append(String.format(
+                            "%s [%s / %s]",
+                            c.getValue().getClass().getSimpleName(),
+                            c.getKey(),
+                            c.getValue().getPlanSQL()
+                        ));
+                    }
+                    planLog.append(PRETTY_PRINT_DELIMITER);
+                }
+            }
+
+            System.out.println(planLog);
+        }
+
         return item;
     }
 
