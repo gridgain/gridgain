@@ -674,7 +674,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
             return fut;
         }
         catch (IgniteException | IgniteCheckedException e) {
-            U.error(log, "Failed to execute cache command: " + req, e);
+            U.warn(log, "Failed to execute cache command: " + req, e);
 
             return new GridFinishedFuture<>(e);
         }
