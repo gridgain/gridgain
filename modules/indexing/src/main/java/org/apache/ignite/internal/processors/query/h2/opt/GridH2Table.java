@@ -1467,7 +1467,7 @@ public class GridH2Table extends TableBase {
             long totalRowCnt = cacheSize(CachePeekMode.PRIMARY, CachePeekMode.BACKUP);
 
             if (IGNITE_SHOW_ORDER_OF_INDEXES) {
-                System.out.println(">>> Refresh statistics: " + this.identifierStr + " [" +
+                log.info("Refresh statistics: " + this.identifierStr + " [" +
                         "statsTotalRowCnt=" + statsTotalRowCnt + ", " +
                         "curTotalRowCnt=" + curTotalRowCnt + ", " +
                         "primaryRowCnt=" + primaryRowCnt + ", " +

@@ -33,6 +33,7 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
  *     <li>Restart any of Server1 || Server2 || Server3 and watch the logs and selected indexes (it will chose __SCAN indexes)</li>
  * </ol>
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class Issue24hf extends GridAbstractTest {
 
     /**
@@ -99,32 +100,25 @@ public class Issue24hf extends GridAbstractTest {
         System.setProperty("IGNITE_SHOW_INDEX_CANDIDATES", "true");
         System.setProperty("IGNITE_SHOW_INDEX_PRETTY_PRINT", "true");
 
-        Ignite ignite = Ignition.start(nodeConfig(instance).setClientMode(client));
-        return ignite;
+        return Ignition.start(nodeConfig(instance).setClientMode(client));
     }
 
     static class Server1 {
-
         public static void main(String[] args) throws IgniteException {
             run("server-1", false);
         }
-
     }
 
     static class Server2 {
-
         public static void main(String[] args) throws IgniteException {
             run("server-2", false);
         }
-
     }
 
     static class Server3 {
-
         public static void main(String[] args) throws IgniteException {
             run("server-3", false);
         }
-
     }
 
     static final String ACCOUNT_TABLE = "\"account\".Account";
@@ -194,7 +188,6 @@ public class Issue24hf extends GridAbstractTest {
 
         private void querySubscriptionsByAccount(boolean explain) {
             String subName = "sub-" + random(ACCOUNTS_COUNT) + '.' + random(ACCOUNT_SUBSCRIPTIONS_COUNT / 3);
-
             SqlFieldsQuery qry = new SqlFieldsQuery(qry(QUERY_SUBSCRIPTIONS_BY_ACCOUNT_NAME, explain)).setArgs(subName);
             runQuery(queryCache(), qry);
         }
@@ -225,8 +218,9 @@ public class Issue24hf extends GridAbstractTest {
     static final int EXPECTED_NODES = 3;
     static final int ACCOUNTS_PER_NODE = 5000;
     static final int ACCOUNTS_COUNT = ACCOUNTS_PER_NODE * EXPECTED_NODES;
-    static final int ACCOUNT_SUBSCRIPTIONS_COUNT = 15;
+    static final int ACCOUNT_SUBSCRIPTIONS_COUNT = 10;
 
+    @SuppressWarnings("resource")
     static class Filler extends Issue24hf {
 
         public Filler(Ignite ignite) throws IgniteCheckedException {
@@ -254,7 +248,6 @@ public class Issue24hf extends GridAbstractTest {
 
         public void write() {
             AtomicLong idSequence = new AtomicLong(accountCache().size(CachePeekMode.PRIMARY));
-
             System.out.println("Start writing");
             while (true) {
                 fillAccount(idSequence);
@@ -297,13 +290,11 @@ public class Issue24hf extends GridAbstractTest {
     }
 
     static class Writer {
-
         public static void main(String[] args) throws IgniteException, IgniteCheckedException {
             Ignite ignite = run("writer", true);
             Filler filler = new Filler(ignite);
             filler.write();
         }
-
     }
 
     public static long random(long ceiling) {
