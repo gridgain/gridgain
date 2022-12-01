@@ -1696,23 +1696,23 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
         @Nullable IgniteInternalFuture<?> flush() throws IgniteInterruptedCheckedException {
             acquireRemapSemaphore();
 
-            for (PerStripeBuffer b : stripes) {
+            for (PerStripeBuffer perStripeBuf : stripes) {
                 AffinityTopologyVersion batchTopVer = null;
                 List<DataStreamerEntry> entries0 = null;
                 GridFutureAdapter<Object> curFut0 = null;
 
-                synchronized (b) {
-                    if (!b.entries.isEmpty()) {
-                        entries0 = b.entries;
-                        curFut0 = b.curFut;
-                        batchTopVer = b.batchTopVer;
+                synchronized (perStripeBuf) {
+                    if (!perStripeBuf.entries.isEmpty()) {
+                        entries0 = perStripeBuf.entries;
+                        curFut0 = perStripeBuf.curFut;
+                        batchTopVer = perStripeBuf.batchTopVer;
 
-                        b.renewBatch(false);
+                        perStripeBuf.renewBatch(false);
                     }
                 }
 
                 if (entries0 != null)
-                    submit(entries0, batchTopVer, curFut0, false, b.partId);
+                    submit(entries0, batchTopVer, curFut0, false, perStripeBuf.partId);
             }
 
             // Create compound future for this flush.
@@ -1892,7 +1892,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                 }
             }
 
-            IgniteInternalFuture<Object> fut;
+            GridFutureAdapter<Object> fut;
 
             byte plc = DataStreamProcessor.ioPolicy(ioPlcRslvr, node);
 
@@ -1954,7 +1954,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
                 fut = curFut;
 
-                reqs.put(reqId, (GridFutureAdapter<Object>)fut);
+                reqs.put(reqId, fut);
 
                 if (topVer == null)
                     topVer = ctx.cache().context().exchange().readyAffinityVersion();
@@ -1989,7 +1989,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                     // Anyway it does not make sense to track it.
                     reqs.remove(reqId);
 
-                    GridFutureAdapter<Object> fut0 = ((GridFutureAdapter<Object>)fut);
+                    GridFutureAdapter<Object> fut0 = fut;
 
                     if (e instanceof ClusterTopologyCheckedException)
                         fut0.onDone(e);
