@@ -2114,8 +2114,6 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (F.isEmpty(drMap))
             return;
 
-        ctx.dr().onReceiveCacheEntriesReceived(drMap.size());
-
         syncOp(new SyncInOp(drMap.size() == 1) {
             @Override public void inOp(GridNearTxLocal tx) throws IgniteCheckedException {
                 tx.putAllDrAsync(ctx, drMap).get();
@@ -2125,6 +2123,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
                 return "putAllConflict [drMap=" + drMap + ']';
             }
         });
+
+        ctx.dr().onReceiveCacheEntriesReceived(drMap.size());
     }
 
     /** {@inheritDoc} */
