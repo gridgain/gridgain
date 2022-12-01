@@ -348,42 +348,44 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         // Let's not let a checkpoint happen.
         gridDatabase(n).checkpointReadLock();
 
+        FileWriteAheadLogManager wal = wal(n);
+
         try {
             // Let's reserve the very first segment that will definitely be needed for the checkpoint.
-            assertTrue(wal(n).reserve(new FileWALPointer(0, 0, 0)));
+            assertTrue(wal.reserve(new FileWALPointer(0, 0, 0)));
 
-            for (int i = 0; wal(n).lastArchivedSegment() < 20L; i++)
+            for (int i = 0; wal.lastArchivedSegment() < 20L; i++)
                 n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(512 * KB)]);
 
             // Make sure nothing has been deleted from the archive.
             assertThat(walArchiveSize(n), greaterThanOrEqualTo(20L * walSegmentSize));
-            assertThat(wal(n).lastTruncatedSegment(), equalTo(-1L));
+            assertThat(wal.lastTruncatedSegment(), equalTo(-1L));
 
             // Let's try to reserve all the segments and then immediately release them.
-            long lastWalSegmentIndex = ((FileWALPointer)wal(n).lastWritePointer()).index();
+            long lastWalSegmentIndex = ((FileWALPointer)wal.lastWritePointer()).index();
 
             for (int i = 0; i < lastWalSegmentIndex; i++) {
                 FileWALPointer pointer = new FileWALPointer(i, 0, 0);
 
                 // Unable to reserve because the archive is full.
-                assertFalse(String.valueOf(i), wal(n).reserve(pointer));
+                assertFalse(String.valueOf(i), wal.reserve(pointer));
 
-                wal(n).release(pointer);
+                wal.release(pointer);
             }
 
             assertTrue(
                 String.valueOf(lastWalSegmentIndex),
-                wal(n).reserve(new FileWALPointer(lastWalSegmentIndex, 0, 0))
+                wal.reserve(new FileWALPointer(lastWalSegmentIndex, 0, 0))
             );
 
-            wal(n).release(new FileWALPointer(lastWalSegmentIndex, 0, 0));
+            wal.release(new FileWALPointer(lastWalSegmentIndex, 0, 0));
 
             // Let's wait a bit, suddenly there will be a deletion from the archive?
-            assertFalse(waitForCondition(() -> wal(n).lastTruncatedSegment() >= 0, 1_000, 100));
+            assertFalse(waitForCondition(() -> wal.lastTruncatedSegment() >= 0, 1_000, 100));
 
             // Make sure nothing has been deleted from the archive.
             assertThat(walArchiveSize(n), greaterThanOrEqualTo(20L * walSegmentSize));
-            assertThat(wal(n).lastTruncatedSegment(), equalTo(-1L));
+            assertThat(wal.lastTruncatedSegment(), equalTo(-1L));
         }
         finally {
             gridDatabase(n).checkpointReadUnlock();
@@ -398,8 +400,8 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         );
 
         assertThat(
-            wal(n).lastTruncatedSegment(),
-            lessThan(((FileWALPointer)getFieldValueHierarchy(wal(n), "lastCheckpointPtr")).index())
+            wal.lastTruncatedSegment(),
+            lessThan(((FileWALPointer)getFieldValueHierarchy(wal, "lastCheckpointPtr")).index())
         );
     }
 
