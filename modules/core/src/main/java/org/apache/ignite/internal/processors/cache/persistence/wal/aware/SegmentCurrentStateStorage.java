@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,12 +87,8 @@ class SegmentCurrentStateStorage extends SegmentObservable {
         long nextAbsIdx;
 
         synchronized (this) {
-            curAbsWalIdx++;
-
-            notifyAll();
-
             try {
-                while (curAbsWalIdx - lastAbsArchivedIdx > walSegmentsCnt && !forceInterrupted)
+                while ((curAbsWalIdx + 1) - lastAbsArchivedIdx > walSegmentsCnt && !forceInterrupted)
                     wait();
             }
             catch (InterruptedException e) {
@@ -102,7 +98,9 @@ class SegmentCurrentStateStorage extends SegmentObservable {
             if (forceInterrupted)
                 throw new IgniteInterruptedCheckedException("Interrupt waiting of change archived idx");
 
-            nextAbsIdx = curAbsWalIdx;
+            nextAbsIdx = ++curAbsWalIdx;
+
+            notifyAll();
         }
 
         notifyObservers(nextAbsIdx);
