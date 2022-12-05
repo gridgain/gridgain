@@ -183,7 +183,7 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
     public void testRandomRemove() throws Exception {
         IgniteCache<Integer, DbValue> cache = cache(DEFAULT_CACHE_NAME);
 
-        final int cnt = SF.apply(30_000);
+        final int cnt = SF.apply(20_000);
 
         long seed = System.nanoTime();
 
@@ -762,14 +762,14 @@ public abstract class IgniteDbPutGetAbstractTest extends IgniteDbAbstractTest {
 
     /** */
     private static int[] generateUniqueRandomKeys(int cnt, Random rnd) {
-        int[] keys = new int[cnt];
+        Integer[] keys = new Integer[cnt];
 
         for (int i = 0; i < cnt; i++)
             keys[i] = i;
 
-        Collections.shuffle(Arrays.asList(keys));
+        Collections.shuffle(Arrays.asList(keys), rnd);
 
-        return keys;
+        return Arrays.stream(keys).mapToInt(x -> x).toArray();
     }
 
     /**
