@@ -393,7 +393,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         boolean primary,
         boolean backup,
         AffinityTopologyVersion topVer
-    ) throws IgniteCheckedException {
+    ) {
         if (grp.isLocal())
             if (primary)
                 return cacheEntriesCount(cacheId, 0);

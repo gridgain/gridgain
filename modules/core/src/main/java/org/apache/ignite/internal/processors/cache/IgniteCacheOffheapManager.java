@@ -540,11 +540,9 @@ public interface IgniteCacheOffheapManager {
      * @param backup Backup entries flag.
      * @param topVer Topology version.
      * @return Entries count.
-     * @throws IgniteCheckedException If failed.
      */
     // TODO: MVCC>
-    public long cacheEntriesCount(int cacheId, boolean primary, boolean backup, AffinityTopologyVersion topVer)
-        throws IgniteCheckedException;
+    public long cacheEntriesCount(int cacheId, boolean primary, boolean backup, AffinityTopologyVersion topVer);
 
     /**
      * Clears offheap entries.
