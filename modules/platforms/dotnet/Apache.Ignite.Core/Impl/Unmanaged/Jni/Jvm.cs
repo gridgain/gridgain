@@ -57,6 +57,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged.Jni
             "--add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED",
             "--add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED",
             "--add-opens=java.base/java.io=ALL-UNNAMED",
+            "--add-opens=java.base/java.net=ALL-UNNAMED",
             "--add-opens=java.base/java.nio=ALL-UNNAMED",
             "--add-opens=java.base/java.util=ALL-UNNAMED",
             "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
