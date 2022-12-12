@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,11 +53,14 @@ class SegmentArchiveSizeStorage {
     /** Automatically release segments. Guarded by {@code this}. */
     private boolean autoRelease;
 
+    /** Segment of last completed checkpoint. Guarded by {@code this}. */
+    private long lastCpIdx = -1;
+
     /**
      * Segment sizes. Mapping: segment idx -> size in bytes. Guarded by {@code this}.
      * {@code null} if {@link #walArchiveUnlimited} == {@code true}.
      */
-    @Nullable private final Map<Long, Long> segmentSizes;
+    @Nullable private final TreeMap<Long, Long> segmentSizes;
 
     /**
      * Segment reservations storage.
@@ -205,7 +208,7 @@ class SegmentArchiveSizeStorage {
      */
     void startAutoReleaseSegments() {
         if (!walArchiveUnlimited) {
-            T2<Long, Integer> forceReleaseSegments = null;
+            T2<Long, Integer> forceReleaseSegments;
 
             synchronized (this) {
                 autoRelease = true;
@@ -231,6 +234,9 @@ class SegmentArchiveSizeStorage {
             long size = 0;
 
             for (Map.Entry<Long, Long> e : segmentSizes.entrySet()) {
+                if (e.getKey() > lastCpIdx)
+                    break;
+
                 releaseIdx = e.getKey();
                 releaseCnt++;
 
@@ -258,5 +264,15 @@ class SegmentArchiveSizeStorage {
         }
 
         reservationStorage.forceRelease(absIdx);
+    }
+
+    /**
+     * Update segment of last completed checkpoint.
+     * Required for binary recovery.
+     *
+     * @param absIdx Absolut segment index.
+     */
+    synchronized void lastCheckpointIdx(long absIdx) {
+        lastCpIdx = absIdx;
     }
 }

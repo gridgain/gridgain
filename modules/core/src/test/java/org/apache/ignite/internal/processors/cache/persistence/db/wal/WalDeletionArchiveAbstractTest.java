@@ -351,8 +351,10 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         FileWriteAheadLogManager wal = wal(n);
 
         try {
+            long idxLastCp = lastCheckpointPtr(n).index();
+
             // Let's reserve the very first segment that will definitely be needed for the checkpoint.
-            assertTrue(wal.reserve(new FileWALPointer(0, 0, 0)));
+            assertTrue(wal.reserve(new FileWALPointer(idxLastCp, 0, 0)));
 
             for (int i = 0; wal.lastArchivedSegment() < 20L; i++)
                 n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(512 * KB)]);
@@ -364,11 +366,11 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
             // Let's try to reserve all the segments and then immediately release them.
             long lastWalSegmentIndex = ((FileWALPointer)wal.lastWritePointer()).index();
 
-            for (int i = 0; i < lastWalSegmentIndex; i++) {
+            for (int i = (int) (idxLastCp + 1); i < lastWalSegmentIndex; i++) {
                 FileWALPointer pointer = new FileWALPointer(i, 0, 0);
 
-                // Unable to reserve because the archive is full.
-                assertFalse(String.valueOf(i), wal.reserve(pointer));
+                // Should be able to reserve segments because the checkpoint has not happened yet.
+                assertTrue(String.valueOf(i), wal.reserve(pointer));
 
                 wal.release(pointer);
             }
@@ -399,10 +401,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
             waitForCondition(() -> walArchiveSize(n) <= walSegmentSize, 1_000, 100)
         );
 
-        assertThat(
-            wal.lastTruncatedSegment(),
-            lessThan(((FileWALPointer)getFieldValueHierarchy(wal, "lastCheckpointPtr")).index())
-        );
+        assertThat(wal.lastTruncatedSegment(), lessThan(lastCheckpointPtr(n).index()));
     }
 
     /**
@@ -427,5 +426,15 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
      */
     private long walArchiveSize(Ignite n) {
         return Arrays.stream(wal(n).walArchiveFiles()).mapToLong(fd -> fd.file().length()).sum();
+    }
+
+    /**
+     * Returns the value of field {@code FileWriteAheadLogManager#lastCheckpointPtr}.
+     *
+     * @param n Node.
+     * @return Field value {@code FileWriteAheadLogManager#lastCheckpointPtr}.
+     */
+    private FileWALPointer lastCheckpointPtr(Ignite n) {
+        return getFieldValueHierarchy(wal(n), "lastCheckpointPtr");
     }
 }
