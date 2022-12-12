@@ -50,6 +50,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.InvalidUserCommandCheckedException;
 import org.apache.ignite.internal.client.GridClientCacheFlag;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.cache.CacheConfigurationOverride;
@@ -376,11 +377,16 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
         try {
             GridRestCommand cmd = req0.command();
 
-            if (req0.cacheName() == null && !CACHE_NAME_NOT_REQUIRED_REQUESTS.contains(cmd))
-                throw new IgniteCheckedException(GridRestCommandHandlerAdapter.missingParameter("cacheName"));
+            if (req0.cacheName() == null && !CACHE_NAME_NOT_REQUIRED_REQUESTS.contains(cmd)) {
+                return new GridFinishedFuture<>(
+                        new InvalidUserCommandCheckedException(
+                                GridRestCommandHandlerAdapter.missingParameter("cacheName")));
+            }
 
-            if (key == null && KEY_REQUIRED_REQUESTS.contains(cmd))
-                throw new IgniteCheckedException(GridRestCommandHandlerAdapter.missingParameter("key"));
+            if (key == null && KEY_REQUIRED_REQUESTS.contains(cmd)) {
+                return new GridFinishedFuture<>(
+                        new InvalidUserCommandCheckedException(GridRestCommandHandlerAdapter.missingParameter("key")));
+            }
 
             final Long ttl = req0.ttl();
 
