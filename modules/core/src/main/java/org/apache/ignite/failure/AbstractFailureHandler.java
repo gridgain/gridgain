@@ -61,9 +61,8 @@ public abstract class AbstractFailureHandler implements FailureHandler {
     }
 
     /**
-     * {@link ShutdownPolicy} to be used when handling critical situation by FailureProcessor mechanism.
-     *
-     * @return IMMEDIATE shutdown policy should be used as we treat any situation reached Failure Handler
+     * Returns {@link ShutdownPolicy} to be used when handling critical situation by FailureProcessor mechanism.
+     * IMMEDIATE shutdown policy is used as by default we treat any situation reached Failure Handler
      * as requiering immediate shutdown.
      */
     protected ShutdownPolicy shutdownPolicyToHandleFailure() {
