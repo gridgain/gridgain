@@ -16,8 +16,23 @@
 
 package org.apache.ignite.examples;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.commandline.CommandHandler;
 
 /**
  * Starts up an empty node with example compute configuration.
@@ -30,6 +45,61 @@ public class ExampleNodeStartup {
      * @throws IgniteException If failed.
      */
     public static void main(String[] args) throws IgniteException {
-        Ignition.start("examples/config/example-ignite.xml");
+
+        System.setProperty("IGNITE_DIRECT_IO_ENABLED", "true");
+
+        IgniteConfiguration cfg = new IgniteConfiguration();
+        cfg.setIgniteInstanceName("server");
+        cfg.setDataStorageConfiguration(
+            new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration().setPersistenceEnabled(true)
+        ));
+
+        Ignite ignite = Ignition.start(cfg);
+        ignite.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache("myCache");
+        pupulateCache(cache);
+
+
+        IgniteCache<Object, Object> xxxCache = ignite.getOrCreateCache("xxxCache");
+        pupulateCache(xxxCache);
+
+        ArrayList<String> cmdArgs = new ArrayList<>();
+        cmdArgs.add("--defragmentation");
+        cmdArgs.add("schedule");
+        cmdArgs.add("--nodes");
+        cmdArgs.add("e387f5c5-c9e8-4c12-8c61-b143365a3753");
+
+
+
+        CommandHandler handler = createCommandHandler();
+        handler.execute(cmdArgs);
+
+        System.out.println("Done");
+    }
+
+
+    /** */
+    private static CommandHandler createCommandHandler() {
+        Logger log = CommandHandler.initLogger(null);
+        return new CommandHandler(log);
+    }
+
+
+    private static void pupulateCache(IgniteCache cache){
+        Random rnd = new Random();
+        for(int i = 0; i < 10000; i++) {
+
+            int len = rnd.nextInt(10000);
+            int[] data = new int[len];
+
+            for(int j=0; j < len; j++){
+                data[j] = rnd.nextInt(10000);
+            }
+
+            cache.put(i, data);
+        }
     }
 }

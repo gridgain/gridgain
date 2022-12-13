@@ -35,9 +35,9 @@ public class IgnitePdsNativeIoTestSuite {
         IgnitePdsTestSuite.addRealPageStoreTests(suite, null);
 
         //long running test by design with light parameters
-        suite.add(IgnitePdsReplacementNativeIoTest.class);
+        suite.add(GridCommandHandlerDefragmentationTest.class);
 
-        suite.add(IgniteNativeIoWithNoPersistenceTest.class);
+        //suite.add(IgniteNativeIoWithNoPersistenceTest.class);
 
         return suite;
     }

@@ -83,41 +83,41 @@ public class AlignedBuffersDirectFileIOFactory implements FileIOFactory {
         ioBlockSize = IgniteNativeIoLib.getDirectIOBlockSize(storePath.getAbsolutePath(), log);
 
         if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DIRECT_IO_ENABLED, true)) {
-            if (log.isInfoEnabled())
-                log.info("Direct IO is explicitly disabled by system property.");
+                if (log.isInfoEnabled())
+                    log.info("Direct IO is explicitly disabled by system property.");
 
-            return;
-        }
-
-        if (ioBlockSize > 0) {
-            int blkSize = ioBlockSize;
-
-            if (pageSize % blkSize != 0) {
-                U.warn(log, String.format("Unable to setup Direct IO for Ignite [pageSize=%d bytes;" +
-                        " file system block size=%d]. For speeding up Ignite consider setting %s.setPageSize(%d)." +
-                        " Direct IO is disabled.",
-                    pageSize, blkSize, DataStorageConfiguration.class.getSimpleName(), blkSize));
+                return;
             }
-            else {
-                useBackupFactory = false;
 
-                tlbOnePageAligned = new ThreadLocal<ByteBuffer>() {
-                    @Override protected ByteBuffer initialValue() {
-                        return createManagedBuffer(pageSize);
+            if (ioBlockSize > 0) {
+                int blkSize = ioBlockSize;
+
+                if (pageSize % blkSize != 0) {
+                    U.warn(log, String.format("Unable to setup Direct IO for Ignite [pageSize=%d bytes;" +
+                            " file system block size=%d]. For speeding up Ignite consider setting %s.setPageSize(%d)." +
+                            " Direct IO is disabled.",
+                        pageSize, blkSize, DataStorageConfiguration.class.getSimpleName(), blkSize));
+                }
+                else {
+                    useBackupFactory = false;
+
+                    tlbOnePageAligned = new ThreadLocal<ByteBuffer>() {
+                        @Override protected ByteBuffer initialValue() {
+                            return createManagedBuffer(pageSize);
+                        }
+                    };
+
+                    if (log.isInfoEnabled()) {
+                        log.info(String.format("Direct IO is enabled for block IO operations on aligned memory structures." +
+                            " [block size = %d, durable memory page size = %d]", blkSize, pageSize));
                     }
-                };
-
-                if (log.isInfoEnabled()) {
-                    log.info(String.format("Direct IO is enabled for block IO operations on aligned memory structures." +
-                        " [block size = %d, durable memory page size = %d]", blkSize, pageSize));
                 }
             }
-        }
-        else {
-            if (log.isInfoEnabled()) {
-                log.info(String.format("Direct IO library is not available on current operating system [%s]." +
-                    " Direct IO is not enabled.", System.getProperty("os.version")));
-            }
+            else {
+                if (log.isInfoEnabled()) {
+                    log.info(String.format("Direct IO library is not available on current operating system [%s]." +
+                        " Direct IO is not enabled.", System.getProperty("os.version")));
+                }
         }
 
     }
