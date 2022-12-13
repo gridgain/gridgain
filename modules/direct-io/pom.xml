@@ -128,7 +128,7 @@
         <dependency>
             <groupId>org.gridgain</groupId>
             <artifactId>ignite-control-utility</artifactId>
-            <version>8.8.127-SNAPSHOT</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

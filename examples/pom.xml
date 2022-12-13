@@ -153,18 +153,18 @@
             <artifactId>jaxb-core</artifactId>
             <version>2.3.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.gridgain</groupId>
-            <artifactId>ignite-control-utility</artifactId>
-            <version>8.8.127-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.gridgain</groupId>
-            <artifactId>ignite-direct-io</artifactId>
-            <version>8.8.127-SNAPSHOT</version>
-            <scope>compile</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.gridgain</groupId>-->
+<!--            <artifactId>ignite-control-utility</artifactId>-->
+<!--            <version>8.8.127-SNAPSHOT</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.gridgain</groupId>-->
+<!--            <artifactId>ignite-direct-io</artifactId>-->
+<!--            <version>8.8.127-SNAPSHOT</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
     </dependencies>
 
     <properties>
