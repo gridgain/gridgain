@@ -32,7 +32,7 @@ public class IgnitePdsNativeIoTestSuite {
     public static List<Class<?>> suite() {
         List<Class<?>> suite = new ArrayList<>();
 
-        IgnitePdsTestSuite.addRealPageStoreTests(suite, null);
+        //IgnitePdsTestSuite.addRealPageStoreTests(suite, null);
 
         //long running test by design with light parameters
         suite.add(GridCommandHandlerDefragmentationTest.class);
