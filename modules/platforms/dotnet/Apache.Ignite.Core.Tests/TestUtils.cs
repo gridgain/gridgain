@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Tests
             ? new List<string>
             {
                 "-XX:+HeapDumpOnOutOfMemoryError",
-                "-Xms4g",
+                "-Xms5g",
                 "-Xmx7g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
