@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -57,6 +58,15 @@ public abstract class AbstractFailureHandler implements FailureHandler {
     /** {@inheritDoc} */
     @Override public boolean onFailure(Ignite ignite, FailureContext failureCtx) {
         return !ignoredFailureTypes.contains(failureCtx.type()) && handle(ignite, failureCtx);
+    }
+
+    /**
+     * Returns {@link ShutdownPolicy} to be used when handling critical situation by FailureProcessor mechanism.
+     * IMMEDIATE shutdown policy is used as by default we treat any situation reached Failure Handler
+     * as requiering immediate shutdown.
+     */
+    protected ShutdownPolicy shutdownPolicyToHandleFailure() {
+        return ShutdownPolicy.IMMEDIATE;
     }
 
     /**
