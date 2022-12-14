@@ -182,13 +182,16 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             if (handshakeDuration != null) {
                 GridNioFutureImpl<?> fut = ses.meta(HANDSHAKE_FUT_META_KEY);
 
+                long startTime = System.nanoTime();
+
                 if (fut == null) {
                     fut = new GridNioFutureImpl<>(null);
 
                     ses.addMeta(HANDSHAKE_FUT_META_KEY, fut);
                 }
-
-                long startTime = System.nanoTime();
+                else {
+                    U.dumpStack(log, ">>>>> Handshake future already exists [fut=" + fut + ", startTime=" + startTime + ']');
+                }
 
                 fut.listen(f -> handshakeDuration.value(U.nanosToMillis(System.nanoTime() - startTime)));
             }
