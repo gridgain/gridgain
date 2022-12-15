@@ -74,12 +74,13 @@ namespace Apache.Ignite.Core.Tests
             ? new List<string>
             {
                 "-XX:+HeapDumpOnOutOfMemoryError",
-                "-Xms5g",
-                "-Xmx7g",
+                "-Xms2g",
+                "-Xmx4g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
                 "-Duser.timezone=UTC",
-                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
+                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
+                "-DIGNITE_UPDATE_NOTIFIER=false"
             }
             : new List<string>
             {
@@ -90,7 +91,8 @@ namespace Apache.Ignite.Core.Tests
                 "-DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000",
                 "-DIGNITE_QUIET=true",
                 "-Duser.timezone=UTC",
-                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
+                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
+                "-DIGNITE_UPDATE_NOTIFIER=false"
             };
 
         /** */
