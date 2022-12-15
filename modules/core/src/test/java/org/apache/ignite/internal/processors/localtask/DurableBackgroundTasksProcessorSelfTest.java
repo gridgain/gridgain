@@ -48,8 +48,8 @@ import static org.apache.ignite.internal.processors.localtask.DurableBackgroundT
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.hasKey;
 
 /**
  * Class for testing the {@link DurableBackgroundTasksProcessor}.
@@ -349,7 +349,7 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
         // To ensure that after the checkpoint, the converted task is deleted.
         forceCheckpoint(n);
 
-        assertThat(tasks(n).keySet(), containsInAnyOrder(t1.name(), hasKey(t2.name())));
+        assertThat(tasks(n).keySet(), containsInAnyOrder(t1.name(), t2.name()));
 
         checkStateAndMetaStorage(n, t1, STARTED, true, false, false);
         checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
