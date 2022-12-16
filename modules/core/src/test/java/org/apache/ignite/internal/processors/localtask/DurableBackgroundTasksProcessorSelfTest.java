@@ -48,6 +48,7 @@ import static org.apache.ignite.internal.processors.localtask.DurableBackgroundT
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 
@@ -202,10 +203,17 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
         n = startGrid(0);
         n.cluster().state(ACTIVE);
 
-        t = ((SimpleTask)tasks(n).get(t.name()).task());
+        DurableBackgroundTaskState<?> taskState = tasks(n).get(t.name());
+
+        t = ((SimpleTask)taskState.task());
 
         t.onExecFut.get(getTestTimeout());
+
+        // To avoid a race between signaling the start of a task and changing its status.
+        waitForCondition(() -> taskState.state() == STARTED, getTestTimeout(), 10);
+
         checkStateAndMetaStorage(n, t, STARTED, true, false);
+
         t.taskFut.onDone(complete(null));
     }
 
