@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Tests
 
         /** */
         public const int DfltBusywaitSleepInterval = 200;
-        
+
         /** System cache name. */
         public const string UtilityCacheName = "ignite-sys-cache";
 
@@ -69,31 +69,21 @@ namespace Apache.Ignite.Core.Tests
             // ReSharper disable once AssignNullToNotNullAttribute
             Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ignite_work");
 
+        private static readonly IList<string> TestJvmOptsCommon = new List<string>
+        {
+            "-XX:+HeapDumpOnOutOfMemoryError",
+            "-ea",
+            "-DIGNITE_QUIET=true",
+            "-Duser.timezone=UTC",
+            "-DIGNITE_UPDATE_NOTIFIER=false",
+            "-DIGNITE_SENSITIVE_DATA_LOGGING=plain"
+        };
+
         /** */
-        private static readonly IList<string> TestJvmOpts = Environment.Is64BitProcess
-            ? new List<string>
-            {
-                "-XX:+HeapDumpOnOutOfMemoryError",
-                "-Xms2g",
-                "-Xmx2g",
-                "-ea",
-                "-DIGNITE_QUIET=true",
-                "-Duser.timezone=UTC",
-                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
-                "-DIGNITE_UPDATE_NOTIFIER=false"
-            }
-            : new List<string>
-            {
-                "-XX:+HeapDumpOnOutOfMemoryError",
-                "-Xms64m",
-                "-Xmx99m",
-                "-ea",
-                "-DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000",
-                "-DIGNITE_QUIET=true",
-                "-Duser.timezone=UTC",
-                "-DIGNITE_SENSITIVE_DATA_LOGGING=plain",
-                "-DIGNITE_UPDATE_NOTIFIER=false"
-            };
+        private static readonly IList<string> TestJvmOpts = (Environment.Is64BitProcess
+                ? new[] { "-Xms2g", "-Xmx2g" }
+                : new[] { "-Xms64m", "-Xmx99m", "-DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000" })
+            .Concat(TestJvmOptsCommon).ToList();
 
         /** */
         private static readonly IList<string> JvmDebugOpts =
@@ -264,7 +254,7 @@ namespace Apache.Ignite.Core.Tests
 
             return false;
         }
-        
+
         /// <summary>
         /// Waits for particular topology on specific cache (system cache by default).
         /// </summary>
