@@ -48,6 +48,8 @@ import static org.apache.ignite.internal.processors.localtask.DurableBackgroundT
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 /**
  * Class for testing the {@link DurableBackgroundTasksProcessor}.
@@ -76,7 +78,8 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
-            );
+            )
+            .setClusterStateOnStart(INACTIVE);
     }
 
     /**
@@ -344,16 +347,14 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
 
         n = startGrid(0);
 
-        assertEquals(3, tasks(n).size());
-
-        checkStateAndMetaStorage(n, t0, COMPLETED, true, true, false);
-        checkStateAndMetaStorage(n, t1, INIT, true, false, false);
-
         n.cluster().state(ACTIVE);
 
-        t2 = (SimpleTask)tasks(n).get(t2.name()).task();
-        t2.onExecFut.get(getTestTimeout());
+        // To ensure that after the checkpoint, the converted task is deleted.
+        forceCheckpoint(n);
 
+        assertThat(tasks(n).keySet(), containsInAnyOrder(t1.name(), t2.name()));
+
+        checkStateAndMetaStorage(n, t1, STARTED, true, false, false);
         checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
     }
 
