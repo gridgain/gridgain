@@ -364,8 +364,14 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
 
         n.cluster().state(ACTIVE);
 
-        t2 = (SimpleTask)tasks(n).get(t2.name()).task();
+        DurableBackgroundTaskState<?> taskState2 = tasks(n).get(t2.name());
+
+        t2 = (SimpleTask)taskState2.task();
+
         t2.onExecFut.get(getTestTimeout());
+
+        // To avoid a race between signaling the start of a task and changing its status.
+        waitForCondition(() -> taskState2.state() == STARTED, getTestTimeout(), 10);
 
         checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
     }
