@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.client.Person;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -39,9 +42,12 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetrics;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.util.IgniteUtils.KB;
+import static org.apache.ignite.internal.util.IgniteUtils.MB;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertThat;
@@ -64,16 +70,19 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        cleanPersistenceDir();
-
         super.beforeTest();
 
-        grid = startGrid();
+        stopAllGrids();
+
+        cleanPersistenceDir();
+
+        grid = startGrid(0);
+
         grid.cluster().state(ClusterState.ACTIVE);
 
-        CacheConfiguration<Integer, Person> cacheConfiguration = new CacheConfiguration<Integer, Person>(TEST_CACHE_NAME)
-            .setIndexedTypes(Integer.class, Person.class);
-        cache = grid.createCache(cacheConfiguration);
+        cache = grid.createCache(
+            new CacheConfiguration<Integer, Person>(TEST_CACHE_NAME).setIndexedTypes(Integer.class, Person.class)
+        );
 
         idxPageCounter = new IndexPageCounter(grid, true);
     }
@@ -82,7 +91,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        grid.close();
+        stopAllGrids();
 
         cleanPersistenceDir();
     }
@@ -95,7 +104,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
-                            .setMaxSize(12 * 1024 * 1024) // 12 MB
+                            .setMaxSize(12 * MB)
                             .setPersistenceEnabled(true)
                     )
             );
@@ -117,10 +126,12 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
         long idxPagesOnDisk;
         long idxPagesInMemory;
 
+        String namePrefix = IntStream.range(0, (int)KB).mapToObj(i -> "a").collect(Collectors.joining());
+
         do {
             // insert data into the cache until some index pages get displaced to the storage
             for (int i = 0; i < 100; i++, personId++)
-                cache.put(personId, new Person(personId, "foobar"));
+                cache.put(personId, new Person(personId, namePrefix + "_" + personId));
 
             forceCheckpoint(grid);
 
@@ -128,7 +139,6 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             idxPagesInMemory = idxPageCounter.countIdxPagesInMemory(grpId);
 
             assertThat(pageMetrics.indexPages().value(), is(idxPagesInMemory));
-
         } while (idxPagesOnDisk <= idxPagesInMemory);
 
         // load pages back into memory and check that the metric value has increased
@@ -166,6 +176,8 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             .allocateDirect(pageStore.getPageSize())
             .order(ByteOrder.nativeOrder());
 
+        log.error("Asshole pageStoreSize=" + pageStore.size());
+
         // Page Store contains a one-page header
         long numPages = pageStore.size() / pageStore.getPageSize() - 1;
 
@@ -185,6 +197,71 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             buf.clear();
         }
 
+        log.error("Asshole idxPagesSize=" + result.size());
+
         return result;
+    }
+
+    /**
+     * A person entity used for the tests.
+     */
+    private static class Person {
+        /** Id. */
+        @QuerySqlField(index = true)
+        private Integer id;
+
+        /** Name. */
+        @QuerySqlField(index = true)
+        private String name;
+
+        /** Constructor. */
+        public Person(Integer id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        /** @return id. */
+        public Integer getId() {
+            return id;
+        }
+
+        /** @return name. */
+        public String getName() {
+            return name;
+        }
+
+        /**
+         *
+         */
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
+        /**
+         *
+         */
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(id, name);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object obj) {
+            if (!(obj instanceof Person))
+                return false;
+
+            Person other = (Person)obj;
+
+            return other.id.equals(id) && other.name.equals(name);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(Person.class, this);
+        }
     }
 }
