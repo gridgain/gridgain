@@ -475,6 +475,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceCancelOnSupplyError() throws Exception {
+        final long TOP_VER_BASE_TIME = 1388520000000L;
+
         backups = 4;
 
         // Prepare some data.
@@ -494,12 +496,22 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         forceCheckpoint();
 
+        long prevStartTime = grid(0).context().discovery().gridStartTime();
+        GridCacheVersion prevLastVer = grid(0).context().cache().context().versions().last();
+
         stopAllGrids();
 
         // Rewrite data to trigger further rebalance.
         IgniteEx supplierNode = startGrid(0);
 
         supplierNode.cluster().state(ACTIVE);
+
+        long startTime = grid(0).context().discovery().gridStartTime();
+        GridCacheVersion lastVer = grid(0).context().cache().context().versions().last();
+
+        log.warning(">>>>> StartTimeComparator " +
+            "[prevStartTime=" + prevStartTime + ", prevLastVer=" + prevLastVer + ", offset=" + ((int) ((prevStartTime - TOP_VER_BASE_TIME) / 1000))
+            + ", startTime=" + startTime + ", lastVer=" + lastVer + ", offset=" + ((int) ((startTime - TOP_VER_BASE_TIME) / 1000)) + ']');
 
         IgniteCache<Object, Object> cache = supplierNode.cache(CACHE_NAME);
 
