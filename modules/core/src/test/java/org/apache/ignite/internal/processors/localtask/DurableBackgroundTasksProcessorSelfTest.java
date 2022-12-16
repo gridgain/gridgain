@@ -48,7 +48,6 @@ import static org.apache.ignite.internal.processors.localtask.DurableBackgroundT
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
-import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 
@@ -79,7 +78,8 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
-            );
+            )
+            .setClusterStateOnStart(INACTIVE);
     }
 
     /**
@@ -203,17 +203,10 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
         n = startGrid(0);
         n.cluster().state(ACTIVE);
 
-        DurableBackgroundTaskState<?> taskState = tasks(n).get(t.name());
-
-        t = ((SimpleTask)taskState.task());
+        t = ((SimpleTask)tasks(n).get(t.name()).task());
 
         t.onExecFut.get(getTestTimeout());
-
-        // To avoid a race between signaling the start of a task and changing its status.
-        waitForCondition(() -> taskState.state() == STARTED, getTestTimeout(), 10);
-
         checkStateAndMetaStorage(n, t, STARTED, true, false);
-
         t.taskFut.onDone(complete(null));
     }
 
@@ -354,25 +347,14 @@ public class DurableBackgroundTasksProcessorSelfTest extends GridCommonAbstractT
 
         n = startGrid(0);
 
+        n.cluster().state(ACTIVE);
+
         // To ensure that after the checkpoint, the converted task is deleted.
         forceCheckpoint(n);
 
         assertThat(tasks(n).keySet(), containsInAnyOrder(t1.name(), t2.name()));
 
         checkStateAndMetaStorage(n, t1, STARTED, true, false, false);
-        checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
-
-        n.cluster().state(ACTIVE);
-
-        DurableBackgroundTaskState<?> taskState2 = tasks(n).get(t2.name());
-
-        t2 = (SimpleTask)taskState2.task();
-
-        t2.onExecFut.get(getTestTimeout());
-
-        // To avoid a race between signaling the start of a task and changing its status.
-        waitForCondition(() -> taskState2.state() == STARTED, getTestTimeout(), 10);
-
         checkStateAndMetaStorage(n, t2, STARTED, true, false, true);
     }
 
