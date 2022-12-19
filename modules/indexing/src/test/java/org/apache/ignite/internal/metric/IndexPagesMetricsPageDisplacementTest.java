@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetri
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.Repeat;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -180,7 +181,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             .allocateDirect(pageStore.getPageSize())
             .order(ByteOrder.nativeOrder());
 
-        log.error("Asshole pageStoreSize=" + pageStore.size());
+        log.error("Asshole pageStoreSize=" + U.humanReadableByteCount(pageStore.size()));
 
         // Page Store contains a one-page header
         long numPages = pageStore.size() / pageStore.getPageSize() - 1;
