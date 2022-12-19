@@ -105,6 +105,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setPageSize((int) (4 * KB))
+                    .setConcurrencyLevel(4)
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setMaxSize(12 * MB)
