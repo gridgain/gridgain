@@ -39,6 +39,7 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Objects.nonNull;
@@ -781,6 +782,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
      * Verify that the eviction strategy can support large dataregion.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36062")
     public void testLargeRegionsWithRandomLRU() throws Exception {
         doTestLargeRegionsWithEviction(DataPageEvictionMode.RANDOM_LRU);
     }
@@ -789,6 +791,7 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
      * Verify that the eviction strategy can support large dataregion.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36062")
     public void testLargeRegionsWithRandom2LRU() throws Exception {
         doTestLargeRegionsWithEviction(DataPageEvictionMode.RANDOM_2_LRU);
     }
