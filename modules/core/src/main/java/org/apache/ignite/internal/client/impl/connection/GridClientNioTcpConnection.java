@@ -241,6 +241,14 @@ public class GridClientNioTcpConnection extends GridClientConnection {
             if (sslCtx != null) {
                 sslHandshakeFut = new GridNioFutureImpl<>(null);
 
+                sslHandshakeFut.listen(f -> {
+                    if (f.error() == null) {
+                        log.warning(">>>>> sslHandshakeFut completed successfully [clientId=" + clientId + ']');
+                    }
+                    else {
+                        log.warning(">>>>> sslHandshakeFut failed [clientId=" + clientId + ']');
+                    }
+                });
                 meta.put(GridNioSslFilter.HANDSHAKE_FUT_META_KEY, sslHandshakeFut);
             }
 

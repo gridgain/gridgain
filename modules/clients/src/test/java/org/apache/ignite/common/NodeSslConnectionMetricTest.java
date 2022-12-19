@@ -20,6 +20,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.client.ClientConnectionException;
@@ -375,7 +377,12 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     ) {
         SslContextFactory sslCtxFactory = sslContextFactory(keyStore, trustStore, cipherSuite, protocol);
 
+        Map<String, String> attrs = new HashMap<>();
+        attrs.put("test_class_desc", testClassDescription());
+        attrs.put("test_method", getName());
+
         return new GridClientConfiguration()
+//            .setUserAttributes(attrs)
             .setServers(Collections.singleton("127.0.0.1:11211"))
             .setSslContextFactory(sslCtxFactory::create);
     }

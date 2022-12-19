@@ -80,7 +80,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
 
     /* Suppression logging if needed. */
     static {
-        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_GRID_CLIENT_LOG_ENABLED, false)) {
+        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_GRID_CLIENT_LOG_ENABLED, true)) {
             boolean isLog4jUsed = U.gridClassLoader().getResource("org/apache/log4j/Appender.class") != null;
 
             try {
@@ -210,6 +210,8 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
             connMgr = createConnectionManager(id, sslCtx, cfg, routers, top, null, routerClient, beforeNodeStart);
 
             try {
+                log.warning(">>>>> Trying to initiate a client connection [clientId=" + id + ']');
+                U.dumpStack(null, ">>>>> Trying to initiate a client connection [clientId=" + id + ']');
                 // Init connection manager.
                 tryInit();
             }
@@ -287,8 +289,10 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
                     removeTopologyListener((GridClientTopologyListener)aff);
             }
 
-            if (log.isLoggable(Level.INFO))
+            if (log.isLoggable(Level.INFO)) {
                 log.info("Client stopped [id=" + id + ", waitCompletion=" + waitCompletion + ']');
+                U.dumpStack(null, "Client stopped [id=" + id + ", waitCompletion=" + waitCompletion + ']');
+            }
         }
     }
 
