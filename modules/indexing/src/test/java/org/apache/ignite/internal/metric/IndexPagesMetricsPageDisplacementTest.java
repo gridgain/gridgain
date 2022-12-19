@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMetri
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.testframework.junits.Repeat;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -116,6 +117,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
      * go down.
      */
     @Test
+    @Repeat(10)
     public void testPageDisplacement() throws IgniteCheckedException {
         int grpId = grid.cachex(TEST_CACHE_NAME).context().groupId();
 
