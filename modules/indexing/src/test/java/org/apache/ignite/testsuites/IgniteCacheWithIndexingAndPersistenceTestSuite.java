@@ -17,6 +17,10 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.metric.IndexPagesMetricsPageDisplacementTest;
+import org.apache.ignite.internal.metric.IndexPagesMetricsPersistentTest;
+import org.apache.ignite.internal.processors.cache.StartCachesInParallelTest;
+import org.apache.ignite.internal.processors.cache.index.IoStatisticsBasicIndexSelfTest;
+import org.apache.ignite.internal.processors.query.CleanupIndexTreeCheckpointFailoverTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -25,10 +29,10 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-//    StartCachesInParallelTest.class,
-//    IoStatisticsBasicIndexSelfTest.class,
-//    CleanupIndexTreeCheckpointFailoverTest.class,
-//    IndexPagesMetricsPersistentTest.class,
+    StartCachesInParallelTest.class,
+    IoStatisticsBasicIndexSelfTest.class,
+    CleanupIndexTreeCheckpointFailoverTest.class,
+    IndexPagesMetricsPersistentTest.class,
     IndexPagesMetricsPageDisplacementTest.class
 })
 public class IgniteCacheWithIndexingAndPersistenceTestSuite {

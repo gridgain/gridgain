@@ -64,9 +64,6 @@ class IndexPageCounter {
         long idxPageCnt = 0;
 
         for (int i = 0; i < pageMemory.loadedPages(); i++) {
-            if (i == 0)
-                grid.log().error("Asshole pageMemory.loadedPages()=" + pageMemory.loadedPages());
-
             long pageId = PageIdUtils.pageId(PageIdAllocator.INDEX_PARTITION, (byte)0, i);
 
             if (persistenceEnabled) {
