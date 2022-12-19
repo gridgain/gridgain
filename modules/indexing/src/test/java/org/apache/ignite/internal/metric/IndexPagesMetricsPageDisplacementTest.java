@@ -86,7 +86,8 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             )
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
-                    // Default values are not suitable for us.
+                    // Default values are not suitable for us because bigger concurrency level means bigger
+                    // segment sizes which means no page replacement.
                     .setPageSize((int)(4 * KB))
                     .setConcurrencyLevel(4)
                     .setDefaultDataRegionConfiguration(
@@ -117,7 +118,7 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
         DataRegion dataRegion = grid.context().cache().context().database().dataRegion(null);
         PageMetrics pageMetrics = dataRegion.metrics().cacheGrpPageMetrics(grpId);
 
-        // Test may start to fluky if the size of the PageMemoryImpl.Segment increases.
+        // Test may start to flaky if the size of the PageMemoryImpl.Segment increases.
         assertEquals(
             dataRegion.config().getMaxSize() + IgniteUtils.checkpointBufferSize(dataRegion.config()),
             LongStream.of(getFieldValue(dataRegion.pageMemory(), "sizes")).sum()
