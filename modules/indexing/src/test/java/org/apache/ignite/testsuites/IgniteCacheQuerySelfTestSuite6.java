@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.query.CheckIndexConsistencyOnRemove
 import org.apache.ignite.internal.processors.query.HashJoinQueryTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlSinglePartitionMultiParallelismTest;
 import org.apache.ignite.internal.processors.query.MemLeakOnSqlWithClientReconnectTest;
+import org.apache.ignite.internal.processors.query.QueryEntityAliasesTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -80,6 +81,7 @@ import org.junit.runners.Suite;
     CacheContinuousQueryFilterDeploymentFailedTest.class,
     CacheContinuousQueryDeploymentToClientTest.class,
     IgniteSqlSinglePartitionMultiParallelismTest.class,
+    QueryEntityAliasesTest.class
 })
 public class IgniteCacheQuerySelfTestSuite6 {
 }
