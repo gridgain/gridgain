@@ -20,12 +20,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.testframework.junits.DynamicSuite;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 
 /**
  * Test suite.
  */
 @RunWith(DynamicSuite.class)
+@Ignore
 public class IgniteCacheTestSuite7 {
     /**
      * @return IgniteCache test suite.

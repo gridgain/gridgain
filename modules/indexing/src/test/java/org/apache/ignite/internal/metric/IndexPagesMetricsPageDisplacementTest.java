@@ -140,6 +140,8 @@ public class IndexPagesMetricsPageDisplacementTest extends GridCommonAbstractTes
             idxPagesOnDisk = getIdxPagesOnDisk(grpId).size();
             idxPagesInMemory = idxPageCounter.countIdxPagesInMemory(grpId);
 
+            log.error("Asshole idxPagesInMemory=" + idxPagesInMemory);
+
             assertThat(pageMetrics.indexPages().value(), is(idxPagesInMemory));
         } while (idxPagesOnDisk <= idxPagesInMemory);
 
