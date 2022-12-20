@@ -39,7 +39,6 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.Objects.nonNull;
@@ -776,38 +775,5 @@ public class CacheDataRegionConfigurationTest extends GridCommonAbstractTest {
         assertEquals(2, cacheClient.get(2));
 
         assertFalse(logLsnr.check());
-    }
-
-    /**
-     * Verify that the eviction strategy can support large dataregion.
-     */
-    @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-36062")
-    public void testLargeRegionsWithRandomLRU() throws Exception {
-        doTestLargeRegionsWithEviction(DataPageEvictionMode.RANDOM_LRU);
-    }
-
-    /**
-     * Verify that the eviction strategy can support large dataregion.
-     */
-    @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-36062")
-    public void testLargeRegionsWithRandom2LRU() throws Exception {
-        doTestLargeRegionsWithEviction(DataPageEvictionMode.RANDOM_2_LRU);
-    }
-
-    /**
-     * @param evictMode Page eviction mode.
-     * @throws Exception If failed.
-     */
-    private void doTestLargeRegionsWithEviction(DataPageEvictionMode evictMode) throws Exception {
-        DataRegionConfiguration cfg = new DataRegionConfiguration()
-            .setName("region-1")
-            .setMaxSize(4 * 1024 * U.GB)
-            .setPageEvictionMode(evictMode);
-
-        memCfg = new DataStorageConfiguration().setDataRegionConfigurations(cfg);
-
-        startGrid();
     }
 }

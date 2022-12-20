@@ -43,6 +43,9 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     /** Maximum sample search spin count */
     private static final int SAMPLE_SPIN_LIMIT = SAMPLE_SIZE * 1000;
 
+    /** Number of bytes per page in the tracking array. */
+    private static final long TRACKING_BYTES_PER_PAGE = 4L;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -70,9 +73,23 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteException {
-        trackingArrPtr = GridUnsafe.allocateMemory(trackingSize * 4l);
+        trackingArrPtr = GridUnsafe.allocateMemory(trackingArraySize(trackingSize));
 
-        GridUnsafe.setMemory(trackingArrPtr, trackingSize * 4l, (byte)0);
+        GridUnsafe.setMemory(trackingArrPtr, trackingArraySize(trackingSize), (byte)0);
+    }
+
+    /**
+     * Returns size of the tracking array for the given page count.
+     */
+    static long trackingArraySize(int pageCount) {
+        return trackingArrayOffset(pageCount);
+    }
+
+    /**
+     * Returns offset in of the tracking array for the given page index.
+     */
+    private static long trackingArrayOffset(int pageIndex) {
+        return pageIndex * TRACKING_BYTES_PER_PAGE;
     }
 
     /** {@inheritDoc} */
@@ -81,14 +98,14 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public void touchPage(long pageId) throws IgniteCheckedException {
+    @Override public void touchPage(long pageId) {
         int pageIdx = PageIdUtils.pageIndex(pageId);
 
         long res = compactTimestamp(U.currentTimeMillis());
-        
+
         assert res >= 0 && res < Integer.MAX_VALUE;
-        
-        GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingIdx(pageIdx) * 4, (int)res);
+
+        GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx(pageIdx)), (int)res);
     }
 
     /** {@inheritDoc} */
@@ -109,7 +126,8 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
             while (dataPagesCnt < SAMPLE_SIZE) {
                 int sampleTrackingIdx = rnd.nextInt(trackingSize);
 
-                int compactTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + sampleTrackingIdx * 4);
+                int compactTs = GridUnsafe.getIntVolatile(null,
+                    trackingArrPtr + trackingArrayOffset(sampleTrackingIdx));
 
                 if (compactTs != 0) {
                     // We chose data page with at least one touch.
@@ -144,7 +162,7 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     @Override protected boolean checkTouch(long pageId) {
         int trackingIdx = trackingIdx(PageIdUtils.pageIndex(pageId));
 
-        int ts = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 4);
+        int ts = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
         return ts != 0;
     }
@@ -153,6 +171,6 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     @Override public void forgetPage(long pageId) {
         int pageIdx = PageIdUtils.pageIndex(pageId);
 
-        GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingIdx(pageIdx) * 4, 0);
+        GridUnsafe.putIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx(pageIdx)), 0);
     }
 }
