@@ -35,6 +35,7 @@ import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientBeforeNodeStart;
 import org.apache.ignite.internal.client.GridClientCacheMode;
@@ -210,8 +211,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
             connMgr = createConnectionManager(id, sslCtx, cfg, routers, top, null, routerClient, beforeNodeStart);
 
             try {
-                log.warning(">>>>> Trying to initiate a client connection [clientId=" + id + ']');
-                U.dumpStack(null, ">>>>> Trying to initiate a client connection [clientId=" + id + ']');
+                log.warning(">>>>> Trying to initiate a client connection <init> [clientId=" + id + ']');
                 // Init connection manager.
                 tryInit();
             }
@@ -272,8 +272,18 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
     public void stop(boolean waitCompletion) {
         if (closed.compareAndSet(false, true)) {
             // Shutdown the topology refresh thread.
-            if (topUpdateThread != null)
+            if (topUpdateThread != null) {
                 topUpdateThread.interrupt();
+
+                if (waitCompletion) {
+                    try {
+                        U.join(topUpdateThread);
+                    }
+                    catch (IgniteInterruptedCheckedException ignored) {
+                        // No-op.
+                    }
+                }
+            }
 
             // Shutdown listener notification.
             if (top != null)
@@ -530,6 +540,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
      * @throws InterruptedException If initialisation was interrupted.
      */
     private void tryInit() throws GridClientException, InterruptedException {
+        U.dumpStack(null, ">>>>> Trying to initiate a client connection tryInit [clientId=" + id + ']');
         connMgr.init(addresses());
 
         Map<String, GridClientCacheMode> overallCaches = new HashMap<>();
@@ -621,6 +632,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
         /** {@inheritDoc} */
         @Override public void iteration() throws InterruptedException {
             try {
+                log.warning(">>>>> Trying to initiate a client connection <topology updater> [clientId=" + id + ']');
                 tryInit();
             }
             catch (GridClientException e) {
