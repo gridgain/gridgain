@@ -18,10 +18,14 @@ package org.apache.ignite.internal.visor.query;
 
 import java.util.Iterator;
 import java.util.List;
+import org.apache.ignite.IgniteException;
+import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.resources.JobContextResource;
 
 import static org.apache.ignite.internal.visor.query.VisorQueryUtils.getQueryHolder;
 import static org.apache.ignite.internal.visor.query.VisorQueryUtils.removeQueryHolder;
@@ -46,6 +50,13 @@ public class VisorQueryNextPageTask extends VisorOneNodeTask<VisorQueryNextPageT
         /** */
         private static final long serialVersionUID = 0L;
 
+        /** Job context. */
+        @JobContextResource
+        private ComputeJobContext jobCtx;
+
+        /** Operation future. */
+        private volatile IgniteFuture<Void> opFut;
+
         /**
          * Create job with specified argument.
          *
@@ -58,11 +69,28 @@ public class VisorQueryNextPageTask extends VisorOneNodeTask<VisorQueryNextPageT
 
         /** {@inheritDoc} */
         @Override protected VisorQueryResult run(VisorQueryNextPageTaskArg arg) {
-            long start = System.currentTimeMillis();
-
             String qryId = arg.getQueryId();
 
             VisorQueryHolder holder = getQueryHolder(ignite, qryId);
+
+            if (opFut == null) {
+                opFut = holder.readyFuture();
+
+                if (!opFut.isDone()) {
+                    jobCtx.holdcc();
+
+                    opFut.listen(f -> jobCtx.callcc());
+
+                    return null;
+                }
+            }
+
+            assert opFut.isDone() : "Query holder must be completed [queryId=" + qryId + ']';
+
+            if (holder.getErr() != null)
+                throw new IgniteException(holder.getErr());
+
+            long start = System.currentTimeMillis();
 
             Iterator itr = holder.getIterator();
 
