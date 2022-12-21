@@ -41,6 +41,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
     /** Maximum sample search spin count */
     private static final int SAMPLE_SPIN_LIMIT = SAMPLE_SIZE * 1000;
 
+    /** Number of bytes per page in the tracking array. */
+    private static final long TRACKING_BYTES_PER_PAGE = 8L;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -68,9 +71,23 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteException {
-        trackingArrPtr = GridUnsafe.allocateMemory(trackingSize * 8l);
+        trackingArrPtr = GridUnsafe.allocateMemory(trackingArraySize(trackingSize));
 
-        GridUnsafe.setMemory(trackingArrPtr, trackingSize * 8l, (byte)0);
+        GridUnsafe.setMemory(trackingArrPtr, trackingArraySize(trackingSize), (byte)0);
+    }
+
+    /**
+     * Returns size of the tracking array for the given page count.
+     */
+    static long trackingArraySize(int pageCount) {
+        return trackingArrayOffset(pageCount);
+    }
+
+    /**
+     * Returns offset in of the tracking array for the given page index.
+     */
+    static long trackingArrayOffset(int pageIndex) {
+        return pageIndex * TRACKING_BYTES_PER_PAGE;
     }
 
     /** {@inheritDoc} */
@@ -91,15 +108,16 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
         do {
             int trackingIdx = trackingIdx(pageIdx);
 
-            int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 8);
+            int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
-            int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 8 + 4);
+            int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
 
             if (firstTs <= secondTs)
-                success = GridUnsafe.compareAndSwapInt(null, trackingArrPtr + trackingIdx * 8, firstTs, (int)latestTs);
+                success = GridUnsafe.compareAndSwapInt(null,
+                    trackingArrPtr + trackingArrayOffset(trackingIdx), firstTs, (int)latestTs);
             else {
                 success = GridUnsafe.compareAndSwapInt(
-                    null, trackingArrPtr + trackingIdx * 8 + 4, secondTs, (int)latestTs);
+                    null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4, secondTs, (int)latestTs);
             }
         } while (!success);
     }
@@ -122,9 +140,9 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
             while (dataPagesCnt < SAMPLE_SIZE) {
                 int trackingIdx = rnd.nextInt(trackingSize);
 
-                int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 8);
+                int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
-                int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 8 + 4);
+                int secondTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx) + 4);
 
                 int minTs = Math.min(firstTs, secondTs);
 
@@ -163,7 +181,7 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
     @Override protected boolean checkTouch(long pageId) {
         int trackingIdx = trackingIdx(PageIdUtils.pageIndex(pageId));
 
-        int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingIdx * 8);
+        int firstTs = GridUnsafe.getIntVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx));
 
         return firstTs != 0;
     }
@@ -174,6 +192,6 @@ public class Random2LruPageEvictionTracker extends PageAbstractEvictionTracker {
 
         int trackingIdx = trackingIdx(pageIdx);
 
-        GridUnsafe.putLongVolatile(null, trackingArrPtr + trackingIdx * 8, 0L);
+        GridUnsafe.putLongVolatile(null, trackingArrPtr + trackingArrayOffset(trackingIdx), 0L);
     }
 }
