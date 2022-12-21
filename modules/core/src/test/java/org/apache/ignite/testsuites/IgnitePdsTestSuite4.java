@@ -47,6 +47,8 @@ import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsTrans
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.HistoricalReservationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteDisableWalOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalRebalanceRestartTest;
+import org.apache.ignite.internal.processors.cache.persistence.evict.Random2LruPageEvictionTrackerTest;
+import org.apache.ignite.internal.processors.cache.persistence.evict.RandomLruPageEvictionTrackerTest;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileDownloaderTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
@@ -98,6 +100,9 @@ public class IgnitePdsTestSuite4 {
         GridTestUtils.addTestIfNeeded(suite, ReleaseSegmentOnHistoricalRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AutoReleaseSegmentSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCheckpointMapSnapshotTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, RandomLruPageEvictionTrackerTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, Random2LruPageEvictionTrackerTest.class, ignoredTests);
 
         return suite;
     }
