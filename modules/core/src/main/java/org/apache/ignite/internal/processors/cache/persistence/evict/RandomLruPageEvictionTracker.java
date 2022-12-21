@@ -88,7 +88,7 @@ public class RandomLruPageEvictionTracker extends PageAbstractEvictionTracker {
     /**
      * Returns offset in of the tracking array for the given page index.
      */
-    private static long trackingArrayOffset(int pageIndex) {
+    static long trackingArrayOffset(int pageIndex) {
         return pageIndex * TRACKING_BYTES_PER_PAGE;
     }
 

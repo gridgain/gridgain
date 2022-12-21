@@ -22,10 +22,27 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /**
+ * Tests for {@link Random2LruPageEvictionTracker}.
  */
 public class Random2LruPageEvictionTrackerTest {
+    /**
+     * Tests that {@link Random2LruPageEvictionTracker#trackingArraySize(int)} correctly handles situations
+     * when the size does not fit {@code int} range.
+     */
     @Test
     public void trackingArraySizeMayExceed2Gb() {
         assertThat(Random2LruPageEvictionTracker.trackingArraySize(1024 * 1024 * 1024), is(8L * 1024L * 1024L * 1024L));
+    }
+
+    /**
+     * Tests that {@link Random2LruPageEvictionTracker#trackingArrayOffset(int)} correctly handles situations
+     * when the size does not fit {@code int} range.
+     */
+    @Test
+    public void trackingArrayOffsetMayExceed2Gb() {
+        assertThat(
+            Random2LruPageEvictionTracker.trackingArrayOffset(1024 * 1024 * 1024),
+            is(8L * 1024L * 1024L * 1024L)
+        );
     }
 }
