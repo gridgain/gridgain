@@ -42,6 +42,7 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.client.GridClientClosedException;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
+import org.apache.ignite.internal.client.GridClientFuture;
 import org.apache.ignite.internal.client.GridClientHandshakeException;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.client.GridClientProtocol;
@@ -228,7 +229,7 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
     }
 
     /** {@inheritDoc} */
-    @Override public void init(Collection<InetSocketAddress> srvs) throws GridClientException, InterruptedException {
+    @Override public void init(Collection<InetSocketAddress> srvs, boolean b) throws GridClientException, InterruptedException {
         init0();
 
         connect(srvs, conn -> {
@@ -237,10 +238,19 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                     .get(cfg.getConnectTimeout(), MILLISECONDS);
             }
             else {
-                conn.topology(cfg.isAutoFetchAttributes(), cfg.isAutoFetchMetrics(), null)
-                    .get(cfg.getConnectTimeout(), MILLISECONDS);
+                GridClientFuture<List<GridClientNode>> fut = conn.topology(cfg.isAutoFetchAttributes(), cfg.isAutoFetchMetrics(), null);
+
+                if (b)
+                    emulateInterruption();
+
+                fut.get(cfg.getConnectTimeout(), MILLISECONDS);
             }
         });
+    }
+
+    @Override
+    public void emulateInterruption() {
+        //Thread.currentThread().interrupt();
     }
 
     /**
@@ -584,6 +594,10 @@ public abstract class GridClientConnectionManagerAdapter implements GridClientCo
                     if (!srvsCp.remove(conn.serverAddress()))
                         // We have misbehaving collection or equals - just exit to avoid infinite loop.
                         break;
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    throw e;
                 }
             }
 

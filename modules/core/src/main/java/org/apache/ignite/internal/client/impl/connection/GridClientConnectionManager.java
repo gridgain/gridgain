@@ -29,6 +29,9 @@ import org.jetbrains.annotations.Nullable;
  * Common interface for client connection managers.
  */
 public interface GridClientConnectionManager {
+    default void emulateInterruption() {
+
+    }
     /**
      * Tries to open initial connection and fetch topology using given server addresses.
      *
@@ -37,7 +40,7 @@ public interface GridClientConnectionManager {
      * @throws GridClientException If manager failed to initialise,
      * @throws InterruptedException If manager was interrupted while waiting for connection.
      */
-    public void init(Collection<InetSocketAddress> srvs) throws GridClientException, InterruptedException;
+    public void init(Collection<InetSocketAddress> srvs, boolean b) throws GridClientException, InterruptedException;
 
     /**
      * Returns connection to the given node.

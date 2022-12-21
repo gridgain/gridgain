@@ -213,7 +213,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
             try {
                 log.warning(">>>>> Trying to initiate a client connection <init> [clientId=" + id + ']');
                 // Init connection manager.
-                tryInit();
+                tryInit(false);
             }
             catch (GridClientException e) {
                 top.fail(e);
@@ -280,7 +280,8 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
                         U.join(topUpdateThread);
                     }
                     catch (IgniteInterruptedCheckedException ignored) {
-                        // No-op.
+                        if (log.isLoggable(Level.WARNING))
+                            log.warning("Got interrupted while waiting for completion of topology updater [clientId=" + id + ']');
                     }
                 }
             }
@@ -539,9 +540,9 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
      * @throws GridClientException If initialisation failed.
      * @throws InterruptedException If initialisation was interrupted.
      */
-    private void tryInit() throws GridClientException, InterruptedException {
+    private void tryInit(boolean b) throws GridClientException, InterruptedException {
         U.dumpStack(null, ">>>>> Trying to initiate a client connection tryInit [clientId=" + id + ']');
-        connMgr.init(addresses());
+        connMgr.init(addresses(), b);
 
         Map<String, GridClientCacheMode> overallCaches = new HashMap<>();
 
@@ -622,6 +623,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
      * Thread that updates topology according to refresh interval specified in configuration.
      */
     private class TopologyUpdaterThread extends CycleThread {
+        private volatile boolean first = true;
         /**
          * Creates topology refresh thread.
          */
@@ -633,13 +635,20 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
         @Override public void iteration() throws InterruptedException {
             try {
                 log.warning(">>>>> Trying to initiate a client connection <topology updater> [clientId=" + id + ']');
-                tryInit();
+                //U.dumpStack(null, ">>>>> Trying to initiate a client connection <topology updater> [clientId=" + id + ", isInterrupted=" + isInterrupted() + ']');
+                //Thread.currentThread().interrupt();
+                tryInit(first);
             }
             catch (GridClientException e) {
+                e.printStackTrace();
+                System.err.println(">>>>> iteration failed [clientId=" + id + ", err=" + e + ']');
                 top.fail(e);
 
                 if (log.isLoggable(Level.FINE))
                     log.fine("Failed to update topology: " + e.getMessage());
+            }
+            finally {
+                first = false;
             }
         }
     }
