@@ -754,6 +754,9 @@ namespace Apache.Ignite.Core.Tests.Compute
             var nodes = new[] {_grid1, _grid2}.Select(x => x.GetCluster().GetLocalNode());
 
             var aff = _grid1.GetAffinity(cacheName);
+            
+            // TODO remove me.
+            Thread.Sleep(6000);
 
             foreach (var node in nodes)
             {
