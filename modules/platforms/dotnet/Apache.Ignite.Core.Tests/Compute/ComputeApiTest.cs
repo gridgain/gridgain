@@ -1155,7 +1155,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
 
-        public static Guid LastNodeId;
+        public static volatile object LastNodeId;
 
         public Guid Id { get; set; }
 
