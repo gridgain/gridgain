@@ -686,14 +686,14 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="cfg">Config.</param>
         private static void CheckDefaultProperties(SqlConnectorConfiguration cfg)
         {
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultPort, cfg.Port);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultPortRange, cfg.PortRange);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultMaxOpenCursorsPerConnection,
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultPort, cfg.Port);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultPortRange, cfg.PortRange);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultMaxOpenCursorsPerConnection,
                 cfg.MaxOpenCursorsPerConnection);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketReceiveBufferSize);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketSendBufferSize);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultTcpNoDelay, cfg.TcpNoDelay);
-            Assert.AreEqual(ClientConnectorConfiguration.DefaultThreadPoolSize, cfg.ThreadPoolSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketReceiveBufferSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultSocketBufferSize, cfg.SocketSendBufferSize);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultTcpNoDelay, cfg.TcpNoDelay);
+            Assert.AreEqual(SqlConnectorConfiguration.DefaultThreadPoolSize, cfg.ThreadPoolSize);
         }
 
         /// <summary>
