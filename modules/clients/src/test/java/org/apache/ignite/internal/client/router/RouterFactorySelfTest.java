@@ -24,6 +24,8 @@ import java.util.Iterator;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JETTY_PORT;
@@ -49,6 +51,25 @@ public class RouterFactorySelfTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+    @Before
+    public void setup() throws Exception {
+        System.setProperty(IGNITE_JETTY_PORT, String.valueOf(GRID_HTTP_PORT));
+
+        try {
+            startGrid();
+        }
+        finally {
+            System.clearProperty(IGNITE_JETTY_PORT);
+        }
+    }
+
+    @After
+    public void tearDown() {
+        GridRouterFactory.stopAllRouters();
+
+        stopAllGrids();
+    }
+
     /**
      * Test router's start/stop.
      *
@@ -56,53 +77,37 @@ public class RouterFactorySelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRouterFactory() throws Exception {
-        try {
-            System.setProperty(IGNITE_JETTY_PORT, String.valueOf(GRID_HTTP_PORT));
+        final int size = 20;
+        final Collection<GridTcpRouter> tcpRouters = new ArrayList<>(size);
+        final GridTcpRouterConfiguration tcpCfg = new GridTcpRouterConfiguration();
 
-            try {
-                startGrid();
-            }
-            finally {
-                System.clearProperty(IGNITE_JETTY_PORT);
-            }
+        tcpCfg.setPortRange(size);
 
-            final int size = 20;
-            final Collection<GridTcpRouter> tcpRouters = new ArrayList<>(size);
-            final GridTcpRouterConfiguration tcpCfg = new GridTcpRouterConfiguration();
+        for (int i = 0; i < size; i++)
+            tcpRouters.add(GridRouterFactory.startTcpRouter(tcpCfg));
 
-            tcpCfg.setPortRange(size);
+        for (GridTcpRouter tcpRouter : tcpRouters) {
+            assertEquals(tcpCfg, tcpRouter.configuration());
+            assertEquals(tcpRouter, GridRouterFactory.tcpRouter(tcpRouter.id()));
+        }
 
-            for (int i = 0; i < size; i++)
-                tcpRouters.add(GridRouterFactory.startTcpRouter(tcpCfg));
+        assertEquals("Validate all started tcp routers.", new HashSet<>(tcpRouters),
+            new HashSet<>(GridRouterFactory.allTcpRouters()));
 
-            for (GridTcpRouter tcpRouter : tcpRouters) {
-                assertEquals(tcpCfg, tcpRouter.configuration());
-                assertEquals(tcpRouter, GridRouterFactory.tcpRouter(tcpRouter.id()));
-            }
+        for (Iterator<GridTcpRouter> it = tcpRouters.iterator(); it.hasNext(); ) {
+            GridTcpRouter tcpRouter = it.next();
 
             assertEquals("Validate all started tcp routers.", new HashSet<>(tcpRouters),
                 new HashSet<>(GridRouterFactory.allTcpRouters()));
 
-            for (Iterator<GridTcpRouter> it = tcpRouters.iterator(); it.hasNext(); ) {
-                GridTcpRouter tcpRouter = it.next();
+            it.remove();
 
-                assertEquals("Validate all started tcp routers.", new HashSet<>(tcpRouters),
-                    new HashSet<>(GridRouterFactory.allTcpRouters()));
+            GridRouterFactory.stopTcpRouter(tcpRouter.id());
 
-                it.remove();
-
-                GridRouterFactory.stopTcpRouter(tcpRouter.id());
-
-                assertEquals("Validate all started tcp routers.", new HashSet<>(tcpRouters),
-                    new HashSet<>(GridRouterFactory.allTcpRouters()));
-            }
-
-            assertEquals(Collections.<GridTcpRouter>emptyList(), GridRouterFactory.allTcpRouters());
+            assertEquals("Validate all started tcp routers.", new HashSet<>(tcpRouters),
+                new HashSet<>(GridRouterFactory.allTcpRouters()));
         }
-        finally {
-            GridRouterFactory.stopAllRouters();
 
-            stopAllGrids();
-        }
+        assertEquals(Collections.<GridTcpRouter>emptyList(), GridRouterFactory.allTcpRouters());
     }
 }

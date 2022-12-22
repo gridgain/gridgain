@@ -48,8 +48,6 @@ public abstract class CycleThread extends Thread {
                 iteration();
             }
         } catch (InterruptedException e) {
-            System.err.println(">>>>> CycleThread interrupted!");
-            e.printStackTrace();
             // No op
         }
     }

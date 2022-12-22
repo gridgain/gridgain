@@ -377,7 +377,9 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
 
         return new GridClientConfiguration()
             .setServers(Collections.singleton("127.0.0.1:11211"))
-            //.setTopologyRefreshFrequency(Long.MAX_VALUE)
+            // disable background topology updater in order to avoid background connections to a cluster
+            // and sporadic changes of metrics.
+            .setTopologyRefreshFrequency(Long.MAX_VALUE)
             .setSslContextFactory(sslCtxFactory::create);
     }
 

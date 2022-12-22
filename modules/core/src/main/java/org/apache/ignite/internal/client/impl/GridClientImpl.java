@@ -34,6 +34,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.client.GridClient;
@@ -63,6 +64,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientConnectionMan
 import org.apache.ignite.internal.client.impl.connection.GridClientTopology;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.CycleThread;
 import org.jetbrains.annotations.Nullable;
@@ -81,7 +83,7 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
 
     /* Suppression logging if needed. */
     static {
-        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_GRID_CLIENT_LOG_ENABLED, true)) {
+        if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_GRID_CLIENT_LOG_ENABLED, false)) {
             boolean isLog4jUsed = U.gridClassLoader().getResource("org/apache/log4j/Appender.class") != null;
 
             try {
@@ -211,9 +213,8 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
             connMgr = createConnectionManager(id, sslCtx, cfg, routers, top, null, routerClient, beforeNodeStart);
 
             try {
-                log.warning(">>>>> Trying to initiate a client connection <init> [clientId=" + id + ']');
                 // Init connection manager.
-                tryInit(false);
+                tryInit();
             }
             catch (GridClientException e) {
                 top.fail(e);
@@ -300,10 +301,8 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
                     removeTopologyListener((GridClientTopologyListener)aff);
             }
 
-            if (log.isLoggable(Level.INFO)) {
+            if (log.isLoggable(Level.INFO))
                 log.info("Client stopped [id=" + id + ", waitCompletion=" + waitCompletion + ']');
-                U.dumpStack(null, "Client stopped [id=" + id + ", waitCompletion=" + waitCompletion + ']');
-            }
         }
     }
 
@@ -540,9 +539,8 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
      * @throws GridClientException If initialisation failed.
      * @throws InterruptedException If initialisation was interrupted.
      */
-    private void tryInit(boolean b) throws GridClientException, InterruptedException {
-        U.dumpStack(null, ">>>>> Trying to initiate a client connection tryInit [clientId=" + id + ']');
-        connMgr.init(addresses(), b);
+    private void tryInit() throws GridClientException, InterruptedException {
+        connMgr.init(addresses());
 
         Map<String, GridClientCacheMode> overallCaches = new HashMap<>();
 
@@ -623,7 +621,6 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
      * Thread that updates topology according to refresh interval specified in configuration.
      */
     private class TopologyUpdaterThread extends CycleThread {
-        private volatile boolean first = true;
         /**
          * Creates topology refresh thread.
          */
@@ -634,21 +631,18 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
         /** {@inheritDoc} */
         @Override public void iteration() throws InterruptedException {
             try {
-                log.warning(">>>>> Trying to initiate a client connection <topology updater> [clientId=" + id + ']');
-                //U.dumpStack(null, ">>>>> Trying to initiate a client connection <topology updater> [clientId=" + id + ", isInterrupted=" + isInterrupted() + ']');
-                //Thread.currentThread().interrupt();
-                tryInit(first);
+                tryInit();
             }
             catch (GridClientException e) {
-                e.printStackTrace();
-                System.err.println(">>>>> iteration failed [clientId=" + id + ", err=" + e + ']');
                 top.fail(e);
 
                 if (log.isLoggable(Level.FINE))
                     log.fine("Failed to update topology: " + e.getMessage());
-            }
-            finally {
-                first = false;
+
+                if (X.hasCause(e, InterruptedException.class, IgniteInterruptedCheckedException.class, IgniteInterruptedException.class)) {
+                    // this topology updater has been interrupted due to stopping the client.
+                    throw new InterruptedException();
+                }
             }
         }
     }
