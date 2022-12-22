@@ -47,7 +47,6 @@ import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META
 public class GridNioSslFilter extends GridNioFilterAdapter {
     /** SSL handshake future metadata key. */
     public static final int HANDSHAKE_FUT_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
-    public static final int HANDSHAKE_START_TIME_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** The name of the metric that provides histogram of SSL handshake duration. */
     public static final String SSL_HANDSHAKE_DURATION_HISTOGRAM_METRIC_NAME = "SslHandshakeDurationHistogram";
@@ -183,28 +182,15 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             if (handshakeDuration != null) {
                 GridNioFutureImpl<?> fut = ses.meta(HANDSHAKE_FUT_META_KEY);
 
-                long startTime = System.nanoTime();
-
                 if (fut == null) {
                     fut = new GridNioFutureImpl<>(null);
 
                     ses.addMeta(HANDSHAKE_FUT_META_KEY, fut);
-                    ses.addMeta(HANDSHAKE_START_TIME_KEY, startTime);
-                    log.warning(">>>>> New handshake fut created [fut=" + fut + ", startTime=" + startTime + ", remote=" + ses.remoteAddress().toString() + ']');
-                }
-                else {
-                    long metaStartTime = ses.meta(HANDSHAKE_START_TIME_KEY);
-                    log.warning(">>>>> Handshake future already exists [fut=" + fut +
-                        ", startTime=" + startTime + ", metaStartTime=" + metaStartTime + ", equal=" + (startTime == metaStartTime)
-                        + ", remote=" + ses.remoteAddress().toString() + ']');
-                    U.dumpStack(log, ">>>>> Handshake future already exists [fut=" + fut + ", startTime=" + startTime + ']');
                 }
 
-                fut.listen(f -> {
-                    long metaStartTime = ses.meta(HANDSHAKE_START_TIME_KEY);
-                    log.warning(">>>>> Update handshake metrics [fut=" + f + ", startTime=" + startTime + ", metaStartTime=" + metaStartTime + ", equal=" + (startTime == metaStartTime) + ']');
-                    handshakeDuration.value(U.nanosToMillis(System.nanoTime() - startTime));
-                });
+                long startTime = System.nanoTime();
+
+                fut.listen(f -> handshakeDuration.value(U.nanosToMillis(System.nanoTime() - startTime)));
             }
 
             hnd.handshake();
