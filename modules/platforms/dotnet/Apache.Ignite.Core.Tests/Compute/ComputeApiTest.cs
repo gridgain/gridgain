@@ -752,27 +752,38 @@ namespace Apache.Ignite.Core.Tests.Compute
             const string cacheName = DefaultCacheName;
 
             // Test keys for non-client nodes
-            var nodes = new[] {_grid1, _grid2}.Select(x => x.GetCluster().GetLocalNode());
-
             var aff = _grid1.GetAffinity(cacheName);
-            
-            foreach (var node in nodes)
+            int i = 0;
+
+            foreach (var grid in new[] {_grid1, _grid2})
             {
-                var primaryKey = TestUtils.GetPrimaryKey(_grid1, cacheName, node);
-
-                var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
-
-                var computeAction = new ComputeAction
+                var node = grid.GetCluster().GetLocalNode();
+                foreach (var primaryKey in TestUtils.GetPrimaryKeys(_grid1, cacheName, node).Take(100))
                 {
-                    ReservedPartition = aff.GetPartition(primaryKey),
-                    CacheNames = new[] {cacheName}
-                };
+                    i++;
 
-                _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
-                Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    var affinityKey = aff.GetAffinityKey<int, int>(primaryKey);
+                    var partition = aff.GetPartition(primaryKey);
 
-                _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
-                Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    var computeAction = new ComputeAction
+                    {
+                        ReservedPartition = partition,
+                        CacheNames = new[] { cacheName }
+                    };
+
+                    _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
+
+                    var primaryNodeForPartition = aff.MapPartitionToNode(partition);
+
+                    Console.WriteLine(
+                        $">>> Test iteration {i}, node {grid.Name} ({node.Id}), key {primaryKey}, affinity key {affinityKey}, " +
+                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}");
+
+                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+
+                    _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
+                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                }
             }
         }
 
