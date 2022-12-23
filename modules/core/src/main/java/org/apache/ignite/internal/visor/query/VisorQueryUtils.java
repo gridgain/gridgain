@@ -403,9 +403,9 @@ public class VisorQueryUtils {
                         }
 
                         actualHolder.complete(cur, System.currentTimeMillis() - start, cols);
-
-                        scheduleQueryHolderRemoval(ignite, actualHolder.getQueryID());
                     }
+
+                    scheduleQueryHolderRemoval(ignite, actualHolder.getQueryID());
                 }
                 catch (Throwable e) {
                     U.closeQuiet(cur);
