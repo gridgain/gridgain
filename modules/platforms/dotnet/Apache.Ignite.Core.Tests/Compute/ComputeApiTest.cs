@@ -768,7 +768,8 @@ namespace Apache.Ignite.Core.Tests.Compute
                     var computeAction = new ComputeAction
                     {
                         ReservedPartition = partition,
-                        CacheNames = new[] { cacheName }
+                        CacheNames = new[] { cacheName },
+                        Id = Guid.NewGuid()
                     };
 
                     _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
@@ -777,7 +778,8 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                     Console.WriteLine(
                         $">>> Test iteration {i}, node {grid.Name} ({node.Id}), key {primaryKey}, affinity key {affinityKey}, " +
-                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}");
+                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}," +
+                        $"actionId {computeAction.Id}");
 
                     Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
 
@@ -1187,8 +1189,11 @@ namespace Apache.Ignite.Core.Tests.Compute
         public void Invoke()
         {
             Thread.Sleep(10);
+
             Invokes.Add(Id);
             LastNodeId = _grid.GetCluster().GetLocalNode().Id;
+
+            Console.WriteLine($">>> ComputeAction.Invoke: Id = {Id}, NodeId = {LastNodeId}, NodeName = {_grid.Name}");
 
             if (ReservedPartition != null)
             {
@@ -1196,7 +1201,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 foreach (var cacheName in CacheNames)
                 {
-                    Assert.IsTrue(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
+                    Assert.IsFalse(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
                 }
             }
 
