@@ -44,6 +44,7 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.systemview.view.SqlQueryHistoryView;
 import org.apache.ignite.spi.systemview.view.SqlQueryView;
 import org.jetbrains.annotations.Nullable;
@@ -292,8 +293,8 @@ public class RunningQueryManager {
             if (failed)
                 qrySpan.addTag(ERROR, failReason::getMessage);
 
-//            if (qry.memoryMetricProvider() instanceof AutoCloseable)
-//                U.close((AutoCloseable)qry.memoryMetricProvider(), log);
+            if (qry.memoryMetricProvider() instanceof AutoCloseable)
+                U.close((AutoCloseable)qry.memoryMetricProvider(), log);
 
             if (log.isDebugEnabled()) {
                 log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
