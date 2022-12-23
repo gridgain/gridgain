@@ -1201,7 +1201,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                 foreach (var cacheName in CacheNames)
                 {
-                    Assert.IsFalse(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
+                    Assert.IsTrue(TestUtils.IsPartitionReserved(_grid, cacheName, ReservedPartition.Value));
                 }
             }
 
