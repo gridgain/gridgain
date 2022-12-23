@@ -59,7 +59,7 @@ public class VisorQueryHolder implements AutoCloseable {
     /** Result set iterator. */
     private volatile Iterator itr;
 
-    /** Future that will be complited when the underlying query cursor is initialized and ready to use. */
+    /** Future that will be completed when the underlying query cursor is initialized and ready to use. */
     private final GridFutureAdapter<Void> readyFut = new GridFutureAdapter<>();
 
     /**
