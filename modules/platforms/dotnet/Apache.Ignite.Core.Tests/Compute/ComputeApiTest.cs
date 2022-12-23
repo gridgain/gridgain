@@ -778,8 +778,8 @@ namespace Apache.Ignite.Core.Tests.Compute
 
                     Console.WriteLine(
                         $">>> Test iteration {i}, node {grid.Name} ({node.Id}), key {primaryKey}, affinity key {affinityKey}, " +
-                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}," +
-                        $"actionId {computeAction.Id}");
+                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}, " +
+                        $"actionId {computeAction.Id}, invocationCount {ComputeAction.Invokes.Count}");
 
                     Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
 
