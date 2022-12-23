@@ -34,7 +34,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientBeforeNodeStart;
 import org.apache.ignite.internal.client.GridClientCacheMode;
@@ -62,6 +64,7 @@ import org.apache.ignite.internal.client.impl.connection.GridClientConnectionMan
 import org.apache.ignite.internal.client.impl.connection.GridClientTopology;
 import org.apache.ignite.internal.client.ssl.GridSslContextFactory;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.CycleThread;
 import org.jetbrains.annotations.Nullable;
@@ -270,8 +273,19 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
     public void stop(boolean waitCompletion) {
         if (closed.compareAndSet(false, true)) {
             // Shutdown the topology refresh thread.
-            if (topUpdateThread != null)
+            if (topUpdateThread != null) {
                 topUpdateThread.interrupt();
+
+                if (waitCompletion) {
+                    try {
+                        U.join(topUpdateThread);
+                    }
+                    catch (IgniteInterruptedCheckedException ignored) {
+                        if (log.isLoggable(Level.WARNING))
+                            log.warning("Got interrupted while waiting for completion of topology updater [clientId=" + id + ']');
+                    }
+                }
+            }
 
             // Shutdown listener notification.
             if (top != null)
@@ -624,6 +638,11 @@ public class GridClientImpl implements GridClient, GridClientBeforeNodeStart {
 
                 if (log.isLoggable(Level.FINE))
                     log.fine("Failed to update topology: " + e.getMessage());
+
+                if (X.hasCause(e, InterruptedException.class, IgniteInterruptedCheckedException.class, IgniteInterruptedException.class)) {
+                    // this topology updater has been interrupted due to stopping the client.
+                    throw new InterruptedException();
+                }
             }
         }
     }
