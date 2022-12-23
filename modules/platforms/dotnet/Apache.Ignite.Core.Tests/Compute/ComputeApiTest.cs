@@ -43,7 +43,10 @@ namespace Apache.Ignite.Core.Tests.Compute
         private const string JavaBinaryCls = "PlatformComputeJavaBinarizable";
 
         /** */
-        public const string DefaultCacheName = "default";
+        private const string DefaultCacheName = "default";
+
+        /** */
+        private const string CacheName2 = "cache1";
 
         /** First node. */
         private IIgnite _grid1;
@@ -67,12 +70,10 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             _grid1 = Ignition.Start(Configuration(configs.Item1));
             _grid2 = Ignition.Start(Configuration(configs.Item2));
-
-            AffinityTopologyVersion waitingTop = new AffinityTopologyVersion(2, 1);
-
-            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
-
             _grid3 = Ignition.Start(Configuration(configs.Item3));
+
+            var waitingTop = new AffinityTopologyVersion(3, 3);
+            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
 
             // Start thin client.
             _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
@@ -755,9 +756,6 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             var aff = _grid1.GetAffinity(cacheName);
             
-            // TODO remove me.
-            Thread.Sleep(6000);
-
             foreach (var node in nodes)
             {
                 var primaryKey = TestUtils.GetPrimaryKey(_grid1, cacheName, node);
@@ -837,9 +835,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
 
             // Two caches.
-            var cache = _grid1.CreateCache<int, int>(TestUtils.TestName);
-
-            res = action(new[] {cacheName, cache.Name});
+            res = action(new[] {cacheName, CacheName2});
 
             Assert.AreEqual(res, ComputeFunc.InvokeCount);
             Assert.AreEqual(localNode.Id, ComputeFunc.LastNodeId);
@@ -866,8 +862,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             if (multiCache)
             {
-                var cache2 = _grid1.CreateCache<int, int>(TestUtils.TestName);
-                cacheNames.Add(cache2.Name);
+                cacheNames.Add(CacheName2);
             }
 
             var node = local
