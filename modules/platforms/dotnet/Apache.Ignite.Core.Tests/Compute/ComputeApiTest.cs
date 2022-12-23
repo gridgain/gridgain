@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             _grid2 = Ignition.Start(Configuration(configs.Item2));
             _grid3 = Ignition.Start(Configuration(configs.Item3));
 
-            var waitingTop = new AffinityTopologyVersion(3, 3);
+            var waitingTop = new AffinityTopologyVersion(3, 0);
             Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
 
             // Start thin client.
