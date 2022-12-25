@@ -887,7 +887,8 @@ namespace Apache.Ignite.Core.Tests.Compute
             var computeAction = new ComputeAction
             {
                 ReservedPartition = part,
-                CacheNames = cacheNames
+                CacheNames = cacheNames,
+                Id = Guid.NewGuid()
             };
 
             var action = async
@@ -896,7 +897,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             // Good case.
             action();
-            Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+            Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id]);
 
             // Exception in user code.
             computeAction.ShouldThrow = true;
