@@ -72,8 +72,12 @@ namespace Apache.Ignite.Core.Tests.Compute
             _grid2 = Ignition.Start(Configuration(configs.Item2));
             _grid3 = Ignition.Start(Configuration(configs.Item3));
 
-            var waitingTop = new AffinityTopologyVersion(3, 0);
-            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
+            var ver = new AffinityTopologyVersion(3, 0);
+
+            foreach (var cacheName in new[] { DefaultCacheName, CacheName2 })
+            {
+                Assert.True(_grid1.WaitForRebalance(cacheName, ver), "Failed to wait for rebalance on " + cacheName);
+            }
 
             // Start thin client.
             _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
@@ -1189,11 +1193,8 @@ namespace Apache.Ignite.Core.Tests.Compute
         public void Invoke()
         {
             Thread.Sleep(10);
-
             Invokes.Add(Id);
             LastNodeId = _grid.GetCluster().GetLocalNode().Id;
-
-            Console.WriteLine($">>> ComputeAction.Invoke: Id = {Id}, NodeId = {LastNodeId}, NodeName = {_grid.Name}");
 
             if (ReservedPartition != null)
             {
