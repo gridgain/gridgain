@@ -762,7 +762,7 @@ namespace Apache.Ignite.Core.Tests.Compute
             foreach (var grid in new[] {_grid1, _grid2})
             {
                 var node = grid.GetCluster().GetLocalNode();
-                foreach (var primaryKey in TestUtils.GetPrimaryKeys(_grid1, cacheName, node).Take(100))
+                foreach (var primaryKey in TestUtils.GetPrimaryKeys(_grid1, cacheName, node).Take(5))
                 {
                     i++;
 
@@ -777,18 +777,10 @@ namespace Apache.Ignite.Core.Tests.Compute
                     };
 
                     _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
-
-                    var primaryNodeForPartition = aff.MapPartitionToNode(partition);
-
-                    Console.WriteLine(
-                        $">>> Test iteration {i}, node {grid.Name} ({node.Id}), key {primaryKey}, affinity key {affinityKey}, " +
-                        $"partition {partition}, actual node {ComputeAction.LastNodeId}, primary node {primaryNodeForPartition}, " +
-                        $"actionId {computeAction.Id}, invocationCount {ComputeAction.Invokes.Count}");
-
-                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id], $"Run {i} failed");
 
                     _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
-                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId);
+                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id], $"Async run {i} failed");
                 }
             }
         }
@@ -1170,7 +1162,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
 
-        public static volatile object LastNodeId;
+        public static ConcurrentDictionary<Guid, Guid> LastNodeId = new ConcurrentDictionary<Guid, Guid>();
 
         public Guid Id { get; set; }
 
@@ -1194,7 +1186,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Thread.Sleep(10);
             Invokes.Add(Id);
-            LastNodeId = _grid.GetCluster().GetLocalNode().Id;
+            LastNodeId[Id] = _grid.GetCluster().GetLocalNode().Id;
 
             if (ReservedPartition != null)
             {
