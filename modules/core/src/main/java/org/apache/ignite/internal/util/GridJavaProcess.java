@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.lang.GridAbsClosure;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -49,6 +50,9 @@ import org.jetbrains.annotations.Nullable;
 public final class GridJavaProcess {
     /** Internal protocol message prefix saying that the next text in the outputted line is pid. */
     public static final String PID_MSG_PREFIX = "my_pid_is:";
+
+    /** Default pid. */
+    private static final String DFLT_PID = "-1";
 
     /** Logger */
     private IgniteLogger log;
@@ -256,6 +260,20 @@ public final class GridJavaProcess {
      */
     public Process getProcess() {
         return proc;
+    }
+
+    /** Suspends the process. */
+    public void suspend() throws Exception {
+        if (!U.isUnix() && !U.isMacOs())
+            throw new UnsupportedOperationException();
+
+        if (pid.equals(DFLT_PID))
+            return;
+
+        Process stopProc = Runtime.getRuntime().exec(new String[]{"kill", "-STOP", pid});
+
+        if (!stopProc.waitFor(5000, TimeUnit.MILLISECONDS))
+            throw new IllegalStateException("The stop process is hanging.");
     }
 
     /**
