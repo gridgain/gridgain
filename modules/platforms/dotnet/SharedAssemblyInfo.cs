@@ -23,6 +23,6 @@ using System.Reflection;
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-[assembly: AssemblyVersion("8.8.127.50721")]
-[assembly: AssemblyFileVersion("8.8.127.50721")]
-[assembly: AssemblyInformationalVersion("8.8.127")]
+[assembly: AssemblyVersion("8.8.24.7914")]
+[assembly: AssemblyFileVersion("8.8.24.7914")]
+[assembly: AssemblyInformationalVersion("8.8.24")]
