@@ -271,13 +271,17 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
     @Test
     @WithSystemProperty(key = IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE, value = "1000")
     public void testSingleCleanWalArchive() throws Exception {
+        int walSegments = 10;
+        long maxWalArchiveSize = 5 * MB;
+
         IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(0))
             .setCacheConfiguration(cacheConfiguration())
             .setDataStorageConfiguration(
                 new DataStorageConfiguration()
                     .setCheckpointFrequency(Long.MAX_VALUE)
-                    .setMaxWalArchiveSize(5 * MB)
+                    .setMaxWalArchiveSize(maxWalArchiveSize)
                     .setWalSegmentSize((int)MB)
+                    .setWalSegments(walSegments)
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
@@ -292,23 +296,38 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
         IgniteEx n = startGrid(cfg);
 
         n.cluster().state(ClusterState.ACTIVE);
-        awaitPartitionMapExchange();
-
-        for (int i = 0; walArchiveSize(n) < 20L * cfg.getDataStorageConfiguration().getWalSegmentSize(); )
-            n.cache(DEFAULT_CACHE_NAME).put(i++, new byte[(int)(512 * KB)]);
-
-        assertEquals(-1, wal(n).lastTruncatedSegment());
-        assertEquals(0, ((FileWALPointer)gridDatabase(n).lastCheckpointMarkWalPointer()).index());
 
         Collection<String> logStrs = new ConcurrentLinkedQueue<>();
-        listeningLog.registerListener(logStr -> {
-            if (logStr.contains("Finish clean WAL archive"))
-                logStrs.add(logStr);
-        });
+
+        // To prevent a checkpoint from happening prematurely.
+        dbMgr(n).checkpointReadLock();
+
+        try {
+            // We write to the cache until there is 2L * cfg.getDataStorageConfiguration().getWalSegments().
+            for(int i = 0; ((FileWALPointer)wal(n).lastWritePointer()).index() < 2L * walSegments; i++)
+                n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(512 * KB)]);
+
+            // Let's make sure that no segments have been deleted.
+            assertEquals(-1, wal(n).lastTruncatedSegment());
+
+            // Let's wait for the archiving of all segments that should get into the archive in order to eliminate the
+            // race between archiving segments and cleaning the archive.
+            assertTrue(waitForCondition(
+                () -> wal(n).lastArchivedSegment() == (2L * walSegments) - 1,
+                getTestTimeout()
+            ));
+
+            listeningLog.registerListener(logStr -> {
+                if (logStr.contains("Finish clean WAL archive"))
+                    logStrs.add(logStr);
+            });
+        }
+        finally {
+            dbMgr(n).checkpointReadUnlock();
+        }
 
         forceCheckpoint();
 
-        long maxWalArchiveSize = cfg.getDataStorageConfiguration().getMaxWalArchiveSize();
         assertTrue(waitForCondition(() -> walArchiveSize(n) < maxWalArchiveSize, getTestTimeout()));
 
         assertEquals(logStrs.toString(), 1, logStrs.size());
