@@ -304,7 +304,7 @@ namespace Apache.Ignite.Core.Tests
         /// <param name="cacheName">Cache name.</param>
         /// <param name="expectedTopVer">Expected topology version.</param>
         /// <param name="timeoutMs">Timeout.</param>
-        /// <returns></returns>
+        /// <returns>True when expected topology version was reached; false otherwise.</returns>
         public static bool WaitForRebalance(
             this IIgnite ignite,
             string cacheName,
