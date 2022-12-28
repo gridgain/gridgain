@@ -64,6 +64,9 @@ namespace Apache.Ignite.Core.Tests
         /** System cache name. */
         public const string UtilityCacheName = "ignite-sys-cache";
 
+        /** */
+        private const string WaitForRebalanceTask = "org.apache.ignite.platform.PlatformWaitForRebalanceTask";
+
         /** Work dir. */
         private static readonly string WorkDir =
             // ReSharper disable once AssignNullToNotNullAttribute
@@ -292,6 +295,25 @@ namespace Apache.Ignite.Core.Tests
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Waits for rebalance to complete.
+        /// </summary>
+        /// <param name="ignite">Ignite.</param>
+        /// <param name="cacheName">Cache name.</param>
+        /// <param name="expectedTopVer">Expected topology version.</param>
+        /// <param name="timeoutMs">Timeout.</param>
+        /// <returns>True when expected topology version was reached; false otherwise.</returns>
+        public static bool WaitForRebalance(
+            this IIgnite ignite,
+            string cacheName,
+            AffinityTopologyVersion expectedTopVer,
+            long timeoutMs = 1000)
+        {
+            return ignite.GetCompute().ExecuteJavaTask<bool>(
+                WaitForRebalanceTask,
+                new object[] { cacheName, expectedTopVer.Version, expectedTopVer.MinorVersion, timeoutMs });
         }
 
         /// <summary>
