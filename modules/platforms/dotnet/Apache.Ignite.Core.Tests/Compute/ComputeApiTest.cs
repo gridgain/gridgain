@@ -777,10 +777,10 @@ namespace Apache.Ignite.Core.Tests.Compute
                     };
 
                     _grid1.GetCompute().AffinityRun(cacheName, affinityKey, computeAction);
-                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id], $"Run {i} failed");
+                    Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id], $"Run {i} failed");
 
                     _grid1.GetCompute().AffinityRunAsync(cacheName, affinityKey, computeAction).Wait();
-                    Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id], $"Async run {i} failed");
+                    Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id], $"Async run {i} failed");
                 }
             }
         }
@@ -897,7 +897,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             // Good case.
             action();
-            Assert.AreEqual(node.Id, ComputeAction.LastNodeId[computeAction.Id]);
+            Assert.AreEqual(node.Id, ComputeAction.ActionIdToNodeId[computeAction.Id]);
 
             // Exception in user code.
             computeAction.ShouldThrow = true;
@@ -1163,7 +1163,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
 
-        public static ConcurrentDictionary<Guid, Guid> LastNodeId = new ConcurrentDictionary<Guid, Guid>();
+        public static ConcurrentDictionary<Guid, Guid> ActionIdToNodeId = new ConcurrentDictionary<Guid, Guid>();
 
         public Guid Id { get; set; }
 
@@ -1187,7 +1187,7 @@ namespace Apache.Ignite.Core.Tests.Compute
         {
             Thread.Sleep(10);
             Invokes.Add(Id);
-            LastNodeId[Id] = _grid.GetCluster().GetLocalNode().Id;
+            ActionIdToNodeId[Id] = _grid.GetCluster().GetLocalNode().Id;
 
             if (ReservedPartition != null)
             {
