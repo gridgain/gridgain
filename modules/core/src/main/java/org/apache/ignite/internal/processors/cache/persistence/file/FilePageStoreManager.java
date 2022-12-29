@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2022 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -192,7 +192,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     private File storeWorkDir;
 
     /** */
-    private final Set<Integer> grpsWithoutIdx = Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+    private final Set<Integer> grpsWithoutIdx = ConcurrentHashMap.newKeySet();
 
     /** */
     private final GridStripedReadWriteLock initDirLock =
@@ -484,6 +484,15 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             CacheStoreHolder old = idxCacheStores.put(grpId, holder);
 
             assert old == null : "Non-null old store holder for cache: " + cacheData.config().getName();
+
+            if (!CU.isReservedCacheName(grpDesc.cacheOrGroupName()) && grpsWithoutIdx.contains(grpId)) {
+                if (log.isInfoEnabled())
+                    log.info(String.format(
+                        "'index.bin' was deleted for cache: [id=%s, name=%s]",
+                        grpId,
+                        grpDesc.cacheOrGroupName()
+                    ));
+            }
         }
     }
 
