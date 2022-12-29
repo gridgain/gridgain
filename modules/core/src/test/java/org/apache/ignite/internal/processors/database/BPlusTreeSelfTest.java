@@ -214,8 +214,8 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
                     // Ignore.
                 }
 
-                // We should try to wait for all the futures to complete, since GridCompoundFuture#get(long) only waits
-                // for one of the futures to complete so that we don't want crash jvm due to PageMemory deallocation.
+                // We should try to wait for all the futures to complete, since GridCompoundFuture#get(long) fails if
+                // one of the futures fails so that we don't want crash jvm due to PageMemory deallocation.
                 for (IgniteInternalFuture<?> future : asyncRunFut.futures()) {
                     if (!future.isDone()) {
                         try {
