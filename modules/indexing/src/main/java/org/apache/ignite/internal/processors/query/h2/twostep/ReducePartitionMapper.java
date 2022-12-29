@@ -41,8 +41,6 @@ import org.gridgain.internal.h2.util.IntArray;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
-
 /**
  * Reduce partition mapper.
  */
@@ -99,9 +97,9 @@ public class ReducePartitionMapper {
 
         if (isPreloadingActive(cacheIds)) {
             if (isReplicatedOnly)
-                nodes = replicatedUnstableDataNodes(cacheIds);
+                nodes = replicatedUnstableDataNodes(cacheIds, topVer);
             else {
-                partsMap = partitionedUnstableDataNodes(cacheIds);
+                partsMap = partitionedUnstableDataNodes(cacheIds, topVer);
 
                 if (partsMap != null) {
                     qryMap = narrowForQuery(partsMap, parts);
@@ -383,10 +381,14 @@ public class ReducePartitionMapper {
      * Calculates partition mapping for partitioned cache on unstable topology.
      *
      * @param cacheIds Cache IDs.
+     * @param topVer Topology version.
      * @return Partition mapping or {@code null} if we can't calculate it due to repartitioning and we need to retry.
      */
     @SuppressWarnings("unchecked")
-    private Map<ClusterNode, IntArray> partitionedUnstableDataNodes(List<Integer> cacheIds) {
+    private Map<ClusterNode, IntArray> partitionedUnstableDataNodes(
+        List<Integer> cacheIds,
+        AffinityTopologyVersion topVer
+    ) {
         // If the main cache is replicated, just replace it with the first partitioned.
         GridCacheContext<?,?> cctx = findFirstPartitioned(cacheIds);
 
@@ -412,16 +414,16 @@ public class ReducePartitionMapper {
 
         // Fill partition locations for main cache.
         for (int p = 0; p < partsCnt; p++) {
-            List<ClusterNode> owners = cctx.topology().owners(p);
+            List<ClusterNode> owners = cctx.topology().owners(p, topVer);
 
             if (F.isEmpty(owners)) {
                 // Handle special case: no mapping is configured for a partition or a lost partition is found.
-                if (F.isEmpty(cctx.affinity().assignment(NONE).get(p)) || cctx.topology().lostPartitions().contains(p)) {
+                if (F.isEmpty(cctx.affinity().assignment(topVer).get(p)) || cctx.topology().lostPartitions().contains(p)) {
                     partLocs[p] = UNMAPPED_PARTS; // Mark unmapped partition.
 
                     continue;
                 }
-                else if (!F.isEmpty(dataNodes(cctx.groupId(), NONE))) {
+                else if (!F.isEmpty(dataNodes(cctx.groupId(), topVer))) {
                     if (log.isInfoEnabled())
                         logRetry("Failed to calculate nodes for SQL query (partition has no owners, but corresponding " +
                             "cache group has data nodes) [cacheIds=" + cacheIds +
@@ -451,13 +453,13 @@ public class ReducePartitionMapper {
                     continue;
 
                 for (int p = 0, parts = extraCctx.affinity().partitions(); p < parts; p++) {
-                    List<ClusterNode> owners = extraCctx.topology().owners(p);
+                    List<ClusterNode> owners = extraCctx.topology().owners(p, topVer);
 
                     if (partLocs[p] == UNMAPPED_PARTS)
                         continue; // Skip unmapped partitions.
 
                     if (F.isEmpty(owners)) {
-                        if (!F.isEmpty(dataNodes(extraCctx.groupId(), NONE))) {
+                        if (!F.isEmpty(dataNodes(extraCctx.groupId(), topVer))) {
                             if (log.isInfoEnabled())
                                 logRetry("Failed to calculate nodes for SQL query (partition has no owners, but " +
                                     "corresponding cache group has data nodes) [cacheIds=" + cacheIds +
@@ -497,7 +499,7 @@ public class ReducePartitionMapper {
                 if (!extraCctx.isReplicated())
                     continue;
 
-                Set<ClusterNode> dataNodes = replicatedUnstableDataNodes(extraCctx);
+                Set<ClusterNode> dataNodes = replicatedUnstableDataNodes(extraCctx, topVer);
 
                 if (F.isEmpty(dataNodes))
                     return null; // Retry.
@@ -555,9 +557,10 @@ public class ReducePartitionMapper {
      * Calculates data nodes for replicated caches on unstable topology.
      *
      * @param cacheIds Cache IDs.
+     * @param topVer Topology version.
      * @return Collection of all data nodes owning all the caches or {@code null} for retry.
      */
-    private Collection<ClusterNode> replicatedUnstableDataNodes(List<Integer> cacheIds) {
+    private Collection<ClusterNode> replicatedUnstableDataNodes(List<Integer> cacheIds, AffinityTopologyVersion topVer) {
         int i = 0;
 
         GridCacheContext<?, ?> cctx = cacheContext(cacheIds.get(i++));
@@ -572,7 +575,7 @@ public class ReducePartitionMapper {
             assert cctx.isReplicated() : "all the extra caches must be replicated here";
         }
 
-        Set<ClusterNode> nodes = replicatedUnstableDataNodes(cctx);
+        Set<ClusterNode> nodes = replicatedUnstableDataNodes(cctx, topVer);
 
         if (F.isEmpty(nodes))
             return null; // Retry.
@@ -588,7 +591,7 @@ public class ReducePartitionMapper {
                     "with tables in partitioned caches [replicatedCache=" + cctx.name() + ", " +
                     "partitionedCache=" + extraCctx.name() + "]");
 
-            Set<ClusterNode> extraOwners = replicatedUnstableDataNodes(extraCctx);
+            Set<ClusterNode> extraOwners = replicatedUnstableDataNodes(extraCctx, topVer);
 
             if (F.isEmpty(extraOwners))
                 return null; // Retry.
@@ -610,22 +613,23 @@ public class ReducePartitionMapper {
     /**
      * Collects all the nodes owning all the partitions for the given replicated cache.
      *
-     * @param cctx Cache context.
+     * @param cctx   Cache context.
+     * @param topVer Topology version.
      * @return Owning nodes or {@code null} if we can't find owners for some partitions.
      */
-    private Set<ClusterNode> replicatedUnstableDataNodes(GridCacheContext<?,?> cctx) {
+    private Set<ClusterNode> replicatedUnstableDataNodes(GridCacheContext<?,?> cctx, AffinityTopologyVersion topVer) {
         assert cctx.isReplicated() : cctx.name() + " must be replicated";
 
         String cacheName = cctx.name();
 
-        Set<ClusterNode> dataNodes = new HashSet<>(dataNodes(cctx.groupId(), NONE));
+        Set<ClusterNode> dataNodes = new HashSet<>(dataNodes(cctx.groupId(), topVer));
 
         if (dataNodes.isEmpty())
             throw new CacheServerNotFoundException("Failed to find data nodes for cache: " + cacheName);
 
         // Find all the nodes owning all the partitions for replicated cache.
         for (int p = 0, parts = cctx.affinity().partitions(); p < parts; p++) {
-            List<ClusterNode> owners = cctx.topology().owners(p);
+            List<ClusterNode> owners = cctx.topology().owners(p, topVer);
 
             if (F.isEmpty(owners)) {
                 logRetry("Failed to calculate nodes for SQL query (partition of a REPLICATED cache has no owners) [" +
