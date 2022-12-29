@@ -38,6 +38,10 @@ public class IgniteDbMemoryLeakWithExpirationTest extends IgniteDbMemoryLeakTest
 
     /** {@inheritDoc} */
     @Override protected long pagesMax() {
-        return 7000;
+        // This value is obtained empirically. We temporarily change #operation() to only do puts, also increase
+        // #duration() to last for many munites, then we run this test and monitor the usedRam metric. Then we can see
+        // if a value chosen here is enough or not.
+
+        return 10_000;
     }
 }
