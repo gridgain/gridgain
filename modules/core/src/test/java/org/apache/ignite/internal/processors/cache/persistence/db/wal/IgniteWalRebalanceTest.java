@@ -68,8 +68,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTestUtils;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
@@ -92,7 +92,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Assert;
@@ -103,6 +102,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.CheckpointState.FINISHED;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Historical WAL rebalance base test.
@@ -193,6 +193,34 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         if (!walRebalanceInvoked)
             throw new AssertionError("WAL rebalance hasn't been invoked.");
+    }
+
+    /**
+     * Stops all cluster nodes with checkpoint and restarts the given number of nodes.
+     * It is assumed that there is no load during stopping the cluster.
+     *
+     * @param numNodeToRestart Number of nodes to be restarted.
+     * @throws IgniteCheckedException In case of checkpoint process failed.
+     * @throws Exception In case of starting nodes failed.
+     */
+    private IgniteEx restartGrid(int numNodeToRestart) throws IgniteCheckedException, Exception {
+        forceCheckpoint();
+
+        long gridStartTime = grid(0).context().discovery().gridStartTime();
+        long majorTopVer = grid(0).context().discovery().topologyVersion();
+
+        // It is assumed that there is no load during stopping the cluster.
+        stopAllGrids();
+
+        // Need to wait for some time in order to overcome the issue with GridCacheVersion generation on restart.
+        // See details at https://ggsystems.atlassian.net/browse/GG-36019
+        boolean res = waitForCondition(() -> (U.currentTimeMillis() - gridStartTime)/1000 > majorTopVer, getTestTimeout());
+
+        assertTrue(
+            "Failed to wait for a timeout ot restart nodes [gridStartTime=" + gridStartTime + ", majorTopVer=" + majorTopVer,
+            res);
+
+        return startGrids(numNodeToRestart);
     }
 
     /**
@@ -314,11 +342,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
                 cache.put(k, new IndexedObject(k - 1));
         }
 
-        forceCheckpoint();
-
-        stopAllGrids();
-
-        IgniteEx ig0 = startGrids(2);
+        IgniteEx ig0 = restartGrid(2);
 
         ig0.cluster().state(ACTIVE);
 
@@ -409,12 +433,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
                 cache.put(k, new IndexedObject(k - 1));
         }
 
-        forceCheckpoint();
-
-        stopAllGrids();
-
         // Rewrite data with globally disabled WAL.
-        crd = startGrids(2);
+        crd = restartGrid(2);
 
         crd.cluster().state(ACTIVE);
 
@@ -475,8 +495,6 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceCancelOnSupplyError() throws Exception {
-        final long TOP_VER_BASE_TIME = 1388520000000L;
-
         backups = 4;
 
         // Prepare some data.
@@ -494,24 +512,10 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
                 cache.put(k, new IndexedObject(k - 1));
         }
 
-        forceCheckpoint();
-
-        long prevStartTime = grid(0).context().discovery().gridStartTime();
-        GridCacheVersion prevLastVer = grid(0).context().cache().context().versions().last();
-
-        stopAllGrids();
-
         // Rewrite data to trigger further rebalance.
-        IgniteEx supplierNode = startGrid(0);
+        IgniteEx supplierNode = restartGrid(1);
 
         supplierNode.cluster().state(ACTIVE);
-
-        long startTime = grid(0).context().discovery().gridStartTime();
-        GridCacheVersion lastVer = grid(0).context().cache().context().versions().last();
-
-        log.warning(">>>>> StartTimeComparator " +
-            "[prevStartTime=" + prevStartTime + ", prevLastVer=" + prevLastVer + ", offset=" + ((int) ((prevStartTime - TOP_VER_BASE_TIME) / 1000))
-            + ", startTime=" + startTime + ", lastVer=" + lastVer + ", offset=" + ((int) ((startTime - TOP_VER_BASE_TIME) / 1000)) + ']');
 
         IgniteCache<Object, Object> cache = supplierNode.cache(CACHE_NAME);
 
@@ -537,7 +541,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Wait for rebalance process start on demander node.
         final GridCachePreloader preloader = demanderNode.cachex(CACHE_NAME).context().group().preloader();
 
-        GridTestUtils.waitForCondition(() ->
+        waitForCondition(() ->
                 ((GridDhtPartitionDemander.RebalanceFuture)preloader.rebalanceFuture()).topologyVersion().equals(curTopVer),
             getTestTimeout()
         );
@@ -689,7 +693,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         // Wait until rebalancing will be cancelled for both suppliers.
         assertTrue(
             "Rebalance future was not cancelled [fut=" + preloadFut + ']',
-            GridTestUtils.waitForCondition(preloadFut::isDone, getTestTimeout()));
+            waitForCondition(preloadFut::isDone, getTestTimeout()));
 
         Assert.assertEquals(
             "Rebalance should be cancelled on demander node: " + preloadFut,
@@ -1060,7 +1064,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         demanderSpi.stopBlock();
 
         // Wait until rebalancing will be cancelled.
-        GridTestUtils.waitForCondition(
+        waitForCondition(
             () -> preloadFut1.isDone() && (!rebalanceReassigned || (rebalanceReassigned && preloadFut2.isDone())),
             getTestTimeout());
 
@@ -1305,7 +1309,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         assertTrue(
             "Failed to wait for a checkpoint.",
-            GridTestUtils.waitForCondition(() -> checkpointFut.isDone(), getTestTimeout()));
+            waitForCondition(() -> checkpointFut.isDone(), getTestTimeout()));
 
         // Well, there is a race between we unblock rebalance and the current checkpoint executes all its listeners.
         demanderSpi.stopBlock();
