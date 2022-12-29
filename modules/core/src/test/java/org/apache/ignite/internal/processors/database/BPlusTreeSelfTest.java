@@ -208,10 +208,22 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
 
                 try {
                     asyncRunFut.cancel();
-                    asyncRunFut.get(60000);
+                    asyncRunFut.get(TimeUnit.MINUTES.toMillis(1));
                 }
                 catch (Throwable ex) {
-                    //Ignore
+                    // Ignore.
+                }
+
+                // We should try to wait for all the futures to complete, since GridCompoundFuture#get(long) only waits
+                // for one of the futures to complete so that we don't want crash jvm due to PageMemory deallocation.
+                for (IgniteInternalFuture<?> future : asyncRunFut.futures()) {
+                    if (!future.isDone()) {
+                        try {
+                            future.get(TimeUnit.MINUTES.toMillis(1));
+                        } catch (Throwable t) {
+                            // Ignore.
+                        }
+                    }
                 }
             }
 
@@ -1744,8 +1756,6 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
      * the method is picking up new pages which are concurrently added to the tree until the new pages are not added
      * anymore. Test verifies that despite livelock condition a size from a valid range is returned.
      *
-     * NB: This test has to be changed with the integration of IGNITE-3478.
-     *
      * @throws Exception if test failed
      */
     @Test
@@ -1753,7 +1763,8 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         MAX_PER_PAGE = 5;
         CNT = 800;
 
-        final int SLIDING_WINDOW_SIZE = 16;
+        // Sliding window size should be grater than cores to avoid races between puts and removes values in the tree.
+        final int SLIDING_WINDOW_SIZE = CPUS * 2;
         final boolean DEBUG_PRINT = false;
 
         final TestTree tree = createTestTree(false);
@@ -1764,7 +1775,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         for (long i = curRmvKey.get(); i < curPutKey.get(); ++i)
             assertNull(tree.put(i));
 
-        final int hwThreads = Runtime.getRuntime().availableProcessors();
+        final int hwThreads = CPUS;
         final int putRmvThreadCnt = Math.max(1, hwThreads / 2);
         final int sizeThreadCnt = hwThreads - putRmvThreadCnt;
 
