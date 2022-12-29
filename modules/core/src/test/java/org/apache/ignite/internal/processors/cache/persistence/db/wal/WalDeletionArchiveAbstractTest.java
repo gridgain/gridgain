@@ -304,7 +304,7 @@ public abstract class WalDeletionArchiveAbstractTest extends GridCommonAbstractT
 
         try {
             // We write to the cache until there is 2L * cfg.getDataStorageConfiguration().getWalSegments().
-            for(int i = 0; ((FileWALPointer)wal(n).lastWritePointer()).index() < 2L * walSegments; i++)
+            for (int i = 0; ((FileWALPointer)wal(n).lastWritePointer()).index() < 2L * walSegments; i++)
                 n.cache(DEFAULT_CACHE_NAME).put(i, new byte[(int)(512 * KB)]);
 
             // Let's make sure that no segments have been deleted.
