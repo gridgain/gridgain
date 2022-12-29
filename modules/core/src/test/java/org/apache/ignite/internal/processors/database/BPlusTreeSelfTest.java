@@ -1763,7 +1763,8 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         MAX_PER_PAGE = 5;
         CNT = 800;
 
-        // Sliding window size should be grater than cores to avoid races between puts and removes values in the tree.
+        // Sliding window size should be greater than the amount of CPU cores to avoid races between puts and removes
+        // in the tree.
         final int SLIDING_WINDOW_SIZE = CPUS * 2;
         final boolean DEBUG_PRINT = false;
 
