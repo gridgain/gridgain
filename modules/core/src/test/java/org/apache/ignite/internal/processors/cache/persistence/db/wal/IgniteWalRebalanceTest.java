@@ -214,7 +214,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         // Need to wait for some time in order to overcome the issue with GridCacheVersion generation on restart.
         // See details at https://ggsystems.atlassian.net/browse/GG-36019
-        boolean res = waitForCondition(() -> (U.currentTimeMillis() - gridStartTime)/1000 > majorTopVer, getTestTimeout());
+        boolean res = waitForCondition(() -> (U.currentTimeMillis() - gridStartTime) / 1000 > majorTopVer, getTestTimeout());
 
         assertTrue(
             "Failed to wait for a timeout ot restart nodes [gridStartTime=" + gridStartTime + ", majorTopVer=" + majorTopVer,
