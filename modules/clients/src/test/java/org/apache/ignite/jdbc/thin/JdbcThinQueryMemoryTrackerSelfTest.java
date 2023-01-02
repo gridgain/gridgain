@@ -25,12 +25,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.junit.Test;
 
@@ -40,6 +43,18 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  * Query memory manager for local queries.
  */
 public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTest {
+    /** Log listener. */
+    private static final LogListener logLsnr = LogListener.matches("Memory tracker has been closed concurrently").build();
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        ListeningTestLogger lnsrLog = new ListeningTestLogger(log());
+
+        lnsrLog.registerListener(logLsnr);
+
+        return super.getConfiguration(igniteInstanceName).setGridLogger(lnsrLog);
+    }
+
     /** {@inheritDoc} */
     @Override protected boolean startClient() {
         return false;
@@ -106,6 +121,29 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
                 IgniteUtils.closeQuiet(stmt);
             }
         }
+    }
+
+    /**
+     * Ensures that the memory tracker closes without errors when only a small part of the results are read.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartialRead() throws Exception {
+        maxMem = 8 * MB;
+
+        try (Connection conn = createConnection(false)) {
+            try (Statement stmt = conn.createStatement()) {
+                try (ResultSet rs = stmt.executeQuery("select * from k")) {
+                    for (int i = 0; i < 10; i++) {
+                        if (!rs.next())
+                            return;
+                    }
+                }
+            }
+        }
+
+        assertFalse(logLsnr.check(1_000));
     }
 
     /** {@inheritDoc} */

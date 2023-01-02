@@ -597,17 +597,15 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void close() {
         if (!closed) {
-            onClose();
-
             if (memReserved > 0) {
                 H2MemoryTracker tracker = session.memoryTracker();
 
                 assert tracker != null;
 
                 tracker.release(memReserved);
-
-                memReserved = 0;
             }
+
+            onClose();
 
             if (external != null) {
                 external.close();
@@ -688,6 +686,8 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** Close event handler. */
     protected void onClose() {
+        memReserved = 0;
+
         // Allow results to be collected by GC before mark memory released.
         distinctRows = null;
         rows = null;
