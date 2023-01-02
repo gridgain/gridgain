@@ -303,10 +303,10 @@ class MapQueryResult {
 
         ses.setQueryContext(null);
 
-//        H2MemoryTracker tracker = ses.memoryTracker();
-//
-//        if (tracker != null)
-//            tracker.close();
+        H2MemoryTracker tracker = ses.memoryTracker();
+
+        if (tracker != null)
+            tracker.close();
 
         conn.close();
     }

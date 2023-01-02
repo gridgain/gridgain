@@ -599,6 +599,16 @@ public class H2ManagedLocalResult implements LocalResult {
         if (!closed) {
             onClose();
 
+            if (memReserved > 0) {
+                H2MemoryTracker tracker = session.memoryTracker();
+
+                assert tracker != null;
+
+                tracker.release(memReserved);
+
+                memReserved = 0;
+            }
+
             if (external != null) {
                 external.close();
                 external = null;
@@ -681,16 +691,6 @@ public class H2ManagedLocalResult implements LocalResult {
         // Allow results to be collected by GC before mark memory released.
         distinctRows = null;
         rows = null;
-
-        if (memReserved > 0) {
-            H2MemoryTracker tracker = session.memoryTracker();
-
-            assert tracker != null;
-
-            tracker.release(memReserved);
-
-            memReserved = 0;
-        }
     }
 
     /** */
