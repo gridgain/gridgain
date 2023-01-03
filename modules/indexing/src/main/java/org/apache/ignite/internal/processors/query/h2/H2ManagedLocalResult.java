@@ -597,11 +597,8 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void close() {
         if (!closed) {
-            if (memReserved > 0) {
+            if (memReserved > 0)
                 memTracker.release(memReserved);
-
-                memReserved = 0;
-            }
 
             onClose();
 

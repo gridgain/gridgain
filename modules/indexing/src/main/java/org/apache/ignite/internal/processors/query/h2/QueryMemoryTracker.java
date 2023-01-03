@@ -177,10 +177,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public synchronized void release(long size) {
         assert size >= 0;
 
-        if (size == 0)
+        if (size == 0 || closed)
             return;
-
-        checkClosed();
 
         reserved -= size;
 
@@ -372,7 +370,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** {@inheritDoc} */
         @Override public void release(long size) {
-            checkClosed();
+            if (state == STATE_CLOSED)
+                return;
 
             reserved -= size;
 
