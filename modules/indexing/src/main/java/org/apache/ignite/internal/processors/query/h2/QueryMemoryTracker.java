@@ -23,6 +23,7 @@ import org.apache.ignite.cache.query.exceptions.SqlMemoryQuotaExceededException;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Query memory tracker.
@@ -30,6 +31,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
+    /** Error message when tracker is called after it has been closed. */
+    public static final String ERROR_TRACKER_ALREADY_CLOSED = "Memory tracker has been closed concurrently.";
+
     /** State updater. */
     private static final AtomicIntegerFieldUpdater<QueryMemoryTracker> STATE_UPDATER
         = AtomicIntegerFieldUpdater.newUpdater(QueryMemoryTracker.class, "state");
@@ -135,8 +139,12 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
      * Checks whether tracker was closed.
      */
     private void checkClosed() {
-        if (closed)
-            throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
+        if (closed) {
+//            System.err.println(">xxx> Ignore exception");
+            U.dumpStack(">xxx> ERROR in tracker");
+
+            throw new TrackerWasClosedException(ERROR_TRACKER_ALREADY_CLOSED);
+        }
     }
 
     /**
@@ -274,9 +282,13 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
     /** {@inheritDoc} */
     @Override public void close() {
+        boolean res = STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED);
+
+        System.err.println(Thread.currentThread().getName() + " >xxx> try to close mem tracker - " + res + " " + hashCode());
+
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
+        if (!res)
             return;
 
         synchronized (this) {
@@ -436,7 +448,11 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** {@inheritDoc} */
         @Override public void close() {
-            if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
+            boolean res = STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED);
+
+            System.err.println(Thread.currentThread().getName() + " >xxx> try to close child memory tracker - " + res + " " + hashCode());
+
+            if (!res)
                 return;
 
             parent.release(reserved);
@@ -450,8 +466,11 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** */
         private void checkClosed() {
-            if (state == STATE_CLOSED)
-                throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
+            if (state == STATE_CLOSED) {
+                U.dumpStack(">xxx> ERROR in child tracker " + hashCode());
+
+                throw new TrackerWasClosedException(ERROR_TRACKER_ALREADY_CLOSED);
+            }
         }
     }
 
