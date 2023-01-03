@@ -127,6 +127,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
             else if (isNewSchema && _portStruct != null && !_portStruct.IsPathEnd(_curStructPath, _curStructAction))
             {
                 // Subset of current schema is a different schema and should be saved.
+                // TODO: Null below causes GG-36141.
                 writer.SaveMetadata(_desc, null);
             }
         }
