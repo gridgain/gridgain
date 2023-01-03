@@ -358,7 +358,8 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
             if (fields == null || fields.Count == 0)
                 return;
 
-            Debug.Assert(_fields != null);
+            Debug.Assert(this != Empty, "this != Empty");
+            Debug.Assert(_fields != null, "_fields != null");
 
             foreach (var field in fields)
                 _fields[field.Key] = field.Value;
