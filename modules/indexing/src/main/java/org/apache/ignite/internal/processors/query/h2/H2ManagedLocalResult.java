@@ -103,6 +103,9 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Disk spilling (offloading) manager. */
     private ResultExternal external;
 
+    /** Query memory tracker. */
+    private H2MemoryTracker memTracker;
+
     /** Reserved memory. */
     private long memReserved;
 
@@ -128,7 +131,7 @@ public class H2ManagedLocalResult implements LocalResult {
         rowId = -1;
         this.expressions = expressions;
 
-//        memTracker = session.memoryTracker();
+        memTracker = session.memoryTracker();
     }
 
     /**
@@ -142,7 +145,7 @@ public class H2ManagedLocalResult implements LocalResult {
     private boolean hasAvailableMemory(ValueRow distinctRowKey, Value[] oldRow, Value[] row) {
         assert !isClosed();
 
-        if (session.memoryTracker() == null)
+        if (memTracker == null)
             return true; // No memory management set.
 
         long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
@@ -150,9 +153,9 @@ public class H2ManagedLocalResult implements LocalResult {
         boolean hasMemory = true;
 
         if (memory < 0)
-            session.memoryTracker().release(-memory);
+            memTracker.release(-memory);
         else
-            hasMemory = session.memoryTracker().reserve(memory);
+            hasMemory = memTracker.reserve(memory);
 
         memReserved += memory;
 
@@ -422,9 +425,8 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        session.memoryTracker().release(memReserved);
+        memTracker.release(memReserved);
 
-        System.err.println(Thread.currentThread().getName() + " >xxx> reset memReserved");
         memReserved = 0;
     }
 
@@ -595,10 +597,10 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void close() {
         if (!closed) {
-            H2MemoryTracker tracker = session.memoryTracker();
+            if (memReserved > 0) {
+                memTracker.release(memReserved);
 
-            if (memReserved > 0 && !tracker.closed()) {
-                tracker.release(memReserved);
+                memReserved = 0;
             }
 
             onClose();
@@ -677,12 +679,11 @@ public class H2ManagedLocalResult implements LocalResult {
      * @return Memory tracker.
      */
     public H2MemoryTracker memoryTracker() {
-        return session.memoryTracker();
+        return memTracker;
     }
 
     /** Close event handler. */
     protected void onClose() {
-        System.err.println(Thread.currentThread().getName() + " >xxx> reset memReserved(2)");
         memReserved = 0;
 
         // Allow results to be collected by GC before mark memory released.

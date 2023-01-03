@@ -56,14 +56,12 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSe
     public void testPartialResultRead() throws Exception {
         maxMem = 8 * MB;
 
-        System.out.println(">xxx> start test");
-
         try (Connection conn = createConnection(false)) {
             try (Statement stmt = conn.createStatement()) {
                 try (ResultSet rs = stmt.executeQuery("select * from k")) {
                     for (int i = 0; i < 10; i++) {
                         if (!rs.next())
-                            return;
+                            fail();
                     }
                 }
             }
