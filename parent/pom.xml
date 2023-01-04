@@ -54,7 +54,7 @@
         <aspectj.bundle.version>1.9.8</aspectj.bundle.version>
         <aspectj.version>1.9.8</aspectj.version>
         <aws.sdk.bundle.version>1.12.175</aws.sdk.bundle.version>
-        <aws.sdk.version>1.12.261</aws.sdk.version>
+        <aws.sdk.version>1.12.328</aws.sdk.version>
         <aws.encryption.sdk.version>2.4.0</aws.encryption.sdk.version>
         <camel.version>2.22.3</camel.version>
         <bouncycastle.version>1.70</bouncycastle.version>
@@ -1497,7 +1497,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1510,7 +1510,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1524,7 +1524,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                     </pluginExecutions>
