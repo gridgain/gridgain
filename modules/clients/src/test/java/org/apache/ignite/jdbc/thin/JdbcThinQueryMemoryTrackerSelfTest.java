@@ -21,12 +21,17 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.apache.ignite.configuration.IgniteConfiguration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
+import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
+import org.gridgain.internal.h2.engine.Session;
+import org.gridgain.internal.h2.expression.Expression;
+import org.gridgain.internal.h2.result.LocalResult;
+import org.gridgain.internal.h2.result.LocalResultImpl;
 import org.junit.Test;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
@@ -34,26 +39,31 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
  * Query memory manager for local queries.
  */
 public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSelfTest {
-    /** Log listener. */
-    private static final LogListener errMsgLsnr =
-        LogListener.matches(QueryMemoryTracker.ERROR_TRACKER_ALREADY_CLOSED).build();
+    /** Hold any error that occurred while closing the local result. */
+    private static final AtomicReference<Throwable> localResultErr = new AtomicReference<>();
+
+    /** Count of closed results. */
+    private static final AtomicInteger closedResultCntr = new AtomicInteger();
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        ListeningTestLogger lnsrLog = new ListeningTestLogger(log());
+    @Override protected Class<?> localResultFactory() {
+        return TestH2LocalResultFactory.class;
+    }
 
-        lnsrLog.registerListener(errMsgLsnr);
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
 
-        return super.getConfiguration(igniteInstanceName).setGridLogger(lnsrLog);
+        closedResultCntr.set(0);
     }
 
     /**
-     * Ensures that the memory tracker closes without errors when only a small part of the results are read.
+     * Ensures that the H2 local result closes without errors when only a small part of the results are read.
      *
-     * @throws Exception If failed.
+     * @throws Throwable If failed.
      */
     @Test
-    public void testPartialResultRead() throws Exception {
+    public void testPartialResultRead() throws Throwable {
         maxMem = 8 * MB;
 
         try (Connection conn = createConnection(false)) {
@@ -67,7 +77,13 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSe
             }
         }
 
-        assertFalse(errMsgLsnr.check(1_000));
+        assertEquals(localResults.size(), closedResultCntr.get());
+
+        Throwable err = localResultErr.get();
+
+        if (err != null) {
+            fail(err.getMessage());
+        }
     }
 
     /** {@inheritDoc} */
@@ -78,5 +94,44 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends JdbcQueryMemoryTrackerSe
         conn.setSchema("\"PUBLIC\"");
 
         return conn;
+    }
+
+    /**
+     * Local result factory for test.
+     */
+    public static class TestH2LocalResultFactory extends H2LocalResultFactory {
+        /** {@inheritDoc} */
+        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
+            if (system)
+                return new LocalResultImpl(ses, expressions, visibleColCnt);
+
+            if (ses.memoryTracker() != null) {
+                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, expressions, visibleColCnt) {
+                    @Override public void close() {
+                        try {
+                            closedResultCntr.incrementAndGet();
+
+                            super.close();
+                        } catch (Throwable t) {
+                            if (!localResultErr.compareAndSet(null, t))
+                                localResultErr.get().addSuppressed(t);
+
+                            throw t;
+                        }
+                    }
+                };
+
+                localResults.add(res);
+
+                return res;
+            }
+
+            return new H2ManagedLocalResult(ses, expressions, visibleColCnt);
+        }
+
+        /** {@inheritDoc} */
+        @Override public LocalResult create() {
+            throw new NotImplementedException();
+        }
     }
 }

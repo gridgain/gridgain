@@ -30,9 +30,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
-    /** Error message when tracker is called after it has been closed. */
-    public static final String ERROR_TRACKER_ALREADY_CLOSED = "Memory tracker has been closed concurrently.";
-
     /** State updater. */
     private static final AtomicIntegerFieldUpdater<QueryMemoryTracker> STATE_UPDATER
         = AtomicIntegerFieldUpdater.newUpdater(QueryMemoryTracker.class, "state");
@@ -139,7 +136,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
      */
     private void checkClosed() {
         if (closed)
-            throw new TrackerWasClosedException(ERROR_TRACKER_ALREADY_CLOSED);
+            throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
     }
 
     /**
@@ -177,6 +174,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public synchronized void release(long size) {
         assert size >= 0;
 
+        // If the query is cancelled from thin client, the tracker may be closed before the local result is closed.
         if (size == 0 || closed)
             return;
 
@@ -453,7 +451,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** */
         private void checkClosed() {
             if (state == STATE_CLOSED)
-                throw new TrackerWasClosedException(ERROR_TRACKER_ALREADY_CLOSED);
+                throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
         }
     }
 

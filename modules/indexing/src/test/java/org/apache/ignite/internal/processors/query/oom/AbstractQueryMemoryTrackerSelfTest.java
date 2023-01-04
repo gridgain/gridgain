@@ -62,7 +62,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     static final long RESERVATION_BLOCK_SIZE = KB;
 
     /** Query local results. */
-    static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
+    protected static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
 
     /** Query memory limit. */
     protected long maxMem;
@@ -77,7 +77,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
+        System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, localResultFactory().getName());
         System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(RESERVATION_BLOCK_SIZE));
 
         startGrid(0);
@@ -274,6 +274,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         catch (Exception e) {
             fail("Wrong exception: " + X.getFullStackTrace(e));
         }
+    }
+
+    /**
+     * @return Local result factory class.
+     */
+    protected Class<?> localResultFactory() {
+        return TestH2LocalResultFactory.class;
     }
 
     /**
