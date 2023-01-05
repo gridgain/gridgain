@@ -77,9 +77,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** Total number of bytes written on disk tracked by current tracker. */
     private volatile long totalWrittenOnDisk;
 
-    /** Close flag to prevent tracker reuse. */
-    private volatile boolean closed;
-
     /** State of the tracker. Can be equal {@link #STATE_INITIAL} or {@link #STATE_CLOSED}*/
     private volatile int state;
 
@@ -135,7 +132,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
      * Checks whether tracker was closed.
      */
     private void checkClosed() {
-        if (closed)
+        if (closed())
             throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
     }
 
@@ -175,7 +172,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         assert size >= 0;
 
         // If the query is cancelled from thin client, the tracker may be closed before the local result is closed.
-        if (size == 0 || closed)
+        if (size == 0 || closed())
             return;
 
         reserved -= size;
@@ -268,24 +265,20 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
      * @return {@code true} if closed, {@code false} otherwise.
      */
     @Override public boolean closed() {
-        return closed;
+        return STATE_UPDATER.get(this) == STATE_CLOSED;
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public synchronized void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
         if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
             return;
 
-        synchronized (this) {
-            for (H2MemoryTracker child : children)
-                child.close();
+        for (H2MemoryTracker child : children)
+            child.close();
 
-            children.clear();
-        }
-
-        closed = true;
+        children.clear();
 
         reserved = 0;
 
