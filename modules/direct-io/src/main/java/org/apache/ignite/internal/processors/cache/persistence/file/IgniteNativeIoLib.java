@@ -48,6 +48,9 @@ public class IgniteNativeIoLib {
     /** File shall be created. If the file exists, this flag has no effect. */
     public static final int O_CREAT = 0100;
 
+    /** If O_CREAT and O_EXCL are set, open() shall fail if the file exists. */
+    public static final int O_EXCL = 0200;
+
     /** If the file exists and is a regular file length shall be truncated to 0. */
     public static final int O_TRUNC = 01000;
 
@@ -94,7 +97,7 @@ public class IgniteNativeIoLib {
     private static boolean jnaAvailable;
 
     /** JNA library initialization exception. To be logged to Ignite logger later. */
-    @Nullable private static Exception ex;
+    @Nullable private static Throwable ex;
 
     static {
         if (Platform.isLinux()) {
@@ -106,7 +109,7 @@ public class IgniteNativeIoLib {
                 else
                     jnaAvailable = false;
             }
-            catch (Exception e) {
+            catch (Throwable e) {
                 ex = e;
                 jnaAvailable = false;
             }
