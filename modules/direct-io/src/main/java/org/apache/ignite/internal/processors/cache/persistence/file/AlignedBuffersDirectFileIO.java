@@ -165,8 +165,6 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
                     ? IgniteNativeIoLib.O_RDWR
                     : IgniteNativeIoLib.O_WRONLY;
             }
-            else if (mode == StandardOpenOption.CREATE_NEW)
-                flags |= (IgniteNativeIoLib.O_CREAT | IgniteNativeIoLib.O_EXCL);
             else if (mode == StandardOpenOption.CREATE)
                 flags |= IgniteNativeIoLib.O_CREAT;
             else if (mode == StandardOpenOption.TRUNCATE_EXISTING)
