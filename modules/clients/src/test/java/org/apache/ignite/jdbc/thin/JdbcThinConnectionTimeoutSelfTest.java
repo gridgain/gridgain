@@ -149,7 +149,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      *
      */
-    //@Test
+    @Test
     public void testSettingNegativeConnectionTimeout() {
         GridTestUtils.assertThrows(log,
             () -> {
@@ -162,7 +162,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      *
      */
-    //@Test
+    @Test
     public void testNegativeConnectionTimeout() {
         GridTestUtils.assertThrows(log,
             () -> {
@@ -176,7 +176,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testConnectionTimeoutRetrieval() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
             assertEquals(1000, conn.getNetworkTimeout());
@@ -190,7 +190,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testConnectionTimeout() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 1000);
 
@@ -212,7 +212,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testUrlConnectionTimeoutProperty() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
@@ -255,7 +255,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testQueryTimeoutOccursBeforeConnectionTimeout() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 10_000);
 
@@ -275,7 +275,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testUrlQueryTimeoutProperty() throws Exception {
         final int QRY_TIMEOUT = 1;
 
@@ -300,7 +300,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testConnectionTimeoutUpdate() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL +
             "?connectionTimeout=5000")) {
@@ -323,7 +323,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    //@Test
+    @Test
     public void testCancelingTimedOutStatement() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 1);
 

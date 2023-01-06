@@ -184,16 +184,20 @@ public class JdbcThinTcpIo {
             else if (ConnectionProperties.SSL_MODE_DISABLE.equalsIgnoreCase(connProps.getSslMode())) {
                 sock = new Socket();
 
+                long start = System.currentTimeMillis();
+
                 try {
-                    long start = System.currentTimeMillis();
+
                     System.out.println(">xxx> Try connect [timeout=" +  timeout + ", start=" + start + "]");
                     sock.connect(sockAddr, timeout);
-                    long end = System.currentTimeMillis();
-                    System.out.println(">xxx> End connect [timeout=" + timeout + ", end=" + end + ", total=" + (end - start) + "]");
                 }
                 catch (IOException e) {
                     throw new SQLException("Failed to connect to server [host=" + sockAddr.getHostName() +
                         ", port=" + sockAddr.getPort() + ']', SqlStateCode.CLIENT_CONNECTION_FAILED, e);
+                }
+                finally {
+                    long end = System.currentTimeMillis();
+                    System.out.println(">xxx> End connect [timeout=" + timeout + ", end=" + end + ", total=" + (end - start) + "]");
                 }
             }
             else {
