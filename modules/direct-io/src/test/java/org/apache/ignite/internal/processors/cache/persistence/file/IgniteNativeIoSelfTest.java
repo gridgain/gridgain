@@ -24,12 +24,14 @@ import org.apache.ignite.logger.NullLogger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.util.Assert;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 
 public class IgniteNativeIoSelfTest {
     /** Native io file factory. */
@@ -76,7 +78,7 @@ public class IgniteNativeIoSelfTest {
         File file = directory.resolve("file").toFile();
 
         try (FileIO io = factory.create(file, CREATE, WRITE)) {
-            Assert.isInstanceOf(AlignedBuffersDirectFileIO.class, io);
+            assertThat(io, is(instanceOf(AlignedBuffersDirectFileIO.class)));
         }
     }
 
@@ -90,7 +92,7 @@ public class IgniteNativeIoSelfTest {
         File file = directory.resolve("file-if-not-exists").toFile();
 
         try (FileIO io = factory.create(file, CREATE_NEW, WRITE)) {
-            Assert.isInstanceOf(AlignedBuffersDirectFileIO.class, io);
+            assertThat(io, is(instanceOf(AlignedBuffersDirectFileIO.class)));
         }
     }
 }
