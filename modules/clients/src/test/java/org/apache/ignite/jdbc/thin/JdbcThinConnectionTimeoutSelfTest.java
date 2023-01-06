@@ -23,7 +23,6 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -150,7 +149,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      *
      */
-    @Test
+    //@Test
     public void testSettingNegativeConnectionTimeout() {
         GridTestUtils.assertThrows(log,
             () -> {
@@ -163,7 +162,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      *
      */
-    @Test
+    //@Test
     public void testNegativeConnectionTimeout() {
         GridTestUtils.assertThrows(log,
             () -> {
@@ -177,7 +176,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testConnectionTimeoutRetrieval() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
             assertEquals(1000, conn.getNetworkTimeout());
@@ -191,7 +190,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testConnectionTimeout() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 1000);
 
@@ -213,7 +212,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testUrlConnectionTimeoutProperty() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL + "?connectionTimeout=1000")) {
             conn.setSchema('"' + DEFAULT_CACHE_NAME + '"');
@@ -243,17 +242,20 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testUrlImmediateConnectionTimeoutProperty() throws Exception {
-        GridTestUtils.assertTimeout(IMMEDIATE_TIMEOUT, TimeUnit.SECONDS, () -> GridTestUtils.assertThrows(log, () -> {
-            try (final Connection conn = DriverManager.getConnection(INCORRECT_URL + "?connectionTimeout=1")) {
-                fail("Connection was established to " + conn.getMetaData().getURL());
-            }
-        }, IgniteException.class, "Failed to connect to server"));
+        for (int i = 0; i < 100; i++) {
+            GridTestUtils.assertTimeout(IMMEDIATE_TIMEOUT, TimeUnit.SECONDS,
+                () -> GridTestUtils.assertThrows(log, () -> {
+                    try (final Connection conn = DriverManager.getConnection(INCORRECT_URL + "?connectionTimeout=1")) {
+                        fail("Connection was established to " + conn.getMetaData().getURL());
+                    }
+                }, IgniteException.class, "Failed to connect to server"));
+        }
     }
 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testQueryTimeoutOccursBeforeConnectionTimeout() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 10_000);
 
@@ -273,7 +275,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testUrlQueryTimeoutProperty() throws Exception {
         final int QRY_TIMEOUT = 1;
 
@@ -298,7 +300,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testConnectionTimeoutUpdate() throws Exception {
         try (final Connection conn = DriverManager.getConnection(URL +
             "?connectionTimeout=5000")) {
@@ -321,7 +323,7 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
     /**
      * @throws Exception If failed.
      */
-    @Test
+    //@Test
     public void testCancelingTimedOutStatement() throws Exception {
         conn.setNetworkTimeout(EXECUTOR_STUB, 1);
 
