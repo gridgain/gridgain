@@ -65,7 +65,7 @@ public class JdbcThinTcpIoTest extends GridCommonAbstractTest {
 
                 return null;
             }
-        }, SQLException.class, "Failed to connect to server [host=10.0.0.0, port=10800]");
+        }, SQLException.class, "Failed to connect to server [addr=/10.0.0.0, port=10800]");
 
         assertEquals(java.net.SocketTimeoutException.class, throwable.getCause().getClass());
 
