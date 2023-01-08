@@ -21,7 +21,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
@@ -185,20 +184,12 @@ public class JdbcThinTcpIo {
             else if (ConnectionProperties.SSL_MODE_DISABLE.equalsIgnoreCase(connProps.getSslMode())) {
                 sock = new Socket();
 
-                long start = System.currentTimeMillis();
-
                 try {
-
-                    System.out.println(">xxx> Try connect [timeout=" +  timeout + ", start=" + start + "]");
                     sock.connect(sockAddr, timeout);
                 }
                 catch (IOException e) {
                     throw new SQLException("Failed to connect to server [addr=" + sockAddr.getAddress() +
                         ", port=" + sockAddr.getPort() + ']', SqlStateCode.CLIENT_CONNECTION_FAILED, e);
-                }
-                finally {
-                    long end = System.currentTimeMillis();
-                    System.out.println(">xxx> End connect [timeout=" + timeout + ", end=" + end + ", total=" + (end - start) + "]");
                 }
             }
             else {

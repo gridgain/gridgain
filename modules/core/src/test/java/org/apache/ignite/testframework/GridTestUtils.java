@@ -766,8 +766,6 @@ public final class GridTestUtils {
             fut.get(timeout, timeUnit);
         }
         catch (TimeoutException ignored) {
-            U.dumpThreads(null);
-
             fail(msg, null);
         }
         finally {

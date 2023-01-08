@@ -23,6 +23,7 @@ import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -242,14 +243,11 @@ public class JdbcThinConnectionTimeoutSelfTest extends JdbcThinAbstractSelfTest 
      */
     @Test
     public void testUrlImmediateConnectionTimeoutProperty() throws Exception {
-        for (int i = 0; i < 100; i++) {
-            GridTestUtils.assertTimeout(IMMEDIATE_TIMEOUT, TimeUnit.SECONDS,
-                () -> GridTestUtils.assertThrows(log, () -> {
-                    try (final Connection conn = DriverManager.getConnection(INCORRECT_URL + "?connectionTimeout=1")) {
-                        fail("Connection was established to " + conn.getMetaData().getURL());
-                    }
-                }, IgniteException.class, "Failed to connect to server"));
-        }
+        GridTestUtils.assertTimeout(IMMEDIATE_TIMEOUT, TimeUnit.SECONDS, () -> GridTestUtils.assertThrows(log, () -> {
+            try (final Connection conn = DriverManager.getConnection(INCORRECT_URL + "?connectionTimeout=1")) {
+                fail("Connection was established to " + conn.getMetaData().getURL());
+            }
+        }, IgniteException.class, "Failed to connect to server"));
     }
 
     /**
