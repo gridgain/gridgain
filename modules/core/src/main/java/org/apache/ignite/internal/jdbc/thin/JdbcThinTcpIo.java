@@ -188,7 +188,7 @@ public class JdbcThinTcpIo {
                     sock.connect(sockAddr, timeout);
                 }
                 catch (IOException e) {
-                    throw new SQLException("Failed to connect to server [addr=" + sockAddr.getAddress() +
+                    throw new SQLException("Failed to connect to server [host=" + sockAddr.getAddress() +
                         ", port=" + sockAddr.getPort() + ']', SqlStateCode.CLIENT_CONNECTION_FAILED, e);
                 }
             }
