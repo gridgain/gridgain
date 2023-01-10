@@ -96,7 +96,7 @@ public class ClientListenerMetricsTest extends GridCommonAbstractTest {
 
         IgniteConfiguration nodeCfg = getConfiguration()
             .setClientConnectorConfiguration(new ClientConnectorConfiguration()
-                .setHandshakeTimeout(2000))
+                .setHandshakeTimeout(500))
             .setAuthenticationEnabled(true)
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
