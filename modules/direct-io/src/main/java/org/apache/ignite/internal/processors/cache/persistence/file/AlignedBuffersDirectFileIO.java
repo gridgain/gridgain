@@ -413,8 +413,9 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
         if (rd != toRead) {
             int error = Native.getLastError();
 
-            String msg = String.format("Didn't read exact bytes count: file=%s, pos=%d, limit=%d, ioBlockSize=%d" +
-                ", pageSize=%d, fsBlockSize=%d, errno=%d", file, pos, limit, ioBlockSize, pageSize, fsBlockSize, error);
+            String msg = String.format("Didn't read exact bytes count: read=%d, file=%s, pos=%d, limit=%d" +
+                ", ioBlockSize=%d, pageSize=%d, fsBlockSize=%d, errno=%d", rd, file, pos, limit, ioBlockSize,
+                pageSize, fsBlockSize, error);
 
             log.error(msg);
         }
