@@ -73,14 +73,23 @@ public class ReducePartitionMapper {
      * @param isReplicatedOnly Allow only replicated caches.
      * @return Result.
      */
-    public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds, AffinityTopologyVersion topVer,
-        int[] parts, boolean isReplicatedOnly) {
+    public ReducePartitionMapResult nodesForPartitions(
+        List<Integer> cacheIds,
+        AffinityTopologyVersion topVer,
+        int[] parts,
+        boolean isReplicatedOnly
+    ) {
         Collection<ClusterNode> nodes = null;
         Map<ClusterNode, IntArray> partsMap = null;
         Map<ClusterNode, IntArray> qryMap = null;
 
-        for (int cacheId : cacheIds) {
-            GridCacheContext<?, ?> cctx = cacheContext(cacheId);
+        TopologyLock topLock = TopologyLock.forCaches(ctx, cacheIds);
+
+        topLock.lock();
+
+        try {
+            for (int cacheId : cacheIds) {
+                GridCacheContext<?, ?> cctx = cacheContext(cacheId);
 
             Collection<Integer> lostParts = cctx.topology().lostPartitions();
 
@@ -119,7 +128,11 @@ public class ReducePartitionMapper {
             }
         }
 
-        return new ReducePartitionMapResult(nodes, partsMap, qryMap);
+            return new ReducePartitionMapResult(nodes, partsMap, qryMap);
+        }
+        finally {
+            topLock.unlock();
+        }
     }
 
     /**
@@ -560,7 +573,10 @@ public class ReducePartitionMapper {
      * @param topVer Topology version.
      * @return Collection of all data nodes owning all the caches or {@code null} for retry.
      */
-    private Collection<ClusterNode> replicatedUnstableDataNodes(List<Integer> cacheIds, AffinityTopologyVersion topVer) {
+    private Collection<ClusterNode> replicatedUnstableDataNodes(
+        List<Integer> cacheIds,
+        AffinityTopologyVersion topVer
+    ) {
         int i = 0;
 
         GridCacheContext<?, ?> cctx = cacheContext(cacheIds.get(i++));
