@@ -16,10 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
-
 /** */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, value = "true")
 public class IgnitePdsDefragmentationDirectIoTest extends IgnitePdsDefragmentationTest {
 }
