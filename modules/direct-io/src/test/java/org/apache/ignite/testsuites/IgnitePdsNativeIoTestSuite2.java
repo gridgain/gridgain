@@ -15,16 +15,15 @@
  */
 package org.apache.ignite.testsuites;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteNativeIoLocalWalModeChangeDuringRebalancingSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteNativeIoPdsRecoveryAfterFileCorruptionTest;
-import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationDirectIoTest;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsDefragmentationTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteNativeIoWalFlushFsyncSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.file.IgniteNativeIoSelfTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Same as {@link IgnitePdsTestSuite2} but is started with direct-oi jar in classpath.
@@ -48,7 +47,7 @@ public class IgnitePdsNativeIoTestSuite2 {
 
         suite.add(IgniteNativeIoSelfTest.class);
 
-        suite.add(IgnitePdsDefragmentationDirectIoTest.class);
+        suite.add(IgnitePdsDefragmentationTest.class);
 
         return suite;
     }
