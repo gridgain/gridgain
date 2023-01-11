@@ -407,15 +407,17 @@ public class AlignedBuffersDirectFileIO extends AbstractFileIO {
         else
             rd = IgniteNativeIoLib.pread(fdCheckOpened(), ptr, nl(toRead), nl(filePos)).intValue();
 
+        if (rd == 0)
+            return -1; //Tried to read past EOF for file
+
         if (rd != toRead) {
+            int error = Native.getLastError();
+
             String msg = String.format("Didn't read exact bytes count: file=%s, pos=%d, limit=%d, ioBlockSize=%d" +
-                ", pageSize=%d, fsBlockSize=%d", file, pos, limit, ioBlockSize, pageSize, fsBlockSize);
+                ", pageSize=%d, fsBlockSize=%d, errno=%d", file, pos, limit, ioBlockSize, pageSize, fsBlockSize, error);
 
             log.error(msg);
         }
-
-        if (rd == 0)
-            return -1; //Tried to read past EOF for file
 
         if (rd < 0)
             throw new IOException(String.format("Error during reading file [%s] from position [%s] : %s",
