@@ -689,6 +689,8 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
             FileIOFactory delegate = pageStore.getPageStoreFileIoFactory();
 
+            // pageStoreV1FileIoFactory will be the original factory (so not direct io in case if direct io is enabled),
+            // We need it for non-aligned reads/writes.
             FileIOFactory storeV1FileIoFactory = GridTestUtils.getFieldValue(pageStore, "pageStoreV1FileIoFactory");
 
             pageStore.setPageStoreFileIOFactories(new FileIOFactory() {
