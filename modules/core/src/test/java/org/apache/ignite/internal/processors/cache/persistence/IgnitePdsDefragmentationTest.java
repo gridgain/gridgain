@@ -687,13 +687,15 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
             final FilePageStoreManager pageStore = (FilePageStoreManager)ignitePageStoreMgr;
 
-            FileIOFactory backupIoFactory = pageStore.getPageStoreFileIoFactory();
+            FileIOFactory delegate = pageStore.getPageStoreFileIoFactory();
+
+            FileIOFactory storeV1FileIoFactory = GridTestUtils.getFieldValue(pageStore, "pageStoreV1FileIoFactory");
 
             pageStore.setPageStoreFileIOFactories(new FileIOFactory() {
                 @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-                    return wrapper.create(backupIoFactory, file, modes);
+                    return wrapper.create(delegate, file, modes);
                 }
-            }, backupIoFactory);
+            }, storeV1FileIoFactory);
         }
 
         private interface FileIODelegator {
