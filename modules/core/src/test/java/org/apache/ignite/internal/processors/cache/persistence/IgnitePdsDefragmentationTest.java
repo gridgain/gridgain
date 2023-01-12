@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -55,15 +56,21 @@ import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.maintenance.MaintenanceFileStore;
+import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
 import org.apache.ignite.internal.pagemem.store.PageStoreCollection;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.defragmentation.DefragmentationFileUtils;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.lang.IgniteThrowableConsumer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
+import org.apache.ignite.plugin.AbstractTestPluginProvider;
+import org.apache.ignite.plugin.PluginContext;
+import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -438,7 +445,7 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
 
         File workDir = resolveCacheWorkDir(ig);
 
-        //Defragmentation should fail when node starts.
+        // Defragmentation should fail when node starts.
         startAndAwaitNodeFail(workDir);
 
         c.accept(workDir);
@@ -466,11 +473,11 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
         AtomicBoolean errOccurred = new AtomicBoolean();
 
         UnaryOperator<IgniteConfiguration> cfgOp = cfg -> {
-            DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration();
+            // Get all plugins first.
+            List<PluginProvider> providers = U.allPluginProviders();
 
-            FileIOFactory delegate = dsCfg.getFileIOFactory();
-
-            dsCfg.setFileIOFactory((file, modes) -> {
+            // Add io delegator last, so previous plugins will be initialized first.
+            providers.add(new IODelegatorProvider((delegate, file, modes) -> {
                 if (file.equals(defragmentationCompletionMarkerFile(workDir))) {
                     errOccurred.set(true);
 
@@ -478,7 +485,9 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
                 }
 
                 return delegate.create(file, modes);
-            });
+            }));
+
+            cfg.setPluginProviders(providers.toArray(new PluginProvider[0]));
 
             return cfg;
         };
@@ -645,6 +654,54 @@ public class IgnitePdsDefragmentationTest extends GridCommonAbstractTest {
             }
 
             assertTrue(atLeastOneSmaller);
+        }
+    }
+
+    /** Plugin that substitutes current io with another io passing substited io to the new io. */
+    static class IODelegatorProvider extends AbstractTestPluginProvider {
+        private final FileIODelegator wrapper;
+
+        IODelegatorProvider(FileIODelegator wrapper) {
+            this.wrapper = wrapper;
+        }
+
+        @Override public String name() {
+            return "IODelegatorProvider";
+        }
+
+        /** {@inheritDoc} */
+        @Override public void start(PluginContext ctx) throws IgniteCheckedException {
+            // No-op.
+            setupIODelegator((IgniteEx)ctx.grid());
+        }
+
+        private void setupIODelegator(IgniteEx ignite) {
+            GridCacheSharedContext<Object, Object> cacheCtx = ignite.context().cache().context();
+            IgnitePageStoreManager ignitePageStoreMgr = cacheCtx.pageStore();
+
+            if (ignitePageStoreMgr == null)
+                return;
+
+            if (!(ignitePageStoreMgr instanceof FilePageStoreManager))
+                return;
+
+            final FilePageStoreManager pageStore = (FilePageStoreManager)ignitePageStoreMgr;
+
+            FileIOFactory delegate = pageStore.getPageStoreFileIoFactory();
+
+            // pageStoreV1FileIoFactory will be the original factory (so not direct io in case if direct io is enabled),
+            // We need it for non-aligned reads/writes.
+            FileIOFactory storeV1FileIoFactory = GridTestUtils.getFieldValue(pageStore, "pageStoreV1FileIoFactory");
+
+            pageStore.setPageStoreFileIOFactories(new FileIOFactory() {
+                @Override public FileIO create(File file, OpenOption... modes) throws IOException {
+                    return wrapper.create(delegate, file, modes);
+                }
+            }, storeV1FileIoFactory);
+        }
+
+        private interface FileIODelegator {
+            FileIO create(FileIOFactory original, File file, OpenOption... modes) throws IOException;
         }
     }
 }
