@@ -260,9 +260,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * Initial timeout (in milliseconds) for output the progress of restoring partitions status.
      * After the first output, the next ones will be output after value/5.
-     * It is recommended to change this property only in tests.
      */
-    static long TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = TimeUnit.MINUTES.toMillis(5);
+    private static final long TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = TimeUnit.MINUTES.toMillis(5);
+
+    /**
+     * Whether partition state restoration progress should be logged at least once (even if it the restoration
+     * was very fast). Only useful for tests.
+     */
+    static boolean FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS = false;
 
     /** Shared cache context. */
     private GridCacheSharedContext<?, ?> sharedCtx;
@@ -5508,7 +5513,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 }
             }
 
-            boolean printTop = false;
+            boolean printedTop = false;
 
             try {
                 // Await completion restore state tasks in all stripes.
@@ -5518,21 +5523,19 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     long timeout = TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS;
 
                     while (!completionLatch.await(timeout, TimeUnit.MILLISECONDS)) {
-                        if (log.isInfoEnabled()) {
-                            SortedSet<T3<Long, Long, GroupPartitionId>> top =
-                                collectTopProcessedParts(threadCtxs.values(), topPartRefLimit);
-
-                            long totalProcessed = threadCtxs.values().stream().mapToLong(c -> c.processedCnt).sum();
-
-                            log.info("Restore partitions state progress [grpCnt=" +
-                                (forGroups.size() - completionLatch.getCount()) + '/' + forGroups.size() +
-                                ", partitionCnt=" + totalProcessed + '/' + totalPart + (top.isEmpty() ? "" :
-                                ", topProcessedPartitions=" + toStringTopProcessingPartitions(top, forGroups)) + ']');
-                        }
+                        if (log.isInfoEnabled())
+                            logRestorationProgress(forGroups, totalPart, completionLatch, threadCtxs, topPartRefLimit);
 
                         timeout = TIMEOUT_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS / 5;
 
-                        printTop = true;
+                        printedTop = true;
+                    }
+
+                    if (FORCE_OUTPUT_RESTORE_PARTITION_STATE_PROGRESS && !printedTop) {
+                        if (log.isInfoEnabled())
+                            logRestorationProgress(forGroups, totalPart, completionLatch, threadCtxs, topPartRefLimit);
+
+                        printedTop = true;
                     }
                 }
             }
@@ -5549,7 +5552,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             if (log.isInfoEnabled()) {
                 SortedSet<T3<Long, Long, GroupPartitionId>> t =
-                    printTop ? collectTopProcessedParts(threadCtxs.values(), topPartRefLimit) : null;
+                    printedTop ? collectTopProcessedParts(threadCtxs.values(), topPartRefLimit) : null;
 
                 long totalProcessed = threadCtxs.values().stream().mapToLong(c -> c.processedCnt).sum();
 
@@ -5560,6 +5563,33 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     (t == null ? "" : ", topProcessedPartitions=" + toStringTopProcessingPartitions(t, forGroups)) +
                     "]");
             }
+        }
+
+        /**
+         * Logs partition restoration progress.
+         *
+         * @param forGroups       Groups for which the restoration is run.
+         * @param totalPart       Total number of partitions under restore.
+         * @param completionLatch Latch that is counted down with each restored partition.
+         * @param threadCtxs      Threads to restoration contexts.
+         * @param topPartRefLimit Maximum number of elements in the 'top partitions' to report.
+         */
+        private void logRestorationProgress(
+            Collection<CacheGroupContext> forGroups,
+            int totalPart,
+            CountDownLatch completionLatch,
+            Map<Thread, RestorePartitionStateThreadContext> threadCtxs,
+            int topPartRefLimit
+        ) {
+            SortedSet<T3<Long, Long, GroupPartitionId>> top =
+                collectTopProcessedParts(threadCtxs.values(), topPartRefLimit);
+
+            long totalProcessed = threadCtxs.values().stream().mapToLong(c -> c.processedCnt).sum();
+
+            log.info("Restore partitions state progress [grpCnt=" +
+                (forGroups.size() - completionLatch.getCount()) + '/' + forGroups.size() +
+                ", partitionCnt=" + totalProcessed + '/' + totalPart + (top.isEmpty() ? "" :
+                ", topProcessedPartitions=" + toStringTopProcessingPartitions(top, forGroups)) + ']');
         }
 
         /**
