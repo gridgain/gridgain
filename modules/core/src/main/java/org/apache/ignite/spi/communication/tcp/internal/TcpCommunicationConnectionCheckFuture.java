@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.BitSet;
@@ -58,8 +59,21 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
         AtomicIntegerFieldUpdater.newUpdater(SingleAddressConnectFuture.class, "done");
 
     /** */
+    private static final AtomicIntegerFieldUpdater<SingleAddressConnectFuture> connFutConnectionStatusUpdater =
+        AtomicIntegerFieldUpdater.newUpdater(SingleAddressConnectFuture.class, "connectionStatus");
+
+    /** */
     private static final AtomicIntegerFieldUpdater<MultipleAddressesConnectFuture> connResCntUpdater =
         AtomicIntegerFieldUpdater.newUpdater(MultipleAddressesConnectFuture.class, "resCnt");
+
+    /** */
+    private static final int CONNECTING = 0;
+
+    /** */
+    private static final int OPEN = 1;
+
+    /** */
+    private static final int CLOSED = 2;
 
     /** */
     private final AtomicInteger resCntr = new AtomicInteger();
@@ -71,7 +85,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
     private volatile ConnectFuture[] futs;
 
     /** */
-    private final GridNioServer nioSrvr;
+    private final GridNioServer<?> nioSrvr;
 
     /** */
     private final TcpCommunicationSpi spi;
@@ -269,12 +283,15 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
     /**
      *
      */
-    private class SingleAddressConnectFuture implements TcpCommunicationNodeConnectionCheckFuture, ConnectFuture {
+    class SingleAddressConnectFuture implements TcpCommunicationNodeConnectionCheckFuture, ConnectFuture {
         /** */
         final int nodeIdx;
 
         /** */
         volatile int done;
+
+        /** */
+        volatile int connectionStatus = CONNECTING;
 
         /** */
         Map<Integer, Object> sesMeta;
@@ -298,12 +315,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
             boolean connect;
 
             try {
-                ch = SocketChannel.open();
-
-                ch.configureBlocking(false);
-
-                ch.socket().setTcpNoDelay(true);
-                ch.socket().setKeepAlive(false);
+                ch = createChannel();
 
                 connect = ch.connect(addr);
             }
@@ -329,16 +341,50 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
                             finish(false);
                     }
                 });
+
+                if (!connFutConnectionStatusUpdater.compareAndSet(this, CONNECTING, OPEN)) {
+                    // Connection needs to be closed.
+                    nioSrvr.cancelConnect(ch, sesMeta);
+                }
             }
         }
 
+        SocketChannel createChannel() throws IOException {
+            SocketChannel channel = SocketChannel.open();
+
+            channel.configureBlocking(false);
+
+            channel.socket().setTcpNoDelay(true);
+            channel.socket().setKeepAlive(false);
+
+            return channel;
+        }
+
         /**
-         *
+         * NB: May be called simultaneously from multiple threads.
          */
-        @SuppressWarnings("unchecked")
         void cancel() {
-            if (finish(false))
+            finish(false);
+
+            if (connectionStatus == CLOSED) {
+                return;
+            }
+
+            // Here we check whether we can close connection. If not, we try to set the flag
+            // indicating that connection should be closed after it's open.
+            if (connFutConnectionStatusUpdater.compareAndSet(this, OPEN, CLOSED)) {
+                // Connection was open, need to close it.
                 nioSrvr.cancelConnect(ch, sesMeta);
+            } else {
+                // Connection was not open, try to set flag that will close it when it will be open.
+                if (!connFutConnectionStatusUpdater.compareAndSet(this, CONNECTING, CLOSED)) {
+                    // Connection's state changed, it's either open or closed now (not connecting).
+                    if (connFutConnectionStatusUpdater.compareAndSet(this, OPEN, CLOSED)) {
+                        // Connection was open after all, we need to close it.
+                        nioSrvr.cancelConnect(ch, sesMeta);
+                    }
+                }
+            }
         }
 
         /** {@inheritDoc} */

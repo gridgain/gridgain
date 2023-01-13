@@ -44,16 +44,22 @@ import javax.net.ssl.SSLSocket;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.GridLeanMap;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.internal.util.nio.GridNioServer.WORKER_IDX_META_KEY;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
 /**
  * Tests for new NIO server.
@@ -751,6 +757,99 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             assertFalse("Size check failed", lsnr.isSizeFailed());
         }
         finally {
+            srvr.stop();
+        }
+    }
+
+    /**
+     * Tests that move session operation will not fail with an exception if session was cancelled before move
+     * was issued.
+     *
+     * See https://ggsystems.atlassian.net/browse/GG-35895.
+     *
+     * @throws Exception If test failed.
+     */
+    @Test
+    public void testMoveSessionAfterCancelConnect() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+
+        NioListener lsnr = new NioListener(latch);
+
+        final GridNioServer<?> srvr = startServer(new GridBufferedParser(true, ByteOrder.nativeOrder()), lsnr);
+        TestClient client = null;
+
+        try {
+            final byte[] data = createMessage();
+
+            try {
+                // Establishing connection. Client must not be closed here.
+                client = createClient(U.getLocalHost(), srvr.port(), U.getLocalHost());
+
+                client.sendMessage(data, data.length);
+            }
+            catch (Exception e) {
+                error("Failed to send message.", e);
+
+                assert false : "Message sending failed: " + e;
+            }
+
+            // Wait until message is received by nio server as this means that connection is established.
+            latch.await(3, SECONDS);
+
+            // There should be at least two workers, one with connection and one without.
+            GridWorker idleWorker = null;
+            GridWorker nonIdleWorker = null;
+
+            // Find out the superclass of the worker, because worker is always a child
+            // class (direct or bytebuffer worker).
+            Class<?> superclass = ((GridWorker)srvr.workers().get(0)).getClass().getSuperclass();
+
+            // Find those workers.
+            for (GridWorker worker : srvr.workers()) {
+                GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions
+                    = getFieldValue(worker, superclass, "workerSessions");
+
+                if (sessions.isEmpty()) {
+                    idleWorker = worker;
+                    continue;
+                }
+
+                nonIdleWorker = worker;
+            }
+
+            // Get workers' indices.
+            int idx = getFieldValue(nonIdleWorker, superclass, "idx");
+            int idleIdx = getFieldValue(idleWorker, superclass, "idx");
+
+            // Get non-idle worker's sessions.
+            GridConcurrentHashSet<GridSelectorNioSessionImpl> sessions
+                = getFieldValue(nonIdleWorker, superclass, "workerSessions");
+
+            // Should be only one session, between server and client.
+            assertEquals(1, sessions.size());
+
+            // Get this session.
+            GridSelectorNioSessionImpl session = F.first(sessions);
+
+            // We need this meta information for the cancelConnect method
+            Map<Integer, Object> metaMap = new GridLeanMap<>(1);
+            metaMap.put(WORKER_IDX_META_KEY, idx);
+
+            // We create two nio requests: cancel session and right after that move it to another worker.
+            // It is not a problem that this is not atomic, because that's what happens when this bug shows up.
+            srvr.cancelConnect((SocketChannel)session.key().channel(), metaMap);
+            GridFutureAdapter<Boolean> future = srvr.moveSession(session, idx, idleIdx);
+
+            // This future should be completed with false, because move operation should not proceed.
+            // If there's an exception, the future will not be completed at all.
+            Boolean result = future.get(3, SECONDS);
+
+            assertFalse(result);
+        }
+        finally {
+            if (client != null)
+                client.close();
+
             srvr.stop();
         }
     }
