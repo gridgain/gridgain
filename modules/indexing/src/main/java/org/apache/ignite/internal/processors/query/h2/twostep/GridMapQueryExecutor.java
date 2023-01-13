@@ -761,7 +761,7 @@ public class GridMapQueryExecutor {
                         log.info(errMsg);
                 }
                 else
-                    U.error(log, "Failed to run map query on local node.", err);
+                    U.warn(log, "Failed to run map query on local node.", err);
 
                 h2.reduceQueryExecutor().onFail(node, msg);
             }
