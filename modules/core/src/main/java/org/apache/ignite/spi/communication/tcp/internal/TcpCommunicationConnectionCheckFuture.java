@@ -369,9 +369,8 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
         void cancel() {
             finish(false);
 
-            if (connStatus == CLOSED) {
+            if (connStatus == CLOSED)
                 return;
-            }
 
             // Here we check whether we can close connection. If not, we try to set the flag
             // indicating that connection should be closed after it's open.
