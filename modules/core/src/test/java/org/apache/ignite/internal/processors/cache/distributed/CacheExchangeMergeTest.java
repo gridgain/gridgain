@@ -42,6 +42,7 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -69,6 +70,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -169,6 +171,14 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
                 cacheConfiguration("c25", TRANSACTIONAL, REPLICATED, 0)
             );
         }
+
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        dsCfg.getDefaultDataRegionConfiguration().setMaxSize(400 * U.MB);
+        dsCfg.getDefaultDataRegionConfiguration().setInitialSize(400 * U.MB);
+        dsCfg.getDefaultDataRegionConfiguration().setCheckpointPageBufferSize(40 * U.MB);
+        dsCfg.setSystemRegionMaxSize(dsCfg.getSystemRegionInitialSize());
+
+        cfg.setDataStorageConfiguration(dsCfg);
 
         return cfg;
     }
@@ -1179,7 +1189,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         if (latch != null && !latch.await(WAIT_SECONDS, TimeUnit.SECONDS))
             fail("Failed to wait for expected messages.");
 
-        stopGrid(0);
+        stopGrid(getTestIgniteInstanceName(0), true, false);
 
         fut.get();
 
