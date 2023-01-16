@@ -308,7 +308,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     @Test
     public void testMergeStartRandomClientsServers() throws Exception {
         int iterNum = GridTestUtils.SF.applyLB(3, 1);
-        final int concurrentNodesNumber = GridTestUtils.SF.applyLB(5, 3);
+        final int concurrentNodesNumber = GridTestUtils.SF.applyLB(8, 3);
 
         for (int iter = 0; iter < iterNum; iter++) {
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -364,8 +364,8 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
     @Test
     public void testMergeStartStopRandomClientsServers() throws Exception {
         int iterNum = GridTestUtils.SF.applyLB(3, 1);
-        int initNodesNum = GridTestUtils.SF.applyLB(3, 2);
-        final int concurrentNodesNumber = GridTestUtils.SF.applyLB(5, 3);
+        int initNodesNum = GridTestUtils.SF.applyLB(5, 2);
+        final int concurrentNodesNumber = GridTestUtils.SF.applyLB(8, 3);
 
         for (int iter = 0; iter < iterNum; iter++) {
             log.info("Iteration: " + iter);
@@ -453,7 +453,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      */
     private void concurrentStart(final boolean withClients) throws Exception {
         int iterations = GridTestUtils.SF.applyLB(5, 1);
-        int concurrentNodesNumber = GridTestUtils.SF.applyLB(5, 3);
+        int concurrentNodesNumber = GridTestUtils.SF.applyLB(10, 5);
 
         for (int i = 0; i < iterations; i++) {
             log.info("Iteration: " + i);
@@ -1016,35 +1016,9 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("testFailExchangeCoordinatorChange_NoMerge_1")
-    public void testFailExchangeCoordinatorChange_NoMerge_2() throws Exception {
-        for (CoordinatorChangeMode mode : CoordinatorChangeMode.values()) {
-            exchangeCoordinatorChangeNoMerge(8, false, mode);
-
-            stopAllGrids();
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
     public void testMergeJoinExchangesCoordinatorChange1_4_servers() throws Exception {
         for (CoordinatorChangeMode mode : CoordinatorChangeMode.values()) {
             mergeJoinExchangesCoordinatorChange1(4, mode);
-
-            stopAllGrids();
-        }
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    @Ignore("testMergeJoinExchangesCoordinatorChange1_4_servers")
-    public void testMergeJoinExchangesCoordinatorChange1_8_servers() throws Exception {
-        for (CoordinatorChangeMode mode : CoordinatorChangeMode.values()) {
-            mergeJoinExchangesCoordinatorChange1(8, mode);
 
             stopAllGrids();
         }
@@ -1736,7 +1710,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNoConcurrentModificationExceptionAfterMergeExchanges() throws Exception {
-        int concurrentNodesNumber = GridTestUtils.SF.applyLB(5, 3);
+        int concurrentNodesNumber = GridTestUtils.SF.applyLB(9, 3);
 
         testSpi = true;
 
