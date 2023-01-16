@@ -60,7 +60,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
 
     /** */
     private static final AtomicIntegerFieldUpdater<SingleAddressConnectFuture> connFutConnectionStatusUpdater =
-        AtomicIntegerFieldUpdater.newUpdater(SingleAddressConnectFuture.class, "connectionStatus");
+        AtomicIntegerFieldUpdater.newUpdater(SingleAddressConnectFuture.class, "connStatus");
 
     /** */
     private static final AtomicIntegerFieldUpdater<MultipleAddressesConnectFuture> connResCntUpdater =
@@ -110,7 +110,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
      */
     public TcpCommunicationConnectionCheckFuture(TcpCommunicationSpi spi,
         IgniteLogger log,
-        GridNioServer nioSrvr,
+        GridNioServer<?> nioSrvr,
         List<ClusterNode> nodes)
     {
         this.spi = spi;
@@ -291,7 +291,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
         volatile int done;
 
         /** */
-        volatile int connectionStatus = CONNECTING;
+        volatile int connStatus = CONNECTING;
 
         /** */
         Map<Integer, Object> sesMeta;
@@ -349,15 +349,18 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
             }
         }
 
+        /**
+         * Creates non-blocking socket channel.
+         */
         SocketChannel createChannel() throws IOException {
-            SocketChannel channel = SocketChannel.open();
+            SocketChannel ch = SocketChannel.open();
 
-            channel.configureBlocking(false);
+            ch.configureBlocking(false);
 
-            channel.socket().setTcpNoDelay(true);
-            channel.socket().setKeepAlive(false);
+            ch.socket().setTcpNoDelay(true);
+            ch.socket().setKeepAlive(false);
 
-            return channel;
+            return ch;
         }
 
         /**
@@ -366,7 +369,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
         void cancel() {
             finish(false);
 
-            if (connectionStatus == CLOSED) {
+            if (connStatus == CLOSED) {
                 return;
             }
 

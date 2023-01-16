@@ -31,6 +31,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,7 +45,6 @@ import javax.net.ssl.SSLSocket;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
-import org.apache.ignite.internal.util.GridLeanMap;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
@@ -763,9 +763,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
 
     /**
      * Tests that move session operation will not fail with an exception if session was cancelled before move
-     * was issued.
-     *
-     * See https://ggsystems.atlassian.net/browse/GG-35895.
+     * was issued. See <a href="https://ggsystems.atlassian.net/browse/GG-35895">this ticket</a>.
      *
      * @throws Exception If test failed.
      */
@@ -794,7 +792,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             }
 
             // Wait until message is received by nio server as this means that connection is established.
-            latch.await(3, SECONDS);
+            assertTrue(latch.await(3, SECONDS));
 
             // There should be at least two workers, one with connection and one without.
             GridWorker idleWorker = null;
@@ -829,22 +827,21 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             assertEquals(1, sessions.size());
 
             // Get this session.
-            GridSelectorNioSessionImpl session = F.first(sessions);
+            GridSelectorNioSessionImpl ses = F.first(sessions);
 
             // We need this meta information for the cancelConnect method
-            Map<Integer, Object> metaMap = new GridLeanMap<>(1);
-            metaMap.put(WORKER_IDX_META_KEY, idx);
+            Map<Integer, Object> metaMap = Collections.singletonMap(WORKER_IDX_META_KEY, idx);
 
             // We create two nio requests: cancel session and right after that move it to another worker.
             // It is not a problem that this is not atomic, because that's what happens when this bug shows up.
-            srvr.cancelConnect((SocketChannel)session.key().channel(), metaMap);
-            GridFutureAdapter<Boolean> future = srvr.moveSession(session, idx, idleIdx);
+            srvr.cancelConnect((SocketChannel)ses.key().channel(), metaMap);
+            GridFutureAdapter<Boolean> fut = srvr.moveSession(ses, idx, idleIdx);
 
             // This future should be completed with false, because move operation should not proceed.
             // If there's an exception, the future will not be completed at all.
-            Boolean result = future.get(3, SECONDS);
+            Boolean res = fut.get(3, SECONDS);
 
-            assertFalse(result);
+            assertFalse(res);
         }
         finally {
             if (client != null)

@@ -2086,18 +2086,18 @@ public class GridNioServer<T> {
                             }
 
                             case CANCEL_CONNECT: {
-                                NioOperationFuture req = (NioOperationFuture)req0;
+                                NioOperationFuture<?> req = (NioOperationFuture<?>)req0;
 
-                                GridSelectorNioSessionImpl session = null;
+                                GridSelectorNioSessionImpl ses = null;
 
                                 SocketChannel ch = req.socketChannel();
 
                                 SelectionKey key = ch.keyFor(selector);
 
                                 if (key != null)
-                                    session = (GridSelectorNioSessionImpl)key.attachment();
+                                    ses = (GridSelectorNioSessionImpl)key.attachment();
 
-                                if (session == null) {
+                                if (ses == null) {
                                     // Session was not created yet.
                                     if (key != null)
                                         key.cancel();
@@ -2106,7 +2106,7 @@ public class GridNioServer<T> {
                                 }
                                 else {
                                     // Session is already established, we need to close it.
-                                    close(session, null);
+                                    close(ses, null);
                                 }
 
                                 req.onDone();

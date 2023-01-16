@@ -25,7 +25,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture.SingleAddressConnectFuture;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -40,52 +39,64 @@ import static org.mockito.Mockito.when;
  * {@link TcpCommunicationConnectionCheckFutureSelfTest} tests.
  */
 public class TcpCommunicationConnectionCheckFutureSelfTest {
+    /** */
+    private final GridNioServer<?> srv = mock(GridNioServer.class);
 
-    private final GridNioServer<?> server = mock(GridNioServer.class);
-
+    /**
+     * Tests that channel will be closed correctly if cancel is called after connect.
+     */
     @Test
     public void singleAddressConnectBeforeCancel() throws Exception {
         TcpCommunicationConnectionCheckFuture fut = createCheckFuture();
 
-        SocketChannel mockChannel = createChannel();
+        SocketChannel mockCh = createChannel();
 
-        SingleAddressConnectFuture single = createSingleCheckFuture(fut, mockChannel);
+        SingleAddressConnectFuture single = createSingleCheckFuture(fut, mockCh);
 
         // Should just open normally.
         single.init(mock(InetSocketAddress.class), "test", UUID.randomUUID());
 
-        verify(server, never()).cancelConnect(eq(mockChannel), any());
+        verify(srv, never()).cancelConnect(eq(mockCh), any());
 
         // Should close connection normally.
         single.cancel();
 
-        verify(server, times(1)).cancelConnect(eq(mockChannel), any());
+        verify(srv, times(1)).cancelConnect(eq(mockCh), any());
     }
 
+    /**
+     * Tests that channel will be closed correctly if connect is called after cancel.
+     */
     @Test
     public void singleAddressConnectAfterCancel() throws Exception {
         TcpCommunicationConnectionCheckFuture fut = createCheckFuture();
 
-        SocketChannel mockChannel = createChannel();
+        SocketChannel mockCh = createChannel();
 
-        SingleAddressConnectFuture single = createSingleCheckFuture(fut, mockChannel);
+        SingleAddressConnectFuture single = createSingleCheckFuture(fut, mockCh);
 
         // Should install a flag, based on which channel will be closed right after it's open.
         single.cancel();
 
-        verify(server, never()).cancelConnect(eq(mockChannel), any());
+        verify(srv, never()).cancelConnect(eq(mockCh), any());
 
         // Should be closed after this.
         single.init(mock(InetSocketAddress.class), "test", UUID.randomUUID());
 
-        verify(server, times(1)).cancelConnect(eq(mockChannel), any());
+        verify(srv, times(1)).cancelConnect(eq(mockCh), any());
     }
 
-    @NotNull private static SingleAddressConnectFuture createSingleCheckFuture(TcpCommunicationConnectionCheckFuture fut,
-        SocketChannel mockChannel) {
+    /**
+     * Creates {@link SingleAddressConnectFuture}.
+     *
+     * @param fut Future.
+     * @param mockCh Mock channel.
+     */
+    private static SingleAddressConnectFuture createSingleCheckFuture(TcpCommunicationConnectionCheckFuture fut,
+        SocketChannel mockCh) {
         return fut.new SingleAddressConnectFuture(1337) {
-            @Override SocketChannel createChannel() throws IOException {
-                return mockChannel;
+            @Override SocketChannel createChannel() {
+                return mockCh;
             }
 
             @Override void onStatusReceived(boolean res) {
@@ -94,19 +105,25 @@ public class TcpCommunicationConnectionCheckFutureSelfTest {
         };
     }
 
-    TcpCommunicationConnectionCheckFuture createCheckFuture() {
+    /**
+     * Creates {@link TcpCommunicationConnectionCheckFuture}.
+     */
+    private TcpCommunicationConnectionCheckFuture createCheckFuture() {
         TcpCommunicationSpi commSpi = mock(TcpCommunicationSpi.class);
-        IgniteLogger logger = mock(IgniteLogger.class);
+        IgniteLogger log = mock(IgniteLogger.class);
 
-        return new TcpCommunicationConnectionCheckFuture(commSpi, logger, server, Collections.emptyList());
+        return new TcpCommunicationConnectionCheckFuture(commSpi, log, srv, Collections.emptyList());
     }
 
-    SocketChannel createChannel() throws IOException {
-        SocketChannel mockChannel = mock(SocketChannel.class);
-        // Connect should return false;
-        when(mockChannel.connect(any())).thenReturn(false);
+    /**
+     * Creates mock non-blocking socket channel.
+     */
+    private static SocketChannel createChannel() throws IOException {
+        SocketChannel mockCh = mock(SocketChannel.class);
 
-        return mockChannel;
+        // Connect should return false.
+        when(mockCh.connect(any())).thenReturn(false);
+
+        return mockCh;
     }
-
 }
