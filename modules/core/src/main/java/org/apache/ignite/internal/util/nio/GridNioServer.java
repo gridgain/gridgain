@@ -135,7 +135,7 @@ public class GridNioServer<T> {
     public static final int RECOVERY_DESC_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** Selection key meta key. */
-    private static final int WORKER_IDX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
+    public static final int WORKER_IDX_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
 
     /** Meta key for pending requests to be written. */
     private static final int REQUESTS_META_KEY = GridNioSessionMetaKey.nextUniqueKey();
@@ -770,8 +770,9 @@ public class GridNioServer<T> {
      * @param ses Session.
      * @param from Move from index.
      * @param to Move to index.
+     * @return Move session future.
      */
-    private void moveSession(GridNioSession ses, int from, int to) {
+    SessionMoveFuture moveSession(GridNioSession ses, int from, int to) {
         assert from >= 0 && from < clientWorkers.size() : from;
         assert to >= 0 && to < clientWorkers.size() : to;
         assert from != to;
@@ -782,6 +783,8 @@ public class GridNioServer<T> {
 
         if (!ses0.offerMove(clientWorkers.get(from), fut))
             fut.onDone(false);
+
+        return fut;
     }
 
     /**
@@ -2083,16 +2086,28 @@ public class GridNioServer<T> {
                             }
 
                             case CANCEL_CONNECT: {
-                                NioOperationFuture req = (NioOperationFuture)req0;
+                                NioOperationFuture<?> req = (NioOperationFuture<?>)req0;
+
+                                GridSelectorNioSessionImpl ses = null;
 
                                 SocketChannel ch = req.socketChannel();
 
                                 SelectionKey key = ch.keyFor(selector);
 
                                 if (key != null)
-                                    key.cancel();
+                                    ses = (GridSelectorNioSessionImpl)key.attachment();
 
-                                U.closeQuiet(ch);
+                                if (ses == null) {
+                                    // Session was not created yet.
+                                    if (key != null)
+                                        key.cancel();
+
+                                    U.closeQuiet(ch);
+                                }
+                                else {
+                                    // Session is already established, we need to close it.
+                                    close(ses, null);
+                                }
 
                                 req.onDone();
 
@@ -2850,7 +2865,10 @@ public class GridNioServer<T> {
                         GridUnsafe.cleanDirectBuffer(ses.readBuffer());
                 }
 
-                closeKey(ses.key());
+                SelectionKey key = ses.key();
+
+                if (key != null)
+                    closeKey(key);
 
                 if (e != null)
                     filterChain.onExceptionCaught(ses, e);
