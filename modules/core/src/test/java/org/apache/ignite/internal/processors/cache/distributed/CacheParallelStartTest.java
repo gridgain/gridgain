@@ -28,6 +28,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -137,7 +138,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_ALLOW_START_CACHES_IN_PARALLEL, value = "true")
     public void testParallelStartAndStop() throws Exception {
-        testParallelStartAndStopInternal();
+        checkParallelStartAndStopInternal();
     }
 
     /**
@@ -147,7 +148,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_ALLOW_START_CACHES_IN_PARALLEL, value = "false")
     @Ignore("https://ggsystems.atlassian.net/browse/GG-19619")
     public void testSequentialStartAndStop() throws Exception {
-        testParallelStartAndStopInternal();
+        checkParallelStartAndStopInternal();
     }
 
     /**
