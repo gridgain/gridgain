@@ -21,12 +21,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 
 /**
  * Task to collect cache query metrics.
  */
 @GridInternal
+@GridVisorManagementTask
 public class VisorDrRepairPartitionCountersTask extends VisorDrPartitionCountersTask<VisorDrRepairPartitionCountersTaskArg,
         VisorDrRepairPartitionCountersTaskResult, Collection<VisorDrRepairPartitionCountersJobResult>> {
     /** */

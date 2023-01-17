@@ -31,6 +31,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
@@ -40,6 +41,7 @@ import org.jetbrains.annotations.Nullable;
  * Task that collects caches that have index rebuild in progress.
  */
 @GridInternal
+@GridVisorManagementTask
 public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;

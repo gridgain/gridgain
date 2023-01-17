@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.gridgain.internal.h2.index.Index;
@@ -39,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * Task that collects indexes information.
  */
 @GridInternal
+@GridVisorManagementTask
 public class IndexListTask extends VisorOneNodeTask<IndexListTaskArg, Set<IndexListInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;
