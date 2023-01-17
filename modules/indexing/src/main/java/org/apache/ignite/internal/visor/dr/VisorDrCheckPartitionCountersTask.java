@@ -21,12 +21,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.visor.VisorJob;
 
 /**
  * Task for check partition counter in DR entries.
  */
 @GridInternal
+@GridVisorManagementTask
 public class VisorDrCheckPartitionCountersTask extends VisorDrPartitionCountersTask<VisorDrCheckPartitionCountersTaskArg,
         VisorDrCheckPartitionCountersTaskResult, Collection<VisorDrCheckPartitionCountersJobResult>> {
     /** */

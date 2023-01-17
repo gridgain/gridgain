@@ -26,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
  * Task that triggers indexes force rebuild for specified caches or cache groups.
  */
 @GridInternal
+@GridVisorManagementTask
 public class IndexForceRebuildTask extends VisorOneNodeTask<IndexForceRebuildTaskArg, IndexForceRebuildTaskRes> {
     /** */
     private static final long serialVersionUID = 0L;
