@@ -74,7 +74,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
                         .setPersistenceEnabled(false)
                         .setInitialSize(sz)
                         .setMaxSize(sz)
-                        .setCheckpointPageBufferSize(10 * 1024 * 1024)
+                        .setCheckpointPageBufferSize(10 * U.MB)
                 )
                 .setWalMode(WALMode.LOG_ONLY).setCheckpointFrequency(24L * 60 * 60 * 1000);
 
