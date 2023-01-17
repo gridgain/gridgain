@@ -112,6 +112,8 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
         if (F.isEmpty(rowBuff))
             return;
 
+        log.info("SQL offloading started");
+
         data.store(rowBuff);
 
         long delta = 0;
