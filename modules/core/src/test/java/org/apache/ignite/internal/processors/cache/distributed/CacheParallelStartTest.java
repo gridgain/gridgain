@@ -153,7 +153,7 @@ public class CacheParallelStartTest extends GridCommonAbstractTest {
     /**
      *
      */
-    private void testParallelStartAndStopInternal() throws Exception {
+    private void checkParallelStartAndStopInternal() throws Exception {
         IgniteEx igniteEx = startGrid(0);
 
         IgniteEx igniteEx2 = startGrid(1);
