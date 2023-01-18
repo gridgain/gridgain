@@ -353,6 +353,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<Clie
             metrics.onHandshakeAccept(clientType);
         }
         catch (IgniteAccessControlException | SecurityException authEx) {
+            cancelHandshakeTimeout(ses);
             metrics.onFailedAuth();
             writer.writeBoolean(false);
 
