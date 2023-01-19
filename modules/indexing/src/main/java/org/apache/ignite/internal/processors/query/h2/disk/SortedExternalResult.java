@@ -283,6 +283,8 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (F.isEmpty(sortedRowsBuf) && F.isEmpty(unsortedRowsBuf))
             return;
 
+        log.info("SQL offloading started");
+
         int size = distinct ? sortedRowsBuf.size() : unsortedRowsBuf.size();
 
         List<Map.Entry<ValueRow, Value[]>> rows = new ArrayList<>(size);
