@@ -1605,6 +1605,10 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         // It is important that client topologies be added after contexts.
         for (GridClientPartitionTopology top : cctx.exchange().clientTopologies()) {
+            CacheGroupDescriptor grpDesc = cctx.cache().cacheGroupDescriptor(top.groupId());
+            if (grpDesc == null || grpDesc.startTopologyVersion().compareTo(exchId.topologyVersion()) > 0)
+                continue;
+
             GridDhtPartitionFullMap map = top.partitionMap(true);
 
             if (map != null)

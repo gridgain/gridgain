@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
@@ -74,8 +75,6 @@ public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAb
         for (int k = 0; k < 64; k++)
             crd.cache(CACHE_NAME).put(k, k);
 
-        clientMode = true;
-
         TestRecordingCommunicationSpi clientCommSpi = new TestRecordingCommunicationSpi();
 
         // Delay client join process.
@@ -113,7 +112,7 @@ public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAb
 
         discoverySpiSupplier = () -> clientDiscoSpi;
 
-        IgniteInternalFuture<IgniteEx> clientStartFut = GridTestUtils.runAsync(() -> startGrid(3));
+        IgniteInternalFuture<IgniteEx> clientStartFut = GridTestUtils.runAsync(() -> startClientGrid(3));
 
         // Wait till client node starts join process.
         clientCommSpi.waitForBlocked();
@@ -157,5 +156,47 @@ public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAb
         }, 5_000); // Reasonable timeout.
 
         Assert.assertNull("Cache should be destroyed on client node", client.cache(CACHE_NAME));
+    }
+
+    /**
+     * Tests that the client node successfully joins the cluster in the case when a fast reply from the coordinator node
+     * to the corresponding single map message happens after a new cache is created on the server side and
+     * the coordinator is not an affinity node for this newly created cache.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClientJoinWithParallelCacheStart() throws Exception {
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(2);
+
+        TestRecordingCommunicationSpi clientCommSpi = new TestRecordingCommunicationSpi();
+
+        // Delay client join process.
+        clientCommSpi.blockMessages(
+            GridDhtPartitionsSingleMessage.class,
+            crd.configuration().getIgniteInstanceName());
+
+        communicationSpiSupplier = () -> clientCommSpi;
+
+        IgniteInternalFuture<IgniteEx> clientStartFut = GridTestUtils.runAsync(() -> startClientGrid(3));
+
+        // Wait till client node starts join process.
+        clientCommSpi.waitForBlocked();
+
+        // Create a new cache with a node filter which excludes the coordinator from affinity nodes.
+        CacheConfiguration<Object, Object> cacheCfg = new CacheConfiguration<>("test-atomic-cache-x")
+            .setNodeFilter(clusterNode -> clusterNode.id().toString().endsWith("1"));
+
+        grid(1).getOrCreateCache(cacheCfg);
+
+        // Resume client joining the cluster.
+        clientCommSpi.stopBlock();
+
+        // Client join should succeed.
+        IgniteEx client = clientStartFut.get();
+
+        IgniteCache<Object, Object> clientCache = client.cache("test-atomic-cache-x");
+
+        Assert.assertNotNull("Cache should exists on client node", clientCache);
     }
 }

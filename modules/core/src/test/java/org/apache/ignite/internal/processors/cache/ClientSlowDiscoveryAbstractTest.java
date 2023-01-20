@@ -49,9 +49,6 @@ public class ClientSlowDiscoveryAbstractTest extends GridCommonAbstractTest {
         .setBackups(1)
         .setAffinity(new RendezvousAffinityFunction(false, 64));
 
-    /** Client mode. */
-    protected boolean clientMode;
-
     /** Communication SPI supplier. */
     protected Supplier<CommunicationSpi> communicationSpiSupplier = TestRecordingCommunicationSpi::new;
 
@@ -66,7 +63,6 @@ public class ClientSlowDiscoveryAbstractTest extends GridCommonAbstractTest {
         cfg.setCacheConfiguration(ccfg);
         cfg.setCommunicationSpi(communicationSpiSupplier.get());
         cfg.setDiscoverySpi(discoverySpiSupplier.get());
-        cfg.setClientMode(clientMode);
 
         return cfg;
     }
