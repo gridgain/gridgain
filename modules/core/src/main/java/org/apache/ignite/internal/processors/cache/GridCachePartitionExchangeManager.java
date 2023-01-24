@@ -1605,6 +1605,23 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         // It is important that client topologies be added after contexts.
         for (GridClientPartitionTopology top : cctx.exchange().clientTopologies()) {
+            if (exchId != null) {
+                CacheGroupDescriptor grpDesc = cctx.cache().cacheGroupDescriptor(top.groupId());
+
+                if (grpDesc == null)
+                    // Cache group was removed already.
+                    continue;
+
+                // Start topology version for dynamically started cache.
+                AffinityTopologyVersion startTopVer = grpDesc.startTopologyVersion();
+                if (startTopVer == null)
+                    // Start topology version for statically configured cache.
+                    startTopVer = grpDesc.receivedFromStartVersion();
+
+                if (startTopVer != null && startTopVer.compareTo(exchId.topologyVersion()) > 0)
+                    continue;
+            }
+
             GridDhtPartitionFullMap map = top.partitionMap(true);
 
             if (map != null)
