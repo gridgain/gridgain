@@ -178,6 +178,9 @@ public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAb
      * to the corresponding single map message happens after a new cache is created on the server side and
      * the coordinator is not an affinity node for this newly created cache.
      *
+     * Impl notes: this test uses a node filter in order to be sure that the coordinator node will create a "client topology" -
+     * GridClientPartitionTopology instance for the cache instead of GridDhtPartitionTopologyImpl.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -220,6 +223,9 @@ public class ClientSlowDiscoveryTopologyChangeTest extends ClientSlowDiscoveryAb
      * Tests that the client node successfully joins the cluster in the case when a fast reply from the coordinator node
      * to the corresponding single map message happens after a new node joins the cluster with statically configured cache and
      * the coordinator is not an affinity node for this cache.
+     *
+     * Impl notes: this test uses a node filter in order to be sure that the coordinator node will create a "client topology" -
+     * GridClientPartitionTopology instance for the cache instead of GridDhtPartitionTopologyImpl.
      *
      * @throws Exception If failed.
      */
