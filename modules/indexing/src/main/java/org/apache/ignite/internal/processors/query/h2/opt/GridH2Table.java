@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -73,6 +72,7 @@ import org.gridgain.internal.h2.command.ddl.CreateTableData;
 import org.gridgain.internal.h2.engine.DbObject;
 import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.SysProperties;
+import org.gridgain.internal.h2.index.HashJoinIndex;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.index.IndexType;
 import org.gridgain.internal.h2.index.SpatialIndex;
@@ -1874,5 +1874,27 @@ public class GridH2Table extends TableBase {
         }
 
         return "<UNAVAILABLE>".getBytes();
+    }
+
+    /**
+     * Get an index by name.
+     *
+     * @param indexName Index name to search for.
+     * @return Found index, {@code null} if not found.
+     */
+    public @Nullable Index getIndexSafe(String indexName) {
+        ArrayList<Index> indexes = getIndexes();
+
+        if (HashJoinIndex.HASH_JOIN_IDX.equalsIgnoreCase(indexName))
+            return new HashJoinIndex(this);
+
+        if (indexes != null) {
+            for (Index index : indexes) {
+                if (index.getName().equals(indexName))
+                    return index;
+            }
+        }
+
+        return null;
     }
 }

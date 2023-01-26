@@ -1192,4 +1192,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
             return OTHER;
         }
     }
+
+    /**
+     * Returns index name.
+     */
+    public String getIndexName() {
+        return idxName;
+    }
 }
