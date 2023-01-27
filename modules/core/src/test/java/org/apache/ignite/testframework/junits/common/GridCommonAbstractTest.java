@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -2147,11 +2149,24 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
     protected void cleanPersistenceDir() throws Exception {
         assertTrue("Grids are not stopped", F.isEmpty(G.allGrids()));
 
+        File dbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false);
+
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), "cp", false));
-        U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DFLT_STORE_DIR, false));
+        U.delete(dbDir);
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_MARSHALLER_PATH, false));
         U.delete(U.resolveWorkDirectory(U.defaultWorkDirectory(), DataStorageConfiguration.DFLT_BINARY_METADATA_PATH,
             false));
+
+        List<Path> dbFilesAfterDeleteDelete = Files.walk(dbDir.toPath())
+            .filter(Files::isRegularFile)
+            .sorted()
+            .collect(toList());
+
+        if (!dbFilesAfterDeleteDelete.isEmpty()) {
+            log.warning(
+                "NOT DELETED FILES FROM DB DIR: [startDir=" + dbDir + ", files=" + dbFilesAfterDeleteDelete + ']'
+            );
+        }
     }
 
     /**
