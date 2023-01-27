@@ -201,8 +201,11 @@ public class CheckpointMarkersStorage {
 
                 snap = JdkMarshaller.DEFAULT.unmarshal(bytes, null);
             }
-            catch (IOException e) {
-                log.error("Failed to unmarshal earliest checkpoint map snapshot", e);
+            catch (IOException | IgniteCheckedException e) {
+                if (e instanceof IgniteCheckedException)
+                    log.error("Failed to unmarshal earliest checkpoint map snapshot", e);
+                else
+                    log.error("Failed to read earliest checkpoint map snapshot", e);
 
                 if (!IgniteUtils.delete(snapshotFile)) {
                     throw new IgniteCheckedException(
@@ -645,9 +648,8 @@ public class CheckpointMarkersStorage {
 
         if (createSnapshot) {
             Runnable runnable = () -> {
-                if (!checkpointSnapshotInProgress.compareAndSet(false, true)) {
+                if (!checkpointSnapshotInProgress.compareAndSet(false, true))
                     return;
-                }
 
                 try {
                     EarliestCheckpointMapSnapshot snapshot;
@@ -685,7 +687,7 @@ public class CheckpointMarkersStorage {
                     }
 
                     try {
-                        Files.write(tmpFile.toPath(), bytes);
+                        Files.write(tmpFile.toPath(), bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.DSYNC);
                     }
                     catch (IOException e) {
                         log.error("Failed to write checkpoint snapshot temporary file: " + tmpFile, e);

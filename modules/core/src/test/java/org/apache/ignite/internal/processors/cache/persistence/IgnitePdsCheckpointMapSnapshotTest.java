@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,6 +56,15 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALAN
 @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
 @WithSystemProperty(key = IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD, value = "1")
 public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
+    /** */
+    private static final int KEEP_SNAPSHOT = 0;
+
+    /** */
+    private static final int REMOVE_SNAPSHOT = 1;
+
+    /** */
+    private static final int EMPTY_SNAPSHOT = 2;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(name);
@@ -138,7 +149,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithCheckpointMapSnapshot() throws Exception {
-        testRestart(false);
+        testRestart(KEEP_SNAPSHOT);
     }
 
     /**
@@ -148,16 +159,26 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithoutCheckpointMapSnapshot() throws Exception {
-        testRestart(true);
+        testRestart(REMOVE_SNAPSHOT);
+    }
+
+    /**
+     * Tests that node can restart successfully with an empty checkpoint map snapshot.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRestartWithEmptyCheckpointMapSnapshot() throws Exception {
+        testRestart(EMPTY_SNAPSHOT);
     }
 
     /**
      * Tests node restart after a series of checkpoints. Node should use a checkpoint map snapshot if it is present.
      *
-     * @param removeSnapshot Whether to remove a snapshot of a checkpoint map.
+     * @param action Which action to perform with cpMapSnapshot.bin.
      * @throws Exception If failed.
      */
-    private void testRestart(boolean removeSnapshot) throws Exception {
+    private void testRestart(int action) throws Exception {
         IgniteEx grid = startGrid(0);
 
         grid.cluster().state(ClusterState.ACTIVE);
@@ -177,15 +198,26 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
         stopGrid(0, true);
 
-        if (removeSnapshot) {
-            // Remove checkpoint map snapshot
-            File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
+        File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
 
-            File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+        File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+
+        if (action == REMOVE_SNAPSHOT) {
+            // Remove checkpoint map snapshot
 
             IgniteUtils.delete(cpSnapshotMap);
 
             assertFalse(cpSnapshotMap.exists());
+        }
+        else if (action == EMPTY_SNAPSHOT) {
+            try (
+                FileOutputStream stream = new FileOutputStream(cpSnapshotMap, true);
+                FileChannel outChan = stream.getChannel()
+            ) {
+                outChan.truncate(0);
+                stream.flush();
+                stream.getFD().sync();
+            }
         }
 
         grid = startGrid(0);
@@ -213,7 +245,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         stopGrid(2, true);
 
         // 1 is the count of checkpoint on start of the node (see checkpoint with reason "node started")
-        if (removeSnapshot)
+        if (action == REMOVE_SNAPSHOT || action == EMPTY_SNAPSHOT)
             assertEquals(cnt + 1, replayCount);
         else
             assertEquals(0, replayCount);
