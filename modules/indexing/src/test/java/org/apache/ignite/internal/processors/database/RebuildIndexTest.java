@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,10 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.SchemaManager;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexAction;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
@@ -45,7 +49,9 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
+import static org.apache.ignite.internal.processors.query.h2.maintenance.RebuildIndexAction.findIndex;
 
 /**
  *
@@ -78,9 +84,17 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         fields.put("account", "java.lang.Integer");
         fields.put("balance", "java.lang.Integer");
 
-        QueryEntity qryEntity = new QueryEntity()
+        QueryEntity qryEntity0 = new QueryEntity()
+            .setTableName("TABLE_0")
             .setKeyType(UserKey.class.getName())
             .setValueType(UserValue.class.getName())
+            .setKeyFields(new HashSet<>(Arrays.asList("account")))
+            .setFields(fields);
+
+        QueryEntity qryEntity1 = new QueryEntity()
+            .setTableName("TABLE_1")
+            .setKeyType(UserKey.class.getName())
+            .setValueType(UserValue0.class.getName())
             .setKeyFields(new HashSet<>(Arrays.asList("account")))
             .setFields(fields);
 
@@ -91,7 +105,11 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         QueryIndex idx1 = new QueryIndex(idxFields, QueryIndexType.SORTED).setName("IDX_1");
         QueryIndex idx2 = new QueryIndex("balance", QueryIndexType.SORTED, false, "IDX_2");
 
-        qryEntity.setIndexes(Arrays.asList(idx1, idx2));
+        QueryIndex idx3 = new QueryIndex(idxFields, QueryIndexType.SORTED).setName("IDX_3");
+        QueryIndex idx4 = new QueryIndex("balance", QueryIndexType.SORTED, false, "IDX_4");
+
+        qryEntity0.setIndexes(Arrays.asList(idx1, idx2));
+        qryEntity1.setIndexes(Arrays.asList(idx3, idx4));
 
         cfg.setCacheConfiguration(new CacheConfiguration<UserKey, UserValue>()
             .setName(CACHE_NAME)
@@ -99,7 +117,7 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
             .setCacheMode(REPLICATED)
             .setWriteSynchronizationMode(FULL_SYNC)
             .setAffinity(new RendezvousAffinityFunction(false, 1))
-            .setQueryEntities(Collections.singleton(qryEntity)));
+            .setQueryEntities(Arrays.asList(qryEntity0, qryEntity1)));
 
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()
@@ -147,6 +165,48 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, value = "false")
     public void testRebuildIndexWithoutLogging() throws Exception {
         check(false);
+    }
+
+    /**
+     * Checks {@link RebuildIndexAction#findIndex(String, String, SchemaManager)}.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testFindIndex() throws Exception {
+        IgniteEx node = startGrid(0);
+
+        node.cluster().state(ACTIVE);
+
+        IgniteCache<UserKey, UserValue> cache = node.getOrCreateCache(CACHE_NAME);
+
+        cache.put(new UserKey(1), new UserValue(333));
+        cache.put(new UserKey(2), new UserValue(555));
+
+        checkFindIndex(node, CACHE_NAME, "TABLE_0", "IDX_1");
+        checkFindIndex(node, CACHE_NAME, "TABLE_0", "IDX_2");
+        checkFindIndex(node, CACHE_NAME, "TABLE_1", "IDX_3");
+        checkFindIndex(node, CACHE_NAME, "TABLE_1", "IDX_4");
+
+        checkMissingIndex(node, "IDX_5");
+    }
+
+    /** */
+    private void checkFindIndex(IgniteEx n, String cacheName, String tableName, String idxName) {
+        IgniteH2Indexing indexing = (IgniteH2Indexing)n.context().query().getIndexing();
+
+        H2TreeIndex idx = findIndex(CACHE_NAME, idxName, indexing.schemaManager());
+
+        assertEquals(cacheName, idx.getTable().cacheName());
+        assertEquals(tableName, idx.getTable().getName());
+        assertEquals(idxName, idx.getIndexName());
+    }
+
+    /** */
+    private void checkMissingIndex(IgniteEx n, String idxName) {
+        IgniteH2Indexing indexing = (IgniteH2Indexing)n.context().query().getIndexing();
+
+        assertNull(findIndex(CACHE_NAME, idxName, indexing.schemaManager()));
     }
 
     /**
@@ -226,6 +286,21 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
          * @param balance balance.
          */
         public UserValue(int balance) {
+            this.balance = balance;
+        }
+    }
+
+    /**
+     * User value.
+     */
+    private static class UserValue0 {
+        /** Balance. */
+        private int balance;
+
+        /**
+         * @param balance balance.
+         */
+        public UserValue0(int balance) {
             this.balance = balance;
         }
     }
