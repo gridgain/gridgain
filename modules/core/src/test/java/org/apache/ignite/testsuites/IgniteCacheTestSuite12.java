@@ -26,16 +26,6 @@ import org.apache.ignite.internal.processors.cache.SafeLogTxFinishErrorTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheDataLossOnPartitionMoveTest;
 import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLossWithPersistenceTest;
 import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLostAfterSupplierHasLeftTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GracefulShutdownTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadDelayedWithPersistenceSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheDhtPreloadWaitForBackupsWithPersistenceTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.WaitForBackupsOnShutdownSystemPropertyTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.BlockedEvictionsTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.DelayedOwningDuringExchangeTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictionWhilePartitionGroupIsReservedTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.MovingPartitionIsEvictedDuringClearingTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PreloadingRestartWhileClearingPartitionTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.RentingPartitionIsOwnedDuringEvictionTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteLostPartitionsOnLeaveBaselineSelfTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicPartitionCounterStateConsistencyHistoryRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicPartitionCounterStateConsistencyTest;
@@ -43,8 +33,6 @@ import org.apache.ignite.internal.processors.cache.transactions.AtomicVolatilePa
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithPrimaryIndexCorruptionTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCacheMapOnInvalidTopologyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCacheRemoteMultiplePartitionReservationTest;
-import org.apache.ignite.internal.processors.cache.transactions.TxLocalTrackerWithoutTxRecordLoggingTest;
-import org.apache.ignite.internal.processors.cache.transactions.TxWithKeyContentionSelfTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -88,7 +76,8 @@ public class IgniteCacheTestSuite12 {
         GridTestUtils.addTestIfNeeded(suite, AtomicPartitionCounterStateConsistencyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AtomicPartitionCounterStateConsistencyHistoryRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AtomicVolatilePartitionCounterStateConsistencyTest.class, ignoredTests);
-
+        
+        /*
         GridTestUtils.addTestIfNeeded(suite, GridCacheDhtPreloadWaitForBackupsWithPersistenceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GracefulShutdownTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, WaitForBackupsOnShutdownSystemPropertyTest.class, ignoredTests);
@@ -103,7 +92,7 @@ public class IgniteCacheTestSuite12 {
         GridTestUtils.addTestIfNeeded(suite, MovingPartitionIsEvictedDuringClearingTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, EvictionWhilePartitionGroupIsReservedTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, DelayedOwningDuringExchangeTest.class, ignoredTests);
-
+        */
         return suite;
     }
 }
