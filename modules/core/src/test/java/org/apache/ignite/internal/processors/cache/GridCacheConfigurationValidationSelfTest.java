@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.Collection;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -259,22 +260,46 @@ public class GridCacheConfigurationValidationSelfTest extends GridCommonAbstract
         client.getOrCreateCache(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME + 0)
                 .setGroupName(DEFAULT_CACHE_GROUP_NAME)
+                .setBackups(1)
+                .setCacheMode(REPLICATED)
         );
 
-        CacheConfiguration<Object, Object> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME + 1)
+        CacheConfiguration<Object, Object> cacheCfg0 = new CacheConfiguration<>(DEFAULT_CACHE_NAME + 1)
             .setGroupName(DEFAULT_CACHE_GROUP_NAME)
-            .setDataRegionName(REGION_NAME);
+            .setDataRegionName(REGION_NAME)
+            .setBackups(1)
+            .setCacheMode(PARTITIONED);
+
+        CacheConfiguration<Object, Object> cacheCfg1 = new CacheConfiguration<>(DEFAULT_CACHE_NAME + 1)
+            .setGroupName(DEFAULT_CACHE_GROUP_NAME)
+            .setDataRegionName(REGION_NAME)
+            .setBackups(1)
+            .setCacheMode(REPLICATED);
 
         assertThrows(
             log,
-            () -> client.getOrCreateCache(cacheCfg),
+            () -> client.getOrCreateCache(cacheCfg0),
+            IgniteCheckedException.class,
+            "Cache mode mismatch for caches related to the same group"
+        );
+
+        assertThrows(
+            log,
+            () -> server.getOrCreateCache(cacheCfg0),
+            IgniteCheckedException.class,
+            "Cache mode mismatch for caches related to the same group"
+        );
+
+        assertThrows(
+            log,
+            () -> client.getOrCreateCache(cacheCfg1),
             CacheException.class,
             "Data region mismatch for caches related to the same group"
         );
 
         assertThrows(
             log,
-            () -> server.getOrCreateCache(cacheCfg),
+            () -> server.getOrCreateCache(cacheCfg1),
             CacheException.class,
             "Data region mismatch for caches related to the same group"
         );
