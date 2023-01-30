@@ -687,6 +687,9 @@ public class CheckpointMarkersStorage {
                     }
 
                     try {
+                        // Use DSYNC so write to file is fsync'ed or else we can move empty file.
+                        // CREATE_NEW is needed here, because we need to create a new temporary file.
+                        // It's not needed by default, but needed to be passed explicitly in case of DSYNC.
                         Files.write(tmpFile.toPath(), bytes, StandardOpenOption.CREATE_NEW, StandardOpenOption.DSYNC);
                     }
                     catch (IOException e) {

@@ -49,6 +49,9 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.CLEAR_FILE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.KEEP;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.REMOVE;
 
 /**
  * Tests checkpoint map snapshot.
@@ -56,15 +59,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALAN
 @WithSystemProperty(key = IGNITE_PREFER_WAL_REBALANCE, value = "true")
 @WithSystemProperty(key = IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD, value = "1")
 public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
-    /** */
-    private static final int KEEP_SNAPSHOT = 0;
-
-    /** */
-    private static final int REMOVE_SNAPSHOT = 1;
-
-    /** */
-    private static final int EMPTY_SNAPSHOT = 2;
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         IgniteConfiguration configuration = super.getConfiguration(name);
@@ -149,7 +143,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithCheckpointMapSnapshot() throws Exception {
-        testRestart(KEEP_SNAPSHOT);
+        testRestart(KEEP);
     }
 
     /**
@@ -159,7 +153,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithoutCheckpointMapSnapshot() throws Exception {
-        testRestart(REMOVE_SNAPSHOT);
+        testRestart(REMOVE);
     }
 
     /**
@@ -169,7 +163,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithEmptyCheckpointMapSnapshot() throws Exception {
-        testRestart(EMPTY_SNAPSHOT);
+        testRestart(CLEAR_FILE);
     }
 
     /**
@@ -178,7 +172,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      * @param action Which action to perform with cpMapSnapshot.bin.
      * @throws Exception If failed.
      */
-    private void testRestart(int action) throws Exception {
+    private void testRestart(SnapshotAction action) throws Exception {
         IgniteEx grid = startGrid(0);
 
         grid.cluster().state(ClusterState.ACTIVE);
@@ -202,14 +196,14 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
         File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
 
-        if (action == REMOVE_SNAPSHOT) {
+        if (action == REMOVE) {
             // Remove checkpoint map snapshot
 
             IgniteUtils.delete(cpSnapshotMap);
 
             assertFalse(cpSnapshotMap.exists());
         }
-        else if (action == EMPTY_SNAPSHOT) {
+        else if (action == CLEAR_FILE) {
             try (
                 FileOutputStream stream = new FileOutputStream(cpSnapshotMap, true);
                 FileChannel outChan = stream.getChannel()
@@ -245,9 +239,19 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         stopGrid(2, true);
 
         // 1 is the count of checkpoint on start of the node (see checkpoint with reason "node started")
-        if (action == REMOVE_SNAPSHOT || action == EMPTY_SNAPSHOT)
+        if (action == REMOVE || action == CLEAR_FILE)
             assertEquals(cnt + 1, replayCount);
         else
             assertEquals(0, replayCount);
+    }
+
+    /** Action to perform on checkpoint map snapshot. */
+    enum SnapshotAction {
+        /** Keep checkpoint map snapshot. */
+        KEEP,
+        /** Remove checkpoint map snapshot. */
+        REMOVE,
+        /** Clear checkpoint map snapshot file. */
+        CLEAR_FILE
     }
 }
