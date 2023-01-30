@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.UnzipFileIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.io.SegmentIO;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,6 +41,7 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
     private static final int WAL_SEGMENT_FILE_NAME_LENGTH = 16;
 
     /** File represented by this class. */
+    @GridToStringInclude
     protected final File file;
 
     /** Absolute WAL segment file index. */
@@ -149,5 +152,10 @@ public class FileDescriptor implements Comparable<FileDescriptor>, AbstractWalRe
         FileIO fileIO = isCompressed() ? new UnzipFileIO(file()) : fileIOFactory.create(file(), READ);
 
         return new SegmentIO(idx, fileIO);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(FileDescriptor.class, this);
     }
 }

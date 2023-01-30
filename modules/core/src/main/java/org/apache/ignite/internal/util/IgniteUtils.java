@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -3824,7 +3824,19 @@ public abstract class IgniteUtils {
      *      {@code false} otherwise
      */
     public static boolean delete(@Nullable File file) {
-        return file != null && delete(file.toPath());
+        return delete(file, null);
+    }
+
+    /**
+     * Deletes file or directory with all sub-directories and files.
+     *
+     * @param file File or directory to delete.
+     * @param log Log errors when deleting files, {@code null} if not to be logged.
+     * @return {@code true} if and only if the file or directory is successfully deleted,
+     *      {@code false} otherwise
+     */
+    public static boolean delete(@Nullable File file, @Nullable IgniteLogger log) {
+        return file != null && delete(file.toPath(), log);
     }
 
     /**
@@ -3841,21 +3853,25 @@ public abstract class IgniteUtils {
      * Deletes file or directory with all sub-directories and files.
      *
      * @param path File or directory to delete.
+     * @param log Log errors when deleting files, {@code null} if not to be logged.
      * @return {@code true} if and only if the file or directory is successfully deleted,
      *      {@code false} otherwise
      */
-    public static boolean delete(Path path) {
+    public static boolean delete(Path path, @Nullable IgniteLogger log) {
         if (Files.isDirectory(path)) {
             try {
                 try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)) {
                     for (Path innerPath : stream) {
-                        boolean res = delete(innerPath);
+                        boolean res = delete(innerPath, log);
 
                         if (!res)
                             return false;
                     }
                 }
             } catch (IOException e) {
+                if (log != null)
+                    log.error("Failed to clear directory: " + path.toFile().getAbsolutePath(), e);
+
                 return false;
             }
         }
@@ -3865,8 +3881,10 @@ public abstract class IgniteUtils {
                 // Why do we do this?
                 new JarFile(path.toString(), false).close();
             }
-            catch (IOException ignore) {
-                // Ignore it here...
+            catch (IOException e) {
+                // Just logging.
+                if (log != null)
+                    log.error("Failed to delete jar: " + path.toFile().getAbsolutePath(), e);
             }
         }
 
@@ -3875,6 +3893,9 @@ public abstract class IgniteUtils {
 
             return true;
         } catch (IOException e) {
+            if (log != null)
+                log.error("Failed to delete file: " + path.toFile().getAbsolutePath(), e);
+
             return false;
         }
     }
