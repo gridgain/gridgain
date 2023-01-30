@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +49,9 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PREFER_WAL_REBALANCE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.CLEAR_FILE;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.KEEP;
+import static org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCheckpointMapSnapshotTest.SnapshotAction.REMOVE;
 
 /**
  * Tests checkpoint map snapshot.
@@ -138,7 +143,7 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithCheckpointMapSnapshot() throws Exception {
-        testRestart(false);
+        testRestart(KEEP);
     }
 
     /**
@@ -148,16 +153,26 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRestartWithoutCheckpointMapSnapshot() throws Exception {
-        testRestart(true);
+        testRestart(REMOVE);
+    }
+
+    /**
+     * Tests that node can restart successfully with an empty checkpoint map snapshot.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRestartWithEmptyCheckpointMapSnapshot() throws Exception {
+        testRestart(CLEAR_FILE);
     }
 
     /**
      * Tests node restart after a series of checkpoints. Node should use a checkpoint map snapshot if it is present.
      *
-     * @param removeSnapshot Whether to remove a snapshot of a checkpoint map.
+     * @param action Which action to perform with cpMapSnapshot.bin.
      * @throws Exception If failed.
      */
-    private void testRestart(boolean removeSnapshot) throws Exception {
+    private void testRestart(SnapshotAction action) throws Exception {
         IgniteEx grid = startGrid(0);
 
         grid.cluster().state(ClusterState.ACTIVE);
@@ -177,15 +192,26 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
 
         stopGrid(0, true);
 
-        if (removeSnapshot) {
-            // Remove checkpoint map snapshot
-            File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
+        File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
 
-            File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+        File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+
+        if (action == REMOVE) {
+            // Remove checkpoint map snapshot
 
             IgniteUtils.delete(cpSnapshotMap);
 
             assertFalse(cpSnapshotMap.exists());
+        }
+        else if (action == CLEAR_FILE) {
+            try (
+                FileOutputStream stream = new FileOutputStream(cpSnapshotMap, true);
+                FileChannel outChan = stream.getChannel()
+            ) {
+                outChan.truncate(0);
+                stream.flush();
+                stream.getFD().sync();
+            }
         }
 
         grid = startGrid(0);
@@ -213,9 +239,19 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
         stopGrid(2, true);
 
         // 1 is the count of checkpoint on start of the node (see checkpoint with reason "node started")
-        if (removeSnapshot)
+        if (action == REMOVE || action == CLEAR_FILE)
             assertEquals(cnt + 1, replayCount);
         else
             assertEquals(0, replayCount);
+    }
+
+    /** Action to perform on checkpoint map snapshot. */
+    enum SnapshotAction {
+        /** Keep checkpoint map snapshot. */
+        KEEP,
+        /** Remove checkpoint map snapshot. */
+        REMOVE,
+        /** Clear checkpoint map snapshot file. */
+        CLEAR_FILE
     }
 }
