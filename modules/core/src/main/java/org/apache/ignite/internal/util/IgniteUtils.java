@@ -3853,6 +3853,17 @@ public abstract class IgniteUtils {
      * Deletes file or directory with all sub-directories and files.
      *
      * @param path File or directory to delete.
+     * @return {@code true} if and only if the file or directory is successfully deleted,
+     *      {@code false} otherwise
+     */
+    public static boolean delete(Path path) {
+        return delete(path, null);
+    }
+
+    /**
+     * Deletes file or directory with all sub-directories and files.
+     *
+     * @param path File or directory to delete.
      * @param log Log errors when deleting files, {@code null} if not to be logged.
      * @return {@code true} if and only if the file or directory is successfully deleted,
      *      {@code false} otherwise
