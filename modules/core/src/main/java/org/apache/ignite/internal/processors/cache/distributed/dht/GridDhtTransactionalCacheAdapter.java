@@ -1433,6 +1433,8 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                     assert e != null;
 
                     while (true) {
+                        ctx.shared().database().checkpointReadLock();
+
                         try {
                             // Don't return anything for invalid partitions.
                             if (tx == null || !tx.isRollbackOnly()) {
@@ -1504,6 +1506,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
                             e = entryExx(e.key());
 
                             it.set(e);
+                        }
+                        finally {
+                            ctx.shared().database().checkpointReadUnlock();
                         }
                     }
 
