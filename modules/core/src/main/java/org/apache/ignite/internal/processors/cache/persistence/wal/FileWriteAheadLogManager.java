@@ -2120,7 +2120,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * Restart worker in IgniteThread.
          */
         public void restart() {
-            assert runner() == null : "FileArchiver is still running";
+            assert runner() == null : "FileArchiver is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
@@ -2579,12 +2579,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 segmentsQueue.put(-1L);
             }
 
-            U.join(this, log);
+            U.join(runner(), log);
         }
 
         /** Restart worker. */
         void restart() {
-            assert runner() == null : "FileDecompressor is still running.";
+            assert runner() == null : "FileDecompressor is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
@@ -3296,14 +3296,14 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         private void shutdown() throws IgniteInterruptedCheckedException {
             isCancelled.set(true);
 
-            U.join(this);
+            U.join(runner());
         }
 
         /**
          * Restart worker in IgniteThread.
          */
         public void restart() {
-            assert runner() == null : "FileCleaner is still running";
+            assert runner() == null : "FileCleaner is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
