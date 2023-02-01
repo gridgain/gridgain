@@ -681,7 +681,7 @@
                                                 if (digitVer != null)
                                                 {
                                                     // Date of the last major release
-                                                    var startDate = new Date(new Date().getFullYear(),0,1);
+                                                    var startDate = new Date(new Date().getFullYear(),1,1);
 
                                                     // Number of hours since the last major release
                                                     var buildNum = Math.round((new Date() - startDate)/(3600*1000));
