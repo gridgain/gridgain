@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
@@ -32,12 +31,6 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         /** Empty metadata. */
         public static readonly BinaryType Empty =
             new BinaryType(BinaryTypeId.Object, BinaryTypeNames.TypeNameObject, null, null, false, null, null, null);
-
-        /** Empty dictionary. */
-        private static readonly IDictionary<string, BinaryField> EmptyDict = new Dictionary<string, BinaryField>();
-
-        /** Empty list. */
-        private static readonly ICollection<string> EmptyList = new List<string>().AsReadOnly();
 
         /** Type name map. */
         private static readonly string[] TypeNames = new string[byte.MaxValue];
@@ -218,7 +211,9 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
             _typeId = typeId;
             _typeName = typeName;
             _affinityKeyFieldName = affKeyFieldName;
-            _fields = fields;
+
+            _fields = fields ?? new Dictionary<string, BinaryField>();
+
             _isEnum = isEnum;
             _enumNameToValue = enumValues;
 
@@ -253,7 +248,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         /// </summary>
         public ICollection<string> Fields
         {
-            get { return _fields != null ? _fields.Keys : EmptyList; }
+            get { return _fields.Keys; }
         }
 
         /// <summary>
@@ -267,19 +262,14 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         {
             IgniteArgumentCheck.NotNullOrEmpty(fieldName, "fieldName");
 
-            if (_fields != null)
+            BinaryField fieldMeta;
+
+            if (!_fields.TryGetValue(fieldName, out fieldMeta))
             {
-                BinaryField fieldMeta;
-
-                if (!_fields.TryGetValue(fieldName, out fieldMeta))
-                {
-                    throw new BinaryObjectException("BinaryObject field does not exist: " + fieldName);
-                }
-
-                return GetTypeName(fieldMeta.TypeId);
+                throw new BinaryObjectException("BinaryObject field does not exist: " + fieldName);
             }
-            
-            return null;
+
+            return GetTypeName(fieldMeta.TypeId);
         }
 
         /// <summary>
@@ -331,7 +321,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         /// <returns>Fields map.</returns>
         public IDictionary<string, BinaryField> GetFieldsMap()
         {
-            return _fields ?? EmptyDict;
+            return _fields;
         }
 
         /// <summary>
@@ -357,8 +347,6 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         {
             if (fields == null || fields.Count == 0)
                 return;
-
-            Debug.Assert(_fields != null);
 
             foreach (var field in fields)
                 _fields[field.Key] = field.Value;
