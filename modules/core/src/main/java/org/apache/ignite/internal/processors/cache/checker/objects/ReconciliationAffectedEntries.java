@@ -140,22 +140,30 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
             printer.accept("\nSKIPPED CACHES: " + skippedCachesCount() + "\n\n");
 
             for (PartitionReconciliationSkippedEntityHolder<String> skippedCache : skippedCaches) {
-                printer.accept("Following cache was skipped during partition reconciliation check cache=["
-                    + skippedCache.skippedEntity() + "], reason=[" + skippedCache.skippingReason() + "]\n");
+                String entity = skippedCache.skippedEntity();
+                String reason = skippedCache.skippingReason() != null ? skippedCache.skippingReason().reason() : null;
+
+                printer.accept(
+                    "Following cache was skipped during partition reconciliation check cache=[" + entity + "]" +
+                        (reason != null ? ", reason=[" + reason + ']' : "") + '\n');
             }
         }
 
         if (skippedEntries != null && !skippedEntries.isEmpty()) {
             printer.accept("\nSKIPPED ENTRIES: " + skippedEntriesCount() + "\n\n");
 
-            printer.accept(skippedEntries(skippedEntries));
+            printer.accept(skippedEntries(skippedEntries, includeSensitive));
         }
     }
 
     /**
      * @param skippedEntries Skipped entries.
+     * @param includeSensitive Indicates that sensitive information should be stored.
      */
-    private String skippedEntries(Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries) {
+    private String skippedEntries(
+        Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries,
+        boolean includeSensitive
+    ) {
         StringBuilder res = new StringBuilder();
 
         for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
@@ -176,13 +184,11 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
                 for (PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> skippedEntry
                     : partitionBoundedSkippedEntries.getValue()) {
 
-                    recordBuilder.append(", entry=").append(skippedEntry.skippedEntity());
-
-                    recordBuilder.append(", reason=").append(skippedEntry.skippingReason());
+                    recordBuilder.append(", entry=").append(getSkippedAsString(skippedEntry, includeSensitive, false));
                 }
                 recordBuilder.append("]\n");
 
-                res.append(recordBuilder.toString());
+                res.append(recordBuilder);
             }
         }
 
@@ -275,28 +281,50 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     }
 
     /**
+     * Returns string representation of the given {@code row}.
+     *
+     * @param row Data row.
+     * @param includeSensitive Indicates that sensitive information should be stored.
+     */
+    public static String getSkippedAsString(
+        PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> row,
+        boolean includeSensitive,
+        boolean appendIndent
+    ) {
+        StringBuilder res = new StringBuilder();
+
+        res
+            .append(appendIndent ? "\t\t" : "")
+            .append(row.skippedEntity().stringView(includeSensitive))
+            .append(row.skippingReason() != null ? ", reason=" + row.skippingReason().reason() : "")
+            .append('\n');
+
+        return res.toString();
+    }
+
+    /**
      * Added outer value to this class.
      */
     public void merge(ReconciliationAffectedEntries outer) {
         assert outer != null;
 
-        this.nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);
+        nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);
 
         for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> entry : outer.inconsistentKeys.entrySet()) {
-            Map<Integer, List<PartitionReconciliationDataRowMeta>> map = this.inconsistentKeys.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+            Map<Integer, List<PartitionReconciliationDataRowMeta>> map = inconsistentKeys.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
 
             for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> listEntry : entry.getValue().entrySet())
                 map.computeIfAbsent(listEntry.getKey(), k -> new ArrayList<>()).addAll(listEntry.getValue());
         }
 
         for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> entry : outer.skippedEntries.entrySet()) {
-            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> map = this.skippedEntries.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> map = skippedEntries.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
 
             for (Map.Entry<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> setEntry : entry.getValue().entrySet())
                 map.computeIfAbsent(setEntry.getKey(), k -> new HashSet<>()).addAll(setEntry.getValue());
         }
 
-        this.skippedCaches.addAll(outer.skippedCaches);
+        skippedCaches.addAll(outer.skippedCaches);
     }
 
     /**
@@ -352,6 +380,6 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
      * @return Skipped entries count.
      */
     public int skippedEntriesCount() {
-        return skippedEntries.size();
+        return skippedEntries.values().stream().flatMap(m -> m.values().stream()).mapToInt(Set::size).sum();
     }
 }

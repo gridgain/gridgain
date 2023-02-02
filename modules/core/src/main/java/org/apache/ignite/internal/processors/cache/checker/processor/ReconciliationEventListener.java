@@ -25,6 +25,10 @@ import java.util.Objects;
 public interface ReconciliationEventListener {
     /**
      * Workload lifecycle stages.
+     *
+     * The following state transitions are possible:
+     *  SCHEDULED -> BEFORE_PROCESSING -> READY -> FINISHED
+     *  SCHEDULED -> SKIPPED -> FINISHED
      */
     enum WorkLoadStage {
         /** Workload is scheduled for processing. */
@@ -35,6 +39,9 @@ public interface ReconciliationEventListener {
 
         /** Workload has been processed and the processing result is ready to be used. */
         READY,
+
+        /** Workload is skipped for some reason. */
+        SKIPPED,
 
         /** Processing of the workload is completed. */
         FINISHED
