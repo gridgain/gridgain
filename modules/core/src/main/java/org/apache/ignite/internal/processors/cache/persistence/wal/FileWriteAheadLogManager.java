@@ -2212,7 +2212,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 U.cancel(this);
             }
 
-            U.join(this);
+            U.join(runner());
         }
     }
 
@@ -2228,7 +2228,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         /** */
         void restart() {
-            assert runner() == null : "FileCompressorWorker is still running.";
+            assert runner() == null : "FileCompressorWorker is still running [worker=" + this + ']';
 
             isCancelled.set(false);
 
