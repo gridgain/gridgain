@@ -544,7 +544,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
-         * Redirects processiong of skeppeed workload to collector.
+         * Redirects processing of skipped workload to the collector.
          *
          * @param workload Workload to skip.
          */
