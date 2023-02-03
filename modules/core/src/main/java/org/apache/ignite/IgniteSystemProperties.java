@@ -2258,6 +2258,16 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_SSL_UNWRAP_TIMEOUT = "IGNITE_SSL_UNWRAP_TIMEOUT";
 
     /**
+     * Comma separated packages list to expose in configuration view.
+     * The default value is null.
+     * @see org.apache.ignite.internal.managers.systemview.GridSystemViewManager
+     * @see org.apache.ignite.spi.systemview.view.ConfigurationView
+     */
+    @SystemProperty(value = "Packages list to expose in configuration view")
+    @IgniteExperimental
+    public static final String IGNITE_CONFIGURATION_VIEW_PACKAGES = "IGNITE_CONFIGURATION_VIEW_PACKAGES";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

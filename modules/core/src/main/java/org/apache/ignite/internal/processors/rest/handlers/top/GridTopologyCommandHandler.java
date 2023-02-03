@@ -63,6 +63,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_SUBJ
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOGY;
+import static org.apache.ignite.internal.util.IgniteUtils.IGNITE_PKG;
 
 /**
  * Command handler for API requests.
@@ -303,7 +304,7 @@ public class GridTopologyCommandHandler extends GridRestCommandHandlerAdapter {
             for (Iterator<Map.Entry<String, Object>> i = attrs.entrySet().iterator(); i.hasNext();) {
                 Map.Entry<String, Object> e = i.next();
 
-                if (!e.getKey().startsWith("org.apache.ignite.") && !e.getKey().startsWith("plugins.") &&
+                if (!e.getKey().startsWith(IGNITE_PKG) && !e.getKey().startsWith("plugins.") &&
                     System.getProperty(e.getKey()) == null) {
                     i.remove();
 

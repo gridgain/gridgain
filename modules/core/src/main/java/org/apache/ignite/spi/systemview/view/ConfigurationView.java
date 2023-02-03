@@ -16,58 +16,35 @@
 
 package org.apache.ignite.spi.systemview.view;
 
-import org.apache.ignite.internal.managers.systemview.walker.Filtrable;
 import org.apache.ignite.internal.managers.systemview.walker.Order;
 
-import static org.apache.ignite.internal.util.IgniteUtils.toStringSafe;
-
 /**
- * Baseline node attribute representation for a {@link SystemView}.
+ * Configuration value representation for a {@link SystemView}.
  */
-public class BaselineNodeAttributeView {
-    /** Node consistent id. */
-    private final Object consistentId;
-
-    /** Attribute name. */
+public class ConfigurationView {
+    /** Name of the configuration property. */
     private final String name;
 
-    /** Attribute value. */
-    private final Object val;
+    /** Value of the configuration property. */
+    private final String val;
 
     /**
-     * @param consistentId Node consistent id.
-     * @param name Attribute name.
-     * @param val Attribute value.
+     * @param name Name of the configuration property.
+     * @param val Value of the configuration property.
      */
-    public BaselineNodeAttributeView(Object consistentId, String name, Object val) {
-        this.consistentId = consistentId;
+    public ConfigurationView(String name, String val) {
         this.name = name;
         this.val = val;
     }
 
-    /**
-     * @return Node consistend id.
-     */
+    /** @return Name of the configuration property. */
     @Order
-    @Filtrable
-    public String nodeConsistentId() {
-        return toStringSafe(consistentId);
-    }
-
-    /**
-     * @return Attribute name.
-     */
-    @Order(1)
-    @Filtrable
     public String name() {
         return name;
     }
 
-    /**
-     * @return Attribute value.
-     */
-    @Order(2)
+    /** @return Value of the configuration property. */
     public String value() {
-        return toStringSafe(val);
+        return val;
     }
 }

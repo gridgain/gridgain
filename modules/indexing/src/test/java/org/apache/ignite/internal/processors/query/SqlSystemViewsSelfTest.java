@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import javax.cache.Cache;
@@ -85,6 +86,7 @@ import org.junit.Test;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+import static org.apache.ignite.internal.util.IgniteUtils.MB;
 import static org.junit.Assert.assertNotEquals;
 
 /**
@@ -1687,6 +1689,48 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             .collect(Collectors.toList());
 
         assertEqualsCollections(elevenExpVals, durationMetrics);
+    }
+
+    /** */
+    @Test
+    public void testConfigurationView() throws Exception {
+        IgniteConfiguration icfg = new IgniteConfiguration();
+
+        long expMaxSize = 10 * MB;
+
+        String expName = "my-instance";
+
+        String expDrName = "my-dr";
+
+        icfg.setIgniteInstanceName(expName);
+
+        icfg.setDataStorageConfiguration(new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setLazyMemoryAllocation(false))
+            .setDataRegionConfigurations(
+                new DataRegionConfiguration()
+                    .setName(expDrName)
+                    .setMaxSize(expMaxSize)));
+
+        try (IgniteEx srv = startGrid(icfg)) {
+            srv.createCache(DEFAULT_CACHE_NAME);
+
+            BiConsumer<String, String> checker = (name, val) -> assertEquals(
+                val,
+                execSql(srv, "SELECT VALUE FROM SYS.CONFIGURATION WHERE NAME = ?", name).get(0).get(0)
+            );
+
+            checker.accept("IgniteInstanceName", expName);
+            checker.accept("DataStorageConfiguration.DefaultDataRegionConfiguration.LazyMemoryAllocation", "false");
+            checker.accept("DataStorageConfiguration.DataRegionConfigurations[0].Name", expDrName);
+            checker.accept(
+                "DataStorageConfiguration.DataRegionConfigurations[0].MaxSize",
+                Long.toString(expMaxSize)
+            );
+            checker.accept("CacheConfiguration[0].AtomicityMode", CacheAtomicityMode.TRANSACTIONAL.name());
+            checker.accept("AddressResolver", null);
+        }
     }
 
     /**
