@@ -76,7 +76,7 @@ public class ClientListenerNioMessageParser implements GridNioParser {
             }
         }
         catch (Throwable e) {
-            U.error(log, "Failed to read message [msg=" + msg +
+            U.warn(log, "Failed to read message [msg=" + msg +
                     ", buf=" + buf + ", ses=" + ses + "]", e);
 
             throw e;
