@@ -98,12 +98,25 @@ public class PartitionReconciliationLostPartitionsTest extends PartitionReconcil
         ReconciliationResult res = partitionReconciliation(
             grid(0),
             new VisorPartitionReconciliationTaskArg.Builder()
+                .locOutput(true)
+                .repair(false)
+                .caches(Collections.singleton(DEFAULT_CACHE_NAME)));
+
+        ReconciliationResult compactRes = partitionReconciliation(
+            grid(0),
+            new VisorPartitionReconciliationTaskArg.Builder()
+                .locOutput(false)
                 .repair(false)
                 .caches(Collections.singleton(DEFAULT_CACHE_NAME)));
 
         assertEquals(
             "Number of lost partitions does not match to the number of skipped entities.",
             res.partitionReconciliationResult().skippedEntriesCount(),
+            lostParts.size());
+
+        assertEquals(
+            "Number of lost partitions does not match to the number of skipped entities (compact mode).",
+            compactRes.partitionReconciliationResult().skippedEntriesCount(),
             lostParts.size());
 
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> entries =

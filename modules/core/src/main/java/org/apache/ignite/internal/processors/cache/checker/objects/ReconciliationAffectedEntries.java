@@ -141,11 +141,11 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
 
             for (PartitionReconciliationSkippedEntityHolder<String> skippedCache : skippedCaches) {
                 String entity = skippedCache.skippedEntity();
-                String reason = skippedCache.skippingReason() != null ? skippedCache.skippingReason().reason() : null;
+                String reason = skippedCache.skippingReason() != null ?
+                    ", reason=[" + skippedCache.skippingReason().reason() + ']' : "";
 
                 printer.accept(
-                    "Following cache was skipped during partition reconciliation check cache=[" + entity + "]" +
-                        (reason != null ? ", reason=[" + reason + ']' : "") + '\n');
+                    "Following cache was skipped during partition reconciliation check cache=[" + entity + "]" + reason + '\n');
             }
         }
 
@@ -293,8 +293,7 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     ) {
         StringBuilder res = new StringBuilder();
 
-        res
-            .append(appendIndent ? "\t\t" : "")
+        res.append(appendIndent ? "\t\t" : "")
             .append(row.skippedEntity().stringView(includeSensitive))
             .append(row.skippingReason() != null ? ", reason=" + row.skippingReason().reason() : "")
             .append('\n');

@@ -66,6 +66,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.KEY_WAS_NOT_REPAIRED;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.LOST_PARTITION;
+import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
 
 /**
  * Defines a contract for collecting of inconsistent and repaired entries.
@@ -141,9 +142,6 @@ public interface ReconciliationResultCollector {
      * Represents a collector of inconsistent and repaired entries.
      */
     public static class Simple implements ReconciliationResultCollector {
-        /** */
-        private static final byte[] EMPTY_BYTES = new byte[0];
-
         /** Ignite instance. */
         protected final IgniteEx ignite;
 
