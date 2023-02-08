@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-aop</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+    <version>8.8.23-p2</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
