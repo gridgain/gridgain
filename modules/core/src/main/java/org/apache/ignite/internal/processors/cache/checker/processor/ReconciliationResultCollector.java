@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
@@ -64,6 +65,8 @@ import static org.apache.ignite.internal.processors.cache.checker.objects.Reconc
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
 import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.KEY_WAS_NOT_REPAIRED;
+import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.LOST_PARTITION;
+import static org.apache.ignite.internal.util.IgniteUtils.EMPTY_BYTES;
 
 /**
  * Defines a contract for collecting of inconsistent and repaired entries.
@@ -77,6 +80,14 @@ public interface ReconciliationResultCollector {
      * @param keys Skipped entries
      */
     void appendSkippedEntries(String cacheName, int partId, Map<VersionedKey, Map<UUID, VersionedValue>> keys);
+
+    /**
+     * Appends skipped partition.
+     *
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     */
+    void appendSkippedPartition(String cacheName, int partId);
 
     /**
      * Appends conflicted entries.
@@ -192,8 +203,8 @@ public interface ReconciliationResultCollector {
 
                         PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> holder
                             = new PartitionReconciliationSkippedEntityHolder<>(
-                            new PartitionReconciliationKeyMeta(bytes, strVal),
-                            KEY_WAS_NOT_REPAIRED
+                                new PartitionReconciliationKeyMeta(bytes, strVal),
+                                KEY_WAS_NOT_REPAIRED
                         );
 
                         data.add(holder);
@@ -203,6 +214,23 @@ public interface ReconciliationResultCollector {
                     }
                 }
 
+                skippedEntries
+                    .computeIfAbsent(cacheName, k -> new HashMap<>())
+                    .computeIfAbsent(partId, l -> new HashSet<>())
+                    .addAll(data);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void appendSkippedPartition(String cacheName, int partId) {
+            Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
+
+            data.add(new PartitionReconciliationSkippedEntityHolder<>(
+                    new PartitionReconciliationKeyMeta(EMPTY_BYTES, "All partition keys."),
+                LOST_PARTITION
+            ));
+
+            synchronized (skippedEntries) {
                 skippedEntries
                     .computeIfAbsent(cacheName, k -> new HashMap<>())
                     .computeIfAbsent(partId, l -> new HashSet<>())
@@ -356,6 +384,9 @@ public interface ReconciliationResultCollector {
         /** Total number of inconsistent keys. */
         private final AtomicInteger totalKeysCnt = new AtomicInteger();
 
+        /** Total number of skipped entities. */
+        private final AtomicInteger totalSkippedCnt = new AtomicInteger();
+
         /** Provides mapping of cache name to temporary filename with results. */
         private final Map<String, String> tmpFiles = new ConcurrentHashMap<>();
 
@@ -391,6 +422,7 @@ public interface ReconciliationResultCollector {
                 log.debug("Partition has been processed [cacheName=" + cacheName + ", partId=" + partId + ']');
 
             List<PartitionReconciliationDataRowMeta> meta = null;
+            Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped = null;
 
             synchronized (inconsistentKeys) {
                 Map<Integer, List<PartitionReconciliationDataRowMeta>> c = inconsistentKeys.get(cacheName);
@@ -398,10 +430,17 @@ public interface ReconciliationResultCollector {
                     meta = c.remove(partId);
             }
 
-            if (meta != null && !meta.isEmpty()) {
-                totalKeysCnt.addAndGet(meta.size());
+            synchronized (skippedEntries) {
+                Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> c = skippedEntries.get(cacheName);
+                if (c != null)
+                    skipped = c.remove(partId);
+            }
 
-                storePartition(cacheName, partId, meta);
+            if (!F.isEmpty(meta) || !F.isEmpty(skipped)) {
+                totalKeysCnt.addAndGet(F.isEmpty(meta) ? 0 : meta.size());
+                totalSkippedCnt.addAndGet(F.isEmpty(skipped) ? 0 : skipped.size());
+
+                storePartition(cacheName, partId, meta, skipped);
             }
         }
 
@@ -413,7 +452,7 @@ public interface ReconciliationResultCollector {
                         collectNodeIdToConsistentIdMapping(ignite),
                         totalKeysCnt.get(),
                         0, // skipped caches count which is not tracked/used.
-                        skippedEntries.size());
+                        totalSkippedCnt.get());
                 }
             }
         }
@@ -425,7 +464,7 @@ public interface ReconciliationResultCollector {
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
 
                     try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file)))) {
-                        printFileHead(out, totalKeysCnt.get());
+                        printFileHead(out, totalKeysCnt.get(), totalSkippedCnt.get());
 
                         for (Map.Entry<String, String> e : tmpFiles.entrySet()) {
                             out.println(e.getKey());
@@ -460,10 +499,13 @@ public interface ReconciliationResultCollector {
          *
          * @param out Output stream.
          * @param inconsistentKeyCnt Number of inconsistent keys.
+         * @param skippedEntitiesCnt Number of skipped entities.
          */
-        private void printFileHead(PrintWriter out, long inconsistentKeyCnt) {
+        private void printFileHead(PrintWriter out, int inconsistentKeyCnt, int skippedEntitiesCnt) {
             out.println();
             out.println("INCONSISTENT KEYS: " + inconsistentKeyCnt);
+            out.println();
+            out.println("SKIPPED ENTRIES: " + skippedEntitiesCnt);
             out.println();
 
             out.println("<cacheName>");
@@ -480,9 +522,15 @@ public interface ReconciliationResultCollector {
          *
          * @param cacheName Cache name.
          * @param partId Partition id.
-         * @param meta Entries to store.
+         * @param meta Inconsistent entries.
+         * @param skipped Skipped entities.
          */
-        private void storePartition(String cacheName, int partId, List<PartitionReconciliationDataRowMeta> meta) {
+        private void storePartition(
+            String cacheName,
+            int partId,
+            List<PartitionReconciliationDataRowMeta> meta,
+            Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> skipped
+        ) {
             String maskId = U.maskForFileName(ignite.context().discovery().localNode().consistentId().toString());
 
             String fileName = tmpFiles.computeIfAbsent(cacheName, d -> {
@@ -509,8 +557,15 @@ public interface ReconciliationResultCollector {
                     out.print('\t');
                     out.println(partId);
 
-                    for (PartitionReconciliationDataRowMeta row : meta)
-                        out.print(getConflictsAsString(row, nodesIdsToConsistentIdsMap, true));
+                    if (!F.isEmpty(meta)) {
+                        for (PartitionReconciliationDataRowMeta row : meta)
+                            out.print(getConflictsAsString(row, nodesIdsToConsistentIdsMap, includeSensitive));
+                    }
+
+                    if (!F.isEmpty(skipped)) {
+                        for (PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> keyMeta : skipped)
+                            out.print(ReconciliationAffectedEntries.getSkippedAsString(keyMeta, includeSensitive, true));
+                    }
                 }
                 catch (IOException e) {
                     log.error("Cannot store partition's data [cacheName=" + cacheName + ", partId" + partId + ']');

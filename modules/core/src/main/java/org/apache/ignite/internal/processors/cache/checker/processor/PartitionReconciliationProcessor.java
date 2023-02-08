@@ -35,6 +35,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
@@ -464,6 +465,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                     break;
 
+                case SKIPPED:
+                    skipWorkload(workload);
+
+                    break;
+
                 case FINISHED:
                     detachWorkload(workload);
 
@@ -534,6 +540,19 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 chanIds.remove(desc.chainId);
 
                 onChainCompleted(desc.chainId, desc.cacheName, desc.partId);
+            }
+        }
+
+        /**
+         * Redirects processing of skipped workload to the collector.
+         *
+         * @param workload Workload to skip.
+         */
+        private void skipWorkload(PipelineWorkload workload) {
+            if (workload instanceof CachePartitionRequest) {
+                CachePartitionRequest partReqWorkload = (CachePartitionRequest) workload;
+
+                collector.appendSkippedPartition(partReqWorkload.cacheName(), partReqWorkload.partitionId());
             }
         }
 
