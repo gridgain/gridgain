@@ -314,15 +314,51 @@ public class TableFilter implements ColumnResolver {
 
         // forget all unused index conditions
         // the indexConditions list may be modified here
+        int[] indexedConditions = new int[index.getColumns().length];
+        int upperBound = -1;
+
         for (int i = 0; i < indexConditions.size(); i++) {
             IndexCondition condition = indexConditions.get(i);
             if (!condition.isAlwaysFalse()) {
                 Column col = condition.getColumn();
                 if (col.getColumnId() >= 0) {
-                    if (index.getColumnIndex(col) < 0) {
+                    int idx = index.getColumnIndex(condition.getColumn());
+
+                    if (idx < 0) {
                         indexConditions.remove(i);
                         i--;
+
+                        continue;
                     }
+
+                    indexedConditions[idx] = i + 1; // Zero reserved for gaps.
+                    upperBound = Math.max(upperBound, idx);
+                }
+            }
+        }
+
+        //  0       1   2       3
+        // [cond3] [0] [cond2] [cond4]  <- remove 2,3
+        // [cond3] [cond2] [cond4] [0] <- ok
+        boolean[] toRmvConditionIdxs = null;
+        boolean gapFound = false;
+
+        for (int i = 0; i <= upperBound; i++) {
+            if (indexedConditions[i] == 0) {
+                gapFound = true;
+            }
+            else if (gapFound) {
+                if (toRmvConditionIdxs == null) {
+                    toRmvConditionIdxs = new boolean[indexedConditions.length];
+                }
+                toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+            }
+        }
+
+        if (toRmvConditionIdxs != null) {
+            for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
+                if (toRmvConditionIdxs[rmvIdx]) {
+                    indexConditions.remove(rmvIdx);
                 }
             }
         }

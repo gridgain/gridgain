@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -42,6 +43,7 @@ public class TestFuzzOptimizations extends TestDb {
         conn = getConnection(getTestName());
         if (!config.diskResult) {
             testIn();
+            testIn2();
         }
         testGroupSorted();
         testInSelect();
@@ -119,6 +121,57 @@ public class TestFuzzOptimizations extends TestDb {
         }
         executeAndCompare("a >=0 and b in(?, 2) and a in(1, ?, null)", Arrays.asList("10", "2"),
                 "testIn() seed=-6191135606105920350L");
+        db.execute("drop table test0, test1");
+    }
+
+    private void testIn2() throws SQLException {
+        Db db = new Db(conn);
+        db.execute("create table test0(a int, b int, c int, d int)");
+        db.execute("create index idx_2 on test0(a, c, b)");
+        db.execute("create table test1(a int, b int, c int, d int)");
+        db.execute("insert into test0 select x / 100, " +
+            "mod(x / 10, 10), mod(x, 10), x from system_range(0, 999)");
+        db.execute("update test0 set a = null where a = 9");
+        db.execute("update test0 set b = null where b = 9");
+        db.execute("update test0 set c = null where c = 9");
+        db.execute("insert into test1 select * from test0");
+
+        // this failed at some point
+        Db.Prepared p = db.prepare("select * from test0 where b in(" +
+            "select a from test1 where a <? and a not in(" +
+            "select c from test1 where b <=10 and a in(" +
+            "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
+            "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
+        p.set(1);
+        p.execute();
+
+        Random seedGenerator = new Random();
+        String[] columns = new String[] { "a", "b", "c" };
+        String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
+        String[] compares = new String[] { "in(", "not in(", "=", "=", ">",
+            "<", ">=", "<=", "<>", "in(select", "not in(select" };
+        int size = getSize(100, 1000);
+        for (int i = 0; i < size; i++) {
+            long seed = seedGenerator.nextLong();
+            println("testIn() seed: " + seed);
+            Random random = new Random(seed);
+            ArrayList<String> params = new ArrayList<>();
+            String condition = getRandomCondition(random, params, columns,
+                compares, values);
+            String message = "testIn() seed: " + seed + " " + condition;
+            executeAndCompare(condition, params, message);
+            if (params.size() > 0) {
+                for (int j = 0; j < params.size(); j++) {
+                    String value = values[random.nextInt(values.length - 2)];
+                    params.set(j, value);
+                }
+                executeAndCompare(condition, params, message);
+            }
+        }
+
+        String constCondition = "a = 1 and b in(10, 2)";
+        executeAndCompare(constCondition, Collections.<String>emptyList(), "testIn2() condition: " + constCondition);
+
         db.execute("drop table test0, test1");
     }
 
