@@ -18,12 +18,10 @@ package org.apache.ignite.internal.commandline;
 
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeIdTask;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeIdTaskArg;
 import org.apache.ignite.internal.visor.id_and_tag.VisorClusterChangeIdTaskResult;
 
-import java.util.Comparator;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -33,6 +31,7 @@ import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
 /**
  * Command to change cluster ID.
@@ -47,10 +46,7 @@ public class ClusterChangeIdCommand extends AbstractCommand<UUID> {
             return null;
 
         try (GridClient client = Command.startClient(clientCfg)) {
-            UUID coordinatorId = client.compute().nodes().stream()
-                .min(Comparator.comparingLong(GridClientNode::order))
-                .map(GridClientNode::nodeId)
-                .orElse(null);
+            UUID coordinatorId = coordinatorId(client.compute());
 
             VisorClusterChangeIdTaskResult res = executeTaskByNameOnNode(
                 client,
