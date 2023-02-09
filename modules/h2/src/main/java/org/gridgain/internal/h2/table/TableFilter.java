@@ -8,7 +8,7 @@ package org.gridgain.internal.h2.table;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-
+import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.Parser;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.command.dml.Select;
@@ -18,22 +18,21 @@ import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.expression.condition.ConditionAndOr;
-import org.gridgain.internal.h2.message.DbException;
-import org.gridgain.internal.h2.result.Row;
-import org.gridgain.internal.h2.result.SearchRow;
-import org.gridgain.internal.h2.result.SortOrder;
-import org.gridgain.internal.h2.value.Value;
-import org.gridgain.internal.h2.value.ValueLong;
-import org.gridgain.internal.h2.value.ValueNull;
-import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.index.HashJoinIndex;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.index.IndexCondition;
 import org.gridgain.internal.h2.index.IndexCursor;
 import org.gridgain.internal.h2.index.IndexLookupBatch;
 import org.gridgain.internal.h2.index.ViewIndex;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
 
 /**
  * A table filter represents a table that is used in a query. There is one such
@@ -337,28 +336,30 @@ public class TableFilter implements ColumnResolver {
             }
         }
 
-        //  0       1   2       3
-        // [cond3] [0] [cond2] [cond4]  <- remove 2,3
-        // [cond3] [cond2] [cond4] [0] <- ok
-        boolean[] toRmvConditionIdxs = null;
-        boolean gapFound = false;
+        if (!(index instanceof HashJoinIndex)) {
+            //  0       1   2       3
+            // [cond3] [0] [cond2] [cond4]  <- remove 2,3
+            // [cond3] [cond2] [cond4] [0] <- ok
+            boolean[] toRmvConditionIdxs = null;
+            boolean gapFound = false;
 
-        for (int i = 0; i <= upperBound; i++) {
-            if (indexedConditions[i] == 0) {
-                gapFound = true;
-            }
-            else if (gapFound) {
-                if (toRmvConditionIdxs == null) {
-                    toRmvConditionIdxs = new boolean[indexedConditions.length];
+            for (int i = 0; i <= upperBound; i++) {
+                if (indexedConditions[i] == 0) {
+                    gapFound = true;
                 }
-                toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+                else if (gapFound) {
+                    if (toRmvConditionIdxs == null) {
+                        toRmvConditionIdxs = new boolean[indexedConditions.length];
+                    }
+                    toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+                }
             }
-        }
 
-        if (toRmvConditionIdxs != null) {
-            for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
-                if (toRmvConditionIdxs[rmvIdx]) {
-                    indexConditions.remove(rmvIdx);
+            if (toRmvConditionIdxs != null) {
+                for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
+                    if (toRmvConditionIdxs[rmvIdx]) {
+                        indexConditions.remove(rmvIdx);
+                    }
                 }
             }
         }
