@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Test;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
@@ -28,6 +30,14 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
 
         cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
+//        cfg.setStripedPoolSize(64);
+
         return cfg;
+    }
+
+    @Test
+    //@WithSystemProperty(key = "IGNITE_RECOVERY_SEMAPHORE_PERMITS", value = "512")
+    @Override public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
+        super.testPartitionConsistencyWithBackupRestart_ChangeBLT();
     }
 }

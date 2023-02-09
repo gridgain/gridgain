@@ -137,8 +137,8 @@ public class TxRecordSerializer {
 
             int backupNodesSize = in.readInt();
 
-            if (backupNodesSize > 20) {
-                log.info("Read tx record: [primaryNode=" + primaryNode
+            if (backupNodesSize > 3) {
+                log.info(">>>>> Read tx record: [primaryNode=" + primaryNode
                     + ", backupNodesSize=" + backupNodesSize
                     + ", state=" + state
                     + ", nearXidVer=" + nearXidVer
@@ -146,7 +146,19 @@ public class TxRecordSerializer {
                     + ", participatingNodesSize=" + participatingNodesSize + ']');
             }
 
-            Collection<Short> backupNodes = new ArrayList<>(backupNodesSize);
+            Collection<Short> backupNodes;
+            try {
+                backupNodes = new ArrayList<>(backupNodesSize);
+            }
+            catch (Throwable t) {
+                log.warning(">>>>> Read tx record: OutOfMemoryCheck [primaryNode=" + primaryNode
+                    + ", backupNodesSize=" + backupNodesSize
+                    + ", state=" + state
+                    + ", nearXidVer=" + nearXidVer
+                    + ", writeVer=" + writeVer
+                    + ", participatingNodesSize=" + participatingNodesSize + ']');
+                throw t;
+            }
 
             for (int j = 0; j < backupNodesSize; j++) {
                 short backupNode = in.readShort();
