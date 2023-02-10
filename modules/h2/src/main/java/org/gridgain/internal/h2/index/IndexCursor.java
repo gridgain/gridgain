@@ -148,7 +148,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
         // An X=? condition will produce less rows than
         // an X IN(..) condition, unless the X IN condition can use the index.
-        if (!isConstEqualConditionsOnly && !canUseIndexFor(inColumn)) {
+        if (!isConstEqualConditionsOnly && (start != null || end != null || !canUseIndexFor(inColumn))) {
             inColumn = null;
             inList = null;
 
