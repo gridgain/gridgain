@@ -70,13 +70,19 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = client.state().clusterName();
+            GridClientClusterState clientState = client.state();
+
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+                UUID id = clientState.id();
+                String tag = clientState.tag();
+                clusterName = "[id="+id.toString()+", tag="+tag+"]";
+            }
         }
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
+        return "Warning: the command will change state of cluster " + clusterName + " to " + state + ".";
     }
 
     /** {@inheritDoc} */
