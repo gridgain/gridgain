@@ -43,13 +43,19 @@ public class DeactivateCommand extends AbstractCommand<Void> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = client.state().clusterName();
+            GridClientClusterState clientState = client.state();
+
+            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
+                UUID id = clientState.id();
+                String tag = clientState.tag();
+                clusterName = "[id="+id.toString()+", tag="+tag+"]";
+            }
         }
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will deactivate a cluster \"" + clusterName + "\".";
+        return "Warning: The command will deactivate a cluster " + clusterName + ".";
     }
 
     /**
