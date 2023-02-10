@@ -2736,6 +2736,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         @Override public boolean workDir() {
             return segmentAware != null && segmentAware.lastArchivedAbsoluteIndex() < getSegmentId();
         }
+
+        @Override
+        public String toString() {
+            return ">>>>> ReadFileHandle [segmentId=" + getSegmentId() + ", workDir=" + workDir() + ']';
+        }
     }
 
     /**

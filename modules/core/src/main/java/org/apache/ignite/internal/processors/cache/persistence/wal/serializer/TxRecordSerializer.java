@@ -94,6 +94,11 @@ public class TxRecordSerializer {
 
         Map<Short, Collection<Short>> participatingNodes = rec.participatingNodes();
 
+        if (participatingNodes != null && participatingNodes.size() > 10) {
+            ///
+            U.dumpStack(log, ">>> TxRecod [rec=" + rec + ']');
+        }
+
         if (participatingNodes != null && !participatingNodes.isEmpty()) {
             buf.putInt(participatingNodes.size());
 
@@ -137,18 +142,25 @@ public class TxRecordSerializer {
 
             int backupNodesSize = in.readInt();
 
-            if (backupNodesSize > 3) {
-                log.info(">>>>> Read tx record: [primaryNode=" + primaryNode
-                    + ", backupNodesSize=" + backupNodesSize
-                    + ", state=" + state
-                    + ", nearXidVer=" + nearXidVer
-                    + ", writeVer=" + writeVer
-                    + ", participatingNodesSize=" + participatingNodesSize + ']');
-            }
-
-            Collection<Short> backupNodes;
             try {
-                backupNodes = new ArrayList<>(backupNodesSize);
+                if (backupNodesSize > 3) {
+                    log.info(">>>>> Read tx record: [primaryNode=" + primaryNode
+                        + ", backupNodesSize=" + backupNodesSize
+                        + ", state=" + state
+                        + ", nearXidVer=" + nearXidVer
+                        + ", writeVer=" + writeVer
+                        + ", participatingNodesSize=" + participatingNodesSize + ']');
+                }
+
+                Collection<Short> backupNodes = new ArrayList<>(backupNodesSize);
+
+                for (int j = 0; j < backupNodesSize; j++) {
+                    short backupNode = in.readShort();
+
+                    backupNodes.add(backupNode);
+                }
+
+                participatingNodes.put(primaryNode, backupNodes);
             }
             catch (Throwable t) {
                 log.warning(">>>>> Read tx record: OutOfMemoryCheck [primaryNode=" + primaryNode
@@ -159,14 +171,6 @@ public class TxRecordSerializer {
                     + ", participatingNodesSize=" + participatingNodesSize + ']');
                 throw t;
             }
-
-            for (int j = 0; j < backupNodesSize; j++) {
-                short backupNode = in.readShort();
-
-                backupNodes.add(backupNode);
-            }
-
-            participatingNodes.put(primaryNode, backupNodes);
         }
 
         long ts = in.readLong();

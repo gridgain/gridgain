@@ -296,6 +296,10 @@ public abstract class AbstractWalRecordsIterator
 
             return null;
         }
+        catch (OutOfMemoryError oom) {
+            log.error(">>>>> OutOfMemoryError [actualFilePtr=" + actualFilePtr + ", hnd=" + hnd + ']');
+            throw oom;
+        }
     }
 
     /**
