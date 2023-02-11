@@ -742,6 +742,7 @@ public abstract class Table extends SchemaObjectBase {
     public PlanItem getBestPlanItem(Session session, int[] masks,
             TableFilter[] filters, int filter, SortOrder sortOrder,
             AllColumnsForPlan allColumnsSet, boolean isEquiJoined) {
+        // new Exception("best plan").printStackTrace();
         PlanItem item = new PlanItem();
         item.setIndex(getScanIndex(session));
         item.cost = item.getIndex().getCost(session, null, filters, filter, sortOrder, allColumnsSet);

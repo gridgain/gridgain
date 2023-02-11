@@ -19,8 +19,11 @@ package org.apache.ignite.jdbc.thin;
 import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.jdbc.JdbcErrorsAbstractSelfTest;
 import org.apache.ignite.lang.IgniteCallable;
 import org.junit.Test;
@@ -126,5 +129,47 @@ public class JdbcThinErrorsSelfTest extends JdbcErrorsAbstractSelfTest {
                 statement.executeUpdate("EXPLAIN INSERT INTO TEST_EXPLAIN VALUES (1, 2)");
             }
         }, "0A000", "Explains of update queries are not supported.");
+    }
+
+    private List<List<Object>> toRows(ResultSet rs) throws SQLException {
+        int cols = rs.getMetaData().getColumnCount();
+        List<List<Object>> rows = new ArrayList<>();
+
+        while (rs.next()) {
+            List<Object> row = new ArrayList<>(cols);
+
+            for (int i = 0; i < cols; i++) {
+                row.add(rs.getObject(i + 1));
+            }
+
+            rows.add(row);
+        }
+
+        return rows;
+    }
+
+    @Test
+    public void testJdbc() throws Exception {
+        try (final Connection conn = getConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("CREATE TABLE t (k1 INT, k2 INT, k3 INT, v1 int, PRIMARY KEY (k1, k3, k2))");
+                stmt.executeUpdate("CREATE TABLE t2 (k1 INT, k2 INT, k3 INT, v1 int, PRIMARY KEY (k3))");
+                stmt.executeUpdate("INSERT INTO t (k1, k2, k3, v1) VALUES (1, 1, 1, 0)");
+                stmt.executeUpdate("INSERT INTO t (k1, k2, k3, v1) VALUES (1, 2, 2, 0)");
+                stmt.executeUpdate("insert into t2 select * from t");
+
+                System.out.println(">xxx> IDX SELECT");
+
+                ResultSet rs1 = stmt.executeQuery("SELECT K2 FROM t WHERE k1 = 1 AND k2 in (1, 2)");
+                List<List<Object>> rows1 = toRows(rs1);
+
+                System.out.println(">xxx> SIMPLE SELECT");
+
+                ResultSet rs2 = stmt.executeQuery("SELECT K2 FROM t2 WHERE k1 = 1 AND k2 in (1, 2)");
+                List<List<Object>> rows2 = toRows(rs2);
+
+                assertEquals(rows1, rows2);
+            }
+        }
     }
 }

@@ -8,7 +8,8 @@ package org.gridgain.internal.h2.table;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-
+import java.util.List;
+import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.command.Parser;
 import org.gridgain.internal.h2.command.dml.AllColumnsForPlan;
 import org.gridgain.internal.h2.command.dml.Select;
@@ -18,22 +19,24 @@ import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.condition.Comparison;
 import org.gridgain.internal.h2.expression.condition.ConditionAndOr;
-import org.gridgain.internal.h2.message.DbException;
-import org.gridgain.internal.h2.result.Row;
-import org.gridgain.internal.h2.result.SearchRow;
-import org.gridgain.internal.h2.result.SortOrder;
-import org.gridgain.internal.h2.value.Value;
-import org.gridgain.internal.h2.value.ValueLong;
-import org.gridgain.internal.h2.value.ValueNull;
-import org.gridgain.internal.h2.api.ErrorCode;
+import org.gridgain.internal.h2.index.HashIndex;
 import org.gridgain.internal.h2.index.HashJoinIndex;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.index.IndexCondition;
 import org.gridgain.internal.h2.index.IndexCursor;
 import org.gridgain.internal.h2.index.IndexLookupBatch;
+import org.gridgain.internal.h2.index.MetaIndex;
+import org.gridgain.internal.h2.index.TreeIndex;
 import org.gridgain.internal.h2.index.ViewIndex;
+import org.gridgain.internal.h2.message.DbException;
+import org.gridgain.internal.h2.result.Row;
+import org.gridgain.internal.h2.result.SearchRow;
+import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.util.StringUtils;
 import org.gridgain.internal.h2.util.Utils;
+import org.gridgain.internal.h2.value.Value;
+import org.gridgain.internal.h2.value.ValueLong;
+import org.gridgain.internal.h2.value.ValueNull;
 
 /**
  * A table filter represents a table that is used in a query. There is one such
@@ -222,7 +225,9 @@ public class TableFilter implements ColumnResolver {
         // The more index conditions, the earlier the table.
         // This is to ensure joins without indexes run quickly:
         // x (x.a=10); y (x.b=y.b) - see issue 113
-        item.cost -= item.cost * indexConditions.size() / 100 / (filter + 1);
+        // List<IndexCondition> res = removeUnusable(indexConditions, item.getIndex(), true);
+        // assert res.size() == indexConditions.size() : item.getIndex().getClass().getSimpleName();
+        item.cost -= item.cost * removeUnusable(indexConditions, item.getIndex(), true).size() / 100 / (filter + 1);
 
         if (item1 != null && item1.cost < item.cost) {
             item = item1;
@@ -246,6 +251,72 @@ public class TableFilter implements ColumnResolver {
             item.cost += item.cost * item.getJoinPlan().cost;
         }
         return item;
+    }
+
+    private List<IndexCondition> removeUnusable(ArrayList<IndexCondition> conditions, Index index, boolean planning) {
+        assert !(index instanceof TreeIndex);
+
+        List<IndexCondition> indexConditions = planning ? new ArrayList<>(conditions) : conditions;
+        // forget all unused index conditions
+        // the indexConditions list may be modified here
+        int[] indexedConditions = new int[index.getColumns().length];
+        int upperBound = -1;
+
+        for (int i = 0; i < indexConditions.size(); i++) {
+            IndexCondition condition = indexConditions.get(i);
+            if (!condition.isAlwaysFalse()) {
+                Column col = condition.getColumn();
+                if (col.getColumnId() >= 0) {
+                    int idx = index.getColumnIndex(condition.getColumn());
+
+                    if (idx < 0) {
+                        indexConditions.remove(i);
+                        i--;
+
+                        continue;
+                    }
+
+                    indexedConditions[idx] = i + 1; // Zero reserved for gaps.
+                    upperBound = Math.max(upperBound, idx);
+                }
+            }
+        }
+        System.out.println(">xxx> remove unusable " + index.getClass().getSimpleName());
+
+        if (!(index instanceof HashJoinIndex) && !(index instanceof HashIndex) && !(index instanceof MetaIndex)) {
+            //            if (!(index instanceof HashJoinIndex)) {
+            //                if (indexedConditions.length > 0)
+            //                    new Exception("filter conditions").printStackTrace();
+            //  0       1   2       3
+            // [cond3] [0] [cond2] [cond4]  <- remove 2,3
+            // [cond3] [cond2] [cond4] [0] <- ok
+            boolean[] toRmvConditionIdxs = null;
+            boolean gapFound = false;
+
+            for (int i = 0; i <= upperBound; i++) {
+                if (indexedConditions[i] == 0) {
+                    gapFound = true;
+                }
+                else if (gapFound) {
+                    if (toRmvConditionIdxs == null) {
+                        toRmvConditionIdxs = new boolean[indexConditions.size()];
+                    }
+                    toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+                }
+            }
+
+            if (toRmvConditionIdxs != null) {
+                for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
+                    if (toRmvConditionIdxs[rmvIdx]) {
+                        indexConditions.remove(rmvIdx);
+                    }
+                }
+            }
+
+            return indexConditions;
+        }
+
+        return conditions;
     }
 
     /**
@@ -314,56 +385,59 @@ public class TableFilter implements ColumnResolver {
 
         // forget all unused index conditions
         // the indexConditions list may be modified here
-        int[] indexedConditions = new int[index.getColumns().length];
-        int upperBound = -1;
-
-        for (int i = 0; i < indexConditions.size(); i++) {
-            IndexCondition condition = indexConditions.get(i);
-            if (!condition.isAlwaysFalse()) {
-                Column col = condition.getColumn();
-                if (col.getColumnId() >= 0) {
-                    int idx = index.getColumnIndex(condition.getColumn());
-
-                    if (idx < 0) {
-                        indexConditions.remove(i);
-                        i--;
-
-                        continue;
-                    }
-
-                    indexedConditions[idx] = i + 1; // Zero reserved for gaps.
-                    upperBound = Math.max(upperBound, idx);
-                }
-            }
-        }
-
-        if (!(index instanceof HashJoinIndex)) {
-            //  0       1   2       3
-            // [cond3] [0] [cond2] [cond4]  <- remove 2,3
-            // [cond3] [cond2] [cond4] [0] <- ok
-            boolean[] toRmvConditionIdxs = null;
-            boolean gapFound = false;
-
-            for (int i = 0; i <= upperBound; i++) {
-                if (indexedConditions[i] == 0) {
-                    gapFound = true;
-                }
-                else if (gapFound) {
-                    if (toRmvConditionIdxs == null) {
-                        toRmvConditionIdxs = new boolean[indexConditions.size()];
-                    }
-                    toRmvConditionIdxs[indexedConditions[i] - 1] = true;
-                }
-            }
-
-            if (toRmvConditionIdxs != null) {
-                for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
-                    if (toRmvConditionIdxs[rmvIdx]) {
-                        indexConditions.remove(rmvIdx);
-                    }
-                }
-            }
-        }
+        removeUnusable(indexConditions, index, false);
+//        int[] indexedConditions = new int[index.getColumns().length];
+//        int upperBound = -1;
+//
+//        for (int i = 0; i < indexConditions.size(); i++) {
+//            IndexCondition condition = indexConditions.get(i);
+//            if (!condition.isAlwaysFalse()) {
+//                Column col = condition.getColumn();
+//                if (col.getColumnId() >= 0) {
+//                    int idx = index.getColumnIndex(condition.getColumn());
+//
+//                    if (idx < 0) {
+//                        indexConditions.remove(i);
+//                        i--;
+//
+//                        continue;
+//                    }
+//
+//                    indexedConditions[idx] = i + 1; // Zero reserved for gaps.
+//                    upperBound = Math.max(upperBound, idx);
+//                }
+//            }
+//        }
+//
+//        if (!(index instanceof HashJoinIndex)) {
+//            if (indexedConditions.length > 0)
+//                new Exception("filter conditions").printStackTrace();
+//            //  0       1   2       3
+//            // [cond3] [0] [cond2] [cond4]  <- remove 2,3
+//            // [cond3] [cond2] [cond4] [0] <- ok
+//            boolean[] toRmvConditionIdxs = null;
+//            boolean gapFound = false;
+//
+//            for (int i = 0; i <= upperBound; i++) {
+//                if (indexedConditions[i] == 0) {
+//                    gapFound = true;
+//                }
+//                else if (gapFound) {
+//                    if (toRmvConditionIdxs == null) {
+//                        toRmvConditionIdxs = new boolean[indexedConditions.length];
+//                    }
+//                    toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+//                }
+//            }
+//
+//            if (toRmvConditionIdxs != null) {
+//                for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
+//                    if (toRmvConditionIdxs[rmvIdx]) {
+//                        indexConditions.remove(rmvIdx);
+//                    }
+//                }
+//            }
+//        }
 
         if (nestedJoin != null) {
             if (nestedJoin == this) {
@@ -677,6 +751,7 @@ public class TableFilter implements ColumnResolver {
      * @param condition the index condition
      */
     public void addIndexCondition(IndexCondition condition) {
+        // new Exception(">xxx> add index condition").printStackTrace();
         if (!doneWithIndexConditions) {
             indexConditions.add(condition);
         }
