@@ -153,12 +153,12 @@ public class TestFuzzOptimizations extends TestDb {
         int size = getSize(100, 1000);
         for (int i = 0; i < size; i++) {
             long seed = seedGenerator.nextLong();
-            println("testIn() seed: " + seed);
             Random random = new Random(seed);
             ArrayList<String> params = new ArrayList<>();
             String condition = getRandomCondition(random, params, columns,
                 compares, values);
-            String message = "testIn() seed: " + seed + " " + condition;
+            String message = "testIn2() seed: " + seed + " " + condition;
+            println(message);
             executeAndCompare(condition, params, message);
             if (params.size() > 0) {
                 for (int j = 0; j < params.size(); j++) {
