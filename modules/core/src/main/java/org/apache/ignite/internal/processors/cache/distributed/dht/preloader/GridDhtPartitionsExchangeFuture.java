@@ -1483,7 +1483,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 // This exception will be handled by init() method.
                 throw e;
 
-            U.error(log, "Failed to initialize cache(s) (will try to rollback) [exchId=" + exchId +
+            U.warn(log, "Failed to initialize cache(s) (will try to rollback) [exchId=" + exchId +
                 ", caches=" + exchActions.cacheGroupsToStart() + ']', e);
 
             exchangeLocE = new IgniteCheckedException(
