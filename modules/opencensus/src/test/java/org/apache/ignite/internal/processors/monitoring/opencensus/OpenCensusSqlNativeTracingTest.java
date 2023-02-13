@@ -771,6 +771,7 @@ public class OpenCensusSqlNativeTracingTest extends AbstractTracingTest {
             .setSkipReducerOnUpdate(skipReducerOnUpdate)
             .setDistributedJoins(distributedJoins)
             .setPageSize(PAGE_SIZE)
+            .setLazy(false)
             .setSchema(schema);
 
         reducer().context().query().querySqlFields(qry, false).getAll();

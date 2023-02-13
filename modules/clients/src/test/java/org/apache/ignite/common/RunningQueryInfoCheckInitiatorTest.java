@@ -226,7 +226,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
             GridTestUtils.runAsync(() -> {
                     try (Connection conn = DriverManager.getConnection(
-                        CFG_URL_PREFIX + "nodeId=" + grid0NodeId + "@modules/clients/src/test/config/jdbc-config.xml")) {
+                        CFG_URL_PREFIX + "lazy=false:nodeId=" + grid0NodeId + "@modules/clients/src/test/config/jdbc-config.xml")) {
                         try (Statement stmt = conn.createStatement()) {
                             stmt.execute(sql);
                         }
