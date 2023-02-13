@@ -1309,40 +1309,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             break;
                         }
                     }
-                }
 
-                if (foundAllColumnsWeNeed)
-                    needsToReadFromScanIndex = false;
-            }
-
-            if (!needsToReadFromScanIndex && canGetFirstOrLast()) {
-                ArrayList<IndexCondition> indexConditions = tableFilter.getIndexConditions();
-
-                boolean[] indexedConditions = new boolean[getColumns().length];
-                int upperBound = -1;
-
-                for (int i = 0; i < indexConditions.size(); i++) {
-                    IndexCondition condition = indexConditions.get(i);
-                    if (!condition.isAlwaysFalse()) {
-                        Column col = condition.getColumn();
-                        if (col.getColumnId() >= 0) {
-                            int idx = getColumnIndex(condition.getColumn());
-
-                            if (idx < 0)
-                                continue;
-
-                            indexedConditions[idx] = true; // Zero reserved for gaps.
-                            upperBound = Math.max(upperBound, idx);
-                        }
-                    }
-                }
-
-                for (int i = 0; i <= upperBound; i++) {
-                    if (!indexedConditions[i]) {
-                        needsToReadFromScanIndex = true;
-
-                        break;
-                    }
+                    needsToReadFromScanIndex = foundAllColumnsWeNeed
+                        ? indexHasGaps(tableFilter.getIndexConditions(), foundCols)
+                        : foundAllColumnsWeNeed;
                 }
             }
 
@@ -1358,13 +1328,49 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 // columns (the more columns we have in index - the higher cost).
                 // This is faster because a smaller index will fit into fewer data
                 // blocks.
-//                rc = rowsCost + rowsCost + sortingCost + 20;
                 rc = rowsCost + sortingCost + columns.length;
-
-//                U.dumpStack("");
             }
 
             return rc;
+        }
+
+        private boolean indexHasGaps(ArrayList<IndexCondition> indexConditions, ArrayList<Column> columns) {
+            boolean[] indexedConditions = null;
+            int upperBound = -1;
+
+            for (int i = 0; i < indexConditions.size(); i++) {
+                IndexCondition condition = indexConditions.get(i);
+
+                if (condition.isAlwaysFalse() || condition.getColumn().getColumnId() < 0)
+                    continue;
+
+                int colIdx = -1;
+
+                for (int j = 0; j < columns.size(); j++) {
+                    if (condition.getColumn().equals(columns.get(j))) {
+                        colIdx = j;
+
+                        break;
+                    }
+                }
+
+                if (colIdx < 0)
+                    continue;
+
+                if (indexedConditions == null)
+                    indexedConditions = new boolean[getColumns().length];
+
+                indexedConditions[colIdx] = true;
+                upperBound = Math.max(upperBound, colIdx);
+            }
+
+            for (int i = 0; i <= upperBound; i++) {
+                if (!indexedConditions[i]) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
