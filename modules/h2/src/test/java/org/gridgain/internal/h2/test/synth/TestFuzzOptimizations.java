@@ -119,10 +119,10 @@ public class TestFuzzOptimizations extends TestDb {
 
         // this failed at some point
         Db.Prepared p = db.prepare("select * from test0 where b in(" +
-            "select a from test1 where a <? and a not in(" +
-            "select c from test1 where b <=10 and a in(" +
-            "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
-            "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
+                "select a from test1 where a <? and a not in(" +
+                "select c from test1 where b <=10 and a in(" +
+                "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
+                "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
         p.set(1);
         p.execute();
 
@@ -130,7 +130,7 @@ public class TestFuzzOptimizations extends TestDb {
         String[] columns = new String[] { "a", "b", "c" };
         String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
         String[] compares = new String[] { "in(", "not in(", "=", "=", ">",
-            "<", ">=", "<=", "<>", "in(select", "not in(select" };
+                "<", ">=", "<=", "<>", "in(select", "not in(select" };
 
         for (int i = 0; i < 1_000; i++) {
             long seed = seedGenerator.nextLong();
@@ -138,10 +138,10 @@ public class TestFuzzOptimizations extends TestDb {
             Random random = new Random(seed);
             ArrayList<String> params = new ArrayList<>();
             String condition = getRandomCondition(random, params, columns,
-                compares, values);
+                    compares, values);
             String message = msgPrefix + " seed: " + seed + " " + condition;
             executeAndCompare(condition, params, message);
-            if (params.isEmpty()) {
+            if (params.size() > 0) {
                 for (int j = 0; j < params.size(); j++) {
                     String value = values[random.nextInt(values.length - 2)];
                     params.set(j, value);
