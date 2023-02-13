@@ -201,6 +201,9 @@ public class TableFilter implements ColumnResolver {
      */
     public PlanItem getBestPlanItem(Session s, TableFilter[] filters, int filter,
             AllColumnsForPlan allColumnsSet) {
+
+        s.getTrace().setLevel(10);
+
         SortOrder sortOrder = null;
         if (select != null) {
             sortOrder = select.getSortOrder();
