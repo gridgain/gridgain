@@ -314,8 +314,9 @@ public class TableFilter implements ColumnResolver {
 
         // forget all unused index conditions
         // the indexConditions list may be modified here
-        int[] indexedConditions = new int[index.getColumns().length];
+        int[] conditionsColumnIndexes = null;
         int upperBound = -1;
+        boolean sortedIndex = index.canGetFirstOrLast();
 
         for (int i = 0; i < indexConditions.size(); i++) {
             IndexCondition condition = indexConditions.get(i);
@@ -331,36 +332,39 @@ public class TableFilter implements ColumnResolver {
                         continue;
                     }
 
-                    indexedConditions[idx] = i + 1; // Zero reserved for gaps.
+                    if (!sortedIndex)
+                        continue;
+
+                    if (conditionsColumnIndexes == null)
+                        conditionsColumnIndexes = new int[index.getColumns().length];
+
+                    conditionsColumnIndexes[idx] = i + 1; // Zero reserved for gaps.
                     upperBound = Math.max(upperBound, idx);
                 }
             }
         }
 
-        if (!(index instanceof HashJoinIndex)) {
-            //  0       1   2       3
-            // [cond3] [0] [cond2] [cond4]  <- remove 2,3
-            // [cond3] [cond2] [cond4] [0] <- ok
-            boolean[] toRmvConditionIdxs = null;
+        if (conditionsColumnIndexes != null) {
+            boolean[] rmvConditionIndexes = null;
             boolean gapFound = false;
 
             for (int i = 0; i <= upperBound; i++) {
-                if (indexedConditions[i] == 0) {
+                if (conditionsColumnIndexes[i] == 0) {
                     gapFound = true;
                 }
                 else if (gapFound) {
-                    if (toRmvConditionIdxs == null) {
-                        toRmvConditionIdxs = new boolean[indexConditions.size()];
+                    if (rmvConditionIndexes == null) {
+                        rmvConditionIndexes = new boolean[indexConditions.size()];
                     }
-                    toRmvConditionIdxs[indexedConditions[i] - 1] = true;
+
+                    rmvConditionIndexes[conditionsColumnIndexes[i] - 1] = true;
                 }
             }
 
-            if (toRmvConditionIdxs != null) {
-                for (int rmvIdx = toRmvConditionIdxs.length - 1; rmvIdx >= 0; rmvIdx--) {
-                    if (toRmvConditionIdxs[rmvIdx]) {
-                        indexConditions.remove(rmvIdx);
-                    }
+            if (rmvConditionIndexes != null) {
+                for (int i = rmvConditionIndexes.length - 1; i >= 0; i--) {
+                    if (rmvConditionIndexes[i])
+                        indexConditions.remove(i);
                 }
             }
         }

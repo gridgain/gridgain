@@ -21,7 +21,6 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
@@ -1316,19 +1315,54 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     needsToReadFromScanIndex = false;
             }
 
+            if (!needsToReadFromScanIndex && canGetFirstOrLast()) {
+                ArrayList<IndexCondition> indexConditions = tableFilter.getIndexConditions();
+
+                boolean[] indexedConditions = new boolean[getColumns().length];
+                int upperBound = -1;
+
+                for (int i = 0; i < indexConditions.size(); i++) {
+                    IndexCondition condition = indexConditions.get(i);
+                    if (!condition.isAlwaysFalse()) {
+                        Column col = condition.getColumn();
+                        if (col.getColumnId() >= 0) {
+                            int idx = getColumnIndex(condition.getColumn());
+
+                            if (idx < 0)
+                                continue;
+
+                            indexedConditions[idx] = true; // Zero reserved for gaps.
+                            upperBound = Math.max(upperBound, idx);
+                        }
+                    }
+                }
+
+                for (int i = 0; i <= upperBound; i++) {
+                    if (!indexedConditions[i]) {
+                        needsToReadFromScanIndex = true;
+
+                        break;
+                    }
+                }
+            }
+
             long rc;
 
             if (isScanIndex)
                 rc = rowsCost + sortingCost + 20;
             else if (needsToReadFromScanIndex)
                 rc = rowsCost + rowsCost + sortingCost + 20;
-            else
+            else {
                 // The (20-x) calculation makes sure that when we pick a covering
                 // index, we pick the covering index that has the smallest number of
                 // columns (the more columns we have in index - the higher cost).
                 // This is faster because a smaller index will fit into fewer data
                 // blocks.
+//                rc = rowsCost + rowsCost + sortingCost + 20;
                 rc = rowsCost + sortingCost + columns.length;
+
+//                U.dumpStack("");
+            }
 
             return rc;
         }
