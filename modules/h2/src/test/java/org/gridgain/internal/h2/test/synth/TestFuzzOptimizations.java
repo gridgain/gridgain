@@ -43,7 +43,7 @@ public class TestFuzzOptimizations extends TestDb {
         conn = getConnection(getTestName());
         if (!config.diskResult) {
             testIn();
-            testIn2();
+            testInWithIndexFieldsPermutations();
         }
         testGroupSorted();
         testInSelect();
@@ -82,55 +82,36 @@ public class TestFuzzOptimizations extends TestDb {
         db.execute("create table test1(a int, b int, c int)");
         db.execute("insert into test0 select x / 100, " +
                 "mod(x / 10, 10), mod(x, 10) from system_range(0, 999)");
-        db.execute("update test0 set a = null where a = 9");
-        db.execute("update test0 set b = null where b = 9");
-        db.execute("update test0 set c = null where c = 9");
-        db.execute("insert into test1 select * from test0");
 
-        // this failed at some point
-        Db.Prepared p = db.prepare("select * from test0 where b in(" +
-                "select a from test1 where a <? and a not in(" +
-                "select c from test1 where b <=10 and a in(" +
-                "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
-                "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
-        p.set(1);
-        p.execute();
+        doRandomQueries(db, "testIn()");
 
-        Random seedGenerator = new Random();
-        String[] columns = new String[] { "a", "b", "c" };
-        String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
-        String[] compares = new String[] { "in(", "not in(", "=", "=", ">",
-                "<", ">=", "<=", "<>", "in(select", "not in(select" };
-        int size = getSize(100, 1000);
-        for (int i = 0; i < size; i++) {
-            long seed = seedGenerator.nextLong();
-            println("testIn() seed: " + seed);
-            Random random = new Random(seed);
-            ArrayList<String> params = new ArrayList<>();
-            String condition = getRandomCondition(random, params, columns,
-                    compares, values);
-            String message = "testIn() seed: " + seed + " " + condition;
-            executeAndCompare(condition, params, message);
-            if (params.size() > 0) {
-                for (int j = 0; j < params.size(); j++) {
-                    String value = values[random.nextInt(values.length - 2)];
-                    params.set(j, value);
-                }
-                executeAndCompare(condition, params, message);
-            }
-        }
         executeAndCompare("a >=0 and b in(?, 2) and a in(1, ?, null)", Arrays.asList("10", "2"),
                 "testIn() seed=-6191135606105920350L");
         db.execute("drop table test0, test1");
     }
 
-    private void testIn2() throws SQLException {
+    private void testInWithIndexFieldsPermutations() throws SQLException {
         Db db = new Db(conn);
-        db.execute("create table test0(a int, b int, c int, d int)");
-        db.execute("create index idx_2 on test0(a, c, b)");
-        db.execute("create table test1(a int, b int, c int, d int)");
-        db.execute("insert into test0 select x / 100, " +
-            "mod(x / 10, 10), mod(x, 10), x from system_range(0, 999)");
+        String[] idxFieldsPermutations = {"a,b,c", "a,c,b", "b,a,c", "b,c,a", "c,a,b", "c,b,a",};
+
+        for (String idxFields : idxFieldsPermutations) {
+            db.execute("create table test0(a int, b int, c int, d int)");
+            db.execute("create index idx_2 on test0(" + idxFields + ")");
+            db.execute("create table test1(a int, b int, c int, d int)");
+            db.execute("insert into test0 select x / 100, " +
+                "mod(x / 10, 10), mod(x, 10), x from system_range(0, 999)");
+
+            doRandomQueries(db, "testInWithIndexFieldsPermutations(" + idxFields + ')');
+
+            String constCondition = "a = 1 and b in(10, 2)";
+            executeAndCompare(constCondition, Collections.<String>emptyList(),
+                "testInWithIndexFieldsPermutations() condition: " + constCondition);
+
+            db.execute("drop table test0, test1");
+        }
+    }
+
+    private void doRandomQueries(Db db, String msgPrefix) throws SQLException {
         db.execute("update test0 set a = null where a = 9");
         db.execute("update test0 set b = null where b = 9");
         db.execute("update test0 set c = null where c = 9");
@@ -150,17 +131,17 @@ public class TestFuzzOptimizations extends TestDb {
         String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
         String[] compares = new String[] { "in(", "not in(", "=", "=", ">",
             "<", ">=", "<=", "<>", "in(select", "not in(select" };
-        int size = getSize(100, 1000);
-        for (int i = 0; i < size; i++) {
+
+        for (int i = 0; i < 1_000; i++) {
             long seed = seedGenerator.nextLong();
+            println("testIn() seed: " + seed);
             Random random = new Random(seed);
             ArrayList<String> params = new ArrayList<>();
             String condition = getRandomCondition(random, params, columns,
                 compares, values);
-            String message = "testIn2() seed: " + seed + " " + condition;
-            println(message);
+            String message = msgPrefix + " seed: " + seed + " " + condition;
             executeAndCompare(condition, params, message);
-            if (params.size() > 0) {
+            if (params.isEmpty()) {
                 for (int j = 0; j < params.size(); j++) {
                     String value = values[random.nextInt(values.length - 2)];
                     params.set(j, value);
@@ -168,11 +149,6 @@ public class TestFuzzOptimizations extends TestDb {
                 executeAndCompare(condition, params, message);
             }
         }
-
-        String constCondition = "a = 1 and b in(10, 2)";
-        executeAndCompare(constCondition, Collections.<String>emptyList(), "testIn2() condition: " + constCondition);
-
-        db.execute("drop table test0, test1");
     }
 
     private void executeAndCompare(String condition, List<String> params, String message) throws SQLException {
