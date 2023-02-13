@@ -25,11 +25,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Class provides methods to work with nodes in topology:
+ * Class provides utility methods to work with nodes in topology:
  * finding coordinator, filtering client nodes and so on.
  */
 public final class TopologyUtils {
     /**
+     * Obtains ID of coordinator node from the topology
+     * visible through {@link GridClientCompute client compute} interface at the moment of method call.
+     *
      * @param compute {@link GridClientCompute} instance to obtain list of nodes in topology.
      * @return Id of coordinator node or null if topology is empty.
      * @throws GridClientException If client doesn't have an actual topology version.
@@ -45,6 +48,8 @@ public final class TopologyUtils {
     }
 
     /**
+     * Obtains any server node from the topology
+     * visible through {@link GridClientCompute client compute} interface at the moment of method call.
      *
      * @param compute {@link GridClientCompute} instance to obtain list of nodes in topology.
      * @return {@link Optional} object containing any connectable server node.
