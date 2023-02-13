@@ -1330,6 +1330,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         if (col.getColumnId() >= 0) {
                             int idx = getColumnIndex(condition.getColumn());
 
+                            if (idx < 0)
+                                continue;
+
                             indexedConditions[idx] = true; // Zero reserved for gaps.
                             upperBound = Math.max(upperBound, idx);
                         }
