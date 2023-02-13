@@ -1332,6 +1332,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
 
         checkIdxIsUsed(qryProc, "idx1", TEST_TBL_NAME, "LANG", "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
         checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
         checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }

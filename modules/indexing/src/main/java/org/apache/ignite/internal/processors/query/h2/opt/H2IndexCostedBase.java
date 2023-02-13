@@ -1310,9 +1310,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                         }
                     }
 
-                    needsToReadFromScanIndex = foundAllColumnsWeNeed
-                        ? indexHasGaps(tableFilter.getIndexConditions(), foundCols)
-                        : foundAllColumnsWeNeed;
+                    if (foundAllColumnsWeNeed)
+                        needsToReadFromScanIndex = indexHasGaps(tableFilter.getIndexConditions(), foundCols);
                 }
             }
 
