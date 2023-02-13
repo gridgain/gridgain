@@ -248,6 +248,7 @@ public class IndexCondition {
                     // where a=1 and b in(10, 20);
                     return 0;
                 }
+//                return 0;
             }
             return EQUALITY;
         case Comparison.BIGGER_EQUAL:
