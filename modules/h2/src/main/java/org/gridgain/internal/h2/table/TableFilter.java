@@ -312,59 +312,52 @@ public class TableFilter implements ColumnResolver {
         if (index.getClass() == HashJoinIndex.class)
             ((HashJoinIndex)index).prepare(session, indexConditions);
 
+        boolean hashIndex = index.getIndexType().isHash();
+        int[] indexColumnConditions = null;
+        int maxColumnIdx = -1;
+
         // forget all unused index conditions
         // the indexConditions list may be modified here
-        int[] conditionsColumnIndexes = null;
-        int upperBound = -1;
-        boolean sortedIndex = index.canGetFirstOrLast();
-
         for (int i = 0; i < indexConditions.size(); i++) {
             IndexCondition condition = indexConditions.get(i);
             if (!condition.isAlwaysFalse()) {
                 Column col = condition.getColumn();
                 if (col.getColumnId() >= 0) {
-                    int idx = index.getColumnIndex(condition.getColumn());
+                    int columnIdx = index.getColumnIndex(condition.getColumn());
 
-                    if (idx < 0) {
+                    if (columnIdx < 0) {
                         indexConditions.remove(i);
                         i--;
 
                         continue;
                     }
 
-                    if (!sortedIndex)
+                    if (hashIndex)
                         continue;
 
-                    if (conditionsColumnIndexes == null)
-                        conditionsColumnIndexes = new int[index.getColumns().length];
+                    if (indexColumnConditions == null)
+                        indexColumnConditions = new int[index.getColumns().length];
 
-                    conditionsColumnIndexes[idx] = i + 1; // Zero reserved for gaps.
-                    upperBound = Math.max(upperBound, idx);
+                    // Storing conditions using the order of their columns in the index.
+                    // The zero index is reserved for gaps.
+                    indexColumnConditions[columnIdx] = i + 1;
+                    maxColumnIdx = Math.max(maxColumnIdx, columnIdx);
                 }
             }
         }
 
-        if (conditionsColumnIndexes != null) {
-            boolean[] rmvConditionIndexes = null;
+        // Remove conditions that cannot be used with the current index due to gaps.
+        if (!hashIndex) {
             boolean gapFound = false;
 
-            for (int i = 0; i <= upperBound; i++) {
-                if (conditionsColumnIndexes[i] == 0) {
+            for (int i = 0; i <= maxColumnIdx; i++) {
+                // If we don't have a condition for a column in index, then we have found a gap.
+                if (indexColumnConditions[i] == 0) {
                     gapFound = true;
                 }
                 else if (gapFound) {
-                    if (rmvConditionIndexes == null) {
-                        rmvConditionIndexes = new boolean[indexConditions.size()];
-                    }
-
-                    rmvConditionIndexes[conditionsColumnIndexes[i] - 1] = true;
-                }
-            }
-
-            if (rmvConditionIndexes != null) {
-                for (int i = rmvConditionIndexes.length - 1; i >= 0; i--) {
-                    if (rmvConditionIndexes[i])
-                        indexConditions.remove(i);
+                    // Any condition associated with a column in the index after a gap cannot be used.
+                    indexConditions.remove(indexColumnConditions[i] - 1);
                 }
             }
         }
