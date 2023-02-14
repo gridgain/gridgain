@@ -21,6 +21,7 @@ import java.math.BigInteger;
 import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Arrays;
+
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.query.stat.ColumnStatistics;
@@ -1292,11 +1293,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 ArrayList<Column> foundCols = allColumnsSet.get(getTable());
 
                 if (foundCols != null) {
-                    for (IndexCondition idxCndition : tableFilter.getIndexConditions()) {
+                    for (Column c : foundCols) {
                         boolean found = false;
 
                         for (Column c2 : columns) {
-                            if (idxCndition.getColumn().equals(c2)) {
+                            if (c == c2) {
                                 found = true;
 
                                 break;
@@ -1309,10 +1310,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                             break;
                         }
                     }
-
-                    if (foundAllColumnsWeNeed)
-                        needsToReadFromScanIndex = indexHasGaps(tableFilter.getIndexConditions());
                 }
+
+                if (foundAllColumnsWeNeed)
+                    needsToReadFromScanIndex = false;
             }
 
             long rc;
@@ -1321,47 +1322,15 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 rc = rowsCost + sortingCost + 20;
             else if (needsToReadFromScanIndex)
                 rc = rowsCost + rowsCost + sortingCost + 20;
-            else {
+            else
                 // The (20-x) calculation makes sure that when we pick a covering
                 // index, we pick the covering index that has the smallest number of
                 // columns (the more columns we have in index - the higher cost).
                 // This is faster because a smaller index will fit into fewer data
                 // blocks.
                 rc = rowsCost + sortingCost + columns.length;
-            }
 
             return rc;
-        }
-
-        private boolean indexHasGaps(ArrayList<IndexCondition> indexConditions) {
-            boolean[] indexedConditions = null;
-            int upperBound = -1;
-
-            for (int i = 0; i < indexConditions.size(); i++) {
-                IndexCondition condition = indexConditions.get(i);
-
-                if (condition.isAlwaysFalse() || condition.getColumn().getColumnId() < 0)
-                    continue;
-
-                int colIdx = getColumnIndex(condition.getColumn());
-
-                if (colIdx < 0)
-                    continue;
-
-                if (indexedConditions == null)
-                    indexedConditions = new boolean[getColumns().length];
-
-                indexedConditions[colIdx] = true;
-                upperBound = Math.max(upperBound, colIdx);
-            }
-
-            for (int i = 0; i <= upperBound; i++) {
-                if (!indexedConditions[i]) {
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }
