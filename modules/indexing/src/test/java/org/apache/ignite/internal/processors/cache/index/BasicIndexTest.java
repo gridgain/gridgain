@@ -1337,6 +1337,29 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
     }
 
+    /**
+     * Tests different fields sequence in indexes.
+     * Last field not participate in any index.
+     */
+    @Test
+    public void testIndexWithDifferentFldsOrderReqPartialFldsInIdx() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx ig0 = startGrid(0);
+
+        GridQueryProcessor qryProc = ig0.context().query();
+
+        populateTable(qryProc, TEST_TBL_NAME, 2, "FIRST_NAME", "LAST_NAME", "ADDRESS", "LANG");
+
+        String sqlIdx1 = String.format("create index \"idx1\" on %s(FIRST_NAME, ADDRESS, LAST_NAME, LANG)", TEST_TBL_NAME);
+
+        qryProc.querySqlFields(new SqlFieldsQuery(sqlIdx1), true).getAll();
+
+        checkIdxIsUsed(qryProc, "idx1", TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "ADDRESS");
+        checkIdxIsUsed(qryProc, PK_IDX_NAME, TEST_TBL_NAME, "FIRST_NAME", "LAST_NAME", "LANG");
+        checkIdxIsUsed(qryProc, SCAN_INDEX_NAME_SUFFIX, TEST_TBL_NAME, "LAST_NAME", "ADDRESS");
+    }
+
     /** */
     @Test
     public void testNoIndexesWithPersistence() throws Exception {

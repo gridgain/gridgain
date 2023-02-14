@@ -1292,11 +1292,11 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 ArrayList<Column> foundCols = allColumnsSet.get(getTable());
 
                 if (foundCols != null) {
-                    for (Column c : foundCols) {
+                    for (IndexCondition idxCndition : tableFilter.getIndexConditions()) {
                         boolean found = false;
 
                         for (Column c2 : columns) {
-                            if (c == c2) {
+                            if (idxCndition.getColumn().equals(c2)) {
                                 found = true;
 
                                 break;
@@ -1311,7 +1311,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     }
 
                     if (foundAllColumnsWeNeed)
-                        needsToReadFromScanIndex = indexHasGaps(tableFilter.getIndexConditions(), foundCols);
+                        needsToReadFromScanIndex = indexHasGaps(tableFilter.getIndexConditions());
                 }
             }
 
@@ -1333,7 +1333,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
             return rc;
         }
 
-        private boolean indexHasGaps(ArrayList<IndexCondition> indexConditions, ArrayList<Column> columns) {
+        private boolean indexHasGaps(ArrayList<IndexCondition> indexConditions) {
             boolean[] indexedConditions = null;
             int upperBound = -1;
 
@@ -1343,15 +1343,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                 if (condition.isAlwaysFalse() || condition.getColumn().getColumnId() < 0)
                     continue;
 
-                int colIdx = -1;
-
-                for (int j = 0; j < columns.size(); j++) {
-                    if (condition.getColumn().equals(columns.get(j))) {
-                        colIdx = j;
-
-                        break;
-                    }
-                }
+                int colIdx = getColumnIndex(condition.getColumn());
 
                 if (colIdx < 0)
                     continue;
