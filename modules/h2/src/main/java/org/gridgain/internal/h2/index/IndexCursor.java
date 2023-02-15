@@ -78,7 +78,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inResult = null;
         intersects = null;
 
-        boolean isConstEqualConditionsOnly = true;
+        boolean isConstEqualConditions = true;
 
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
@@ -92,30 +92,28 @@ public class IndexCursor implements Cursor, AutoCloseable {
             }
             Column column = condition.getColumn();
 
-            boolean inListComparison;
-            boolean inQueryComparison = false;;
+            if (condition.getCompareType() == Comparison.IN_LIST) {
+                if (isConstEqualConditions || (start == null && end == null)) {
+                    // We can handle only one IN(...) index scan.
+                    if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
+                        continue;
 
-            if ((inListComparison = (condition.getCompareType() == Comparison.IN_LIST)) ||
-                (inQueryComparison = (condition.getCompareType() == Comparison.IN_QUERY))) {
-                // We can handle only one IN(...) index scan.
-                if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
-                    continue;
+                    if (inResult != null)
+                        inResult.close();
 
-                inColumn = column;
-                inList = null;
-
-                if (inResult != null)
-                    inResult.close();
-
-                if (inListComparison) {
+                    this.inColumn = column;
                     inList = condition.getCurrentValueList(s);
                     inListIndex = 0;
                 }
-                else if (inQueryComparison) {
-                    inResult = condition.getCurrentResult();
+            } else if (condition.getCompareType() == Comparison.IN_QUERY) {
+                if (start == null && end == null) {
+                    if (inColumn == null && canUseIndexFor(column)) {
+                        this.inColumn = column;
+                        inResult = condition.getCurrentResult();
+                    }
                 }
             } else {
-                isConstEqualConditionsOnly &= condition.getCompareType() == Comparison.EQUAL &&
+                isConstEqualConditions &= condition.getCompareType() == Comparison.EQUAL &&
                     condition.getExpression().isConstant();
 
                 Value v = condition.getCurrentValue(s);
@@ -143,19 +141,19 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
+
+                // An X=? condition will produce less rows than
+                // an X IN(..) condition, unless the X IN condition can use the index.
+                if (!isConstEqualConditions && (isStart || isEnd) && !canUseIndexFor(inColumn)) {
+                    inColumn = null;
+                    inList = null;
+
+                    if (inResult != null)
+                        inResult.close();
+
+                    inResult = null;
+                }
             }
-        }
-
-        // An X=? condition will produce less rows than
-        // an X IN(..) condition, unless the X IN condition can use the index.
-        if (!isConstEqualConditionsOnly && (start != null || end != null || !canUseIndexFor(inColumn))) {
-            inColumn = null;
-            inList = null;
-
-            if (inResult != null)
-                inResult.close();
-
-            inResult = null;
         }
 
         if (inColumn != null && start == null) {
