@@ -78,6 +78,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inResult = null;
         intersects = null;
 
+        assert false;
+
         boolean isConstEqualConditions = true;
 
         for (IndexCondition condition : indexConditions) {
