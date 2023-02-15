@@ -348,6 +348,7 @@ public class TableFilter implements ColumnResolver {
 
         // Remove conditions that cannot be used with the current index due to gaps.
         if (!hashIndex) {
+            boolean[] rmvConditionIndexes = null;
             boolean gapFound = false;
 
             for (int i = 0; i <= maxColumnIdx; i++) {
@@ -356,8 +357,19 @@ public class TableFilter implements ColumnResolver {
                     gapFound = true;
                 }
                 else if (gapFound) {
+                    if (rmvConditionIndexes == null) {
+                        rmvConditionIndexes = new boolean[indexConditions.size()];
+                    }
+
                     // Any condition associated with a column in the index after a gap cannot be used.
-                    indexConditions.remove(indexColumnConditions[i] - 1);
+                    rmvConditionIndexes[indexColumnConditions[i] - 1] = true;
+                }
+            }
+
+            if (rmvConditionIndexes != null) {
+                for (int i = rmvConditionIndexes.length - 1; i >= 0; i--) {
+                    if (rmvConditionIndexes[i])
+                        indexConditions.remove(i);
                 }
             }
         }
