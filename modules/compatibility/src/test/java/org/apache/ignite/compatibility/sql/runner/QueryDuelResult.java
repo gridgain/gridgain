@@ -177,8 +177,6 @@ public class QueryDuelResult {
          * @return {@code this} for chaining.
          */
         Builder baseExecTime(long time) {
-            assert time >= 0;
-
             baseExecTime = time;
 
             return this;
@@ -190,8 +188,6 @@ public class QueryDuelResult {
          * @return {@code this} for chaining.
          */
         Builder targetExecTime(long time) {
-            assert time >= 0;
-
             targetExecTime = time;
 
             return this;

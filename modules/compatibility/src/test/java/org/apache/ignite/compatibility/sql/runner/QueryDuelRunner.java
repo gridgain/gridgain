@@ -68,6 +68,9 @@ class QueryDuelRunner {
             targetRes = executeQuerySimple(targetConn, qry);
         }
 
+        assert baseRes.rsSize == targetRes.rsSize :
+            "result mismatch [base=" + baseRes.rsSize + ", target" + targetRes.rsSize + ']';
+
         return QueryDuelResult.builder(qry)
             .baseExecTime(baseRes.execTime())
             .baseErr(baseRes.error())
