@@ -337,7 +337,7 @@ public class TableFilter implements ColumnResolver {
                         continue;
 
                     // Removing all index conditions that cannot be applied because some index column is missing.
-                    // For example index uses 3 columns (a,b,c),
+                    // For example index has 3 columns (a,b,c),
                     // And we have the following conditions: c = 1 and a > 2.
                     // In this case we cannot use condition on 'c' and it can be removed.
                     if (columnPresenceMask == null) {

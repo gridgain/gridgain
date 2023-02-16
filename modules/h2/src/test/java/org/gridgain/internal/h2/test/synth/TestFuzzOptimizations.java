@@ -105,7 +105,7 @@ public class TestFuzzOptimizations extends TestDb {
 
     private void testInWithIndexFieldsPermutations() throws SQLException {
         Db db = new Db(conn);
-        String[] idxFieldsPermutations = {"a,b,c", "a,c,b", "b,a,c", "b,c,a", "c,a,b", "c,b,a",};
+        String[] idxFieldsPermutations = {"a,b,c", "a,c,b", "b,a,c", "b,c,a", "c,a,b", "c,b,a"};
 
         for (String idxFields : idxFieldsPermutations) {
             db.execute("create table test0(a int, b int, c int, d int)");
@@ -131,13 +131,13 @@ public class TestFuzzOptimizations extends TestDb {
                 "b in (select b from test1 where c >=1 and a =0) and c >=2",
                 "b in (select b from test1 where c >=1 and a =0) and c =2",
                 "a in (1,2) and b in (select b from test1 where c >=1 and a =0) and c >=0",
-                // IN(query)
+                // IN(query).
                 "b =1 and a in(select b from test1 where c >=1 and a =0) and c =2",
                 "b >0 and a in(select b from test1 where c >=1 and a =0) and c >0",
-                // IN(const) + IN(query)
+                // IN(const) + IN(query).
                 "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and c =2",
                 "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and c >0",
-                // Multiple IN(const)
+                // Multiple IN(const).
                 "b in (1,2) and a in(2,3) and c >0",
                 "b in (1,2) and a in(2,3) and c =0",
                 "b in (1,2) and a in(2,3) and c in (1,2,3)",
