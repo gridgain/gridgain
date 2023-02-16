@@ -80,10 +80,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
         boolean canUseAnyIndexColumnForIn = true;
 
-        for (int i = indexConditions.size() - 1; i >= 0; i--) {
-//        for (int i = 0; i < indexConditions.size(); i++) {
-            IndexCondition condition = indexConditions.get(i);
-
+        for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
                 alwaysFalse = true;
                 break;
@@ -202,8 +199,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
         // IndexCondition.getMask.
         IndexColumn[] cols = index.getIndexColumns();
         if (cols == null) {
-            assert false;
-
             return true;
         }
         IndexColumn idxCol = cols[0];

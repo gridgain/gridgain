@@ -313,7 +313,8 @@ public class TableFilter implements ColumnResolver {
             ((HashJoinIndex)index).prepare(session, indexConditions);
 
         boolean hashIndex = index.getIndexType().isHash();
-        ArrayList<Integer>[] indexColumnConditions = null;
+        boolean[] columnPresenceMask = null;
+        int[] columnIndexes = null;
         int maxColumnIdx = -1;
 
         // forget all unused index conditions
@@ -335,49 +336,35 @@ public class TableFilter implements ColumnResolver {
                     if (hashIndex)
                         continue;
 
-                    if (indexColumnConditions == null)
-                        indexColumnConditions = new ArrayList[index.getColumns().length];
-
-                    // Storing conditions using the order of their columns in the index.
-                    // We can have multiple conditions for the same column.
-                    if (indexColumnConditions[columnIdx] == null) {
-                        indexColumnConditions[columnIdx] = new ArrayList<>(1);
+                    // Removing all index conditions that cannot be applied because some index column is missing.
+                    // For example index uses 3 columns (a,b,c),
+                    // And we have the following conditions: c = 1 and a > 2.
+                    // In this case we cannot use condition on 'c' and it can be removed.
+                    if (columnPresenceMask == null) {
+                        columnPresenceMask = new boolean[index.getColumns().length];
+                        columnIndexes = new int[indexConditions.size()];
                     }
 
-                    indexColumnConditions[columnIdx].add(i);
+                    // Storing conditions using the order of their columns in the index to find possible gap.
+                    columnPresenceMask[columnIdx] = true;
+                    columnIndexes[i] = columnIdx;
                     maxColumnIdx = Math.max(maxColumnIdx, columnIdx);
                 }
             }
         }
 
         // Remove conditions that cannot be used with the current index due to gaps.
-        if (!hashIndex) {
-            boolean[] rmvConditionIndexes = null;
-            boolean gapFound = false;
+        for (int columnIdx = 0; columnIdx <= maxColumnIdx; columnIdx++) {
+            if (columnPresenceMask[columnIdx])
+                continue;
 
-            for (int i = 0; i <= maxColumnIdx; i++) {
-                // If we don't have a condition for a column in index, then we have found a gap.
-                if (indexColumnConditions[i] == null) {
-                    gapFound = true;
-                }
-                else if (gapFound) {
-                    if (rmvConditionIndexes == null) {
-                        rmvConditionIndexes = new boolean[indexConditions.size()];
-                    }
-
-                    // Any condition associated with a column in the index after a gap cannot be used.
-                    for (int condIdx : indexColumnConditions[i]) {
-                        rmvConditionIndexes[condIdx] = true;
-                    }
-                }
+            // We can remove any condition that uses an index column greater than a gap.
+            for (int i = columnIndexes.length - 1; i >= 0; i--) {
+                if (columnIndexes[i] > columnIdx)
+                    indexConditions.remove(i);
             }
 
-            if (rmvConditionIndexes != null) {
-                for (int i = rmvConditionIndexes.length - 1; i >= 0; i--) {
-                    if (rmvConditionIndexes[i])
-                        indexConditions.remove(i);
-                }
-            }
+            break;
         }
 
         if (nestedJoin != null) {
