@@ -82,7 +82,6 @@ public class TestFuzzOptimizations extends TestDb {
         db.execute("create table test1(a int, b int, c int)");
         db.execute("insert into test0 select x / 100, " +
                 "mod(x / 10, 10), mod(x, 10) from system_range(0, 999)");
-
         db.execute("update test0 set a = null where a = 9");
         db.execute("update test0 set b = null where b = 9");
         db.execute("update test0 set c = null where c = 9");
@@ -90,10 +89,10 @@ public class TestFuzzOptimizations extends TestDb {
 
         // this failed at some point
         Db.Prepared p = db.prepare("select * from test0 where b in(" +
-            "select a from test1 where a <? and a not in(" +
-            "select c from test1 where b <=10 and a in(" +
-            "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
-            "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
+                "select a from test1 where a <? and a not in(" +
+                "select c from test1 where b <=10 and a in(" +
+                "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
+                "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
         p.set(1);
         p.execute();
 
@@ -123,6 +122,8 @@ public class TestFuzzOptimizations extends TestDb {
             String testName = "testInWithIndexFieldsPermutations(" + idxFields + "): ";
 
             String[] predefinedConditions = {
+                "a >=1 and c =2 and a in(1,0,0)",
+                "a >=1 and c =2 and a in(1,0,0) and c in (1,3)",
                 "a = 1 and b in(10, 2)",
                 "b =1 and a in(0,3,4,7,0) and c =2",
                 "b >0 and a in(0,7,3,4) and c >0",
@@ -170,7 +171,7 @@ public class TestFuzzOptimizations extends TestDb {
             ArrayList<String> params = new ArrayList<>();
             String condition = getRandomCondition(random, params, columns,
                     compares, values);
-            String message = msgPrefix + " seed: " + seed + " " + condition;
+            String message = msgPrefix + " seed=" + seed + ", condition=" + condition;
             executeAndCompare(condition, params, message);
             if (params.size() > 0) {
                 for (int j = 0; j < params.size(); j++) {
