@@ -91,7 +91,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 continue;
             }
             Column column = condition.getColumn();
-
             if (condition.getCompareType() == Comparison.IN_LIST) {
                 if (isConstEqualConditions || (start == null && end == null)) {
                     // We can handle only one IN(...) index scan.
@@ -106,6 +105,12 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     inListIndex = 0;
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
+                // Fallback to the table scan if the IN column is not the first column of the index.
+                if (inColumn != null && !canUseIndexFor(inColumn)) {
+                    inList = null;
+                    inColumn = null;
+                }
+
                 if (start == null && end == null) {
                     if (inColumn == null && canUseIndexFor(column)) {
                         this.inColumn = column;
@@ -156,7 +161,10 @@ public class IndexCursor implements Cursor, AutoCloseable {
             }
         }
 
-        if (inColumn != null && start == null) {
+        if (inColumn == null)
+            return;
+
+        if (start == null || (!isConstEqualConditions && canUseIndexFor(inColumn))) {
             start = table.getTemplateRow();
         }
     }
@@ -189,6 +197,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
         // IndexCondition.getMask.
         IndexColumn[] cols = index.getIndexColumns();
         if (cols == null) {
+            assert false;
+
             return true;
         }
         IndexColumn idxCol = cols[0];
