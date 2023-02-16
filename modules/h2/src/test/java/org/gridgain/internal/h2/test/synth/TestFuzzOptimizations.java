@@ -42,11 +42,11 @@ public class TestFuzzOptimizations extends TestDb {
         deleteDb(getTestName());
         conn = getConnection(getTestName());
         if (!config.diskResult) {
-//            testIn();
+            testIn();
             testInWithIndexFieldsPermutations();
         }
-//        testGroupSorted();
-//        testInSelect();
+        testGroupSorted();
+        testInSelect();
         conn.close();
         deleteDb(getTestName());
     }
@@ -97,7 +97,7 @@ public class TestFuzzOptimizations extends TestDb {
         p.set(1);
         p.execute();
 
-        doRandomQueries(db, "testIn()");
+        doRandomQueries("testIn()");
 
         executeAndCompare("a >=0 and b in(?, 2) and a in(1, ?, null)", Arrays.asList("10", "2"),
                 "testIn() seed=-6191135606105920350L");
@@ -128,6 +128,7 @@ public class TestFuzzOptimizations extends TestDb {
                 "b >0 and a in(0,7,3,4) and c >0",
                 "b in (1,2) and c >=2",
                 "b in (select b from test1 where c >=1 and a =0) and c >=2",
+                "b in (select b from test1 where c >=1 and a =0) and c =2",
                 "a in (1,2) and b in (select b from test1 where c >=1 and a =0) and c >=0",
                 // IN(query)
                 "b =1 and a in(select b from test1 where c >=1 and a =0) and c =2",
@@ -149,13 +150,13 @@ public class TestFuzzOptimizations extends TestDb {
                 executeAndCompare(cond, Collections.<String>emptyList(), testName + cond);
             }
 
-            doRandomQueries(db, testName);
+            doRandomQueries(testName);
 
             db.execute("drop table test0, test1");
         }
     }
 
-    private void doRandomQueries(Db db, String msgPrefix) throws SQLException {
+    private void doRandomQueries(String msgPrefix) throws SQLException {
         Random seedGenerator = new Random();
         String[] columns = new String[] { "a", "b", "c" };
         String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
