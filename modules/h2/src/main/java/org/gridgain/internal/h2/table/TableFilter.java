@@ -313,7 +313,7 @@ public class TableFilter implements ColumnResolver {
             ((HashJoinIndex)index).prepare(session, indexConditions);
 
         boolean hashIndex = index.getIndexType().isHash();
-        int[] indexColumnConditions = null;
+        ArrayList<Integer>[] indexColumnConditions = null;
         int maxColumnIdx = -1;
 
         // forget all unused index conditions
@@ -336,11 +336,15 @@ public class TableFilter implements ColumnResolver {
                         continue;
 
                     if (indexColumnConditions == null)
-                        indexColumnConditions = new int[index.getColumns().length];
+                        indexColumnConditions = new ArrayList[index.getColumns().length];
 
                     // Storing conditions using the order of their columns in the index.
-                    // The zero index is reserved for gaps.
-                    indexColumnConditions[columnIdx] = i + 1;
+                    // We can have multiple conditions for the same column.
+                    if (indexColumnConditions[columnIdx] == null) {
+                        indexColumnConditions[columnIdx] = new ArrayList<>(1);
+                    }
+
+                    indexColumnConditions[columnIdx].add(i);
                     maxColumnIdx = Math.max(maxColumnIdx, columnIdx);
                 }
             }
@@ -353,7 +357,7 @@ public class TableFilter implements ColumnResolver {
 
             for (int i = 0; i <= maxColumnIdx; i++) {
                 // If we don't have a condition for a column in index, then we have found a gap.
-                if (indexColumnConditions[i] == 0) {
+                if (indexColumnConditions[i] == null) {
                     gapFound = true;
                 }
                 else if (gapFound) {
@@ -362,7 +366,9 @@ public class TableFilter implements ColumnResolver {
                     }
 
                     // Any condition associated with a column in the index after a gap cannot be used.
-                    rmvConditionIndexes[indexColumnConditions[i] - 1] = true;
+                    for (int condIdx : indexColumnConditions[i]) {
+                        rmvConditionIndexes[condIdx] = true;
+                    }
                 }
             }
 

@@ -78,9 +78,12 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inResult = null;
         intersects = null;
 
-        boolean isConstEqualConditions = true;
+        boolean canUseAnyIndexColumnForIn = true;
 
-        for (IndexCondition condition : indexConditions) {
+        for (int i = indexConditions.size() - 1; i >= 0; i--) {
+//        for (int i = 0; i < indexConditions.size(); i++) {
+            IndexCondition condition = indexConditions.get(i);
+
             if (condition.isAlwaysFalse()) {
                 alwaysFalse = true;
                 break;
@@ -92,7 +95,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
             }
             Column column = condition.getColumn();
             if (condition.getCompareType() == Comparison.IN_LIST) {
-                if (isConstEqualConditions || (start == null && end == null)) {
+                if (canUseAnyIndexColumnForIn || (start == null && end == null)) {
                     // We can handle only one IN(...) index scan.
                     if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
                         continue;
@@ -111,6 +114,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     inColumn = null;
                 }
 
+                canUseAnyIndexColumnForIn = false;
+
                 if (start == null && end == null) {
                     if (inColumn == null && canUseIndexFor(column)) {
                         this.inColumn = column;
@@ -118,7 +123,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     }
                 }
             } else {
-                isConstEqualConditions &= condition.getCompareType() == Comparison.EQUAL &&
+                canUseAnyIndexColumnForIn &= condition.getCompareType() == Comparison.EQUAL &&
                     condition.getExpression().isConstant();
 
                 Value v = condition.getCurrentValue(s);
@@ -146,25 +151,25 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
-
-                // An X=? condition will produce less rows than
-                // an X IN(..) condition, unless the X IN condition can use the index.
-                if (!isConstEqualConditions && (isStart || isEnd) && !canUseIndexFor(inColumn)) {
-                    inColumn = null;
-                    inList = null;
-
-                    if (inResult != null)
-                        inResult.close();
-
-                    inResult = null;
-                }
             }
+        }
+
+        // An X=? condition will produce less rows than
+        // an X IN(..) condition, unless the X IN condition can use the index.
+        if (!canUseAnyIndexColumnForIn && (start != null || end != null) && !canUseIndexFor(inColumn)) {
+            inColumn = null;
+            inList = null;
+
+            if (inResult != null)
+                inResult.close();
+
+            inResult = null;
         }
 
         if (inColumn == null)
             return;
 
-        if (start == null || (!isConstEqualConditions && canUseIndexFor(inColumn))) {
+        if (start == null || (!canUseAnyIndexColumnForIn && canUseIndexFor(inColumn))) {
             start = table.getTemplateRow();
         }
     }
