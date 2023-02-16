@@ -336,10 +336,6 @@ public class TableFilter implements ColumnResolver {
                     if (hashIndex)
                         continue;
 
-                    // Removing all index conditions that cannot be applied because some index column is missing.
-                    // For example index has 3 columns (a,b,c),
-                    // And we have the following conditions: c = 1 and a > 2.
-                    // In this case we cannot use condition on 'c' and it can be removed.
                     if (columnPresenceMask == null) {
                         columnPresenceMask = new boolean[index.getColumns().length];
                         columnIndexes = new int[indexConditions.size()];
@@ -353,7 +349,10 @@ public class TableFilter implements ColumnResolver {
             }
         }
 
-        // Remove conditions that cannot be used with the current index due to gaps.
+        // Removing all index conditions that cannot be applied because some index column is missing.
+        // For example index has 3 columns (a,b,c),
+        // And we have the following conditions: c = 1 and a > 2.
+        // In this case we cannot use condition on 'c' and it can be removed.
         for (int columnIdx = 0; columnIdx <= maxColumnIdx; columnIdx++) {
             if (columnPresenceMask[columnIdx])
                 continue;
