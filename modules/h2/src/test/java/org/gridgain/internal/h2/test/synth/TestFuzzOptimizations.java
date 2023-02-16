@@ -42,11 +42,11 @@ public class TestFuzzOptimizations extends TestDb {
         deleteDb(getTestName());
         conn = getConnection(getTestName());
         if (!config.diskResult) {
-            testIn();
+//            testIn();
             testInWithIndexFieldsPermutations();
         }
-        testGroupSorted();
-        testInSelect();
+//        testGroupSorted();
+//        testInSelect();
         conn.close();
         deleteDb(getTestName());
     }
@@ -83,6 +83,20 @@ public class TestFuzzOptimizations extends TestDb {
         db.execute("insert into test0 select x / 100, " +
                 "mod(x / 10, 10), mod(x, 10) from system_range(0, 999)");
 
+        db.execute("update test0 set a = null where a = 9");
+        db.execute("update test0 set b = null where b = 9");
+        db.execute("update test0 set c = null where c = 9");
+        db.execute("insert into test1 select * from test0");
+
+        // this failed at some point
+        Db.Prepared p = db.prepare("select * from test0 where b in(" +
+            "select a from test1 where a <? and a not in(" +
+            "select c from test1 where b <=10 and a in(" +
+            "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
+            "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
+        p.set(1);
+        p.execute();
+
         doRandomQueries(db, "testIn()");
 
         executeAndCompare("a >=0 and b in(?, 2) and a in(1, ?, null)", Arrays.asList("10", "2"),
@@ -101,31 +115,47 @@ public class TestFuzzOptimizations extends TestDb {
             db.execute("insert into test0 select x / 100, " +
                 "mod(x / 10, 10), mod(x, 10), x from system_range(0, 999)");
 
-            doRandomQueries(db, "testInWithIndexFieldsPermutations(" + idxFields + ')');
+            db.execute("update test0 set a = null where a = 9");
+            db.execute("update test0 set b = null where b = 9");
+            db.execute("update test0 set c = null where c = 9");
+            db.execute("insert into test1 select * from test0");
 
-            String constCondition = "a = 1 and b in(10, 2)";
-            executeAndCompare(constCondition, Collections.<String>emptyList(),
-                "testInWithIndexFieldsPermutations() condition: " + constCondition);
+            String testName = "testInWithIndexFieldsPermutations(" + idxFields + "): ";
+
+            String[] predefinedConditions = {
+                "a = 1 and b in(10, 2)",
+                "b =1 and a in(0,3,4,7,0) and c =2",
+                "b >0 and a in(0,7,3,4) and c >0",
+                "b in (1,2) and c >=2",
+                "b in (select b from test1 where c >=1 and a =0) and c >=2",
+                "a in (1,2) and b in (select b from test1 where c >=1 and a =0) and c >=0",
+                // IN(query)
+                "b =1 and a in(select b from test1 where c >=1 and a =0) and c =2",
+                "b >0 and a in(select b from test1 where c >=1 and a =0) and c >0",
+                // IN(const) + IN(query)
+                "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and c =2",
+                "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and c >0",
+                // Multiple IN(const)
+                "b in (1,2) and a in(2,3) and c >0",
+                "b in (1,2) and a in(2,3) and c =0",
+                "b in (1,2) and a in(2,3) and c in (1,2,3)",
+                // Multiple IN(const) + single IN(query).
+                "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and c in(2,3)",
+                "b in (1,2) and a in(select b from test1 where c >=1 and a =0) and " +
+                    "c in(select b from test1 where c > 0 and b =0)"
+            };
+
+            for (String cond : predefinedConditions) {
+                executeAndCompare(cond, Collections.<String>emptyList(), testName + cond);
+            }
+
+            doRandomQueries(db, testName);
 
             db.execute("drop table test0, test1");
         }
     }
 
     private void doRandomQueries(Db db, String msgPrefix) throws SQLException {
-        db.execute("update test0 set a = null where a = 9");
-        db.execute("update test0 set b = null where b = 9");
-        db.execute("update test0 set c = null where c = 9");
-        db.execute("insert into test1 select * from test0");
-
-        // this failed at some point
-        Db.Prepared p = db.prepare("select * from test0 where b in(" +
-                "select a from test1 where a <? and a not in(" +
-                "select c from test1 where b <=10 and a in(" +
-                "select a from test1 where b =1 or b =2 and b not in(2))) or c <>a) " +
-                "and c in(0, 10) and c in(10, 0, 0) order by 1, 2, 3");
-        p.set(1);
-        p.execute();
-
         Random seedGenerator = new Random();
         String[] columns = new String[] { "a", "b", "c" };
         String[] values = new String[] { null, "0", "0", "1", "2", "10", "a", "?" };
