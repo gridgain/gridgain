@@ -2973,13 +2973,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * @param cacheName Cache name.
      * @param deploymentId Future deployment ID.
+     * @param err Error to complete the future with or {@code null} if no errors occurred.
      */
-    void completeTemplateAddFuture(String cacheName, IgniteUuid deploymentId) {
+    void completeTemplateAddFuture(String cacheName, IgniteUuid deploymentId, @Nullable Throwable err) {
         GridCacheProcessor.TemplateConfigurationFuture fut =
             (GridCacheProcessor.TemplateConfigurationFuture)pendingTemplateFuts.get(cacheName);
 
-        if (fut != null && fut.deploymentId().equals(deploymentId))
-            fut.onDone();
+        if (fut != null && fut.deploymentId().equals(deploymentId)) {
+            if (err != null)
+                fut.onDone(err);
+            else
+                fut.onDone();
+        }
     }
 
     /**
@@ -2988,8 +2993,18 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param err Error if any.
      */
     public void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
-        if (ctx.localNodeId().equals(req.initiatingNodeId())) {
-            DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(req.requestId());
+        completeCacheStartFuture(req.initiatingNodeId(), req.requestId(), success, err);
+    }
+
+    /**
+     * @param reqId
+     * @param initiatingNodeId
+     * @param success
+     * @param err
+     */
+    private void completeCacheStartFuture(UUID reqId, UUID initiatingNodeId, boolean success, @Nullable Throwable err) {
+        if (ctx.localNodeId().equals(initiatingNodeId)) {
+            DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(reqId);
 
             if (fut != null)
                 fut.onDone(success, err);
@@ -4218,9 +4233,44 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (msg instanceof DynamicCacheChangeBatch) {
-            boolean changeRequested = cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+            DynamicCacheChangeBatch batchMsg = (DynamicCacheChangeBatch) msg;
 
-            ctx.query().onCacheChangeRequested((DynamicCacheChangeBatch)msg);
+            ClassNotFoundException deserEx = batchMsg.deserializationException();
+
+            if (deserEx != null) {
+                String errMsgTemplate = "Failed to %s," +
+                    " an error occurred during cache configuration deserialization: " + deserEx + "." +
+                    " A possible cause is that some classes from configuration are unavailable on the server side." +
+                    " Please check configuration and make sure all necessary classes" +
+                    " are available on all nodes accross the cluster.";
+
+                if (batchMsg.cacheReqsMapping() != null) {
+                    Throwable err = new IgniteCheckedException(String.format(errMsgTemplate, "start cache"));
+
+                    for (Map.Entry<UUID, UUID> entry : batchMsg.cacheReqsMapping().entrySet()) {
+                        log.warning("Failed to handle cache start request," +
+                            " an exception was thrown during request message deserialization: " + deserEx + "." +
+                            " Request ID: " + entry.getKey() + "," +
+                            " Initiating node ID: " + entry.getValue());
+
+                        completeCacheStartFuture(entry.getKey(), entry.getValue(), false, err);
+                    }
+                }
+
+                if (batchMsg.cacheTemplateReqsMapping() != null) {
+                    Throwable err = new IgniteCheckedException(
+                        String.format(errMsgTemplate, "add new cache template"));
+
+                    for (Map.Entry<String, IgniteUuid> entry : batchMsg.cacheTemplateReqsMapping().entrySet())
+                        completeTemplateAddFuture(entry.getKey(), entry.getValue(), err);
+                }
+
+                return false;
+            }
+
+            boolean changeRequested = cachesInfo.onCacheChangeRequested(batchMsg, topVer);
+
+            ctx.query().onCacheChangeRequested(batchMsg);
 
             return changeRequested;
         }

@@ -118,8 +118,15 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractTraceabl
             }
             catch (IgniteCheckedException e) {
                 // Try to resurrect a message in a case of deserialization failure
-                if (e.getCause() instanceof IncompleteDeserializationException)
-                    return new CustomMessageWrapper(((IncompleteDeserializationException)e.getCause()).message());
+                if (e.getCause() instanceof IncompleteDeserializationException) {
+                    IncompleteDeserializationException idE = (IncompleteDeserializationException) e.getCause();
+                    CustomMessageWrapper partiallyDeserializedMsg = new CustomMessageWrapper(
+                        idE.message());
+
+                    msgClass = idE.message().getClass();
+
+                    return partiallyDeserializedMsg;
+                }
 
                 throw e;
             }

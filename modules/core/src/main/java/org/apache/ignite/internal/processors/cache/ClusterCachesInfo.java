@@ -635,7 +635,7 @@ public class ClusterCachesInfo {
             for (DynamicCacheChangeRequest req : batch.requests()) {
                 if (req.template()) {
                     ctx.cache().completeTemplateAddFuture(req.startCacheConfiguration().getName(),
-                        req.deploymentId());
+                        req.deploymentId(), null);
                 }
                 else
                     ctx.cache().completeCacheStartFuture(req, false, err);
@@ -955,7 +955,7 @@ public class ClusterCachesInfo {
         }
 
         if (!persistedCfgs)
-            ctx.cache().completeTemplateAddFuture(ccfg.getName(), req.deploymentId());
+            ctx.cache().completeTemplateAddFuture(ccfg.getName(), req.deploymentId(), null);
     }
 
     /**
