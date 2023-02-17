@@ -312,6 +312,11 @@ public class TableFilter implements ColumnResolver {
         if (index.getClass() == HashJoinIndex.class)
             ((HashJoinIndex)index).prepare(session, indexConditions);
 
+        boolean hashIndex = index.getIndexType().isHash();
+        boolean[] columnPresenceMask = null;
+        int[] columnIndexes = null;
+        int maxColumnIdx = -1;
+
         // forget all unused index conditions
         // the indexConditions list may be modified here
         for (int i = 0; i < indexConditions.size(); i++) {
@@ -319,12 +324,46 @@ public class TableFilter implements ColumnResolver {
             if (!condition.isAlwaysFalse()) {
                 Column col = condition.getColumn();
                 if (col.getColumnId() >= 0) {
-                    if (index.getColumnIndex(col) < 0) {
+                    int columnIdx = index.getColumnIndex(condition.getColumn());
+
+                    if (columnIdx < 0) {
                         indexConditions.remove(i);
                         i--;
+
+                        continue;
                     }
+
+                    if (hashIndex)
+                        continue;
+
+                    if (columnPresenceMask == null) {
+                        columnPresenceMask = new boolean[index.getColumns().length];
+                        columnIndexes = new int[indexConditions.size()];
+                    }
+
+                    // Storing conditions using the order of their columns in the index to find possible gap.
+                    columnPresenceMask[columnIdx] = true;
+                    columnIndexes[i] = columnIdx;
+                    maxColumnIdx = Math.max(maxColumnIdx, columnIdx);
                 }
             }
+        }
+
+        // Removing all index conditions that cannot be applied because some index column is missing.
+        // For example index has 3 columns (a,b,c),
+        // And we have the following conditions: c = 1 and a > 2.
+        // In this case we cannot use condition on 'c' and it can be removed.
+        for (int columnIdx = 0; columnIdx <= maxColumnIdx; columnIdx++) {
+            if (columnPresenceMask[columnIdx])
+                continue;
+
+            // We can remove any condition that uses an index column greater than a gap.
+            for (int i = columnIndexes.length - 1; i >= 0; i--) {
+                if (columnIndexes[i] > columnIdx)
+                    indexConditions.remove(i);
+            }
+
+            break;
         }
 
         if (nestedJoin != null) {

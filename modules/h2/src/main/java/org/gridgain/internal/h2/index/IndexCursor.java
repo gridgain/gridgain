@@ -77,6 +77,9 @@ public class IndexCursor implements Cursor, AutoCloseable {
         inColumn = null;
         inResult = null;
         intersects = null;
+
+        boolean canUseAnyIndexColumnForIn = true;
+
         for (IndexCondition condition : indexConditions) {
             if (condition.isAlwaysFalse()) {
                 alwaysFalse = true;
@@ -89,21 +92,37 @@ public class IndexCursor implements Cursor, AutoCloseable {
             }
             Column column = condition.getColumn();
             if (condition.getCompareType() == Comparison.IN_LIST) {
-                if (start == null && end == null) {
-                    if (canUseIndexForIn(column)) {
-                        this.inColumn = column;
-                        inList = condition.getCurrentValueList(s);
-                        inListIndex = 0;
-                    }
+                if (canUseAnyIndexColumnForIn || (start == null && end == null)) {
+                    // We can handle only one IN(...) index scan.
+                    if (inColumn != null && index.getColumnIndex(inColumn) <= index.getColumnIndex(column))
+                        continue;
+
+                    if (inResult != null)
+                        inResult.close();
+
+                    this.inColumn = column;
+                    inList = condition.getCurrentValueList(s);
+                    inListIndex = 0;
                 }
             } else if (condition.getCompareType() == Comparison.IN_QUERY) {
+                // Fallback to the table scan if the IN column is not the first column of the index.
+                if (inColumn != null && !canUseIndexFor(inColumn)) {
+                    inList = null;
+                    inColumn = null;
+                }
+
+                canUseAnyIndexColumnForIn = false;
+
                 if (start == null && end == null) {
-                    if (canUseIndexForIn(column)) {
+                    if (inColumn == null && canUseIndexFor(column)) {
                         this.inColumn = column;
                         inResult = condition.getCurrentResult();
                     }
                 }
             } else {
+                canUseAnyIndexColumnForIn &= condition.getCompareType() == Comparison.EQUAL &&
+                    condition.getExpression().isConstant();
+
                 Value v = condition.getCurrentValue(s);
                 boolean isStart = condition.isStart();
                 boolean isEnd = condition.isEnd();
@@ -129,20 +148,25 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if (isIntersects) {
                     intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
-                // An X=? condition will produce less rows than
-                // an X IN(..) condition, unless the X IN condition can use the index.
-                if ((isStart || isEnd) && !canUseIndexFor(inColumn)) {
-                    inColumn = null;
-                    inList = null;
-
-                    if (inResult != null)
-                        inResult.close();
-
-                    inResult = null;
-                }
             }
         }
-        if (inColumn != null) {
+
+        // An X=? condition will produce less rows than
+        // an X IN(..) condition, unless the X IN condition can use the index.
+        if (!canUseAnyIndexColumnForIn && (start != null || end != null) && !canUseIndexFor(inColumn)) {
+            inColumn = null;
+            inList = null;
+
+            if (inResult != null)
+                inResult.close();
+
+            inResult = null;
+        }
+
+        if (inColumn == null)
+            return;
+
+        if (start == null || (!canUseAnyIndexColumnForIn && canUseIndexFor(inColumn))) {
             start = table.getTemplateRow();
         }
     }
@@ -166,14 +190,6 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 cursor = index.find(tableFilter, start, end);
             }
         }
-    }
-
-    private boolean canUseIndexForIn(Column column) {
-        if (inColumn != null) {
-            // only one IN(..) condition can be used at the same time
-            return false;
-        }
-        return canUseIndexFor(column);
     }
 
     private boolean canUseIndexFor(Column column) {
