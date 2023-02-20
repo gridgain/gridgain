@@ -358,7 +358,7 @@ public class TableFilter implements ColumnResolver {
                 continue;
 
             // We can remove any condition that uses an index column greater than a gap.
-            for (int i = columnIndexes.length - 1; i >= 0; i--) {
+            for (int i = indexConditions.size() - 1; i >= 0; i--) {
                 if (columnIndexes[i] > columnIdx)
                     indexConditions.remove(i);
             }
