@@ -2993,7 +2993,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param err Error if any.
      */
     public void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
-        completeCacheStartFuture(req.initiatingNodeId(), req.requestId(), success, err);
+        completeCacheStartFuture(req.requestId(), req.initiatingNodeId(), success, err);
     }
 
     /**
