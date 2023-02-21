@@ -80,17 +80,20 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     public DynamicCacheChangeBatch(Collection<DynamicCacheChangeRequest> reqs) {
         assert !F.isEmpty(reqs) : reqs;
 
-        cacheReqsMapping = reqs.stream().collect(
-            Collectors.toMap(
-                DynamicCacheChangeRequest::requestId,
-                DynamicCacheChangeRequest::initiatingNodeId
+        cacheReqsMapping = reqs.stream()
+            .collect(
+                Collectors.toMap(
+                    DynamicCacheChangeRequest::requestId,
+                    DynamicCacheChangeRequest::initiatingNodeId
             )
         );
 
-        cacheTemplateReqsMapping = reqs.stream().collect(
-            Collectors.toMap(
-                DynamicCacheChangeRequest::cacheName,
-                DynamicCacheChangeRequest::deploymentId
+        cacheTemplateReqsMapping = reqs.stream()
+            .filter(req -> req.deploymentId() != null)
+            .collect(
+                Collectors.toMap(
+                    DynamicCacheChangeRequest::cacheName,
+                    DynamicCacheChangeRequest::deploymentId
             )
         );
 
