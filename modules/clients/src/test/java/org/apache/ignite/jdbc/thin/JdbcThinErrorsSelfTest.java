@@ -45,7 +45,7 @@ public class JdbcThinErrorsSelfTest extends JdbcErrorsAbstractSelfTest {
     public void testConnectionError() throws SQLException {
         checkErrorState(new IgniteCallable<Void>() {
             @Override public Void call() throws Exception {
-                DriverManager.getConnection("jdbc:ignite:thin://unknown.host");
+                DriverManager.getConnection("jdbc:ignite:thin://host.invalid");
 
                 return null;
             }
