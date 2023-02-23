@@ -3183,7 +3183,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test several changes os cluster state without auto confirmation option (--yes)
+     * Test several changes on cluster state from INACTIVE state without auto confirmation option (--yes)
+     *  It will test the four scenarios
+     *  1. INACTIVE to INACTIVE (--set-state INACTIVE)
+     *  2. INACTIVE to INACTIVE (--deactivate)
+     *  3. INACTIVE ACTIVE_READ_ONLY (--set-state ACTIVE_READ_ONLY)
+     *  4. INACTIVE ACTIVE (--set-state ACTIVE)
+     *
      *  @throws Exception If failed.
      */
     @Test
@@ -3193,6 +3199,10 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         injectTestSystemOut();
         ignite.cluster().state(ACTIVE);
+
+        injectTestSystemIn(CONFIRM_MSG);
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "INACTIVE"));
+        assertEquals(INACTIVE, ignite.cluster().state());
 
         injectTestSystemIn(CONFIRM_MSG);
         assertEquals(EXIT_CODE_OK, execute("--set-state", "INACTIVE"));
