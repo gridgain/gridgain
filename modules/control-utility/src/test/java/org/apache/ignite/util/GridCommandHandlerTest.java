@@ -3193,7 +3193,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *  @throws Exception If failed.
      */
     @Test
-    public void testActivateNoAutoConfirmation() throws Exception {
+    public void testStateChangeNoAutoConfirmation() throws Exception {
         Ignite ignite = startGrids(1);
         autoConfirmation = false;
 
