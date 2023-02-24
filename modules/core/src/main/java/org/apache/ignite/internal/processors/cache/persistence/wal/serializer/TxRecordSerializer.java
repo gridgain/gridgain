@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccVersion;
@@ -169,6 +170,11 @@ public class TxRecordSerializer {
                     + ", nearXidVer=" + nearXidVer
                     + ", writeVer=" + writeVer
                     + ", participatingNodesSize=" + participatingNodesSize + ']');
+
+                if (t instanceof OutOfMemoryError) {
+                    System.setProperty(IgniteSystemProperties.OOM_HAPPEN, Boolean.TRUE.toString());
+                }
+
                 throw t;
             }
         }

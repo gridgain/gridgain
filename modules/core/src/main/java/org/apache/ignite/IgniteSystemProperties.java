@@ -150,6 +150,8 @@ import static org.apache.ignite.startup.cmdline.CommandLineStartup.DFLT_PROG_NAM
  * These properties and variables can be used to affect the behavior of Ignite.
  */
 public final class IgniteSystemProperties {
+    public static final String OOM_HAPPEN = "OOM_HAPPEN";
+
     /**
      * If this system property is present the Ignite will include grid name into verbose log.
      *
