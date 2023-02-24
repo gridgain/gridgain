@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.wal;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInput;
 import java.io.EOFException;
 import java.io.File;
@@ -49,9 +47,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -1221,7 +1216,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Nullable private FileDescriptor readFileDescriptor(File file, FileIOFactory ioFactory) {
         FileDescriptor ds = new FileDescriptor(file);
 
-        try (SegmentIO fileIO = ds.toReadOnlyIO(ioFactory)) {
+//        try (SegmentIO fileIO = ds.toReadOnlyIO(ioFactory)) {
+        try (SegmentIO fileIO = new SegmentIO(ds.idx, ioFactory.create(file, READ))) {
             // File may be empty when LOG_ONLY mode is enabled and mmap is disabled.
             if (fileIO.size() == 0)
                 return null;
@@ -2344,10 +2340,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 serializerVer = readSegmentHeader(new SegmentIO(idx, fileIO), segmentFileInputFactory)
                     .getSerializerVersion();
             }
-
-            try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zip)))) {
-                zos.setLevel(dsCfg.getWalCompactionLevel());
-                zos.putNextEntry(new ZipEntry(idx + ".wal"));
+            try (FileOutputStream zos = new FileOutputStream(zip)) {
+//            try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zip)))) {
+//                zos.setLevel(dsCfg.getWalCompactionLevel());
+//                zos.putNextEntry(new ZipEntry(idx + ".wal"));
 
                 ByteBuffer buf = ByteBuffer.allocate(HEADER_RECORD_SIZE);
                 buf.order(ByteOrder.nativeOrder());
@@ -2492,9 +2488,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                         if (unzip.exists())
                             throw new FileAlreadyExistsException(unzip.getAbsolutePath());
 
-                        try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)));
+//                        try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zip)));
+                        try (FileInputStream zis = new FileInputStream(zip);
                              FileIO io = ioFactory.create(unzipTmp)) {
-                            zis.getNextEntry();
+//                            zis.getNextEntry();
 
                             while (io.writeFully(arr, 0, zis.read(arr)) > 0)
                                 updateHeartbeat();

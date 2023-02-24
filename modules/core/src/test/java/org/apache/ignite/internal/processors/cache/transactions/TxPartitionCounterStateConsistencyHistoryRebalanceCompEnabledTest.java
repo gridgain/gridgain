@@ -28,7 +28,8 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
+//        cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
+        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
 //        cfg.setStripedPoolSize(64);
 
