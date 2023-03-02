@@ -27,7 +27,6 @@ import org.apache.ignite.internal.commandline.AbstractCommand;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
-import org.apache.ignite.internal.commandline.util.TopologyUtils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.dr.VisorDrRebuildTreeOperation;
@@ -38,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUILD_TREES;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
@@ -56,7 +56,7 @@ public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildParti
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Optional<GridClientNode> firstNodeOpt = TopologyUtils.anyConnectableServerNode(client.compute());
+            Optional<GridClientNode> firstNodeOpt = anyConnectableServerNode(client.compute());
 
             if (firstNodeOpt.isPresent()) {
                 VisorDrRebuildTreeTaskResult res = executeTaskByNameOnNode(client,
