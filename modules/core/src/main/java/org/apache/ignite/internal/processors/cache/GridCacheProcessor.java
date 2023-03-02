@@ -2979,9 +2979,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridCacheProcessor.TemplateConfigurationFuture fut =
             (GridCacheProcessor.TemplateConfigurationFuture)pendingTemplateFuts.get(cacheName);
 
-        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] pendingTemplateFuts: " + pendingTemplateFuts.size());
-
-
         if (fut != null && fut.deploymentId().equals(deploymentId)) {
             if (err != null)
                 fut.onDone(err);
