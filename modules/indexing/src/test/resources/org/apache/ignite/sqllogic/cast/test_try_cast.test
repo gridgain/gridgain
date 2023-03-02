@@ -11,10 +11,10 @@ SELECT TRY_CAST('hello' as INTEGER)
 
 # not a reserved keyword
 statement ok
-CREATE TABLE try_cast(try_cast INTEGER);
+CREATE TABLE try_cast(try_cast INTEGER PRIMARY KEY, val INTEGER);
 
 statement ok
-INSERT INTO try_cast VALUES (3);
+INSERT INTO try_cast VALUES (3, 0);
 
 query I
 SELECT try_cast FROM try_cast;
