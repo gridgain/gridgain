@@ -16,5 +16,15 @@
 
 package org.apache.ignite.tests.p2p.cache;
 
-public class CustomSqlFunctionsClass {
+/**
+ * Class represents a piece of custom configuration that can be passed to
+ * {@link org.apache.ignite.configuration.CacheConfiguration#setSqlFunctionClasses(Class[])} property.
+ *
+ * This class is used to represent a situation when it is available on the classpath of a client node
+ * and unavailable on server node.
+ *
+ * In that case request to start a cache or create a cache template should be rejected on the client side
+ * without compromizing stability of the rest of the cluster.
+ */
+public class UnavailableToServerCustomSqlFunctionsClass {
 }

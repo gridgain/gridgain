@@ -2979,6 +2979,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         GridCacheProcessor.TemplateConfigurationFuture fut =
             (GridCacheProcessor.TemplateConfigurationFuture)pendingTemplateFuts.get(cacheName);
 
+        System.out.println("-->>-->> [" + Thread.currentThread().getName() + "] pendingTemplateFuts: " + pendingTemplateFuts.size());
+
+
         if (fut != null && fut.deploymentId().equals(deploymentId)) {
             if (err != null)
                 fut.onDone(err);
@@ -4244,7 +4247,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     " Please check configuration and make sure all necessary classes" +
                     " are available on all nodes accross the cluster.";
 
-                if (batchMsg.cacheReqsMapping() != null) {
+                if (batchMsg.cacheReqsMapping() != null && !batchMsg.cacheReqsMapping().isEmpty()) {
                     Throwable err = new IgniteCheckedException(String.format(errMsgTemplate, "start cache"));
 
                     for (Map.Entry<UUID, UUID> entry : batchMsg.cacheReqsMapping().entrySet()) {
@@ -4257,7 +4260,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     }
                 }
 
-                if (batchMsg.cacheTemplateReqsMapping() != null) {
+                if (batchMsg.cacheTemplateReqsMapping() != null && !batchMsg.cacheTemplateReqsMapping().isEmpty()) {
                     Throwable err = new IgniteCheckedException(
                         String.format(errMsgTemplate, "add new cache template"));
 

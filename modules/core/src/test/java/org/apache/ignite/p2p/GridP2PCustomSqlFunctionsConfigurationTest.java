@@ -19,8 +19,8 @@ package org.apache.ignite.p2p;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -28,22 +28,37 @@ import org.junit.Test;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
 
+/**
+ *
+ */
 public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTest {
-    /** Test class loader 1. */
-    private static final ClassLoader TEST_CLASS_LOADER_1;
+    /** Test class loader. */
+    private static final ClassLoader CLIENT_SIDE_CLASS_LOADER;
 
     /** */
-    private static final String CUSTOM_FUNCTIONS_CLASS_NAME = "org.apache.ignite.tests.p2p.cache.CustomSqlFunctionsClass";
+    public static final String STATIC_CACHE_NAME = "STATIC_CACHE";
+
+    /** */
+    public static final String STATIC_CACHE_TEMPLATE = "STATIC_CACHE_TMPL_*";
+
+    /** */
+    public static final String DYNAMIC_CACHE_NAME = "DYNAMIC_CACHE";
+
+    /** */
+    public static final String DYNAMIC_CACHE_TEMPLATE = "DYNAMIC_CACHE_TMPL_*";
+
+    /** */
+    private static final String UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME =
+        "org.apache.ignite.tests.p2p.cache.UnavailableToServerCustomSqlFunctionsClass";
 
     static {
         try {
-            TEST_CLASS_LOADER_1 = new URLClassLoader(
+            CLIENT_SIDE_CLASS_LOADER = new URLClassLoader(
                 new URL[]{new URL(GridTestProperties.getProperty("p2p.uri.cls.second"))},
                 GridP2PScanQueryWithTransformerTest.class.getClassLoader());
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Define property p2p.uri.cls", e);
+            throw new RuntimeException("Define property p2p.uri.cls.second", e);
         }
     }
 
@@ -51,10 +66,7 @@ public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstra
     private ClassLoader clsLoader;
 
     /** */
-    private Integer localDiscoPort;
-
-    /** */
-    private Integer remoteDiscoPort;
+    private CacheConfiguration<?, ?> staticCacheCfg;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -72,35 +84,212 @@ public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstra
 
         cfg.setPeerClassLoadingEnabled(false);
 
-        if (localDiscoPort != null) {
-            TcpDiscoverySpi disco = (TcpDiscoverySpi)cfg.getDiscoverySpi();
-            disco.setLocalPort(localDiscoPort);
-        }
-
-        if (remoteDiscoPort != null) {
-            TcpDiscoverySpi disco = (TcpDiscoverySpi)cfg.getDiscoverySpi();
-            TcpDiscoveryVmIpFinder finder = (TcpDiscoveryVmIpFinder)disco.getIpFinder();
-
-            finder.setAddresses(Collections.singleton("127.0.0.1:" + remoteDiscoPort));
-        }
-
         cfg.setClassLoader(clsLoader);
+
+        if (staticCacheCfg != null)
+            cfg.setCacheConfiguration(staticCacheCfg);
 
         return cfg;
     }
 
+    /**
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
     @Test
-    public void testStartSimpleGrid() throws Exception {
-        localDiscoPort = 47500;
-        IgniteEx ig0 = startGrid(0);
+    public void testDynamicCacheWithUnavailableClass() throws Exception {
+        startGrid(0);
 
-        clsLoader = TEST_CLASS_LOADER_1;
+        clsLoader = CLIENT_SIDE_CLASS_LOADER;
 
-        localDiscoPort = null;
-        remoteDiscoPort = 47500;
         IgniteEx cl0 = startClientGrid(1);
-        remoteDiscoPort = null;
 
-        cl0.getOrCreateCache(new CacheConfiguration<>("CACHE").setSqlFunctionClasses(clsLoader.loadClass(CUSTOM_FUNCTIONS_CLASS_NAME)));
+        try {
+            cl0.getOrCreateCache(new CacheConfiguration<>(DYNAMIC_CACHE_NAME)
+                .setSqlFunctionClasses(clsLoader.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
+        }
+        catch (Exception e) {
+            String errorMsg = e.getMessage();
+
+            assertTrue("Exception during cache template creation is expected to be about a class not found "
+                    + "during creation process but was: '" + errorMsg + "'",
+                errorMsg.contains("ClassNotFoundException"));
+
+            assertTrue("Exception during cache template creation is expected to be about a particular class: "
+                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
+                    + ", but was: '" + errorMsg + "'",
+                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(2);
+    }
+
+    /**
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
+    @Test
+    public void testAddExplicitCacheTemplateWithUnavailableClass() throws Exception {
+        startGrid(0);
+
+        clsLoader = CLIENT_SIDE_CLASS_LOADER;
+
+        IgniteEx cl0 = startClientGrid(1);
+
+        try {
+            cl0.addCacheConfiguration(new CacheConfiguration<>(DYNAMIC_CACHE_TEMPLATE)
+                .setSqlFunctionClasses(clsLoader.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
+        }
+        catch (Exception e) {
+            String errorMsg = e.getMessage();
+
+            assertTrue("Exception during cache template creation is expected to be about a class not found "
+                    + "during creation process but was: '" + errorMsg + "'",
+                errorMsg.contains("ClassNotFoundException"));
+
+            assertTrue("Exception during explicit cache template creation is expected to contain information "
+                    + "about template, but actual message was: '" + errorMsg + "'",
+                errorMsg.contains("template"));
+
+            assertTrue("Exception during cache template creation is expected to be about a particular class: "
+                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
+                    + ", but was: '" + errorMsg + "'",
+                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(2);
+    }
+
+    /**
+     * Test verifies that dynamically creating implicit cache template (a template with asterisk in its name
+     * added via standard create cache API) with a class unavailable on server classpath fails with a proper exception.
+     * However, no client or server nodes fail in the process.
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
+    @Test
+    public void testAddImplicitCacheTemplateWithUnavailableClass() throws Exception {
+        startGrid(0);
+
+        clsLoader = CLIENT_SIDE_CLASS_LOADER;
+
+        IgniteEx cl0 = startClientGrid(1);
+
+        try {
+            cl0.createCache(new CacheConfiguration<>(DYNAMIC_CACHE_TEMPLATE)
+                .setSqlFunctionClasses(clsLoader.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
+        }
+        catch (Exception e) {
+            String errorMsg = e.getMessage();
+
+            assertTrue("Exception during cache template creation is expected to be about a class not found "
+                + "during creation process but was: '" + errorMsg + "'",
+                errorMsg.contains("ClassNotFoundException"));
+
+            assertTrue("Exception during cache template creation is expected to be about a particular class: "
+                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
+                + ", but was: '" + errorMsg + "'",
+                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(2);
+    }
+
+    /**
+     * Test verifies that server node fails to start when it encounters a class missing on its classpath
+     * in static cache configuration.
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
+    @Test
+    public void testStaticCacheWithUnavailableClassInServerConfig() throws Exception {
+        staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_NAME)
+            .setSqlFunctionClasses(CLIENT_SIDE_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+
+        try {
+            startGrid(0);
+
+            fail("Server node is expected to fail when "
+                + "handling configuration with unavailable class in cache configuration: "
+                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME);
+        }
+        catch (Exception e) {
+            assertTrue("Server expected to fail on ClassNotFoundException on loading "
+                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME + " class",
+                X.hasCause(e, ClassNotFoundException.class));
+
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+            assertTrue("ClassNotFoundException was thrown with the unexpected class: " + cnfE.getMessage(),
+                cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(0);
+    }
+
+    /**
+     * Test verifies that server node fails to start when it encounters a class missing on its classpath
+     * in static cache template configuration.
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
+    @Test
+    public void testStaticCacheTemplateWithUnavailableClassInServerConfig() throws Exception {
+        staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_TEMPLATE).setBackups(5)
+            .setSqlFunctionClasses(CLIENT_SIDE_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+
+        try {
+            startGrid(0);
+
+            fail("Server node is expected to fail when "
+                + "handling configuration with unavailable class in cache template configuration: "
+                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME);
+        }
+        catch (Exception e) {
+            assertTrue("Server expected to fail on ClassNotFoundException on loading "
+                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME + " class",
+                X.hasCause(e, ClassNotFoundException.class));
+
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+            assertTrue("ClassNotFoundException was thrown with the unexpected class: " + cnfE.getMessage(),
+                cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(0);
+    }
+
+    /**
+     * Test verifies that a client with a class in its configuration that is unavialable to a server
+     * fails to join to the cluster but doesn't fail any server node.
+     *
+     * @throws Exception If test fails to set up necessary environment.
+     */
+    @Test
+    public void testStaticCacheWithUnavailableClassInClientConfig() throws Exception {
+        startGrid(0);
+
+        clsLoader = CLIENT_SIDE_CLASS_LOADER;
+
+        staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_NAME)
+            .setSqlFunctionClasses(CLIENT_SIDE_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+
+        try {
+            startClientGrid(1);
+
+            fail("Client node is expected to fail when joining to a cluster that doesn't have on its classpath "
+                + "some classes from client's configuration: "
+                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
+            );
+        }
+        catch (Exception e) {
+            assertTrue(X.hasCause(e, IgniteSpiException.class));
+
+            IgniteSpiException spiE = X.cause(e, IgniteSpiException.class);
+
+            assertTrue(spiE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(1);
     }
 }
