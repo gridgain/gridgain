@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence.checkpoint;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 /**
  * Earliest checkpoint map snapshot.
@@ -105,6 +107,16 @@ public class EarliestCheckpointMapSnapshot extends IgniteDataTransferObject {
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         data = U.readMap(in);
         checkpointIds = U.readSet(in);
+    }
+
+    /**
+     * Returns a set of checkpoint ids.
+     *
+     * @return Set of checkpoint ids.
+     */
+    @TestOnly
+    public Set<UUID> checkpointIds() {
+        return Collections.unmodifiableSet(checkpointIds);
     }
 
     /** {@link CheckpointEntry.GroupState} snapshot. */
