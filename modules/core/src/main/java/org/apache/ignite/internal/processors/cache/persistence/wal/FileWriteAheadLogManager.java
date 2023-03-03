@@ -845,6 +845,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         List<IgniteBiTuple<FileWALPointer, WALRecord>> snapshot(long segmentId) {
             return IntStream.range(0, records.length())
                 .mapToObj(records::get)
+                .filter(Objects::nonNull)
                 .filter(biTuple -> biTuple.get1().index() == segmentId)
                 .collect(toCollection(() -> new ArrayList<>(records.length())));
         }
