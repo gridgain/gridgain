@@ -2172,6 +2172,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             File file = new File(dfltWorkDir + "/artifacts", "some.txt");
 
             try {
+                log.error("!!!! try save file: " + file.getAbsolutePath());
+
                 Files.write(file.toPath(), "hello!".getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
             }
             catch (Throwable t) {

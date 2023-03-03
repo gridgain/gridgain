@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,11 +43,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -107,6 +112,7 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.io.GridFileUtils;
+import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CIX1;
 import org.apache.ignite.internal.util.typedef.CO;
@@ -127,7 +133,9 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
@@ -823,8 +831,29 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return log(rec, RolloverType.NONE);
     }
 
+    private final ConcurrentMap<Thread, LastLogWalRecord> walLogRecordPerThread = new ConcurrentHashMap<>();
+
+    private static class LastLogWalRecord {
+        final AtomicLong size = new AtomicLong();
+
+        final AtomicReferenceArray<IgniteBiTuple<FileWALPointer, WALRecord>> records = new AtomicReferenceArray<>(100);
+
+        void add(FileWALPointer ptr, WALRecord rec) {
+            records.set((int)(size.getAndIncrement() % records.length()), new IgniteBiTuple<>(ptr, rec));
+        }
+
+        List<IgniteBiTuple<FileWALPointer, WALRecord>> snapshot(long segmentId) {
+            return IntStream.range(0, records.length())
+                .mapToObj(records::get)
+                .filter(biTuple -> biTuple.get1().index() == segmentId)
+                .collect(toCollection(() -> new ArrayList<>(records.length())));
+        }
+    }
+
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
-        WALPointer ptr = log0(rec, rolloverType);
+        FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
+
+        walLogRecordPerThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
 
         if (rec instanceof TxRecord) {
             WALRecord read = null;
@@ -836,6 +865,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
             catch (Throwable t) {
                 System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
+
+                Map<Thread, List<IgniteBiTuple<FileWALPointer, WALRecord>>> snapshots = walLogRecordPerThread.entrySet().stream()
+                    .collect(toMap(Map.Entry::getKey, entry -> entry.getValue().snapshot(ptr.index())));
+
+                List<GridTuple3<Thread, FileWALPointer, WALRecord>> writeRecords = snapshots.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream().map(biTuple -> new GridTuple3<>(entry.getKey(), biTuple.get1(), biTuple.get2())))
+                    .sorted(Comparator.comparing(GridTuple3::get2))
+                    .collect(toList());
+
+                String writeRecordsStr = writeRecords.stream()
+                    .map(threeTuple -> "(off=" + threeTuple.get2().fileOffset() + ", len=" + threeTuple.get2().length() + ", rec=" + threeTuple.get3().getClass().getSimpleName() + ", thr=" + threeTuple.get1().getName() + ')')
+                    .collect(Collectors.joining(", "));
+
+                log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
 
                 throw new IgniteCheckedException(
                     String.format(
