@@ -2163,7 +2163,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         if (IgniteSystemProperties.getBoolean(OOM_HAPPEN, false)) {
             System.clearProperty(OOM_HAPPEN);
 
-            File dest = new File(dfltWorkDir + "/log", testDescription().replace("#", "_") + "_oom");
+            File dest = new File(dfltWorkDir + "/log", testDescription().replace("#", "_") + "_oom" + COUNTER.getAndIncrement());
 
             U.copy(
                 U.resolveWorkDirectory(dfltWorkDir, DFLT_STORE_DIR, false),
