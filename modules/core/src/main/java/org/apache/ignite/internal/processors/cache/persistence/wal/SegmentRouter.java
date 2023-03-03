@@ -88,6 +88,20 @@ public class SegmentRouter {
         return fd;
     }
 
+    public FileDescriptor[] findSegment1(long segmentId) {
+        FileDescriptor fd;
+
+        if (segmentAware.lastArchivedAbsoluteIndex() >= segmentId || !isArchiverEnabled())
+            fd = new FileDescriptor(new File(walArchiveDir, fileName(segmentId)));
+        else
+            fd = new FileDescriptor(new File(walWorkDir, fileName(segmentId % dsCfg.getWalSegments())), segmentId);
+
+        return new FileDescriptor[] {
+            fd,
+            new FileDescriptor(new File(walArchiveDir, fileName(fd.idx()) + ZIP_SUFFIX))
+        };
+    }
+
     /**
      * @return {@code true} If archive folder exists.
      */

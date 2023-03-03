@@ -352,7 +352,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /**
      * Manage of segment location.
      */
-    private SegmentRouter segmentRouter;
+    public SegmentRouter segmentRouter;
 
     /** Segment factory with ability locked segment during reading. */
     private SegmentFileInputFactory lockedSegmentFileInputFactory;

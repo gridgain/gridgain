@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.Optional;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -37,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.Re
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -298,7 +301,43 @@ public abstract class AbstractWalRecordsIterator
         }
         catch (OutOfMemoryError oom) {
             log.error(">>>>> OutOfMemoryError [actualFilePtr=" + actualFilePtr + ", hnd=" + hnd + ']');
+
+            FileWriteAheadLogManager wal = (FileWriteAheadLogManager)sharedCtx.wal();
+
+            FileDescriptor[] segments = wal.segmentRouter.findSegment1(hnd.idx());
+
+            File raw = segments[0].file;
+            File zip = segments[1].file;
+
+            log.error(">>>>> segments [" +
+                "rawPath=" + raw.getAbsolutePath() + ", rawExists=" + raw.exists() +
+                "zipPath=" + zip.getAbsolutePath() + ", zipExists=" + zip.exists() +
+                ']');
+
+            if (raw.exists()) {
+                byte[] rawZipBytes = IgniteUtils.zip(readAllBytes(raw));
+
+                log.error("rawContentZipBase64=" + Base64.getEncoder().encodeToString(rawZipBytes));
+            }
+
+            if (zip.exists()) {
+                byte[] zipZipBytes = IgniteUtils.zip(readAllBytes(zip));
+
+                log.error("zipContentZipBase64=" + Base64.getEncoder().encodeToString(zipZipBytes));
+            }
+
             throw oom;
+        }
+    }
+
+    private static byte[] readAllBytes(File file) {
+        assert file.exists() : file.getAbsolutePath();
+
+        try {
+            return Files.readAllBytes(file.toPath());
+        }
+        catch (IOException e) {
+            throw new RuntimeException(file.getAbsolutePath(), e);
         }
     }
 
