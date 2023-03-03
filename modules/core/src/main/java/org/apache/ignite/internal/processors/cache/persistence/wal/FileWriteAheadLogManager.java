@@ -70,6 +70,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -822,8 +823,17 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return log(rec, RolloverType.NONE);
     }
 
-    /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
+        WALPointer ptr = log0(rec, rolloverType);
+
+        if (rec instanceof TxRecord) {
+            read(ptr);
+        }
+
+        return ptr;
+    }
+
+    public WALPointer log0(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         if (serializer == null || mode == WALMode.NONE)
             return null;
 
