@@ -24,6 +24,7 @@ import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -46,6 +47,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.joining;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.readSegmentHeader;
 
 /**
@@ -306,24 +308,16 @@ public abstract class AbstractWalRecordsIterator
 
             FileDescriptor[] segments = wal.segmentRouter.findSegment1(hnd.idx());
 
-            File raw = segments[0].file;
-            File zip = segments[1].file;
-
             log.error(">>>>> segments [" +
-                "rawPath=" + raw.getAbsolutePath() + ", rawExists=" + raw.exists() +
-                "zipPath=" + zip.getAbsolutePath() + ", zipExists=" + zip.exists() +
-                ']');
+                Stream.of(segments).map(descriptor -> "path=" + descriptor.file.getAbsolutePath() + ", exists=" + descriptor.file.exists() + " ").collect(joining())
+                + ']');
 
-            if (raw.exists()) {
-                byte[] rawZipBytes = IgniteUtils.zip(readAllBytes(raw));
+            for (FileDescriptor segment : segments) {
+                if (segment.file.exists()) {
+                    byte[] zipBytes = IgniteUtils.zip(readAllBytes(segment.file));
 
-                log.error("rawContentZipBase64=" + Base64.getEncoder().encodeToString(rawZipBytes));
-            }
-
-            if (zip.exists()) {
-                byte[] zipZipBytes = IgniteUtils.zip(readAllBytes(zip));
-
-                log.error("zipContentZipBase64=" + Base64.getEncoder().encodeToString(zipZipBytes));
+                    log.error(">>>>> segment content [path=" + segment.file.getAbsolutePath() + ", content=" + Base64.getEncoder().encodeToString(zipBytes) + ']');
+                }
             }
 
             throw oom;

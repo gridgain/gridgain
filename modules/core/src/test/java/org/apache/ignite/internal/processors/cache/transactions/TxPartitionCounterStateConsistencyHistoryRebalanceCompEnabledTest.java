@@ -31,6 +31,8 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
 //        cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
         cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
+        cfg.getDataStorageConfiguration().setWalSegments(100);
+
 //        cfg.setStripedPoolSize(64);
 
         return cfg;

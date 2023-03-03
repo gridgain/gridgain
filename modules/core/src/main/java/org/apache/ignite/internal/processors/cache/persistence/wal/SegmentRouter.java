@@ -98,6 +98,7 @@ public class SegmentRouter {
 
         return new FileDescriptor[] {
             fd,
+            new FileDescriptor(new File(walWorkDir, fileName(segmentId % dsCfg.getWalSegments())), segmentId),
             new FileDescriptor(new File(walArchiveDir, fileName(fd.idx()) + ZIP_SUFFIX))
         };
     }
