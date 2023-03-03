@@ -49,6 +49,7 @@ import static org.apache.ignite.internal.commandline.persistence.PersistenceSubc
 import static org.apache.ignite.internal.commandline.persistence.PersistenceSubcommands.CLEAN;
 import static org.apache.ignite.internal.commandline.persistence.PersistenceSubcommands.INFO;
 import static org.apache.ignite.internal.commandline.persistence.PersistenceSubcommands.of;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 
 /** */
 public class PersistenceCommand extends AbstractCommand<PersistenceArguments> {
@@ -58,7 +59,7 @@ public class PersistenceCommand extends AbstractCommand<PersistenceArguments> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Optional<GridClientNode> firstNodeOpt = client.compute().nodes().stream().findFirst();
+            Optional<GridClientNode> firstNodeOpt = anyConnectableServerNode(client.compute());
 
             if (firstNodeOpt.isPresent()) {
                 UUID uuid = firstNodeOpt.get().nodeId();

@@ -38,6 +38,7 @@ import static org.apache.ignite.internal.commandline.Command.usage;
 import static org.apache.ignite.internal.commandline.CommandList.DEFRAGMENTATION;
 import static org.apache.ignite.internal.commandline.defragmentation.DefragmentationSubcommands.CANCEL;
 import static org.apache.ignite.internal.commandline.defragmentation.DefragmentationSubcommands.SCHEDULE;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 
 /** */
 public class DefragmentationCommand extends AbstractCommand<DefragmentationArguments> {
@@ -53,7 +54,7 @@ public class DefragmentationCommand extends AbstractCommand<DefragmentationArgum
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Optional<GridClientNode> firstNodeOpt = client.compute().nodes().stream().filter(GridClientNode::connectable).findFirst();
+            Optional<GridClientNode> firstNodeOpt = anyConnectableServerNode(client.compute());
 
             if (firstNodeOpt.isPresent()) {
                 VisorDefragmentationTaskResult res;

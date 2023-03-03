@@ -37,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.REBUILD_TREES;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.anyConnectableServerNode;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
@@ -55,7 +56,7 @@ public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildParti
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Optional<GridClientNode> firstNodeOpt = client.compute().nodes().stream().findFirst();
+            Optional<GridClientNode> firstNodeOpt = anyConnectableServerNode(client.compute());
 
             if (firstNodeOpt.isPresent()) {
                 VisorDrRebuildTreeTaskResult res = executeTaskByNameOnNode(client,
