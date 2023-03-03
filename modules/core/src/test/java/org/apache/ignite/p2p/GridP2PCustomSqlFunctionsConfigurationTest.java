@@ -30,7 +30,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 /**
- *
+ * Class contains tests for a set of situations when cache/cache template configuration contains
+ * a class available on classpath of a client node but not available to server.
+ * Different tests cover various scenarios: dynamic creation of a cache/template, static configuration,
+ * different APIs used to perform operations.
  */
 public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTest {
     /** Test class loader. */
@@ -93,11 +96,14 @@ public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstra
     }
 
     /**
+     * Test verifies that dynamic cache request issued by a client node with a class unavailable on server side
+     * fails with a proper exception.
+     * However, no client nor server nodes fail as a result.
      *
      * @throws Exception If test fails to set up necessary environment.
      */
     @Test
-    public void testDynamicCacheWithUnavailableClass() throws Exception {
+    public void testClientStartsDynamicCacheWithUnavailableClass() throws Exception {
         startGrid(0);
 
         clsLoader = CLIENT_SIDE_CLASS_LOADER;
@@ -125,11 +131,15 @@ public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstra
     }
 
     /**
+     * Test verifies that explicit cache template (a template with asterisk in its name
+     * added via addConfiguration cache API) dynamically created from a client node
+     * with a class unavailable on server classpath fails with a proper exception.
+     * However, no client nor server nodes fail as a result.
      *
      * @throws Exception If test fails to set up necessary environment.
      */
     @Test
-    public void testAddExplicitCacheTemplateWithUnavailableClass() throws Exception {
+    public void testClientAddsExplicitCacheTemplateWithUnavailableClass() throws Exception {
         startGrid(0);
 
         clsLoader = CLIENT_SIDE_CLASS_LOADER;
@@ -161,14 +171,15 @@ public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstra
     }
 
     /**
-     * Test verifies that dynamically creating implicit cache template (a template with asterisk in its name
-     * added via standard create cache API) with a class unavailable on server classpath fails with a proper exception.
-     * However, no client or server nodes fail in the process.
+     * Test verifies that implicit cache template (a template with asterisk in its name
+     * added via standard create cache API) dynamically created from a client node
+     * with a class unavailable on server classpath fails with a proper exception.
+     * However, no client nor server nodes fail as a result.
      *
      * @throws Exception If test fails to set up necessary environment.
      */
     @Test
-    public void testAddImplicitCacheTemplateWithUnavailableClass() throws Exception {
+    public void testClientAddsImplicitCacheTemplateWithUnavailableClass() throws Exception {
         startGrid(0);
 
         clsLoader = CLIENT_SIDE_CLASS_LOADER;

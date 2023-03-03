@@ -200,6 +200,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
         this.startCaches = startCaches;
     }
 
+    /** */
     private void readObject(ObjectInputStream in) throws IOException {
         try {
             in.defaultReadObject();
