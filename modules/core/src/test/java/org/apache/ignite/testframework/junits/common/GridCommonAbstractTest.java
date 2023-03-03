@@ -21,9 +21,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -162,6 +160,10 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.CREATE_NEW;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
@@ -2148,6 +2150,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             "[subfolderName=" + subfolderName + ", src=" + src + ", dst=" + dst + ']');
     }
 
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+
     /**
      *
      */
@@ -2157,6 +2161,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         String dfltWorkDir = U.defaultWorkDirectory();
 
         if (IgniteSystemProperties.getBoolean(OOM_HAPPEN, false)) {
+            System.clearProperty(OOM_HAPPEN);
+
             File dest = new File(dfltWorkDir + "/log", testDescription().replace("#", "_") + "_oom");
 
             U.copy(
@@ -2169,12 +2175,16 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         }
 
         if (IgniteSystemProperties.getBoolean(SHIT_HAPPEN, false)) {
-            File file = new File(dfltWorkDir + "/artifacts", "some.txt");
+            System.clearProperty(SHIT_HAPPEN);
+
+            String testName = testDescription().replace("#", "_");
+
+            File file = new File(dfltWorkDir + "/artifacts/" + testName + "/", COUNTER.getAndIncrement() + "some.txt");
 
             try {
                 log.error("!!!! try save file: " + file.getAbsolutePath());
 
-                Files.write(file.toPath(), "hello!".getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                Files.write(file.toPath(), "hello!".getBytes(UTF_8), CREATE_NEW, CREATE, WRITE);
             }
             catch (Throwable t) {
                 log.error("Error there:" + file.getAbsolutePath(), t);
