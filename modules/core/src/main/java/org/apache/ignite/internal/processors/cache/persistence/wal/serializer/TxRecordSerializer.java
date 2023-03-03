@@ -97,7 +97,7 @@ public class TxRecordSerializer {
 
         if (participatingNodes != null && participatingNodes.size() > 10) {
             ///
-            U.dumpStack(log, ">>> TxRecod [rec=" + rec + ']');
+            U.dumpStack(log, ">>> TxRecord [rec=" + rec + ']');
         }
 
         if (participatingNodes != null && !participatingNodes.isEmpty()) {
@@ -109,6 +109,10 @@ public class TxRecordSerializer {
                 Collection<Short> backupNodes = e.getValue();
 
                 buf.putInt(backupNodes.size());
+
+                if (backupNodes.size() > 10) {
+                    U.dumpStack(log, ">>> TxRecord [rec=" + rec + ']');
+                }
 
                 for (short backupNode : backupNodes)
                     buf.putShort(backupNode);

@@ -38,6 +38,7 @@ public class TxRecord extends TimeStampRecord {
     private final GridCacheVersion nearXidVer;
 
     /** Transaction entries write topology version. */
+    @GridToStringInclude
     private final GridCacheVersion writeVer;
 
     /**
@@ -46,6 +47,7 @@ public class TxRecord extends TimeStampRecord {
      * Structure:
      * Primary node -> [Backup nodes...], where nodes are identified by compact ID for some baseline topology.
      **/
+    @GridToStringInclude
     @Nullable private Map<Short, Collection<Short>> participatingNodes;
 
     /**
