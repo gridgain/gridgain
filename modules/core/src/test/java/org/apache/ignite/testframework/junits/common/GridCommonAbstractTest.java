@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -164,6 +167,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.OOM_HAPPEN;
+import static org.apache.ignite.IgniteSystemProperties.SHIT_HAPPEN;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheRebalanceMode.NONE;
@@ -2162,6 +2166,17 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             );
 
             log.warning(">>> COPY PDS ON OOM: " + dest.getAbsolutePath());
+        }
+
+        if (IgniteSystemProperties.getBoolean(SHIT_HAPPEN, false)) {
+            File file = new File(dfltWorkDir + "/artifacts", "some.txt");
+
+            try {
+                Files.write(file.toPath(), "hello!".getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE_NEW, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            }
+            catch (Throwable t) {
+                log.error("Error there:" + file.getAbsolutePath(), t);
+            }
         }
 
         deleteDirWithCheckAndLogging(U.resolveWorkDirectory(dfltWorkDir, "cp", false));

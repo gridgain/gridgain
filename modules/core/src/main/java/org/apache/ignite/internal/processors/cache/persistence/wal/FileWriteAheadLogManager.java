@@ -835,10 +835,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 assert read instanceof TxRecord : read;
             }
             catch (Throwable t) {
+                System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
+
                 throw new IgniteCheckedException(
                     String.format(
                         ">>>>> Invalid read record [expRecord=%s, expRecordSize=%s, ptr=%s, actRecord=%s, actRecordSize=%s]",
-                        rec, serializer.size(rec), ptr, read, serializer.size(read)
+                        rec, serializer.size(rec), ptr, read, read != null ? serializer.size(read) : 0
                     ),
                     t
                 );
