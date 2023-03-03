@@ -827,7 +827,22 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         WALPointer ptr = log0(rec, rolloverType);
 
         if (rec instanceof TxRecord) {
-            read(ptr);
+            WALRecord read = null;
+
+            try {
+                read = read(ptr);
+
+                assert read instanceof TxRecord : read;
+            }
+            catch (Throwable t) {
+                throw new IgniteCheckedException(
+                    String.format(
+                        ">>>>> Invalid read record [expRecord=%s, expRecordSize=%s, ptr=%s, actRecord=%s, actRecordSize=%s]",
+                        rec, serializer.size(rec), ptr, read, serializer.size(read)
+                    ),
+                    t
+                );
+            }
         }
 
         return ptr;
