@@ -832,9 +832,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     private final ConcurrentMap<Thread, LastLogWalRecord> lastLogWalRecordByThread = new ConcurrentHashMap<>();
 
-    private static class LastLogWalRecord {
-        final AtomicBoolean stopRecord = new AtomicBoolean();
+    private final AtomicBoolean stopAddLastLogWalRecord = new AtomicBoolean();
 
+    private static class LastLogWalRecord {
         final AtomicLong currentAbsSegmentIdx = new AtomicLong();
 
         final AtomicInteger size = new AtomicInteger();
@@ -842,9 +842,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         final AtomicReferenceArray<LogWalRecord> records = new AtomicReferenceArray<>(100_000);
 
         void add(FileWALPointer ptr, WALRecord rec) {
-            if (stopRecord.get())
-                return;
-
             if (ptr.index() != currentAbsSegmentIdx.get()) {
                 currentAbsSegmentIdx.set(ptr.index());
 
@@ -852,10 +849,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             }
 
             records.set(size.getAndIncrement() % records.length(), new LogWalRecord(ptr, rec));
-        }
-
-        void stopAddRecord() {
-            stopRecord.set(true);
         }
 
         List<LogWalRecord> collect(long absSegmentId, int lowFileOffset, int upperFileOffset) {
@@ -902,7 +895,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
-        lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
+        if (ptr != null && !stopAddLastLogWalRecord.get())
+            lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
 
         if (rec instanceof TxRecord) {
             WALRecord read = null;
@@ -915,7 +909,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             catch (Throwable t) {
                 System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
-                lastLogWalRecordByThread.values().forEach(LastLogWalRecord::stopAddRecord);
+                stopAddLastLogWalRecord.set(true);
 
                 Map<Thread, List<LogWalRecord>> collected = new HashMap<>();
 
