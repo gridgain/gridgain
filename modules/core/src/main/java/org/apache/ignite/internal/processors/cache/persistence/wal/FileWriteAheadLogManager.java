@@ -45,6 +45,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -112,7 +114,6 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.io.GridFileUtils;
-import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.CIX1;
 import org.apache.ignite.internal.util.typedef.CO;
@@ -133,9 +134,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAL_ARCHIVE_SIZE_PERCENTAGE;
@@ -831,30 +830,79 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return log(rec, RolloverType.NONE);
     }
 
-    private final ConcurrentMap<Thread, LastLogWalRecord> walLogRecordPerThread = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Thread, LastLogWalRecord> lastLogWalRecordByThread = new ConcurrentHashMap<>();
 
     private static class LastLogWalRecord {
-        final AtomicLong size = new AtomicLong();
+        final AtomicBoolean stopRecord = new AtomicBoolean();
 
-        final AtomicReferenceArray<IgniteBiTuple<FileWALPointer, WALRecord>> records = new AtomicReferenceArray<>(100);
+        final AtomicLong currentAbsSegmentIdx = new AtomicLong();
+
+        final AtomicInteger size = new AtomicInteger();
+
+        final AtomicReferenceArray<LogWalRecord> records = new AtomicReferenceArray<>(100_000);
 
         void add(FileWALPointer ptr, WALRecord rec) {
-            records.set((int)(size.getAndIncrement() % records.length()), new IgniteBiTuple<>(ptr, rec));
+            if (stopRecord.get())
+                return;
+
+            if (ptr.index() != currentAbsSegmentIdx.get()) {
+                currentAbsSegmentIdx.set(ptr.index());
+
+                size.set(0);
+            }
+
+            records.set(size.getAndIncrement() % records.length(), new LogWalRecord(ptr, rec));
         }
 
-        List<IgniteBiTuple<FileWALPointer, WALRecord>> snapshot(long segmentId) {
-            return IntStream.range(0, records.length())
+        void stopAddRecord() {
+            stopRecord.set(true);
+        }
+
+        List<LogWalRecord> collect(long absSegmentId, int lowFileOffset, int upperFileOffset) {
+            return IntStream.range(0, Math.min(size.get(), records.length()))
                 .mapToObj(records::get)
                 .filter(Objects::nonNull)
-                .filter(biTuple -> biTuple.get1().index() == segmentId)
-                .collect(toCollection(() -> new ArrayList<>(records.length())));
+                .filter(logWalRecord -> logWalRecord.absSegmentIndex == absSegmentId)
+                .filter(logWalRecord -> logWalRecord.fileOffset >= lowFileOffset && logWalRecord.fileOffset <= upperFileOffset)
+                .collect(toList());
+        }
+    }
+
+    private static class LogWalRecord implements Comparable<LogWalRecord> {
+        final long absSegmentIndex;
+
+        final int fileOffset;
+
+        final int recordLength;
+
+        final int walRecordTypeIndex;
+
+        LogWalRecord(FileWALPointer ptr, WALRecord rec) {
+            this(ptr.index(), ptr.fileOffset(), ptr.length(), rec.type().index());
+        }
+
+        LogWalRecord(long absSegmentIndex, int fileOffset, int recordLength, int walRecordTypeIndex) {
+            this.absSegmentIndex = absSegmentIndex;
+            this.fileOffset = fileOffset;
+            this.recordLength = recordLength;
+            this.walRecordTypeIndex = walRecordTypeIndex;
+        }
+
+        String toString(Thread thread) {
+            return "(off=" + fileOffset + ", len=" + recordLength + ", rec=" + WALRecord.RecordType.fromIndex(walRecordTypeIndex) + ", thr=" + thread.getName() + ')';
+        }
+
+        @Override public int compareTo(FileWriteAheadLogManager.LogWalRecord other) {
+            int res = Long.compare(absSegmentIndex, other.absSegmentIndex);
+
+            return res != 0 ? res : Integer.compare(fileOffset, other.fileOffset);
         }
     }
 
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
-        walLogRecordPerThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
+        lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
 
         if (rec instanceof TxRecord) {
             WALRecord read = null;
@@ -867,16 +915,24 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             catch (Throwable t) {
                 System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
-                Map<Thread, List<IgniteBiTuple<FileWALPointer, WALRecord>>> snapshots = walLogRecordPerThread.entrySet().stream()
-                    .collect(toMap(Map.Entry::getKey, entry -> entry.getValue().snapshot(ptr.index())));
+                lastLogWalRecordByThread.values().forEach(LastLogWalRecord::stopAddRecord);
 
-                List<GridTuple3<Thread, FileWALPointer, WALRecord>> writeRecords = snapshots.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream().map(biTuple -> new GridTuple3<>(entry.getKey(), biTuple.get1(), biTuple.get2())))
-                    .sorted(Comparator.comparing(GridTuple3::get2))
+                Map<Thread, List<LogWalRecord>> collected = new HashMap<>();
+
+                for (Map.Entry<Thread, LastLogWalRecord> entry : lastLogWalRecordByThread.entrySet()) {
+                    List<LogWalRecord> collect = entry.getValue().collect(ptr.index(), ptr.fileOffset() - 25_000, ptr.fileOffset() + 1000);
+
+                    if (!collect.isEmpty())
+                        collected.put(entry.getKey(), collect);
+                }
+
+                List<IgniteBiTuple<Thread, LogWalRecord>> writeRecords = collected.entrySet().stream()
+                    .flatMap(entry -> entry.getValue().stream().map(logWalRecord -> new IgniteBiTuple<>(entry.getKey(), logWalRecord)))
+                    .sorted(Comparator.comparing(IgniteBiTuple::get2))
                     .collect(toList());
 
                 String writeRecordsStr = writeRecords.stream()
-                    .map(threeTuple -> "(off=" + threeTuple.get2().fileOffset() + ", len=" + threeTuple.get2().length() + ", rec=" + threeTuple.get3().getClass().getSimpleName() + ", thr=" + threeTuple.get1().getName() + ')')
+                    .map(biTuple -> biTuple.get2().toString(biTuple.get1()))
                     .collect(Collectors.joining(", "));
 
                 log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
