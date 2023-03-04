@@ -228,7 +228,7 @@ public class SegmentedRingByteBuffer {
         for (;;) {
             long currTail = tail;
 
-            assert !safe || currTail < 0 : "Unsafe usage of segment ring byte buffer currTail=" + currTail;
+            assert !safe || currTail < 0 : "Unsafe usage of segment ring byte buffer currTail=" + currTail + ", safe=" + safe;
 
             if (currTail < 0) {
                 if (safe)

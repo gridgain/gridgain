@@ -931,6 +931,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
                 log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
 
+                log.error(String.format(
+                    ">>>>> Some info: [walMode=%s, mmap=%s, pageCompression=%s, rolloverType=%s, fileHandleManager=%s]",
+                    mode, mmap, pageCompression, rolloverType, fileHandleManager.getClass().getSimpleName()
+                ));
+
                 throw new IgniteCheckedException(
                     String.format(
                         ">>>>> Invalid read record [expRecord=%s, expRecordSize=%s, ptr=%s, actRecord=%s, actRecordSize=%s]",
