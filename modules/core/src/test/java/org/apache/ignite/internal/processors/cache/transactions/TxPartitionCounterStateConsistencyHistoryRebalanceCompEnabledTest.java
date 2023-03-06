@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -24,12 +25,14 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.wal.record.RecordUtils;
 import org.junit.Test;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
  */
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_WAL_MMAP, value = "false")
 public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
