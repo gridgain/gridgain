@@ -77,7 +77,6 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
-import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -3061,11 +3060,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(
             @Nullable AbstractReadFileHandle hnd) throws IgniteCheckedException {
+            long hndPos = hnd == null ? -1 : hnd.in().position();
+
             if (end != null && hnd != null && hnd.in().position() >= end.fileOffset()) {
                 return null;
             }
 
-            return super.advanceRecord(hnd);
+            try {
+                return super.advanceRecord(hnd);
+            }
+            catch (Throwable t) {
+                log.error(">>>>> ON ADVANCE RECORD: [start=" + start + ", hndPos=" + hndPos + ']');
+
+                throw t;
+            }
         }
 
         /** {@inheritDoc} */
