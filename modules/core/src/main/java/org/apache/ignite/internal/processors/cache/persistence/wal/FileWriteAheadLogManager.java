@@ -895,6 +895,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    public static class SpecialException extends Exception {
+        public SpecialException(String message) {
+            super(message);
+        }
+    }
+
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
@@ -912,9 +918,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         try {
             read = read0(ptr);
 
-            assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
+            if (rec.type() != read.type())
+                throw new SpecialException("rec=" + rec + ", read=" + read);
         }
-        catch (Throwable t) {
+        catch (OutOfMemoryError | SpecialException t) {
             System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
             stopAddLastLogWalRecord.set(true);
@@ -1105,7 +1112,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     public WALIterator replay(
         WALPointer start,
-        FileWALPointer end,
+        @Nullable FileWALPointer end,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
     ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
@@ -3074,7 +3081,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 return super.advanceRecord(hnd);
             }
             catch (Throwable t) {
-                log.error(">>>>> ON ADVANCE RECORD: [start=" + start + ", hndPos=" + hndPos + ']');
+                log.error(">>>>> ON ADVANCE RECORD: [start=" + start + ", end=" + end + ", hndPos=" + hndPos + ']');
 
                 throw t;
             }
