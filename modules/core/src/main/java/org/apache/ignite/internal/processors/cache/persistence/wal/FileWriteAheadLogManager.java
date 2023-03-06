@@ -901,52 +901,50 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         if (ptr != null && !stopAddLastLogWalRecord.get())
             lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
 
-        if (rec instanceof TxRecord) {
-            WALRecord read = null;
+        WALRecord read = null;
 
-            try {
-                read = read0(ptr);
+        try {
+            read = read0(ptr);
 
-                assert read instanceof TxRecord : read;
+            assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
+        }
+        catch (Throwable t) {
+            System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
+
+            stopAddLastLogWalRecord.set(true);
+
+            Map<Thread, List<LogWalRecord>> collected = new HashMap<>();
+
+            for (Map.Entry<Thread, LastLogWalRecord> entry : lastLogWalRecordByThread.entrySet()) {
+                List<LogWalRecord> collect = entry.getValue().collect(ptr.index(), ptr.fileOffset() - 25_000, ptr.fileOffset() + 1000);
+
+                if (!collect.isEmpty())
+                    collected.put(entry.getKey(), collect);
             }
-            catch (Throwable t) {
-                System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
-                stopAddLastLogWalRecord.set(true);
+            List<IgniteBiTuple<Thread, LogWalRecord>> writeRecords = collected.entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream().map(logWalRecord -> new IgniteBiTuple<>(entry.getKey(), logWalRecord)))
+                .sorted(Comparator.comparing(IgniteBiTuple::get2))
+                .collect(toList());
 
-                Map<Thread, List<LogWalRecord>> collected = new HashMap<>();
+            String writeRecordsStr = writeRecords.stream()
+                .map(biTuple -> biTuple.get2().toString(biTuple.get1()))
+                .collect(Collectors.joining(", "));
 
-                for (Map.Entry<Thread, LastLogWalRecord> entry : lastLogWalRecordByThread.entrySet()) {
-                    List<LogWalRecord> collect = entry.getValue().collect(ptr.index(), ptr.fileOffset() - 25_000, ptr.fileOffset() + 1000);
+            log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
 
-                    if (!collect.isEmpty())
-                        collected.put(entry.getKey(), collect);
-                }
+            log.error(String.format(
+                ">>>>> Some info: [walMode=%s, mmap=%s, pageCompression=%s, rolloverType=%s, fileHandleManager=%s]",
+                mode, mmap, pageCompression, rolloverType, fileHandleManager.getClass().getSimpleName()
+            ));
 
-                List<IgniteBiTuple<Thread, LogWalRecord>> writeRecords = collected.entrySet().stream()
-                    .flatMap(entry -> entry.getValue().stream().map(logWalRecord -> new IgniteBiTuple<>(entry.getKey(), logWalRecord)))
-                    .sorted(Comparator.comparing(IgniteBiTuple::get2))
-                    .collect(toList());
-
-                String writeRecordsStr = writeRecords.stream()
-                    .map(biTuple -> biTuple.get2().toString(biTuple.get1()))
-                    .collect(Collectors.joining(", "));
-
-                log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
-
-                log.error(String.format(
-                    ">>>>> Some info: [walMode=%s, mmap=%s, pageCompression=%s, rolloverType=%s, fileHandleManager=%s]",
-                    mode, mmap, pageCompression, rolloverType, fileHandleManager.getClass().getSimpleName()
-                ));
-
-                throw new IgniteCheckedException(
-                    String.format(
-                        ">>>>> Invalid read record [expRecord=%s, expRecordSize=%s, ptr=%s, actRecord=%s, actRecordSize=%s]",
-                        rec, serializer.size(rec), ptr, read, read != null ? serializer.size(read) : 0
-                    ),
-                    t
-                );
-            }
+            throw new IgniteCheckedException(
+                String.format(
+                    ">>>>> Invalid read record [expRecord=%s, expRecordSize=%s, ptr=%s, actRecord=%s, actRecordSize=%s]",
+                    rec, serializer.size(rec), ptr, read, read != null ? serializer.size(read) : 0
+                ),
+                t
+            );
         }
 
         return ptr;
