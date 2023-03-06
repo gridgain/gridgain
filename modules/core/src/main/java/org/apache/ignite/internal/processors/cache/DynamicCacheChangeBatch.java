@@ -73,7 +73,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     @Nullable private transient ServiceDeploymentActions serviceDeploymentActions;
 
     /** Exception thrown during deserialization of this message (if any). */
-    private transient ClassNotFoundException deserEx;
+    private ClassNotFoundException deserEx;
 
     /**
      * @param reqs Requests.
