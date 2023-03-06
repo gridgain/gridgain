@@ -16,19 +16,18 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.Comparator;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.shutdown.ShutdownPolicyArgument;
 import org.apache.ignite.internal.visor.shutdown.VisorShutdownPolicyTask;
 import org.apache.ignite.internal.visor.shutdown.VisorShutdownPolicyTaskArg;
 import org.apache.ignite.internal.visor.shutdown.VisorShutdownPolicyTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandList.SHUTDOWN_POLICY;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
 /**
  * Command for change or display policy for shutdown.
@@ -40,13 +39,7 @@ public class ShutdownPolicyCommand extends AbstractCommand<ShutdownPolicyArgumen
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            UUID coordinatorId = client.compute()
-                //Only non client node can be coordinator.
-                .nodes(node -> !node.isClient())
-                .stream()
-                .min(Comparator.comparingLong(GridClientNode::order))
-                .map(GridClientNode::nodeId)
-                .orElse(null);
+            UUID coordinatorId = coordinatorId(client.compute());
 
             VisorShutdownPolicyTaskResult res = TaskExecutor.executeTaskByNameOnNode(
                 client,
