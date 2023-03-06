@@ -2997,10 +2997,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @param reqId
-     * @param initiatingNodeId
-     * @param success
-     * @param err
+     * @param reqId ID of a request to complete a future for.
+     * @param initiatingNodeId ID of a node that requested the original operation.
+     * @param success Future result.
+     * @param err Error if any.
      */
     private void completeCacheStartFuture(UUID reqId, UUID initiatingNodeId, boolean success, @Nullable Throwable err) {
         if (ctx.localNodeId().equals(initiatingNodeId)) {
@@ -4249,8 +4249,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                     for (Map.Entry<UUID, UUID> entry : batchMsg.cacheReqsMapping().entrySet()) {
                         log.warning("Failed to handle cache start request," +
-                            " an exception was thrown during request message deserialization: " + deserEx + "." +
-                            " Request ID: " + entry.getKey() + "," +
+                            " an exception was thrown during request message deserialization: " + deserEx + '.' +
+                            " Request ID: " + entry.getKey() + ',' +
                             " Initiating node ID: " + entry.getValue());
 
                         completeCacheStartFuture(entry.getKey(), entry.getValue(), false, err);
@@ -4261,8 +4261,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     Throwable err = new IgniteCheckedException(
                         String.format(errMsgTemplate, "add new cache template"));
 
-                    for (Map.Entry<String, IgniteUuid> entry : batchMsg.cacheTemplateReqsMapping().entrySet())
+                    for (Map.Entry<String, IgniteUuid> entry : batchMsg.cacheTemplateReqsMapping().entrySet()) {
+                        log.warning("Failed to handle add cache template request," +
+                            " an exception was thrown during message deserialization: " + deserEx + '.' +
+                            " Cache name: " + entry.getKey() + ',' +
+                            " Deployment ID: " + entry.getValue());
+
                         completeTemplateAddFuture(entry.getKey(), entry.getValue(), err);
+                    }
                 }
 
                 return false;

@@ -51,7 +51,8 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
      * for a situation with incomplete deserialization when no requests can be obtained from the collection. */
     private Map<UUID, UUID> cacheReqsMapping;
 
-    /** Cache name -> Deployment ID mapping */
+    /** Cache name -> Deployment ID mapping. This collection is needed for the same purpose as the other one:
+     * {@link #cacheReqsMapping}. */
     private Map<String, IgniteUuid> cacheTemplateReqsMapping;
 
     /** Change requests. */
@@ -71,8 +72,8 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     @GridToStringExclude
     @Nullable private transient ServiceDeploymentActions serviceDeploymentActions;
 
-    /** */
-    private ClassNotFoundException deserEx;
+    /** Exception thrown during deserialization of this message (if any). */
+    private transient ClassNotFoundException deserEx;
 
     /**
      * @param reqs Requests.
