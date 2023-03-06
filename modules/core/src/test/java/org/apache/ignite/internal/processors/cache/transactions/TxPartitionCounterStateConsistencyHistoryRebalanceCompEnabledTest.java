@@ -41,10 +41,10 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
 //        cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
-//        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
+        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
         cfg.getDataStorageConfiguration().setWalSegments(100);
-        cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath());
+//        cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath());
 
 //        cfg.setStripedPoolSize(64);
 
