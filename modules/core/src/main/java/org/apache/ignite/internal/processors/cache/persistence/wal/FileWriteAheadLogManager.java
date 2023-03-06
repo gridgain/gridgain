@@ -898,7 +898,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
-        if (ptr != null && !stopAddLastLogWalRecord.get())
+        if (ptr == null)
+            return ptr;
+
+        if (!stopAddLastLogWalRecord.get())
             lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
 
         WALRecord read = null;
