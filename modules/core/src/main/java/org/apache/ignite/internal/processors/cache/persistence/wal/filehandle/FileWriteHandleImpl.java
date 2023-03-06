@@ -262,11 +262,19 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                             long written0 = written;
 
                             if (seg.position() > written0) {
-                                if (WRITTEN_UPD.compareAndSet(this, written0, seg.position()))
+                                if (WRITTEN_UPD.compareAndSet(this, written0, seg.position())) {
+                                    written0 = -written0;
+
                                     break;
+                                }
                             }
-                            else
+                            else {
+                                written0 = -written0;
+
                                 break;
+                            }
+
+                            ptr.setWritten(written0);
                         }
                     }
 
@@ -403,6 +411,8 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
 
                     List<SegmentedRingByteBuffer.ReadSegment> segs = buf.poll(pos);
 
+                    StringBuilder sb = new StringBuilder(", FSYNCER=" + FSYNCER.getClass().getSimpleName());
+
                     if (segs != null) {
                         assert segs.size() == 1;
 
@@ -411,10 +421,15 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                         int off = seg.buffer().position();
                         int len = seg.buffer().limit() - off;
 
+                        sb.append(", segs=true, segOff=" + off + ", segLen=" + len + ", segNewHead=" + seg.newHead);
+
                         fsync((MappedByteBuffer)buf.buf, off, len);
 
                         seg.release();
-                    }
+                    } else
+                        sb.append(", segs=false");
+
+                    log.error(">>>>> FSYNC MMAP: [ptr=" + ptr + sb + ']', new Exception());
                 }
                 else
                     walWriter.force();

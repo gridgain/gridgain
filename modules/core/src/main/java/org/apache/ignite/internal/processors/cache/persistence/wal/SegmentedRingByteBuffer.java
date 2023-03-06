@@ -550,7 +550,7 @@ public class SegmentedRingByteBuffer {
      */
     public class ReadSegment extends Segment {
         /** New head. */
-        private final long newHead;
+        public final long newHead;
 
         /**
          * @param seg Seg.

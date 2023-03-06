@@ -870,19 +870,22 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         final int walRecordTypeIndex;
 
+        final long written;
+
         LogWalRecord(FileWALPointer ptr, WALRecord rec) {
-            this(ptr.index(), ptr.fileOffset(), ptr.length(), rec.type().index());
+            this(ptr.index(), ptr.fileOffset(), ptr.length(), rec.type().index(), ptr.getWritten());
         }
 
-        LogWalRecord(long absSegmentIndex, int fileOffset, int recordLength, int walRecordTypeIndex) {
+        LogWalRecord(long absSegmentIndex, int fileOffset, int recordLength, int walRecordTypeIndex, long written) {
             this.absSegmentIndex = absSegmentIndex;
             this.fileOffset = fileOffset;
             this.recordLength = recordLength;
             this.walRecordTypeIndex = walRecordTypeIndex;
+            this.written = written;
         }
 
         String toString(Thread thread) {
-            return "(off=" + fileOffset + ", len=" + recordLength + ", rec=" + WALRecord.RecordType.fromIndex(walRecordTypeIndex) + ", thr=" + thread.getName() + ')';
+            return "(off=" + fileOffset + ", len=" + recordLength + ", wrt=" + written + ", rec=" + WALRecord.RecordType.fromIndex(walRecordTypeIndex) + ", thr=" + thread.getName() + ')';
         }
 
         @Override public int compareTo(FileWriteAheadLogManager.LogWalRecord other) {
