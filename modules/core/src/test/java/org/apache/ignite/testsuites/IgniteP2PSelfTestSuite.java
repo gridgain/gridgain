@@ -20,30 +20,7 @@ import org.apache.ignite.internal.managers.deployment.GridDeploymentMessageCount
 import org.apache.ignite.internal.managers.deployment.GridDifferentLocalDeploymentSelfTest;
 import org.apache.ignite.internal.managers.deployment.P2PCacheOperationIntoComputeTest;
 import org.apache.ignite.internal.managers.deployment.P2PClassLoadingIssuesTest;
-import org.apache.ignite.p2p.DeploymentClassLoaderCallableTest;
-import org.apache.ignite.p2p.GridP2PClassLoadingSelfTest;
-import org.apache.ignite.p2p.GridP2PComputeWithNestedEntryProcessorTest;
-import org.apache.ignite.p2p.GridP2PContinuousDeploymentClientDisconnectTest;
-import org.apache.ignite.p2p.GridP2PContinuousDeploymentSelfTest;
-import org.apache.ignite.p2p.GridP2PCountTiesLoadClassDirectlyFromClassLoaderTest;
-import org.apache.ignite.p2p.GridP2PDifferentClassLoaderSelfTest;
-import org.apache.ignite.p2p.GridP2PDoubleDeploymentSelfTest;
-import org.apache.ignite.p2p.GridP2PHotRedeploymentSelfTest;
-import org.apache.ignite.p2p.GridP2PJobClassLoaderSelfTest;
-import org.apache.ignite.p2p.GridP2PLocalDeploymentSelfTest;
-import org.apache.ignite.p2p.GridP2PMissedResourceCacheSizeSelfTest;
-import org.apache.ignite.p2p.GridP2PNodeLeftSelfTest;
-import org.apache.ignite.p2p.GridP2PRecursionTaskSelfTest;
-import org.apache.ignite.p2p.GridP2PRemoteClassLoadersSelfTest;
-import org.apache.ignite.p2p.GridP2PSameClassLoaderSelfTest;
-import org.apache.ignite.p2p.GridP2PScanQueryWithTransformerTest;
-import org.apache.ignite.p2p.GridP2PTimeoutSelfTest;
-import org.apache.ignite.p2p.GridP2PUndeploySelfTest;
-import org.apache.ignite.p2p.P2PClassLoadingFailureHandlingTest;
-import org.apache.ignite.p2p.P2PScanQueryUndeployTest;
-import org.apache.ignite.p2p.P2PStreamingClassLoaderTest;
-import org.apache.ignite.p2p.P2PUnsupportedClassVersionTest;
-import org.apache.ignite.p2p.SharedDeploymentTest;
+import org.apache.ignite.p2p.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -80,7 +57,8 @@ import org.junit.runners.Suite;
     GridP2PContinuousDeploymentClientDisconnectTest.class,
     P2PUnsupportedClassVersionTest.class,
     P2PClassLoadingFailureHandlingTest.class,
-    P2PClassLoadingIssuesTest.class
+    P2PClassLoadingIssuesTest.class,
+    P2PCustomSqlFunctionsConfigurationTest.class
 })
 public class IgniteP2PSelfTestSuite {
 }

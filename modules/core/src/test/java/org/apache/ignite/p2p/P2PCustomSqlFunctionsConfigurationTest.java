@@ -36,7 +36,7 @@ import java.net.URLClassLoader;
  * Different tests cover various scenarios: dynamic creation of a cache/template, static configuration,
  * different APIs used to perform operations.
  */
-public class GridP2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTest {
+public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTest {
     /** Test class loader. */
     private static final ClassLoader CONFIGURATION_CLASS_LOADER;
 
