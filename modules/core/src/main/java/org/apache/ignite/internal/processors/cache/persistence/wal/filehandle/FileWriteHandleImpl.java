@@ -261,20 +261,22 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                         while (true) {
                             long written0 = written;
 
-                            if (seg.position() > written0) {
-                                if (WRITTEN_UPD.compareAndSet(this, written0, seg.position())) {
+                            try {
+                                if (seg.position() > written0) {
+                                    if (WRITTEN_UPD.compareAndSet(this, written0, seg.position())) {
+                                        written0 = -written0;
+
+                                        break;
+                                    }
+                                }
+                                else {
                                     written0 = -written0;
 
                                     break;
                                 }
+                            } finally {
+                                ptr.setWritten(written0);
                             }
-                            else {
-                                written0 = -written0;
-
-                                break;
-                            }
-
-                            ptr.setWritten(written0);
                         }
                     }
 
@@ -429,7 +431,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                     } else
                         sb.append(", segs=false");
 
-                    log.error(">>>>> FSYNC MMAP: [ptr=" + ptr + sb + ']', new Exception());
+                    log.error(">>>>> FSYNC MMAP: [ptr=" + ptr + sb + ']');
                 }
                 else
                     walWriter.force();
