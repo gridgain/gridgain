@@ -77,6 +77,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -902,6 +903,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         if (!stopAddLastLogWalRecord.get())
             lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
+
+        if (!(rec instanceof TxRecord))
+            return ptr;
 
         WALRecord read = null;
 
