@@ -895,12 +895,6 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
-    public static class SpecialException extends Exception {
-        public SpecialException(String message) {
-            super(message);
-        }
-    }
-
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
@@ -918,10 +912,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         try {
             read = read0(ptr);
 
-            if (rec.type() != read.type())
-                throw new SpecialException("rec=" + rec + ", read=" + read);
+            assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
         }
-        catch (OutOfMemoryError | SpecialException t) {
+        catch (Throwable t) {
             System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
             stopAddLastLogWalRecord.set(true);
