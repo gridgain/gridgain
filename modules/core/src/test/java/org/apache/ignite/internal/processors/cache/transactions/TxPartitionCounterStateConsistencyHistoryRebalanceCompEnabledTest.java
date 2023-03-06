@@ -16,32 +16,35 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.wal.record.RecordUtils;
+import org.apache.ignite.transactions.TransactionState;
 import org.junit.Test;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
  */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_WAL_MMAP, value = "false")
 public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
 //        cfg.getDataStorageConfiguration().setWalCompactionEnabled(false);
-        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
+//        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
         cfg.getDataStorageConfiguration().setWalSegments(100);
+        cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath());
 
 //        cfg.setStripedPoolSize(64);
 
@@ -105,8 +108,25 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
 
         IgniteInternalFuture future1 = GridTestUtils.runAsync(() -> {
             try {
-                for (int i = 0; i < 1_000 && !stop.get(); i++)
+                for (int i = 0; i < 1_000 && !stop.get(); i++) {
                     wal.log(RecordUtils.buildTxRecord());
+
+                    wal.log(new TxRecord(
+                        TransactionState.PREPARED,
+                        new GridCacheVersion(289558248, 1678078245493L, 1, 0),
+                        new GridCacheVersion(289558248, 1678078245498L, 1, 0),
+                        new HashMap<>(Collections.singletonMap((short)0, Collections.singleton((short)32767))),
+                        1678078249284L
+                    ));
+
+                    wal.log(new TxRecord(
+                        TransactionState.COMMITTED,
+                        new GridCacheVersion(289558164, 1678078166239L, 1, 0),
+                        new GridCacheVersion(289558164, 1678078166240L, 1, 0),
+                        new HashMap<>(Collections.singletonMap((short)0, Collections.singleton((short)32767))),
+                        1678078167906L
+                    ));
+                }
             } catch (Throwable t) {
                 stop.compareAndSet(false, true);
 

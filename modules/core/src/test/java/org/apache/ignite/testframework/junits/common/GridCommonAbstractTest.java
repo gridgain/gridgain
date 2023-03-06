@@ -2165,6 +2165,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
             File dest = new File(dfltWorkDir + "/log", testDescription().replace("#", "_") + "_oom" + COUNTER.getAndIncrement());
 
+            U.delete(dest);
+
             U.copy(
                 U.resolveWorkDirectory(dfltWorkDir, DFLT_STORE_DIR, false),
                 dest,
@@ -2180,6 +2182,8 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             String testName = testDescription().replace("#", "_");
 
             File file = new File(dfltWorkDir + "/artifacts/" + testName + "/", COUNTER.getAndIncrement() + "some.txt");
+
+            U.delete(file);
 
             try {
                 log.error("!!!! try save file: " + file.getAbsolutePath());
