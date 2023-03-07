@@ -236,6 +236,9 @@ public class H2Utils {
         sql.a(',').a(VAL_FIELD_NAME).a(' ').a(valTypeStr).a(keyValVisibility);
 
         for (Map.Entry<String, Class<?>> e : tbl.type().fields().entrySet()) {
+            if (e.getKey().equals(KEY_FIELD_NAME))
+                continue;
+
             GridQueryProperty prop = tbl.type().property(e.getKey());
 
             sql.a(',')
@@ -769,7 +772,8 @@ public class H2Utils {
         String ptrn = "Name ''{0}'' is reserved and cannot be used as a field name [type=" + type.name() + "]";
 
         for (String name : names) {
-            if (name.equalsIgnoreCase(KEY_FIELD_NAME) || name.equalsIgnoreCase(VAL_FIELD_NAME))
+            //name.equalsIgnoreCase(KEY_FIELD_NAME)
+            if (name.equalsIgnoreCase(VAL_FIELD_NAME))
                 throw new IgniteCheckedException(MessageFormat.format(ptrn, name));
         }
     }
@@ -1097,7 +1101,8 @@ public class H2Utils {
         for (IndexColumn idxCol : idxCols) {
             if (idxCol.column.getColumnId() == KEY_COL) {
                 if (QueryUtils.isSqlType(type.keyClass())) {
-                    int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
+                    int altKeyColId = KEY_FIELD_NAME.equals(idxCol.column.getName()) ? QueryUtils.KEY_COL :
+                        tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.
                     IndexColumn idxKeyCol = new IndexColumn();

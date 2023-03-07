@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.BinaryObject;
@@ -227,6 +228,7 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public <T> T value(String field, Object key, Object val) throws IgniteCheckedException {
         assert field != null;
+        assert false;
 
         GridQueryProperty prop = property(field);
 
@@ -741,7 +743,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
         for (int i = 0; i < propsWithDefaultValue.size(); ++i) {
             GridQueryProperty prop = propsWithDefaultValue.get(i);
 
-            prop.setValue(key, val, prop.defaultValue());
+            System.out.println(Thread.currentThread().getName()  + " >xxx> set defaults " + prop.defaultValue());
+
+            prop.setValue(key, val, (prop.defaultValue() instanceof UUID ? UUID.randomUUID() : prop.defaultValue()));
         }
     }
 

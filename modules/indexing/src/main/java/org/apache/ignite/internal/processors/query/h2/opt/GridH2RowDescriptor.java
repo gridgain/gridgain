@@ -412,6 +412,7 @@ public class GridH2RowDescriptor {
      * @return Result.
      */
     public int getAlternativeColumnId(int colId) {
+        // TOOD if implicit - nothing to do
         if (keyAliasColId > 0) {
             if (colId == QueryUtils.KEY_COL)
                 return keyAliasColId;

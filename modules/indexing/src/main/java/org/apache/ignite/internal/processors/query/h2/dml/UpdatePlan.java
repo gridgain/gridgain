@@ -42,6 +42,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.gridgain.internal.h2.table.Column;
+import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.query.h2.dml.UpdateMode.BULK_LOAD;
@@ -212,9 +213,10 @@ public final class UpdatePlan {
         Object key = keySupplier.apply(row);
 
         if (QueryUtils.isSqlType(desc.keyClass())) {
-            assert keyColIdx != -1;
-
-            key = DmlUtils.convert(key, rowDesc, desc.keyClass(), colTypes[keyColIdx], colNames[keyColIdx]);
+            if (keyColIdx != -1)
+                key = DmlUtils.convert(key, rowDesc, desc.keyClass(), colTypes[keyColIdx], colNames[keyColIdx]);
+            else
+                key = DmlUtils.convert(key, rowDesc, desc.keyClass(), Value.UUID, "ID");
         }
 
         Object val = valSupplier.apply(row);

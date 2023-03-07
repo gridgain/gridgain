@@ -96,6 +96,16 @@ public class GridSqlCreateTable extends GridSqlStatement {
     /** INLINE_SIZE for affinity key index. */
     private Integer affInlineSize;
 
+    private boolean implicitPk;
+
+    public void implicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
+    }
+
+    public boolean implicitPk() {
+        return implicitPk;
+    }
+
     /**
      * @return Cache name upon which new cache configuration for this table must be based.
      */

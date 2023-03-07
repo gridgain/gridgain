@@ -47,6 +47,8 @@ public class QueryEntityEx extends QueryEntity {
     /** INLINE_SIZE for affinity field index. */
     private Integer affKeyInlineSize;
 
+    private boolean implicitPk;
+
     /**
      * Default constructor.
      */
@@ -171,6 +173,14 @@ public class QueryEntityEx extends QueryEntity {
         this.affKeyInlineSize = affKeyInlineSize;
 
         return this;
+    }
+
+    public boolean isImplicitPk() {
+        return implicitPk;
+    }
+
+    public void setImplicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
     }
 
     /** {@inheritDoc} */

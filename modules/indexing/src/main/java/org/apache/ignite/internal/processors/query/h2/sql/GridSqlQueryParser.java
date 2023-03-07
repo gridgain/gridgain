@@ -68,6 +68,7 @@ import org.gridgain.internal.h2.command.dml.SelectUnion;
 import org.gridgain.internal.h2.command.dml.Update;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.FunctionAlias;
+import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.UserAggregate;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
@@ -1141,9 +1142,38 @@ public class GridSqlQueryParser {
 
         List<DefineCommand> constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
 
+        boolean implicitPk = false;
+
         if (F.isEmpty(constraints)) {
-            throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
-                IgniteQueryErrorCode.PARSING);
+            implicitPk  = true;
+
+            Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
+            Session session = createTbl.getSession();
+            column.setDefaultExpression(session, Function.getFunction(session.getDatabase(), "UUID"));
+            column.setPrimaryKey(true);
+            column.setVisible(false);
+            createTbl.addColumn(column);
+
+            Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
+
+            res.schemaName(schema.getName());
+
+            CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
+
+            IndexColumn[] cols = { new IndexColumn() };
+            cols[0].columnName = column.getName();
+
+            AlterTableAddConstraint pk = new AlterTableAddConstraint(
+                session, schema, false);
+            pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
+
+
+            pk.setTableName(data.tableName);
+            pk.setIndexColumns(new IndexColumn[] {cols[0]});
+
+            createTbl.addConstraintCommand(pk);
+
+            constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
         }
 
         if (constraints.size() > 1) {
@@ -1198,7 +1228,7 @@ public class GridSqlQueryParser {
                 throw new IgniteSQLException("Duplicate column name: " + col.getName(), IgniteQueryErrorCode.PARSING);
         }
 
-        if (cols.containsKey(QueryUtils.KEY_FIELD_NAME.toUpperCase()) ||
+        if ((!implicitPk && cols.containsKey(QueryUtils.KEY_FIELD_NAME.toUpperCase())) ||
             cols.containsKey(QueryUtils.VAL_FIELD_NAME.toUpperCase())) {
             throw new IgniteSQLException("Direct specification of _KEY and _VAL columns is forbidden",
                 IgniteQueryErrorCode.PARSING);
@@ -1232,6 +1262,7 @@ public class GridSqlQueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
 
+        res.implicitPk(implicitPk);
         res.columns(cols);
         res.primaryKeyColumns(pkCols);
         res.tableName(data.tableName);
@@ -1405,10 +1436,10 @@ public class GridSqlQueryParser {
         checkTypeSupported(col.getType().getValueType(), "[colName=" + col.getName() + ']');
 
         if (col.getDefaultExpression() != null) {
-            if (!col.getDefaultExpression().isConstant()) {
-                throw new IgniteSQLException("Non-constant DEFAULT expressions are not supported [colName=" + col.getName() + ']',
-                    IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-            }
+//            if (!col.getDefaultExpression().isConstant()) {
+//                throw new IgniteSQLException("Non-constant DEFAULT expressions are not supported [colName=" + col.getName() + ']',
+//                    IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+//            }
 
             DataType colType = DataType.getDataType(col.getType().getValueType());
             DataType dfltType = DataType.getDataType(col.getDefaultExpression().getType().getValueType());

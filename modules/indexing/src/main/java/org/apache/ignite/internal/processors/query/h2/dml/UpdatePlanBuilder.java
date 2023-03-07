@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -261,6 +262,8 @@ public final class UpdatePlanBuilder {
             }
 
             GridQueryProperty prop = desc.type().property(colName);
+
+            System.out.println(">xxx> search " + colName + ", prop=" + prop);
 
             assert prop != null : "Property '" + colName + "' not found.";
 
@@ -668,9 +671,11 @@ public final class UpdatePlanBuilder {
         if (isSqlType || !hasProps) {
             if (colIdx != -1)
                 return new PlainValueSupplier(colIdx);
-            else if (isSqlType)
-                // Non constructable keys and values (SQL types) must be present in the query explicitly.
-                throw new IgniteCheckedException((key ? "Key" : "Value") + " is missing from query");
+            else
+                return (arg) -> UUID.randomUUID();
+//            else if (isSqlType)
+//                // Non constructable keys and values (SQL types) must be present in the query explicitly.
+//                throw new IgniteCheckedException((key ? "Key" : "Value") + " is missing from query");
         }
 
         if (cctx.binaryMarshaller()) {

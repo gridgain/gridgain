@@ -1084,6 +1084,7 @@ public class CommandProcessor {
         QueryEntityEx res = new QueryEntityEx();
 
         res.setTableName(createTbl.tableName());
+        res.setImplicitPk(createTbl.implicitPk());
 
         Set<String> notNullFields = null;
 

@@ -89,6 +89,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
+import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.AFFINITY_KEY_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.H2TableDescriptor.PK_HASH_IDX_NAME;
 import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
@@ -1599,7 +1600,7 @@ public class GridH2Table extends TableBase {
             proxyCol.column = col.column;
             proxyCol.sortType = col.sortType;
 
-            int altColId = desc.getAlternativeColumnId(proxyCol.column.getColumnId());
+            int altColId = KEY_FIELD_NAME.equals(col.column.getName()) ? 0 : desc.getAlternativeColumnId(proxyCol.column.getColumnId());
 
             if (altColId != proxyCol.column.getColumnId()) {
                 proxyCol.column = getColumn(altColId);
