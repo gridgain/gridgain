@@ -121,7 +121,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
         assertEquals(expSet, resSet);
     }
 
-    private List<List<?>> querySql(String sql, Object ... args) {
+    private List<List<?>> querySql(String sql, Object... args) {
         IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
         try (FieldsQueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery(sql).setArgs(args))) {

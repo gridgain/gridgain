@@ -69,7 +69,6 @@ import org.gridgain.internal.h2.command.dml.SelectUnion;
 import org.gridgain.internal.h2.command.dml.Update;
 import org.gridgain.internal.h2.engine.Constants;
 import org.gridgain.internal.h2.engine.FunctionAlias;
-import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.engine.UserAggregate;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
