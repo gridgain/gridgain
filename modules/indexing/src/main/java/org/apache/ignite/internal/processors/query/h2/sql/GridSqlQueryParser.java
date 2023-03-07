@@ -1148,32 +1148,9 @@ public class GridSqlQueryParser {
         boolean implicitPk = noPrimaryKey && IgniteSystemProperties.getBoolean(IGNITE_SQL_ALLOW_IMPLICIT_PK);
 
         if (implicitPk) {
-            Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
-            Session session = createTbl.getSession();
-//            column.setDefaultExpression(session, Function.getFunction(session.getDatabase(), "UUID"));
-            column.setPrimaryKey(true);
-            column.setVisible(false);
-            createTbl.addColumn(column);
+            AlterTableAddConstraint pk = addImplicitPk(createTbl);
 
-            Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
-
-            res.schemaName(schema.getName());
-
-            CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
-
-            IndexColumn[] cols = {new IndexColumn()};
-            cols[0].columnName = column.getName();
-
-            AlterTableAddConstraint pk = new AlterTableAddConstraint(
-                session, schema, false);
-            pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
-
-            pk.setTableName(data.tableName);
-            pk.setIndexColumns(new IndexColumn[] {cols[0]});
-
-            createTbl.addConstraintCommand(pk);
-
-            constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
+            constraints = Collections.singletonList(pk);
         }
         else if (noPrimaryKey) {
             throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
@@ -1359,6 +1336,31 @@ public class GridSqlQueryParser {
         }
 
         return res;
+    }
+
+    private AlterTableAddConstraint addImplicitPk(CreateTable createTbl) {
+        Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
+        Session session = createTbl.getSession();
+
+        column.setPrimaryKey(true);
+        column.setVisible(false);
+        createTbl.addColumn(column);
+
+        Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
+        CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
+
+        IndexColumn[] cols = {new IndexColumn()};
+        cols[0].columnName = column.getName();
+
+        AlterTableAddConstraint pk = new AlterTableAddConstraint(session, schema, false);
+        pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
+
+        pk.setTableName(data.tableName);
+        pk.setIndexColumns(new IndexColumn[] {cols[0]});
+
+        createTbl.addConstraintCommand(pk);
+
+        return pk;
     }
 
     /**
