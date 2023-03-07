@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
@@ -262,8 +263,6 @@ public final class UpdatePlanBuilder {
             }
 
             GridQueryProperty prop = desc.type().property(colName);
-
-            System.out.println(">xxx> search " + colName + ", prop=" + prop);
 
             assert prop != null : "Property '" + colName + "' not found.";
 
@@ -667,15 +666,16 @@ public final class UpdatePlanBuilder {
 
         boolean isSqlType = QueryUtils.isSqlType(cls);
 
+        if (key && ((QueryTypeDescriptorImpl)desc).implicitPk())
+            return (arg) -> UUID.randomUUID();
+
         // If we don't need to construct anything from scratch, just return value from given list.
         if (isSqlType || !hasProps) {
             if (colIdx != -1)
                 return new PlainValueSupplier(colIdx);
-            else
-                return (arg) -> UUID.randomUUID();
-//            else if (isSqlType)
-//                // Non constructable keys and values (SQL types) must be present in the query explicitly.
-//                throw new IgniteCheckedException((key ? "Key" : "Value") + " is missing from query");
+            else if (isSqlType)
+                // Non constructable keys and values (SQL types) must be present in the query explicitly.
+                throw new IgniteCheckedException((key ? "Key" : "Value") + " is missing from query");
         }
 
         if (cctx.binaryMarshaller()) {

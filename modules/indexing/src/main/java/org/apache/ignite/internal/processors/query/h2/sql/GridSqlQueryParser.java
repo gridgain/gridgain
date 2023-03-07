@@ -1340,7 +1340,6 @@ public class GridSqlQueryParser {
 
     private AlterTableAddConstraint addImplicitPk(CreateTable createTbl) {
         Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
-        Session session = createTbl.getSession();
 
         column.setPrimaryKey(true);
         column.setVisible(false);
@@ -1352,7 +1351,7 @@ public class GridSqlQueryParser {
         IndexColumn[] cols = {new IndexColumn()};
         cols[0].columnName = column.getName();
 
-        AlterTableAddConstraint pk = new AlterTableAddConstraint(session, schema, false);
+        AlterTableAddConstraint pk = new AlterTableAddConstraint(createTbl.getSession(), schema, false);
         pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
 
         pk.setTableName(data.tableName);

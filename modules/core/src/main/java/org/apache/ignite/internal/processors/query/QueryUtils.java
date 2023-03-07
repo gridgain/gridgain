@@ -504,6 +504,9 @@ public class QueryUtils {
 
         desc.tableName(qryEntity.getTableName());
 
+        if (qryEntity instanceof QueryEntityEx)
+            desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
+
         if (binaryEnabled && !keyOrValMustDeserialize) {
             // Safe to check null.
             if (SQL_TYPES.contains(valCls))
