@@ -32,6 +32,7 @@ import java.util.Objects;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryIndex;
@@ -114,6 +115,7 @@ import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.AND;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER_EQUAL;
@@ -1142,14 +1144,13 @@ public class GridSqlQueryParser {
 
         List<DefineCommand> constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
 
-        boolean implicitPk = false;
+        boolean noPrimaryKey = F.isEmpty(constraints);
+        boolean implicitPk = noPrimaryKey && IgniteSystemProperties.getBoolean(IGNITE_SQL_ALLOW_IMPLICIT_PK);
 
-        if (F.isEmpty(constraints)) {
-            implicitPk  = true;
-
+        if (implicitPk) {
             Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
             Session session = createTbl.getSession();
-            column.setDefaultExpression(session, Function.getFunction(session.getDatabase(), "UUID"));
+//            column.setDefaultExpression(session, Function.getFunction(session.getDatabase(), "UUID"));
             column.setPrimaryKey(true);
             column.setVisible(false);
             createTbl.addColumn(column);
@@ -1160,13 +1161,12 @@ public class GridSqlQueryParser {
 
             CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
 
-            IndexColumn[] cols = { new IndexColumn() };
+            IndexColumn[] cols = {new IndexColumn()};
             cols[0].columnName = column.getName();
 
             AlterTableAddConstraint pk = new AlterTableAddConstraint(
                 session, schema, false);
             pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
-
 
             pk.setTableName(data.tableName);
             pk.setIndexColumns(new IndexColumn[] {cols[0]});
@@ -1174,6 +1174,10 @@ public class GridSqlQueryParser {
             createTbl.addConstraintCommand(pk);
 
             constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
+        }
+        else if (noPrimaryKey) {
+            throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
+                IgniteQueryErrorCode.PARSING);
         }
 
         if (constraints.size() > 1) {
@@ -1436,10 +1440,10 @@ public class GridSqlQueryParser {
         checkTypeSupported(col.getType().getValueType(), "[colName=" + col.getName() + ']');
 
         if (col.getDefaultExpression() != null) {
-//            if (!col.getDefaultExpression().isConstant()) {
-//                throw new IgniteSQLException("Non-constant DEFAULT expressions are not supported [colName=" + col.getName() + ']',
-//                    IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-//            }
+            if (!col.getDefaultExpression().isConstant()) {
+                throw new IgniteSQLException("Non-constant DEFAULT expressions are not supported [colName=" + col.getName() + ']',
+                    IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+            }
 
             DataType colType = DataType.getDataType(col.getType().getValueType());
             DataType dfltType = DataType.getDataType(col.getDefaultExpression().getType().getValueType());

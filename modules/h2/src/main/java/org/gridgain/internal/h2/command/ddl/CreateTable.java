@@ -56,8 +56,6 @@ public class CreateTable extends CommandWithColumns {
         data.tableName = tableName;
     }
 
-//    public String getTable
-
     @Override
     public void addColumn(Column column) {
         data.columns.add(column);

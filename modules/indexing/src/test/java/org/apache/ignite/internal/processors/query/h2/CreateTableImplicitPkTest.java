@@ -25,8 +25,11 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 
 public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     private static final int NODES_CNT = 2;
@@ -45,6 +48,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testImplicitPk() {
         querySql("CREATE TABLE integers(i INTEGER)");
 

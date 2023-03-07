@@ -2180,6 +2180,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
+     * Allow DDL statements without explicitly specifying a PK.
+     * This mode is for testing purposes only and is strongly discouraged in a production environment.
+     */
+    @SystemProperty(value = "Allow DDL statements without explicitly specifying a PK. This mode is for testing " +
+        "purposes only and is strongly discouraged in a production environment.", defaults = "false")
+    public static final String IGNITE_SQL_ALLOW_IMPLICIT_PK = "IGNITE_SQL_ALLOW_IMPLICIT_PK";
+
+    /**
      * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
      * The default value is 1000.
      */
