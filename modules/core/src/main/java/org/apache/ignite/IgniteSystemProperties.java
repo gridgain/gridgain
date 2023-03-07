@@ -2183,8 +2183,8 @@ public final class IgniteSystemProperties {
      * Allow DDL statements without explicitly specifying a PK.
      * This mode is for testing purposes only and is strongly discouraged in a production environment.
      */
-    @SystemProperty(value = "Allow DDL statements without explicitly specifying a PK. This mode is for testing " +
-        "purposes only and is strongly discouraged in a production environment.", defaults = "false")
+    @SystemProperty(value = "Allow DDL statements without explicitly specifying a PK (this mode is for testing " +
+        "purposes only and is strongly discouraged in a production environment)", defaults = "false")
     public static final String IGNITE_SQL_ALLOW_IMPLICIT_PK = "IGNITE_SQL_ALLOW_IMPLICIT_PK";
 
     /**
