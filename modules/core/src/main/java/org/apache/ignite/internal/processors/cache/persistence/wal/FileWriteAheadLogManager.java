@@ -1112,7 +1112,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         FileWriteHandle hnd = currentHandle();
 
-        if (end != null && hnd != null)
+        if (end == null && hnd != null)
             end = hnd.position();
 
         RecordsIterator iter = new RecordsIterator(
