@@ -96,15 +96,8 @@ public class GridSqlCreateTable extends GridSqlStatement {
     /** INLINE_SIZE for affinity key index. */
     private Integer affInlineSize;
 
+    /** Flag indicating that the primary key is autocreated. */
     private boolean implicitPk;
-
-    public void implicitPk(boolean implicitPk) {
-        this.implicitPk = implicitPk;
-    }
-
-    public boolean implicitPk() {
-        return implicitPk;
-    }
 
     /**
      * @return Cache name upon which new cache configuration for this table must be based.
@@ -404,6 +397,20 @@ public class GridSqlCreateTable extends GridSqlStatement {
     /** */
     public void affinityKeyInlineSize(Integer affInlineSize) {
         this.affInlineSize = affInlineSize;
+    }
+
+    /**
+     * @param implicitPk Flag indicating that the primary key is autocreated.
+     */
+    public void implicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
+    }
+
+    /**
+     * @return Flag indicating that the primary key is autocreated.
+     */
+    public boolean implicitPk() {
+        return implicitPk;
     }
 
     /** {@inheritDoc} */
