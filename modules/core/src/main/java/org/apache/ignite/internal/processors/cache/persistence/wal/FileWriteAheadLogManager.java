@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -42,18 +43,18 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -129,11 +130,14 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THRESHOLD_WAIT_TIME_NEXT_WAL_SEGMENT;
@@ -387,6 +391,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** Pointer to the last successful checkpoint until which WAL segments can be safely deleted. */
     private volatile FileWALPointer lastCheckpointPtr = new FileWALPointer(0, 0, 0);
 
+    private volatile DumpLastLogWalRecordsWorker dumpLastLogWalRecordsWorker;
+
     /**
      * Constructor.
      *
@@ -543,6 +549,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     checkCompressionLevelBounds(dsCfg.getWalPageCompressionLevel(), pageCompression) :
                     getDefaultCompressionLevel(pageCompression);
             }
+
+            new IgniteThread(dumpLastLogWalRecordsWorker = new DumpLastLogWalRecordsWorker(log)).start();
         }
     }
 
@@ -659,6 +667,18 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
      * It shutdown workers but do not deallocate them to avoid duplication.
      */
     @Override protected void stop0(boolean cancel) {
+        stop1(cancel);
+
+        try {
+            if (dumpLastLogWalRecordsWorker != null)
+                dumpLastLogWalRecordsWorker.shutdown();
+        }
+        catch (Throwable e) {
+            U.error(log, ">>>>> Failed to gracefully shutdown DUMPER", e);
+        }
+    }
+
+    protected void stop1(boolean cancel) {
         final GridTimeoutProcessor.CancelableTask schedule = backgroundFlushSchedule;
 
         if (schedule != null)
@@ -707,7 +727,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             log.debug("DeActivate file write ahead log [nodeId=" + cctx.localNodeId() +
                 " topVer=" + cctx.discovery().topologyVersionEx() + " ]");
 
-        stop0(true);
+        stop1(true);
 
         currHnd = null;
     }
@@ -830,34 +850,69 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return log(rec, RolloverType.NONE);
     }
 
-    private final ConcurrentMap<Thread, LastLogWalRecord> lastLogWalRecordByThread = new ConcurrentHashMap<>();
+    private final BlockingQueue<LastLogWalRecordsToDump> lastLogWalRecordsToDump = new LinkedBlockingQueue<>();
+
+    private final ConcurrentMap<Thread, LastLogWalRecords> lastLogWalRecordByThread = new ConcurrentHashMap<>();
 
     private final AtomicBoolean stopAddLastLogWalRecord = new AtomicBoolean();
 
-    private static class LastLogWalRecord {
+    private class LastLogWalRecords {
         final AtomicLong currentAbsSegmentIdx = new AtomicLong();
 
-        final AtomicInteger size = new AtomicInteger();
-
-        final AtomicReferenceArray<LogWalRecord> records = new AtomicReferenceArray<>(100_000);
+        volatile Collection<LogWalRecord> records = new ConcurrentLinkedQueue<>();
 
         void add(FileWALPointer ptr, WALRecord rec) {
             if (ptr.index() != currentAbsSegmentIdx.get()) {
                 currentAbsSegmentIdx.set(ptr.index());
 
-                size.set(0);
+                dump(Thread.currentThread());
             }
 
-            records.set(size.getAndIncrement() % records.length(), new LogWalRecord(ptr, rec));
+            records.add(new LogWalRecord(ptr, rec));
         }
 
         List<LogWalRecord> collect(long absSegmentId, int lowFileOffset, int upperFileOffset) {
-            return IntStream.range(0, Math.min(size.get(), records.length()))
-                .mapToObj(records::get)
+            return records.stream()
                 .filter(Objects::nonNull)
                 .filter(logWalRecord -> logWalRecord.absSegmentIndex == absSegmentId)
                 .filter(logWalRecord -> logWalRecord.fileOffset >= lowFileOffset && logWalRecord.fileOffset <= upperFileOffset)
                 .collect(toList());
+        }
+
+        void dump(Thread thread) {
+            lastLogWalRecordsToDump.add(
+                new LastLogWalRecordsToDump(thread, currentAbsSegmentIdx.get(), records)
+            );
+
+            records = new ConcurrentLinkedQueue<>();
+        }
+    }
+
+    private static class LastLogWalRecordsToDump {
+        final static LastLogWalRecordsToDump EMPTY = new LastLogWalRecordsToDump(Thread.currentThread(), 0, Collections.emptyList());
+
+        final Thread thread;
+
+        final long absSegmentIndex;
+
+        final Collection<LogWalRecord> records;
+
+        private LastLogWalRecordsToDump(Thread thread, long absSegmentIndex, Collection<LogWalRecord> records) {
+            this.thread = thread;
+            this.absSegmentIndex = absSegmentIndex;
+            this.records = records;
+        }
+
+        void dump(IgniteLogger log) throws IgniteCheckedException {
+            String recordsStr = records.stream()
+                .map(logWalRecord -> "(off=" + logWalRecord.fileOffset + ", len=" + logWalRecord.recordLength + ", wrt=" + logWalRecord.written + ", rec=" + WALRecord.RecordType.fromIndex(logWalRecord.walRecordTypeIndex) + ')')
+                .collect(joining(", "));
+
+            String valueStr = "thread=" + thread.getName() + ", absSegmentIndex=" + absSegmentIndex + ", records=[" + recordsStr + ']';
+
+            byte[] valueBytes = U.zip(valueStr.getBytes(UTF_8));
+
+            log.error(">>>>> DUMP last write wal log entries: [" + Base64.getEncoder().encodeToString(valueBytes) + ']');
         }
     }
 
@@ -895,6 +950,23 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    void stopAddLastLogWalRecord() {
+        if(!stopAddLastLogWalRecord.compareAndSet(false, true)) {
+            // Already stop write last wal records.
+            return;
+        }
+
+        try {
+            Thread.sleep(100);
+        }
+        catch (InterruptedException ignore) {
+        }
+
+        lastLogWalRecordByThread.entrySet().forEach(entry -> entry.getValue().dump(entry.getKey()));
+
+        lastLogWalRecordsToDump.add(LastLogWalRecordsToDump.EMPTY);
+    }
+
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         FileWALPointer ptr = (FileWALPointer)log0(rec, rolloverType);
 
@@ -902,7 +974,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             return ptr;
 
         if (!stopAddLastLogWalRecord.get())
-            lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecord()).add(ptr, rec);
+            lastLogWalRecordByThread.computeIfAbsent(Thread.currentThread(), thread -> new LastLogWalRecords()).add(ptr, rec);
 
         if (!(rec instanceof TxRecord))
             return ptr;
@@ -917,11 +989,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         catch (Throwable t) {
             System.setProperty(IgniteSystemProperties.SHIT_HAPPEN, Boolean.TRUE.toString());
 
-            stopAddLastLogWalRecord.set(true);
+            stopAddLastLogWalRecord();
 
             Map<Thread, List<LogWalRecord>> collected = new HashMap<>();
 
-            for (Map.Entry<Thread, LastLogWalRecord> entry : lastLogWalRecordByThread.entrySet()) {
+            for (Map.Entry<Thread, LastLogWalRecords> entry : lastLogWalRecordByThread.entrySet()) {
                 List<LogWalRecord> collect = entry.getValue().collect(ptr.index(), ptr.fileOffset() - 25_000, ptr.fileOffset() + 1000);
 
                 if (!collect.isEmpty())
@@ -935,7 +1007,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             String writeRecordsStr = writeRecords.stream()
                 .map(biTuple -> biTuple.get2().toString(biTuple.get1()))
-                .collect(Collectors.joining(", "));
+                .collect(joining(", "));
 
             log.error("Try to line up the records: [errorPtr=" + ptr + ", records=[" + writeRecordsStr + "]]");
 
@@ -3760,5 +3832,58 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     /** {@inheritDoc} */
     @Override public void startAutoReleaseSegments() {
         segmentAware.startAutoReleaseSegments();
+    }
+
+    public class DumpLastLogWalRecordsWorker extends GridWorker {
+        public DumpLastLogWalRecordsWorker(IgniteLogger log) {
+            super(cctx.igniteInstanceName(), "dump-last-write-wal-record#" + cctx.igniteInstanceName(), log);
+        }
+
+        @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+            while (true) {
+                try {
+                    LastLogWalRecordsToDump take = lastLogWalRecordsToDump.take();
+
+                    if (take == LastLogWalRecordsToDump.EMPTY)
+                        break;
+
+                    if(!take.records.isEmpty())
+                        take.dump(log);
+                } catch (Throwable t) {
+                    log.error(">>>>> ERROR FROM DUMPER", t);
+
+                    break;
+                }
+            }
+        }
+
+        void shutdown() throws IgniteInterruptedCheckedException {
+            stopAddLastLogWalRecord();
+
+            U.join(runner());
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        File fromFile = new File("C:\\test\\dump_last_records\\01.txt");
+        File toFile = new File(fromFile.getParentFile(), "decode_" + fromFile.getName());
+
+        U.delete(toFile);
+        toFile.createNewFile();
+
+        try (Stream<String> lines = Files.lines(fromFile.toPath())) {
+            lines.forEach(line -> {
+                try {
+                    byte[] decoded = Base64.getDecoder().decode(line);
+
+                    byte[] unziped = U.unzip(decoded);
+
+                    Files.write(toFile.toPath(), unziped, APPEND);
+                    Files.write(toFile.toPath(), System.lineSeparator().getBytes(UTF_8), APPEND);
+                } catch (Throwable t) {
+                    throw new RuntimeException(t);
+                }
+            });
+        }
     }
 }
