@@ -242,4 +242,9 @@ public interface GridQueryTypeDescriptor {
      * Sets affinity fields index INLINE_SIZE.
      */
     public void affinityFieldInlineSize(int affFieldInlineSize);
+
+    /**
+     * @return Flag indicating that the primary key is autocreated.
+     */
+    public boolean implicitPk();
 }

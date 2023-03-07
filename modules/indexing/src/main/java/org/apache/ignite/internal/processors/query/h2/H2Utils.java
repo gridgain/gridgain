@@ -772,7 +772,7 @@ public class H2Utils {
         String ptrn = "Name ''{0}'' is reserved and cannot be used as a field name [type=" + type.name() + "]";
 
         for (String name : names) {
-            if (name.equalsIgnoreCase(KEY_FIELD_NAME) || name.equalsIgnoreCase(VAL_FIELD_NAME))
+            if ((!type.implicitPk() && name.equalsIgnoreCase(KEY_FIELD_NAME)) || name.equalsIgnoreCase(VAL_FIELD_NAME))
                 throw new IgniteCheckedException(MessageFormat.format(ptrn, name));
         }
     }
@@ -1100,7 +1100,7 @@ public class H2Utils {
         for (IndexColumn idxCol : idxCols) {
             if (idxCol.column.getColumnId() == KEY_COL) {
                 if (QueryUtils.isSqlType(type.keyClass())) {
-                    int altKeyColId = KEY_FIELD_NAME.equals(idxCol.column.getName()) ? QueryUtils.KEY_COL :
+                    int altKeyColId = type.implicitPk() ? QueryUtils.KEY_COL :
                         tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.

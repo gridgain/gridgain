@@ -205,20 +205,6 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
         this.tblName = tblName;
     }
 
-    /**
-     * @param implicitPk Flag indicating that the primary key is autocreated.
-     */
-    public void implicitPk(boolean implicitPk) {
-        this.implicitPk = implicitPk;
-    }
-
-    /**
-     * @return Flag indicating that the primary key is autocreated.
-     */
-    public boolean implicitPk() {
-        return implicitPk;
-    }
-
     /** {@inheritDoc} */
     @Override public LinkedHashMap<String, Class<?>> fields() {
         return fields;
@@ -800,5 +786,17 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void affinityFieldInlineSize(int affFieldInlineSize) {
         this.affFieldInlineSize = affFieldInlineSize;
+    }
+
+    /**
+     * @param implicitPk Flag indicating that the primary key is autocreated.
+     */
+    public void implicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean implicitPk() {
+        return implicitPk;
     }
 }

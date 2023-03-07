@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
@@ -666,7 +665,7 @@ public final class UpdatePlanBuilder {
 
         boolean isSqlType = QueryUtils.isSqlType(cls);
 
-        if (key && ((QueryTypeDescriptorImpl)desc).implicitPk())
+        if (key && desc.implicitPk())
             return (arg) -> UUID.randomUUID();
 
         // If we don't need to construct anything from scratch, just return value from given list.
