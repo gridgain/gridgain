@@ -3066,7 +3066,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             @Nullable AbstractReadFileHandle hnd) throws IgniteCheckedException {
             long hndPos = hnd == null ? -1 : hnd.in().position();
 
-            if (end != null && end.fileOffset() == start.fileOffset() + start.length()
+            if (start != null && end != null && end.fileOffset() == start.fileOffset() + start.length()
                 && hnd != null && hnd.in().position() > start.fileOffset())
                 return null;
 
