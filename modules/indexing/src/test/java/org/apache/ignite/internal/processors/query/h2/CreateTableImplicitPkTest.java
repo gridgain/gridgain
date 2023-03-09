@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
@@ -37,6 +38,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -54,7 +56,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setBackups(1))
+            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
             .setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(10 * 1024 * 1024)
@@ -80,24 +82,41 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
 
     @Test
     public void testImplicitPkWithRestart() throws Exception {
-        querySql("CREATE TABLE integers(i INTEGER)");
-        querySql("INSERT INTO integers(i) VALUES(?)", 0);
+        querySql("CREATE TABLE uuids(i UUID) with \"backups=1\"");
+
+        int dataCnt = 1_000;
+        Set<UUID> expRows = new HashSet<>();
+        BiConsumer<Integer, Integer> fillData = (off, cnt) -> {
+            for (int i = 0; i < dataCnt / 2; i++) {
+                UUID id = UUID.randomUUID();
+
+                expRows.add(id);
+
+                querySql("INSERT INTO uuids(i) VALUES(?)", id);
+            }
+        };
+
+        // Create 50% of rows.
+        fillData.accept(0, dataCnt / 2);
 
         stopAllGrids();
         startGridsMultiThreaded(NODES_CNT);
 
-        querySql("INSERT INTO integers VALUES(?)", 1);
+        // Create remaining 50% of rows.
+        fillData.accept(dataCnt / 2, dataCnt);
 
-        List<List<?>> res = querySql("SELECT * FROM integers");
+        // Restart each node one by one and check the data.
+        for (int i = 0; i < NODES_CNT; i++) {
+            stopGrid(i);
 
-        assertEquals(2, res.size());
+            List<List<?>> res = querySql("SELECT * FROM uuids");
+            assertEquals(dataCnt, res.size());
 
-        Set<Integer> resSet = new HashSet<>();
+            Set<UUID> resRows = res.stream().map(l -> (UUID)l.get(0)).collect(Collectors.toSet());
+            assertEquals(expRows, resRows);
 
-        for (List<?> row : res) {
-            assertEquals(1, row.size());
-
-            resSet.add((Integer)F.first(row));
+            startGrid(i);
+            awaitPartitionMapExchange();
         }
     }
 
@@ -196,7 +215,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
      * @return List of results.
      */
     private List<List<?>> querySql(String sql, Object... args) {
-        IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Object, Object> cache = F.first(G.allGrids()).cache(DEFAULT_CACHE_NAME);
 
         try (FieldsQueryCursor<List<?>> cur = cache.query(new SqlFieldsQuery(sql).setArgs(args))) {
             assertNotNull(cur);
