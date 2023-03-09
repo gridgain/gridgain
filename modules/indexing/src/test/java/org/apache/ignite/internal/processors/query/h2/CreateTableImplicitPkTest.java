@@ -16,13 +16,22 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -37,9 +46,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT
 /**
  * Check the ability of creating tables without specifying a primary key.
  */
+@WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
 public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     /** Nodes count. */
-    private static final int NODES_CNT = 2;
+    private static final int NODES_CNT = 3;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -69,7 +79,6 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     }
 
     @Test
-    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testImplicitPkWithRestart() throws Exception {
         querySql("CREATE TABLE integers(i INTEGER)");
         querySql("INSERT INTO integers(i) VALUES(?)", 0);
@@ -77,7 +86,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
         stopAllGrids();
         startGridsMultiThreaded(NODES_CNT);
 
-        querySql("INSERT INTO integers(i) VALUES(?)", 1);
+        querySql("INSERT INTO integers VALUES(?)", 1);
 
         List<List<?>> res = querySql("SELECT * FROM integers");
 
@@ -93,7 +102,6 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
     }
 
     @Test
-    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testImplicitPk() {
         querySql("CREATE TABLE integers(i INTEGER)");
 
@@ -103,7 +111,7 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
         for (int n = 0; n < cnt; n++) {
             expSet.add(n);
 
-            querySql("INSERT INTO integers(i) VALUES(?)", n);
+            querySql("INSERT INTO integers VALUES(?)", n);
         }
 
         List<List<?>> res = querySql("SELECT * FROM integers");
@@ -121,6 +129,72 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
         assertEquals(expSet, resSet);
     }
 
+    @Test
+    public void testImplicitPkWithCacheApi() {
+        querySql("CREATE TABLE person(name VARCHAR, age INT) WITH \"value_type=" + Person.class.getName()+"\"");
+
+        IgniteCache<UUID, Person> cache = grid(0).cache("SQL_PUBLIC_PERSON");
+
+        // Prepare test data.
+        String[] names = {"Hektor", "Emma", "Tom", "Gloria"};
+        List<Person> persons = new ArrayList<>(names.length);
+
+        for (String name : names) {
+            persons.add(new Person(name, ThreadLocalRandom.current().nextInt(100)));
+        }
+
+        // Put part of the entries using the cache API.
+        Set<UUID> expKeys = new HashSet<>();
+
+        for (int i = 0; i < 2; i++) {
+            UUID id = UUID.randomUUID();
+
+            expKeys.add(id);
+
+            cache.put(id, persons.get(i));
+        }
+
+        // Put another part using SQL API.
+        for (int i = 2; i < names.length; i++) {
+            Person person = persons.get(i);
+            querySql("INSERT INTO person VALUES(?, ?)", person.getName(), person.getAge());
+        }
+
+        // Ensure all entries has been stored.
+        List<List<?>> res = querySql("SELECT * FROM person");
+
+        assertEquals(names.length, cache.size());
+        assertEquals(names.length, res.size());
+
+        Set<Person> sqlPersons = new HashSet<>();
+
+        for (List<?> r : res) {
+            sqlPersons.add(new Person((String)r.get(0), (Integer)r.get(1)));
+        }
+
+        // Ensure all records are visible with SQL.
+        assertEquals(new HashSet<>(persons), sqlPersons);
+
+        Map<UUID, Person> cacheData = new HashMap<>();
+
+        for (Cache.Entry<UUID, Person> e : cache) {
+            cacheData.put(e.getKey(), e.getValue());
+        }
+
+        // Ensure all records are visible with cache-api.
+        assertEquals(sqlPersons, new HashSet<>(cacheData.values()));
+        assertTrue(cacheData.keySet().containsAll(expKeys));
+
+        for (UUID id : cacheData.keySet()) {
+            assertNotNull(cache.get(id));
+        }
+    }
+
+    /**
+     * @param sql SQL query.
+     * @param args Arguments.
+     * @return List of results.
+     */
     private List<List<?>> querySql(String sql, Object... args) {
         IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
@@ -128,6 +202,59 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
             assertNotNull(cur);
 
             return cur.getAll();
+        }
+    }
+
+    /** Person entity. */
+    private static class Person implements Serializable {
+        /** Person name. */
+        @QuerySqlField
+        private final String name;
+
+        /** Person name. */
+        @QuerySqlField
+        private final Integer age;
+
+        /**
+         * @param name Person name.
+         * @param age Person age.
+         */
+        public Person(String name, Integer age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        /** @return Person name. */
+        public String getName() {
+            return name;
+        }
+
+        /** @return Person age. */
+        public Integer getAge() {
+            return age;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            Person person = (Person)o;
+
+            return Objects.equals(name, person.name) && Objects.equals(age, person.age);
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return Objects.hash(name, age);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "Person{" + "name='" + name + '\'' + ", age=" + age + '}';
         }
     }
 }
