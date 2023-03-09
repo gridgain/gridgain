@@ -1342,23 +1342,18 @@ public class GridSqlQueryParser {
      * @param createTbl {@code CREATE TABLE} statement.
      */
     private void addImplicitPk(CreateTable createTbl) {
-        Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
-
-        column.setPrimaryKey(true);
-        createTbl.addColumn(column);
-
         Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
         CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
 
-        IndexColumn[] cols = {new IndexColumn()};
-        cols[0].columnName = column.getName();
+        IndexColumn idxCol = new IndexColumn();
+        idxCol.columnName = QueryUtils.KEY_FIELD_NAME;
 
         AlterTableAddConstraint pk = new AlterTableAddConstraint(createTbl.getSession(), schema, false);
         pk.setType(CommandInterface.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY);
-
         pk.setTableName(data.tableName);
-        pk.setIndexColumns(new IndexColumn[] {cols[0]});
+        pk.setIndexColumns(new IndexColumn[] {idxCol});
 
+        createTbl.addColumn(new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID));
         createTbl.addConstraintCommand(pk);
     }
 

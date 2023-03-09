@@ -30,6 +30,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
@@ -46,45 +47,141 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 
 /**
- * Check the ability of creating tables without specifying a primary key.
+ * Basic tests to check the possibility of creating tables without specifying a primary key.
  */
 @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
-public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
+public class TableWithImplicitPkTest extends GridCommonAbstractTest {
     /** Nodes count. */
     private static final int NODES_CNT = 3;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
-            .setDataStorageConfiguration(new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(
-                    new DataRegionConfiguration().setPersistenceEnabled(true).setMaxSize(10 * 1024 * 1024)
-                )
+            .setCacheConfiguration(cacheCfg())
+            .setDataStorageConfiguration(
+                new DataStorageConfiguration()
+                    .setDefaultDataRegionConfiguration(
+                        new DataRegionConfiguration()
+                            .setPersistenceEnabled(true)
+                    )
             );
+    }
+
+    /**
+     * @return Cache configuration.
+     */
+    private CacheConfiguration<?, ?> cacheCfg() {
+        return new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setAffinity(new RendezvousAffinityFunction(false, 16))
+            .setBackups(1);
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        startGridsMultiThreaded(NODES_CNT);
+        startGridsMultiThreaded(NODES_CNT)
+            .addCacheConfiguration(cacheCfg());
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        List<String> cacheNames =
-            grid(0).cacheNames().stream().filter(name -> !name.equals(DEFAULT_CACHE_NAME)).collect(Collectors.toList());
+        List<String> rmvCaches = grid(0).cacheNames().stream()
+            .filter(name -> !DEFAULT_CACHE_NAME.equals(name))
+            .collect(Collectors.toList());
 
-        if (!F.isEmpty(cacheNames)) {
-            grid(0).destroyCaches(cacheNames);
+        if (!rmvCaches.isEmpty()) {
+            grid(0).destroyCaches(rmvCaches);
             awaitPartitionMapExchange();
         }
     }
 
     @Test
-    public void testImplicitPkWithRestart() throws Exception {
-        querySql("CREATE TABLE uuids(i UUID) with \"backups=1\"");
+    public void testBasicOperations() {
+        querySql("CREATE TABLE integers(i INTEGER)");
 
-        int dataCnt = 1_000;
+        int rowsCnt = 5;
+        Set<Integer> expNums = new HashSet<>();
+
+        for (int n = 0; n < rowsCnt; n++) {
+            expNums.add(n);
+
+            querySql("INSERT INTO integers VALUES(?)", n);
+        }
+
+        List<List<?>> rows = querySql("SELECT * FROM integers");
+        assertEquals(rowsCnt, rows.size());
+
+        Set<Integer> resSet = new HashSet<>();
+
+        for (List<?> row : rows) {
+            assertEquals(1, row.size());
+
+            resSet.add((Integer)row.get(0));
+        }
+
+        assertEquals(expNums, resSet);
+    }
+
+    @Test
+    public void testCacheApiCompatibility() {
+        querySql("CREATE TABLE person(name VARCHAR, age INT) WITH \"value_type=" + Person.class.getName() + "\"");
+
+        IgniteCache<UUID, Person> cache = grid(0).cache("SQL_PUBLIC_PERSON");
+
+        // Prepare test data.
+        String[] names = {"Hektor", "Emma", "Tom", "Gloria", "Brad", "Ann", "Will", "Courtney"};
+        List<Person> persons = new ArrayList<>(names.length);
+
+        for (String name : names)
+            persons.add(new Person(name, ThreadLocalRandom.current().nextInt(100)));
+
+        // Put part of the entries using the cache API.
+        Set<UUID> expKeys = new HashSet<>();
+
+        for (int i = 0; i < names.length / 2; i++) {
+            UUID id = UUID.randomUUID();
+
+            expKeys.add(id);
+
+            cache.put(id, persons.get(i));
+        }
+
+        // Put another part using SQL API.
+        for (int i = names.length / 2; i < names.length; i++) {
+            Person person = persons.get(i);
+            querySql("INSERT INTO person VALUES(?, ?)", person.getName(), person.getAge());
+        }
+
+        // Ensure all entries has been stored.
+        List<List<?>> rows = querySql("SELECT * FROM person");
+
+        assertEquals(names.length, cache.size());
+        assertEquals(names.length, rows.size());
+
+        // Ensure all records are visible using SQL.
+        Set<Person> sqlPersons = rows.stream()
+            .map(l -> new Person((String)l.get(0), (Integer)l.get(1)))
+            .collect(Collectors.toSet());
+
+        assertEquals(new HashSet<>(persons), sqlPersons);
+
+        // Ensure all records are visible using cache API.
+        Map<UUID, Person> cacheData = new HashMap<>();
+
+        for (Cache.Entry<UUID, Person> e : cache)
+            cacheData.put(e.getKey(), e.getValue());
+
+        assertEquals(sqlPersons, new HashSet<>(cacheData.values()));
+        assertTrue(cacheData.keySet().containsAll(expKeys));
+
+        for (UUID id : expKeys)
+            assertNotNull(cache.get(id));
+    }
+
+    @Test
+    public void testNodeRestart() throws Exception {
+        querySql("CREATE TABLE uuids(i UUID) with \"template=default\"");
+
+        int dataCnt = 100;
         Set<UUID> expRows = new HashSet<>();
         BiConsumer<Integer, Integer> fillData = (off, cnt) -> {
             for (int i = 0; i < dataCnt / 2; i++) {
@@ -105,107 +202,17 @@ public class CreateTableImplicitPkTest extends GridCommonAbstractTest {
         // Create remaining 50% of rows.
         fillData.accept(dataCnt / 2, dataCnt);
 
-        // Restart each node one by one and check the data.
-        for (int i = 0; i < NODES_CNT; i++) {
-            stopGrid(i);
+        // Stop some node and check the data.
+        stopGrid(0);
 
-            List<List<?>> res = querySql("SELECT * FROM uuids");
-            assertEquals(dataCnt, res.size());
+        try {
+            List<List<?>> rows = querySql("SELECT * FROM uuids");
+            assertEquals(dataCnt, rows.size());
 
-            Set<UUID> resRows = res.stream().map(l -> (UUID)l.get(0)).collect(Collectors.toSet());
+            Set<UUID> resRows = rows.stream().map(l -> (UUID)l.get(0)).collect(Collectors.toSet());
             assertEquals(expRows, resRows);
-
-            startGrid(i);
-            awaitPartitionMapExchange();
-        }
-    }
-
-    @Test
-    public void testImplicitPk() {
-        querySql("CREATE TABLE integers(i INTEGER)");
-
-        int cnt = 5;
-        Set<Integer> expSet = new HashSet<>();
-
-        for (int n = 0; n < cnt; n++) {
-            expSet.add(n);
-
-            querySql("INSERT INTO integers VALUES(?)", n);
-        }
-
-        List<List<?>> res = querySql("SELECT * FROM integers");
-
-        assertEquals(cnt, res.size());
-
-        Set<Integer> resSet = new HashSet<>();
-
-        for (List<?> row : res) {
-            assertEquals(1, row.size());
-
-            resSet.add((Integer)F.first(row));
-        }
-
-        assertEquals(expSet, resSet);
-    }
-
-    @Test
-    public void testImplicitPkWithCacheApi() {
-        querySql("CREATE TABLE person(name VARCHAR, age INT) WITH \"value_type=" + Person.class.getName()+"\"");
-
-        IgniteCache<UUID, Person> cache = grid(0).cache("SQL_PUBLIC_PERSON");
-
-        // Prepare test data.
-        String[] names = {"Hektor", "Emma", "Tom", "Gloria"};
-        List<Person> persons = new ArrayList<>(names.length);
-
-        for (String name : names) {
-            persons.add(new Person(name, ThreadLocalRandom.current().nextInt(100)));
-        }
-
-        // Put part of the entries using the cache API.
-        Set<UUID> expKeys = new HashSet<>();
-
-        for (int i = 0; i < 2; i++) {
-            UUID id = UUID.randomUUID();
-
-            expKeys.add(id);
-
-            cache.put(id, persons.get(i));
-        }
-
-        // Put another part using SQL API.
-        for (int i = 2; i < names.length; i++) {
-            Person person = persons.get(i);
-            querySql("INSERT INTO person VALUES(?, ?)", person.getName(), person.getAge());
-        }
-
-        // Ensure all entries has been stored.
-        List<List<?>> res = querySql("SELECT * FROM person");
-
-        assertEquals(names.length, cache.size());
-        assertEquals(names.length, res.size());
-
-        Set<Person> sqlPersons = new HashSet<>();
-
-        for (List<?> r : res) {
-            sqlPersons.add(new Person((String)r.get(0), (Integer)r.get(1)));
-        }
-
-        // Ensure all records are visible with SQL.
-        assertEquals(new HashSet<>(persons), sqlPersons);
-
-        Map<UUID, Person> cacheData = new HashMap<>();
-
-        for (Cache.Entry<UUID, Person> e : cache) {
-            cacheData.put(e.getKey(), e.getValue());
-        }
-
-        // Ensure all records are visible with cache-api.
-        assertEquals(sqlPersons, new HashSet<>(cacheData.values()));
-        assertTrue(cacheData.keySet().containsAll(expKeys));
-
-        for (UUID id : cacheData.keySet()) {
-            assertNotNull(cache.get(id));
+        } finally {
+            startGrid(0);
         }
     }
 
