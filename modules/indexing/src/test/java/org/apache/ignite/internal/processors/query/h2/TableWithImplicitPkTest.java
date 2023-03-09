@@ -38,6 +38,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -45,6 +46,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
  * Basic tests to check the possibility of creating tables without specifying a primary key.
@@ -78,25 +80,32 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        cleanPersistenceDir();
+
         startGridsMultiThreaded(NODES_CNT)
             .addCacheConfiguration(cacheCfg());
     }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        List<String> rmvCaches = grid(0).cacheNames().stream()
+        List<String> cachesToDestroy = grid(0).cacheNames().stream()
             .filter(name -> !DEFAULT_CACHE_NAME.equals(name))
             .collect(Collectors.toList());
 
-        if (!rmvCaches.isEmpty()) {
-            grid(0).destroyCaches(rmvCaches);
+        if (!cachesToDestroy.isEmpty()) {
+            grid(0).destroyCaches(cachesToDestroy);
             awaitPartitionMapExchange();
         }
     }
 
     @Test
     public void testBasicOperations() {
-        querySql("CREATE TABLE integers(i INTEGER)");
+        String sql = "CREATE TABLE integers(i INTEGER)";
+
+        // "WRAP_KEY" option is not supported.
+        assertThrows(log, () -> querySql(sql + " WITH \"wrap_key=true\""), IgniteSQLException.class, null);
+
+        querySql(sql);
 
         int rowsCnt = 5;
         Set<Integer> expNums = new HashSet<>();

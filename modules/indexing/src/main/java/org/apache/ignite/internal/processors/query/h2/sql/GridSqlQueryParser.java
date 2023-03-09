@@ -1302,6 +1302,11 @@ public class GridSqlQueryParser {
 
         boolean wrapKey0 = (res.wrapKey() != null && res.wrapKey()) || !F.isEmpty(res.keyTypeName()) || keyColsNum > 1;
 
+        if (implicitPk && wrapKey0) {
+            throw new IgniteSQLException(PARAM_WRAP_KEY + " cannot be true if the PK is autocreated.",
+                IgniteQueryErrorCode.PARSING);
+        }
+
         res.wrapKey(wrapKey0);
 
         // Process value wrapping.
@@ -1345,6 +1350,11 @@ public class GridSqlQueryParser {
         Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
         CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
 
+        Column pkCol = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
+        pkCol.setPrimaryKey(true);
+
+        createTbl.addColumn(pkCol);
+
         IndexColumn idxCol = new IndexColumn();
         idxCol.columnName = QueryUtils.KEY_FIELD_NAME;
 
@@ -1353,7 +1363,6 @@ public class GridSqlQueryParser {
         pk.setTableName(data.tableName);
         pk.setIndexColumns(new IndexColumn[] {idxCol});
 
-        createTbl.addColumn(new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID));
         createTbl.addConstraintCommand(pk);
     }
 

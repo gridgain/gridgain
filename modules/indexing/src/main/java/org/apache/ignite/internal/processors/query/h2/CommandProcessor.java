@@ -1098,7 +1098,8 @@ public class CommandProcessor {
 
             Column col = gridCol.column();
 
-            res.addQueryField(e.getKey(), getTypeClassName(gridCol), null);
+            if (!createTbl.implicitPk() || !col.isPrimaryKey())
+                res.addQueryField(e.getKey(), getTypeClassName(gridCol), null);
 
             if (!col.isNullable()) {
                 if (notNullFields == null)
@@ -1150,14 +1151,14 @@ public class CommandProcessor {
         assert createTbl.wrapKey() != null;
         assert createTbl.wrapValue() != null;
 
-        if (!createTbl.wrapKey()) {
+        if (!createTbl.wrapKey() && !createTbl.implicitPk()) {
             GridSqlColumn pkCol = createTbl.columns().get(createTbl.primaryKeyColumns().iterator().next());
 
             keyTypeName = getTypeClassName(pkCol);
 
             res.setKeyFieldName(pkCol.columnName());
         }
-        else {
+        else if (createTbl.wrapKey()) {
             res.setKeyFields(createTbl.primaryKeyColumns());
 
             if (IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().allNodes(),
