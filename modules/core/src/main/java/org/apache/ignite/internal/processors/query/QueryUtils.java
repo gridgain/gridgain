@@ -479,8 +479,10 @@ public class QueryUtils {
 
         desc.aliases(qryEntity.getAliases());
         
-        if (qryEntity instanceof QueryEntityEx)
+        if (qryEntity instanceof QueryEntityEx) {
             desc.setFillAbsentPKsWithDefaults(((QueryEntityEx)qryEntity).fillAbsentPKsWithDefaults());
+            desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
+        }
         
         // Key and value classes still can be available if they are primitive or JDK part.
         // We need that to set correct types for _key and _val columns.
@@ -503,9 +505,6 @@ public class QueryUtils {
         desc.name(simpleValType);
 
         desc.tableName(qryEntity.getTableName());
-
-        if (qryEntity instanceof QueryEntityEx)
-            desc.implicitPk(((QueryEntityEx)qryEntity).isImplicitPk());
 
         if (binaryEnabled && !keyOrValMustDeserialize) {
             // Safe to check null.
