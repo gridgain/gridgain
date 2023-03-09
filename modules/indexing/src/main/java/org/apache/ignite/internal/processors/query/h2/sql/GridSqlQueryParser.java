@@ -1146,14 +1146,15 @@ public class GridSqlQueryParser {
         boolean noPrimaryKey = F.isEmpty(constraints);
         boolean implicitPk = noPrimaryKey && IgniteSystemProperties.getBoolean(IGNITE_SQL_ALLOW_IMPLICIT_PK);
 
-        if (implicitPk) {
+        if (noPrimaryKey) {
+            if (!implicitPk) {
+                throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
+                    IgniteQueryErrorCode.PARSING);
+            }
+
             addImplicitPk(createTbl);
 
             constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
-        }
-        else if (noPrimaryKey) {
-            throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
-                IgniteQueryErrorCode.PARSING);
         }
 
         if (constraints.size() > 1) {
@@ -1337,6 +1338,9 @@ public class GridSqlQueryParser {
         return res;
     }
 
+    /**
+     * @param createTbl {@code CREATE TABLE} statement.
+     */
     private void addImplicitPk(CreateTable createTbl) {
         Column column = new Column(QueryUtils.KEY_FIELD_NAME, Value.UUID);
 
