@@ -12,15 +12,14 @@ statement ok
 INSERT INTO integers VALUES (3), (4), (NULL)
 
 statement ok
-INSERT INTO strings SELECT i FROM integers
+INSERT INTO strings SELECT * FROM integers
 
 query T
-SELECT a FROM strings order by a
+SELECT * FROM strings ORDER BY 1
 ----
 NULL
 3
 4
-
 
 statement ok
 UPDATE strings SET a=13 WHERE a=3
