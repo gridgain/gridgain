@@ -2185,6 +2185,7 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "Allow run CREATE TABLE statements without explicitly specifying a PK (this mode is " +
         "for testing purposes only and is strongly discouraged in a production environment)", defaults = "false")
+    @TestOnly
     public static final String IGNITE_SQL_ALLOW_IMPLICIT_PK = "IGNITE_SQL_ALLOW_IMPLICIT_PK";
 
     /**
