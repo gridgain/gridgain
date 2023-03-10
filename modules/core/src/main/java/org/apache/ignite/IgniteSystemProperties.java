@@ -49,6 +49,7 @@ import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.cache.CacheManager.DFLT_JCACHE_DEFAULT_ISOLATED;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_USE_ASYNC_FILE_IO_FACTORY;
