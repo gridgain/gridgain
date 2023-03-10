@@ -41,7 +41,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -51,7 +50,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 /**
  * Basic tests to check the possibility of creating tables without specifying a primary key.
  */
-@WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
 public class TableWithImplicitPkTest extends GridCommonAbstractTest {
     /** Nodes count. */
     private static final int NODES_CNT = 3;
@@ -96,6 +94,8 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
             grid(0).destroyCaches(cachesToDestroy);
             awaitPartitionMapExchange();
         }
+
+        System.setProperty(IGNITE_SQL_ALLOW_IMPLICIT_PK, "true");
     }
 
     @Test
@@ -206,7 +206,12 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
         fillData.accept(0, dataCnt / 2);
 
         stopAllGrids();
+
+        System.clearProperty(IGNITE_SQL_ALLOW_IMPLICIT_PK);
+
         startGridsMultiThreaded(NODES_CNT);
+
+        assertThrows(log, () -> querySql("CREATE TABLE test(i INT)"), IgniteSQLException.class, null);
 
         // Create remaining 50% of rows.
         fillData.accept(dataCnt / 2, dataCnt);
