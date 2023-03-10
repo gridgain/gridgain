@@ -114,7 +114,7 @@ import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.AND;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER_EQUAL;
@@ -1338,6 +1338,11 @@ public class GridSqlQueryParser {
 
             if (!F.isEmpty(pkCols0) && pkCols0.size() == 1 && wrapKey0)
                 res.affinityKey(pkCols0.iterator().next());
+        }
+
+        if (implicitPk) {
+            log.warning("No PRIMARY KEY defined for table '" + data.tableName + "'. " +
+                "An auto-generated implicit primary key will be created.");;
         }
 
         return res;

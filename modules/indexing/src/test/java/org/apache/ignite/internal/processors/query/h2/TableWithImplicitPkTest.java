@@ -44,7 +44,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ALLOW_IMPLICIT_PK;
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
 /**
