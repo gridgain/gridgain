@@ -97,7 +97,7 @@ import org.jetbrains.annotations.Nullable;
  * &lt;bean id="grid.custom.cfg" class="org.apache.ignite.configuration.IgniteConfiguration" singleton="true"&gt;
  *     ...
  *     &lt;property name="checkpointSpi"&gt;
- *         &lt;bean class="org.apache.ignite.spi.checkpoint.sharedfs.GridSharedFsCheckpointSpi"&gt;
+ *         &lt;bean class="org.apache.ignite.spi.checkpoint.sharedfs.SharedFsCheckpointSpi"&gt;
  *             &lt;!-- Change to shared directory path in your environment. --&gt;
  *             &lt;property name="directoryPaths"&gt;
  *                 &lt;list&gt;
