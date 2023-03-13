@@ -89,7 +89,7 @@ statement ok
 create table dates(d date);
 
 statement ok
-insert into dates select date '1992-01-01' + interval x months as d from system_range(0, 99);
+insert into dates select date '1992-01-01' + CAST(X AS INTERVAL MONTH) as d from system_range(0, 99);
 
 query II
 select extract(year from d), extract(month from d) from dates group by extract(year from d), extract(month from d) order by 1, 2;

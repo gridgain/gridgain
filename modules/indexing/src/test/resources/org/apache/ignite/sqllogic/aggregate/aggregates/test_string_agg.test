@@ -35,31 +35,33 @@ CREATE TABLE strings(g INTEGER, x VARCHAR, y VARCHAR);
 statement ok
 INSERT INTO strings VALUES (1,'a','/'), (1,'b','-'), (2,'i','/'), (2,NULL,'-'), (2,'j','+'), (3,'p','/'), (4,'x','/'), (4,'y','-'), (4,'z','+')
 
-query TT
-SELECT STRING_AGG(x, ',' ORDER BY x ASC), STRING_AGG(x, y ORDER BY x ASC) FROM strings
-----
-a,b,i,j,p,x,y,z
-a-b/i+j/p/x-y+z
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+#query TT
+#SELECT STRING_AGG(x, ',' ORDER BY x ASC), STRING_AGG(x, y ORDER BY x ASC) FROM strings
+#----
+#a,b,i,j,p,x,y,z
+#a-b/i+j/p/x-y+z
 
-query ITT
-SELECT g, STRING_AGG(x, ',' ORDER BY x ASC), STRING_AGG(x, y ORDER BY x ASC) FROM strings GROUP BY g ORDER BY g
-----
-1
-a,b
-a-b
-2
-i,j
-i+j
-3
-p
-p
-4
-x,y,z
-x-y+z
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+#query ITT
+#SELECT g, STRING_AGG(x, ',' ORDER BY x ASC), STRING_AGG(x, y ORDER BY x ASC) FROM strings GROUP BY g ORDER BY g
+#----
+#1
+#a,b
+#a-b
+#2
+#i,j
+#i+j
+#3
+#p
+#p
+#4
+#x,y,z
+#x-y+z
 
 # test agg on empty set
 query TT
-SELECT STRING_AGG(x, ','), STRING_AGG(x, y) FROM strings WHERE g > 100
+SELECT STRING_AGG(x, ','), STRING_AGG(y, '.') FROM strings WHERE g > 100
 ----
 NULL
 NULL
@@ -72,7 +74,7 @@ SELECT STRING_AGG(1, 2)
 
 # group_concat is an alias for string_agg
 query T
-SELECT GROUP_CONCAT('a', ',')
+SELECT GROUP_CONCAT('a' SEPARATOR ',')
 ----
 a
 
@@ -81,13 +83,14 @@ SELECT GROUP_CONCAT('a')
 ----
 a
 
-query TT
-SELECT g, GROUP_CONCAT(x ORDER BY x) FROM strings GROUP BY g ORDER BY g
-----
-1	a,b
-2	i,j
-3	p
-4	x,y,z
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+#query TT
+#SELECT g, GROUP_CONCAT(x ORDER BY x) FROM strings GROUP BY g ORDER BY g
+#----
+#1	a,b
+#2	i,j
+#3	p
+#4	x,y,z
 
 # listagg is an alias for string_agg
 query T
@@ -100,13 +103,14 @@ SELECT LISTAGG('a')
 ----
 a
 
-query TT
-SELECT g, LISTAGG(x) WITHIN GROUP (ORDER BY x) FROM strings GROUP BY g ORDER BY g
-----
-1	a,b
-2	i,j
-3	p
-4	x,y,z
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+#query TT
+#SELECT g, LISTAGG(x) WITHIN GROUP (ORDER BY x) FROM strings GROUP BY g ORDER BY g
+#----
+#1	a,b
+#2	i,j
+#3	p
+#4	x,y,z
 
 
 # Tests ordering, distincts, etc.
@@ -125,29 +129,32 @@ INSERT INTO trades(id, amount, xkey, name, ts) VALUES (5, 1000, 'key-4', 'name3'
 statement ok
 INSERT INTO trades(id, amount, xkey, name, ts) VALUES (7, 10,   'key-4', 'name4', '2021-11-01 19:00:00');
 
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
 # Simple ordering
-query TTTTTTTT
-SELECT xkey, COUNT(*), COUNT(DISTINCT name), SUM(amount), STRING_AGG(name ORDER BY name), STRING_AGG(name ORDER BY name DESC), STRING_AGG(DISTINCT name ORDER BY name), STRING_AGG(DISTINCT name ORDER BY name DESC) FROM trades GROUP BY xkey ORDER BY xkey
-----
-key-1	2	1	160	name1,name1	name1,name1	name1	name1
-key-2	2	2	500	name11,name2	name2,name11	name11,name2	name2,name11
-key-3	1	1	900	name1	name1	name1	name1
-key-4	2	2	1010	name3,name4	name4,name3	name3,name4	name4,name3
+#query TTTTTTT
+#SELECT xkey, COUNT(DISTINCT name), SUM(amount), GROUP_CONCAT(name ORDER BY name), GROUP_CONCAT(name ORDER BY name DESC), GROUP_CONCAT(DISTINCT name ORDER BY name), GROUP_CONCAT(DISTINCT name ORDER BY name DESC) FROM trades GROUP BY xkey ORDER BY xkey
+#----
+#key-1	1	160	name1,name1	name1,name1	name1	name1
+#key-2	2	500	name11,name2	name2,name11	name11,name2	name2,name11
+#key-3	1	900	name1	name1	name1	name1
+#key-4	2	1010	name3,name4	name4,name3	name3,name4	name4,name3
 
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
 # Collation ordering
-query TTTTTTTT
-SELECT xkey, COUNT(*), COUNT(DISTINCT name), SUM(amount), STRING_AGG(name ORDER BY amount), STRING_AGG(name ORDER BY amount DESC), STRING_AGG(name ORDER BY ts), STRING_AGG(name ORDER BY ts DESC) FROM trades GROUP BY xkey ORDER BY xkey
-----
-key-1	2	1	160	name1,name1	name1,name1	name1,name1	name1,name1
-key-2	2	2	500	name11,name2	name2,name11	name2,name11	name11,name2
-key-3	1	1	900	name1	name1	name1	name1
-key-4	2	2	1010	name4,name3	name3,name4	name3,name4	name4,name3
+#query TTTTTTTT
+#SELECT xkey, COUNT(*), COUNT(DISTINCT name), SUM(amount), STRING_AGG(name ORDER BY amount), STRING_AGG(name ORDER BY amount DESC), STRING_AGG(name ORDER BY ts), STRING_AGG(name ORDER BY ts DESC) FROM trades GROUP BY xkey ORDER BY xkey
+#----
+#key-1	2	1	160	name1,name1	name1,name1	name1,name1	name1,name1
+#key-2	2	2	500	name11,name2	name2,name11	name2,name11	name11,name2
+#key-3	1	1	900	name1	name1	name1	name1
+#key-4	2	2	1010	name4,name3	name3,name4	name3,name4	name4,name3
 
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
 # Distinct collation ordering
-query TTTTTTTT
-SELECT xkey, COUNT(*), COUNT(DISTINCT name), SUM(amount), STRING_AGG(DISTINCT name ORDER BY amount), STRING_AGG(DISTINCT name ORDER BY amount DESC), STRING_AGG(DISTINCT name ORDER BY ts), STRING_AGG(DISTINCT name ORDER BY ts DESC)  FROM trades GROUP BY xkey ORDER BY xkey
-----
-key-1	2	1	160	name1	name1	name1	name1
-key-2	2	2	500	name11,name2	name2,name11	name2,name11	name11,name2
-key-3	1	1	900	name1	name1	name1	name1
-key-4	2	2	1010	name4,name3	name3,name4	name3,name4	name4,name3
+#query TTTTTTTT
+#SELECT xkey, COUNT(*), COUNT(DISTINCT name), SUM(amount), STRING_AGG(DISTINCT name ORDER BY amount), STRING_AGG(DISTINCT name ORDER BY amount DESC), STRING_AGG(DISTINCT name ORDER BY ts), STRING_AGG(DISTINCT name ORDER BY ts DESC)  FROM trades GROUP BY xkey ORDER BY xkey
+#----
+#key-1	2	1	160	name1	name1	name1	name1
+#key-2	2	2	500	name11,name2	name2,name11	name2,name11	name11,name2
+#key-3	1	1	900	name1	name1	name1	name1
+#key-4	2	2	1010	name4,name3	name3,name4	name3,name4	name4,name3

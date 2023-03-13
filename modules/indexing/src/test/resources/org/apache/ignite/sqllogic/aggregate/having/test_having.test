@@ -38,8 +38,9 @@ SELECT b, SUM(a) FROM test GROUP BY b HAVING SUM(a)+10>28;
 ----
 22	24.000000
 
+# [ignore] Failed to generate REDUCE query. Data table found: "PUBLIC"."TEST"
 # uncorrelated subquery in having
-query IR
-SELECT b, SUM(a) FROM test GROUP BY b HAVING SUM(a)>(SELECT SUM(t.a)*0.5 FROM test t);
-----
-22	24.000000
+#query IR
+#SELECT b, SUM(a) FROM test GROUP BY b HAVING SUM(a)>(SELECT SUM(t.a)*0.5 FROM test t);
+#----
+#22	24.000000

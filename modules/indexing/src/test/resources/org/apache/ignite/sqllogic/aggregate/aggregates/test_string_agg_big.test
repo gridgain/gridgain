@@ -3,14 +3,18 @@
 # group: [aggregates]
 
 statement ok
-CREATE TABLE strings AS SELECT c::VARCHAR g, (c*10+e)::INTEGER x FROM table(system_range(0, 99, 1)) t1(c), table(system_range(0, 99, 1)) t2(e);
+CREATE TABLE strings(g VARCHAR, x INTEGER)
+
+statement ok
+INSERT INTO strings SELECT t1.x::VARCHAR, (t1.x*10+t2.x)::INTEGER FROM system_range(0, 99, 1) t1, system_range(0, 99, 1) t2;
 
 query I
-SELECT COUNT(*) FROM (SELECT g, STRING_AGG(x) FROM strings GROUP BY g) t1
+SELECT COUNT(*) FROM (SELECT g, LISTAGG(x) FROM strings GROUP BY g) t1
 ----
 100
 
-query I
-SELECT g, STRING_AGG(x ORDER BY x) as s FROM strings GROUP BY g ORDER BY 1, 2
-----
-200 values hashing to b8126ea73f21372cdb3f2dc483106a12
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+#query I
+#SELECT g, GROUP_CONCAT(x ORDER BY x) as s FROM strings GROUP BY g ORDER BY 1, 2
+#----
+#200 values hashing to b8126ea73f21372cdb3f2dc483106a12
