@@ -122,7 +122,7 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
                 
-//                if (!p.toAbsolutePath().toString().contains("timestampdiff"))
+//                if (!p.toAbsolutePath().toString().contains("/sqlite/join/join1"))
 //                    return;
 
                 runTest(p, notifier);

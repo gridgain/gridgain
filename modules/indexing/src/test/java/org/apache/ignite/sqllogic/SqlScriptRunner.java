@@ -753,7 +753,7 @@ public class SqlScriptRunner {
                 }
             }
 
-            if (!res0.equals(expectedHash))
+            if (!expectedHash.equalsIgnoreCase(res0))
                 throw new AssertionError("Unexpected hash result, error at: " + posDesc +
                     ", expected=" + expectedHash + ", calculated=" + res0 +
                     ", expectedRows=" + expectedRows + ", returnedRows=" + res.size() * res.get(0).size());
