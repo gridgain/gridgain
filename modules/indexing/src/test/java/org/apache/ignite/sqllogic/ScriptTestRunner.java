@@ -20,7 +20,6 @@ import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -122,8 +121,8 @@ public class ScriptTestRunner extends Runner {
 
                     return;
                 }
-
-//                if (!"test_group_by.test".equals(p.getFileName().toString()))
+                
+//                if (!p.toAbsolutePath().toString().contains("timestampdiff"))
 //                    return;
 
                 runTest(p, notifier);
