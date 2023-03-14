@@ -122,7 +122,7 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
                 
-//                if (!p.toAbsolutePath().toString().contains("/sqlite/join/join1"))
+//                if (!p.toAbsolutePath().toString().contains("/join/"))
 //                    return;
 
                 runTest(p, notifier);
