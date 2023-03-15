@@ -379,7 +379,8 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
 
                         throw new IgniteCheckedException("SSL handshake failed (connection closed).", e);
                     }
-                } finally {
+                }
+                finally {
                     // Try to write TLS error to the remote.
                     hnd.writeNetBuffer(null);
                 }
