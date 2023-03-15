@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.nio.ssl;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -355,6 +356,29 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
             }
         }
         catch (SSLException e) {
+            if (e instanceof SSLHandshakeException) {
+                GridNioFutureImpl<?> fut = ses.removeMeta(HANDSHAKE_FUT_META_KEY);
+
+                if (fut != null) {
+                    if (rejectedSesCnt != null)
+                        rejectedSesCnt.increment();
+
+                    fut.onDone(new IgniteCheckedException("SSL handshake failed (connection closed).", onSessionOpenedException));
+
+                    return;
+                }
+
+                String errMsg = e.getMessage();
+                if (errMsg.contains("Received fatal alert")) {
+                    if (errMsg.contains("bad_certificate")) {// It's a TLS v1.3 "post-handshake handshake" error.
+                        if (rejectedSesCnt != null)
+                            rejectedSesCnt.increment();
+
+                        throw new IgniteCheckedException("SSL handshake failed (connection closed).", e);
+                    }
+                }
+            }
+
             throw new GridNioException("Failed to decode SSL data: " + ses, e);
         }
         finally {
