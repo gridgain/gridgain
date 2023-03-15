@@ -357,25 +357,31 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
         }
         catch (SSLException e) {
             if (e instanceof SSLHandshakeException) {
-                GridNioFutureImpl<?> fut = ses.removeMeta(HANDSHAKE_FUT_META_KEY);
+                onSessionOpenedException = e;
 
-                if (fut != null) {
-                    if (rejectedSesCnt != null)
-                        rejectedSesCnt.increment();
+                try {
+                    GridNioFutureImpl<?> fut = ses.removeMeta(HANDSHAKE_FUT_META_KEY);
 
-                    fut.onDone(new IgniteCheckedException("SSL handshake failed (connection closed).", onSessionOpenedException));
+                    if (fut != null) {
+                        if (rejectedSesCnt != null)
+                            rejectedSesCnt.increment();
 
-                    return;
-                }
+                        fut.onDone(new IgniteCheckedException("SSL handshake failed (connection closed).", e));
 
-                String errMsg = e.getMessage();
-                if (errMsg.contains("Received fatal alert")) {
-                    if (errMsg.contains("bad_certificate")) { // It's a TLS v1.3 "post-handshake handshake" error.
+                        return;
+                    }
+
+                    String errMsg = e.getMessage();
+                    if (errMsg.contains("Received fatal alert")) {
+                        // It's a TLS v1.3 "post-handshake handshake" error.
                         if (rejectedSesCnt != null)
                             rejectedSesCnt.increment();
 
                         throw new IgniteCheckedException("SSL handshake failed (connection closed).", e);
                     }
+                } finally {
+                    // Try to write TLS error to the remote.
+                    hnd.writeNetBuffer(null);
                 }
             }
 
