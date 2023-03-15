@@ -115,6 +115,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryEnsureDelivery;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryJoinRequestMessage;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
+import sun.security.ssl.SSLSocketImpl;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONSISTENT_ID_BY_HOST_WITHOUT_PORT;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -1686,7 +1687,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             out.flush();
         }
         catch (IOException e) {
-            err = e;
+            err = maybeSslError(sock, e);
         }
         finally {
             boolean cancelled = obj.cancel();
@@ -1701,6 +1702,34 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             if (!cancelled)
                 throw new SocketTimeoutException("Write timed out (socket was concurrently closed).");
         }
+    }
+
+    private IOException maybeSslError(Socket sock, IOException e) {
+        if (!(sock instanceof SSLSocketImpl) || (e instanceof SSLException))
+            return e;
+
+        SSLSocketImpl sockImpl = (SSLSocketImpl)sock;
+
+        if (U.hasField(sockImpl, "conContext")) {
+            Object conCtx = U.field(sockImpl, "conContext");
+
+            if (conCtx != null && U.hasField(conCtx, "isNegotiated")) {
+                Boolean isNegotiated = U.field(conCtx, "isNegotiated");
+
+                if (isNegotiated != null && !isNegotiated)
+                    return new SSLException("readHandshakeRecord", e);
+            }
+        }
+
+        try {
+            sock.getInputStream().read();
+        }
+        catch (IOException ioException) {
+            if (ioException instanceof SSLException)
+                return ioException;
+        }
+
+        return e;
     }
 
     /**
