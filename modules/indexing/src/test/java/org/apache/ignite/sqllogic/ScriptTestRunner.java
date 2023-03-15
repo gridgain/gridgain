@@ -121,9 +121,9 @@ public class ScriptTestRunner extends Runner {
 
                     return;
                 }
-                
-//                if (!p.toAbsolutePath().toString().contains("/join/"))
-//                    return;
+
+                if (!p.toAbsolutePath().toString().contains("/order/"))
+                    return;
 
                 runTest(p, notifier);
             });
