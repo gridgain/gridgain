@@ -122,9 +122,6 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
 
-                if (p.toAbsolutePath().toString().contains("/updates/"))
-                    return;
-
                 runTest(p, notifier);
             });
         }
