@@ -1753,6 +1753,16 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         assert !req.returnValue() || (req.operation() == TRANSFORM || req.size() == 1);
 
+        if (ctx.startTopologyVersion().after(req.topologyVersion())) {
+            // The request reffers to a cache with the same identifier, but the required cache was already stopped.
+            // There is no need to provide a list of keys, because it can be a problem to marshall keys using this cache context.
+            res.addFailedKeys(Collections.emptyList(), new CacheStoppedException(name()));
+
+            completionCb.apply(req, res);
+
+            return;
+        }
+
         GridDhtAtomicAbstractUpdateFuture dhtFut = null;
 
         IgniteCacheExpiryPolicy expiry = null;

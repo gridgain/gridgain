@@ -42,6 +42,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
+import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.EntryGetResult;
 import org.apache.ignite.internal.processors.cache.EntryGetWithTtlResult;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
@@ -1122,7 +1123,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
      * @param mvccSnapshot Mvcc snapshot.
      * @return Future for the operation.
      */
-    GridDhtGetSingleFuture getDhtSingleAsync(
+    GridDhtFuture<GridCacheEntryInfo> getDhtSingleAsync(
         UUID nodeId,
         long msgId,
         KeyCacheObject key,
@@ -1170,21 +1171,27 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
             final CacheExpiryPolicy expiryPlc = CacheExpiryPolicy.fromRemote(req.createTtl(), req.accessTtl());
 
-            IgniteInternalFuture<GridCacheEntryInfo> fut =
-                getDhtSingleAsync(
-                    nodeId,
-                    req.messageId(),
-                    req.key(),
-                    req.addReader(),
-                    req.readThrough(),
-                    req.topologyVersion(),
-                    req.subjectId(),
-                    req.taskNameHash(),
-                    expiryPlc,
-                    req.skipValues(),
-                    req.recovery(),
-                    req.txLabel(),
-                    req.mvccSnapshot());
+            IgniteInternalFuture<GridCacheEntryInfo> fut;
+
+            if (ctx.startTopologyVersion().after(req.topologyVersion())) {
+                fut = new FinishedGetFuture<>(new CacheStoppedException(ctx.name()));
+            }
+            else {
+                fut = getDhtSingleAsync(
+                        nodeId,
+                        req.messageId(),
+                        req.key(),
+                        req.addReader(),
+                        req.readThrough(),
+                        req.topologyVersion(),
+                        req.subjectId(),
+                        req.taskNameHash(),
+                        expiryPlc,
+                        req.skipValues(),
+                        req.recovery(),
+                        req.txLabel(),
+                        req.mvccSnapshot());
+            }
 
             fut.listen(new CI1<IgniteInternalFuture<GridCacheEntryInfo>>() {
                 @Override public void apply(IgniteInternalFuture<GridCacheEntryInfo> f) {
@@ -1282,20 +1289,26 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
             final CacheExpiryPolicy expiryPlc = CacheExpiryPolicy.fromRemote(req.createTtl(), req.accessTtl());
 
-            IgniteInternalFuture<Collection<GridCacheEntryInfo>> fut =
-                getDhtAsync(nodeId,
-                    req.messageId(),
-                    req.keys(),
-                    req.addReaders(),
-                    req.readThrough(),
-                    req.topologyVersion(),
-                    req.subjectId(),
-                    req.taskNameHash(),
-                    expiryPlc,
-                    req.skipValues(),
-                    req.recovery(),
-                    req.txLabel(),
-                    req.mvccSnapshot());
+            IgniteInternalFuture<Collection<GridCacheEntryInfo>> fut;
+
+            if (ctx.startTopologyVersion().after(req.topologyVersion())) {
+                fut = new FinishedGetFuture(new CacheStoppedException(ctx.name()));
+            }
+            else {
+                fut = getDhtAsync(nodeId,
+                        req.messageId(),
+                        req.keys(),
+                        req.addReaders(),
+                        req.readThrough(),
+                        req.topologyVersion(),
+                        req.subjectId(),
+                        req.taskNameHash(),
+                        expiryPlc,
+                        req.skipValues(),
+                        req.recovery(),
+                        req.txLabel(),
+                        req.mvccSnapshot());
+            }
 
             fut.listen(new CI1<IgniteInternalFuture<Collection<GridCacheEntryInfo>>>() {
                 @Override public void apply(IgniteInternalFuture<Collection<GridCacheEntryInfo>> f) {
@@ -1803,5 +1816,19 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
          * @param msg Message.
          */
         protected abstract void onMessage(ClusterNode node, M msg);
+    }
+
+    private static class FinishedGetFuture<T> extends GridFinishedFuture<T> implements GridDhtFuture<T> {
+        /**
+         * @param err Error.
+         */
+        private FinishedGetFuture(Throwable err) {
+            super(err);
+        }
+
+        /** {@inheritDoc} */
+        @Override public Collection<Integer> invalidPartitions() {
+            return Collections.emptyList();
+        }
     }
 }
