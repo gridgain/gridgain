@@ -122,7 +122,7 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
 
-                if (!p.toAbsolutePath().toString().contains("/order/"))
+                if (!p.toAbsolutePath().toString().contains("/subquery/"))
                     return;
 
                 runTest(p, notifier);
