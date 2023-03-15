@@ -370,7 +370,7 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
 
                 String errMsg = e.getMessage();
                 if (errMsg.contains("Received fatal alert")) {
-                    if (errMsg.contains("bad_certificate")) {// It's a TLS v1.3 "post-handshake handshake" error.
+                    if (errMsg.contains("bad_certificate")) { // It's a TLS v1.3 "post-handshake handshake" error.
                         if (rejectedSesCnt != null)
                             rejectedSesCnt.increment();
 
