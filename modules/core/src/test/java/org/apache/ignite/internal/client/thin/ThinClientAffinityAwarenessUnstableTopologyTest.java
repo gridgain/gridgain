@@ -104,7 +104,8 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         // Next request will also detect topology change.
         // initDefaultChannel();
         // TODO: ???
-        awaitChannelsInit(0);
+        // awaitChannelsInit(0, 1, 2);
+        opsQueue.clear();
 
         // Test affinity awareness after node join.
         testAffinityAwareness(true);
@@ -184,9 +185,7 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         // Send any request to failover.
         client.cache(REPL_CACHE_NAME).put(0, 0);
 
-        // initDefaultChannel();
-        // TODO: ???
-        awaitChannelsInit(0);
+        opsQueue.clear();
 
         awaitChannelsInit(0, 1);
 
