@@ -68,8 +68,7 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void beforeTestsStarted() throws Exception {
+    @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         startGrids(1);
@@ -78,8 +77,7 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void afterTest() throws Exception {
+    @Override protected void afterTest() throws Exception {
         super.afterTest();
 
         grid(0).destroyCache(CACHE_NAME);
@@ -88,8 +86,7 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void afterTestsStopped() throws Exception {
+    @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
@@ -215,7 +212,14 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
-    public void testCacheOperationAndCacheRecreate(
+    /**
+     *
+     * @param mode Cache atomicity mode.
+     * @param clazz Cache message type to be blocked before re-creating a cache.
+     * @param cacheOp Cache operation.
+     * @throws Exception If failed.
+     */
+    private void testCacheOperationAndCacheRecreate(
         CacheAtomicityMode mode,
         Class<? extends GridCacheIdMessage> clazz,
         IgniteBiInClosure<IgniteCache<Integer, Integer>, List<Integer>> cacheOp
@@ -231,8 +235,6 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
 
         // Block cache operation.
         clientSpi.blockMessages((node, msg) -> {
-//            U.dumpStack(log, ">>>>> communication masg");
-            log.warning(">>>>> msg all [msg=" + msg + ']');
             if (clazz.isAssignableFrom(msg.getClass())) {
                 GridCacheIdMessage msg0 = (GridCacheIdMessage)msg;
 
@@ -251,7 +253,7 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         // Wait for operation is initiated on the client node.
         clientSpi.waitForBlocked();
 
-        // Destoy the existing cache and re-create it once again in order to deliver the blocked cache message to a server node
+        // Destoy the existing cache and re-create it once again in order to deliver the blocked cache message to the server node
         // when the reqired cache is destroyed and new cache handlers are registered.
         g0.destroyCache(clientCache.getName());
 
