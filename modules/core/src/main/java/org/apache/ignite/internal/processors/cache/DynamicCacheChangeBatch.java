@@ -16,18 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.service.ServiceDeploymentActions;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -47,14 +41,6 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     /** Discovery custom message ID. */
     private IgniteUuid id = IgniteUuid.randomUuid();
 
-    /** Request ID -> Initiator Node ID mapping extracted from {@link DynamicCacheChangeBatch#reqs} collection
-     * for a situation with incomplete deserialization when no requests can be obtained from the collection. */
-    private Map<UUID, UUID> cacheReqsMapping;
-
-    /** Cache name -> Deployment ID mapping. This collection is needed for the same purpose as the other one:
-     * {@link #cacheReqsMapping}. */
-    private Map<String, IgniteUuid> cacheTemplateReqsMapping;
-
     /** Change requests. */
     @GridToStringInclude
     private Collection<DynamicCacheChangeRequest> reqs;
@@ -72,31 +58,11 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
     @GridToStringExclude
     @Nullable private transient ServiceDeploymentActions serviceDeploymentActions;
 
-    /** Exception thrown during deserialization of this message (if any). */
-    private ClassNotFoundException deserEx;
-
     /**
      * @param reqs Requests.
      */
     public DynamicCacheChangeBatch(Collection<DynamicCacheChangeRequest> reqs) {
         assert !F.isEmpty(reqs) : reqs;
-
-        cacheReqsMapping = reqs.stream()
-            .collect(
-                Collectors.toMap(
-                    DynamicCacheChangeRequest::requestId,
-                    DynamicCacheChangeRequest::initiatingNodeId
-            )
-        );
-
-        cacheTemplateReqsMapping = reqs.stream()
-            .filter(req -> req.deploymentId() != null)
-            .collect(
-                Collectors.toMap(
-                    DynamicCacheChangeRequest::cacheName,
-                    DynamicCacheChangeRequest::deploymentId
-            )
-        );
 
         this.reqs = reqs;
     }
@@ -113,7 +79,7 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
 
     /** {@inheritDoc} */
     @Override public boolean isMutable() {
-        return true;
+        return false;
     }
 
     /** {@inheritDoc} */
@@ -199,37 +165,6 @@ public class DynamicCacheChangeBatch implements DiscoveryCustomMessage {
      */
     public void startCaches(boolean startCaches) {
         this.startCaches = startCaches;
-    }
-
-    /** */
-    private void readObject(ObjectInputStream in) throws IOException {
-        try {
-            in.defaultReadObject();
-        }
-        catch (ClassNotFoundException cnfe) {
-            deserEx = cnfe;
-
-            throw new IncompleteDeserializationException(this);
-        }
-    }
-
-    /**
-     * Getter for an exception caught during message deserialization.
-     *
-     * @return Exception or {@code null} if deserialization was successful.
-     */
-    @Nullable public ClassNotFoundException deserializationException() {
-        return deserEx;
-    }
-
-    /** */
-    @Nullable public Map<UUID, UUID> cacheReqsMapping() {
-        return cacheReqsMapping;
-    }
-
-    /** */
-    @Nullable public Map<String, IgniteUuid> cacheTemplateReqsMapping() {
-        return cacheTemplateReqsMapping;
     }
 
     /** {@inheritDoc} */

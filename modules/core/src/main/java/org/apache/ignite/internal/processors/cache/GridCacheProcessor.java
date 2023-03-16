@@ -3150,7 +3150,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (validationRes != null)
             return new IgniteNodeValidationResult(node.id(), validationRes);
 
-        return ValidationOnNodeJoinUtils.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor);
+        return ValidationOnNodeJoinUtils.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor,
+            enricher());
     }
 
     /**
@@ -4234,45 +4235,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
         if (msg instanceof DynamicCacheChangeBatch) {
             DynamicCacheChangeBatch batchMsg = (DynamicCacheChangeBatch) msg;
-
-            ClassNotFoundException deserEx = batchMsg.deserializationException();
-
-            if (deserEx != null) {
-                String errMsgTemplate = "Failed to %s," +
-                    " an error occurred during cache configuration deserialization: " + deserEx + "." +
-                    " A possible cause is that some classes from configuration are unavailable on the server side." +
-                    " Please check configuration and make sure all necessary classes" +
-                    " are available on all nodes accross the cluster.";
-
-                if (batchMsg.cacheReqsMapping() != null && !batchMsg.cacheReqsMapping().isEmpty()) {
-                    Throwable err = new IgniteCheckedException(String.format(errMsgTemplate, "start cache"));
-
-                    for (Map.Entry<UUID, UUID> entry : batchMsg.cacheReqsMapping().entrySet()) {
-                        log.warning("Failed to handle cache start request," +
-                            " an exception was thrown during request message deserialization: " + deserEx + '.' +
-                            " Request ID: " + entry.getKey() + ',' +
-                            " Initiating node ID: " + entry.getValue());
-
-                        completeCacheStartFuture(entry.getKey(), entry.getValue(), false, err);
-                    }
-                }
-
-                if (batchMsg.cacheTemplateReqsMapping() != null && !batchMsg.cacheTemplateReqsMapping().isEmpty()) {
-                    Throwable err = new IgniteCheckedException(
-                        String.format(errMsgTemplate, "add new cache template"));
-
-                    for (Map.Entry<String, IgniteUuid> entry : batchMsg.cacheTemplateReqsMapping().entrySet()) {
-                        log.warning("Failed to handle add cache template request," +
-                            " an exception was thrown during message deserialization: " + deserEx + '.' +
-                            " Cache name: " + entry.getKey() + ',' +
-                            " Deployment ID: " + entry.getValue());
-
-                        completeTemplateAddFuture(entry.getKey(), entry.getValue(), err);
-                    }
-                }
-
-                return false;
-            }
 
             boolean changeRequested = cachesInfo.onCacheChangeRequested(batchMsg, topVer);
 

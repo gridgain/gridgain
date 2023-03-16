@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.QueryEntity;
@@ -118,19 +119,20 @@ public class ValidationOnNodeJoinUtils {
     /**
      * Checks a joining node to configuration consistency.
      *
-     * @param node Node.
-     * @param discoData Disco data.
-     * @param marsh Marsh.
-     * @param ctx Context.
+     * @param node              Node.
+     * @param discoData         Disco data.
+     * @param marsh             Marsh.
+     * @param ctx               Context.
      * @param cacheDescProvider Cache descriptor provider.
+     * @param enricher
      */
     @Nullable static IgniteNodeValidationResult validateNode(
         ClusterNode node,
         DiscoveryDataBag.JoiningNodeDiscoveryData discoData,
         Marshaller marsh,
         GridKernalContext ctx,
-        Function<String, DynamicCacheDescriptor> cacheDescProvider
-    ) {
+        Function<String, DynamicCacheDescriptor> cacheDescProvider,
+        CacheConfigurationEnricher enricher) {
         if (discoData.hasJoiningNodeData() && discoData.joiningNodeData() instanceof CacheJoinNodeDiscoveryData) {
             CacheJoinNodeDiscoveryData nodeData = (CacheJoinNodeDiscoveryData)discoData.joiningNodeData();
 
@@ -169,6 +171,14 @@ public class ValidationOnNodeJoinUtils {
 
                         errorMsg.append(ex.getMessage());
                     }
+                }
+
+                try {
+                    enricher.enrich(cacheInfo.cacheData().config(),
+                        cacheInfo.cacheData().cacheConfigurationEnrichment(), true);
+                }
+                catch (IgniteException e) {
+                    errorMsg.append(e.getMessage());
                 }
 
                 DynamicCacheDescriptor locDesc = cacheDescProvider.apply(cacheInfo.cacheData().config().getName());

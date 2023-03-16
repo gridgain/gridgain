@@ -354,6 +354,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     private CacheInterceptor<K, V> interceptor;
 
     /** */
+    @SerializeSeparately
     private Class<?>[] sqlFuncCls;
 
     /** */
