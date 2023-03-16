@@ -122,7 +122,7 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
 
-                if (!p.toAbsolutePath().toString().contains("/having/test_scalar_having.test"))
+                if (!p.toAbsolutePath().toString().contains("/insert/"))
                     return;
 
                 runTest(p, notifier);

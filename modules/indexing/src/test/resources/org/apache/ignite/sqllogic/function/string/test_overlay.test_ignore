@@ -1,6 +1,7 @@
 # name: test/sql/function/string/test_overlay.test
 # description: Just simple test to check support of OVERLAY function.
 # group: [string]
+# [ignore] Not supported.
 
 
 query T

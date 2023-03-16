@@ -1,7 +1,7 @@
 # name: test/sql/function/string/test_similar_to.test
 # description: Test SIMILAR TO statement
 # group: [string]
-# [ignore]
+# [ignore] Not supported.
 
 query T
 SELECT 'aaa' SIMILAR TO 'bbb'

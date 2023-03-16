@@ -1,7 +1,7 @@
 # name: test/sql/function/string/test_substring_utf8.test
 # description: Substring test with UTF8
 # group: [string]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14677
+# [ignore] 32 bit unicode characters length invalid.
 
 statement ok
 CREATE TABLE strings(s VARCHAR);

@@ -93,3 +93,11 @@ SELECT EXTRACT(hour FROM i) FROM timestamps ORDER BY id
 ----
 8
 NULL
+
+query I
+SELECT EXTRACT(milliseconds FROM i) FROM timestamps ORDER BY id
+----
+0
+NULL
+
+

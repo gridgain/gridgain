@@ -36,6 +36,33 @@ SELECT EXTRACT(hour FROM i) FROM times ORDER BY id
 20
 NULL
 
+query I
+SELECT EXTRACT(milliseconds FROM i) FROM times ORDER BY id
+----
+0
+998
+330
+1
+NULL
+
+query I
+SELECT EXTRACT(microseconds FROM i) FROM times ORDER BY id
+----
+0
+998000
+330000
+001000
+NULL
+
+query I
+SELECT EXTRACT(epoch FROM i) FROM times ORDER BY id
+----
+80
+72490.998
+72490.33
+72490.001
+NULL
+
 # time gives errors for date-only parts
 statement error
 SELECT EXTRACT(year FROM i) FROM times

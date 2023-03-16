@@ -1,6 +1,7 @@
 # name: test/sql/function/string/test_reverse.test
 # description: REVERSE test
 # group: [string]
+# [ignore] Not supported.
 
 # test reverse on scalars
 query TTTT

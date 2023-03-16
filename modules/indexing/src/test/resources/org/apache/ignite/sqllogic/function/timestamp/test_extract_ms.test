@@ -21,3 +21,15 @@ SELECT EXTRACT(minute FROM i) FROM timestamps ORDER BY id
 22
 NULL
 
+query I
+SELECT EXTRACT(milliseconds FROM i) FROM timestamps ORDER BY id
+----
+420
+NULL
+
+query I
+SELECT EXTRACT(microseconds FROM i) FROM timestamps ORDER BY id
+----
+420000
+NULL
+

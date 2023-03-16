@@ -5,6 +5,16 @@
 # COALESCE
 
 query T
+SELECT COALESCE(null, null, 'first', 'second', null)
+----
+first
+
+query T
+SELECT COALESCE(COALESCE(null, 'world'), 'blabla')
+----
+world
+
+query T
 SELECT COALESCE(null, DATE '2021-07-08', DATE '2020-01-01')
 ----
 2021-07-08

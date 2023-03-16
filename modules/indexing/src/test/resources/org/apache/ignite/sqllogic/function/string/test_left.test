@@ -30,7 +30,7 @@ statement ok
 DROP TABLE IF EXISTS strings
 
 statement ok
-CREATE TABLE strings(a VARCHAR, b INTEGER)
+CREATE TABLE strings(a VARCHAR, b BIGINT)
 
 statement ok
 INSERT INTO STRINGS VALUES ('abcd', 0), ('abc', 1), ('abc', 2), ('abc', 3), ('abc', 4)
@@ -48,7 +48,7 @@ statement ok
 DROP TABLE IF EXISTS strings
 
 statement ok
-CREATE TABLE strings(a VARCHAR, b INTEGER)
+CREATE TABLE strings(a VARCHAR, b BIGINT)
 
 statement ok
 INSERT INTO STRINGS VALUES ('abcd', 0), ('abc', -1), ('abc', -2), ('abc', -3), ('abc', -4)
@@ -66,7 +66,7 @@ statement ok
 DROP TABLE IF EXISTS strings
 
 statement ok
-CREATE TABLE strings(a VARCHAR, b INTEGER)
+CREATE TABLE strings(a VARCHAR, b BIGINT)
 
 statement ok
 INSERT INTO STRINGS VALUES (NULL, 0), ('abc', NULL), (NULL, NULL)
@@ -78,3 +78,24 @@ NULL
 NULL
 NULL
 
+### [ignore] 32 bit unicode characters length invalid.
+
+#query TTTTT
+#SELECT LEFT('🦆ab', 0), LEFT('🦆ab', 1), LEFT('🦆ab', 2), LEFT('🦆ab', 3), LEFT('🦆ab', 4)
+#----
+#(empty)	🦆	🦆a	🦆ab	🦆ab
+
+#query TTTT
+#SELECT LEFT('🦆🤦S̈', 0), LEFT('🦆🤦S̈', 1), LEFT('🦆🤦S̈', 2), LEFT('🦆🤦S̈', 3)
+#----
+#(empty)	🦆	🦆🤦	🦆🤦S̈
+
+#query TTTTT
+#SELECT LEFT('🦆ab', 0), LEFT('🦆ab', -1), LEFT('🦆ab', -2), LEFT('🦆ab', -3), LEFT('🦆ab', -4)
+#----
+#(empty)	🦆a	🦆	(empty)	(empty)
+
+#query TTTT
+#SELECT LEFT('🦆🤦S̈', 0), LEFT('🦆🤦S̈', -1), LEFT('🦆🤦S̈', -2), LEFT('🦆🤦S̈', -3)
+#----
+#(empty)	🦆🤦	🦆	(empty)

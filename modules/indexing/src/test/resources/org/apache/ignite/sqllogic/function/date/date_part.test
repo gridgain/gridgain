@@ -190,3 +190,20 @@ SELECT DAYOFMONTH(d) as d FROM dates ORDER BY d;
 1
 31
 
+### [ignore]  Function "STATS" not supported.
+
+#query I
+#SELECT stats(YEARWEEK(d)) FROM dates LIMIT 1;
+#----
+#<REGEX>:.*199201.*200052.*
+
+#query I
+#SELECT stats(WEEKDAY(d)) FROM dates LIMIT 1;
+#----
+#<REGEX>:.*0.*6.*
+
+#query I
+#SELECT stats(WEEKOFYEAR(d)) FROM dates LIMIT 1;
+#----
+#<REGEX>:.*1.*54.*
+

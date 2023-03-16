@@ -48,6 +48,11 @@ SELECT ' a ' LIKE '*_ ' ESCAPE '*';
 false
 
 query T
+SELECT '%_' LIKE '%_' ESCAPE '';
+----
+true
+
+query T
 SELECT '*%' NOT LIKE '*%' ESCAPE '*';
 ----
 true
