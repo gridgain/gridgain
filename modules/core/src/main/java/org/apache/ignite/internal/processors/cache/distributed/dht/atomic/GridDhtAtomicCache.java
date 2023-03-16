@@ -1820,33 +1820,33 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     needRemap(req.topologyVersion(), top.readyTopologyVersion()))
                                     remapVer = top.lastTopologyChangeVersion();
                             }
+
+                            if (remapVer == null) {
+                                // TXDR requirement, check TxDrBasicScenariosTest.testScenario3_1
+                                if (ctx.shared().readOnlyMode() && !CU.isUtilityCache(ctx.name())) {
+                                    CacheInvalidStateException err = new CacheInvalidStateException(
+                                        new IgniteClusterReadOnlyException(format(CLUSTER_READ_ONLY_ERROR_MSG,
+                                            ctx.group().name(), ctx.name())));
+
+                                    res.error(err);
+
+                                    completionCb.apply(req, res);
+
+                                    return;
+                                }
+
+                                update(node, locked, req, res, updDhtRes, taskName);
+
+                                dhtFut = updDhtRes.dhtFuture();
+                                expiry = updDhtRes.expiryPolicy();
+                            }
+                            else
+                                // Should remap all keys.
+                                res.remapTopologyVersion(remapVer);
                         }
                         finally {
                             top.readUnlock();
                         }
-
-                        if (remapVer == null) {
-                            // TXDR requirement, check TxDrBasicScenariosTest.testScenario3_1
-                            if (ctx.shared().readOnlyMode() && !CU.isUtilityCache(ctx.name())) {
-                                CacheInvalidStateException err = new CacheInvalidStateException(
-                                    new IgniteClusterReadOnlyException(format(CLUSTER_READ_ONLY_ERROR_MSG,
-                                        ctx.group().name(), ctx.name())));
-
-                                res.error(err);
-
-                                completionCb.apply(req, res);
-
-                                return;
-                            }
-
-                            update(node, locked, req, res, updDhtRes, taskName);
-
-                            dhtFut = updDhtRes.dhtFuture();
-                            expiry = updDhtRes.expiryPolicy();
-                        }
-                        else
-                            // Should remap all keys.
-                            res.remapTopologyVersion(remapVer);
 
                         // This call will convert entry processor invocation results to cache object instances.
                         // Must be done outside topology read lock to avoid deadlocks.
@@ -1956,9 +1956,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         GridNearAtomicUpdateResponse res,
         DhtAtomicUpdateResult dhtUpdRes,
         String taskName
-    )
-        throws GridCacheEntryRemovedException
-    {
+    ) throws GridCacheEntryRemovedException {
         GridDhtPartitionTopology top = topology();
 
         boolean hasNear = req.nearCache();
@@ -2195,7 +2193,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                 ctx.cache().metrics0().onReadOnlyInvoke(old != null);
 
                             continue;
-                        } else {
+                        }
+                        else {
                             updatedVal = ctx.unwrapTemporary(invokeEntry.getValue());
 
                             updated = ctx.toCacheObject(updatedVal);
@@ -2883,7 +2882,6 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     dhtUpdRes.addDeleted(entry, updRes, entries);
 
                     if (dhtFut != null) {
-
                         dhtFut.addWriteEntry(
                             affAssignment,
                             entry,

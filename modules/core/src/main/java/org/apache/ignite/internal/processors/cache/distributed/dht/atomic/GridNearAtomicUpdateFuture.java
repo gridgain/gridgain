@@ -410,11 +410,8 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
                 remapKeys.addAll(req.keys());
 
-                if (remapTopVer == null || remapTopVer.compareTo(res.remapTopologyVersion()) < 0) {
-                    // why we are tryoing to remap on req.topVer instead of res.remapTopVer?
-//                    remapTopVer = req.topologyVersion();
+                if (remapTopVer == null || remapTopVer.compareTo(res.remapTopologyVersion()) < 0)
                     remapTopVer = res.remapTopologyVersion();
-                }
             }
             else if (res.error() != null)
                 onPrimaryError(req, res);
