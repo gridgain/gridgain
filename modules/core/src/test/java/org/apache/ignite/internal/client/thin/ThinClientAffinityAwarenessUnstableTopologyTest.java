@@ -102,10 +102,9 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         awaitPartitionMapExchange();
 
         // Next request will also detect topology change.
-        // initDefaultChannel();
-        // TODO: ???
-        // awaitChannelsInit(0, 1, 2);
         opsQueue.clear();
+        client.getOrCreateCache(REPL_CACHE_NAME);
+        assertNotNull(opsQueue.poll());
 
         // Test affinity awareness after node join.
         testAffinityAwareness(true);
