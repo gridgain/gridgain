@@ -1,7 +1,7 @@
 # name: test/sql/types/collections/list_aggregates.test
 # description: Test lists with aggregations
 # group: [collections]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-16417
+# [ignore] Function "LIST_VALUE" not found.
 
 query II
 select min(i::varchar), max(i::varchar) from table(system_range(0, 9)) tbl(i);

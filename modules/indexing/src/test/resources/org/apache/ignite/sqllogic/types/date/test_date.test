@@ -15,35 +15,35 @@ INSERT INTO dates VALUES ('1993-08-14'), (NULL)
 
 # check that we can select dates
 query T
-SELECT * FROM dates
+SELECT * FROM dates order by i NULLS LAST
 ----
 1993-08-14
 NULL
 
 # YEAR function
 query I
-SELECT year(i) FROM dates
+SELECT year(i) FROM dates order by i NULLS LAST
 ----
 1993
 NULL
 
 # check that we can convert dates to string
 query T
-SELECT cast(i AS VARCHAR) FROM dates
+SELECT cast(i AS VARCHAR) FROM dates order by i NULLS LAST
 ----
 1993-08-14
 NULL
 
 # check that we can add days to a date
 query T
-SELECT i + 5 FROM dates
+SELECT i + 5 FROM dates order by i NULLS LAST
 ----
 1993-08-19
 NULL
 
 # check that we can subtract days from a date
 query T
-SELECT i - 5 FROM dates
+SELECT i - 5 FROM dates order by i NULLS LAST
 ----
 1993-08-09
 NULL
@@ -64,7 +64,7 @@ SELECT i + i FROM dates
 
 # but we can subtract them! resulting in an integer
 query I
-SELECT (i + 5) - i FROM dates
+SELECT (i + 5) - i FROM dates order by i NULLS LAST
 ----
 5
 NULL

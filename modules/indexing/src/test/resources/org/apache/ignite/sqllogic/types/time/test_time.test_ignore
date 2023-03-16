@@ -1,7 +1,7 @@
 # name: test/sql/types/time/test_time.test
 # description: Test basic TIME functionality
 # group: [time]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15619
+# [ignore] TIME is truncated to seconds.
 
 statement ok
 PRAGMA enable_verification
@@ -13,7 +13,7 @@ statement ok
 INSERT INTO times VALUES ('00:01:20'), ('20:08:10.998'), ('20:08:10.33'), ('20:08:10.001'), (NULL)
 
 query T
-SELECT * FROM times
+SELECT * FROM times order by i NULLS LAST;
 ----
 00:01:20
 20:08:10.998

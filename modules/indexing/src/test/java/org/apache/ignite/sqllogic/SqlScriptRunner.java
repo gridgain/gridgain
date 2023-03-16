@@ -162,7 +162,7 @@ public class SqlScriptRunner {
         log.info("Execute: " + sql);
 
         List<FieldsQueryCursor<List<?>>> curs =
-            sqlProc.querySqlFields(new SqlFieldsQuery(sql).setDistributedJoins(true).setSchema(schemaPublic), false, false);
+            sqlProc.querySqlFields(new SqlFieldsQuery(sql).setSchema(schemaPublic), false, false);
 
         assert curs.size() == 1 : "Unexpected results [cursorsCount=" + curs.size() + ']';
 

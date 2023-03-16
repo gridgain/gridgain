@@ -122,9 +122,6 @@ public class ScriptTestRunner extends Runner {
                     return;
                 }
 
-                if (!p.toAbsolutePath().toString().contains("/insert/"))
-                    return;
-
                 runTest(p, notifier);
             });
         }
@@ -151,12 +148,12 @@ public class ScriptTestRunner extends Runner {
         if (testRegex != null && !testRegex.matcher(test.toString()).find())
             return;
 
-//        if (testRegex == null && !fileName.endsWith(".test") && !fileName.endsWith(".test_slow")) {
-//            if (fileName.endsWith(".test_ignore"))
-//                notifier.fireTestIgnored(desc);
-//
-//            return;
-//        }
+        if (testRegex == null && !fileName.endsWith(".test") && !fileName.endsWith(".test_slow")) {
+            if (fileName.endsWith(".test_ignore"))
+                notifier.fireTestIgnored(desc);
+
+            return;
+        }
 
         beforeTest();
 

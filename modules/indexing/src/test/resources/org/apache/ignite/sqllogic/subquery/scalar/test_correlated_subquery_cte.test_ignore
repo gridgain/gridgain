@@ -1,7 +1,7 @@
 # name: test/sql/subquery/scalar/test_correlated_subquery_cte.test
 # description: Test correlated subqueries
 # group: [scalar]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15995
+# [ignore] Failed to parse query (column i1.i inside nested subquery not found).
 
 statement ok
 PRAGMA enable_verification
