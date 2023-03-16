@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -49,7 +50,7 @@ import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_
 @SuppressWarnings("rawtypes")
 public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommonAbstractTest {
     /** Wait timeout. */
-    private static final long WAIT_TIMEOUT = 5_000L;
+    protected static final long WAIT_TIMEOUT = 5_000L;
 
     /** Replicated cache name. */
     protected static final String REPL_CACHE_NAME = "replicated_cache";
@@ -185,7 +186,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
     protected void initClient(ClientConfiguration clientCfg, int... chIdxs) throws IgniteInterruptedCheckedException {
         client = new TcpIgniteClient((cfg, hnd) -> {
             try {
-                log.info("Establishing connection to " + cfg.getAddress());
+                log.info("Establishing connection to " + cfg.getAddresses());
 
                 TcpClientChannel ch = new TestTcpClientChannel(cfg, hnd);
 
@@ -326,7 +327,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
             this.cfg = cfg;
 
-            int chIdx = cfg.getAddress().getPort() - DFLT_PORT;
+            int chIdx = F.first(cfg.getAddresses()).getPort() - DFLT_PORT;
 
             channels[chIdx] = this;
 
@@ -339,8 +340,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
             Function<PayloadInputChannel, T> payloadReader) throws ClientException {
             T res = super.service(op, payloadWriter, payloadReader);
 
-            // Store all operations except binary type registration in queue to check later.
-            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+            // Store all operations except some implicit system ops in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME
+                && op != ClientOperation.PUT_BINARY_TYPE
+                && op != ClientOperation.CLUSTER_GROUP_GET_NODE_ENDPOINTS
+            )
                 opsQueue.offer(new T2<>(this, op));
 
             return res;
@@ -352,8 +356,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 Consumer<PayloadOutputChannel> payloadWriter,
                 Function<PayloadInputChannel, T> payloadReader)
                 throws ClientException {
-            // Store all operations except binary type registration in queue to check later.
-            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+            // Store all operations except some implicit system ops in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME
+                && op != ClientOperation.PUT_BINARY_TYPE
+                && op != ClientOperation.CLUSTER_GROUP_GET_NODE_ENDPOINTS
+            )
                 opsQueue.offer(new T2<>(this, op));
 
             return super.serviceAsync(op, payloadWriter, payloadReader);
@@ -375,7 +382,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return cfg.getAddress().toString();
+            return cfg.getAddresses().toString();
         }
     }
 }
