@@ -1,7 +1,7 @@
 # name: test/sql/aggregate/having/test_having.test
 # description: Test HAVING clause
 # group: [having]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14540
+# [ignore] Failed to generate REDUCE query. Data table found.
 
 statement ok
 CREATE TABLE test (a INTEGER, b INTEGER);

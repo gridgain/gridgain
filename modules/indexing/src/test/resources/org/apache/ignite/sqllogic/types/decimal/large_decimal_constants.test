@@ -11,7 +11,7 @@ SELECT 42.1, -10239814.1, 1049185157.12345, 102398294123451814.12345, -492384092
 102398294123451814.12345
 -49238409238403918140294812084.12490812490
 
-# [ignored] Function TYPEOF not supported.
+# [ignore] Function TYPEOF not supported.
 #query IIIII
 #SELECT typeof(42.1), typeof(-10239814.1), typeof(1049185157.12345), typeof(102398294123451814.12345), typeof(-49238409238403918140294812084.12490812490)
 #----
@@ -32,7 +32,7 @@ SELECT 42., 42e3, 4.23e1, 10e20, .34, - 2.3
 0.34
 -2.3
 
-# [ignored] Function TYPEOF not supported.
+# [ignore] Function TYPEOF not supported.
 #query IIIIIII
 #SELECT typeof(42.), typeof(42e3), typeof(4.23e1), typeof(10e20), typeof(.34), typeof(-2.3), typeof(10e100)
 #----

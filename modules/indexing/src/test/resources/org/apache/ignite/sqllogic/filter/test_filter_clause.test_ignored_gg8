@@ -1,15 +1,16 @@
 # name: test/sql/filter/test_filter_clause.test
 # description: Test aggregation with filter clause
 # group: [filter]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15589
+# [ignore] COUNT .. FILTER doesn't work in ignite/gg h2.
 
 statement ok
-create table t as select x i, mod(x,10) j,mod(x,10)*10000000 k from table(system_range(0, 999));
+create table t(i int, j int, k int);
+insert into t select x, mod(x,10),mod(x,10)*10000000 from system_range(0, 999);
 
 query I
-SELECT count(*) from t;
+SELECT COUNT(*) FILTER (WHERE i < 5) from t;
 ----
-1000
+5
 
 query II
 SELECT

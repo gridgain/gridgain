@@ -67,6 +67,13 @@ SELECT b, SUM(a), COUNT(*), SUM(a+2) FROM test GROUP BY b ORDER BY b;
 21	12.000000	1	14.000000
 22	24.000000	2	28.000000
 
+# group by alias
+query IR
+SELECT b % 2 AS f, SUM(a) FROM test GROUP BY f;
+----
+0	24.000000
+1	12.000000
+
 # group by with filter
 query IRIR
 SELECT b, SUM(a), COUNT(*), SUM(a+2) FROM test WHERE a <= 12 GROUP BY b ORDER BY b;
@@ -103,7 +110,7 @@ SELECT i, i + 10 FROM integers GROUP BY i ORDER BY i
 3	13
 
 # using non-group column and non-aggregate should throw an error,
-# but this works in H2 and sql lite because they implicitly add a grouping column
+# but this works in H2 and sql lite because they implicitly add a groupping column
 query IRI
 SELECT i, SUM(j), j FROM integers GROUP BY i ORDER BY i
 ----

@@ -1,6 +1,7 @@
 # name: test/sql/aggregate/aggregates/test_quantile.test
 # description: Test MEDIAN operator
 # group: [aggregates]
+# [ignore] Unsupported expression: MEDIAN(1)
 
 statement ok
 PRAGMA enable_verification

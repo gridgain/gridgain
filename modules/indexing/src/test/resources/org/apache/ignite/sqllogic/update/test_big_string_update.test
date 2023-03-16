@@ -62,7 +62,7 @@ SELECT LENGTH(a) FROM test
 2600000
 
 #############################################
-# [ignored] Transactional SQL not supported.
+# [ignore] Transactional SQL not supported.
 #############################################
 
 # now update the big string in a separate transaction

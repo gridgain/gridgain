@@ -1,7 +1,7 @@
 # name: test/sql/aggregate/aggregates/test_stddev.test
 # description: STDDEV aggregations
 # group: [aggregates]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14642
+# [ignore] Unsupported expression: STDDEV_SAMP(VAL)
 
 statement ok
 create table stddev_test(val integer, grp integer)

@@ -1,7 +1,7 @@
 # name: test/sql/aggregate/aggregates/test_covar.test
 # description: Test COVAR operators
 # group: [aggregates]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14641
+# [ignore] Function "COVAR_POP" not found.
 
 
 # test incorrect usage of COVAR_POP function
