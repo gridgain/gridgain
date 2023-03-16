@@ -125,9 +125,12 @@ public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstrac
                 assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
 
             assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
-            assertTrue(channelHits.containsKey(opCh));
 
-            channelHits.compute(opCh, (c, old) -> true);
+            if (opCh != null) {
+                assertTrue(channelHits.containsKey(opCh));
+
+                channelHits.compute(opCh, (c, old) -> true);
+            }
         }
 
         assertFalse(channelHits.containsValue(false));
