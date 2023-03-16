@@ -28,7 +28,7 @@ public class ReliabilityTestPartitionAwareAsync extends ReliabilityTestAsync {
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean isPartitionAware() {
+    @Override protected boolean isClientPartitionAwarenessEnabled() {
         return true;
     }
 }

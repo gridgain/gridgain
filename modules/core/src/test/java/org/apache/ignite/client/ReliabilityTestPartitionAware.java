@@ -30,7 +30,7 @@ public class ReliabilityTestPartitionAware extends ReliabilityTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected boolean isPartitionAware() {
+    @Override protected boolean isClientPartitionAwarenessEnabled() {
         return true;
     }
 }
