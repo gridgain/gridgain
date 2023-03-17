@@ -41,6 +41,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -94,11 +95,10 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
             grid(0).destroyCaches(cachesToDestroy);
             awaitPartitionMapExchange();
         }
-
-        System.setProperty(IGNITE_SQL_ALLOW_IMPLICIT_PK, "true");
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testBasicOperations() {
         String sql = "CREATE TABLE integers(i INTEGER)";
 
@@ -131,6 +131,7 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testCacheApiCompatibility() {
         querySql("CREATE TABLE person(name VARCHAR, age INT) WITH \"value_type=" + Person.class.getName() + "\"");
 
@@ -187,13 +188,14 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
     }
 
     @Test
+    @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testNodeRestart() throws Exception {
         querySql("CREATE TABLE uuids(i UUID) with \"template=default\"");
 
         int dataCnt = 100;
         Set<UUID> expRows = new HashSet<>();
         BiConsumer<Integer, Integer> fillData = (off, cnt) -> {
-            for (int i = 0; i < dataCnt / 2; i++) {
+            for (int i = off; i < cnt; i++) {
                 UUID id = UUID.randomUUID();
 
                 expRows.add(id);
