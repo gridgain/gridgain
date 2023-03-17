@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.metric;
 
 import com.google.common.collect.Iterators;
+import java.util.stream.LongStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -24,6 +25,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.metric.LongMetric;
@@ -44,7 +47,10 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.CACHE_GROUP;
 import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
+import static org.apache.ignite.internal.util.IgniteUtils.checkpointBufferSize;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -53,6 +59,12 @@ import static org.junit.Assert.assertThat;
 public class IoStatisticsSelfTest extends GridCommonAbstractTest {
     /** */
     private static final int RECORD_COUNT = 5000;
+
+    /**
+     * Value is chosen so that DataPage are evicted from data region, when adding an entry to the cache, we again
+     * loaded (read) the DataPage from disk in order to add an entry to it.
+     */
+    private static final long MAX_REGION_SIZE = 25 * MB;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -190,11 +202,10 @@ public class IoStatisticsSelfTest extends GridCommonAbstractTest {
 
         if (isPersist) {
             DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+                .setConcurrencyLevel(3)
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
-                        // Value is chosen so that DataPage are evicted from data region, when adding an entry to the
-                        // cache, we again loaded (read) the DataPage from disk in order to add an entry to it.
-                        .setMaxSize(25 * MB)
+                        .setMaxSize(MAX_REGION_SIZE)
                         .setPersistenceEnabled(true)
                 ).setWalMode(WALMode.LOG_ONLY);
 
@@ -217,6 +228,17 @@ public class IoStatisticsSelfTest extends GridCommonAbstractTest {
         ignite.cluster().state(ClusterState.ACTIVE);
 
         ignite.createCache(DEFAULT_CACHE_NAME);
+
+        if (isPersist) {
+            DataRegion dataRegion = ignite.context().cache().cache(DEFAULT_CACHE_NAME).context().dataRegion();
+
+            PageMemoryImpl memory = ((PageMemoryImpl)dataRegion.pageMemory());
+
+            assertThat(
+                LongStream.of(getFieldValue(memory, "sizes")).sum() - checkpointBufferSize(dataRegion.config()),
+                lessThanOrEqualTo(MAX_REGION_SIZE)
+            );
+        }
 
         return ignite;
     }

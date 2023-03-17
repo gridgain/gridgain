@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.persistence;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,11 +38,14 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry.GroupStateLazyStore;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointMarkersStorage;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.EarliestCheckpointMapSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.plugin.AbstractTestPluginProvider;
 import org.apache.ignite.plugin.PluginContext;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
@@ -190,11 +194,28 @@ public class IgnitePdsCheckpointMapSnapshotTest extends GridCommonAbstractTest {
             forceCheckpoint(grid);
         }
 
-        stopGrid(0, true);
-
         File cpDir = dbMgr(grid).checkpointManager.checkpointDirectory();
 
         File cpSnapshotMap = new File(cpDir, CheckpointMarkersStorage.EARLIEST_CP_SNAPSHOT_FILE);
+
+        if (action == KEEP) {
+            assertTrue(GridTestUtils.waitForCondition(() -> {
+                // Wait until there is an expected number of checkpoints in cp snapshot.
+                try {
+                    byte[] bytes = Files.readAllBytes(cpSnapshotMap.toPath());
+
+                    EarliestCheckpointMapSnapshot snap = JdkMarshaller.DEFAULT.unmarshal(bytes, null);
+
+                    // Manual checkpoint count + one checkpoint on node start.
+                    return snap.checkpointIds().size() >= (cnt + 1);
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }, TimeUnit.SECONDS.toMillis(3)));
+        }
+
+        stopGrid(0, true);
 
         if (action == REMOVE) {
             // Remove checkpoint map snapshot

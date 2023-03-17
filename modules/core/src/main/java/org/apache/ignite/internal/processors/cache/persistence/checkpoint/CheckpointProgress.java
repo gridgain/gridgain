@@ -23,7 +23,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Represents information of a progress of a current checkpoint and allows to obtain future to wait for a particular
+ * Represents information of the current checkpoint's progress and allows to obtain future to wait for a particular
  * checkpoint state.
  */
 public interface CheckpointProgress {

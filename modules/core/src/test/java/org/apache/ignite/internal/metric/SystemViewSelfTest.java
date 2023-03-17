@@ -71,8 +71,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.thin.ProtocolVersion;
 import org.apache.ignite.internal.managers.systemview.walker.CachePagesListViewWalker;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.spi.systemview.view.CachePagesListView;
-import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
 import org.apache.ignite.internal.processors.service.DummyService;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -86,12 +84,14 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.spi.systemview.view.CacheGroupView;
+import org.apache.ignite.spi.systemview.view.CachePagesListView;
 import org.apache.ignite.spi.systemview.view.CacheView;
 import org.apache.ignite.spi.systemview.view.ClientConnectionView;
 import org.apache.ignite.spi.systemview.view.ClusterNodeView;
 import org.apache.ignite.spi.systemview.view.ComputeTaskView;
 import org.apache.ignite.spi.systemview.view.ContinuousQueryView;
 import org.apache.ignite.spi.systemview.view.FiltrableSystemView;
+import org.apache.ignite.spi.systemview.view.PagesListView;
 import org.apache.ignite.spi.systemview.view.ScanQueryView;
 import org.apache.ignite.spi.systemview.view.ServiceView;
 import org.apache.ignite.spi.systemview.view.StripedExecutorTaskView;
@@ -669,21 +669,25 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
             try {
                 AtomicInteger cntr = new AtomicInteger();
 
+                int threadNum = 5;
+                CountDownLatch cacheUpdLatch = new CountDownLatch(threadNum);
+
                 GridTestUtils.runMultiThreadedAsync(() -> {
                     try (Transaction tx = g.transactions().withLabel("test").txStart(PESSIMISTIC, REPEATABLE_READ)) {
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
+
+                        cacheUpdLatch.countDown();
 
                         latch.await();
                     }
                     catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                }, 5, "xxx");
+                }, threadNum, "xxx");
 
-                boolean res = waitForCondition(() -> txs.size() == 5, 10_000L);
-
-                assertTrue(res);
+                assertTrue(waitForCondition(() -> txs.size() == 5, 10_000L));
+                assertTrue(cacheUpdLatch.await(10, TimeUnit.SECONDS));
 
                 TransactionView txv = txs.iterator().next();
 
@@ -710,22 +714,24 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 if (Objects.equals(System.getProperty(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS), "true"))
                     return;
 
+                CountDownLatch cacheUpdLatch2 = new CountDownLatch(threadNum);
                 GridTestUtils.runMultiThreadedAsync(() -> {
                     try (Transaction tx = g.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache1.put(cntr.incrementAndGet(), cntr.incrementAndGet());
                         cache2.put(cntr.incrementAndGet(), cntr.incrementAndGet());
 
+                        cacheUpdLatch2.countDown();
+
                         latch.await();
                     }
                     catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                }, 5, "xxx");
+                }, threadNum, "xxx");
 
-                res = waitForCondition(() -> txs.size() == 10, 10_000L);
-
-                assertTrue(res);
+                assertTrue(waitForCondition(() -> txs.size() == 10, 10_000L));
+                assertTrue(cacheUpdLatch2.await(10, TimeUnit.SECONDS));
 
                 for (TransactionView tx : txs) {
                     if (PESSIMISTIC == tx.concurrency())
@@ -759,9 +765,7 @@ public class SystemViewSelfTest extends GridCommonAbstractTest {
                 latch.countDown();
             }
 
-            boolean res = waitForCondition(() -> txs.size() == 0, 10_000L);
-
-            assertTrue(res);
+            assertTrue(waitForCondition(() -> txs.size() == 0, 10_000L));
         }
     }
 
