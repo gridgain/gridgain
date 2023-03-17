@@ -117,8 +117,8 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
 
         clientCache.put(keyForUnknownNode, 0);
 
-        assertOpOnChannel(dfltCh, ClientOperation.CACHE_PARTITIONS);
-        assertOpOnChannel(dfltCh, ClientOperation.CACHE_PUT);
+        assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
+        assertOpOnChannel(null, ClientOperation.CACHE_PUT);
     }
 
     /**
@@ -284,17 +284,17 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
         // After first response we should send partitions request on default channel together with next request.
         cache.put(0, 0);
 
-        assertOpOnChannel(dfltCh, ClientOperation.CACHE_PARTITIONS);
-        assertOpOnChannel(dfltCh, ClientOperation.CACHE_PUT);
+        assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
+        assertOpOnChannel(null, ClientOperation.CACHE_PUT);
 
         for (int i = 1; i < KEY_CNT; i++) {
             cache.put(i, i);
 
-            assertOpOnChannel(dfltCh, ClientOperation.CACHE_PUT);
+            assertOpOnChannel(null, ClientOperation.CACHE_PUT);
 
             cache.get(i);
 
-            assertOpOnChannel(dfltCh, ClientOperation.CACHE_GET);
+            assertOpOnChannel(null, ClientOperation.CACHE_GET);
         }
     }
 
@@ -312,7 +312,7 @@ public class ThinClientAffinityAwarenessStableTopologyTest extends ThinClientAbs
 
         // Default channel is the first who detects topology change, so next partition request will go through
         // the default channel.
-        assertOpOnChannel(dfltCh, ClientOperation.CACHE_PARTITIONS);
+        assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
         assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
 
         for (int i = 1; i < KEY_CNT; i++) {

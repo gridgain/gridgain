@@ -392,6 +392,8 @@ public class NodeSslConnectionMetricTest extends GridCommonAbstractTest {
     ) {
        return new ClientConfiguration()
             .setAddresses("127.0.0.1:10800")
+            // When PA is enabled, async client channel init executes and spoils the metrics.
+            .setAffinityAwarenessEnabled(false)
             .setSslMode(SslMode.REQUIRED)
             .setSslContextFactory(sslContextFactory(keyStore, trustStore, cipherSuite, protocol));
     }

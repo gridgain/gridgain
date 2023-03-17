@@ -37,9 +37,12 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_PORT;
 
@@ -49,7 +52,7 @@ import static org.apache.ignite.configuration.ClientConnectorConfiguration.DFLT_
 @SuppressWarnings("rawtypes")
 public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommonAbstractTest {
     /** Wait timeout. */
-    private static final long WAIT_TIMEOUT = 5_000L;
+    protected static final long WAIT_TIMEOUT = 5_000L;
 
     /** Replicated cache name. */
     protected static final String REPL_CACHE_NAME = "replicated_cache";
@@ -81,9 +84,6 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
     /** Operations queue. */
     protected final Queue<T2<TestTcpClientChannel, ClientOperation>> opsQueue = new ConcurrentLinkedQueue<>();
 
-    /** Default channel. */
-    protected TestTcpClientChannel dfltCh;
-
     /** Client instance. */
     protected IgniteClient client;
 
@@ -94,25 +94,25 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         cfg.setConsistentId(igniteInstanceName);
 
         CacheConfiguration ccfg0 = new CacheConfiguration()
-            .setName(REPL_CACHE_NAME)
-            .setCacheMode(CacheMode.REPLICATED);
+                .setName(REPL_CACHE_NAME)
+                .setCacheMode(CacheMode.REPLICATED);
 
         CacheConfiguration ccfg1 = new CacheConfiguration()
-            .setName(PART_CUSTOM_AFFINITY_CACHE_NAME)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setAffinity(new CustomAffinityFunction());
+                .setName(PART_CUSTOM_AFFINITY_CACHE_NAME)
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setAffinity(new CustomAffinityFunction());
 
         CacheConfiguration ccfg2 = new CacheConfiguration()
-            .setName(PART_CACHE_NAME)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setKeyConfiguration(
-                new CacheKeyConfiguration(TestNotAnnotatedAffinityKey.class.getName(), "affinityKey"),
-                new CacheKeyConfiguration(TestAnnotatedAffinityKey.class));
+                .setName(PART_CACHE_NAME)
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setKeyConfiguration(
+                        new CacheKeyConfiguration(TestNotAnnotatedAffinityKey.class.getName(), "affinityKey"),
+                        new CacheKeyConfiguration(TestAnnotatedAffinityKey.class));
 
         CacheConfiguration ccfg3 = new CacheConfiguration()
-            .setName(PART_CACHE_0_BACKUPS_NAME)
-            .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(0);
+                .setName(PART_CACHE_0_BACKUPS_NAME)
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setBackups(0);
 
         CacheConfiguration ccfg4 = new CacheConfiguration()
                 .setName(PART_CACHE_1_BACKUPS_NAME)
@@ -133,14 +133,15 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         opsQueue.clear();
 
-        if (client != null)
-            client.close();
+        U.closeQuiet(client);
+
+        client = null;
     }
 
     /**
      * Checks that operation goes through specified channel.
      */
-    protected void assertOpOnChannel(TestTcpClientChannel expCh, ClientOperation expOp) {
+    protected void assertOpOnChannel(@Nullable TestTcpClientChannel expCh, ClientOperation expOp) {
         T2<TestTcpClientChannel, ClientOperation> nextChOp = opsQueue.poll();
 
         assertNotNull("Unexpected (null) next operation [expCh=" + expCh + ", expOp=" + expOp + ']', nextChOp);
@@ -148,8 +149,10 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         assertEquals("Unexpected operation on channel [expCh=" + expCh + ", expOp=" + expOp +
                 ", nextOpCh=" + nextChOp + ']', expOp, nextChOp.get2());
 
-        assertEquals("Unexpected channel for operation [expCh=" + expCh + ", expOp=" + expOp +
-            ", nextOpCh=" + nextChOp + ']', expCh, nextChOp.get1());
+        if (expCh != null) {
+            assertEquals("Unexpected channel for operation [expCh=" + expCh + ", expOp=" + expOp +
+                    ", nextOpCh=" + nextChOp + ']', expCh, nextChOp.get1());
+        }
     }
 
     /**
@@ -160,12 +163,19 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         UUID nodeId = nodes.iterator().next().id();
 
+        return nodeChannel(nodeId);
+    }
+
+    /**
+     * Calculates channel for node.
+     */
+    protected TestTcpClientChannel nodeChannel(UUID nodeId) {
         for (int i = 0; i < channels.length; i++) {
             if (channels[i] != null && nodeId.equals(channels[i].serverNodeId()))
                 return channels[i];
         }
 
-        return dfltCh;
+        return null;
     }
 
     /**
@@ -173,7 +183,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
      */
     protected ClientConfiguration getClientConfiguration(int... nodeIdxs) {
         String addrs[] = Arrays.stream(nodeIdxs).mapToObj(nodeIdx -> "127.0.0.1:" + (DFLT_PORT + nodeIdx))
-            .toArray(String[]::new);
+                .toArray(String[]::new);
 
         return new ClientConfiguration().setAddresses(addrs).setAffinityAwarenessEnabled(true);
     }
@@ -185,7 +195,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
     protected void initClient(ClientConfiguration clientCfg, int... chIdxs) throws IgniteInterruptedCheckedException {
         client = new TcpIgniteClient((cfg, hnd) -> {
             try {
-                log.info("Establishing connection to " + cfg.getAddress());
+                log.info("Establishing connection to " + cfg.getAddresses());
 
                 TcpClientChannel ch = new TestTcpClientChannel(cfg, hnd);
 
@@ -202,25 +212,19 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         awaitChannelsInit(chIdxs);
 
-        initDefaultChannel();
+        opsQueue.clear();
     }
 
     /**
-     *
+     * Trigger client to detect topology change.
      */
-    protected void initDefaultChannel() {
+    protected void detectTopologyChange() {
         opsQueue.clear();
 
-        // Send non-affinity request to determine default channel.
+        // Send non-affinity request to detect topology change.
         client.getOrCreateCache(REPL_CACHE_NAME);
 
-        T2<TestTcpClientChannel, ClientOperation> nextChOp = opsQueue.poll();
-
-        assertNotNull(nextChOp);
-
-        assertEquals(nextChOp.get2(), ClientOperation.CACHE_GET_OR_CREATE_WITH_NAME);
-
-        dfltCh = nextChOp.get1();
+        assertOpOnChannel(null, ClientOperation.CACHE_GET_OR_CREATE_WITH_NAME);
     }
 
     /**
@@ -230,7 +234,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         // Wait until all channels initialized.
         for (int ch : chIdxs) {
             assertTrue("Failed to wait for channel[" + ch + "] init",
-                GridTestUtils.waitForCondition(() -> channels[ch] != null, WAIT_TIMEOUT));
+                    GridTestUtils.waitForCondition(() -> channels[ch] != null, WAIT_TIMEOUT));
         }
     }
 
@@ -315,8 +319,8 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
         /** Channel configuration. */
         private final ClientChannelConfiguration cfg;
 
-        /** Closed flag. */
-        private boolean closed;
+        /** Channel is closed. */
+        private volatile boolean closed;
 
         /**
          * @param cfg Config.
@@ -326,21 +330,24 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
             this.cfg = cfg;
 
-            int chIdx = cfg.getAddress().getPort() - DFLT_PORT;
+            int chIdx = F.first(cfg.getAddresses()).getPort() - DFLT_PORT;
 
             channels[chIdx] = this;
 
             addTopologyChangeListener(ch -> log.info("Topology change detected [ch=" + ch + ", topVer=" +
-                ch.serverTopologyVersion() + ']'));
+                    ch.serverTopologyVersion() + ']'));
         }
 
         /** {@inheritDoc} */
         @Override public <T> T service(ClientOperation op, Consumer<PayloadOutputChannel> payloadWriter,
-            Function<PayloadInputChannel, T> payloadReader) throws ClientException {
+                                       Function<PayloadInputChannel, T> payloadReader) throws ClientException {
             T res = super.service(op, payloadWriter, payloadReader);
 
-            // Store all operations except binary type registration in queue to check later.
-            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+            // Store all operations except some implicit system ops in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME
+                    && op != ClientOperation.PUT_BINARY_TYPE
+                    && op != ClientOperation.CLUSTER_GROUP_GET_NODE_ENDPOINTS
+            )
                 opsQueue.offer(new T2<>(this, op));
 
             return res;
@@ -352,8 +359,11 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
                 Consumer<PayloadOutputChannel> payloadWriter,
                 Function<PayloadInputChannel, T> payloadReader)
                 throws ClientException {
-            // Store all operations except binary type registration in queue to check later.
-            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME && op != ClientOperation.PUT_BINARY_TYPE)
+            // Store all operations except some implicit system ops in queue to check later.
+            if (op != ClientOperation.REGISTER_BINARY_TYPE_NAME
+                    && op != ClientOperation.PUT_BINARY_TYPE
+                    && op != ClientOperation.CLUSTER_GROUP_GET_NODE_ENDPOINTS
+            )
                 opsQueue.offer(new T2<>(this, op));
 
             return super.serviceAsync(op, payloadWriter, payloadReader);
@@ -375,7 +385,7 @@ public abstract class ThinClientAbstractAffinityAwarenessTest extends GridCommon
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return cfg.getAddress().toString();
+            return cfg.getAddresses().toString();
         }
     }
 }

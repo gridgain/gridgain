@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.client.thin;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import javax.cache.configuration.Factory;
@@ -32,7 +34,7 @@ import org.apache.ignite.configuration.ClientConfiguration;
  */
 final class ClientChannelConfiguration {
     /** Host. */
-    private final InetSocketAddress addr;
+    private final List<InetSocketAddress> addrs;
 
     /** Ssl mode. */
     private final SslMode sslMode;
@@ -113,7 +115,7 @@ final class ClientChannelConfiguration {
      * Constructor.
      */
     @SuppressWarnings("UnnecessaryThis")
-    ClientChannelConfiguration(ClientConfiguration cfg, InetSocketAddress addr) {
+    ClientChannelConfiguration(ClientConfiguration cfg, List<InetSocketAddress> addrs) {
         this.sslMode = cfg.getSslMode();
         this.tcpNoDelay = cfg.isTcpNoDelay();
         this.timeout = cfg.getTimeout();
@@ -133,7 +135,7 @@ final class ClientChannelConfiguration {
         this.userPwd = cfg.getUserPassword();
         this.reconnectThrottlingPeriod = cfg.getReconnectThrottlingPeriod();
         this.reconnectThrottlingRetries = cfg.getReconnectThrottlingRetries();
-        this.addr = addr;
+        this.addrs = Collections.unmodifiableList(addrs);
         this.userAttrs = cfg.getUserAttributes();
         this.asyncContinuationExecutor = cfg.getAsyncContinuationExecutor();
         this.heartbeatEnabled = cfg.isHeartbeatEnabled();
@@ -145,8 +147,8 @@ final class ClientChannelConfiguration {
     /**
      * @return Address.
      */
-    public InetSocketAddress getAddress() {
-        return addr;
+    public List<InetSocketAddress> getAddresses() {
+        return addrs;
     }
 
     /**

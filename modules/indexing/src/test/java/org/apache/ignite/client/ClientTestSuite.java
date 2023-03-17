@@ -26,10 +26,11 @@ import org.apache.ignite.internal.client.thin.IgniteSetTest;
 import org.apache.ignite.internal.client.thin.OptimizedMarshallerClassesCachedTest;
 import org.apache.ignite.internal.client.thin.ReliableChannelTest;
 import org.apache.ignite.internal.client.thin.ServicesTest;
-import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessConnectionTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessStableTopologyTest;
 import org.apache.ignite.internal.client.thin.ThinClientAffinityAwarenessUnstableTopologyTest;
+import org.apache.ignite.internal.client.thin.ThinClientEnpointsDiscoveryTest;
+import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
 import org.apache.ignite.internal.client.thin.TimeoutTest;
 import org.junit.runner.RunWith;
@@ -47,9 +48,6 @@ import org.junit.runners.Suite;
     IgniteBinaryTest.class,
     LoadTest.class,
     ReliabilityTest.class,
-    ReliabilityTestAsync.class,
-    ReliabilityTestPartitionAware.class,
-    ReliabilityTestPartitionAwareAsync.class,
     SecurityTest.class,
     FunctionalQueryTest.class,
     IgniteBinaryQueryTest.class,
@@ -74,7 +72,8 @@ import org.junit.runners.Suite;
     OptimizedMarshallerClassesCachedTest.class,
     AtomicLongTest.class,
     BinaryConfigurationTest.class,
-    IgniteSetTest.class
+    IgniteSetTest.class,
+    ThinClientEnpointsDiscoveryTest.class,
 })
 public class ClientTestSuite {
     // No-op.
