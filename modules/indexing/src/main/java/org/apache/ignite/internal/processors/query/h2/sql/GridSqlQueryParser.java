@@ -1166,7 +1166,7 @@ public class GridSqlQueryParser {
         LinkedHashSet<String> pkCols = implicitPk ? new LinkedHashSet<>() : parseConstraints(createTbl, cols);
 
         int keyColsNum = pkCols.size();
-        int valColsNum = cols.size() -  keyColsNum;
+        int valColsNum = cols.size() - keyColsNum;
 
         if (valColsNum == 0) {
             throw new IgniteSQLException("Table must have at least one non PRIMARY KEY column.",
