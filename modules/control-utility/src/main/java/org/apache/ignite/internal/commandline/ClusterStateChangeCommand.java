@@ -22,10 +22,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientException;
-import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.client.*;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.util.stream.Collectors.toSet;
@@ -70,7 +67,9 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = client.state().clusterName();
+            GridClientClusterState clientState = client.state();
+            if (!clientState.state().equals(INACTIVE))
+                clusterName=clientState.clusterName();
         }
     }
 
