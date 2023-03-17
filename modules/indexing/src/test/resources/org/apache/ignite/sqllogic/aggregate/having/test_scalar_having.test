@@ -5,7 +5,6 @@
 # CONTROVERSIAL: HAVING without GROUP BY works in PostgreSQL, but not in SQLite
 # scalar HAVING queries
 # constants only
-# Ignore https://issues.apache.org/jira/browse/IGNITE-14541
 
 query I
 SELECT 42 HAVING 42 > 20

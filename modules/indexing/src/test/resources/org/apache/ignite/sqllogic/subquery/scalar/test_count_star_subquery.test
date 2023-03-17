@@ -83,6 +83,14 @@ NULL	NULL
 3	NULL
 
 query II
+SELECT i, (SELECT CASE WHEN (SELECT COUNT(*) FROM integers i2 WHERE i2.i>i1.i)=0 THEN 1 ELSE 0 END) FROM integers i1 ORDER BY i;
+----
+NULL	1
+1	0
+2	0
+3	1
+
+query II
 SELECT i, (SELECT COUNT(*) FROM integers i2 WHERE i2.i>i1.i) FROM integers i1 ORDER BY i;
 ----
 NULL	0

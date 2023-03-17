@@ -18,6 +18,22 @@ CREATE TABLE test2 (a INTEGER, c INTEGER, str2 VARCHAR);
 statement ok
 INSERT INTO test2 VALUES (11, 1, 'a'), (12, 1, 'b'), (13, 4, 'b')
 
+# [ignore] SUM(..) in correlated subquery produces unexpected results.
+#query IRR
+#SELECT a, SUM(a), (SELECT SUM(a)+SUM(t1.b) FROM test) FROM test t1 GROUP BY a ORDER BY a;
+#----
+#11	11.000000	37.000000
+#12	12.000000	38.000000
+#13	13.000000	39.000000
+
+# scalar query with multiple correlated columns
+query R
+SELECT (SELECT test.a+test.b+SUM(test2.a) FROM test2 WHERE str=str2) FROM test ORDER BY 1;
+----
+NULL
+23.000000
+39.000000
+
 # exists with multiple correlated columns
 query IIT
 SELECT * FROM test WHERE EXISTS(SELECT * FROM test2 WHERE test.a=test2.a AND test.b<>test2.c) ORDER BY 1;
