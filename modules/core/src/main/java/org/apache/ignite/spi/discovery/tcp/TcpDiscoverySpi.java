@@ -1687,7 +1687,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             out.flush();
         }
         catch (IOException e) {
-            err = maybeSslError(sock, e);
+            err = clearUpSslEssence(sock, e);
         }
         finally {
             boolean cancelled = obj.cancel();
@@ -1712,7 +1712,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      * @param e Original exception.
      * @return {@link SSLException} if decided that an exception is related to SSL or original exception otherwise.
      */
-    private IOException maybeSslError(Socket sock, IOException e) {
+    private IOException clearUpSslEssence(Socket sock, IOException e) {
         if (!(sock instanceof SSLSocketImpl) || (e instanceof SSLException))
             return e;
 
