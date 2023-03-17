@@ -22,6 +22,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
@@ -47,18 +48,14 @@ public class DeactivateCommand extends AbstractCommand<Void> {
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState clientState = client.state();
-
-            if (isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE)) {
-                UUID id = clientState.id();
-                String tag = clientState.tag();
-                clusterName = "[id="+id.toString()+", tag="+tag+"]";
-            }
+            if (!clientState.state().equals(INACTIVE))
+                clusterName=clientState.clusterName();
         }
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: The command will deactivate a cluster " + clusterName + ".";
+        return "Warning: the command will deactivate a cluster \"" + clusterName + "\".";
     }
 
     /**
