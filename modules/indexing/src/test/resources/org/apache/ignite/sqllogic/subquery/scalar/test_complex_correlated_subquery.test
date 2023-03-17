@@ -11,7 +11,7 @@ CREATE TABLE integers(i INTEGER)
 statement ok
 INSERT INTO integers VALUES (1), (2), (3), (NULL)
 
-# [ignore] Cannot parse correlated expression inside sub-sub query (column not found). 
+# [ignore] Cannot parse correlated expression inside nested subquery (column not found). 
 # correlated expression in subquery
 #query II
 #SELECT i, (SELECT s1.i FROM (SELECT * FROM integers WHERE i=i1.i) s1) AS j FROM integers as i1 ORDER BY i;
@@ -21,7 +21,7 @@ INSERT INTO integers VALUES (1), (2), (3), (NULL)
 #2	2
 #3	3
 
-# [ignore] Cannot parse correlated expression inside sub-sub query (column not found).
+# [ignore] Cannot parse correlated expression inside nested subquery (column not found).
 # join on two subqueries that both have a correlated expression in them
 #query II
 #SELECT i, (SELECT s1.i FROM (SELECT i FROM integers WHERE i=i1.i) s1 INNER JOIN (SELECT i FROM integers WHERE i=4-i1.i) s2 ON s1.i>s2.i) AS j FROM integers i1 ORDER BY i;
@@ -49,9 +49,66 @@ NULL	NULL
 2	2
 3	1
 
+# inner join on correlated subquery
+query II
+SELECT * FROM integers s1 INNER JOIN integers s2 ON (SELECT 2*SUM(i)*s1.i FROM integers)=(SELECT SUM(i)*s2.i FROM integers) ORDER BY s1.i;
+----
+1	2
+
+# inner join on non-equality subquery
+# [ignore] doesn't apply ordering
+#query II
+#SELECT * FROM integers s1 INNER JOIN integers s2 ON (SELECT s1.i=s2.i) ORDER BY s1.i;
+#----
+#1	1
+#2	2
+#3	3
+
+# [note] Wrapped to one more SELECT to make ordering work.
+query II
+SELECT * FROM (SELECT s1.i as q1, s2.i as q2 FROM integers s1 INNER JOIN integers s2 ON (SELECT s1.i=s2.i)) ORDER BY q1;
+----
+1	1
+2	2
+3	3
+
+# [ignore] doesn't apply ordering
+#query II
+#SELECT * FROM integers s1 INNER JOIN integers s2 ON (SELECT s1.i=i FROM integers WHERE s2.i=i) ORDER BY s1.i;
+#----
+#1	1
+#2	2
+#3	3
+
+# [note] Wrapped to one more SELECT to make ordering work.
+query II
+SELECT * FROM (SELECT s1.i as q1, s2.i as q2 FROM integers s1 INNER JOIN integers s2 ON (SELECT s1.i=i FROM integers WHERE s2.i=i)) ORDER BY q1;
+----
+1	1
+2	2
+3	3
+
+# left outer join on comparison between correlated subqueries
+query TT
+SELECT * FROM integers s1 LEFT OUTER JOIN integers s2 ON (SELECT 2*SUM(i)*s1.i FROM integers)=(SELECT SUM(i)*s2.i FROM integers) ORDER BY s1.i;
+----
+NULL	NULL
+1	2
+2	NULL
+3	NULL
+
 # left outer join on arbitrary correlated subquery: not supported
 statement error
 SELECT * FROM integers s1 LEFT OUTER JOIN integers s2 ON (SELECT CASE WHEN s1.i+s2.i>10 THEN TRUE ELSE FALSE END) ORDER BY s1.i;
+
+# left outer join on subquery only involving RHS works
+query TT
+SELECT * FROM integers s1 LEFT OUTER JOIN integers s2 ON s1.i=s2.i AND (SELECT CASE WHEN s2.i>2 THEN TRUE ELSE FALSE END) ORDER BY s1.i;
+----
+NULL	NULL
+1	NULL
+2	NULL
+3	3
 
 # left outer join on subquery only involving LHS is not supported
 statement error
