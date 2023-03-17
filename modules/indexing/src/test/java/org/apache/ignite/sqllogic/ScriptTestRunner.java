@@ -16,6 +16,8 @@
 
 package org.apache.ignite.sqllogic;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -37,6 +39,8 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.apache.ignite.thread.IgniteThread;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.Failure;
@@ -86,6 +90,12 @@ public class ScriptTestRunner extends Runner {
     /** Test script timeout. */
     private final long timeout;
 
+    /** The method that will be called before all tests are executed. */
+    private Method afterCls;
+
+    /** The method that will be called after all tests have passed. */
+    private Method beforeCls;
+
     /** */
     public ScriptTestRunner(Class<?> testCls) {
         this.testCls = testCls;
@@ -98,6 +108,16 @@ public class ScriptTestRunner extends Runner {
         testRegex = F.isEmpty(env.regex()) ? null : Pattern.compile(env.regex());
         restartCluster = env.restart();
         timeout = env.timeout();
+
+        for (Method m : testCls.getMethods()) {
+            if (!Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 0)
+                continue;
+
+            if (m.isAnnotationPresent(BeforeClass.class))
+                beforeCls = m;
+            else if (m.isAnnotationPresent(AfterClass.class))
+                afterCls = m;
+        }
     }
 
     /** {@inheritDoc} */
@@ -108,6 +128,9 @@ public class ScriptTestRunner extends Runner {
     /** {@inheritDoc} */
     @Override public void run(final RunNotifier notifier) {
         try {
+            if (beforeCls != null)
+                beforeCls.invoke(null);
+            
             Files.walk(scriptsRoot).sorted().forEach((p) -> {
                 if (p.equals(scriptsRoot))
                     return;
@@ -130,6 +153,15 @@ public class ScriptTestRunner extends Runner {
         }
         finally {
             Ignition.stopAll(false);
+
+            if (afterCls != null) {
+                try {
+                    afterCls.invoke(null);
+                }
+                catch (Throwable t) {
+                    log.warning("Unable to execute '@afterClass' method " + afterCls.getName(), t);
+                }
+            }
         }
     }
 
@@ -161,11 +193,6 @@ public class ScriptTestRunner extends Runner {
 
         try {
             Ignite ign = F.first(Ignition.allGrids());
-
-//            QueryEngine engine = Commons.lookupComponent(
-//                ((IgniteEx)ign).context(),
-//                QueryEngine.class
-//            );
 
             SqlScriptRunner scriptTestRunner = new SqlScriptRunner(test, ((IgniteEx)ign).context().query(), log);
 
