@@ -22,10 +22,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
-import org.apache.ignite.internal.client.GridClient;
-import org.apache.ignite.internal.client.GridClientConfiguration;
-import org.apache.ignite.internal.client.GridClientException;
-import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.client.*;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.util.stream.Collectors.toSet;
@@ -64,7 +61,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         params.put(ACTIVE_READ_ONLY.toString(), "Activate cluster. Cache updates are denied.");
 
         Command.usage(log, "Change cluster state:", SET_STATE, params, or((Object[])ClusterState.values()),
-            optional(FORCE_COMMAND), optional(CMD_AUTO_CONFIRMATION));
+                optional(FORCE_COMMAND), optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */
@@ -72,7 +69,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState clientState = client.state();
             if (!clientState.state().equals(INACTIVE))
-                clusterName = clientState.clusterName();
+                clusterName=clientState.clusterName();
         }
     }
 
@@ -85,34 +82,34 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             Set<GridClientNode> serverNodes = client.compute().nodes().stream()
-                .filter(n -> !n.isClient() && !n.isDaemon())
-                .collect(toSet());
+                    .filter(n -> !n.isClient() && !n.isDaemon())
+                    .collect(toSet());
 
             Set<GridClientNode> supportedServerNodes = serverNodes.stream()
-                .filter(n -> n.supports(CLUSTER_READ_ONLY_MODE))
-                .collect(toSet());
+                    .filter(n -> n.supports(CLUSTER_READ_ONLY_MODE))
+                    .collect(toSet());
 
             Set<GridClientNode> notSupportedSafeDeactivation = supportedServerNodes.stream()
-                .filter(n -> !n.supports(SAFE_CLUSTER_DEACTIVATION))
-                .collect(toSet());
+                    .filter(n -> !n.supports(SAFE_CLUSTER_DEACTIVATION))
+                    .collect(toSet());
 
             if (!supportedServerNodes.equals(serverNodes) && state == ACTIVE_READ_ONLY)
                 throw new IgniteException("Not all nodes in cluster supports cluster state " + state);
 
             if (!notSupportedSafeDeactivation.isEmpty() && state == INACTIVE && !forceDeactivation) {
                 throw new GridClientException("Deactivation stopped. Found a nodes that do not support the " +
-                    "correctness checking of this operation: " + notSupportedSafeDeactivation + ". Deactivation " +
-                    "clears in-memory caches (without persistence) including the system caches. " +
-                    "To deactivate cluster pass '--force' flag.");
+                        "correctness checking of this operation: " + notSupportedSafeDeactivation + ". Deactivation " +
+                        "clears in-memory caches (without persistence) including the system caches. " +
+                        "To deactivate cluster pass '--force' flag.");
             }
 
             if (F.isEmpty(supportedServerNodes))
                 client.state().active(ClusterState.active(state));
             else
-                if (notSupportedSafeDeactivation.isEmpty())
-                    client.state().state(state, forceDeactivation);
-                else
-                    client.state().state(state);
+            if (notSupportedSafeDeactivation.isEmpty())
+                client.state().state(state, forceDeactivation);
+            else
+                client.state().state(state);
 
             log.info("Cluster state changed to " + state);
 
