@@ -162,29 +162,30 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
         }
 
         // Ensure all entries has been stored.
-        List<List<?>> rows = querySql("SELECT * FROM person");
+        List<List<?>> rows = querySql("SELECT _key, * FROM person");
 
         assertEquals(names.length, cache.size());
         assertEquals(names.length, rows.size());
 
         // Ensure all records are visible using SQL.
-        Set<Person> sqlPersons = rows.stream()
-            .map(l -> new Person((String)l.get(0), (Integer)l.get(1)))
-            .collect(Collectors.toSet());
+        Map<UUID, Person> sqlPersons = rows.stream()
+            .collect(Collectors.toMap(l -> (UUID)l.get(0), l -> new Person((String)l.get(1), (Integer)l.get(2))));
 
-        assertEquals(new HashSet<>(persons), sqlPersons);
+        assertEquals(new HashSet<>(persons), new HashSet<>(sqlPersons.values()));
+        assertTrue(sqlPersons.keySet().containsAll(expKeys));
 
         // Ensure all records are visible using cache API.
-        Map<UUID, Person> cacheData = new HashMap<>();
+        Map<UUID, Person> cachePersons = new HashMap<>();
 
         for (Cache.Entry<UUID, Person> e : cache)
-            cacheData.put(e.getKey(), e.getValue());
+            cachePersons.put(e.getKey(), e.getValue());
 
-        assertEquals(sqlPersons, new HashSet<>(cacheData.values()));
-        assertTrue(cacheData.keySet().containsAll(expKeys));
+        assertEquals(sqlPersons, cachePersons);
+        assertTrue(cachePersons.keySet().containsAll(expKeys));
 
-        for (UUID id : expKeys)
-            assertNotNull(cache.get(id));
+        for (Map.Entry<UUID, Person> p : sqlPersons.entrySet()) {
+            assertEquals(cache.get(p.getKey()), p.getValue());
+        }
     }
 
     @Test
