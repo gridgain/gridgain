@@ -1098,8 +1098,7 @@ public class CommandProcessor {
 
             Column col = gridCol.column();
 
-            if (!createTbl.implicitPk() || !col.isPrimaryKey())
-                res.addQueryField(e.getKey(), getTypeClassName(gridCol), null);
+            res.addQueryField(e.getKey(), getTypeClassName(gridCol), null);
 
             if (!col.isNullable()) {
                 if (notNullFields == null)

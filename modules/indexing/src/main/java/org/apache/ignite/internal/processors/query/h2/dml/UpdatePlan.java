@@ -211,7 +211,7 @@ public final class UpdatePlan {
 
         Object key = keySupplier.apply(row);
 
-        if (!desc.implicitPk() && QueryUtils.isSqlType(desc.keyClass())) {
+        if (QueryUtils.isSqlType(desc.keyClass())) {
             assert keyColIdx != -1;
 
             key = DmlUtils.convert(key, rowDesc, desc.keyClass(), colTypes[keyColIdx], colNames[keyColIdx]);

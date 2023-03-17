@@ -1102,8 +1102,7 @@ public class H2Utils {
         for (IndexColumn idxCol : idxCols) {
             if (idxCol.column.getColumnId() == KEY_COL) {
                 if (QueryUtils.isSqlType(type.keyClass())) {
-                    int altKeyColId = type.implicitPk() ? QueryUtils.KEY_COL :
-                        tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
+                    int altKeyColId = tbl.rowDescriptor().getAlternativeColumnId(QueryUtils.KEY_COL);
 
                     //Remap simple key to alternative column.
                     IndexColumn idxKeyCol = new IndexColumn();

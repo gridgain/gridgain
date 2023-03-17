@@ -100,12 +100,15 @@ public class TableWithImplicitPkTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_SQL_ALLOW_IMPLICIT_PK, value = "true")
     public void testBasicOperations() {
-        String sql = "CREATE TABLE integers(i INTEGER)";
-
         // "WRAP_KEY" option is not supported.
-        assertThrows(log, () -> querySql(sql + " WITH \"wrap_key=true\""), IgniteSQLException.class, null);
+        assertThrows(log, () -> querySql("CREATE TABLE integers(i INTEGER) WITH \"wrap_key=true\""),
+            IgniteSQLException.class, null);
 
-        querySql(sql);
+        // Table without columns. 
+        assertThrows(log, () -> querySql("CREATE TABLE integers()"),
+            IgniteSQLException.class, "Table must have at least one non PRIMARY KEY column");
+
+        querySql("CREATE TABLE integers(i INTEGER)");
 
         int rowsCnt = 5;
         Set<Integer> expNums = new HashSet<>();
