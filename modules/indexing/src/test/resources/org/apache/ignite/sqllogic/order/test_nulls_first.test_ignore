@@ -2,6 +2,7 @@
 # description: Test NULLS FIRST/NULLS LAST
 # group: [order]
 # Ignored: https://issues.apache.org/jira/browse/IGNITE-14777
+# [ignore] Unsupported expression: ROW_NUMBER() OVER.
 
 # now in window functions
 

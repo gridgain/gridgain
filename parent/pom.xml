@@ -1177,6 +1177,11 @@
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
                                         <exclude>modules/platforms/dotnet/Apache.Ignite.Core.Tests/Examples/ExpectedOutput/*.txt</exclude>
+                                        <!-- SQL logic test scripts. -->
+                                        <exclude>**/sqllogic/**/*.test</exclude>
+                                        <exclude>**/sqllogic/**/*.test_ignore</exclude>
+                                        <exclude>**/sqllogic/**/*.test_slow</exclude>
+                                        <exclude>**/sqllogic/**/*.test_slow_ignore</exclude>
                                         <!-- H2 forked module. -->
                                         <exclude>**/org/gridgain/internal/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>
