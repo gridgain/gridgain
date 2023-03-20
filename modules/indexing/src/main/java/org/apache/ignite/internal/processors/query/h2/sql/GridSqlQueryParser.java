@@ -32,6 +32,7 @@ import java.util.Objects;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryIndex;
@@ -42,6 +43,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.gridgain.internal.h2.command.Command;
 import org.gridgain.internal.h2.command.CommandContainer;
 import org.gridgain.internal.h2.command.CommandInterface;
@@ -113,6 +115,7 @@ import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.IGNITE_SQL_ALLOW_IMPLICIT_PK;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.AND;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlOperationType.BIGGER_EQUAL;
@@ -1139,37 +1142,36 @@ public class GridSqlQueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
 
-        List<DefineCommand> constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
+        boolean noPrimaryKey = F.isEmpty(CREATE_TABLE_CONSTRAINTS.get(createTbl));
+        boolean implicitPk = noPrimaryKey && IgniteSystemProperties.getBoolean(IGNITE_SQL_ALLOW_IMPLICIT_PK);
 
-        if (F.isEmpty(constraints)) {
-            throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE",
-                IgniteQueryErrorCode.PARSING);
+        if (noPrimaryKey && !implicitPk) {
+            throw new IgniteSQLException("No PRIMARY KEY defined for CREATE TABLE", IgniteQueryErrorCode.PARSING);
         }
-
-        if (constraints.size() > 1) {
-            throw new IgniteSQLException("Too many constraints - only PRIMARY KEY is supported for CREATE TABLE",
-                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
-        DefineCommand constraint = constraints.get(0);
-
-        if (!(constraint instanceof AlterTableAddConstraint)) {
-            throw new IgniteSQLException("Unsupported type of constraint for CREATE TABLE - only PRIMARY KEY " +
-                "is supported", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
-        AlterTableAddConstraint alterTbl = (AlterTableAddConstraint)constraint;
-
-        if (alterTbl.getType() != Command.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY) {
-            throw new IgniteSQLException("Unsupported type of constraint for CREATE TABLE - only PRIMARY KEY " +
-                "is supported", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
-        Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
-
-        res.schemaName(schema.getName());
 
         CreateTableData data = CREATE_TABLE_DATA.get(createTbl);
+        LinkedHashMap<String, GridSqlColumn> cols = new LinkedHashMap<>(U.capacity(data.columns.size()));
+
+        for (Column col : data.columns) {
+            if (cols.put(col.getName(), parseColumn(col)) != null)
+                throw new IgniteSQLException("Duplicate column name: " + col.getName(), IgniteQueryErrorCode.PARSING);
+        }
+
+        if (cols.containsKey(QueryUtils.KEY_FIELD_NAME.toUpperCase()) ||
+            cols.containsKey(QueryUtils.VAL_FIELD_NAME.toUpperCase())) {
+            throw new IgniteSQLException("Direct specification of _KEY and _VAL columns is forbidden",
+                IgniteQueryErrorCode.PARSING);
+        }
+        
+        LinkedHashSet<String> pkCols = implicitPk ? new LinkedHashSet<>(0) : parseConstraints(createTbl, cols);
+
+        int keyColsNum = pkCols.size();
+        int valColsNum = cols.size() - keyColsNum;
+
+        if (valColsNum == 0) {
+            throw new IgniteSQLException("Table must have at least one non PRIMARY KEY column.",
+                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+        }
 
         if (data.globalTemporary) {
             throw new IgniteSQLException("GLOBAL TEMPORARY keyword is not supported",
@@ -1191,47 +1193,10 @@ public class GridSqlQueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
 
-        LinkedHashMap<String, GridSqlColumn> cols = new LinkedHashMap<>(data.columns.size());
+        Schema schema = SCHEMA_COMMAND_SCHEMA.get(createTbl);
 
-        for (Column col : data.columns) {
-            if (cols.put(col.getName(), parseColumn(col)) != null)
-                throw new IgniteSQLException("Duplicate column name: " + col.getName(), IgniteQueryErrorCode.PARSING);
-        }
-
-        if (cols.containsKey(QueryUtils.KEY_FIELD_NAME.toUpperCase()) ||
-            cols.containsKey(QueryUtils.VAL_FIELD_NAME.toUpperCase())) {
-            throw new IgniteSQLException("Direct specification of _KEY and _VAL columns is forbidden",
-                IgniteQueryErrorCode.PARSING);
-        }
-
-        AlterTableAddConstraint pk = CREATE_TABLE_PK.get(createTbl);
-
-        IndexColumn[] pkIdxCols = ALTER_TABLE_ADD_CONSTRAINT_INDEX_COLUMNS.get(pk);
-
-        if (F.isEmpty(pkIdxCols))
-            throw new AssertionError("No PRIMARY KEY columns specified");
-
-        LinkedHashSet<String> pkCols = new LinkedHashSet<>();
-
-        for (IndexColumn pkIdxCol : pkIdxCols) {
-            GridSqlColumn gridCol = cols.get(pkIdxCol.columnName);
-
-            if (gridCol == null) {
-                throw new IgniteSQLException("PRIMARY KEY column is not defined: " + pkIdxCol.columnName,
-                    IgniteQueryErrorCode.PARSING);
-            }
-
-            pkCols.add(gridCol.columnName());
-        }
-
-        int keyColsNum = pkCols.size();
-        int valColsNum = cols.size() - keyColsNum;
-
-        if (valColsNum == 0) {
-            throw new IgniteSQLException("Table must have at least one non PRIMARY KEY column.",
-                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
+        res.schemaName(schema.getName());
+        res.implicitPk(implicitPk);
         res.columns(cols);
         res.primaryKeyColumns(pkCols);
         res.tableName(data.tableName);
@@ -1290,6 +1255,11 @@ public class GridSqlQueryParser {
 
         boolean wrapKey0 = (res.wrapKey() != null && res.wrapKey()) || !F.isEmpty(res.keyTypeName()) || keyColsNum > 1;
 
+        if (implicitPk && wrapKey0) {
+            throw new IgniteSQLException(PARAM_WRAP_KEY + " cannot be true if the PK is autocreated.",
+                IgniteQueryErrorCode.PARSING);
+        }
+
         res.wrapKey(wrapKey0);
 
         // Process value wrapping.
@@ -1323,7 +1293,55 @@ public class GridSqlQueryParser {
                 res.affinityKey(pkCols0.iterator().next());
         }
 
+        if (implicitPk) {
+            log.warning("No PRIMARY KEY defined for table '" + data.tableName + "'. " +
+                "An auto-generated implicit primary key will be created.");;
+        }
+
         return res;
+    }
+
+    /**
+     * @param createTbl {@code CREATE TABLE} statement.
+     * @param cols Table columns.
+     * @return Primary key column names.
+     */
+    private LinkedHashSet<String> parseConstraints(CreateTable createTbl, Map<String, GridSqlColumn> cols) {
+        List<DefineCommand> constraints = CREATE_TABLE_CONSTRAINTS.get(createTbl);
+
+        if (constraints.size() > 1) {
+            throw new IgniteSQLException("Too many constraints - only PRIMARY KEY is supported for CREATE TABLE",
+                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+        }
+
+        DefineCommand constraint = constraints.get(0);
+
+        if (constraint.getType() != Command.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY) {
+            throw new IgniteSQLException("Unsupported type of constraint for CREATE TABLE - only PRIMARY KEY " +
+                "is supported", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+        }
+
+        AlterTableAddConstraint pk = CREATE_TABLE_PK.get(createTbl);
+
+        IndexColumn[] pkIdxCols = ALTER_TABLE_ADD_CONSTRAINT_INDEX_COLUMNS.get(pk);
+
+        if (F.isEmpty(pkIdxCols))
+            throw new AssertionError("No PRIMARY KEY columns specified");
+        
+        LinkedHashSet<String> pkCols = new LinkedHashSet<>();
+
+        for (IndexColumn pkIdxCol : pkIdxCols) {
+            GridSqlColumn gridCol = cols.get(pkIdxCol.columnName);
+
+            if (gridCol == null) {
+                throw new IgniteSQLException("PRIMARY KEY column is not defined: " + pkIdxCol.columnName,
+                    IgniteQueryErrorCode.PARSING);
+            }
+
+            pkCols.add(gridCol.columnName());
+        }
+        
+        return pkCols;
     }
 
     /**

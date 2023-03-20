@@ -108,6 +108,7 @@ import org.gridgain.internal.h2.value.ValueTimestamp;
 import org.gridgain.internal.h2.value.ValueUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 
 import static java.sql.ResultSetMetaData.columnNullableUnknown;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_HASH_JOIN;
@@ -122,6 +123,10 @@ import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_N
 public class H2Utils {
     /** Default hash join max table size. */
     public static final int DFLT_HASH_JOIN_MAX_TABLE_SIZE = 100_000;
+
+    /** Allow run CREATE TABLE statement without explicitly specifying a PK. This mode is for testing purposes only. */
+    @TestOnly
+    public static final String IGNITE_SQL_ALLOW_IMPLICIT_PK = "IGNITE_SQL_ALLOW_IMPLICIT_PK";
 
     /**
      * The default precision for a char/varchar value.

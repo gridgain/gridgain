@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -663,6 +664,9 @@ public final class UpdatePlanBuilder {
             : desc.valueClass();
 
         boolean isSqlType = QueryUtils.isSqlType(cls);
+
+        if (key && desc.implicitPk())
+            return (arg) -> UUID.randomUUID();
 
         // If we don't need to construct anything from scratch, just return value from given list.
         if (isSqlType || !hasProps) {

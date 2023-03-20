@@ -47,6 +47,9 @@ public class QueryEntityEx extends QueryEntity {
     /** INLINE_SIZE for affinity field index. */
     private Integer affKeyInlineSize;
 
+    /** Flag indicating that the primary key is autocreated. */
+    private boolean implicitPk;
+
     /**
      * Default constructor.
      */
@@ -72,6 +75,7 @@ public class QueryEntityEx extends QueryEntity {
             fillAbsentPKsWithDefaults = other0.fillAbsentPKsWithDefaults;
             pkInlineSize = other0.pkInlineSize;
             affKeyInlineSize = other0.affKeyInlineSize;
+            implicitPk = other0.implicitPk;
         }
     }
 
@@ -173,6 +177,20 @@ public class QueryEntityEx extends QueryEntity {
         return this;
     }
 
+    /**
+     * @return Flag indicating that the primary key is autocreated.
+     */
+    public boolean isImplicitPk() {
+        return implicitPk;
+    }
+
+    /**
+     * @param implicitPk Flag indicating that the primary key is autocreated.
+     */
+    public void setImplicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (this == o)
@@ -186,7 +204,8 @@ public class QueryEntityEx extends QueryEntity {
         return super.equals(entity) && F.eq(notNullFields, entity.notNullFields)
             && preserveKeysOrder == entity.preserveKeysOrder
             && F.eq(pkInlineSize, entity.pkInlineSize)
-            && F.eq(affKeyInlineSize, entity.affKeyInlineSize);
+            && F.eq(affKeyInlineSize, entity.affKeyInlineSize)
+            && implicitPk == implicitPk;
     }
 
     /** {@inheritDoc} */
@@ -197,6 +216,7 @@ public class QueryEntityEx extends QueryEntity {
         res = 31 * res + (preserveKeysOrder ? 1 : 0);
         res = 31 * res + (pkInlineSize != null ? pkInlineSize.hashCode() : 0);
         res = 31 * res + (affKeyInlineSize != null ? affKeyInlineSize.hashCode() : 0);
+        res = 31 * res + (implicitPk ? 1 : 0);
 
         return res;
     }
