@@ -31,7 +31,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpiMutableCustomMessageSupport;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * CacheAffinityChangeMessage represent a message that switches to a new affinity assignmentafter rebalance is finished.
+ * CacheAffinityChangeMessage represent a message that switches to a new affinity assignment after rebalance is finished.
  * This message should not be mutated  in any way outside the "disco-notifier-worker" thread.
  */
 public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {

@@ -165,7 +165,6 @@ public interface GridDhtPartitionTopology {
      *
      * @param p Partition ID.
      * @return Partition.
-     * @throws IgniteCheckedException If failed.
      */
     public GridDhtLocalPartition forceCreatePartition(int p) throws IgniteCheckedException;
 

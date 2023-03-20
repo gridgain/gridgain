@@ -469,7 +469,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public GridDhtLocalPartition forceCreatePartition(int p) throws IgniteCheckedException {
+    @Override public GridDhtLocalPartition forceCreatePartition(int p) {
         throw new UnsupportedOperationException();
     }
 

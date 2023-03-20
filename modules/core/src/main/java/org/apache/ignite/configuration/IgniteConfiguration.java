@@ -1152,7 +1152,7 @@ public class IgniteConfiguration {
 
     /**
      * Gets shutdown policy.
-     * If policy was not set default policy will be return {@link IgniteCluster.DEFAULT_SHUTDOWN_POLICY}.
+     * If policy was not set default policy will be return {@link IgniteConfiguration#DFLT_SHUTDOWN_POLICY}.
      *
      * @return Shutdown policy.
      */

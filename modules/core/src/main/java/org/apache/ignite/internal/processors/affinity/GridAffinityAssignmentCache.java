@@ -803,8 +803,8 @@ public class GridAffinityAssignmentCache {
 
         AffinityAssignment cache = head.get();
 
-        if (!(cache.topologyVersion().compareTo(lastAffChangeTopVer) >= 0 &&
-            cache.topologyVersion().compareTo(topVer) <= 0)) {
+        if (cache.topologyVersion().compareTo(lastAffChangeTopVer) < 0 ||
+            cache.topologyVersion().compareTo(topVer) > 0) {
 
             Map.Entry<AffinityTopologyVersion, HistoryAffinityAssignment> e = affCache.ceilingEntry(lastAffChangeTopVer);
 

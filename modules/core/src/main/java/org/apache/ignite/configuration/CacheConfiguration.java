@@ -189,7 +189,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     /** Default number of queries detail metrics to collect. */
     public static final int DFLT_QRY_DETAIL_METRICS_SIZE = 0;
 
-    /** Default value for keep binary in store behavior . */
+    /** Default value for keep binary in store behavior. */
     @SuppressWarnings({"UnnecessaryBoxing", "BooleanConstructorCall"})
     public static final Boolean DFLT_STORE_KEEP_BINARY = new Boolean(false);
 
@@ -207,9 +207,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /** Default SQL on-heap cache size. */
     public static final int DFLT_SQL_ONHEAP_CACHE_MAX_SIZE = 0;
-
-    /** Default disk page compression algorithm. */
-    public static final DiskPageCompression DFLT_DISK_PAGE_COMPRESSION = DiskPageCompression.DISABLED;
 
     /** Cache name. */
     private String name;
@@ -1354,7 +1351,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /**
      * Gets maximum inline size for sql indexes. If -1 returned then
-     * {@link IgniteSystemProperties#IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
+     * {@link CacheConfiguration#DFLT_SQL_INDEX_MAX_INLINE_SIZE} system property is used.
      * <p>
      * If not set, default value is {@link #DFLT_SQL_INDEX_MAX_INLINE_SIZE}.
      *

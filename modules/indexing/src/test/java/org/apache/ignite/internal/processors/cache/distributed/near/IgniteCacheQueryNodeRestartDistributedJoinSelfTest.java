@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridRandom;
@@ -127,7 +126,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
         final AtomicBoolean fail = new AtomicBoolean();
 
         IgniteInternalFuture<?> fut1 = multithreadedAsync(new CAX() {
-            @Override public void applyx() throws IgniteCheckedException {
+            @Override public void applyx() {
                 GridRandom rnd = new GridRandom();
 
                 try {
@@ -187,7 +186,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
                             }
                         }
                         else {
-                            IgniteCache<?, ?> cache = grid(g).cache("co");
+                            IgniteCache<?, ?> cache = grid(g).cache("co"); // !!!
 
                             assertEquals(rRes, cache.query(qry1).getAll());
                         }
@@ -217,7 +216,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
 
         IgniteInternalFuture<?> fut2 = multithreadedAsync(new Callable<Object>() {
             @SuppressWarnings({"BusyWait"})
-            @Override public Object call() throws Exception {
+            @Override public Object call() {
                 try {
                     GridRandom rnd = new GridRandom();
 
@@ -246,6 +245,8 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
 
                         locks.set(g, 0);
 
+                        log.info("Start node complete: " + g);
+
                         int c = restartCnt.incrementAndGet();
 
                         if (c % logFreq == 0)
@@ -266,14 +267,14 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
 
         info("Stopping...");
 
-        restartsDone.set(true);
         qrysDone.set(true);
-
-        fut2.get();
         fut1.get();
 
+        restartsDone.set(true);
+        fut2.get();
+
         if (fail.get())
-            fail("See message above");
+            fail("Check error message above ^");
 
         info("Stopped.");
     }
