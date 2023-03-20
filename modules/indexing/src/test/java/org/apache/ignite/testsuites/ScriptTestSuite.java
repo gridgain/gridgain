@@ -16,8 +16,11 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.sqllogic.ScriptRunnerTestsEnvironment;
 import org.apache.ignite.sqllogic.ScriptTestRunner;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
 /**
@@ -77,4 +80,13 @@ import org.junit.runner.RunWith;
     nodes = 1
 )
 public class ScriptTestSuite {
+    @BeforeClass
+    public static void init() {
+        System.setProperty(H2Utils.IGNITE_SQL_ALLOW_IMPLICIT_PK, "true");
+    }
+    
+    @AfterClass
+    public static void shutdown() {
+        System.clearProperty(H2Utils.IGNITE_SQL_ALLOW_IMPLICIT_PK);
+    }
 }
