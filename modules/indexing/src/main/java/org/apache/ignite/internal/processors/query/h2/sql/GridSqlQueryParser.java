@@ -1163,7 +1163,7 @@ public class GridSqlQueryParser {
                 IgniteQueryErrorCode.PARSING);
         }
         
-        LinkedHashSet<String> pkCols = implicitPk ? new LinkedHashSet<>() : parseConstraints(createTbl, cols);
+        LinkedHashSet<String> pkCols = implicitPk ? new LinkedHashSet<>(0) : parseConstraints(createTbl, cols);
 
         int keyColsNum = pkCols.size();
         int valColsNum = cols.size() - keyColsNum;
