@@ -34,11 +34,10 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.processors.cache.CacheEntryPredicate;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
-import org.apache.ignite.internal.processors.cache.CacheStoppedException;
 import org.apache.ignite.internal.processors.cache.GridCacheConcurrentMap;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
@@ -1085,31 +1084,19 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             }
 
             try {
-                if (top != null) {
-                    if (ctx.startTopologyVersion().after(req.topologyVersion())) {
-                        GridNearLockResponse res = sendClientLockRemapResponse(nearNode,
-                            req,
-                            top.lastTopologyChangeVersion(),
-                            new CacheStoppedException(ctx.name()));
-
-                        return new GridFinishedFuture<>(res);
+                if (top != null && needRemap(req.topologyVersion(), top.readyTopologyVersion())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Client topology version mismatch, need remap lock request [" +
+                            "reqTopVer=" + req.topologyVersion() +
+                            ", locTopVer=" + top.readyTopologyVersion() +
+                            ", req=" + req + ']');
                     }
 
-                    if (needRemap(req.topologyVersion(), top.readyTopologyVersion())) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Client topology version mismatch, need remap lock request [" +
-                                "reqTopVer=" + req.topologyVersion() +
-                                ", locTopVer=" + top.readyTopologyVersion() +
-                                ", req=" + req + ']');
-                        }
+                    GridNearLockResponse res = sendClientLockRemapResponse(nearNode,
+                        req,
+                        top.lastTopologyChangeVersion());
 
-                        GridNearLockResponse res = sendClientLockRemapResponse(nearNode,
-                            req,
-                            top.lastTopologyChangeVersion(),
-                            null);
-
-                        return new GridFinishedFuture<>(res);
-                    }
+                    return new GridFinishedFuture<>(res);
                 }
 
                 if (req.inTx()) {
@@ -1359,12 +1346,9 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
      * @param topVer Remap version.
      * @return Response.
      */
-    private GridNearLockResponse sendClientLockRemapResponse(
-        ClusterNode nearNode,
+    private GridNearLockResponse sendClientLockRemapResponse(ClusterNode nearNode,
         GridNearLockRequest req,
-        AffinityTopologyVersion topVer,
-        Exception err
-    ) {
+        AffinityTopologyVersion topVer) {
         assert topVer != null;
 
         GridNearLockResponse res = new GridNearLockResponse(
@@ -1374,7 +1358,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
             req.miniId(),
             false,
             0,
-            err,
+            null,
             topVer,
             ctx.deploymentEnabled(),
             false);

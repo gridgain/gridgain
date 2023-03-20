@@ -486,13 +486,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
             if (rebalanceFut.isDone() && Boolean.TRUE.equals(rebalanceFut.result()))
                 return false;
-
-            if (!rebalanceFut.isDone() && ctx.kernalContext().config().isLateAffinityAssignment()) {
-                // It should not be possible to map a request to a moving partition in case of late affinity assignment.
-                // There is only one possible scenario: handling a pending request that is related to already destoyed cache.
-                // This code should be eliminated under https://issues.apache.org/jira/browse/IGNITE-10251
-                return false;
-            }
         }
 
         return true;
