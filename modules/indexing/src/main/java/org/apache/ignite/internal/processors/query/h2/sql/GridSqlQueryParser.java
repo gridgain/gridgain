@@ -1316,14 +1316,7 @@ public class GridSqlQueryParser {
 
         DefineCommand constraint = constraints.get(0);
 
-        if (!(constraint instanceof AlterTableAddConstraint)) {
-            throw new IgniteSQLException("Unsupported type of constraint for CREATE TABLE - only PRIMARY KEY " +
-                "is supported", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
-        }
-
-        AlterTableAddConstraint alterTbl = (AlterTableAddConstraint)constraint;
-
-        if (alterTbl.getType() != Command.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY) {
+        if (constraint.getType() != Command.ALTER_TABLE_ADD_CONSTRAINT_PRIMARY_KEY) {
             throw new IgniteSQLException("Unsupported type of constraint for CREATE TABLE - only PRIMARY KEY " +
                 "is supported", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
