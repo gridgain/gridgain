@@ -39,7 +39,7 @@ import static org.apache.ignite.plugin.security.SecurityPermission.ADMIN_OPS;
 import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.ALLOW_ALL;
 
 /**
- * Test AuthenticationContext contain subject address when subject is IgniteClient.
+ * Test AuthenticationContext contains subject address when subject is IgniteClient.
  */
 public class IgniteClientContainSubjectAddressTest extends CommonSecurityCheckTest {
     /** */
