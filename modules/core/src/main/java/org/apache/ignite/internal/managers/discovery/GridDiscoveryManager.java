@@ -1815,10 +1815,16 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     @Nullable public ClusterNode node(UUID nodeId, AffinityTopologyVersion topVer) {
         assert nodeId != null;
 
-        if (topVer.equals(NONE))
-            return discoCache().node(nodeId);
+        DiscoCache cache0;
 
-        return discoCache(topVer).node(nodeId);
+        if (topVer.equals(NONE) || (cache0 = discoCache(topVer)) == null) {
+            if (log.isDebugEnabled())
+                log.debug("Topology version undefined or can`t be found for: " + topVer);
+
+            return discoCache().node(nodeId);
+        }
+
+        return cache0.node(nodeId);
     }
 
     /**
