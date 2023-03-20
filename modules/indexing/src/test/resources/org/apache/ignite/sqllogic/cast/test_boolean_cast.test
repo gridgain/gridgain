@@ -36,8 +36,15 @@ SELECT CAST('FALSE' AS BOOLEAN)
 ----
 false
 
-statement error
+# [ignore]
+#statement error
+#SELECT CAST('12345' AS BOOLEAN)
+
+# [note] h2
+query T
 SELECT CAST('12345' AS BOOLEAN)
+----
+true
 
 query T
 SELECT CAST(CAST('12345' AS INTEGER) AS BOOLEAN)

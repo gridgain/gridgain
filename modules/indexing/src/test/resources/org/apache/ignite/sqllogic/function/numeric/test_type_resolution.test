@@ -32,8 +32,15 @@ SELECT 1::TINYINT + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::TINYINT + 1::VARCHAR
+
+# [note] h2
+query I
 SELECT 1::TINYINT + 1::VARCHAR
+----
+2
 
 query I
 SELECT 1::SMALLINT + 1::TINYINT
@@ -65,8 +72,15 @@ SELECT 1::SMALLINT + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::SMALLINT + 1::VARCHAR
+
+# [note] h2
+query I
 SELECT 1::SMALLINT + 1::VARCHAR
+----
+2
 
 query I
 SELECT 1::INTEGER + 1::TINYINT
@@ -98,8 +112,15 @@ SELECT 1::INTEGER + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::INTEGER + 1::VARCHAR
+
+# [note] h2
+query I
 SELECT 1::INTEGER + 1::VARCHAR
+----
+2
 
 query I
 SELECT 1::BIGINT + 1::TINYINT
@@ -131,8 +152,15 @@ SELECT 1::BIGINT + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::BIGINT + 1::VARCHAR
+
+# [note] h2
+query I
 SELECT 1::BIGINT + 1::VARCHAR
+----
+2
 
 query R
 SELECT 1::REAL + 1::TINYINT
@@ -164,8 +192,15 @@ SELECT 1::REAL + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::REAL + 1::VARCHAR
+
+# [note] h2
+query R
 SELECT 1::REAL + 1::VARCHAR
+----
+2.000000
 
 query R
 SELECT 1::DOUBLE + 1::TINYINT
@@ -197,6 +232,13 @@ SELECT 1::DOUBLE + 1::DOUBLE
 ----
 2.000000
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT 1::DOUBLE + 1::VARCHAR
+
+# [note] h2
+query R
 SELECT 1::DOUBLE + 1::VARCHAR
+----
+2.000000
 

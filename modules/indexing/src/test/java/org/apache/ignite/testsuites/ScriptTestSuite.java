@@ -71,6 +71,10 @@ import org.junit.runner.RunWith;
  *
  */
 @RunWith(ScriptTestRunner.class)
-@ScriptRunnerTestsEnvironment(scriptsRoot = "modules/indexing/src/test/resources/org/apache/ignite/sqllogic", timeout = 180000, nodes = 1)
+@ScriptRunnerTestsEnvironment(
+    scriptsRoot = "modules/indexing/src/test/resources/org/apache/ignite/sqllogic",
+    timeout = 180000,
+    nodes = 1
+)
 public class ScriptTestSuite {
 }

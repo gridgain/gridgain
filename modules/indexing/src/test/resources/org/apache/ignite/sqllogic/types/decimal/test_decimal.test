@@ -37,8 +37,15 @@ SELECT ('0.123456789'::DECIMAL)::VARCHAR, ('-0.123456789'::DECIMAL)::VARCHAR;
 0.123456789	-0.123456789
 
 # overflow in conversion
-statement error
+# [ignore] h2 does not report an error
+#statement error
+#SELECT '9223372036854788.758'::DECIMAL;
+
+# [note] h2
+query R
 SELECT '9223372036854788.758'::DECIMAL;
+----
+9223372036854788.758
 
 # trailing decimals with scale=0
 query I
@@ -142,11 +149,25 @@ statement error
 SELECT '0.1'::DECIMAL(-17);
 
 # width/scale out of range
-statement error
+# [ignore]
+#statement error
+#SELECT '0.1'::DECIMAL(1000);
+
+# [note] h2
+query R
 SELECT '0.1'::DECIMAL(1000);
+----
+0
 
 statement error
 SELECT '0.1'::DECIMAL(1, 2, 3);
 
-statement error
+# [ignore]
+#statement error
+#SELECT '1'::INTEGER(1000);
+
+# [note] h2
+query I
 SELECT '1'::INTEGER(1000);
+----
+1

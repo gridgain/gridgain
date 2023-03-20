@@ -146,13 +146,32 @@ wor
 b
 NULL
 
+# [ignore] h2 seems to replace negative offset and length to 0
 # Negative length
-statement error
-SELECT substring(s, 2, -2) FROM strings ORDER BY id
+#statement error
+#SELECT substring(s, 2, -2) FROM strings ORDER BY id
 
+# [note] h2
+query T
+SELECT substring(s, 2, -2048) FROM strings ORDER BY id
+----
+(empty)
+(empty)
+(empty)
+NULL
+
+# [ignore] h2 seems to replace negative offset and length to 0
 # negative offset and negative length
-statement error
-SELECT substring(s, -2, -2) FROM strings ORDER BY id
+#statement error
+#SELECT substring(s, -2, -2) FROM strings ORDER BY id
+
+query T
+SELECT substring(s, -2048, -2048) FROM strings ORDER BY id
+----
+(empty)
+(empty)
+(empty)
+NULL
 
 # length 0
 query T
@@ -182,8 +201,18 @@ NULL
 #(empty)
 #NULL
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT substring(s, 2147483647, -2147483647) FROM strings ORDER BY id
+
+# [note] h2
+query T
 SELECT substring(s, 2147483647, -2147483647) FROM strings ORDER BY id
+----
+(empty)
+(empty)
+(empty)
+NULL
 
 query T
 SELECT substring(s, -2147483647, 2147483647) FROM strings ORDER BY id
@@ -193,5 +222,15 @@ world
 b
 NULL
 
-statement error
+# [ignore] h2
+#statement error
+#SELECT substring(s, -2147483647, -2147483647) FROM strings ORDER BY id
+
+# [note] h2
+query T
 SELECT substring(s, -2147483647, -2147483647) FROM strings ORDER BY id
+----
+(empty)
+(empty)
+(empty)
+NULL

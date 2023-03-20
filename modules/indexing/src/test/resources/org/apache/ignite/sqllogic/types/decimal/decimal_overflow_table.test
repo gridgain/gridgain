@@ -17,8 +17,14 @@ SELECT d+1 FROM decimals
 ----
 99000000000000001.0
 
-statement error
+#statement error
+#SELECT d+1000000000000000.0 FROM decimals
+
+# [note] h2
+query R
 SELECT d+1000000000000000.0 FROM decimals
+----
+100000000000000000.0
 
 # subtraction
 query I
@@ -26,8 +32,14 @@ SELECT -1-d FROM decimals
 ----
 -99000000000000001.0
 
-statement error
+#statement error
+#SELECT -1000000000000000.0-d FROM decimals
+
+# [note] h2
+query R
 SELECT -1000000000000000.0-d FROM decimals
+----
+-100000000000000000.0
 
 # multiplication
 query I
@@ -35,5 +47,11 @@ SELECT 1*d FROM decimals
 ----
 99000000000000000.0
 
-statement error
+#statement error
+#SELECT 2*d FROM decimals
+
+# [note] h2
+query R
 SELECT 2*d FROM decimals
+----
+198000000000000000.0

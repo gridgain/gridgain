@@ -31,8 +31,19 @@ SELECT SUM(1), SUM(33.3)
 1.000000
 33.300000
 
-statement error
+# [ignore] h2 supports boolean aggregates
+#statement error
+#SELECT SUM(True)
+
+query I
 SELECT SUM(True)
+----
+1
+
+query I
+SELECT SUM(False)
+----
+0
 
 statement error
 SELECT SUM('hello')

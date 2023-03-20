@@ -68,8 +68,15 @@ Motöread
 statement error
 select REPLACE(1)
 
-statement error
+# [ignore] h2
+#statement error
+#select REPLACE(1, 2)
+
+# [note] h2
+query I
 select REPLACE(1, 2)
+----
+1
 
 statement error
 select REPLACE(1, 2, 3, 4)

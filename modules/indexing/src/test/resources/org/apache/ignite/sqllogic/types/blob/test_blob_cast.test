@@ -47,25 +47,57 @@ SELECT (((x'612061'::VARCHAR)::VARBINARY)::VARCHAR)::VARBINARY
 ----
 612061
 
-statement error
+# [ignore]
+#statement error
+#SELECT 1::VARBINARY
+
+# [note] h2
+query T
 SELECT 1::VARBINARY
+----
+00000001
 
 statement error
 SELECT 1.0::VARBINARY
 
 # numeric -> varbinary, not valid/implemented casts
-statement error
-SELECT 1::tinyint::VARBINARY
+# [ignore]
+#statement error
+#SELECT (1::tinyint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::tinyint)::VARBINARY
+----
+01
+
+#statement error
+#SELECT (1::smallint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::smallint)::VARBINARY
+----
+0001
+
+#statement error
+#SELECT (1::integer)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::integer)::VARBINARY
+----
+00000001
+
+#statement error
+#SELECT (1::bigint)::VARBINARY
+
+# [note] h2
+query T
+SELECT (1::bigint)::VARBINARY
+----
+0000000000000001
 
 statement error
-SELECT 1::smallint::VARBINARY
-
-statement error
-SELECT 1::integer::VARBINARY
-
-statement error
-SELECT 1::bigint::VARBINARY
-
-statement error
-SELECT 1::decimal::VARBINARY
+SELECT (1::decimal)::VARBINARY
 

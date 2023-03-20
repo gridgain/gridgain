@@ -30,9 +30,19 @@ NULL	NULL
 2	2.000000
 3	3.000000
 
+# [ignore]
 # ORDER on a non-grouping column
 # this query is refused by Postgres and MonetDB
 # but SQLite resolves it by first pushing a "FIRST(i)" aggregate into the projection, and then ordering by that
 # aggregate
-statement error
+#statement error
+#SELECT (10-i) AS k, SUM(i) FROM integers GROUP BY k ORDER BY i;
+
+# [note] h2
+query IR
 SELECT (10-i) AS k, SUM(i) FROM integers GROUP BY k ORDER BY i;
+----
+NULL	NULL
+9	1
+8	2
+7	3

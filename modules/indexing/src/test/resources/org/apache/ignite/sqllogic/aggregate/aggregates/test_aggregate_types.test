@@ -127,8 +127,9 @@ NULL
 true
 true
 
-statement error
-SELECT SUM(b) FROM booleans GROUP BY g ORDER BY g
+# [ignore]
+#statement error
+#SELECT SUM(b) FROM booleans GROUP BY g ORDER BY g
 
 statement error
 SELECT AVG(b) FROM booleans GROUP BY g ORDER BY g

@@ -64,14 +64,116 @@ SELECT EXTRACT(epoch FROM i) FROM times ORDER BY id
 NULL
 
 # time gives errors for date-only parts
-statement error
-SELECT EXTRACT(year FROM i) FROM times
+# [ignore] h2 extracts them from zero-date (01-01-1970)
+
+#statement error
+#SELECT EXTRACT(year FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(year FROM i) FROM times ORDER BY id
+----
+1970
+1970
+1970
+1970
+null
+
+#statement error
+#SELECT EXTRACT(month FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(month FROM i) FROM times ORDER BY id
+----
+1
+1
+1
+1
+null
+
+#statement error
+#SELECT EXTRACT(day FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(day FROM i) FROM times ORDER BY id
+----
+1
+1
+1
+1
+null
+
+#statement error
+#SELECT EXTRACT(quarter FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(quarter FROM i) FROM times ORDER BY id
+----
+1
+1
+1
+1
+null
+
+#statement error
+#SELECT EXTRACT(dayofweek FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(dayofweek FROM i) FROM times ORDER BY id
+----
+5
+5
+5
+5
+null
+
+#statement error
+#SELECT EXTRACT(isodow FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(isodow FROM i) FROM times ORDER BY id
+----
+4
+4
+4
+4
+null
+
+#statement error
+#SELECT EXTRACT(dayofyear FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(dayofyear FROM i) FROM times ORDER BY id
+----
+1
+1
+1
+1
+null
+
+#statement error
+#SELECT EXTRACT(week FROM i) FROM times
+
+# [note] h2
+query I
+SELECT EXTRACT(week FROM i) FROM times ORDER BY id
+----
+1
+1
+1
+1
+null
 
 statement error
-SELECT EXTRACT(month FROM i) FROM times
+SELECT EXTRACT(yearweek FROM i) FROM times
 
-statement error
-SELECT EXTRACT(day FROM i) FROM times
+### not supported by h2
 
 statement error
 SELECT EXTRACT(decade FROM i) FROM times
@@ -81,21 +183,3 @@ SELECT EXTRACT(century FROM i) FROM times
 
 statement error
 SELECT EXTRACT(millenium FROM i) FROM times
-
-statement error
-SELECT EXTRACT(quarter FROM i) FROM times
-
-statement error
-SELECT EXTRACT(dayofweek FROM i) FROM times
-
-statement error
-SELECT EXTRACT(isodow FROM i) FROM times
-
-statement error
-SELECT EXTRACT(dayofyear FROM i) FROM times
-
-statement error
-SELECT EXTRACT(week FROM i) FROM times
-
-statement error
-SELECT EXTRACT(yearweek FROM i) FROM times

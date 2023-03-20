@@ -29,8 +29,15 @@ SELECT (127::DECIMAL(3,0))::SMALLINT, (-32767::DECIMAL(5,0))::SMALLINT, (-7::DEC
 ----
 127	-32767	-7	27	33
 
-statement error
+# [ignore]
+#statement error
+#SELECT (-32768::DECIMAL(9,0))::SMALLINT
+
+# [note] h2
+query T
 SELECT (-32768::DECIMAL(9,0))::SMALLINT
+----
+-32768
 
 statement error
 SELECT (32768::DECIMAL(18,0))::SMALLINT

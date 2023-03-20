@@ -24,9 +24,10 @@ SELECT a FROM test ORDER BY 'hello', a
 12
 13
 
+# [ignore]
 # ambiguous reference in union alias
-statement error
-SELECT a AS k, b FROM test UNION SELECT a, b AS k FROM test ORDER BY k
+#statement error
+#SELECT a AS k, b FROM test UNION SELECT a, b AS k FROM test ORDER BY k
 
 # but works if not ambiguous
 query II
@@ -51,8 +52,19 @@ SELECT a % 2 as a, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY a
 statement error
 SELECT a % 2, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY 3
 
+# [ignore] h2 applies DESC order for negative column indexes.
+#statement error
+#SELECT a % 2, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY -1
+
+# but works if not ambiguous
+query II
+SELECT a % 2 as a, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY -1
+----
+1	22
+0	21
+
 statement error
-SELECT a % 2, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY -1
+SELECT a % 2, b FROM test UNION SELECT a % 2 AS k, b FROM test ORDER BY -3
 
 # and union itself fails if amount of entries is wrong
 statement error

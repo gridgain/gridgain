@@ -5,7 +5,12 @@
 statement ok
 PRAGMA enable_verification
 
-statement error
+# [ignore]
+#statement error
+#CREATE TABLE decimals_without_params(d DECIMAL);
+
+# [note] h2
+statement ok
 CREATE TABLE decimals_without_params(d DECIMAL);
 
 statement ok

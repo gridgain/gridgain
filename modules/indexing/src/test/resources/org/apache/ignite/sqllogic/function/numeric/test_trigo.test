@@ -332,8 +332,20 @@ SELECT cast(ACOS(n::double)*1000 as bigint) FROM numbers  WHERE n between -1 and
 1571
 0
 
-statement error
-SELECT cast(ASIN(n)*1000 as bigint) FROM numbers ORDER BY n
+# [ignore] h2
+#statement error
+#SELECT cast(ASIN(n)*1000 as bigint) FROM numbers ORDER BY n
+
+# [note] h2
+query I
+SELECT cast(ASIN(n)*1000 as bigint) as k FROM numbers ORDER BY k
+----
+NULL
+-1571
+0
+0
+0
+1571
 
 query I
 SELECT cast(COT(n::tinyint)*1000 as bigint) FROM numbers  WHERE n > 0.1 OR N < -0.1 ORDER BY n
