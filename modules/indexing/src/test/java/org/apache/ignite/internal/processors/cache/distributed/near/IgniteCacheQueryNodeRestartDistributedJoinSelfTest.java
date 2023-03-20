@@ -186,7 +186,7 @@ public class IgniteCacheQueryNodeRestartDistributedJoinSelfTest extends IgniteCa
                             }
                         }
                         else {
-                            IgniteCache<?, ?> cache = grid(g).cache("co"); // !!!
+                            IgniteCache<?, ?> cache = grid(g).cache("co");
 
                             assertEquals(rRes, cache.query(qry1).getAll());
                         }
