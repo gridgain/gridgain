@@ -17,6 +17,7 @@
 
 package org.apache.ignite.internal.client.thin;
 
+import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,11 +35,15 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.util.nio.GridNioServer;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.ObjectName;
 
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
@@ -271,7 +276,7 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         startGrid(0);
 
         // TODO: We don't have events.
-//        ClientConfiguration cliCfg = getClientConfiguration(0)
+        ClientConfiguration cliCfg = getClientConfiguration(0);
 //            .setEventListeners(new ConnectionEventListener() {
 //                @Override public void onHandshakeStart(HandshakeStartEvent event) {
 //                    // Close connection.
