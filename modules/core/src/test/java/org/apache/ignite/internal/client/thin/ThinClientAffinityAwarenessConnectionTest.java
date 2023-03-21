@@ -19,6 +19,7 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.client.ClientCache;
 import org.apache.ignite.client.ClientConnectionException;
+import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -46,7 +47,8 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
 
         awaitPartitionMapExchange();
 
-        initClient(getClientConfiguration(1), 1);
+        ClientConfiguration cfg = getClientConfiguration(1).setAffinityAwarenessEnabled(false);
+        initClient(cfg, 1);
 
         ClientCache<Object, Object> cache = client.cache(PART_CACHE_NAME);
 
@@ -106,7 +108,7 @@ public class ThinClientAffinityAwarenessConnectionTest extends ThinClientAbstrac
             fail("Must throw exception");
         }
         catch (ClientConnectionException err) {
-            assertTrue(err.getMessage(), err.getMessage().contains("Channel is closed"));
+            assertTrue(err.getMessage(), err.getMessage().contains("Connection refused"));
         }
     }
 

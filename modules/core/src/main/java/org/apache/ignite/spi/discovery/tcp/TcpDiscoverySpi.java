@@ -115,6 +115,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryEnsureDelivery;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryJoinRequestMessage;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
+import sun.security.ssl.SSLSocketImpl;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONSISTENT_ID_BY_HOST_WITHOUT_PORT;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -1686,7 +1687,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             out.flush();
         }
         catch (IOException e) {
-            err = e;
+            err = clearUpSslEssence(sock, e);
         }
         finally {
             boolean cancelled = obj.cancel();
@@ -1701,6 +1702,44 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             if (!cancelled)
                 throw new SocketTimeoutException("Write timed out (socket was concurrently closed).");
         }
+    }
+
+    /**
+     * Handles exception happened on socket write. Required to mitigate bugs in Oracle JDK implementation. Also
+     * handles exceptions during post-handshake handshake of the TLS 1.3 protocol.
+     *
+     * @param sock Socket.
+     * @param e Original exception.
+     * @return {@link SSLException} if decided that an exception is related to SSL or original exception otherwise.
+     */
+    private IOException clearUpSslEssence(Socket sock, IOException e) {
+        if (!(sock instanceof SSLSocketImpl) || (e instanceof SSLException))
+            return e;
+
+        // In Oracle JDK IOException during handshake is not wrapped into an SSLException
+        // unlike how it's done in other JDK distributives.
+        // We need to check if IOException happened during handshake.
+        String mtdName = "readHandshakeRecord";
+        boolean handshakeFailed = Arrays.stream(e.getStackTrace()).anyMatch(element ->
+            mtdName.equals(element.getMethodName())
+                && SSLSocketImpl.class.getName().equals(element.getClassName())
+        );
+
+        if (handshakeFailed)
+            return new SSLException(mtdName, e);
+
+        try {
+            // In TLS 1.3, client authentication is actually done after handshake, so when server sends client
+            // an alert, it will be just recorded and the actual exception will be SocketException with a broken
+            // pipe. In order to get the alert we must perform a read and check if it was indeed an SSLException.
+            sock.getInputStream().read();
+        }
+        catch (IOException ioException) {
+            if (ioException instanceof SSLException)
+                return ioException;
+        }
+
+        return e;
     }
 
     /**

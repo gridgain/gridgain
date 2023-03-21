@@ -66,6 +66,9 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** */
     private String tblName;
 
+    /** Flag indicating that the primary key is autocreated. */
+    private boolean implicitPk;
+
     /** Value field names and types with preserved order. */
     @GridToStringInclude
     private final LinkedHashMap<String, Class<?>> fields = new LinkedHashMap<>();
@@ -783,5 +786,17 @@ public class QueryTypeDescriptorImpl implements GridQueryTypeDescriptor {
     /** {@inheritDoc} */
     @Override public void affinityFieldInlineSize(int affFieldInlineSize) {
         this.affFieldInlineSize = affFieldInlineSize;
+    }
+
+    /**
+     * @param implicitPk Flag indicating that the primary key is autocreated.
+     */
+    public void implicitPk(boolean implicitPk) {
+        this.implicitPk = implicitPk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean implicitPk() {
+        return implicitPk;
     }
 }

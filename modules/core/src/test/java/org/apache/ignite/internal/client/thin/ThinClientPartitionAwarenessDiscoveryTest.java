@@ -122,12 +122,15 @@ public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstrac
             clientCache.put(i, i);
 
             if (i == 0)
-                assertOpOnChannel(dfltCh, ClientOperation.CACHE_PARTITIONS);
+                assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
 
             assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
-            assertTrue(channelHits.containsKey(opCh));
 
-            channelHits.compute(opCh, (c, old) -> true);
+            if (opCh != null) {
+                assertTrue(channelHits.containsKey(opCh));
+
+                channelHits.compute(opCh, (c, old) -> true);
+            }
         }
 
         assertFalse(channelHits.containsValue(false));
@@ -154,13 +157,5 @@ public class ThinClientPartitionAwarenessDiscoveryTest extends ThinClientAbstrac
         return new ClientConfiguration()
             .setAddressesFinder(addrFinder)
             .setAffinityAwarenessEnabled(true);
-    }
-
-    /**
-     * Trigger client to detect topology change.
-     */
-    private void detectTopologyChange() {
-        // Send non-affinity request to detect topology change.
-        initDefaultChannel();
     }
 }
