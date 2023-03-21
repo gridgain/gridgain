@@ -20,14 +20,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteNodeAttributes;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -108,10 +105,9 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * others don't) a request to start a cache with that class in configuration fails with proper error,
      * no nodes fail or hang.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-36341")
     public void testClientStartsDynamicCacheWithPartiallyUnavailableClass() throws Exception {
         clsLoader = CONFIGURATION_CLASS_LOADER;
 
@@ -130,16 +126,11 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
                 .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
         }
         catch (Exception e) {
-            String errorMsg = e.getMessage();
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
 
-            assertTrue("Exception during cache creation is expected to be about a class not found "
-                    + "during creation process but was: '" + errorMsg + "'",
-                errorMsg.contains("ClassNotFoundException"));
+            assertNotNull(cnfE);
 
-            assertTrue("Exception during cache creation is expected to be about a particular class: "
-                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
-                    + ", but was: '" + errorMsg + "'",
-                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+            assertTrue(cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
         }
 
         checkTopology(3);
@@ -150,7 +141,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * fails with a proper exception.
      * However, no client nor server nodes fail as a result.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testClientStartsDynamicCacheWithUnavailableClass() throws Exception {
@@ -166,16 +157,11 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
                     CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
         }
         catch (Exception e) {
-//            String errorMsg = e.getMessage();
-//
-//            assertTrue("Exception during cache creation is expected to be about a class not found "
-//                    + "during creation process but was: '" + errorMsg + "'",
-//                errorMsg.contains("ClassNotFoundException"));
-//
-//            assertTrue("Exception during cache creation is expected to be about a particular class: "
-//                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
-//                    + ", but was: '" + errorMsg + "'",
-//                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+            assertNotNull(cnfE);
+
+            assertTrue(cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
         }
 
         checkTopology(2);
@@ -187,7 +173,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * with a class unavailable on server classpath fails with a proper exception.
      * However, no client nor server nodes fail as a result.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testClientAddsExplicitCacheTemplateWithUnavailableClass() throws Exception {
@@ -202,20 +188,11 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
                 .setSqlFunctionClasses(clsLoader.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
         }
         catch (Exception e) {
-            String errorMsg = e.getMessage();
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
 
-            assertTrue("Exception during cache template creation is expected to be about a class not found "
-                    + "during creation process but was: '" + errorMsg + "'",
-                errorMsg.contains("ClassNotFoundException"));
+            assertNotNull(cnfE);
 
-            assertTrue("Exception during explicit cache template creation is expected to contain information "
-                    + "about template, but actual message was: '" + errorMsg + "'",
-                errorMsg.contains("template"));
-
-            assertTrue("Exception during cache template creation is expected to be about a particular class: "
-                    + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
-                    + ", but was: '" + errorMsg + "'",
-                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+            assertTrue(cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
         }
 
         checkTopology(2);
@@ -227,7 +204,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * with a class unavailable on server classpath fails with a proper exception.
      * However, no client nor server nodes fail as a result.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testClientAddsImplicitCacheTemplateWithUnavailableClass() throws Exception {
@@ -242,16 +219,11 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
                 .setSqlFunctionClasses(clsLoader.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
         }
         catch (Exception e) {
-            String errorMsg = e.getMessage();
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
 
-            assertTrue("Exception during cache template creation is expected to be about a class not found "
-                + "during creation process but was: '" + errorMsg + "'",
-                errorMsg.contains("ClassNotFoundException"));
+            assertNotNull(cnfE);
 
-            assertTrue("Exception during cache template creation is expected to be about a particular class: "
-                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME
-                + ", but was: '" + errorMsg + "'",
-                errorMsg.contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+            assertTrue(cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
         }
 
         checkTopology(2);
@@ -261,7 +233,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * Test verifies that server node fails to start when it encounters a class missing on its classpath
      * in static cache configuration.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testStaticCacheWithUnavailableClassInServerConfig() throws Exception {
@@ -293,11 +265,11 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * Test verifies that server node fails to start when it encounters a class missing on its classpath
      * in static cache template configuration.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testStaticCacheTemplateWithUnavailableClassInServerConfig() throws Exception {
-        staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_TEMPLATE).setBackups(5)
+        staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_TEMPLATE)
             .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
 
         try {
@@ -325,7 +297,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * Test verifies that a client with a class in its configuration that is unavialable to a server
      * fails to join to the cluster but doesn't fail any server node.
      *
-     * @throws Exception If test fails to set up necessary environment.
+     * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
     public void testStaticCacheWithUnavailableClassInClientConfig() throws Exception {
@@ -345,48 +317,119 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
             );
         }
         catch (Exception e) {
-            assertTrue(X.hasCause(e, IgniteSpiException.class));
+            assertTrue("Client expected to fail on ClassNotFoundException on loading "
+                + UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME + " class", X.hasCause(e, IgniteSpiException.class));
 
             IgniteSpiException spiE = X.cause(e, IgniteSpiException.class);
 
-            /*assertTrue(spiE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));*/
+            assertTrue(spiE.getMessage().contains("class " +
+                UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME + " not found."));
         }
 
         checkTopology(1);
     }
 
+    /**
+     * Test verifies the following scenario: only affinity servers in topology have custom class available on their cp.
+     * In that case client with static configuration containing this custom class starts successfully.
+     *
+     * @throws Exception If the test fails to set up necessary environment.
+     */
     @Test
     public void testStaticCacheWithAffinityAndNonAffinityNodesInTopology() throws Exception {
-        startGrid("affNode");
+        startGrid(0);
 
         clsLoader = CONFIGURATION_CLASS_LOADER;
 
-        startGrid("nonAffNode");
+        IgniteEx srv1 = startGrid(1);
 
         staticCacheCfg = new CacheConfiguration<>(STATIC_CACHE_NAME)
             .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME))
-            .setNodeFilter(new AttributeFilter("affNode"));
+            .setNodeFilter(new SimpleNodeNameFilter(srv1.name()));
 
         try {
-            startClientGrid(1);
+            startClientGrid(2);
         }
         catch (Exception e) {
-            fail("client node is expected to survive");
+            fail("Client node is expected to survive");
         }
+
+        checkTopology(3);
     }
 
-    private static class AttributeFilter implements IgnitePredicate<ClusterNode> {
+    /**
+     * Test verifies that when there is a cache started in the cluster with custom class in its config,
+     * a server that passes through node filter for this cache is not allowed to join topology
+     * and fails to start with proper message in exception.
+     *
+     * @throws Exception If the test fails to set up necessary environment.
+     */
+    @Test
+    public void testAffinityServerWithUnavailableClassFailsToJoinTopology() throws Exception {
+        clsLoader = CONFIGURATION_CLASS_LOADER;
+
+        startGrid(0);
+
+        IgniteEx cl0 = startClientGrid(1);
+
+        cl0.getOrCreateCache(new CacheConfiguration<>(DYNAMIC_CACHE_NAME)
+            .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
+
+        clsLoader = null;
+
+        try {
+            startGrid(2);
+
+            fail("Affinity server node with unavailable class supposed to fail on joining topology");
+        } catch (Exception e) {
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+            assertNotNull(cnfE);
+
+            assertTrue(cnfE.getMessage().contains(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
+        }
+
+        checkTopology(2);
+    }
+
+    /**
+     * Test verifies that when there is a cache started in the cluster with custom class in its config,
+     * a server that doesn't pass through node filter for this cache is allowed to join topology.
+     *
+     * @throws Exception If the test fails to set up necessary environment.
+     */
+    @Test
+    public void testNonFffinityServerWithUnavailableClassJoinsTopology() throws Exception {
+        clsLoader = CONFIGURATION_CLASS_LOADER;
+
+        IgniteEx srv0 = startGrid(0);
+
+        IgniteEx cl0 = startClientGrid(1);
+
+        cl0.getOrCreateCache(new CacheConfiguration<>(DYNAMIC_CACHE_NAME)
+                .setNodeFilter(new SimpleNodeNameFilter(srv0.localNode().attribute(ATTR_IGNITE_INSTANCE_NAME)))
+                .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME)));
+
+        clsLoader = null;
+
+        startGrid(2);
+
+        checkTopology(3);
+    }
+
+    /** */
+    private static class SimpleNodeNameFilter implements IgnitePredicate<ClusterNode> {
         /** */
         private String instanceName;
 
         /** */
-        private AttributeFilter(String instanceName) {
+        private SimpleNodeNameFilter(String instanceName) {
             this.instanceName = instanceName;
         }
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
-            String igniteInstanceName = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME);
+            String igniteInstanceName = node.attribute(ATTR_IGNITE_INSTANCE_NAME);
 
             return instanceName.contains(igniteInstanceName);
         }

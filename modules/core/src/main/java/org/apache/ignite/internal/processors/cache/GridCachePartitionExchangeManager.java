@@ -941,6 +941,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                     if (fut.reconnectOnError(e))
                         throw new IgniteNeedReconnectException(cctx.localNode(), e);
 
+                    if (X.hasCause(e, ClassNotFoundException.class)) {
+                        String clsNotFound = X.cause(e, ClassNotFoundException.class).getMessage();
+                        U.warn(log, "Class " + clsNotFound + " was not found when processing cache start requests." +
+                            " Please check that the class is available on all necessary server nodes.");
+                    }
+
                     throw e;
                 }
             }

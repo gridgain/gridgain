@@ -23,6 +23,7 @@ import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.SerializeSeparately;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
@@ -141,7 +142,15 @@ public class CacheConfigurationEnricher {
             }
         }
         catch (Exception e) {
-            throw new IgniteException("Failed to enrich cache configuration [cacheName=" + ccfg.getName() + "]", e);
+            StringBuilder msgBldr = new StringBuilder("Failed to enrich cache configuration [cacheName=")
+                .append(ccfg.getName()).append(']');
+
+            if (X.hasCause(e, ClassNotFoundException.class)) {
+                msgBldr.append("; class needed for deserialization was not found: " +
+                    X.cause(e, ClassNotFoundException.class).getMessage());
+            }
+
+            throw new IgniteException(msgBldr.toString(), e);
         }
 
         return enrichedCp;

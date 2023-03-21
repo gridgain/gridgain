@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -161,9 +162,11 @@ public class ValidationOnNodeJoinUtils {
             }
 
             for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : nodeData.caches().values()) {
+                CacheConfiguration<?, ?> joiningNodeCacheCfg = cacheInfo.cacheData().config();
+
                 if (secCtx != null && cacheInfo.cacheType() == CacheType.USER) {
                     try (OperationSecurityContext s = ctx.security().withContext(secCtx)) {
-                        GridCacheProcessor.authorizeCacheCreate(ctx.security(), cacheInfo.cacheData().config());
+                        GridCacheProcessor.authorizeCacheCreate(ctx.security(), joiningNodeCacheCfg);
                     }
                     catch (SecurityException ex) {
                         if (errorMsg.length() > 0)
@@ -173,20 +176,26 @@ public class ValidationOnNodeJoinUtils {
                     }
                 }
 
-                try {
-                    enricher.enrich(cacheInfo.cacheData().config(),
-                        cacheInfo.cacheData().cacheConfigurationEnrichment(), true);
-                }
-                catch (IgniteException e) {
-                    errorMsg.append(e.getMessage());
+                //check is performed only on affinity nodes for the cache requested to start
+                if (CU.affinityNode(ctx.discovery().localNode(), joiningNodeCacheCfg.getNodeFilter())) {
+                    try {
+                        enricher.enrich(joiningNodeCacheCfg,
+                            cacheInfo.cacheData().cacheConfigurationEnrichment(),
+                            true);
+                    } catch (IgniteException e) {
+                        ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+                        if (cnfE != null)
+                            errorMsg.append(e.getMessage() + ": class " + cnfE.getMessage() + " not found.");
+                    }
                 }
 
-                DynamicCacheDescriptor locDesc = cacheDescProvider.apply(cacheInfo.cacheData().config().getName());
+                DynamicCacheDescriptor locDesc = cacheDescProvider.apply(joiningNodeCacheCfg.getName());
 
                 if (locDesc == null)
                     continue;
 
-                String joinedSchema = cacheInfo.cacheData().config().getSqlSchema();
+                String joinedSchema = joiningNodeCacheCfg.getSqlSchema();
                 Collection<QueryEntity> joinedQryEntities = cacheInfo.cacheData().queryEntities();
                 String locSchema = locDesc.cacheConfiguration().getSqlSchema();
 
@@ -216,7 +225,7 @@ public class ValidationOnNodeJoinUtils {
                 // This check must be done on join, otherwise group encryption key will be
                 // written to metastore regardless of validation check and could trigger WAL write failures.
                 boolean locEnc = locDesc.cacheConfiguration().isEncryptionEnabled();
-                boolean rmtEnc = cacheInfo.cacheData().config().isEncryptionEnabled();
+                boolean rmtEnc = joiningNodeCacheCfg.isEncryptionEnabled();
 
                 if (locEnc != rmtEnc) {
                     if (errorMsg.length() > 0)

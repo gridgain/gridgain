@@ -1486,6 +1486,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             U.error(log, "Failed to initialize cache(s) (will try to rollback) [exchId=" + exchId +
                 ", caches=" + exchActions.cacheGroupsToStart() + ']', e);
 
+            ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
             exchangeLocE = new IgniteCheckedException(
                 "Failed to initialize exchange locally [locNodeId=" + cctx.localNodeId() + "]", e);
 
