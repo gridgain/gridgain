@@ -128,6 +128,8 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
         cache.put(key, 0);
 
+        // Cache partitions are requested from default channel, since it's first (and currently the only) channel
+        // which detects new topology.
         assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
 
         assertOpOnChannel(channels[3], ClientOperation.CACHE_PUT);
@@ -211,10 +213,10 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
     }
 
     /**
-     * Test that partition awareness works when reconnecting to the new cluster (with lower topology version)
+     * Test that affinity awareness works when reconnecting to the new cluster (with lower topology version)
      */
     @Test
-    public void testPartitionAwarenessOnClusterRestart() throws Exception {
+    public void testAffinityAwarenessOnClusterRestart() throws Exception {
         startGrids(3);
 
         awaitPartitionMapExchange();
