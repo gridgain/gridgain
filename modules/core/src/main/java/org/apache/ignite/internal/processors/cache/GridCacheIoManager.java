@@ -1467,6 +1467,24 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         addHandler(hndId, null, type, c, grpHandlers);
     }
 
+    public void remapCacheHandlersOnRecovery(int hndId, IgniteUuid deploymentId) {
+        remapCacheHandlersOnRecovery(cacheHandlers, hndId, deploymentId);
+    }
+
+    private void remapCacheHandlersOnRecovery(MessageHandlers msgHandlers, int hndId, IgniteUuid deploymentId) {
+        Map<Integer, IndexedClassHandler> idxClsHandlers0 = msgHandlers.idxClsHandlers;
+        for (Map.Entry<Integer, IndexedClassHandler> e : idxClsHandlers0.entrySet()) {
+            if (e.getKey() == hndId)
+                e.getValue().deploymentId = deploymentId;
+        }
+
+        ConcurrentMap<ListenerKey, RegularClassHandler> clsHandlers0 = msgHandlers.clsHandlers;
+        for (Map.Entry<ListenerKey, RegularClassHandler> e : clsHandlers0.entrySet()) {
+            if (e.getKey().hndId == hndId)
+                e.getValue().deploymentId = deploymentId;
+        }
+    }
+
     /**
      * @param hndId Message handler ID.
      * @param type Type of message.
@@ -1717,7 +1735,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
     /** */
     static class MessageHandler {
         /** Deployment identifier. */
-        final IgniteUuid deploymentId;
+        volatile IgniteUuid deploymentId;
 
         MessageHandler(IgniteUuid deploymentId) {
             this.deploymentId = deploymentId;

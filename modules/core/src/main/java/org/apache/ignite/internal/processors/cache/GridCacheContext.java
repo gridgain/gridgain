@@ -456,8 +456,10 @@ public class GridCacheContext<K, V> implements Externalizable {
 
         assert locMacs != null;
 
-        this.statisticsEnabled = clusterWideDesc.cacheConfiguration().isStatisticsEnabled();
-        this.dynamicDeploymentId = clusterWideDesc.deploymentId();
+        statisticsEnabled = clusterWideDesc.cacheConfiguration().isStatisticsEnabled();
+        dynamicDeploymentId = clusterWideDesc.deploymentId();
+
+        io().remapCacheHandlersOnRecovery(cacheId, dynamicDeploymentId);
     }
 
     /**
