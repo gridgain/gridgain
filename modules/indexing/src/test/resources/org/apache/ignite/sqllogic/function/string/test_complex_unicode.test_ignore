@@ -1,7 +1,7 @@
 # name: test/sql/function/string/test_complex_unicode.test
 # description: Test correct behavior of various string functions under complex unicode characters
 # group: [string]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14677
+# [ignore] 32 bit unicode characters not supported.
 
 # length with grapheme clusters
 query I

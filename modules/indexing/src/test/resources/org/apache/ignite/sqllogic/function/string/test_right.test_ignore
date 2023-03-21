@@ -1,7 +1,7 @@
 # name: test/sql/function/string/test_right.test
 # description: RIGHT test
 # group: [string]
-# Ignored: https://issues.apache.org/jira/browse/IGNITE-14677
+# [ignore] 32 bit unicode characters not supported.
 
 # test RIGHT on positive positions
 query TTTTT

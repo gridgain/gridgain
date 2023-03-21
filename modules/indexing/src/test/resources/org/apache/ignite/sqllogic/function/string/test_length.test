@@ -17,10 +17,17 @@ SELECT length(s) FROM strings ORDER BY s NULLS LAST
 NULL
 
 # length after concat
+# [ignore] 32 bit unicode characters not supported.
+#query I
+#SELECT length(s || ' ' || '🦆') FROM strings ORDER BY s
+#----
+#7
+#7
+#NULL
+
 query I
 SELECT length(s || ' ' || 'a') FROM strings ORDER BY s NULLS LAST
 ----
 7
 7
 NULL
-

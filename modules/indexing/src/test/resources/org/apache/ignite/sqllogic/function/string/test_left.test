@@ -78,7 +78,7 @@ NULL
 NULL
 NULL
 
-### [ignore] 32 bit unicode characters length invalid.
+### [ignore] 32 bit unicode characters not supported.
 
 #query TTTTT
 #SELECT LEFT('🦆ab', 0), LEFT('🦆ab', 1), LEFT('🦆ab', 2), LEFT('🦆ab', 3), LEFT('🦆ab', 4)

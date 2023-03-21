@@ -1,7 +1,7 @@
 # name: test/sql/function/string/test_substring_utf8.test
 # description: Substring test with UTF8
 # group: [string]
-# [ignore] 32 bit unicode characters length invalid.
+# [ignore] 32 bit unicode characters not supported.
 
 statement ok
 CREATE TABLE strings(s VARCHAR);
