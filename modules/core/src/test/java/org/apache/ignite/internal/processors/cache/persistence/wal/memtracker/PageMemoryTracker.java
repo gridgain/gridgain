@@ -249,6 +249,8 @@ public class PageMemoryTracker implements IgnitePlugin {
 
         memoryRegion = memoryProvider.nextRegion();
 
+        GridUnsafe.zeroMemory(memoryRegion.address(), memoryRegion.size());
+
         maxPages = (int)(maxMemorySize / pageSize);
 
         pageSlots = new DirectMemoryPageSlot[maxPages];
@@ -423,7 +425,7 @@ public class PageMemoryTracker implements IgnitePlugin {
 
                 if (pageSlot.owningPage() != null) {
                     // Clear memory if slot was already used.
-                    GridUnsafe.setMemory(pageAddr, pageSize, (byte)0);
+                    GridUnsafe.zeroMemory(pageAddr, pageSize);
                 }
 
                 pageSlot.owningPage(page);
@@ -486,12 +488,12 @@ public class PageMemoryTracker implements IgnitePlugin {
 
                 page.lock();
 
-            try {
-                GridUnsafe.copyHeapOffheap(snapshot.pageData(), GridUnsafe.BYTE_ARR_OFF, page.address(), pageSize);
+                try {
+                    GridUnsafe.copyHeapOffheap(snapshot.pageData(), GridUnsafe.BYTE_ARR_OFF, page.address(), pageSize);
 
-                page.changeHistory().clear();
+                    page.changeHistory().clear();
 
-                page.changeHistory().add(record);
+                    page.changeHistory().add(record);
                 }
                 finally {
                     page.unlock();
@@ -709,7 +711,7 @@ public class PageMemoryTracker implements IgnitePlugin {
         }
 
         if (!locBuf.equals(rmtBuf)) {
-            log.error("Page buffers are not equals: " + fullPageId);
+            log.error("Page buffers are not equals [fullPageId=" + fullPageId + ", pageIo=" + pageIo + ']');
 
             dumpDiff(locBuf, rmtBuf);
 
