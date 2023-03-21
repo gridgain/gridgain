@@ -99,6 +99,7 @@ public class GridCacheDistributedQueryFuture<K, V, R> extends GridCacheQueryFutu
             }
 
             final GridCacheQueryRequest req = new GridCacheQueryRequest(cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 reqId,
                 fields(),
                 qryMgr.queryTopologyVersion(),

@@ -262,6 +262,7 @@ public final class GridDhtForceKeysFuture<K, V> extends GridCompoundFuture<Objec
 
                     GridDhtForceKeysRequest req = new GridDhtForceKeysRequest(
                         cctx.cacheId(),
+                        cctx.dynamicDeploymentId(),
                         futId,
                         fut.miniId(),
                         mappedKeys,

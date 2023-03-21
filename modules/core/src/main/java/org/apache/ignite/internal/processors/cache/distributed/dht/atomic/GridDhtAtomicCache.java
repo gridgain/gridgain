@@ -1719,6 +1719,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         IgniteCheckedException e
     ) {
         GridNearAtomicUpdateResponse res = new GridNearAtomicUpdateResponse(ctx.cacheId(),
+            ctx.dynamicDeploymentId(),
             nodeId,
             req.futureId(),
             req.partition(),
@@ -1745,6 +1746,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
         final Span span
     ) {
         GridNearAtomicUpdateResponse res = new GridNearAtomicUpdateResponse(ctx.cacheId(),
+            ctx.dynamicDeploymentId(),
             node.id(),
             req.futureId(),
             req.partition(),
@@ -3191,6 +3193,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
              * response was not sent if operation result was empty. Near node will get original response or this one.
              */
             GridNearAtomicUpdateResponse res = new GridNearAtomicUpdateResponse(ctx.cacheId(),
+                ctx.dynamicDeploymentId(),
                 nodeId,
                 checkReq.futureId(),
                 checkReq.partition(),
@@ -3363,6 +3366,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 if (nearEvicted != null) {
                     dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
+                        ctx.dynamicDeploymentId(),
                         req.partition(),
                         req.futureId(),
                         ctx.deploymentEnabled());
@@ -3397,6 +3401,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
             if (dhtRes == null && req.replyWithoutDelay()) {
                 dhtRes = new GridDhtAtomicUpdateResponse(ctx.cacheId(),
+                    ctx.dynamicDeploymentId(),
                     req.partition(),
                     req.futureId(),
                     ctx.deploymentEnabled());

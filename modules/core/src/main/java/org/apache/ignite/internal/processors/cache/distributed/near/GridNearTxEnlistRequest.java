@@ -138,7 +138,9 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
      * @param op Operation.
      * @param filter Filter.
      */
-    GridNearTxEnlistRequest(int cacheId,
+    GridNearTxEnlistRequest(
+        int cacheId,
+        IgniteUuid cacheDeploymentId,
         long threadId,
         IgniteUuid futId,
         int miniId,
@@ -154,11 +156,13 @@ public class GridNearTxEnlistRequest extends GridCacheIdMessage implements GridC
         EnlistOperation op,
         boolean needRes,
         boolean keepBinary,
-        @Nullable CacheEntryPredicate filter) {
+        @Nullable CacheEntryPredicate filter
+    ) {
+        super(cacheId, cacheDeploymentId);
+
         this.txTimeout = txTimeout;
         this.keepBinary = keepBinary;
         this.filter = filter;
-        this.cacheId = cacheId;
         this.threadId = threadId;
         this.futId = futId;
         this.miniId = miniId;

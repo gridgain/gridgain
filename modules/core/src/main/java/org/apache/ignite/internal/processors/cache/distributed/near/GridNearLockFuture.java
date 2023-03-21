@@ -1096,6 +1096,7 @@ public final class GridNearLockFuture extends GridCacheCompoundIdentityFuture<Bo
 
                                             req = new GridNearLockRequest(
                                                 cctx.cacheId(),
+                                                cctx.dynamicDeploymentId(),
                                                 topVer,
                                                 cctx.nodeId(),
                                                 threadId,

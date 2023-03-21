@@ -82,6 +82,7 @@ class GridDhtAtomicUpdateFuture extends GridDhtAtomicAbstractUpdateFuture {
     ) {
         return new GridDhtAtomicUpdateRequest(
             cctx.cacheId(),
+            cctx.dynamicDeploymentId(),
             nodeId,
             futId,
             writeVer,

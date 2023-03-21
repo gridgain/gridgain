@@ -50,8 +50,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Get request. Responsible for obtaining entry from primary node. 'Near' means 'Initiating node' here, not 'Near Cache'.
  */
-public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheDeployable,
-    GridCacheVersionable {
+public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheDeployable, GridCacheVersionable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -140,6 +139,7 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
      */
     public GridNearGetRequest(
         int cacheId,
+        IgniteUuid cacheDeploymentId,
         IgniteUuid futId,
         IgniteUuid miniId,
         GridCacheVersion ver,
@@ -157,11 +157,12 @@ public class GridNearGetRequest extends GridCacheIdMessage implements GridCacheD
         @Nullable String txLbl,
         @Nullable MvccSnapshot mvccSnapshot
     ) {
+        super(cacheId, cacheDeploymentId);
+
         assert futId != null;
         assert miniId != null;
         assert keys != null;
 
-        this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
         this.ver = ver;

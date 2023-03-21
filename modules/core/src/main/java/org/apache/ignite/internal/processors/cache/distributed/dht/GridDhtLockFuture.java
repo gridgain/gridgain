@@ -937,6 +937,7 @@ public final class GridDhtLockFuture extends GridCacheCompoundIdentityFuture<Boo
 
                         GridDhtLockRequest req = new GridDhtLockRequest(
                             cctx.cacheId(),
+                            cctx.dynamicDeploymentId(),
                             nearNodeId,
                             inTx() ? tx.nearXidVersion() : null,
                             threadId,

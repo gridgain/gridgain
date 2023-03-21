@@ -55,7 +55,9 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
      * @param dhtVer Dht version.
      * @param newDhtNodes New DHT nodes involved into transaction.
      */
-    public GridNearTxQueryResultsEnlistResponse(int cacheId,
+    public GridNearTxQueryResultsEnlistResponse(
+        int cacheId,
+        IgniteUuid cacheDeploymentId,
         IgniteUuid futId,
         int miniId,
         GridCacheVersion lockVer,
@@ -63,7 +65,7 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
         GridCacheVersion dhtVer,
         IgniteUuid dhtFutId,
         Set<UUID> newDhtNodes) {
-        super(cacheId, futId, miniId, lockVer, res, false, newDhtNodes);
+        super(cacheId, cacheDeploymentId, futId, miniId, lockVer, res, false, newDhtNodes);
 
         this.dhtVer = dhtVer;
         this.dhtFutId = dhtFutId;
@@ -76,12 +78,14 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
      * @param lockVer Lock version.
      * @param err Error.
      */
-    public GridNearTxQueryResultsEnlistResponse(int cacheId,
+    public GridNearTxQueryResultsEnlistResponse(
+        int cacheId,
+        IgniteUuid cacheDeploymentId,
         IgniteUuid futId,
         int miniId,
         GridCacheVersion lockVer,
         Throwable err) {
-        super(cacheId, futId, miniId, lockVer, err);
+        super(cacheId, cacheDeploymentId, futId, miniId, lockVer, err);
     }
 
     /**

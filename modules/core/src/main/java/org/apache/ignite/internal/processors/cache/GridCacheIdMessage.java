@@ -29,25 +29,25 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 public abstract class GridCacheIdMessage extends GridCacheMessage {
     /** Cache ID. */
     @GridToStringInclude
-    private int cacheId;
+    protected int cacheId;
 
     /** Cache deployment identifier that represents a generation of the cache (see cacheId). */
     private IgniteUuid depId;
 
     /**
-     * For serialization only.
+     * For deserialization only.
      */
-//    public GridCacheIdMessage() {
-//       // No-op.
-//    }
+    public GridCacheIdMessage() {
+       // No-op.
+    }
 
     /**
      * @param cacheId Cache indentifier.
-     * @param depId Cache deployment identifier.
+     * @param cacheDeploymentId Cache deployment identifier.
      */
-    public GridCacheIdMessage(int cacheId, IgniteUuid depId) {
+    public GridCacheIdMessage(int cacheId, IgniteUuid cacheDeploymentId) {
         this.cacheId = cacheId;
-        this.depId = depId;
+        depId = cacheDeploymentId;
     }
 
     /**
@@ -76,7 +76,7 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 4;
+        return 5;
     }
 
     /** {@inheritDoc} */
@@ -100,6 +100,12 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
 
                 writer.incrementState();
 
+            case 4:
+                if (!writer.writeIgniteUuid("depId", depId))
+                    return false;
+
+                writer.incrementState();
+
         }
 
         return true;
@@ -118,6 +124,14 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
         switch (reader.state()) {
             case 3:
                 cacheId = reader.readInt("cacheId");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
+            case 4:
+                depId = reader.readIgniteUuid("depId");
 
                 if (!reader.isLastRead())
                     return false;

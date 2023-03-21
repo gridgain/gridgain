@@ -129,6 +129,7 @@ public class GridDhtLockRequest extends GridDistributedLockRequest {
      */
     public GridDhtLockRequest(
         int cacheId,
+        IgniteUuid cacheDeploymentId,
         UUID nodeId,
         GridCacheVersion nearXidVer,
         long threadId,
@@ -154,6 +155,7 @@ public class GridDhtLockRequest extends GridDistributedLockRequest {
         String txLbl
     ) {
         super(cacheId,
+            cacheDeploymentId,
             nodeId,
             nearXidVer,
             threadId,

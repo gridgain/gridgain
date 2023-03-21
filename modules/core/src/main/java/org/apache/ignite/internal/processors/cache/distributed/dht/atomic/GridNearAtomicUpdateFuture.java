@@ -1033,6 +1033,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
                 GridNearAtomicFullUpdateRequest req = new GridNearAtomicFullUpdateRequest(
                     cctx.cacheId(),
+                    cctx.dynamicDeploymentId(),
                     nodeId,
                     futId,
                     topVer,
@@ -1147,6 +1148,7 @@ public class GridNearAtomicUpdateFuture extends GridNearAtomicAbstractUpdateFutu
 
         GridNearAtomicFullUpdateRequest req = new GridNearAtomicFullUpdateRequest(
             cctx.cacheId(),
+            cctx.dynamicDeploymentId(),
             primary.id(),
             futId,
             topVer,

@@ -69,7 +69,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
      * @param addDepInfo Deployment info flag.
      */
     public GridDistributedTxPrepareResponse(int part, GridCacheVersion xid, boolean addDepInfo) {
-        super(xid, 0, addDepInfo);
+        super(0, null, xid, 0, addDepInfo);
 
         this.part = part;
     }
@@ -81,7 +81,7 @@ public class GridDistributedTxPrepareResponse extends GridDistributedBaseMessage
      * @param addDepInfo Deployment info flag.
      */
     public GridDistributedTxPrepareResponse(int part, GridCacheVersion xid, Throwable err, boolean addDepInfo) {
-        super(xid, 0, addDepInfo);
+        super(0, null, xid, 0, addDepInfo);
 
         this.part = part;
         this.err = err;

@@ -122,6 +122,7 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
      */
     public GridNearLockRequest(
         int cacheId,
+        IgniteUuid cacheDeploymentId,
         @NotNull AffinityTopologyVersion topVer,
         UUID nodeId,
         long threadId,
@@ -149,6 +150,7 @@ public class GridNearLockRequest extends GridDistributedLockRequest {
     ) {
         super(
             cacheId,
+            cacheDeploymentId,
             nodeId,
             lockVer,
             threadId,

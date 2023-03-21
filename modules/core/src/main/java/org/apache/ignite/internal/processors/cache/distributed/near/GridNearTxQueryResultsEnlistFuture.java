@@ -410,6 +410,7 @@ public class GridNearTxQueryResultsEnlistFuture extends GridNearTxQueryAbstractE
         assert batchFut != null;
 
         GridNearTxQueryResultsEnlistRequest req = new GridNearTxQueryResultsEnlistRequest(cctx.cacheId(),
+            cctx.dynamicDeploymentId(),
             threadId,
             futId,
             batchId,

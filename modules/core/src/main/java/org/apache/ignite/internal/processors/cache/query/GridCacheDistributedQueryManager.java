@@ -211,6 +211,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 if (!F.eq(req.cacheName(), cctx.name())) {
                     GridCacheQueryResponse res = new GridCacheQueryResponse(
                         cctx.cacheId(),
+                        cctx.dynamicDeploymentId(),
                         req.id(),
                         new IgniteCheckedException("Received request for incorrect cache [expected=" + cctx.name() +
                             ", actual=" + req.cacheName()),
@@ -235,8 +236,11 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                     catch (Throwable e) {
                         U.error(log(), "Failed to run query.", e);
 
-                        sendQueryResponse(sndId, new GridCacheQueryResponse(cctx.cacheId(), req.id(), e.getCause(),
-                            cctx.deploymentEnabled()), 0);
+                        sendQueryResponse(
+                            sndId,
+                            new GridCacheQueryResponse(cctx.cacheId(), cctx.dynamicDeploymentId(), req.id(), e.getCause(),
+                                cctx.deploymentEnabled()),
+                            0);
 
                         if (e instanceof Error)
                             throw (Error)e;
@@ -454,7 +458,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 fut.onPage(null, null, e, true);
             else
                 sendQueryResponse(qryInfo.senderId(),
-                    new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(), e, cctx.deploymentEnabled()),
+                    new GridCacheQueryResponse(cctx.cacheId(), cctx.dynamicDeploymentId(), qryInfo.requestId(), e, cctx.deploymentEnabled()),
                     qryInfo.query().timeout());
 
             return true;
@@ -463,7 +467,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
         if (loc)
             fut.onPage(null, data, null, finished);
         else {
-            GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(),
+            GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), cctx.dynamicDeploymentId(), qryInfo.requestId(),
                 /*finished*/false, /*fields*/false, cctx.deploymentEnabled());
 
             res.data(data);
@@ -493,7 +497,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             }
             else
                 sendQueryResponse(qryInfo.senderId(),
-                    new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(), e, cctx.deploymentEnabled()),
+                    new GridCacheQueryResponse(cctx.cacheId(), cctx.dynamicDeploymentId(), qryInfo.requestId(), e, cctx.deploymentEnabled()),
                     qryInfo.query().timeout());
 
             return true;
@@ -505,7 +509,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
             fut.onPage(null, metadata, data, null, finished);
         }
         else {
-            GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), qryInfo.requestId(),
+            GridCacheQueryResponse res = new GridCacheQueryResponse(cctx.cacheId(), cctx.dynamicDeploymentId(), qryInfo.requestId(),
                 finished, qryInfo.reducer() == null, cctx.deploymentEnabled());
 
             res.metadata(metadata);
@@ -543,6 +547,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
 
             final GridCacheQueryRequest req = new GridCacheQueryRequest(
                 cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 reqId,
                 cctx.name(),
                 qry.query().type(),
@@ -684,6 +689,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
         try {
             GridCacheQueryRequest req = new GridCacheQueryRequest(
                 cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 id,
                 cctx.name(),
                 qry.pageSize(),
@@ -744,6 +750,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
 
             GridCacheQueryRequest req = new GridCacheQueryRequest(
                 cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 reqId,
                 cctx.name(),
                 qry.query().type(),

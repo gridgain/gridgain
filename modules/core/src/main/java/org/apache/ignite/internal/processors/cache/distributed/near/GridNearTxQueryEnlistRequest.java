@@ -124,6 +124,7 @@ public class GridNearTxQueryEnlistRequest extends GridCacheIdMessage {
      */
     public GridNearTxQueryEnlistRequest(
         int cacheId,
+        IgniteUuid cacheDeploymentId,
         long threadId,
         IgniteUuid futId,
         int miniId,
@@ -141,7 +142,10 @@ public class GridNearTxQueryEnlistRequest extends GridCacheIdMessage {
         long timeout,
         long txTimeout,
         int taskNameHash,
-        boolean clientFirst) {
+        boolean clientFirst
+    ) {
+        super(cacheId, cacheDeploymentId);
+
         this.cacheIds = cacheIds;
         this.parts = parts;
         this.schema = schema;
@@ -150,7 +154,6 @@ public class GridNearTxQueryEnlistRequest extends GridCacheIdMessage {
         this.flags = flags;
         this.pageSize = pageSize;
         this.txTimeout = txTimeout;
-        this.cacheId = cacheId;
         this.threadId = threadId;
         this.futId = futId;
         this.miniId = miniId;

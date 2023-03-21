@@ -85,6 +85,7 @@ class GridDhtAtomicSingleUpdateFuture extends GridDhtAtomicAbstractUpdateFuture 
         if (canUseSingleRequest(ttl, conflictExpireTime, conflictVer)) {
             return new GridDhtAtomicSingleUpdateRequest(
                 cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 nodeId,
                 futId,
                 writeVer,
@@ -99,6 +100,7 @@ class GridDhtAtomicSingleUpdateFuture extends GridDhtAtomicAbstractUpdateFuture 
         else {
             return new GridDhtAtomicUpdateRequest(
                 cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
                 nodeId,
                 futId,
                 writeVer,

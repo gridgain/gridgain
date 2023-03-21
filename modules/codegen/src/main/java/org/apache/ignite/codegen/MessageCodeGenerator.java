@@ -201,44 +201,44 @@ public class MessageCodeGenerator {
 
         MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
 
-//        gen.generateAndWrite(GridCacheIdMessage.class);
-        gen.generateAndWrite(GridCacheTxRecoveryRequest.class);
-        gen.generateAndWrite(GridDistributedBaseMessage.class);
-        gen.generateAndWrite(GridDistributedLockRequest.class);
-        gen.generateAndWrite(GridDistributedTxFinishRequest.class);
-        gen.generateAndWrite(GridDistributedTxPrepareRequest.class);
-        gen.generateAndWrite(GridDhtTxFinishRequest.class);
-        gen.generateAndWrite(GridDhtTxPrepareRequest.class);
-        gen.generateAndWrite(GridDhtTxQueryEnlistRequest.class);
-        gen.generateAndWrite(GridDhtTxQueryFirstEnlistRequest.class);
-        gen.generateAndWrite(GridDhtAtomicAbstractUpdateRequest.class);
-        gen.generateAndWrite(GridDhtAtomicDeferredUpdateResponse.class);
-        gen.generateAndWrite(GridDhtAtomicNearResponse.class);
-        gen.generateAndWrite(GridDhtAtomicSingleUpdateRequest.class);
-        gen.generateAndWrite(GridDhtAtomicUpdateRequest.class);
-        gen.generateAndWrite(GridDhtAtomicUpdateResponse.class);
+        gen.generateAndWrite(GridCacheIdMessage.class);
+//        gen.generateAndWrite(GridCacheTxRecoveryRequest.class);
+//        gen.generateAndWrite(GridDistributedBaseMessage.class);
+//        gen.generateAndWrite(GridDistributedLockRequest.class);
+//        gen.generateAndWrite(GridDistributedTxFinishRequest.class);
+//        gen.generateAndWrite(GridDistributedTxPrepareRequest.class);
+//        gen.generateAndWrite(GridDhtTxFinishRequest.class);
+//        gen.generateAndWrite(GridDhtTxPrepareRequest.class);
+//        gen.generateAndWrite(GridDhtTxQueryEnlistRequest.class);
+//        gen.generateAndWrite(GridDhtTxQueryFirstEnlistRequest.class);
+//        gen.generateAndWrite(GridDhtAtomicAbstractUpdateRequest.class);
+//        gen.generateAndWrite(GridDhtAtomicDeferredUpdateResponse.class);
+//        gen.generateAndWrite(GridDhtAtomicNearResponse.class);
+//        gen.generateAndWrite(GridDhtAtomicSingleUpdateRequest.class);
+//        gen.generateAndWrite(GridDhtAtomicUpdateRequest.class);
+//        gen.generateAndWrite(GridDhtAtomicUpdateResponse.class);
         /*
         org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractSingleUpdateRequest (abstract)
             writeTo method doesn't exist.
             readFrom method doesn't exist.
             fieldCount method doesn't exist.
          */
-        gen.generateAndWrite(GridNearAtomicFullUpdateRequest.class);
-        gen.generateAndWrite(GridNearAtomicSingleUpdateRequest.class);
-        gen.generateAndWrite(GridNearAtomicUpdateResponse.class);
-        gen.generateAndWrite(GridNearGetRequest.class);
-        gen.generateAndWrite(GridNearGetResponse.class);
-        gen.generateAndWrite(GridNearSingleGetRequest.class);
-        gen.generateAndWrite(GridNearSingleGetResponse.class);
-        gen.generateAndWrite(GridNearTxEnlistRequest.class);
-        gen.generateAndWrite(GridNearTxEnlistResponse.class);
-        gen.generateAndWrite(GridNearTxFinishRequest.class);
-        gen.generateAndWrite(GridNearTxPrepareResponse.class);
-        gen.generateAndWrite(GridNearTxQueryEnlistRequest.class);
-        gen.generateAndWrite(GridNearTxQueryEnlistResponse.class);
-        gen.generateAndWrite(GridNearTxQueryResultsEnlistRequest.class);
-        gen.generateAndWrite(GridNearTxQueryResultsEnlistResponse.class);
-        gen.generateAndWrite(GridCacheQueryRequest.class);
+//        gen.generateAndWrite(GridNearAtomicFullUpdateRequest.class);
+//        gen.generateAndWrite(GridNearAtomicSingleUpdateRequest.class);
+//        gen.generateAndWrite(GridNearAtomicUpdateResponse.class);
+//        gen.generateAndWrite(GridNearGetRequest.class);
+//        gen.generateAndWrite(GridNearGetResponse.class);
+//        gen.generateAndWrite(GridNearSingleGetRequest.class);
+//        gen.generateAndWrite(GridNearSingleGetResponse.class);
+//        gen.generateAndWrite(GridNearTxEnlistRequest.class);
+//        gen.generateAndWrite(GridNearTxEnlistResponse.class);
+//        gen.generateAndWrite(GridNearTxFinishRequest.class);
+//        gen.generateAndWrite(GridNearTxPrepareResponse.class);
+//        gen.generateAndWrite(GridNearTxQueryEnlistRequest.class);
+//        gen.generateAndWrite(GridNearTxQueryEnlistResponse.class);
+//        gen.generateAndWrite(GridNearTxQueryResultsEnlistRequest.class);
+//        gen.generateAndWrite(GridNearTxQueryResultsEnlistResponse.class);
+//        gen.generateAndWrite(GridCacheQueryRequest.class);
 
 //        gen.generateAndWrite(GridQueryKillRequest.class);
 //        gen.generateAndWrite(GridQueryKillResponse.class);

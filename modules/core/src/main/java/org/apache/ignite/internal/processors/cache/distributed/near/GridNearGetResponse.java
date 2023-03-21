@@ -44,8 +44,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Get response.
  */
-public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable,
-    GridCacheVersionable {
+public class GridNearGetResponse extends GridCacheIdMessage implements GridCacheDeployable, GridCacheVersionable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -94,14 +93,16 @@ public class GridNearGetResponse extends GridCacheIdMessage implements GridCache
      */
     public GridNearGetResponse(
         int cacheId,
+        IgniteUuid cacheDeploymentId,
         IgniteUuid futId,
         IgniteUuid miniId,
         GridCacheVersion ver,
         boolean addDepInfo
     ) {
+        super(cacheId, cacheDeploymentId);
+
         assert futId != null;
 
-        this.cacheId = cacheId;
         this.futId = futId;
         this.miniId = miniId;
         this.ver = ver;
