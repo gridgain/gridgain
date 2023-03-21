@@ -1,7 +1,7 @@
 # name: test/sql/update/test_repeated_string_update.test
 # description: Test repeated update of string in same segment
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 # create a table
 statement ok con1

@@ -1,7 +1,7 @@
 # name: test/sql/update/test_update_same_value.test
 # description: Update the same value multiple times in one transaction
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 statement ok
 PRAGMA enable_verification

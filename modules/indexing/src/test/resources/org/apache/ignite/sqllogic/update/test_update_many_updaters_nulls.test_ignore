@@ -1,7 +1,7 @@
 # name: test/sql/update/test_update_many_updaters_nulls.test
 # description: Test update behavior with multiple updaters and NULL values
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 statement ok con1
 PRAGMA enable_verification

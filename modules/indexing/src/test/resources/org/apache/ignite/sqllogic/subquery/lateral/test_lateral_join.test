@@ -1,6 +1,7 @@
 # name: test/sql/subquery/lateral/test_lateral_join.test
 # description: Test lateral join
 # group: [lateral]
+# [ignored] Not supported by H2: https://github.com/h2database/h2database/issues/1816.
 
 # FIXME: not supported yet
 # REQUIRE_NO_FAIL(con.Query("CREATE TABLE students(id INTEGER, name VARCHAR, major VARCHAR, year INTEGER)"));

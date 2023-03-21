@@ -1,7 +1,7 @@
 # name: test/sql/function/blob/base64.test
 # description: Test blob base64 functions
 # group: [blob]
-# Ignore: not supported https://github.com/h2database/h2database/issues/2422
+# [ignore[ Not supported https://github.com/h2database/h2database/issues/2422
 
 query I
 SELECT to_base64(NULL)

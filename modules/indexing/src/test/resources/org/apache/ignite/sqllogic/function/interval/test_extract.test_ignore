@@ -1,7 +1,7 @@
 # name: test/sql/function/interval/test_extract.test
 # description: Extract function
 # group: [interval]
-# ignored: https://ggsystems.atlassian.net/browse/GG-36407
+# [ignore] https://ggsystems.atlassian.net/browse/GG-36407
 
 # YEAR-MONTH intervals
 statement ok

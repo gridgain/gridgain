@@ -218,6 +218,14 @@ select count(*) from big  inner join tbl_2 on (a IS NOT DISTINCT FROM tbl_2.b) w
 ----
 1
 
+
+# [ignore] ROWID not supported.
+# Use with rowid column (non-flat and non-constant vector)
+#query I
+#select count(*) from big inner join tbl_2 on (big.rowid IS NOT DISTINCT FROM tbl_2.b)
+#----
+#2
+
 # Use in subqueries with correlated expressions
 query II rowsort
 SELECT a, (select count(*) from tbl_1 where tbl_1.a is distinct from t.b) from tbl_1 as t ORDER BY a NULLS LAST
@@ -225,3 +233,28 @@ SELECT a, (select count(*) from tbl_1 where tbl_1.a is distinct from t.b) from t
 1	2
 2	3
 NULL	2
+
+# Sequence not supported.
+
+#statement ok
+#CREATE SEQUENCE seq;
+
+#statement ok
+#CREATE TABLE test_default (a BOOL DEFAULT nextval('seq') is not distinct from nextval('seq'), b INTEGER);
+
+##statement ok
+#INSERT INTO test_default (b) VALUES (2), (4), (6);
+
+#query II
+#select * from test_default;
+#----
+#false	2
+#alse	4
+#false	6
+
+#query II
+#select * from test_default;
+#----
+#false	2
+#false	4
+#false	6

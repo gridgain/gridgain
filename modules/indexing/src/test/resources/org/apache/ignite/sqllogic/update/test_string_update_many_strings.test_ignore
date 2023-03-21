@@ -1,7 +1,7 @@
 # name: test/sql/update/test_string_update_many_strings.test
 # description: Test string updates with many strings
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 # create a table
 statement ok con1

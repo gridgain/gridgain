@@ -1,7 +1,7 @@
 # name: test/sql/update/test_update_from.test
 # description: Test updates that use a from clause
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Unsupported syntax: UPDATE TEST SET A=TEST.A+S.A FROM.
 
 # create a table
 statement ok

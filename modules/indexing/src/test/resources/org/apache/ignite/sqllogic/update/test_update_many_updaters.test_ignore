@@ -1,7 +1,7 @@
 # name: test/sql/update/test_update_many_updaters.test
 # description: Test update behavior with multiple updaters
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 # this test contains four query connections (con1, con2, con3, con4)
 # and one updating connection (updater)

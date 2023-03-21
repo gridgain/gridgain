@@ -1,8 +1,7 @@
 # name: test/sql/subquery/scalar/test_nested_correlated_subquery.test
 # description: Test nested correlated subqueries
 # group: [scalar]
-# [ignore]  
-# Ignore https://issues.apache.org/jira/browse/IGNITE-16000
+# [ignore] Nested sub-query parse problem: Column "I1.I" not found.
 
 statement ok
 PRAGMA enable_verification

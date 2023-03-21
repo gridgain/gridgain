@@ -1,7 +1,7 @@
 # name: test/sql/update/test_update_delete_same_tuple.test
 # description: Test update and delete of the same tuple
 # group: [update]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15624
+# [ignore] Not supported (transaction).
 
 # on a normal table, we can update and delete the same tuple concurrently without a conflict
 statement ok con1
