@@ -1,13 +1,13 @@
 # name: test/sql/join/inner/test_lt_join.test
 # description: Test less than join
 # group: [inner]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-14555
 
 statement ok
 PRAGMA enable_verification
 
 statement ok
-create table a AS SELECT i FROM range(1, 2001, 1) t1(i)
+create table a(i INT);
+insert into a SELECT x FROM system_range(1, 2000, 1)
 
 query I
 select count(*) from a, (SELECT 2000 AS j) b where i < j
