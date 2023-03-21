@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import java.net.InetSocketAddress;
 import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.Map;
@@ -107,10 +108,10 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
      * @return Auth context.
      * @throws IgniteCheckedException If failed.
      */
-    protected AuthorizationContext authenticate(Certificate[] certificates, String user, String pwd)
+    protected AuthorizationContext authenticate(InetSocketAddress remoteAddr, Certificate[] certificates, String user, String pwd)
         throws IgniteCheckedException {
         if (ctx.security().enabled())
-            authCtx = authenticateExternal(certificates, user, pwd).authorizationContext();
+            authCtx = authenticateExternal(remoteAddr, certificates, user, pwd).authorizationContext();
         else if (ctx.authentication().enabled()) {
             if (F.isEmpty(user))
                 throw new IgniteAccessControlException("Unauthenticated sessions are prohibited.");
@@ -129,7 +130,7 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /**
      * Do 3-rd party authentication.
      */
-    private AuthenticationContext authenticateExternal(Certificate[] certificates, String user, String pwd)
+    private AuthenticationContext authenticateExternal(InetSocketAddress remoteAddr, Certificate[] certificates, String user, String pwd)
         throws IgniteCheckedException {
         SecurityCredentials cred = new SecurityCredentials(user, pwd);
 
@@ -140,6 +141,8 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
         authCtx.nodeAttributes(F.isEmpty(userAttrs) ? Collections.emptyMap() : userAttrs);
         authCtx.credentials(cred);
         authCtx.certificates(certificates);
+        authCtx.address(remoteAddr);
+        authCtx.allAddresses(Collections.singletonList(remoteAddr));
 
         secCtx = ctx.security().authenticate(authCtx);
 
