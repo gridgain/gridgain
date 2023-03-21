@@ -2973,18 +2973,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * @param cacheName Cache name.
      * @param deploymentId Future deployment ID.
-     * @param err Error to complete the future with or {@code null} if no errors occurred.
      */
-    void completeTemplateAddFuture(String cacheName, IgniteUuid deploymentId, @Nullable Throwable err) {
+    void completeTemplateAddFuture(String cacheName, IgniteUuid deploymentId) {
         GridCacheProcessor.TemplateConfigurationFuture fut =
             (GridCacheProcessor.TemplateConfigurationFuture)pendingTemplateFuts.get(cacheName);
 
-        if (fut != null && fut.deploymentId().equals(deploymentId)) {
-            if (err != null)
-                fut.onDone(err);
-            else
-                fut.onDone();
-        }
+        if (fut != null && fut.deploymentId().equals(deploymentId))
+            fut.onDone();
     }
 
     /**
@@ -2993,18 +2988,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param err Error if any.
      */
     public void completeCacheStartFuture(DynamicCacheChangeRequest req, boolean success, @Nullable Throwable err) {
-        completeCacheStartFuture(req.requestId(), req.initiatingNodeId(), success, err);
-    }
-
-    /**
-     * @param reqId ID of a request to complete a future for.
-     * @param initiatingNodeId ID of a node that requested the original operation.
-     * @param success Future result.
-     * @param err Error if any.
-     */
-    private void completeCacheStartFuture(UUID reqId, UUID initiatingNodeId, boolean success, @Nullable Throwable err) {
-        if (ctx.localNodeId().equals(initiatingNodeId)) {
-            DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(reqId);
+        if (ctx.localNodeId().equals(req.initiatingNodeId())) {
+            DynamicCacheStartFuture fut = (DynamicCacheStartFuture)pendingFuts.get(req.requestId());
 
             if (fut != null)
                 fut.onDone(success, err);

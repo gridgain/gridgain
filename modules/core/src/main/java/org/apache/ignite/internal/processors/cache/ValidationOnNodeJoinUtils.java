@@ -120,12 +120,14 @@ public class ValidationOnNodeJoinUtils {
     /**
      * Checks a joining node to configuration consistency.
      *
-     * @param node              Node.
-     * @param discoData         Disco data.
-     * @param marsh             Marsh.
-     * @param ctx               Context.
+     * @param node Node.
+     * @param discoData Disco data.
+     * @param marsh Marsh.
+     * @param ctx Context.
      * @param cacheDescProvider Cache descriptor provider.
-     * @param enricher
+     * @param enricher Enricher to fully deserialize {@link CacheConfiguration} including fields annotated with
+     *                 {@link org.apache.ignite.configuration.SerializeSeparately} to make sure that
+     *                 full deserialization is possible.
      */
     @Nullable static IgniteNodeValidationResult validateNode(
         ClusterNode node,
@@ -133,7 +135,8 @@ public class ValidationOnNodeJoinUtils {
         Marshaller marsh,
         GridKernalContext ctx,
         Function<String, DynamicCacheDescriptor> cacheDescProvider,
-        CacheConfigurationEnricher enricher) {
+        CacheConfigurationEnricher enricher
+    ) {
         if (discoData.hasJoiningNodeData() && discoData.joiningNodeData() instanceof CacheJoinNodeDiscoveryData) {
             CacheJoinNodeDiscoveryData nodeData = (CacheJoinNodeDiscoveryData)discoData.joiningNodeData();
 

@@ -1066,7 +1066,7 @@ public class MvccProcessorImpl extends GridProcessorAdapter implements MvccProce
 
     /** */
     private void checkMvccCacheStarted(DynamicCacheChangeBatch cacheMsg) {
-       if (!mvccEnabled) {
+        if (!mvccEnabled) {
             for (DynamicCacheChangeRequest req : cacheMsg.requests()) {
                 CacheConfiguration ccfg = req.startCacheConfiguration();
 
