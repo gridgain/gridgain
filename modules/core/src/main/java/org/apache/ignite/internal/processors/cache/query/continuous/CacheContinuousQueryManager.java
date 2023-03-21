@@ -159,7 +159,10 @@ public class CacheContinuousQueryManager extends GridCacheManagerAdapter {
         topicPrefix = "CONTINUOUS_QUERY" + (cctx.name() == null ? "" : "_" + cctx.name());
 
         if (cctx.affinityNode()) {
-            cctx.io().addCacheHandler(cctx.cacheId(), CacheContinuousQueryBatchAck.class,
+            cctx.io().addCacheHandler(
+                cctx.cacheId(),
+                cctx.dynamicDeploymentId(),
+                CacheContinuousQueryBatchAck.class,
                 new CI2<UUID, CacheContinuousQueryBatchAck>() {
                     @Override public void apply(UUID uuid, CacheContinuousQueryBatchAck msg) {
                         CacheContinuousQueryListener lsnr = lsnrs.get(msg.routineId());

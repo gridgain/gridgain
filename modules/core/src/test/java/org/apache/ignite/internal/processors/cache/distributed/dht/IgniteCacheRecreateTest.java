@@ -43,9 +43,6 @@ import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AssignableTypeFilter;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -93,17 +90,6 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         super.afterTestsStopped();
 
         stopAllGrids();
-    }
-
-    @Test
-    public void testClasses() throws Exception {
-        ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(false);
-        provider.addIncludeFilter(new AssignableTypeFilter(GridCacheIdMessage.class));
-
-        Set<BeanDefinition> components = provider.findCandidateComponents("org/apache/ignite");
-        for (BeanDefinition component : components)
-            System.out.println(component.getBeanClassName());
-        // use class cls found
     }
 
     @Test
