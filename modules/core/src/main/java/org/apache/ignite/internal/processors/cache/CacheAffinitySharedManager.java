@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,6 +45,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
@@ -1357,6 +1359,15 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             fut.onResponse(nodeId, res);
     }
 
+    /** Return registered cache groups take affinity into account. */
+    private Collection<CacheGroupContext> registeredCacheGroups() {
+        return cachesRegistry.allGroups().values().stream()
+            .filter(desc -> desc.config().getCacheMode() != LOCAL)
+            .map(desc -> cctx.kernalContext().cache().cacheGroup(desc.groupId()))
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+    }
+
     /**
      * @param c Cache closure.
      */
@@ -2450,6 +2461,20 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
+     * Returns cache group context for given cache Id.
+     *
+     * @param ctx     Kernal context.
+     * @param groupId Cache group id.
+     * @return Cache group context.
+     * @throws CacheException If cache group context wasn't found.
+     */
+    private static @Nullable CacheGroupContext groupContext(GridKernalContext ctx, int groupId) {
+        CacheGroupContext grp = ctx.cache().cacheGroup(groupId);
+
+        return grp;
+    }
+
+    /**
      * Initializes current affinity assignment based on partitions availability. Nodes that have most recent data will
      * be considered affinity nodes.
      *
@@ -2476,9 +2501,21 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         final Map<Integer, Map<Integer, List<T>>> assignment = new ConcurrentHashMap<>();
 
+        Collection<CacheGroupContext> affinityCaches = registeredCacheGroups();
+
+/*        for (CacheGroupContext grpCtx : affinityCaches) {
+            if (grpCtx != null)
+                grpCtx.topology().readLock();
+        }*/
+
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
                 CacheGroupHolder grpHolder = getOrCreateGroupHolder(topVer, desc);
+
+                CacheGroupContext grpCtx = cctx.kernalContext().cache().cacheGroup(desc.groupId());
+
+                if (grpCtx != null)
+                    grpCtx.topology().readLock();
 
                 if (!grpHolder.rebalanceEnabled ||
                     (fut.cacheGroupAddedOnExchange(desc.groupId(), desc.receivedFrom()) && !enforcedCentralizedAssignment))
@@ -2498,125 +2535,133 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 List<List<ClusterNode>> newAssignment0 = initAff ? new ArrayList<>(newAssignment) : null;
 
-                GridDhtPartitionTopology top = grpHolder.topology(fut.context().events().discoveryCache());
+                try {
+                    GridDhtPartitionTopology top = grpHolder.topology(fut.context().events().discoveryCache());
 
-                Map<Integer, List<T>> cacheAssignment = null;
+                    Map<Integer, List<T>> cacheAssignment = null;
 
-                for (int p = 0; p < newAssignment.size(); p++) {
-                    List<ClusterNode> newNodes = newAssignment.get(p);
-                    List<ClusterNode> curNodes = curAssignment.get(p);
+                    for (int p = 0; p < newAssignment.size(); p++) {
+                        List<ClusterNode> newNodes = newAssignment.get(p);
+                        List<ClusterNode> curNodes = curAssignment.get(p);
 
-                    assert evtNodes.containsAll(newNodes) : "Invalid new assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
-                        ", nodes=" + newNodes +
-                        ", topVer=" + fut.context().events().discoveryCache().version() +
-                        ", evts=" + fut.context().events().events() + "]";
+                        assert evtNodes.containsAll(newNodes) : "Invalid new assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
+                            ", nodes=" + newNodes +
+                            ", topVer=" + fut.context().events().discoveryCache().version() +
+                            ", evts=" + fut.context().events().events() + "]";
 
-                    ClusterNode curPrimary = !curNodes.isEmpty() ? curNodes.get(0) : null;
-                    ClusterNode newPrimary = !newNodes.isEmpty() ? newNodes.get(0) : null;
+                        ClusterNode curPrimary = !curNodes.isEmpty() ? curNodes.get(0) : null;
+                        ClusterNode newPrimary = !newNodes.isEmpty() ? newNodes.get(0) : null;
 
-                    List<ClusterNode> newNodes0 = null;
+                        List<ClusterNode> newNodes0 = null;
 
-                    assert newPrimary == null || evtNodes.contains(newPrimary) : "Invalid new primary [" +
-                        "grp=" + desc.cacheOrGroupName() +
-                        ", node=" + newPrimary +
-                        ", topVer=" + topVer + ']';
+                        assert newPrimary == null || evtNodes.contains(newPrimary) : "Invalid new primary [" +
+                            "grp=" + desc.cacheOrGroupName() +
+                            ", node=" + newPrimary +
+                            ", topVer=" + topVer + ']';
 
-                    List<ClusterNode> owners = top.owners(p, topVer);
+                        List<ClusterNode> owners = top.owners(p, topVer);
 
-                    // It is essential that curPrimary node has partition in OWNING state.
-                    if (!owners.isEmpty() && !owners.contains(curPrimary))
-                        curPrimary = owners.get(0);
+                        // It is essential that curPrimary node has partition in OWNING state.
+                        if (!owners.isEmpty() && !owners.contains(curPrimary))
+                            curPrimary = owners.get(0);
 
-                    // If new assignment is empty preserve current ownership for alive nodes.
-                    if (curPrimary != null && newPrimary == null) {
-                        newNodes0 = new ArrayList<>(curNodes.size());
+                        // If new assignment is empty preserve current ownership for alive nodes.
+                        if (curPrimary != null && newPrimary == null) {
+                            newNodes0 = new ArrayList<>(curNodes.size());
 
-                        for (ClusterNode node : curNodes) {
-                            if (evtNodes.contains(node))
-                                newNodes0.add(node);
-                        }
-                    }
-                    else if (curPrimary != null && !curPrimary.equals(newPrimary)) {
-                        GridDhtPartitionState state = top.partitionState(newPrimary.id(), p);
-
-                        if (evtNodes.contains(curPrimary)) {
-                            if (state != OWNING) {
-                                newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
-                                    p,
-                                    curPrimary,
-                                    newNodes,
-                                    waitRebalanceInfo);
+                            for (ClusterNode node : curNodes) {
+                                if (evtNodes.contains(node))
+                                    newNodes0.add(node);
                             }
-                        }
-                        else {
-                            if (state != OWNING) {
-                                for (int i = 1; i < curNodes.size(); i++) {
-                                    ClusterNode curNode = curNodes.get(i);
+                        } else if (curPrimary != null && !curPrimary.equals(newPrimary)) {
+                            GridDhtPartitionState state = top.partitionState(newPrimary.id(), p);
 
-                                    if (top.partitionState(curNode.id(), p) == OWNING &&
-                                        evtNodes.contains(curNode)) {
-                                        newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
-                                            p,
-                                            curNode,
-                                            newNodes,
-                                            waitRebalanceInfo);
-
-                                        break;
-                                    }
+                            if (evtNodes.contains(curPrimary)) {
+                                if (state != OWNING) {
+                                    newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
+                                        p,
+                                        curPrimary,
+                                        newNodes,
+                                        waitRebalanceInfo);
                                 }
+                            } else {
+                                if (state != OWNING) {
+                                    for (int i = 1; i < curNodes.size(); i++) {
+                                        ClusterNode curNode = curNodes.get(i);
 
-                                if (newNodes0 == null) {
-                                    for (ClusterNode owner : owners) {
-                                        if (evtNodes.contains(owner)) {
+                                        if (top.partitionState(curNode.id(), p) == OWNING &&
+                                            evtNodes.contains(curNode)) {
                                             newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
                                                 p,
-                                                owner,
+                                                curNode,
                                                 newNodes,
                                                 waitRebalanceInfo);
 
                                             break;
                                         }
                                     }
+
+                                    if (newNodes0 == null) {
+                                        for (ClusterNode owner : owners) {
+                                            if (evtNodes.contains(owner)) {
+                                                newNodes0 = latePrimaryAssignment(grpHolder.affinity(),
+                                                    p,
+                                                    owner,
+                                                    newNodes,
+                                                    waitRebalanceInfo);
+
+                                                break;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
+
+                        // This will happen if no primary has changed but some backups still need to be rebalanced.
+                        if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
+                            waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
+
+                        if (newNodes0 != null) {
+                            assert evtNodes.containsAll(newNodes0) : "Invalid late assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
+                                ", nodes=" + newNodes +
+                                ", topVer=" + fut.context().events().discoveryCache().version() +
+                                ", evts=" + fut.context().events().events() + "]";
+
+                            if (newAssignment0 != null)
+                                newAssignment0.set(p, newNodes0);
+
+                            if (cacheAssignment == null)
+                                cacheAssignment = new HashMap<>();
+
+                            List<T> n = new ArrayList<>(newNodes0.size());
+
+                            for (int i = 0; i < newNodes0.size(); i++)
+                                n.add(c.apply(newNodes0.get(i)));
+
+                            cacheAssignment.put(p, n);
+                        }
                     }
+                    if (cacheAssignment != null)
+                        assignment.put(grpHolder.groupId(), cacheAssignment);
 
-                    // This will happen if no primary has changed but some backups still need to be rebalanced.
-                    if (!owners.isEmpty() && !owners.containsAll(newNodes) && !top.lostPartitions().contains(p))
-                        waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
+                    if (initAff)
+                        grpHolder.affinity().initialize(topVer, newAssignment0);
 
-                    if (newNodes0 != null) {
-                        assert evtNodes.containsAll(newNodes0) : "Invalid late assignment [grp=" + grpHolder.aff.cacheOrGroupName() +
-                            ", nodes=" + newNodes +
-                            ", topVer=" + fut.context().events().discoveryCache().version() +
-                            ", evts=" + fut.context().events().events() + "]";
+                    fut.timeBag().finishLocalStage("Affinity recalculation (partitions availability) " +
+                        "[grp=" + desc.cacheOrGroupName() + "]");
 
-                        if (newAssignment0 != null)
-                            newAssignment0.set(p, newNodes0);
-
-                        if (cacheAssignment == null)
-                            cacheAssignment = new HashMap<>();
-
-                        List<T> n = new ArrayList<>(newNodes0.size());
-
-                        for (int i = 0; i < newNodes0.size(); i++)
-                            n.add(c.apply(newNodes0.get(i)));
-
-                        cacheAssignment.put(p, n);
-                    }
                 }
-
-                if (cacheAssignment != null)
-                    assignment.put(grpHolder.groupId(), cacheAssignment);
-
-                if (initAff)
-                    grpHolder.affinity().initialize(topVer, newAssignment0);
-
-                fut.timeBag().finishLocalStage("Affinity recalculation (partitions availability) " +
-                    "[grp=" + desc.cacheOrGroupName() + "]");
+                finally {
+                    if (grpCtx != null)
+                        grpCtx.topology().readUnlock();
+                }
             }
+
         });
+
+/*        for (CacheGroupContext grpCtx : affinityCaches)
+            grpCtx.topology().readUnlock();*/
 
         if (log.isDebugEnabled()) {
             log.debug("Computed new affinity after node left [topVer=" + topVer +
