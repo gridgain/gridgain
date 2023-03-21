@@ -1,7 +1,7 @@
 # name: test/sql/aggregate/aggregates/test_bit_and.test
 # description: Test BIT_AND operator
 # group: [aggregates]
-# [ignore] Unsupported expression.
+# [ignore] H2 does not support aggregated bit functions.
 
 # test on scalar values
 query II
