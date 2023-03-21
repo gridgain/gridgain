@@ -24,10 +24,7 @@ import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientCache;
-import org.apache.ignite.client.ClientConnectionException;
-import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
@@ -268,27 +265,6 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
             assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
         }
-    }
-
-    /** */
-    @Test
-    public void testSessionCloseBeforeHandshake() throws Exception {
-        startGrid(0);
-
-        // TODO: We don't have events.
-        ClientConfiguration cliCfg = getClientConfiguration(0);
-//            .setEventListeners(new ConnectionEventListener() {
-//                @Override public void onHandshakeStart(HandshakeStartEvent event) {
-//                    // Close connection.
-//                    stopAllGrids();
-//                }
-//            });
-
-        GridTestUtils.assertThrowsWithCause(() -> {
-            try (IgniteClient client = Ignition.startClient(cliCfg)) {
-                return client;
-            }
-        }, ClientConnectionException.class);
     }
 
     /** */
