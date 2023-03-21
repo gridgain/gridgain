@@ -109,9 +109,18 @@ public class ScriptTestRunner extends Runner {
         restartCluster = env.restart();
         timeout = env.timeout();
         
-        String clsName = testCls.getSimpleName();
+        readJUnitAnnotations(testCls);
+    }
 
-        for (Method m : testCls.getDeclaredMethods()) {
+    /**
+     * Initiates {@link BeforeClass} and {@link AfterClass} annotated methods.
+     * 
+     * @param cls Test class.
+     */
+    private void readJUnitAnnotations(Class<?> cls) {
+        String clsName = cls.getSimpleName();
+
+        for (Method m : cls.getDeclaredMethods()) {
             if (m.isAnnotationPresent(BeforeClass.class))
                 beforeCls = m;
             else if (m.isAnnotationPresent(AfterClass.class))
@@ -119,15 +128,13 @@ public class ScriptTestRunner extends Runner {
             else
                 continue;
 
-            if (!Modifier.isStatic(m.getModifiers())) {
-                throw new IllegalStateException("Method '" + clsName + '#' + m.getName() + "' must be static.");
-            }
-
             if (!Modifier.isPublic(m.getModifiers())) {
                 throw new IllegalStateException("Method '" + clsName + '#' + m.getName() + "' must be public.");
             }
-
-            if (m.getParameterCount() != 0) {
+            else if (!Modifier.isStatic(m.getModifiers())) {
+                throw new IllegalStateException("Method '" + clsName + '#' + m.getName() + "' must be static.");
+            }
+            else if (m.getParameterCount() != 0) {
                 throw new IllegalStateException("Method " + clsName + '#' + m.getName() + " must have no arguments.");
             }
         }
