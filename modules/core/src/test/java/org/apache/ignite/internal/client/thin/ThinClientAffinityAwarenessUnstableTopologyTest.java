@@ -17,25 +17,80 @@
 
 package org.apache.ignite.internal.client.thin;
 
-import java.lang.management.ManagementFactory;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.ObjectName;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.client.ClientCache;
+import org.apache.ignite.client.ClientConnectionException;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.client.SslMode;
+import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.nio.GridNioServer;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Test affinity awareness of thin client on unstable topology.
  */
+@RunWith(Parameterized.class)
 public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientAbstractAffinityAwarenessTest {
+    /** */
+    @Parameterized.Parameter
+    public boolean sslEnabled;
+
+    /** @return Test parameters. */
+    @Parameterized.Parameters(name = "sslEnabled={0}")
+    public static Collection<?> parameters() {
+        return Arrays.asList(new Object[][] {{false}, {true}});
+    }
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
         stopAllGrids();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        if (sslEnabled) {
+            cfg.setClientConnectorConfiguration(new ClientConnectorConfiguration()
+                .setSslEnabled(true)
+                .setSslClientAuth(true)
+                .setUseIgniteSslContextFactory(false)
+                .setSslContextFactory(GridTestUtils.sslFactory()));
+        }
+
+        return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected ClientConfiguration getClientConfiguration(int... nodeIdxs) {
+        ClientConfiguration cfg = super.getClientConfiguration(nodeIdxs);
+
+        if (sslEnabled) {
+            cfg.setSslMode(SslMode.REQUIRED)
+                .setSslContextFactory(GridTestUtils.sslFactory());
+        }
+
+        return cfg;
     }
 
     /**
@@ -71,8 +126,6 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
         cache.put(key, 0);
 
-        // Cache partitions are requested from default channel, since it's first (and currently the only) channel
-        // which detects new topology.
         assertOpOnChannel(null, ClientOperation.CACHE_PARTITIONS);
 
         assertOpOnChannel(channels[3], ClientOperation.CACHE_PUT);
@@ -101,10 +154,8 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
         awaitPartitionMapExchange();
 
-        // Next request will also detect topology change.
-        opsQueue.clear();
-        client.getOrCreateCache(REPL_CACHE_NAME);
-        assertNotNull(opsQueue.poll());
+        // Detect topology change.
+        detectTopologyChange();
 
         // Test affinity awareness after node join.
         testAffinityAwareness(true);
@@ -124,8 +175,8 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         // Test affinity awareness before connection to node lost.
         testAffinityAwareness(true);
 
-        // Choose node to disconnect (not default node).
-        int disconnectNodeIdx = null == channels[0] ? 1 : 0;
+        // Choose node to disconnect.
+        int disconnectNodeIdx = 0;
 
         // Drop all thin connections from the node.
         ObjectName mbeanName = U.makeMBeanName(grid(disconnectNodeIdx).name(), "Clients",
@@ -145,8 +196,8 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
         cache.put(key, 0);
 
-        // Request goes to default channel, since affinity node is disconnected.
-        assertOpOnChannel(null, ClientOperation.CACHE_PUT);
+        // Request goes to the connected channel, since affinity node is disconnected.
+        assertOpOnChannel(channels[1], ClientOperation.CACHE_PUT);
 
         cache.put(key, 0);
 
@@ -158,10 +209,10 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
     }
 
     /**
-     * Test that affinity awareness works when reconnecting to the new cluster (with lower topology version)
+     * Test that partition awareness works when reconnecting to the new cluster (with lower topology version)
      */
     @Test
-    public void testAffinityAwarenessOnClusterRestart() throws Exception {
+    public void testPartitionAwarenessOnClusterRestart() throws Exception {
         startGrids(3);
 
         awaitPartitionMapExchange();
@@ -173,8 +224,7 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
 
         stopAllGrids();
 
-        for (int i = 0; i < channels.length; i++)
-            channels[i] = null;
+        Arrays.fill(channels, null);
 
         // Start 2 grids, so topology version of the new cluster will be less then old cluster.
         startGrids(2);
@@ -184,7 +234,7 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
         // Send any request to failover.
         client.cache(REPL_CACHE_NAME).put(0, 0);
 
-        opsQueue.clear();
+        detectTopologyChange();
 
         awaitChannelsInit(0, 1);
 
@@ -212,6 +262,64 @@ public class ThinClientAffinityAwarenessUnstableTopologyTest extends ThinClientA
             }
 
             assertOpOnChannel(opCh, ClientOperation.CACHE_PUT);
+        }
+    }
+
+    /** */
+    @Test
+    public void testSessionCloseBeforeHandshake() throws Exception {
+        startGrid(0);
+
+        // TODO: We don't have events.
+//        ClientConfiguration cliCfg = getClientConfiguration(0)
+//            .setEventListeners(new ConnectionEventListener() {
+//                @Override public void onHandshakeStart(HandshakeStartEvent event) {
+//                    // Close connection.
+//                    stopAllGrids();
+//                }
+//            });
+
+        GridTestUtils.assertThrowsWithCause(() -> {
+            try (IgniteClient client = Ignition.startClient(cliCfg)) {
+                return client;
+            }
+        }, ClientConnectionException.class);
+    }
+
+    /** */
+    @Test
+    public void testCreateSessionAfterClose() throws Exception {
+        startGrids(2);
+
+        CountDownLatch srvStopped = new CountDownLatch(1);
+
+        AtomicBoolean dfltInited = new AtomicBoolean();
+
+        // The client should close pending requests on closing without waiting.
+        try (TcpIgniteClient client = new TcpIgniteClient((cfg, connMgr) -> {
+            // Skip default channel to successful client start.
+            if (!dfltInited.compareAndSet(false, true)) {
+                try {
+                    // Connection manager should be stopped before opening a new connection.
+                    srvStopped.await(getTestTimeout(), TimeUnit.MILLISECONDS);
+                }
+                catch (InterruptedException ignored) {
+                    // No-op.
+                }
+            }
+
+            return new TcpClientChannel(cfg, connMgr);
+        }, getClientConfiguration(0))) {
+            GridNioServer<ByteBuffer> srv = getFieldValue(client.reliableChannel(), "connMgr", "srv");
+
+            // Make sure handshake data will not be recieved.
+            setFieldValue(srv, "skipRead", true);
+
+            GridTestUtils.runAsync(() -> {
+                assertTrue(waitForCondition(() -> getFieldValue(srv, "closed"), getTestTimeout()));
+
+                srvStopped.countDown();
+            });
         }
     }
 }
