@@ -108,15 +108,28 @@ public class ScriptTestRunner extends Runner {
         testRegex = F.isEmpty(env.regex()) ? null : Pattern.compile(env.regex());
         restartCluster = env.restart();
         timeout = env.timeout();
+        
+        String clsName = testCls.getSimpleName();
 
-        for (Method m : testCls.getMethods()) {
-            if (!Modifier.isStatic(m.getModifiers()) || m.getParameterCount() != 0)
-                continue;
-
+        for (Method m : testCls.getDeclaredMethods()) {
             if (m.isAnnotationPresent(BeforeClass.class))
                 beforeCls = m;
             else if (m.isAnnotationPresent(AfterClass.class))
                 afterCls = m;
+            else
+                continue;
+
+            if (!Modifier.isStatic(m.getModifiers())) {
+                throw new IllegalStateException("Method '" + clsName + '#' + m.getName() + "' must be static.");
+            }
+
+            if (!Modifier.isPublic(m.getModifiers())) {
+                throw new IllegalStateException("Method '" + clsName + '#' + m.getName() + "' must be public.");
+            }
+
+            if (m.getParameterCount() != 0) {
+                throw new IllegalStateException("Method " + clsName + '#' + m.getName() + " must have no arguments.");
+            }
         }
     }
 
