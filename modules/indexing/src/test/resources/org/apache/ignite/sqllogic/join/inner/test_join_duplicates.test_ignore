@@ -1,7 +1,7 @@
 # name: test/sql/join/inner/test_join_duplicates.test
 # description: Test join with > STANDARD_VECTOR_SIZE duplicates
 # group: [inner]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-15567
+# [ignore] Function "REPEAT" must return a result set.
 
 statement ok
 PRAGMA enable_verification
