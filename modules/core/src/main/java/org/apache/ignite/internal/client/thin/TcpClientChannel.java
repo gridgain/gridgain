@@ -134,6 +134,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Pending requests. */
     private final Map<Long, ClientRequestFuture> pendingReqs = new ConcurrentHashMap<>();
 
+    /** Lock to safely close pending requests. */
+    private final ReadWriteLock pendingReqsLock = new ReentrantReadWriteLock();
+
     /** Topology change listeners. */
     private final Collection<Consumer<ClientChannel>> topChangeLsnrs = new CopyOnWriteArrayList<>();
 
@@ -220,6 +223,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
         handshake(DEFAULT_VERSION, cfg.getUserName(), cfg.getUserPassword(), cfg.getUserAttributes());
 
+        assert protocolCtx != null : "Protocol context after handshake is null";
+
         heartbeatTimer = protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()
                 ? initHeartbeat(cfg.getHeartbeatInterval())
                 : null;
@@ -255,8 +260,15 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
             U.closeQuiet(sock);
 
-            for (ClientRequestFuture pendingReq : pendingReqs.values())
-                pendingReq.onDone(new ClientConnectionException("Channel is closed", cause));
+            pendingReqsLock.writeLock().lock();
+
+            try {
+                for (ClientRequestFuture pendingReq : pendingReqs.values())
+                    pendingReq.onDone(new ClientConnectionException("Channel is closed", cause));
+            }
+            finally {
+                pendingReqsLock.writeLock().unlock();
+            }
 
             notificationLsnrsGuard.readLock().lock();
 
@@ -310,16 +322,29 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     private ClientRequestFuture send(ClientOperation op, Consumer<PayloadOutputChannel> payloadWriter)
         throws ClientException {
         long id = reqId.getAndIncrement();
+        long startTimeNanos = System.nanoTime();
 
         PayloadOutputChannel payloadCh = new PayloadOutputChannel(this);
 
         try {
-            if (closed())
-                throw new ClientConnectionException("Channel is closed");
+            ClientRequestFuture fut;
 
-            ClientRequestFuture fut = new ClientRequestFuture();
+            pendingReqsLock.readLock().lock();
 
-            pendingReqs.put(id, fut);
+            try {
+                if (closed()) {
+                    ClientConnectionException err = new ClientConnectionException("Channel is closed");
+
+                    throw err;
+                }
+
+                fut = new ClientRequestFuture();
+
+                pendingReqs.put(id, fut);
+            }
+            finally {
+                pendingReqsLock.readLock().unlock();
+            }
 
             BinaryOutputStream req = payloadCh.out();
 
@@ -356,10 +381,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         try {
             ByteBuffer payload = timeout > 0 ? pendingReq.get(timeout) : pendingReq.get();
 
-            if (payload == null || payloadReader == null)
-                return null;
+            T res = null;
+            if (payload != null && payloadReader != null)
+                res = payloadReader.apply(new PayloadInputChannel(this, payload));
 
-            return payloadReader.apply(new PayloadInputChannel(this, payload));
+            return res;
         }
         catch (IgniteCheckedException e) {
             log.warning("Failed to process response: " + e.getMessage(), e);
@@ -382,12 +408,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             try {
                 ByteBuffer payload = payloadFut.get();
 
-                if (payload == null || payloadReader == null)
-                    fut.complete(null);
-                else {
-                    T res = payloadReader.apply(new PayloadInputChannel(this, payload));
-                    fut.complete(res);
-                }
+                T res = null;
+                if (payload != null && payloadReader != null)
+                    res = payloadReader.apply(new PayloadInputChannel(this, payload));
+
+                fut.complete(res);
             }
             catch (Throwable t) {
                 log.warning("Failed to process response: " + t.getMessage(), t);
@@ -636,17 +661,104 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Client handshake. */
     private void handshake(ProtocolVersion ver, String user, String pwd, Map<String, String> userAttrs)
         throws ClientConnectionException, ClientAuthenticationException, ClientProtocolError {
-        ClientRequestFuture fut = new ClientRequestFuture();
-        pendingReqs.put(-1L, fut);
+        long requestId = -1L;
 
-        handshakeReq(ver, user, pwd, userAttrs);
+        while (true) {
+            ClientRequestFuture fut;
 
-        try {
-            ByteBuffer res = timeout > 0 ? fut.get(timeout) : fut.get();
-            handshakeRes(res, ver, user, pwd, userAttrs);
-        }
-        catch (IgniteCheckedException e) {
-            throw new ClientConnectionException(e.getMessage(), e);
+            pendingReqsLock.readLock().lock();
+
+            try {
+                if (closed())
+                    throw new ClientConnectionException("Channel is closed");
+
+                fut = new ClientRequestFuture();
+
+                pendingReqs.put(requestId, fut);
+            }
+            finally {
+                pendingReqsLock.readLock().unlock();
+            }
+
+            handshakeReq(ver, user, pwd, userAttrs);
+
+            try {
+                ByteBuffer buf = timeout > 0 ? fut.get(timeout) : fut.get();
+
+                BinaryInputStream res = BinaryByteBufferInputStream.create(buf);
+
+                try (BinaryReaderExImpl reader = ClientUtils.createBinaryReader(null, res)) {
+                    boolean success = res.readBoolean();
+
+                    if (success) {
+                        byte[] features = EMPTY_BYTES;
+
+                        if (ProtocolContext.isFeatureSupported(ver, BITMAP_FEATURES))
+                            features = reader.readByteArray();
+
+                        protocolCtx = new ProtocolContext(ver, ProtocolBitmaskFeature.enumSet(features));
+
+                        if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS)) {
+                            // Reading server UUID
+                            srvNodeId = reader.readUuid();
+                        }
+
+                        if (log.isDebugEnabled())
+                            log.debug("Handshake succeeded [protocolVersion=" + protocolCtx.version() + ", srvNodeId=" + srvNodeId + ']');
+
+                        break;
+                    }
+                    else {
+                        ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
+
+                        String err = reader.readString();
+                        int errCode = ClientStatus.FAILED;
+
+                        if (res.remaining() > 0)
+                            errCode = reader.readInt();
+
+                        if (log.isDebugEnabled())
+                            log.debug("Handshake failed [protocolVersion=" + srvVer + ", err=" + err + ", errCode=" + errCode + ']');
+
+                        RuntimeException resultErr = null;
+                        if (errCode == ClientStatus.AUTH_FAILED)
+                            resultErr = new ClientAuthenticationException(err);
+                        else if (ver.equals(srvVer))
+                            resultErr = new ClientProtocolError(err);
+                        else if (!supportedVers.contains(srvVer) ||
+                            (!ProtocolContext.isFeatureSupported(srvVer, AUTHORIZATION) && !F.isEmpty(user))) {
+                            // Server version is not supported by this client OR server version is less than 1.1.0 supporting
+                            // authentication and authentication is required.
+                            resultErr = new ClientProtocolError(String.format(
+                                "Protocol version mismatch: client %s / server %s. Server details: %s",
+                                ver,
+                                srvVer,
+                                err
+                            ));
+                        }
+
+                        if (resultErr != null) {
+                            throw resultErr;
+                        }
+                        else {
+                            // Retry with server version.
+                            if (log.isDebugEnabled())
+                                log.debug("Retrying handshake with server version [protocolVersion=" + srvVer + ']');
+
+                            ver = srvVer;
+                        }
+                    }
+                }
+            }
+            catch (IOException | IgniteCheckedException e) {
+                ClientException err;
+                if (e instanceof IOException)
+                    err = handleIOError((IOException)e);
+                else
+                    err = new ClientConnectionException(e.getMessage(), e);
+
+                throw err;
+            }
         }
     }
 
@@ -659,7 +771,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             ProtocolContext protocolCtx = protocolContextFromVersion(proposedVer);
 
             writer.writeInt(0); // reserve an integer for the request size
-            writer.writeByte((byte) ClientListenerRequest.HANDSHAKE);
+            writer.writeByte((byte)ClientListenerRequest.HANDSHAKE);
 
             writer.writeShort(proposedVer.major());
             writer.writeShort(proposedVer.minor());
@@ -682,7 +794,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 writer.writeString(pwd);
             }
 
-            writer.out().writeInt(0, writer.out().position() - 4);// actual size
+            writer.out().writeInt(0, writer.out().position() - 4); // actual size
 
             write(writer.out().arrayCopy(), writer.out().position(), null);
         }
@@ -698,69 +810,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             features = ProtocolBitmaskFeature.allFeaturesAsEnumSet();
 
         return new ProtocolContext(ver, features);
-    }
-
-    /** Receive and handle handshake response. */
-    private void handshakeRes(ByteBuffer buf, ProtocolVersion proposedVer, String user, String pwd, Map<String, String> userAttrs)
-        throws ClientConnectionException, ClientAuthenticationException, ClientProtocolError {
-        BinaryInputStream res = BinaryByteBufferInputStream.create(buf);
-
-        try (BinaryReaderExImpl reader = ClientUtils.createBinaryReader(null, res)) {
-            boolean success = res.readBoolean();
-
-            if (success) {
-                byte[] features = EMPTY_BYTES;
-
-                if (ProtocolContext.isFeatureSupported(proposedVer, BITMAP_FEATURES))
-                    features = reader.readByteArray();
-
-                protocolCtx = new ProtocolContext(proposedVer, ProtocolBitmaskFeature.enumSet(features));
-
-                if (protocolCtx.isFeatureSupported(PARTITION_AWARENESS)) {
-                    // Reading server UUID
-                    srvNodeId = reader.readUuid();
-                }
-
-                if (log.isDebugEnabled())
-                    log.debug("Handshake succeeded [protocolVersion=" + protocolCtx.version() + ", srvNodeId=" + srvNodeId + ']');
-            } else {
-                ProtocolVersion srvVer = new ProtocolVersion(res.readShort(), res.readShort(), res.readShort());
-
-                String err = reader.readString();
-                int errCode = ClientStatus.FAILED;
-
-                if (res.remaining() > 0)
-                    errCode = reader.readInt();
-
-                if (log.isDebugEnabled())
-                    log.debug("Handshake failed [protocolVersion=" + srvVer + ", err=" + err + ", errCode=" + errCode + ']');
-
-                if (errCode == ClientStatus.AUTH_FAILED)
-                    throw new ClientAuthenticationException(err);
-                else if (proposedVer.equals(srvVer))
-                    throw new ClientProtocolError(err);
-                else if (!supportedVers.contains(srvVer) ||
-                    (!ProtocolContext.isFeatureSupported(srvVer, AUTHORIZATION) && !F.isEmpty(user)))
-                    // Server version is not supported by this client OR server version is less than 1.1.0 supporting
-                    // authentication and authentication is required.
-                    throw new ClientProtocolError(String.format(
-                        "Protocol version mismatch: client %s / server %s. Server details: %s",
-                        proposedVer,
-                        srvVer,
-                        err
-                    ));
-                else {
-                    // Retry with server version.
-                    if (log.isDebugEnabled())
-                        log.debug("Retrying handshake with server version [protocolVersion=" + srvVer + ']');
-
-                    handshake(srvVer, user, pwd, userAttrs);
-                }
-            }
-        }
-        catch (IOException e) {
-            throw handleIOError(e);
-        }
     }
 
     /** Write bytes to the output stream. */
