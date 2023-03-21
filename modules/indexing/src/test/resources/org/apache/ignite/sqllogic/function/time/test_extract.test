@@ -182,4 +182,4 @@ statement error
 SELECT EXTRACT(century FROM i) FROM times
 
 statement error
-SELECT EXTRACT(millenium FROM i) FROM times
+SELECT EXTRACT(millennium FROM i) FROM times

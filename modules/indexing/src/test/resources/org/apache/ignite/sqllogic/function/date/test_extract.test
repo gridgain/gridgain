@@ -75,7 +75,7 @@ SELECT EXTRACT(ISODOW FROM i) FROM dates ORDER BY i NULLS LAST
 NULL
 
 # [ignore] Feature not supported (millennium)
-# millenium (change of millenium is January 1, X001)
+# millennium (change of millennium is January 1, X001)
 #query I
 #SELECT EXTRACT(millennium FROM i) FROM dates ORDER BY i NULLS LAST
 #----
