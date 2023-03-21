@@ -3,7 +3,8 @@
 # group: [join]
 
 statement ok
-CREATE TABLE integers AS SELECT * FROM system_range(0, 4999) tbl(i)
+CREATE TABLE integers(i INTEGER);
+INSERT INTO integers SELECT * FROM system_range(0, 4999)
 
 # test if order remains the same
 query I
