@@ -101,7 +101,7 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 13;
+        return 14;
     }
 
     /** {@inheritDoc} */
@@ -119,13 +119,13 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
         }
 
         switch (writer.state()) {
-            case 11:
+            case 12:
                 if (!writer.writeIgniteUuid("dhtFutId", dhtFutId))
                     return false;
 
                 writer.incrementState();
 
-            case 12:
+            case 13:
                 if (!writer.writeMessage("dhtVer", dhtVer))
                     return false;
 
@@ -147,7 +147,7 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
             return false;
 
         switch (reader.state()) {
-            case 11:
+            case 12:
                 dhtFutId = reader.readIgniteUuid("dhtFutId");
 
                 if (!reader.isLastRead())
@@ -155,7 +155,7 @@ public class GridNearTxQueryResultsEnlistResponse extends GridNearTxQueryEnlistR
 
                 reader.incrementState();
 
-            case 12:
+            case 13:
                 dhtVer = reader.readMessage("dhtVer");
 
                 if (!reader.isLastRead())

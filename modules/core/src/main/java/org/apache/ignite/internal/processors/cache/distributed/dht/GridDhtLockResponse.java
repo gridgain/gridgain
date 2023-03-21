@@ -206,25 +206,25 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
         }
 
         switch (writer.state()) {
-            case 11:
+            case 12:
                 if (!writer.writeCollection("invalidParts", invalidParts, MessageCollectionItemType.INT))
                     return false;
 
                 writer.incrementState();
 
-            case 12:
+            case 13:
                 if (!writer.writeIgniteUuid("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 13:
+            case 14:
                 if (!writer.writeCollection("nearEvicted", nearEvicted, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 14:
+            case 15:
                 if (!writer.writeCollection("preloadEntries", preloadEntries, MessageCollectionItemType.MSG))
                     return false;
 
@@ -246,7 +246,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
             return false;
 
         switch (reader.state()) {
-            case 11:
+            case 12:
                 invalidParts = reader.readCollection("invalidParts", MessageCollectionItemType.INT);
 
                 if (!reader.isLastRead())
@@ -254,7 +254,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 12:
+            case 13:
                 miniId = reader.readIgniteUuid("miniId");
 
                 if (!reader.isLastRead())
@@ -262,7 +262,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 13:
+            case 14:
                 nearEvicted = reader.readCollection("nearEvicted", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -270,7 +270,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
                 reader.incrementState();
 
-            case 14:
+            case 15:
                 preloadEntries = reader.readCollection("preloadEntries", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -290,7 +290,7 @@ public class GridDhtLockResponse extends GridDistributedLockResponse {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 15;
+        return 16;
     }
 
     /** {@inheritDoc} */

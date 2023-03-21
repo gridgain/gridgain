@@ -160,25 +160,25 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
         }
 
         switch (writer.state()) {
-            case 4:
+            case 5:
                 if (!writer.writeByteArray("candsByIdxBytes", candsByIdxBytes))
                     return false;
 
                 writer.incrementState();
 
-            case 5:
+            case 6:
                 if (!writer.writeCollection("committedVers", committedVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 6:
+            case 7:
                 if (!writer.writeCollection("rolledbackVers", rolledbackVers, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 7:
+            case 8:
                 if (!writer.writeMessage("ver", ver))
                     return false;
 
@@ -200,7 +200,7 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
             return false;
 
         switch (reader.state()) {
-            case 4:
+            case 5:
                 candsByIdxBytes = reader.readByteArray("candsByIdxBytes");
 
                 if (!reader.isLastRead())
@@ -208,7 +208,7 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
 
                 reader.incrementState();
 
-            case 5:
+            case 6:
                 committedVers = reader.readCollection("committedVers", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -216,7 +216,7 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
 
                 reader.incrementState();
 
-            case 6:
+            case 7:
                 rolledbackVers = reader.readCollection("rolledbackVers", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -224,7 +224,7 @@ public abstract class GridDistributedBaseMessage extends GridCacheIdMessage impl
 
                 reader.incrementState();
 
-            case 7:
+            case 8:
                 ver = reader.readMessage("ver");
 
                 if (!reader.isLastRead())

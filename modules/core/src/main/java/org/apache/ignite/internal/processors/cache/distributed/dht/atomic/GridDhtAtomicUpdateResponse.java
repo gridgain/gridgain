@@ -178,25 +178,25 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
         }
 
         switch (writer.state()) {
-            case 4:
+            case 5:
                 if (!writer.writeMessage("errs", errs))
                     return false;
 
                 writer.incrementState();
 
-            case 5:
+            case 6:
                 if (!writer.writeLong("futId", futId))
                     return false;
 
                 writer.incrementState();
 
-            case 6:
+            case 7:
                 if (!writer.writeCollection("nearEvicted", nearEvicted, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 7:
+            case 8:
                 if (!writer.writeInt("partId", partId))
                     return false;
 
@@ -218,7 +218,7 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
             return false;
 
         switch (reader.state()) {
-            case 4:
+            case 5:
                 errs = reader.readMessage("errs");
 
                 if (!reader.isLastRead())
@@ -226,7 +226,7 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
 
                 reader.incrementState();
 
-            case 5:
+            case 6:
                 futId = reader.readLong("futId");
 
                 if (!reader.isLastRead())
@@ -234,7 +234,7 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
 
                 reader.incrementState();
 
-            case 6:
+            case 7:
                 nearEvicted = reader.readCollection("nearEvicted", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -242,7 +242,7 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
 
                 reader.incrementState();
 
-            case 7:
+            case 8:
                 partId = reader.readInt("partId");
 
                 if (!reader.isLastRead())
@@ -262,7 +262,7 @@ public class GridDhtAtomicUpdateResponse extends GridCacheIdMessage implements G
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 8;
+        return 9;
     }
 
     /** {@inheritDoc} */

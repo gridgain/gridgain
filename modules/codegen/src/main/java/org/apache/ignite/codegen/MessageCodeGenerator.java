@@ -43,6 +43,38 @@ import org.apache.ignite.internal.GridDirectMap;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
+import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryRequest;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedBaseMessage;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedLockRequest;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.GridDistributedTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxQueryEnlistRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxQueryFirstEnlistRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicAbstractUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicDeferredUpdateResponse;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicNearResponse;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicSingleUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridDhtAtomicUpdateResponse;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicFullUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicSingleUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicUpdateResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxEnlistResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxQueryEnlistRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxQueryEnlistResponse;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxQueryResultsEnlistRequest;
+import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxQueryResultsEnlistResponse;
+import org.apache.ignite.internal.processors.cache.query.GridCacheQueryRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillRequest;
 import org.apache.ignite.internal.processors.query.messages.GridQueryKillResponse;
 import org.apache.ignite.internal.util.IgniteUtils;
@@ -169,12 +201,52 @@ public class MessageCodeGenerator {
 
         MessageCodeGenerator gen = new MessageCodeGenerator(srcDir);
 
-        gen.generateAndWrite(GridQueryKillRequest.class);
-        gen.generateAndWrite(GridQueryKillResponse.class);
+//        gen.generateAndWrite(GridCacheIdMessage.class);
+        gen.generateAndWrite(GridCacheTxRecoveryRequest.class);
+        gen.generateAndWrite(GridDistributedBaseMessage.class);
+        gen.generateAndWrite(GridDistributedLockRequest.class);
+        gen.generateAndWrite(GridDistributedTxFinishRequest.class);
+        gen.generateAndWrite(GridDistributedTxPrepareRequest.class);
+        gen.generateAndWrite(GridDhtTxFinishRequest.class);
+        gen.generateAndWrite(GridDhtTxPrepareRequest.class);
+        gen.generateAndWrite(GridDhtTxQueryEnlistRequest.class);
+        gen.generateAndWrite(GridDhtTxQueryFirstEnlistRequest.class);
+        gen.generateAndWrite(GridDhtAtomicAbstractUpdateRequest.class);
+        gen.generateAndWrite(GridDhtAtomicDeferredUpdateResponse.class);
+        gen.generateAndWrite(GridDhtAtomicNearResponse.class);
+        gen.generateAndWrite(GridDhtAtomicSingleUpdateRequest.class);
+        gen.generateAndWrite(GridDhtAtomicUpdateRequest.class);
+        gen.generateAndWrite(GridDhtAtomicUpdateResponse.class);
+        /*
+        org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractSingleUpdateRequest (abstract)
+            writeTo method doesn't exist.
+            readFrom method doesn't exist.
+            fieldCount method doesn't exist.
+         */
+        gen.generateAndWrite(GridNearAtomicFullUpdateRequest.class);
+        gen.generateAndWrite(GridNearAtomicSingleUpdateRequest.class);
+        gen.generateAndWrite(GridNearAtomicUpdateResponse.class);
+        gen.generateAndWrite(GridNearGetRequest.class);
+        gen.generateAndWrite(GridNearGetResponse.class);
+        gen.generateAndWrite(GridNearSingleGetRequest.class);
+        gen.generateAndWrite(GridNearSingleGetResponse.class);
+        gen.generateAndWrite(GridNearTxEnlistRequest.class);
+        gen.generateAndWrite(GridNearTxEnlistResponse.class);
+        gen.generateAndWrite(GridNearTxFinishRequest.class);
+        gen.generateAndWrite(GridNearTxPrepareResponse.class);
+        gen.generateAndWrite(GridNearTxQueryEnlistRequest.class);
+        gen.generateAndWrite(GridNearTxQueryEnlistResponse.class);
+        gen.generateAndWrite(GridNearTxQueryResultsEnlistRequest.class);
+        gen.generateAndWrite(GridNearTxQueryResultsEnlistResponse.class);
+        gen.generateAndWrite(GridCacheQueryRequest.class);
+
+//        gen.generateAndWrite(GridQueryKillRequest.class);
+//        gen.generateAndWrite(GridQueryKillResponse.class);
 
 //        gen.generateAndWrite(ProbedTx.class);
 //        gen.generateAndWrite(DeadlockProbe.class);
 
+//        gen.generateAndWrite(GridDistributedBaseMessage.class);
 //        gen.generateAll(true);
 
 //        gen.generateAndWrite(GridCacheMessage.class);
@@ -268,7 +340,8 @@ public class MessageCodeGenerator {
             try {
                 boolean isAbstract = Modifier.isAbstract(cls.getModifiers());
 
-                System.out.println("Processing class: " + cls.getName() + (isAbstract ? " (abstract)" : ""));
+//                System.out.println("Processing class: " + cls.getName() + (isAbstract ? " (abstract)" : ""));
+                System.out.println(cls.getName() + (isAbstract ? " (abstract)" : ""));
 
                 if (write)
                     generateAndWrite(cls);
@@ -357,7 +430,7 @@ public class MessageCodeGenerator {
                 System.out.println("    readFrom method doesn't exist.");
 
             if (!fieldCntFound)
-                System.out.println("    fieldCount method doesn't exist.");
+                System.out.println("    fieldCount method doesn't exist." + file);
         }
         finally {
             if (rdr != null)
@@ -937,11 +1010,16 @@ public class MessageCodeGenerator {
             if (path.endsWith(".class")) {
                 String clsName = path.substring(prefixLen, path.length() - 6).replace(File.separatorChar, '.');
 
-                Class<?> cls = Class.forName(clsName, false, ldr);
+                try {
+                    Class<?> cls = Class.forName(clsName, false, ldr);
 
-                if (cls.getDeclaringClass() == null && cls.getEnclosingClass() == null &&
-                    !BASE_CLS.equals(cls) && BASE_CLS.isAssignableFrom(cls))
-                    col.add((Class<? extends Message>)cls);
+                    if (cls.getDeclaringClass() == null && cls.getEnclosingClass() == null &&
+                        !BASE_CLS.equals(cls) && BASE_CLS.isAssignableFrom(cls))
+                        col.add((Class<? extends Message>)cls);
+                }
+                catch (Throwable t) {
+                    System.out.println(">>>>> skip class [name=" + clsName + ", err=" + t + ']');
+                }
             }
         }
     }

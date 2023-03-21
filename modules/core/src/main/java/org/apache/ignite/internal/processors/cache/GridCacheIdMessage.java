@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.nio.ByteBuffer;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
@@ -28,13 +29,37 @@ import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 public abstract class GridCacheIdMessage extends GridCacheMessage {
     /** Cache ID. */
     @GridToStringInclude
-    protected int cacheId;
+    private int cacheId;
+
+    /** Cache deployment identifier that represents a generation of the cache (see cacheId). */
+    private IgniteUuid depId;
+
+    /**
+     * For serialization only.
+     */
+//    public GridCacheIdMessage() {
+//       // No-op.
+//    }
+
+    /**
+     * @param cacheId Cache indentifier.
+     * @param depId Cache deployment identifier.
+     */
+    public GridCacheIdMessage(int cacheId, IgniteUuid depId) {
+        this.cacheId = cacheId;
+        this.depId = depId;
+    }
 
     /**
      * @return Cache ID.
      */
     public int cacheId() {
         return cacheId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteUuid deploymentId() {
+        return depId;
     }
 
     /** {@inheritDoc} */

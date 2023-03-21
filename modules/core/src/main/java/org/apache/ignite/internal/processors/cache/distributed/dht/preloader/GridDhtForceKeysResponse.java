@@ -212,31 +212,31 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
         }
 
         switch (writer.state()) {
-            case 4:
+            case 5:
                 if (!writer.writeByteArray("errBytes", errBytes))
                     return false;
 
                 writer.incrementState();
 
-            case 5:
+            case 6:
                 if (!writer.writeIgniteUuid("futId", futId))
                     return false;
 
                 writer.incrementState();
 
-            case 6:
+            case 7:
                 if (!writer.writeCollection("infos", infos, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
 
-            case 7:
+            case 8:
                 if (!writer.writeIgniteUuid("miniId", miniId))
                     return false;
 
                 writer.incrementState();
 
-            case 8:
+            case 9:
                 if (!writer.writeCollection("missedKeys", missedKeys, MessageCollectionItemType.MSG))
                     return false;
 
@@ -258,7 +258,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
             return false;
 
         switch (reader.state()) {
-            case 4:
+            case 5:
                 errBytes = reader.readByteArray("errBytes");
 
                 if (!reader.isLastRead())
@@ -266,7 +266,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
                 reader.incrementState();
 
-            case 5:
+            case 6:
                 futId = reader.readIgniteUuid("futId");
 
                 if (!reader.isLastRead())
@@ -274,7 +274,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
                 reader.incrementState();
 
-            case 6:
+            case 7:
                 infos = reader.readCollection("infos", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -282,7 +282,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
                 reader.incrementState();
 
-            case 7:
+            case 8:
                 miniId = reader.readIgniteUuid("miniId");
 
                 if (!reader.isLastRead())
@@ -290,7 +290,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
                 reader.incrementState();
 
-            case 8:
+            case 9:
                 missedKeys = reader.readCollection("missedKeys", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
@@ -310,7 +310,7 @@ public class GridDhtForceKeysResponse extends GridCacheIdMessage implements Grid
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 9;
+        return 10;
     }
 
     /** {@inheritDoc} */
