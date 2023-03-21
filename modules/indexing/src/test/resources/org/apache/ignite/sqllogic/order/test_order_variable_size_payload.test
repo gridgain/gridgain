@@ -1,12 +1,10 @@
 # name: test/sql/order/test_order_variable_size_payload.test
 # description: Test ORDER BY keyword (variable size sorting/payload columns)
 # group: [order]
-# Ignore https://issues.apache.org/jira/browse/IGNITE-14636
-# Ignore https://issues.apache.org/jira/browse/IGNITE-14555
 
 # payload string that is longer than the 8MB initial string size - this tests whether RowChunk dynamically increases block capacity
 statement ok
-select x % 2 i, string_agg('thisstringis200characterslong..........................................................................................................................................................................') s from table(system_range(0, 99999)) group by i order by i
+select x % 2 i, listagg('thisstringis200characterslong..........................................................................................................................................................................') s from system_range(0, 99999) group by i order by i
 
 # weird one from SQLancer
 statement ok
@@ -15,8 +13,21 @@ create table t0 (c0 varchar);
 statement ok
 insert into t0 values ('a'), (NULL), (NULL), (NULL), (NULL), (NULL), (NULL);
 
+# [ignore] NULLS goes last.
+#query T
+#SELECT * FROM t0 ORDER BY t0.c0 DESC;
+#----
+#NULL
+#NULL
+#NULL
+#NULL
+#NULL
+#NULL
+#a
+
+# [note] h2
 query T
-SELECT * FROM t0 ORDER BY t0.c0 DESC;
+SELECT * FROM t0 ORDER BY t0.c0 DESC NULLS FIRST;
 ----
 NULL
 NULL
@@ -63,10 +74,12 @@ NULL
 
 # sort on 10000 strings
 statement ok
-CREATE TABLE test2 AS (SELECT CAST(range AS VARCHAR) r, random() rand FROM range(10000))
+CREATE TABLE test2(r VARCHAR, rand DOUBLE);
+INSERT INTO test2 SELECT CAST(x AS VARCHAR), random() rand FROM system_range(0, 9999)
 
 statement ok
-CREATE TABLE test2_1 AS (SELECT * FROM test2 ORDER BY r)
+CREATE TABLE test2_1(r VARCHAR, rand DOUBLE);
+INSERT INTO test2_1 SELECT * FROM test2 ORDER BY r
 
 query T
 SELECT count(*) FROM test2_1
@@ -75,10 +88,12 @@ SELECT count(*) FROM test2_1
 
 # string payload
 statement ok
-CREATE TABLE test3 AS (SELECT CAST(range AS VARCHAR) r, random() rand FROM range(10000))
+CREATE TABLE test3(r VARCHAR, rand DOUBLE);
+INSERT INTO test3 SELECT CAST(x AS VARCHAR), random() rand FROM system_range(0, 9999)
 
 statement ok
-CREATE TABLE test3_1 AS (SELECT * FROM test3 ORDER BY rand)
+CREATE TABLE test3_1(r VARCHAR, rand DOUBLE);
+INSERT INTO test3_1 SELECT * FROM test3 ORDER BY rand
 
 query T
 SELECT count(*) FROM test3_1
@@ -128,7 +143,7 @@ SELECT * FROM tpch_q1_agg ORDER BY l_returnflag, l_linestatus;
 ----
 A	F	3774200	5320753880.69	5054096266.6828	5256751331.449234	25.537587116854997	36002.12382901414	0.05014459706340077	147790
 N	F	95257	133737795.84	127132372.6512	132286291.229445	25.30066401062417	35521.32691633466	0.04939442231075697	3765
-N	O	7459297	10512270008.90	9986238338.3847	10385578376.585467	25.545537671232875	36000.9246880137	0.05009595890410959	292000
+N	O	7459297	10512270008.90	9986238338.3847	1.0385578376585466E10	25.545537671232875	36000.9246880137	0.05009595890410959	292000
 R	F	3785523	5337950526.47	5071818532.9420	5274405503.049367	25.5259438574251	35994.029214030925	0.04998927856184382	148301
 
 statement ok
@@ -137,92 +152,83 @@ create table test5 (i int, s varchar);
 statement ok
 insert into test5 values (3, 'ababa'), (1, 'babab'), (NULL, 'abbab'), (2, NULL);
 
-query TT
-select i, list(string_split(s, 'b')) from test5 group by i order by i;
-----
-NULL	[[a, , a, ]]
-1	[[, a, a, ]]
-2	[NULL]
-3	[[a, a, a]]
+# [ignore] Function "LIST" not found.
+#query TT
+#select i, list(string_split(s, 'b')) from test5 group by i order by i;
+#----
+#NULL	[[a, , a, ]]
+#1	[[, a, a, ]]
+#2	[NULL]
+#3	[[a, a, a]]
 
-query TT
-select i, struct_pack(i:=i, s:=s) from test5 order by i;
-----
-NULL	<i: NULL, s: abbab>
-1	<i: 1, s: babab>
-2	<i: 2, s: NULL>
-3	<i: 3, s: ababa>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=s) from test5 order by i;
+#----
+#NULL	<i: NULL, s: abbab>
+#1	<i: 1, s: babab>
+#2	<i: 2, s: NULL>
+#3	<i: 3, s: ababa>
 
-query TT
-select i, struct_pack(i:=i, s:=string_split(s, 'b')) from test5 order by i;
-----
-NULL	<i: NULL, s: [a, , a, ]>
-1	<i: 1, s: [, a, a, ]>
-2	<i: 2, s: NULL>
-3	<i: 3, s: [a, a, a]>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=string_split(s, 'b')) from test5 order by i;
+#----
+#NULL	<i: NULL, s: [a, , a, ]>
+#1	<i: 1, s: [, a, a, ]>
+#2	<i: 2, s: NULL>
+#3	<i: 3, s: [a, a, a]>
 
-query TT
-select i, struct_pack(i:=i, s:=UNNEST(string_split(s, 'b'))) from test5 order by i;
-----
-NULL	<i: NULL, s: a>
-NULL	<i: NULL, s: >
-NULL	<i: NULL, s: a>
-NULL	<i: NULL, s: >
-1	<i: 1, s: >
-1	<i: 1, s: a>
-1	<i: 1, s: a>
-1	<i: 1, s: >
-2	<i: 2, s: NULL>
-3	<i: 3, s: a>
-3	<i: 3, s: a>
-3	<i: 3, s: a>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=UNNEST(string_split(s, 'b'))) from test5 order by i;
+#----
+#NULL	<i: NULL, s: a>
+#NULL	<i: NULL, s: >
+#NULL	<i: NULL, s: a>
+#NULL	<i: NULL, s: >
+#1	<i: 1, s: >
+#1	<i: 1, s: a>
+#1	<i: 1, s: a>
+#1	<i: 1, s: >
+#2	<i: 2, s: NULL>
+#3	<i: 3, s: a>
+#3	<i: 3, s: a>
+#3	<i: 3, s: a>
 
-query TT
-select i, struct_pack(i:=i, s:=list(s)) from test5 group by i order by i;
-----
-NULL	<i: NULL, s: [abbab]>
-1	<i: 1, s: [babab]>
-2	<i: 2, s: [NULL]>
-3	<i: 3, s: [ababa]>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=list(s)) from test5 group by i order by i;
+#----
+#NULL	<i: NULL, s: [abbab]>
+#1	<i: 1, s: [babab]>
+#2	<i: 2, s: [NULL]>
+#3	<i: 3, s: [ababa]>
 
-query TT
-select i, struct_pack(i:=i, s:=s) from test5 order by s;
-----
-2	<i: 2, s: NULL>
-3	<i: 3, s: ababa>
-NULL	<i: NULL, s: abbab>
-1	<i: 1, s: babab>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=s) from test5 order by s;
+#----
+#2	<i: 2, s: NULL>
+#3	<i: 3, s: ababa>
+#NULL	<i: NULL, s: abbab>
+#1	<i: 1, s: babab>
 
-query TT
-select i, struct_pack(i:=i, s:=list(string_split(s, 'b'))) from test5 group by i order by i;
-----
-NULL	<i: NULL, s: [[a, , a, ]]>
-1	<i: 1, s: [[, a, a, ]]>
-2	<i: 2, s: [NULL]>
-3	<i: 3, s: [[a, a, a]]>
+# [ignore] Function "STRUCT_PACK" not found.
+#query TT
+#select i, struct_pack(i:=i, s:=list(string_split(s, 'b'))) from test5 group by i order by i;
+#----
+#NULL	<i: NULL, s: [[a, , a, ]]>
+#1	<i: 1, s: [[, a, a, ]]>
+#2	<i: 2, s: [NULL]>
+#3	<i: 3, s: [[a, a, a]]>
 
 # sorting by a mix of variable size and constant size columns
 statement ok
 CREATE TABLE test6 (i1 INT, s1 VARCHAR, i2 int, s2 VARCHAR)
 
 statement ok
-INSERT INTO test6 VALUES
-(6, '0reallylongstring1', 3, '1reallylongstring8'),
-(6, '0reallylongstring1', 3, '1reallylongstring7'),
-(6, '0reallylongstring1', 4, '1reallylongstring8'),
-(6, '0reallylongstring1', 4, '1reallylongstring7'),
-(6, '0reallylongstring2', 3, '1reallylongstring8'),
-(6, '0reallylongstring2', 3, '1reallylongstring7'),
-(6, '0reallylongstring2', 4, '1reallylongstring8'),
-(6, '0reallylongstring2', 4, '1reallylongstring7'),
-(5, '0reallylongstring1', 3, '1reallylongstring8'),
-(5, '0reallylongstring1', 3, '1reallylongstring7'),
-(5, '0reallylongstring1', 4, '1reallylongstring8'),
-(5, '0reallylongstring1', 4, '1reallylongstring7'),
-(5, '0reallylongstring2', 3, '1reallylongstring8'),
-(5, '0reallylongstring2', 3, '1reallylongstring7'),
-(5, '0reallylongstring2', 4, '1reallylongstring8'),
-(5, '0reallylongstring2', 4, '1reallylongstring7')
+INSERT INTO test6 VALUES (6, '0reallylongstring1', 3, '1reallylongstring8'), (6, '0reallylongstring1', 3, '1reallylongstring7'), (6, '0reallylongstring1', 4, '1reallylongstring8'), (6, '0reallylongstring1', 4, '1reallylongstring7'), (6, '0reallylongstring2', 3, '1reallylongstring8'), (6, '0reallylongstring2', 3, '1reallylongstring7'), (6, '0reallylongstring2', 4, '1reallylongstring8'), (6, '0reallylongstring2', 4, '1reallylongstring7'), (5, '0reallylongstring1', 3, '1reallylongstring8'), (5, '0reallylongstring1', 3, '1reallylongstring7'), (5, '0reallylongstring1', 4, '1reallylongstring8'), (5, '0reallylongstring1', 4, '1reallylongstring7'), (5, '0reallylongstring2', 3, '1reallylongstring8'), (5, '0reallylongstring2', 3, '1reallylongstring7'), (5, '0reallylongstring2', 4, '1reallylongstring8'), (5, '0reallylongstring2', 4, '1reallylongstring7')
 
 query IIII
 SELECT i1, s1, i2, s2 FROM test6 ORDER BY i1, s1, i2, s2
@@ -364,45 +370,49 @@ Brand#11	ECONOMY BURNISHED COPPER	49	4
 Brand#11	ECONOMY BURNISHED NICKEL	14	4
 Brand#11	ECONOMY BURNISHED NICKEL	49	4
 
+# [ignore] Not supported.
 # simple nested lists (no structs)
-statement ok
-create table test8 (i int, s varchar)
+#statement ok
+#create table test8 (i int, s varchar)
 
-statement ok
-insert into test8 values (3, 'aba'), (1, 'ccbcc'), (NULL, 'dbdbd'), (2, NULL);
+#statement ok
+#insert into test8 values (3, 'aba'), (1, 'ccbcc'), (NULL, 'dbdbd'), (2, NULL);
 
-query TT
-select i, string_split(s, 'b') from test8 order by i;
-----
-NULL	[d, d, d]
-1	[cc, cc]
-2	NULL
-3	[a, a]
+# [ignore] Not supported.
+#query TT
+#select i, string_split(s, 'b') from test8 order by i;
+#----
+#NULL	[d, d, d]
+#1	[cc, cc]
+#2	NULL
+#3	[a, a]
 
-query TT
-select i, list(s) from test8 group by i order by i;
-----
-NULL	[dbdbd]
-1	[ccbcc]
-2	[NULL]
-3	[aba]
+# [ignore] Not supported.
+#query TT
+#select i, list(s) from test8 group by i order by i;
+#----
+#NULL	[dbdbd]
+#1	[ccbcc]
+#2	[NULL]
+#3	[aba]
 
-query TT
-select i, list(string_split(s, 'b')) from test8 group by i order by i;
-----
-NULL	[[d, d, d]]
-1	[[cc, cc]]
-2	[NULL]
-3	[[a, a]]
+# [ignore] Not supported.
+#query TT
+#select i, list(string_split(s, 'b')) from test8 group by i order by i;
+#----
+#NULL	[[d, d, d]]
+#1	[[cc, cc]]
+#2	[NULL]
+#3	[[a, a]]
 
 # lists longer than STANDARD_VECTOR_SIZE
-statement ok
-CREATE TABLE test9 AS (SELECT range % 4 i, range j FROM range(5000));
+#statement ok
+#CREATE TABLE test9 AS (SELECT range % 4 i, range j FROM range(5000));
 
-statement ok
-INSERT INTO test9 VALUES (0, NULL), (1, NULL), (2, NULL), (3, NULL)
+#statement ok
+#INSERT INTO test9 VALUES (0, NULL), (1, NULL), (2, NULL), (3, NULL)
 
-query TT
-SELECT i, list(j) FROM test9 GROUP BY i ORDER BY i;
-----
-8 values hashing to fc909a9ac472ea404c0bceecf7f1f3d6
+#query TT
+#SELECT i, list(j) FROM test9 GROUP BY i ORDER BY i;
+#----
+#8 values hashing to fc909a9ac472ea404c0bceecf7f1f3d6
