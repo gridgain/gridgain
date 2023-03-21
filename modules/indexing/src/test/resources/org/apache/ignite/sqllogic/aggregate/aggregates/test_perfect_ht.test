@@ -22,7 +22,7 @@ SELECT year, SUM(val), COUNT(val), COUNT(*) FROM timeseries GROUP BY year ORDER 
 2001	30	1	1
 NULL	1	1	1
 
-# Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
 # use aggregates with destructors
 #query II
 #SELECT year, STRING_AGG(val ORDER BY val) FROM timeseries GROUP BY year ORDER BY year;

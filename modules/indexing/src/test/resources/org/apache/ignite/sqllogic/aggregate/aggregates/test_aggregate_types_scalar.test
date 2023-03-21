@@ -17,7 +17,7 @@ SELECT COUNT(1, 2)
 statement error
 SELECT COUNT()
 
-# SUM or AVG on wrong data type for "SUM(NULL)"
+# [ignore] SUM or AVG on wrong data type for "SUM(NULL)"
 # query RRR
 #SELECT SUM(1), SUM(NULL), SUM(33.3)
 #----
@@ -79,7 +79,7 @@ SELECT MAX()
 statement error
 SELECT MAX(1, 2)
 
-# ANY_VALUE is not implemented in H2
+# [ignore] ANY_VALUE is not implemented in H2
 #query IIRTTTT
 #SELECT ANY_VALUE(1), ANY_VALUE(NULL), ANY_VALUE(33.3), ANY_VALUE('hello'), ANY_VALUE(True), ANY_VALUE(DATE '1992-02-02'), ANY_VALUE(TIMESTAMP '2008-01-01 00:00:01')
 #----
@@ -91,7 +91,7 @@ SELECT MAX(1, 2)
 #statement error
 #SELECT ANY_VALUE(1, 2)
 
-# SUM or AVG on wrong data type for "AVG(NULL)"
+# [ignore] SUM or AVG on wrong data type for "AVG(NULL)"
 #query RRR
 #SELECT AVG(1), AVG(NULL), AVG(33.3)
 #----

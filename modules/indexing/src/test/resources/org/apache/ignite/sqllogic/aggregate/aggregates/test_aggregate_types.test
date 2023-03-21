@@ -25,7 +25,7 @@ SELECT COUNT(*), COUNT(s), MIN(s), MAX(s) FROM strings WHERE s IS NULL
 NULL
 NULL
 
-# Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
+# [ignore] Clauses DISTINCT and ORDER BY are unsupported for GROUP_CONCAT for not collocated data.
 # add string agg
 # query TTTT
 # SELECT STRING_AGG(s, ' ' ORDER BY s ASC), STRING_AGG(s, '' ORDER BY s ASC), STRING_AGG('', ''), STRING_AGG('hello', ' ') FROM strings
@@ -127,9 +127,16 @@ NULL
 true
 true
 
-# [ignore]
+# [ignore] H2 may aggregate booleans.
 #statement error
 #SELECT SUM(b) FROM booleans GROUP BY g ORDER BY g
+
+# [note] h2
+query I
+SELECT SUM(b) FROM booleans GROUP BY g ORDER BY g
+----
+0
+1
 
 statement error
 SELECT AVG(b) FROM booleans GROUP BY g ORDER BY g

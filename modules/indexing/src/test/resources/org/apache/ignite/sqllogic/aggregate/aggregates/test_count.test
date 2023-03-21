@@ -19,6 +19,7 @@ CREATE TABLE integers(i INTEGER);
 statement ok
 INSERT INTO integers VALUES (1), (2), (NULL)
 
+# [ignore] https://issues.apache.org/jira/browse/IGNITE-19001
 #query IIIIII
 #SELECT COUNT(*), COUNT(1), COUNT(i), COUNT(COALESCE(i, 1)), COUNT(DISTINCT i), COUNT(DISTINCT 1) FROM integers
 #----
