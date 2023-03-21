@@ -39,7 +39,7 @@ NULL	11.000000
 statement ok
 INSERT INTO test VALUES (11, 'hello'), (12, 'world')
 
-# TODO https://issues.apache.org/jira/browse/IGNITE-19001
+# [ignore] https://issues.apache.org/jira/browse/IGNITE-19001
 # scalar distinct
 # query III
 # SELECT COUNT(*), COUNT(s), COUNT(DISTINCT s) FROM test;
@@ -52,7 +52,7 @@ SELECT COUNT(s), COUNT(DISTINCT s) FROM test;
 ----
 4	2
 
-# TODO https://issues.apache.org/jira/browse/IGNITE-19001
+# [ignore] https://issues.apache.org/jira/browse/IGNITE-19001
 # grouped distinct
 # query IIII
 # SELECT a, COUNT(*), COUNT(s), COUNT(DISTINCT s) FROM test GROUP BY a ORDER BY a;
@@ -67,7 +67,7 @@ SELECT a, COUNT(s), COUNT(DISTINCT s) FROM test GROUP BY a ORDER BY a;
 11	2	1
 12	2	1
 
-# TODO https://issues.apache.org/jira/browse/IGNITE-19001
+# [ignore] https://issues.apache.org/jira/browse/IGNITE-19001
 # now with WHERE clause
 # query IIII
 # SELECT a, COUNT(*), COUNT(s), COUNT(DISTINCT s) FROM test WHERE s IS NOT NULL GROUP BY a ORDER BY a;
