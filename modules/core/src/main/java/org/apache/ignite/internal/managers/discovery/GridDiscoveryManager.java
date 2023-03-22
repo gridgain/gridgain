@@ -1806,6 +1806,28 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
     }
 
     /**
+     * Return ClusterNode representation according to topology version.
+     *
+     * @param nodeId Node id.
+     * @param topVer Topology version.
+     * @return Node for id and topology version.
+     */
+    @Nullable public ClusterNode node(UUID nodeId, AffinityTopologyVersion topVer) {
+        assert nodeId != null;
+
+        DiscoCache cache0;
+
+        if (topVer.equals(NONE) || (cache0 = discoCache(topVer)) == null) {
+            if (log.isDebugEnabled())
+                log.debug("Topology version undefined or can`t be found for: " + topVer);
+
+            return discoCache().node(nodeId);
+        }
+
+        return cache0.node(nodeId);
+    }
+
+    /**
      * Gets collection of node for given node IDs and predicates.
      *
      * @param ids Ids to include.
