@@ -1277,7 +1277,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             List<ClusterNode> nodes = new ArrayList<>(allIds.size() / 2 + 1);
             for (UUID id : allIds) {
                 if (hasState(p, id, state, states)) {
-                    ClusterNode n = ctx.discovery().node(id, topVer);
+                    ClusterNode n = ctx.discovery().node(id);
 
                     if (n != null && (topVer.topologyVersion() < 0 || n.order() <= topVer.topologyVersion()))
                         nodes.add(n);
