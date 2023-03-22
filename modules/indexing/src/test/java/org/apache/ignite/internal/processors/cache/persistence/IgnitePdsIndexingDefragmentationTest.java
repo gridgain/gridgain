@@ -244,11 +244,35 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
      */
     @Test
     public void testMultipleIndexes() throws Exception {
+        testMultipleIndexes(false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testMultipleIndexesWithParallelism() throws Exception {
+        testMultipleIndexes(true);
+    }
+
+    private static String addParallelism(boolean addParallelism, String sql) {
+        if (!addParallelism)
+            return sql;
+
+        return sql + " WITH \"PARALLELISM=2\"";
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    private void testMultipleIndexes(boolean parallelism) throws Exception {
         startGrid(0).cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_OBJ LONG)"));
+        cache.query(new SqlFieldsQuery(
+            addParallelism(parallelism, "CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_OBJ LONG)")
+        ));
 
         final String cacheName = "SQL_default_TEST";
 
@@ -295,11 +319,28 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
      */
     @Test
     public void testDecimalIndex() throws Exception {
+        testDecimalIndex(false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDecimalIndexWithParallelism() throws Exception {
+        testDecimalIndex(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    private void testDecimalIndex(boolean parallelism) throws Exception {
         startGrid(0).cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_DEC DECIMAL) WITH \"PARALLELISM=2\""));
+        cache.query(new SqlFieldsQuery(
+            addParallelism(parallelism, "CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_DEC DECIMAL)")
+        ));
 
         final String cacheName = "SQL_default_TEST";
 
@@ -340,13 +381,30 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
      */
     @Test
     public void testVarcharIndex() throws Exception {
+        testVarcharIndex(false);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testVarcharIndexWithParallelism() throws Exception {
+        testVarcharIndex(true);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    private void testVarcharIndex(boolean parallelism) throws Exception {
         final String strPrefix = "AAAAAAAAAA";
 
         startGrid(0).cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_STR VARCHAR)"));
+        cache.query(new SqlFieldsQuery(
+            addParallelism(parallelism, "CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_STR VARCHAR)")
+        ));
 
         final String cacheName = "SQL_default_TEST";
 
