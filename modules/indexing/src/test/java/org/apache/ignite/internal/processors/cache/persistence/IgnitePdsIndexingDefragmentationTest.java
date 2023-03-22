@@ -299,7 +299,7 @@ public class IgnitePdsIndexingDefragmentationTest extends IgnitePdsDefragmentati
 
         IgniteCache<?, ?> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_DEC DECIMAL)"));
+        cache.query(new SqlFieldsQuery("CREATE TABLE TEST (ID INT PRIMARY KEY, VAL_INT INT, VAL_DEC DECIMAL) WITH \"PARALLELISM=2\""));
 
         final String cacheName = "SQL_default_TEST";
 

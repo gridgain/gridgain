@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
+import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2InnerIO;
@@ -204,11 +205,11 @@ public class IndexingDefragmentation {
                     log
                 );
 
-                for (int i = 0; i < segments; i++) {
-                    H2Tree tree = oldH2Idx.treeForRead(i);
+                for (int segment = 0; segment < segments; segment++) {
+                    H2Tree tree = oldH2Idx.treeForRead(segment);
                     final H2Tree.MetaPageInfo oldInfo = tree.getMetaInfo();
 
-                    final H2Tree newTree = newIdx.treeForRead(i);
+                    final H2Tree newTree = newIdx.treeForRead(segment);
 
                     // Set IO wrappers for new tree.
                     BPlusInnerIO<H2Row> innerIO = (BPlusInnerIO<H2Row>) wrap(newTree.latestInnerIO());
@@ -258,7 +259,11 @@ public class IndexingDefragmentation {
                                 ((H2RowLinkIO)io).storeMvccInfo()
                             );
 
-                            newIdx.putx(newRow);
+                            InlineIndexColumnFactory.setCurrentInlineIndexes(newTree.inlineIndexes());
+
+                            assert cctx.shared().database().checkpointLockIsHeldByThread();
+
+                            newTree.putx(newRow);
                         }
 
                         return true;
