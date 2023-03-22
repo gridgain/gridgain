@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.persistence.db.checkpoint;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.OpenOption;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCache;
@@ -30,14 +29,18 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DISK_PAGE_COMPRESSION;
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -83,7 +86,7 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
 
         storageCfg.getDefaultDataRegionConfiguration()
             .setPersistenceEnabled(true)
-            .setMaxSize((isCompression ? 70 : 10) * 1024 * 1024);
+            .setMaxSize((isCompression ? 70 : 20) * 1024 * 1024);
 
         cfg.setDataStorageConfiguration(storageCfg)
             .setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
@@ -147,26 +150,27 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCheckpointFailBeforeMarkEntityWrite() throws Exception {
-        //given: one node with persistence.
+        // given: one node with persistence.
         IgniteEx ignite0 = startGrid(0);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
-        AtomicBoolean pageReplacementStarted = new AtomicBoolean(false);
+        GridFutureAdapter<Void> pageReplacementStartedFuture = new GridFutureAdapter<>();
 
-        //and: Listener of page replacement start.
+        // and: Listener of page replacement start.
         ignite0.events().localListen((e) -> {
-            pageReplacementStarted.set(true);
+            pageReplacementStartedFuture.onDone();
 
             return true;
         }, EventType.EVT_PAGE_REPLACEMENT_STARTED);
 
-        //when: Load a lot of data to cluster.
+        // when: Load a lot of data to cluster.
         AtomicInteger lastKey = new AtomicInteger();
-        GridTestUtils.runMultiThreadedAsync(() -> {
+
+        IgniteInternalFuture<Long> loadDataFuture = GridTestUtils.runMultiThreadedAsync(() -> {
             IgniteCache<Integer, Object> cache2 = ignite(0).cache(DEFAULT_CACHE_NAME);
 
-            //Should stopped putting data when node is fail.
+            // Should stop putting data when node is fail.
             for (int i = 0; i < Integer.MAX_VALUE; i++) {
                 cache2.put(i, i);
 
@@ -177,24 +181,26 @@ public class CheckpointFailBeforeWriteMarkTest extends GridCommonAbstractTest {
             }
         }, 3, "LOAD-DATA");
 
-        //and: Page replacement was started.
-        assertTrue(waitForCondition(pageReplacementStarted::get, 60_000));
+        // and: Page replacement was started.
+        pageReplacementStartedFuture.get(60_000);
 
-        //and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
+        // and: Node was failed during checkpoint after write lock was released and before checkpoint marker was stored to disk.
         interceptorIOFactory.triggerIOException((file) -> file.getName().contains("START.bin"));
 
         log.info("KILL NODE await to stop");
 
         assertTrue(waitForCondition(() -> G.allGrids().isEmpty(), 20_000));
 
+        assertThrows(log, () -> loadDataFuture.get(1_000), Exception.class, null);
+
         //then: Data recovery after node start should be successful.
         ignite0 = startGrid(0);
 
-        ignite0.cluster().active(true);
+        ignite0.cluster().state(ACTIVE);
 
         IgniteCache<Integer, Object> cache = ignite(0).cache(DEFAULT_CACHE_NAME);
 
-        //WAL mode is 'default' so it is allowable to lost some last data(ex. last 100).
+        // WAL mode is 'default' so it is allowable to lose some last data(ex. last 100).
         for (int i = 0; i < lastKey.get() - 100; i++)
             assertNotNull(cache.get(i));
     }
