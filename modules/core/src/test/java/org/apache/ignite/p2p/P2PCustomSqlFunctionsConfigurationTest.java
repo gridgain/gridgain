@@ -62,10 +62,10 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
     static {
         try {
             CONFIGURATION_CLASS_LOADER = new URLClassLoader(
-                new URL[]{new URL(GridTestProperties.getProperty("p2p.uri.cls.second"))},
+                new URL[]{new URL(GridTestProperties.getProperty("p2p.uri.cls"))},
                 P2PCustomSqlFunctionsConfigurationTest.class.getClassLoader());
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Define property p2p.uri.cls.second", e);
+            throw new RuntimeException("Define property p2p.uri.cls", e);
         }
     }
 
