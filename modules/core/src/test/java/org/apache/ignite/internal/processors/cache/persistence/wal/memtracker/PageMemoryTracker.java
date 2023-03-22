@@ -711,7 +711,7 @@ public class PageMemoryTracker implements IgnitePlugin {
         }
 
         if (!locBuf.equals(rmtBuf)) {
-            log.error("Page buffers are not equals [fullPageId=" + fullPageId + ", pageIo=" + pageIo + ']');
+            log.error("Page buffers are not equal [fullPageId=" + fullPageId + ", pageIo=" + pageIo + ']');
 
             dumpDiff(locBuf, rmtBuf);
 
