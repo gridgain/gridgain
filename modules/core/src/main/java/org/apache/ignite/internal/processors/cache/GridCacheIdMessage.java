@@ -32,10 +32,10 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
     protected int cacheId;
 
     /** Cache deployment identifier that represents a generation of the cache (see cacheId). */
-    private IgniteUuid depId;
+    private IgniteUuid cacheDepId;
 
     /**
-     * For deserialization only.
+     * Default constructor.
      */
     public GridCacheIdMessage() {
        // No-op.
@@ -47,7 +47,7 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
      */
     public GridCacheIdMessage(int cacheId, IgniteUuid cacheDeploymentId) {
         this.cacheId = cacheId;
-        depId = cacheDeploymentId;
+        cacheDepId = cacheDeploymentId;
     }
 
     /**
@@ -59,7 +59,7 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
 
     /** {@inheritDoc} */
     @Override public IgniteUuid deploymentId() {
-        return depId;
+        return cacheDepId;
     }
 
     /** {@inheritDoc} */
@@ -95,13 +95,13 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
 
         switch (writer.state()) {
             case 3:
-                if (!writer.writeInt("cacheId", cacheId))
+                if (!writer.writeIgniteUuid("cacheDepId", cacheDepId))
                     return false;
 
                 writer.incrementState();
 
             case 4:
-                if (!writer.writeIgniteUuid("depId", depId))
+                if (!writer.writeInt("cacheId", cacheId))
                     return false;
 
                 writer.incrementState();
@@ -123,7 +123,7 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
 
         switch (reader.state()) {
             case 3:
-                cacheId = reader.readInt("cacheId");
+                cacheDepId = reader.readIgniteUuid("cacheDepId");
 
                 if (!reader.isLastRead())
                     return false;
@@ -131,7 +131,7 @@ public abstract class GridCacheIdMessage extends GridCacheMessage {
                 reader.incrementState();
 
             case 4:
-                depId = reader.readIgniteUuid("depId");
+                cacheId = reader.readInt("cacheId");
 
                 if (!reader.isLastRead())
                     return false;
