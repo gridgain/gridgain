@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.net.ssl.SSLContext;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -154,6 +153,9 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
             }
 
             GridNioFuture<GridNioSession> sesFut = srv.createSession(ch, meta, false, null);
+
+            if (sesFut.error() != null)
+                sesFut.get();
 
             if (sslHandshakeFut != null)
                 sslHandshakeFut.get();
