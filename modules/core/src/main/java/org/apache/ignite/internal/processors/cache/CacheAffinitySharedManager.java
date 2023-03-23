@@ -2472,15 +2472,20 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             new WaitRebalanceInfo(fut.exchangeId().topologyVersion()) :
             new WaitRebalanceInfo(fut.context().events().lastServerEventVersion());
 
-        Collection<ClusterNode> evtNodes0 = fut.context().events().discoveryCache().serverNodes();
+        Collection<ClusterNode> evtNodes = fut.context().events().discoveryCache().serverNodes();
 
         final Map<Integer, Map<Integer, List<T>>> assignment = new ConcurrentHashMap<>();
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
-                CacheGroupHolder grpHolder = getOrCreateGroupHolder(topVer, desc);
+                CacheGroupContext grpCtx = cctx.kernalContext().cache().cacheGroup(desc.groupId());
 
-                List<ClusterNode> evtNodes = fut.context().events().discoveryCache().cacheGroupAffinityNodes(desc.groupId());
+                try {
+
+                    if (grpCtx != null)
+                        grpCtx.topology().readLock();
+
+                CacheGroupHolder grpHolder = getOrCreateGroupHolder(topVer, desc);
 
                 if (!grpHolder.rebalanceEnabled ||
                     (fut.cacheGroupAddedOnExchange(desc.groupId(), desc.receivedFrom()) && !enforcedCentralizedAssignment))
@@ -2537,8 +2542,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                             if (evtNodes.contains(node))
                                 newNodes0.add(node);
                         }
-                    }
-                    else if (curPrimary != null && !curPrimary.equals(newPrimary)) {
+                    } else if (curPrimary != null && !curPrimary.equals(newPrimary)) {
                         GridDhtPartitionState state = top.partitionState(newPrimary.id(), p);
 
                         if (evtNodes.contains(curPrimary)) {
@@ -2549,8 +2553,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                                     newNodes,
                                     waitRebalanceInfo);
                             }
-                        }
-                        else {
+                        } else {
                             if (state != OWNING) {
                                 for (int i = 1; i < curNodes.size(); i++) {
                                     ClusterNode curNode = curNodes.get(i);
@@ -2617,7 +2620,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 fut.timeBag().finishLocalStage("Affinity recalculation (partitions availability) " +
                     "[grp=" + desc.cacheOrGroupName() + "]");
-            }
+            } finally {
+                    if (grpCtx != null)
+                        grpCtx.topology().readUnlock();
+                }
+        }
         });
 
         if (log.isDebugEnabled()) {
