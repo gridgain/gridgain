@@ -458,8 +458,6 @@ public class GridCacheContext<K, V> implements Externalizable {
 
         statisticsEnabled = clusterWideDesc.cacheConfiguration().isStatisticsEnabled();
         dynamicDeploymentId = clusterWideDesc.deploymentId();
-
-        io().remapCacheHandlersOnRecovery(cacheId, dynamicDeploymentId);
     }
 
     /**
