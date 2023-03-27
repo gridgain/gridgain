@@ -22,7 +22,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- *
+ * SQL script runner configuration options.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)

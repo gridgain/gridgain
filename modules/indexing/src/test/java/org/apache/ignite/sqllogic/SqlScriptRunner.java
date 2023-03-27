@@ -55,7 +55,8 @@ import org.jetbrains.annotations.NotNull;
 import static org.apache.ignite.internal.util.IgniteUtils.byteArray2HexString;
 
 /**
- *
+ * SQL script runner.
+ * <p>Runs the specified sql test script on the gridgain query engine.
  */
 public class SqlScriptRunner {
     /** UTF-8 character name. */

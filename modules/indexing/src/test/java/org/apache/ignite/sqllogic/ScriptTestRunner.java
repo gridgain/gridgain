@@ -47,7 +47,11 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 
 /**
- *
+ * JUnit runner for sql logic tests.
+ * <p>Launches gridgain cluster with number of nodes defined by the 
+ * '{@link ScriptRunnerTestsEnvironment#nodes() nodes}' config variable.
+ * <p>Executes each SQL script file found in folder defined by 
+ * '{@link ScriptRunnerTestsEnvironment#scriptsRoot() scriptsRoot}' using a {@link SqlScriptRunner}.
  */
 public class ScriptTestRunner extends Runner {
     /** Filesystem. */
