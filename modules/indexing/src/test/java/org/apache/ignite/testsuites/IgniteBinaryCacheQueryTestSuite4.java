@@ -146,7 +146,9 @@ import org.junit.runners.Suite;
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
 
-    IgniteCacheQueryReservationOnUnstableTopologyTest.class
+    IgniteCacheQueryReservationOnUnstableTopologyTest.class,
+
+    ScriptTestSuite.class,
 })
 public class IgniteBinaryCacheQueryTestSuite4 {
 }

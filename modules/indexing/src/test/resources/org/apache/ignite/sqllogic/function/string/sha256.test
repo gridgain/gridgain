@@ -1,0 +1,9 @@
+# name: test/sql/function/string/sha1.test
+# description: Test the SHA1 function
+# group: [string]
+
+query II
+select hash('SHA256', 'hello'), hash('SHA256', NULL)
+----
+2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+NULL
