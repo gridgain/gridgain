@@ -151,7 +151,6 @@ import static org.apache.ignite.internal.IgniteFeatures.CHECK_INDEX_INLINE_SIZES
 import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
-import static org.apache.ignite.internal.processors.cache.GridCacheUtils.affinityNode;
 import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_COLUMN_EXISTS;
 
 /**
@@ -1089,7 +1088,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     public void initQueryStructuresForNotStartedCache(DynamicCacheDescriptor cacheDesc) throws IgniteCheckedException {
         QuerySchema schema = cacheDesc.schema() != null ? cacheDesc.schema() : new QuerySchema();
 
-        enrichConfiguration(cacheDesc);
+        if (ctx.discovery().localNode().isClient())
+            enrichConfiguration(cacheDesc);
 
         GridCacheContextInfo cacheInfo = new GridCacheContextInfo(cacheDesc);
 
@@ -1100,9 +1100,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param cacheDesc {@link DynamicCacheDescriptor} to check and enrich if needed.
      */
     private void enrichConfiguration(DynamicCacheDescriptor cacheDesc) {
-        boolean locAffNode = affinityNode(ctx.discovery().localNode(), cacheDesc.cacheConfiguration().getNodeFilter());
+        CacheConfiguration<?, ?> enrichedCfg = ctx.cache().enricher().enrich(cacheDesc.cacheConfiguration(),
+            cacheDesc.cacheConfigurationEnrichment(),
+            false);
 
-        ctx.cache().enricher().enrich(cacheDesc, locAffNode);
+        cacheDesc.cacheConfiguration(enrichedCfg);
     }
 
     /**
