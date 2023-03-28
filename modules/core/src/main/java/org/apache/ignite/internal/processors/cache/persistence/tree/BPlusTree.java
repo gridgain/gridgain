@@ -5953,6 +5953,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** */
         private int row = -1;
 
+        /**
+         * Last read value from {@link #fillFromBuffer0(long, BPlusIO, int, int)}, used to advance the cursor in
+         * {@link #reinitialize()}.
+         */
+        private T nextLowerBound;
+
         /** */
         private final TreeRowClosure<L, T> c;
 
@@ -5998,6 +6004,9 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             if (resCnt == 0) {
                 rows = (T[])EMPTY;
+
+                // Preserve last read row to avoid inifinite retries or weird assertions.
+                nextLowerBound = getRow(io, pageAddr, cnt - 1, x);
 
                 return false;
             }
@@ -6045,6 +6054,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             T lastRow = clearLastRow();
 
             row = 0;
+
+            if (lastRow == null) {
+                lastRow = nextLowerBound;
+
+                assert lastRow != null;
+            }
 
             return nextPage(lastRow);
         }

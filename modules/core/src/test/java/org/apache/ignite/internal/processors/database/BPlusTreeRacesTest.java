@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeaf
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.IOVersions;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.testframework.junits.GridTestKernalContext;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -50,7 +51,7 @@ import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 /**
  * Test is based on {@link BPlusTreeSelfTest} and has a partial copy of its code.
  */
-public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
+public class BPlusTreeRacesTest extends GridCommonAbstractTest {
     /** */
     private static final short PAIR_INNER_IO = 30000;
 
@@ -387,50 +388,6 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks that there will be no corrupted B+tree during concurrent update and deletion
-     * of the same key that is contained in the inner and leaf nodes of the B+tree.
-     *
-     * NOTE: Test logic is the same as of {@link #testConcurrentPutRemove},
-     * the only difference is that it operates (puts and removes) on a single key.
-     * 
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testConcurrentPutRemoveSameRow() throws Exception {
-        for (int i = 0; i < 100; i++) {
-            TestPairTree tree = prepareBPlusTree();
-
-            // Exact tree from the description is constructed at this point.
-            CyclicBarrier barrier = new CyclicBarrier(2);
-
-            // This is the replace operation.
-            IgniteInternalFuture<?> putFut = runAsync(() -> {
-                barrier.await();
-
-                tree.putx(new Pair(5, 999));
-            });
-
-            // This is the remove operation.
-            IgniteInternalFuture<?> remFut = runAsync(() -> {
-                barrier.await();
-
-                tree.removex(new Pair(5, 0));
-            });
-
-            // Wait for both operations.
-            try {
-                putFut.get(1, TimeUnit.SECONDS);
-            }
-            finally {
-                remFut.get(1, TimeUnit.SECONDS);
-            }
-
-            // Just in case.
-            tree.validateTree();
-        }
-    }
-
-    /**
      * Creates and fills a tree:
      * <pre><code>
      *                                    [ 5:0 ]
@@ -464,5 +421,73 @@ public class BPlusTreeReplaceRemoveRaceTest extends GridCommonAbstractTest {
         tree.putx(new Pair(3, 0));
 
         return tree;
+    }
+
+    /**
+     * Tests a very specific scenario that occures during the data race between scan and remove (merge).
+     * The minimal possible tree is used for the test:
+     * <pre><code>
+     *     [ 2:0 ]
+     *    /       \
+     * [ 1:0 ]  [ 3:0 ]
+     * </code></pre>
+     * The problem manifests itself when there's a tree closure that filters rows. For example, primary partition
+     * filter in index trees.
+     * <p/>
+     * If there's a page that has no matching rows, according to the filter, the {@code BPlusTree.ForwardCursor#rows}
+     * will be empty, thus there's no way to calculate the "lastRow" from its content.
+     * <p/>
+     * If, at the same time, {@code BPlusTree.AbstractForwardCursor#nextPageId} becomes invalid due to concurrent merge,
+     * there would be no way to properly find the next page upon reinitialization. This would lead to either
+     * {@code AssertionError} (if we have {@code -ea} in VM) or otherwise, most likely, an {@code NPE}.
+     */
+    @Test
+    public void testConcurrentScanWithReinitialization() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            TestPairTree tree = new TestPairTree(
+                CACHE_ID,
+                pageMem,
+                allocateMetaPage().pageId(),
+                lockTrackerManager
+            );
+
+            tree.putx(new Pair(1, 0));
+            tree.putx(new Pair(2, 0));
+            tree.putx(new Pair(3, 0));
+
+            // Exact tree from the description is constructed at this point.
+            CyclicBarrier barrier = new CyclicBarrier(2);
+
+            // This is the scan operation.
+            IgniteInternalFuture<?> scanFut = runAsync(() -> {
+                barrier.await();
+
+                BPlusTree.TreeRowClosure<Pair, Pair> closure = (t, io, pageAddr, idx) -> false;
+
+                try (GridCursor<Pair> cursor = tree.find(null, null, closure, null)) {
+                    while (cursor.next()) {
+                        // No-op.
+                    }
+                }
+            });
+
+            // This is the remove operation.
+            IgniteInternalFuture<?> remFut = runAsync(() -> {
+                barrier.await();
+
+                tree.removex(new Pair(3, 0));
+            });
+
+            // Wait for both operations.
+            try {
+                scanFut.get(1, TimeUnit.SECONDS);
+            }
+            finally {
+                remFut.get(1, TimeUnit.SECONDS);
+            }
+
+            // Just in case.
+            tree.validateTree();
+        }
     }
 }
