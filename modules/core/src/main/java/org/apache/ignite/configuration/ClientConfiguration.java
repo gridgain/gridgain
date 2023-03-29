@@ -113,6 +113,11 @@ public final class ClientConfiguration implements Serializable {
     private boolean affinityAwarenessEnabled;
 
     /**
+     * Whether cluster discovery should be enabled.
+     */
+    private boolean clusterDiscoveryEnabled = true;
+
+    /**
      * Reconnect throttling period (in milliseconds). There are no more than {@code reconnectThrottlingRetries}
      * attempts to reconnect will be made within {@code reconnectThrottlingPeriod} in case of connection loss.
      * Throttling is disabled if either {@code reconnectThrottlingRetries} or {@code reconnectThrottlingPeriod} is 0.
@@ -517,6 +522,32 @@ public final class ClientConfiguration implements Serializable {
      */
     public ClientConfiguration setAffinityAwarenessEnabled(boolean affinityAwarenessEnabled) {
         this.affinityAwarenessEnabled = affinityAwarenessEnabled;
+
+        return this;
+    }
+
+    /**
+     * Gets a value indicating whether cluster discovery should be enabled.
+     * <p>
+     * Default is {@code true}: client get addresses of server nodes from the cluster and connects to all of them.
+     * <p>
+     * When {@code false}, client only connects to the addresses provided in {@link #setAddresses(String...)} and
+     * {@link #setAddressesFinder(ClientAddressFinder)}.
+     */
+    public boolean isClusterDiscoveryEnabled() {
+        return clusterDiscoveryEnabled;
+    }
+
+    /**
+     * Sets a value indicating whether cluster discovery should be enabled.
+     * <p>
+     * Default is {@code true}: client get addresses of server nodes from the cluster and connects to all of them.
+     * <p>
+     * When {@code false}, client only connects to the addresses provided in {@link #setAddresses(String...)} and
+     * {@link #setAddressesFinder(ClientAddressFinder)}.
+     */
+    public ClientConfiguration setClusterDiscoveryEnabled(boolean clusterDiscoveryEnabled) {
+        this.clusterDiscoveryEnabled = clusterDiscoveryEnabled;
 
         return this;
     }
