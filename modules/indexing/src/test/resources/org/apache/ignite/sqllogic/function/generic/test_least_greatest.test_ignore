@@ -1,0 +1,19 @@
+# name: test/sql/function/generic/test_least_greatest.test
+# description: Test LEAST/GREATEST
+# group: [generic]
+# [ignore] NULL is not the LEAST/GREATEST.
+
+query I
+SELECT LEAST(1, 3, 0, 2, 7, 8, 10, 11, -100, 30, NULL)
+----
+NULL
+
+query I
+SELECT LEAST(NULL, 3, 0, 2, 7, 8, 10, 11, -100, 30, 1)
+----
+NULL
+
+query T
+SELECT LEAST(DATE '1992-01-01', DATE '1994-02-02', DATE '1991-01-01', NULL)
+----
+NULL

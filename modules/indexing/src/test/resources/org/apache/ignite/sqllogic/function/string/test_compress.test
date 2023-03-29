@@ -1,0 +1,10 @@
+# name: test/sql/function/string/test_compress.test
+# description: Test the COMPRESS function
+# group: [string]
+
+query III
+select COMPRESS(STRINGTOUTF8('BIG TEST STRING TEST STRING!!!!!!')), COMPRESS(''), COMPRESS(NULL)
+----
+01210d424947205445535420535452494ee0040b00212000012121
+0000
+null
