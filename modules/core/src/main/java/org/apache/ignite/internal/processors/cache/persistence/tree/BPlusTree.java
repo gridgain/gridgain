@@ -5957,7 +5957,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
          * Last read value from {@link #fillFromBuffer0(long, BPlusIO, int, int)}, used to advance the cursor in
          * {@link #reinitialize()}.
          */
-        private T nextLowerBound;
+        private L nextLowerBound;
 
         /** */
         private final TreeRowClosure<L, T> c;
@@ -5973,6 +5973,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             this.c = c;
             this.x = x;
+            this.nextLowerBound = lowerBound;
         }
 
         /** {@inheritDoc} */
@@ -6051,14 +6052,14 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return true;
             }
 
-            T lastRow = clearLastRow();
+            L lastRow = clearLastRow();
 
             row = 0;
 
             if (lastRow == null) {
                 lastRow = nextLowerBound;
 
-                assert lastRow != null;
+                assert lastRow != null || nextPageId == 0L;
             }
 
             return nextPage(lastRow);
