@@ -6010,7 +6010,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 nextLowerBound = getRow(io, pageAddr, cnt - 1, x);
 
                 return false;
-            }
+            } else
+                nextLowerBound = rows[resCnt - 1];
 
             GridArrays.clearTail(rows, resCnt);
 
@@ -6052,17 +6053,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return true;
             }
 
-            L lastRow = clearLastRow();
+            clearLastRow();
 
             row = 0;
 
-            if (lastRow == null) {
-                lastRow = nextLowerBound;
+            assert nextLowerBound != null || nextPageId == 0L;
 
-                assert lastRow != null || nextPageId == 0L;
-            }
-
-            return nextPage(lastRow);
+            return nextPage(nextLowerBound);
         }
 
         /**
