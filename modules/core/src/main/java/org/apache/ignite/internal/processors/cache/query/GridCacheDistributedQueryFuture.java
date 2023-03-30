@@ -101,7 +101,7 @@ public class GridCacheDistributedQueryFuture<K, V, R> extends GridCacheQueryFutu
             final GridCacheQueryRequest req = new GridCacheQueryRequest(cctx.cacheId(),
                 reqId,
                 fields(),
-                qryMgr.queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 cctx.deploymentEnabled());
 
             // Process cancel query directly (without sending) for local node,

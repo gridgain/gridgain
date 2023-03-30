@@ -560,7 +560,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.query().keepBinary(),
                 qry.query().subjectId(),
                 qry.query().taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 mvccSnapshot,
                 // Force deployment anyway if scan query is used.
                 cctx.deploymentEnabled() || deployFilterOrTransformer,
@@ -693,7 +693,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.keepBinary(),
                 qry.subjectId(),
                 qry.taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 // Force deployment anyway if scan query is used.
                 cctx.deploymentEnabled() || (qry.scanFilter() != null && cctx.gridDeploy().enabled()),
                 qry.isDataPageScanEnabled());
@@ -761,7 +761,7 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
                 qry.query().keepBinary(),
                 qry.query().subjectId(),
                 qry.query().taskHash(),
-                queryTopologyVersion(),
+                cctx.affinity().affinityTopologyVersion(),
                 null,
                 cctx.deploymentEnabled(),
                 qry.query().isDataPageScanEnabled());
