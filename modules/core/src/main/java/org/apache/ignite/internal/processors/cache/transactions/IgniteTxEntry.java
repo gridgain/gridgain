@@ -959,36 +959,6 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
     }
 
     /**
-     * Prepares this entry to unmarshall. In particular, this method initialize a cache context.
-     *
-     * @param ctx Cache context.
-     * @param deploymentId Deployment identifier that is used to validate a cache context.
-     *               If this parameter is {@code null} then validation will be skipped.
-     * @param near Near flag.
-     * @throws IgniteCheckedException If un-marshalling failed.
-     */
-    public void prepareUnmarshal(
-        GridCacheSharedContext<?, ?> ctx,
-        IgniteUuid deploymentId,
-        boolean near
-    ) throws IgniteCheckedException {
-        if (this.ctx == null) {
-            GridCacheContext<?, ?> cacheCtx = ctx.cacheContext(cacheId);
-
-            if (cacheCtx == null || (deploymentId != null && Objects.equals(deploymentId, cacheCtx.dynamicDeploymentId())))
-                throw new CacheInvalidStateException(
-                    "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
-
-            if (cacheCtx.isNear() && !near)
-                cacheCtx = cacheCtx.near().dht().context();
-            else if (!cacheCtx.isNear() && near)
-                cacheCtx = cacheCtx.dht().near().context();
-
-            this.ctx = cacheCtx;
-        }
-    }
-
-    /**
      * Unmarshalls entry.
      *
      * @param ctx Cache context.
@@ -1002,8 +972,20 @@ public class IgniteTxEntry implements GridPeerDeployAware, Message {
         ClassLoader clsLdr
     ) throws IgniteCheckedException {
 
-        if (this.ctx == null)
-            prepareUnmarshal(ctx, null, near);
+        if (this.ctx == null) {
+            GridCacheContext<?, ?> cacheCtx = ctx.cacheContext(cacheId);
+
+            if (cacheCtx == null || (deploymentId != null && !Objects.equals(deploymentId, cacheCtx.dynamicDeploymentId())))
+                throw new CacheInvalidStateException(
+                    "Failed to perform cache operation (cache is stopped), cacheId=" + cacheId);
+
+            if (cacheCtx.isNear() && !near)
+                cacheCtx = cacheCtx.near().dht().context();
+            else if (!cacheCtx.isNear() && near)
+                cacheCtx = cacheCtx.dht().near().context();
+
+            this.ctx = cacheCtx;
+        }
 
         CacheObjectValueContext coctx = this.ctx.cacheObjectContext();
 
