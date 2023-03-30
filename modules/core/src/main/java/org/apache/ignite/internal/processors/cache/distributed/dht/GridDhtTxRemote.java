@@ -353,6 +353,7 @@ public class GridDhtTxRemote extends GridDistributedTxRemoteAdapter {
         GridDhtCacheEntry cached = cacheCtx.dht().entryExx(key.key(), topologyVersion());
 
         IgniteTxEntry txEntry = new IgniteTxEntry(cacheCtx,
+            cacheCtx.dynamicDeploymentId(),
             this,
             op,
             val,

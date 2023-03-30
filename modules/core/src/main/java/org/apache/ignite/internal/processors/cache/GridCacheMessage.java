@@ -453,8 +453,11 @@ public abstract class GridCacheMessage implements Message {
         assert ctx != null;
 
         if (txEntries != null) {
-            for (IgniteTxEntry e : txEntries)
+            for (IgniteTxEntry e : txEntries) {
+                e.prepareUnmarshal(ctx, deploymentId(), near);
+
                 e.unmarshal(ctx, near, ldr);
+            }
         }
     }
 
