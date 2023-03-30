@@ -23,8 +23,14 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheEntryProcessor;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -33,13 +39,16 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicFullUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearSingleGetRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPrepareRequest;
+import org.apache.ignite.internal.processors.cache.query.GridCacheQueryRequest;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiInClosure;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -50,6 +59,9 @@ import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
+/**
+ * Tests handling of ppending cache messages/operations when the required cache was re created.
+ * */
 public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
     /** Cache name to be used in tests. */
     private static final String CACHE_NAME = "test-recreate-cache";
@@ -57,10 +69,6 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setFailureDetectionTimeout(600_000);
-        cfg.setClientFailureDetectionTimeout(600_000);
-        cfg.setMetricsLogFrequency(15_000);
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
@@ -92,6 +100,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testAtomicPutAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -100,6 +111,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             (cache, keys) -> cache.put(keys.get(0), 42));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testAtomicGetAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -108,6 +122,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             (cache, keys) -> cache.get(keys.get(0)));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testAtomicPutAllAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -122,6 +139,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testAtomicGetAllAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -136,6 +156,34 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testImplicitInvokeAndCacheRecreate() throws Exception {
+        testCacheOperationAndCacheRecreate(
+            ATOMIC,
+            GridNearAtomicAbstractUpdateRequest.class,
+            (cache, keys) -> {
+                cache.invoke(keys.get(0), new CacheEntryProcessor<Integer, Integer, Integer>() {
+                    @Override public Integer process(
+                        MutableEntry<Integer, Integer> entry,
+                        Object... arguments
+                    ) throws EntryProcessorException {
+                        if (entry.exists())
+                            return entry.getValue();
+
+                        entry.setValue(123);
+
+                        return entry.getValue();
+                    }
+                });
+            });
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testImplicitOptimisticTxPutAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -144,6 +192,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             (cache, keys) -> cache.put(keys.get(0), 42));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testImplicitOptimisticTxGetAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -152,6 +203,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             (cache, keys) -> cache.get(keys.get(0)));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testImplicitOptimisticTxPutAllAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -166,6 +220,34 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testImplicitTxInvokeAndCacheRecreate() throws Exception {
+        testCacheOperationAndCacheRecreate(
+            TRANSACTIONAL,
+            GridNearTxPrepareRequest.class,
+            (cache, keys) -> {
+                cache.invoke(keys.get(0), new CacheEntryProcessor<Integer, Integer, Integer>() {
+                    @Override public Integer process(
+                        MutableEntry<Integer, Integer> entry,
+                        Object... arguments
+                    ) throws EntryProcessorException {
+                        if (entry.exists())
+                            return entry.getValue();
+
+                        entry.setValue(123);
+
+                        return entry.getValue();
+                    }
+                });
+            });
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testPessimisticTxPutAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -180,6 +262,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testPessimisticTxPutAllAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -198,6 +283,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
             });
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testPessimisticTxGetAndCacheRecreate() throws Exception {
         testCacheOperationAndCacheRecreate(
@@ -208,6 +296,28 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
                     cache.get(keys.get(0));
 
                     tx.commit();
+                }
+            });
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testAtomicScanAndCacheRecreate() throws Exception {
+        testCacheOperationAndCacheRecreate(
+            ATOMIC,
+            GridCacheQueryRequest.class,
+            (cache, keys) -> {
+                ScanQuery<Integer, Integer> scanQuery = new ScanQuery<>();
+                scanQuery.setPageSize(1);
+
+                try (QueryCursor qry = cache.query(scanQuery)) {
+                    for (Object o : qry.getAll()) {
+                        IgniteBiTuple<Integer, Integer> tuple = (IgniteBiTuple<Integer, Integer>)o;
+
+                        throw new RuntimeException("Succesfully read unexpected value [k=" + tuple.getKey() + ", v=" + tuple.getValue());
+                    }
                 }
             });
     }
@@ -227,11 +337,13 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         IgniteEx g0 = grid(0);
         IgniteEx client = grid(1);
 
+        // Initial loading.
         IgniteCache<Integer, Integer> clientCache = createCache(client, mode);
-
-        awaitPartitionMapExchange(true, true, null);
+        for (int i = 0; i < 100; i++)
+            clientCache.put(i, i);
 
         TestRecordingCommunicationSpi clientSpi = TestRecordingCommunicationSpi.spi(client);
+        TestRecordingCommunicationSpi crdSpi = TestRecordingCommunicationSpi.spi(g0);
 
         // Block cache operation.
         clientSpi.blockMessages((node, msg) -> {
@@ -241,6 +353,14 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
                 if (msg0.cacheId() == 0 || msg0.cacheId() == CU.cacheId(CACHE_NAME))
                     return true;
             }
+
+            return false;
+        });
+
+        // Block notifying the client node about upcoming changes.
+        crdSpi.blockMessages((node, msg) -> {
+            if (msg instanceof GridDhtPartitionsFullMessage)
+                return true;
 
             return false;
         });
@@ -260,6 +380,10 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         // Create a new cache with the same name.
         IgniteCache newCache = createCache(g0, mode);
 
+        // Upload new values.
+        for (int i = 0; i < 100; i++)
+            newCache.put(i, i + 1_000);
+
         // Unblock cache operation.
         clientSpi.stopBlock();
 
@@ -270,6 +394,9 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
         }
         catch (Exception e) {
             assertTrue("Unexpected exception [err=" + e + ']', X.hasCause(e, CacheException.class));
+        }
+        finally {
+            crdSpi.stopBlock();
         }
     }
 
@@ -285,7 +412,8 @@ public class IgniteCacheRecreateTest extends GridCommonAbstractTest {
 
         cfg.setBackups(1)
             .setReadFromBackup(false)
-            .setAtomicityMode(mode);
+            .setAtomicityMode(mode)
+            .setAffinity(new RendezvousAffinityFunction(false, 32));
 
         return ignite.getOrCreateCache(cfg);
     }
