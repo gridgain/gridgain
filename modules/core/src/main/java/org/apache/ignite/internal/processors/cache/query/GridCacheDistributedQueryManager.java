@@ -104,11 +104,11 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
 
         assert cctx.config().getCacheMode() != LOCAL;
 
-        cctx.io().addCacheHandler(cctx.cacheId(), GridCacheQueryRequest.class, new CI2<UUID, GridCacheQueryRequest>() {
-            @Override public void apply(UUID nodeId, GridCacheQueryRequest req) {
-                processQueryRequest(nodeId, req);
-            }
-        });
+        cctx.io().addCacheHandler(
+            cctx.cacheId(),
+            cctx.startTopologyVersion(),
+            GridCacheQueryRequest.class,
+            (CI2<UUID, GridCacheQueryRequest>)this::processQueryRequest);
 
         lsnr = new GridLocalEventListener() {
             @Override public void onEvent(Event evt) {
