@@ -102,6 +102,8 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE;
+import static org.apache.ignite.internal.IgniteFeatures.CHECK_CACHE_GENERATION;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
 import static org.apache.ignite.internal.util.IgniteUtils.nl;
 
@@ -320,7 +322,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      * @param plc Message policy.
      */
     private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, byte plc) {
-        handleMessage(nodeId, cacheMsg, cacheMsg.cacheGroupMessage() ? grpHandlers : cacheHandlers, plc);
+        handleMessage(nodeId, cacheMsg, cacheMsg.cacheGroupMessage() ? grpHandlers : cacheHandlers, plc, false);
     }
 
     /**
@@ -328,9 +330,11 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      * @param cacheMsg Message.
      * @param msgHandlers Message handlers.
      * @param plc Message policy.
+     * @param skipTopologyCheck If {@code true} then the incoming message will be handled regardless of the start topology version
+     *                         defined in a message handler.
      */
     @SuppressWarnings("unchecked")
-    private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, MessageHandlers msgHandlers, byte plc) {
+    private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, MessageHandlers msgHandlers, byte plc, boolean skipTopologyCheck) {
         Lock lock = rw.readLock();
 
         lock.lock();
@@ -348,7 +352,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                 IndexedClassHandler cacheClsHandlers = idxClsHandlers0.get(cacheMsg.handlerId());
 
                 if (cacheClsHandlers != null &&
-                    (NONE.equals(msgTopVer) || !msgTopVer.before(cacheClsHandlers.startTopVer)))
+                    (skipTopologyCheck || NONE.equals(msgTopVer) || !msgTopVer.before(cacheClsHandlers.startTopVer)))
                     c = cacheClsHandlers.hndls[msgIdx];
             }
 
@@ -356,12 +360,12 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                 RegularClassHandler rHnd = msgHandlers.clsHandlers.get(
                         new ListenerKey(cacheMsg.handlerId(), cacheMsg.getClass()));
 
-                if (rHnd != null && (NONE.equals(msgTopVer) || !msgTopVer.before(rHnd.startTopVer)))
+                if (rHnd != null && (skipTopologyCheck || NONE.equals(msgTopVer) || !msgTopVer.before(rHnd.startTopVer)))
                     c = rHnd.hnd;
             }
 
             if (c == null) {
-                if (processMissedHandler(nodeId, cacheMsg))
+                if (processMissedHandler(nodeId, cacheMsg, msgHandlers, plc, skipTopologyCheck))
                     return;
 
                 IgniteLogger log = cacheMsg.messageLogger(cctx);
@@ -412,9 +416,19 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
     /**
      * @param nodeId Node ID.
      * @param cacheMsg Message.
+     * @param msgHandlers Message handlers.
+     * @param plc Message policy.
+     * @param skipTopologyCheck If {@code true} then the incoming message will be handled regardless of the start topology version
+     *                         defined in a message handler.
      * @return {@code True} if message processed.
      */
-    private boolean processMissedHandler(UUID nodeId, GridCacheMessage cacheMsg) {
+    private boolean processMissedHandler(
+        UUID nodeId,
+        GridCacheMessage cacheMsg,
+        MessageHandlers msgHandlers,
+        byte plc,
+        boolean skipTopologyCheck
+    ) {
         // It is possible to receive reader update after client near cache was closed.
         if (cacheMsg instanceof GridDhtAtomicAbstractUpdateRequest) {
             GridDhtAtomicAbstractUpdateRequest req = (GridDhtAtomicAbstractUpdateRequest)cacheMsg;
@@ -451,6 +465,15 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                         req.nearNodeId(),
                         GridIoPolicy.SYSTEM_POOL);
                 }
+
+                return true;
+            }
+        }
+
+        // Due to a bug, GridCacheQueryRequest messages were always mapped to the cache start topology version instead of an actual one.
+        if (cacheMsg instanceof GridCacheQueryRequest && !skipTopologyCheck) {
+            if (!nodeSupports(cctx.kernalContext(), cctx.discovery().node(nodeId), CHECK_CACHE_GENERATION)) {
+                handleMessage(nodeId, cacheMsg, msgHandlers, plc, true);
 
                 return true;
             }
