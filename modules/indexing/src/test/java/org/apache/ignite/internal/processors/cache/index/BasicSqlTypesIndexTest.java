@@ -429,17 +429,17 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testPredicateAndGroupBy() {
-        execSql("CREATE TABLE T1 (id INT PRIMARY KEY, val1 INT, val2 INT)");
+        execSql("CREATE TABLE T (id INT PRIMARY KEY, val1 INT, val2 INT)");
 
-        execSql("CREATE INDEX IDX_ON_PREDICATE ON T1(val1)");
-        execSql("CREATE INDEX IDX_ON_GRP ON T1(val2)");
+        execSql("CREATE INDEX T_IDX_ON_PREDICATE ON T(val1)");
+        execSql("CREATE INDEX T_IDX_ON_GRP ON T(val2)");
 
         // Use predicate index
-        List<List<?>> res = execSql("EXPLAIN SELECT * FROM T1 WHERE T1.val1 = 1 GROUP BY T1.val2");
+        List<List<?>> res = execSql("EXPLAIN SELECT * FROM T WHERE T.val1 = 1 GROUP BY T.val2");
 
         String explainPlan = (String)res.get(0).get(0);
 
-        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
+        assertTrue(explainPlan, explainPlan.contains("T_IDX_ON_PREDICATE"));
     }
 
     /**
