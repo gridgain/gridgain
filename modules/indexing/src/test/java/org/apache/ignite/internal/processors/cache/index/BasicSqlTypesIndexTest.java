@@ -361,7 +361,7 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
      *     hint index must be used.
      * </li>
      * <li>
-     *     <b>Hint</b> is empty - prefer index which contains group by columns.
+     *     <b>Hint</b> is empty - prefer non scan index, otherwise index which contains group by columns.
      * </li>
      */
     @Test
@@ -392,14 +392,14 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
 
-        // If no hint - choose closer to group by conditions
+        // If no hint - choose non scan index
         res = execSql("EXPLAIN SELECT T1.id FROM T1 INNER JOIN T2 ON T1.id = T2.id " +
             "WHERE T1.val1 = 1 AND T2.val1 = 2 " +
             "GROUP BY T1.val2");
 
         explainPlan = (String)res.get(0).get(0);
 
-        assertTrue(explainPlan, explainPlan.contains("IDX_ON_GRP"));
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
 
         execSql("DROP INDEX IDX_ON_GRP");
 
@@ -422,6 +422,24 @@ public class BasicSqlTypesIndexTest extends AbstractIndexingCommonTest {
         explainPlan = (String)res.get(0).get(0);
 
         assertTrue(explainPlan, explainPlan.contains("IDX_ON_GRP"));
+    }
+
+    /**
+     * Test query from one table with where and group by statements.
+     */
+    @Test
+    public void testPredicateAndGroupBy() {
+        execSql("CREATE TABLE T1 (id INT PRIMARY KEY, val1 INT, val2 INT)");
+
+        execSql("CREATE INDEX IDX_ON_PREDICATE ON T1(val1)");
+        execSql("CREATE INDEX IDX_ON_GRP ON T1(val2)");
+
+        // Use predicate index
+        List<List<?>> res = execSql("EXPLAIN SELECT * FROM T1 WHERE T1.val1 = 1 GROUP BY T1.val2");
+
+        String explainPlan = (String)res.get(0).get(0);
+
+        assertTrue(explainPlan, explainPlan.contains("IDX_ON_PREDICATE"));
     }
 
     /**
