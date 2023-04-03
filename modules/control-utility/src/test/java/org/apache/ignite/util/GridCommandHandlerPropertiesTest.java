@@ -233,7 +233,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
         Method nextCheckpointIntervalMtd = Checkpointer.class.getDeclaredMethod("nextCheckpointInterval");
         nextCheckpointIntervalMtd.setAccessible(true);
 
-        return (long) (Long) nextCheckpointIntervalMtd.invoke(database.getCheckpointer());
+        return (Long)nextCheckpointIntervalMtd.invoke(database.getCheckpointer());
     }
 
     /**
