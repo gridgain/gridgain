@@ -17,18 +17,17 @@
 package org.apache.ignite.util;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.TimeZone;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkpointer;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedProperty;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -223,17 +222,12 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
      *
      * @param ignite Ignite instance from which to get the interval.
      * @return Next checkpoint interval.
-     * @throws ReflectiveOperationException If something goes wrong.
      */
-    private static long nextCpInterval(IgniteEx ignite)
-        throws ReflectiveOperationException {
+    private static long nextCpInterval(IgniteEx ignite) throws Exception {
         GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager) ignite.context()
             .cache().context().database();
 
-        Method nextCheckpointIntervalMtd = Checkpointer.class.getDeclaredMethod("nextCheckpointInterval");
-        nextCheckpointIntervalMtd.setAccessible(true);
-
-        return (Long)nextCheckpointIntervalMtd.invoke(database.getCheckpointer());
+        return GridTestUtils.invoke(database.getCheckpointer(), "nextCheckpointInterval");
     }
 
     /**
@@ -272,9 +266,9 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
     /**
      * Makes sure that next CP interval is positive on all started Ignite instances.
      *
-     * @throws ReflectiveOperationException If something goes wrong.
+     * @throws Exception If something goes wrong.
      */
-    private static void assertThatNextCpIntervalIsPositive() throws ReflectiveOperationException {
+    private static void assertThatNextCpIntervalIsPositive() throws Exception {
         for (Ignite ign : G.allGrids()) {
             if (ign.configuration().isClientMode())
                 continue;
