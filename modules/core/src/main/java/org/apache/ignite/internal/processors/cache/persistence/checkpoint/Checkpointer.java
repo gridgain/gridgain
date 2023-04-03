@@ -156,6 +156,9 @@ public class Checkpointer extends GridWorker {
     /** The number of IO-bound threads which will write pages to disk. */
     private final int checkpointWritePageThreads;
 
+    /** Checkpoint frequency override (ms). */
+    private final Supplier<Long> cpFreqOverride;
+
     /** Checkpoint frequency deviation. */
     private final Supplier<Integer> cpFreqDeviation;
 
@@ -194,6 +197,7 @@ public class Checkpointer extends GridWorker {
      * @param factory Page writer factory.
      * @param checkpointFrequency Checkpoint frequency.
      * @param checkpointWritePageThreads The number of IO-bound threads which will write pages to disk.
+     * @param cpFreqOverride Override of checkpoint frequency (ms) via a distributed property.
      * @param cpFreqDeviation Deviation of checkpoint frequency.
      */
     Checkpointer(
@@ -210,6 +214,7 @@ public class Checkpointer extends GridWorker {
         CheckpointPagesWriterFactory factory,
         long checkpointFrequency,
         int checkpointWritePageThreads,
+        Supplier<Long> cpFreqOverride,
         Supplier<Integer> cpFreqDeviation
     ) {
         super(gridName, name, logger.apply(Checkpointer.class), workersRegistry);
@@ -224,6 +229,7 @@ public class Checkpointer extends GridWorker {
         this.checkpointWritePageThreads = Math.max(checkpointWritePageThreads, 1);
         this.checkpointWritePagesPool = initializeCheckpointPool();
         this.cpFreqDeviation = cpFreqDeviation;
+        this.cpFreqOverride = cpFreqOverride;
 
         scheduledCp = new CheckpointProgressImpl(nextCheckpointInterval());
     }
@@ -308,15 +314,32 @@ public class Checkpointer extends GridWorker {
      * @return Next checkpoint interval.
      */
     private long nextCheckpointInterval() {
+        long effectiveCheckpointFreq = effectiveCheckpointFreq();
+
         Integer deviation = cpFreqDeviation.get();
 
         if (deviation == null || deviation == 0)
-            return checkpointFreq;
+            return effectiveCheckpointFreq;
 
-        long startDelay = ThreadLocalRandom.current().nextLong(U.ensurePositive(U.safeAbs(checkpointFreq * deviation) / 100, 1))
-            - U.ensurePositive(U.safeAbs(checkpointFreq * deviation) / 200, 1);
+        long bound = U.ensurePositive(U.safeAbs(effectiveCheckpointFreq * deviation) / 100, 1);
 
-        return U.safeAbs(checkpointFreq + startDelay);
+        long startDelay = ThreadLocalRandom.current().nextLong(bound)
+            - U.ensurePositive(U.safeAbs(effectiveCheckpointFreq * deviation) / 200, 1);
+
+        return U.safeAbs(effectiveCheckpointFreq + startDelay);
+    }
+
+    /**
+     * Returns effective checkpoint frequency (in ms) considering both the value set in the configuration and
+     * the dynamic override. If the override exists and has positive value, it's used, otherwise the configured
+     * value is returned.
+     *
+     * @return Effective checkpoint frequency (in ms).
+     */
+    private long effectiveCheckpointFreq() {
+        Long freqOverride = cpFreqOverride.get();
+
+        return freqOverride != null && freqOverride > 0 ? freqOverride : checkpointFreq;
     }
 
     /**

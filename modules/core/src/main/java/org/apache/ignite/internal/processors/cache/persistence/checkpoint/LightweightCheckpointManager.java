@@ -156,6 +156,7 @@ public class LightweightCheckpointManager {
             checkpointPagesWriterFactory,
             persistenceCfg.getCheckpointFrequency(),
             persistenceCfg.getCheckpointThreads(),
+            () -> null,
             () -> 0
         );
 
