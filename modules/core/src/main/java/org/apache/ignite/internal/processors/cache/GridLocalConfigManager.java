@@ -24,10 +24,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
@@ -40,6 +44,7 @@ import org.apache.ignite.lang.IgniteUuid;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
+import static org.apache.ignite.internal.processors.query.QueryUtils.normalizeObjectName;
 
 /**
  * Responsible for restoring local cache configurations (both from static configuration and persistence).
@@ -265,6 +270,8 @@ public class GridLocalConfigManager {
 
         CU.validateCacheName(cacheName);
 
+        validateIncomingConfiguration(caches, cfg);
+
         cacheProcessor.cloneCheckSerializable(cfg);
 
         // Initialize defaults.
@@ -295,6 +302,58 @@ public class GridLocalConfigManager {
                 cfg.setDataRegionName(cacheProcessor.context().database().systemDateRegionName());
 
             addStoredCache(caches, cacheData, cacheName, cacheType, false, true);
+        }
+    }
+
+    /**
+     * Validates already processed cache configuration instead newly defined.
+     *
+     * @param caches Already processed caches.
+     * @param cfg Currently processed cache config.
+     */
+    private void validateIncomingConfiguration(
+        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
+        CacheConfiguration<?, ?> cfg
+    ) {
+        Map<String, String> idxNamesPerCache = new HashMap<>();
+
+        String schemaName = cfg.getSqlSchema();
+
+        for (CacheJoinNodeDiscoveryData.CacheInfo info : caches.values()) {
+            Collection<QueryEntity> entrs = info.cacheData().config().getQueryEntities();
+            String cacheName = info.cacheData().config().getName();
+            String cacheSchemaName = info.cacheData().config().getSqlSchema();
+
+            if (!Objects.equals(cacheSchemaName, schemaName) || CU.isSystemCache(cacheName))
+                continue;
+
+            for (QueryEntity ent : entrs) {
+                Collection<QueryIndex> idxs = ent.getIndexes();
+
+                for (QueryIndex idx : idxs)
+                    idxNamesPerCache.put(idx.getName(), cacheName);
+            }
+        }
+
+        if (idxNamesPerCache.isEmpty())
+            return;
+
+        Collection<QueryEntity> entrs = cfg.getQueryEntities();
+
+        for (QueryEntity ent : entrs) {
+            Collection<QueryIndex> idxs = ent.getIndexes();
+
+            for (QueryIndex idx : idxs) {
+                String normalizedIdxName = normalizeObjectName(idx.getName(), false);
+
+                String cacheName = idxNamesPerCache.get(normalizedIdxName);
+
+                if (cacheName != null) {
+                    throw new IgniteException("Duplicate index name for [cache=" + cfg.getName() +
+                        ", idxName=" + idx.getName() + "], an equal index name is already configured for [cache=" +
+                        cacheName + ']');
+                }
+            }
         }
     }
 
