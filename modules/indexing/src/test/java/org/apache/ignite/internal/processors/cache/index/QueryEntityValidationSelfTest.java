@@ -27,7 +27,10 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
 /**
@@ -37,9 +40,19 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
 
+    /** Logger listener. */
+    private static ListeningTestLogger srvLog;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        srvLog = new ListeningTestLogger(log);
+
         startGrid(0);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName).setGridLogger(srvLog);
     }
 
     /**
@@ -278,5 +291,33 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
 
             return null;
         }, CacheException.class, "Property with name 'Name3' already exists");
+    }
+
+    /**
+     * Test class for sql queryable test key without annotated fields.
+     */
+    private static class TestKeyNoAnnotatedFields {
+        /**
+         * Non-annotated field.
+         */
+        int keyField;
+    }
+
+    /**
+     * Validates a warning is logged when query entity key is potentially misconfigured.
+     */
+    @Test
+    public void testNonAnnotatedField() {
+        CacheConfiguration<TestKeyNoAnnotatedFields, TestValue> ccfg = new CacheConfiguration<>();
+        ccfg.setName(CACHE_NAME);
+        ccfg.setIndexedTypes(TestKeyNoAnnotatedFields.class, TestValue.class);
+
+        LogListener logListener = LogListener.matches("Key of user type has no fields configured for table=TESTVALUE").build();
+
+        srvLog.registerListener(logListener);
+
+        grid(0).createCache(ccfg);
+
+        assertTrue(logListener.check());
     }
 }
