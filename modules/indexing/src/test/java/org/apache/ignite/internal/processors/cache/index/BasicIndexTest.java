@@ -48,7 +48,6 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.client.Person;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1938,22 +1937,36 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         igniteCfg.setPeerClassLoadingEnabled(true);
 
-        CacheConfiguration<Integer, Person> c1 = new CacheConfiguration<>("c1");
+        CacheConfiguration<Integer, String> c1 = new CacheConfiguration<>("c1");
 
-        c1.setIndexedTypes(Integer.class, Person.class);
+        c1.setIndexedTypes(Integer.class, String.class);
 
         c1.setSqlSchema("TEST_V1");
 
-        CacheConfiguration<Integer, Person> c2 = new CacheConfiguration<>("c2");
+        CacheConfiguration<Integer, String> c1custom = new CacheConfiguration<>("c1custom");
 
-        c2.setIndexedTypes(Integer.class, Person.class);
+        c1custom.setIndexedTypes(Integer.class, Person.class);
 
-        if (differentSchemas)
+        c1custom.setSqlSchema("TEST_V1");
+
+        CacheConfiguration<Integer, String> c2 = new CacheConfiguration<>("c2");
+
+        c2.setIndexedTypes(Integer.class, String.class);
+
+        CacheConfiguration<Integer, String> c2custom = new CacheConfiguration<>("c2custom");
+
+        c2custom.setIndexedTypes(Integer.class, Person.class);
+
+        if (differentSchemas) {
             c2.setSqlSchema("TEST_V2");
-        else
+            c2custom.setSqlSchema("TEST_V2");
+        }
+        else {
             c2.setSqlSchema("TEST_V1");
+            c2custom.setSqlSchema("TEST_V1");
+        }
 
-        igniteCfg.setCacheConfiguration(c1, c2);
+        igniteCfg.setCacheConfiguration(c1, c1custom, c2, c2custom);
 
         String id = UUID.randomUUID().toString();
 

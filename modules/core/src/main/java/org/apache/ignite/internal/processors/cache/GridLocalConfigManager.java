@@ -45,6 +45,7 @@ import org.apache.ignite.lang.IgniteUuid;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.query.QueryUtils.normalizeObjectName;
+import static org.apache.ignite.internal.processors.query.QueryUtils.normalizeSchemaName;
 
 /**
  * Responsible for restoring local cache configurations (both from static configuration and persistence).
@@ -317,7 +318,7 @@ public class GridLocalConfigManager {
     ) {
         Map<String, String> idxNamesPerCache = new HashMap<>();
 
-        String schemaName = cfg.getSqlSchema();
+        String schemaName = normalizeSchemaName(cfg.getName(), cfg.getSqlSchema());
 
         for (CacheJoinNodeDiscoveryData.CacheInfo info : caches.values()) {
             Collection<QueryEntity> entrs = info.cacheData().config().getQueryEntities();
