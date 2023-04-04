@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
+import java.util.logging.Logger;
 import org.gridgain.internal.h2.expression.ParameterInterface;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.message.Trace;
@@ -20,6 +21,8 @@ import org.gridgain.internal.h2.result.ResultInterface;
 import org.gridgain.internal.h2.result.ResultWithGeneratedKeys;
 import org.gridgain.internal.h2.result.ResultWithPaddedStrings;
 import org.gridgain.internal.h2.util.MathUtils;
+
+import static java.util.logging.Level.SEVERE;
 
 /**
  * Represents a SQL statement. This object is only used on the server side.
@@ -216,6 +219,9 @@ public abstract class Command implements CommandInterface {
                         database.shutdownImmediately();
                         throw DbException.convert(e);
                     } catch (Throwable e) {
+                        // UA is using default JavaLogger as grid-loger. We're trying to exploit this fact
+                        // and also use JUL, so next message should also go to same log file that is used by GG node
+                        if (ENABLE_H2_TRACE_LOGGING) getLogger().log(SEVERE, ">>> Tracing error", e);
                         throw DbException.convert(e);
                     }
                 }
@@ -239,6 +245,21 @@ public abstract class Command implements CommandInterface {
                 }
             }
         }
+    }
+
+    private static final boolean ENABLE_H2_TRACE_LOGGING = Boolean.parseBoolean(
+        System.getProperty("ENABLE_H2_TRACE_LOGGING", "false")
+    );
+
+    /**
+     * Lazy init for logger instance
+     */
+    private static class LogHolder {
+        private static final Logger INSTANCE = Logger.getLogger("h2-tracing");
+    }
+
+    private static Logger getLogger() {
+        return LogHolder.INSTANCE;
     }
 
     @Override
