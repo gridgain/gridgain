@@ -20,8 +20,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.dml.UpdatePlanBuilder;
@@ -29,6 +32,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 
 /**
  * Negative java API tests for dml queries (insert, merge, update).
@@ -78,6 +83,20 @@ public class IgniteCacheSqlDmlErrorSelfTest extends AbstractIndexingCommonTest {
         execute("INSERT INTO COMPOSITE (_key, _val) VALUES (?, ?)", new CompositeKey(), new CompositeValue());
         execute("INSERT INTO SIMPLE VALUES (146, 'default name')");
         execute("INSERT INTO SIMPLE_WRAPPED VALUES (147, 'default name')");
+    }
+
+    @Test
+    public void testCopyFromIsNotSupported() {
+        String path = resolveIgnitePath("/modules/indexing/src/test/resources/bulkload_ok.csv").getAbsolutePath();
+
+        GridTestUtils.assertThrows(
+            log(),
+            () -> execute("copy from '" + path + "' into Simple " +
+                " (_key, name)" +
+                " format csv"),
+            CacheException.class,
+            "COPY command is currently supported only in thin JDBC driver."
+        );
     }
 
     /**
