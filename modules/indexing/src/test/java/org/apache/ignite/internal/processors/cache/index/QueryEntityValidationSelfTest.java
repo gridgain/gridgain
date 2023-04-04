@@ -41,12 +41,10 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
     private static final String CACHE_NAME = "cache";
 
     /** Logger listener. */
-    private static ListeningTestLogger srvLog;
+    private static final ListeningTestLogger srvLog = new ListeningTestLogger(log);
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        srvLog = new ListeningTestLogger(log);
-
         startGrid(0);
     }
 
@@ -316,8 +314,14 @@ public class QueryEntityValidationSelfTest extends AbstractIndexingCommonTest {
 
         srvLog.registerListener(logListener);
 
-        grid(0).createCache(ccfg);
+        try {
+            grid(0).createCache(ccfg);
 
-        assertTrue(logListener.check());
+            assertTrue(logListener.check());
+        }
+        finally {
+            srvLog.clearListeners();
+            grid(0).destroyCache(CACHE_NAME);
+        }
     }
 }
