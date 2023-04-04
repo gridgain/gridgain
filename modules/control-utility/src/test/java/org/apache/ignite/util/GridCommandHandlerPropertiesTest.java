@@ -21,11 +21,13 @@ import java.util.Set;
 import java.util.TimeZone;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
-import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedProperty;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,6 +37,9 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UN
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.DFLT_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.HISTORICAL_REBALANCE_THRESHOLD_DMS_KEY;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Checks command line property commands.
@@ -139,7 +144,7 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
             if (ign.configuration().isClientMode())
                 continue;
 
-            SimpleDistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
+            DistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
                 "cpFreqDeviation");
 
             assertNull(cpFreqDeviation.get());
@@ -158,12 +163,119 @@ public class GridCommandHandlerPropertiesTest extends GridCommandHandlerClusterB
             if (ign.configuration().isClientMode())
                 continue;
 
-            SimpleDistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
+            DistributedProperty<Integer> cpFreqDeviation = U.field(((IgniteEx)ign).context().cache().context().database(),
                 "cpFreqDeviation");
 
             assertNotNull(cpFreqDeviation.get());
 
             assertEquals(20, cpFreqDeviation.get().intValue());
+        }
+    }
+
+    /**
+     * Checks the set command for property 'checkpoint.frequency'.
+     */
+    @Test
+    public void testPropertyCheckpointFrequency() throws Exception {
+        for (Ignite ign : G.allGrids()) {
+            if (ign.configuration().isClientMode())
+                continue;
+
+            DistributedProperty<Long> cpFreq = U.field(((IgniteEx)ign).context().cache().context().database(),
+                "cpFreq");
+
+            assertNull(cpFreq.get());
+        }
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", "checkpoint.frequency",
+                "--val", "21000"
+            )
+        );
+
+        for (Ignite ign : G.allGrids()) {
+            if (ign.configuration().isClientMode())
+                continue;
+
+            GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager) ((IgniteEx) ign).context()
+                .cache().context().database();
+
+            // Check that the value gets distributed to all nodes.
+            DistributedProperty<Long> cpFreq = U.field(database, "cpFreq");
+
+            assertNotNull(cpFreq.get());
+
+            assertEquals(21000L, cpFreq.get().longValue());
+
+            // Check that the dynamic property overrides the value from configuration in calculations.
+            long nextCpInterval = nextCpInterval((IgniteEx) ign);
+
+            assertEquals(21000L, nextCpInterval);
+        }
+    }
+
+    /**
+     * Calculates next CP interval (in ms).
+     *
+     * @param ignite Ignite instance from which to get the interval.
+     * @return Next checkpoint interval.
+     */
+    private static long nextCpInterval(IgniteEx ignite) throws Exception {
+        GridCacheDatabaseSharedManager database = (GridCacheDatabaseSharedManager) ignite.context()
+            .cache().context().database();
+
+        return GridTestUtils.invoke(database.getCheckpointer(), "nextCheckpointInterval");
+    }
+
+    /**
+     * Makes sure that non-positive values of 'checkpoint.frequency' are ignored for the purposes of next CP interval
+     * calculation.
+     */
+    @Test
+    public void nonPositiveCheckpointFrequencyOverrideIsIgnored() throws Exception {
+        // Check zero value.
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", "checkpoint.frequency",
+                "--val", "0"
+            )
+        );
+
+        assertThatNextCpIntervalIsPositive();
+
+        // Check negative value.
+
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(
+                "--property", "set",
+                "--name", "checkpoint.frequency",
+                "--val", "-1"
+            )
+        );
+
+        assertThatNextCpIntervalIsPositive();
+    }
+
+    /**
+     * Makes sure that next CP interval is positive on all started Ignite instances.
+     *
+     * @throws Exception If something goes wrong.
+     */
+    private static void assertThatNextCpIntervalIsPositive() throws Exception {
+        for (Ignite ign : G.allGrids()) {
+            if (ign.configuration().isClientMode())
+                continue;
+
+            long nextCpInterval = nextCpInterval((IgniteEx) ign);
+
+            assertThat(nextCpInterval, is(greaterThan(0L)));
         }
     }
 
