@@ -292,8 +292,6 @@ public class SslParametersTest extends GridCommonAbstractTest {
     @Test
     public void testConnectionFailBeforeSslHandshake() {
         ForkJoinPool.commonPool().execute(() -> {
-            // Open a server socket, accept client connection, close the socket
-            // before SSL handshake is completed.
             try (ServerSocket serverSocket = new ServerSocket(10901)) {
                 Socket socket = serverSocket.accept();
                 Thread.sleep(100);
@@ -313,6 +311,31 @@ public class SslParametersTest extends GridCommonAbstractTest {
                 () -> Ignition.startClient(cfg),
                 ClientConnectionException.class,
                 "SSL handshake failed (connection closed)."
+        );
+    }
+
+    @Test
+    public void testSslHandshakeTimeout() {
+        ForkJoinPool.commonPool().execute(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(10902)) {
+                Socket socket = serverSocket.accept();
+                Thread.sleep(500);
+                socket.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        ClientConfiguration cfg = getClientConfiguration()
+                .setAddresses("127.0.0.1:10902")
+                .setTimeout(100);
+
+        GridTestUtils.assertThrowsAnyCause(
+                null,
+                () -> Ignition.startClient(cfg),
+                ClientConnectionException.class,
+                "Timeout was reached before computation completed."
         );
     }
 

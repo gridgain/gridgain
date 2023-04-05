@@ -159,20 +159,17 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
 
             GridNioFuture<GridNioSession> sesFut = srv.createSession(ch, meta, false, null);
 
-            // TODO:
-            //  1. Add timeout.
-            //  2. Wait on both futures.
             if (sesFut.error() != null)
                 sesFut.get();
 
             if (sslHandshakeFut != null) {
-                if (timeout == 0)
+                if (timeout <= 0)
                     sslHandshakeFut.get();
                 else
                     sslHandshakeFut.get(timeout);
             }
 
-            GridNioSession ses = timeout == 0 ? sesFut.get() : sesFut.get(timeout);
+            GridNioSession ses = timeout <= 0 ? sesFut.get() : sesFut.get(timeout);
 
             return new GridNioClientConnection(ses, msgHnd, stateHnd);
         }
