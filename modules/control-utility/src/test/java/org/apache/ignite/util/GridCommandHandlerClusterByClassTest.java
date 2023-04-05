@@ -1579,6 +1579,22 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'default'");
     }
 
+    /** */
+    @Test
+    public void testCacheResetLostPartitionsAll() {
+        Ignite ignite = crd;
+
+        createCacheAndPreload(ignite, 100);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "reset_lost_partitions", "--all"));
+
+        final String out = testOut.toString();
+
+        assertContains(log, out, "No caches with LOST partition has been found found.");
+    }
+
     /**
      * @param h Handler.
      * @param validateClo Validate clo.
