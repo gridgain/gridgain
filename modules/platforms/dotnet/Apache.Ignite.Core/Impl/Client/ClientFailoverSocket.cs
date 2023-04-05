@@ -591,27 +591,34 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             _affinityTopologyVersion = affinityTopologyVersion;
 
-            if (_discoveryTopologyVersion < affinityTopologyVersion.Version && _enableDiscovery)
+            if (!_config.EnablePartitionAwareness && !_enableDiscovery)
             {
-                ThreadPool.QueueUserWorkItem(_ =>
+                return;
+            }
+
+            if (_discoveryTopologyVersion >= affinityTopologyVersion.Version)
+            {
+                return;
+            }
+
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
                 {
-                    try
+                    lock (_topologyUpdateLock)
                     {
-                        lock (_topologyUpdateLock)
+                        if (!_disposed)
                         {
-                            if (!_disposed)
-                            {
-                                DiscoverEndpoints();
-                                InitSocketMap();
-                            }
+                            DiscoverEndpoints();
+                            InitSocketMap();
                         }
                     }
-                    catch (Exception e)
-                    {
-                        _logger.Log(LogLevel.Error, e, "Failed to update topology information");
-                    }
-                });
-            }
+                }
+                catch (Exception e)
+                {
+                    _logger.Log(LogLevel.Error, e, "Failed to update topology information");
+                }
+            });
         }
 
         /// <summary>

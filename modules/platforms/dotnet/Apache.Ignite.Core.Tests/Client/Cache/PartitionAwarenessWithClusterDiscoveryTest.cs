@@ -18,12 +18,52 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System.Linq;
     using Apache.Ignite.Core.Client;
+    using NUnit.Framework;
 
     /// <summary>
     /// Tests Partition Awareness functionality combined with Cluster Discovery.
     /// </summary>
     public class PartitionAwarenessWithClusterDiscoveryTest : PartitionAwarenessTest
     {
+#if NETCOREAPP // TODO: IGNITE-15710
+        [Test]
+        public void CacheGet_NewNodeEnteredTopology_RequestIsRoutedToNewNode()
+        {
+            // Warm-up.
+            Assert.AreEqual(1, _cache.Get(1));
+
+            // Before topology change.
+            Assert.AreEqual(12, _cache.Get(12));
+            Assert.AreEqual(1, GetClientRequestGridIndex());
+
+            Assert.AreEqual(14, _cache.Get(14));
+            Assert.AreEqual(2, GetClientRequestGridIndex());
+
+            // After topology change.
+            var cfg = GetIgniteConfiguration();
+            cfg.AutoGenerateIgniteInstanceName = true;
+
+            using (Ignition.Start(cfg))
+            {
+                TestUtils.WaitForTrueCondition(() =>
+                {
+                    // Keys 12 and 14 belong to a new node now (-1).
+                    Assert.AreEqual(12, _cache.Get(12));
+                    if (GetClientRequestGridIndex() != -1)
+                    {
+                        return false;
+                    }
+
+                    Assert.AreEqual(14, _cache.Get(14));
+                    Assert.AreEqual(-1, GetClientRequestGridIndex());
+
+                    return true;
+                }, 6000);
+            }
+        }
+#endif
+
+
         protected override IgniteClientConfiguration GetClientConfiguration()
         {
             var cfg = base.GetClientConfiguration();
