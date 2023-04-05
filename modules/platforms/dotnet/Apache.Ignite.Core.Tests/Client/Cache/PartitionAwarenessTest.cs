@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Globalization;
     using System.Linq;
     using System.Net;
+    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Affinity.Rendezvous;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -601,6 +602,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cfg = base.GetClientConfiguration();
 
             cfg.EnablePartitionAwareness = true;
+            cfg.EnableClusterDiscovery = false;
             cfg.Endpoints.Add(string.Format("{0}:{1}", IPAddress.Loopback, IgniteClientConfiguration.DefaultPort + 1));
             cfg.Endpoints.Add(string.Format("{0}:{1}", IPAddress.Loopback, IgniteClientConfiguration.DefaultPort + 2));
 
