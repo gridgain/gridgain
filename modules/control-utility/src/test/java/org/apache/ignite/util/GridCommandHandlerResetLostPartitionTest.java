@@ -134,7 +134,6 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheTwo', id = -433499286), caches ([cacheTwo]).");
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheThree', id = 18573116), caches ([cacheThree]).");
 
-
         grid(0).cluster().active(false);
         grid(0).cluster().active(true);
 
