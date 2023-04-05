@@ -508,9 +508,12 @@ namespace Apache.Ignite.Core.Impl.Client
                 );
             }
 
-            if (!_config.EnablePartitionAwareness ||
-                !_config.EnableClusterDiscovery ||
-                !_socket.Features.HasFeature(ClientBitmaskFeature.ClusterGroupGetNodesEndpoints))
+            if (!_config.EnablePartitionAwareness || !_config.EnableClusterDiscovery)
+            {
+                _enableDiscovery = false;
+            }
+
+            if (_enableDiscovery && !_socket.Features.HasFeature(ClientBitmaskFeature.ClusterGroupGetNodesEndpoints))
             {
                 _enableDiscovery = false;
 
