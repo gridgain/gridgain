@@ -254,8 +254,10 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Gets or sets a value indicating whether Cluster Discovery should be enabled.
         /// <para />
-        /// Default is true: when <see cref="EnablePartitionAwareness"/> is also true,
-        /// Ignite client will maintain an actual list of all server nodes in the cluster and connect to all of them.
+        /// Default is true: Ignite will maintain an actual list of all server nodes in the cluster and connect to
+        /// them when necessary.
+        /// When <see cref="EnablePartitionAwareness"/> is false, this list of nodes will be used for failover.
+        /// When <see cref="EnablePartitionAwareness"/> is true, connections will be established to all known nodes.
         /// <para />
         /// When false: Ignite client will connect only to nodes in the <see cref="Endpoints"/> list.
         /// </summary>

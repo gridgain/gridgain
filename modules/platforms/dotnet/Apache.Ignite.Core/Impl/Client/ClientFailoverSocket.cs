@@ -508,7 +508,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 );
             }
 
-            if (!_config.EnablePartitionAwareness || !_config.EnableClusterDiscovery)
+            if (!_config.EnableClusterDiscovery)
             {
                 _enableDiscovery = false;
             }
@@ -591,7 +591,7 @@ namespace Apache.Ignite.Core.Impl.Client
         {
             _affinityTopologyVersion = affinityTopologyVersion;
 
-            if (_discoveryTopologyVersion < affinityTopologyVersion.Version &&_config.EnablePartitionAwareness)
+            if (_discoveryTopologyVersion < affinityTopologyVersion.Version && _enableDiscovery)
             {
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
