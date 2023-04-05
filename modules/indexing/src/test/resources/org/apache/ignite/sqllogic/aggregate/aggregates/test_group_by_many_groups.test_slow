@@ -1,0 +1,20 @@
+# name: test/sql/aggregate/aggregates/test_group_by_many_groups.test_slow
+# description: Test GROUP BY with many groups
+# group: [aggregates]
+
+#CREATE TABLE ... AS ... syntax is not supported
+#statement ok
+#CREATE TABLE integers AS SELECT x AS i, 1 AS j FROM table(system_range(0, 9999, 1)) UNION ALL SELECT x AS i, 2 j FROM table(system_range(0, 9999, 1));
+
+statement ok
+CREATE TABLE integers(i int, j int)
+
+statement ok
+INSERT INTO integers SELECT x AS i, 1 AS j FROM system_range(0, 9999, 1) UNION ALL SELECT x AS i, 2 j FROM system_range(0, 9999, 1)
+
+query RR
+SELECT SUM(i), SUM(sums) FROM (SELECT i, SUM(j) AS sums FROM integers GROUP BY i) tbl1
+----
+49995000
+30000
+

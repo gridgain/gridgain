@@ -1,0 +1,9 @@
+# name: test/sql/function/string/test_char_length.test
+# description: Just simple test to check support of CHAR_LENGTH function.
+# group: [string]
+# [ignore] 32 bit unicode characters not supported.
+
+query T
+SELECT char_length('🦆')
+----
+1
