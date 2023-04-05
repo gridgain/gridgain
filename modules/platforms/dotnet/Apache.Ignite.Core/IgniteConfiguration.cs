@@ -1665,7 +1665,7 @@ namespace Apache.Ignite.Core
         /// Time interval between MVCC vacuum runs in milliseconds.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumFrequency)]
-        [IgniteExperimentalAttribute]
+        [IgniteExperimental]
         public long MvccVacuumFrequency
         {
             get { return _mvccVacuumFreq ?? DefaultMvccVacuumFrequency; }
@@ -1678,7 +1678,7 @@ namespace Apache.Ignite.Core
         /// Number of MVCC vacuum threads.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumThreadCount)]
-        [IgniteExperimentalAttribute]
+        [IgniteExperimental]
         public int MvccVacuumThreadCount
         {
             get { return _mvccVacuumThreadCnt ?? DefaultMvccVacuumThreadCount; }
