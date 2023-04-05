@@ -304,9 +304,13 @@ public class SslParametersTest extends GridCommonAbstractTest {
             }
         });
 
+        ClientConfiguration cfg = getClientConfiguration()
+                .setAddresses("127.0.0.1:10901")
+                .setTimeout(3000);
+
         GridTestUtils.assertThrowsAnyCause(
                 null,
-                () -> Ignition.startClient(getClientConfiguration().setAddresses("127.0.0.1:10901")),
+                () -> Ignition.startClient(cfg),
                 ClientConnectionException.class,
                 "SSL handshake failed (connection closed)."
         );
