@@ -104,8 +104,8 @@ public class GridNearAtomicCache<K, V> extends GridNearCacheAdapter<K, V> {
         rmvQueue = new FastSizeDeque<>(new ConcurrentLinkedDeque<>());
     }
 
-    @Override
-    public void onKernalStart() throws IgniteCheckedException {
+    /** {@inheritDoc} */
+    @Override public void onKernalStart() throws IgniteCheckedException {
         super.onKernalStart();
 
         assert !ctx.isRecoveryMode() : "Registering message handlers in recovery mode [cacheName=" + name() + ']';
