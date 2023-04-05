@@ -71,7 +71,7 @@ public class ResetLostPartitions extends AbstractCommand<Set<String>> {
 
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger logger) throws Exception {
-        if(caches == null)
+        if (caches == null)
             getAffectedCaches(clientCfg, logger);
 
         CacheResetLostPartitionsTaskArg taskArg = new CacheResetLostPartitionsTaskArg(caches);
