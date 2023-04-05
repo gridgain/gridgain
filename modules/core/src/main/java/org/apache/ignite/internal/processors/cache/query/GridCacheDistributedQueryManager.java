@@ -99,10 +99,12 @@ public class GridCacheDistributedQueryManager<K, V> extends GridCacheQueryManage
     private GridLocalEventListener lsnr;
 
     /** {@inheritDoc} */
-    @Override public void start0() throws IgniteCheckedException {
-        super.start0();
+    @Override public void onKernalStart0() throws IgniteCheckedException {
+        super.onKernalStart0();
 
         assert cctx.config().getCacheMode() != LOCAL;
+
+        assert !cctx.isRecoveryMode() : "Registering message handlers in recovery mode [cacheName=" + cctx.name() + ']';
 
         cctx.io().addCacheHandler(
             cctx.cacheId(),
