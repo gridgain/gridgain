@@ -245,6 +245,8 @@ namespace Apache.Ignite.Core.Client
         /// To do so, connection is established to every known server node at all times.
         /// <para />
         /// When false: only one connection is established at a given moment to a random server node.
+        /// <para />
+        /// See also <see cref="EnableClusterDiscovery"/>.
         /// </summary>
         [DefaultValue(DefaultEnablePartitionAwareness)]
         public bool EnablePartitionAwareness { get; set; }
@@ -252,8 +254,8 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Gets or sets a value indicating whether Cluster Discovery should be enabled.
         /// <para />
-        /// Default is true: Ignite client will maintain an actual list of all server nodes in the cluster
-        /// and connect to all of them.
+        /// Default is true: when <see cref="EnablePartitionAwareness"/> is also true,
+        /// Ignite client will maintain an actual list of all server nodes in the cluster and connect to all of them.
         /// <para />
         /// When false: Ignite client will connect only to nodes in the <see cref="Endpoints"/> list.
         /// </summary>
