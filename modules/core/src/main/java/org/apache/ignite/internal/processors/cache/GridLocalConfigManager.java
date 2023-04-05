@@ -321,9 +321,10 @@ public class GridLocalConfigManager {
         String schemaName = normalizeSchemaName(cfg.getName(), cfg.getSqlSchema());
 
         for (CacheJoinNodeDiscoveryData.CacheInfo info : caches.values()) {
-            Collection<QueryEntity> entrs = info.cacheData().config().getQueryEntities();
-            String cacheName = info.cacheData().config().getName();
-            String cacheSchemaName = info.cacheData().config().getSqlSchema();
+            CacheConfiguration<?, ?> conf0 = info.cacheData().config();
+            Collection<QueryEntity> entrs = conf0.getQueryEntities();
+            String cacheName = conf0.getName();
+            String cacheSchemaName = normalizeSchemaName(conf0.getName(), conf0.getSqlSchema());
 
             if (!Objects.equals(cacheSchemaName, schemaName) || CU.isSystemCache(cacheName))
                 continue;
