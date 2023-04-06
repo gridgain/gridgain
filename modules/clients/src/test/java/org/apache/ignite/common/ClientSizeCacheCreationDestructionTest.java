@@ -94,6 +94,7 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         thickClient = startClientGrid(1);
 
+        // https://ggtc.gridgain.com/buildConfiguration/GridGain8_Test_CommunityEdition_JavaClient/8877550?buildTab=tests&status=failed&suite=org.apache.ignite.internal.client.suite.IgniteClientTestSuite%3A+&expandedTest=build%3A%28id%3A8877550%29%2Cid%3A83481
         // TODO: Thin client fails on start
         // 1. Client connector processor has started on TCP port 10801 (server)
         // 2. Client connector processor has started on TCP port 10802 (thick client)
