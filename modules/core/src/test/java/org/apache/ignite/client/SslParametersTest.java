@@ -16,7 +16,10 @@
 
 package org.apache.ignite.client;
 
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ForkJoinPool;
 import javax.net.ssl.SSLHandshakeException;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -34,6 +37,7 @@ import org.junit.Test;
 /**
  * Tests cases when node connects to cluster with different set of cipher suites.
  */
+@SuppressWarnings({"ThrowableNotThrown", "resource"})
 public class SslParametersTest extends GridCommonAbstractTest {
     /** */
     public static final String TEST_CACHE_NAME = "TEST";
@@ -54,7 +58,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
 
         cfg.setSslContextFactory(createSslFactory());
 
-        CacheConfiguration ccfg = new CacheConfiguration(TEST_CACHE_NAME);
+        CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(TEST_CACHE_NAME);
 
         cfg.setCacheConfiguration(ccfg);
 
@@ -76,7 +80,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
      * @return SSL factory.
      */
     @NotNull private SslContextFactory createSslFactory() {
-        SslContextFactory factory = (SslContextFactory)GridTestUtils.sslTrustedFactory("node01", "trustone");
+        SslContextFactory factory = GridTestUtils.sslTrustedFactory("node01", "trustone");
 
         factory.setCipherSuites(cipherSuites);
         factory.setProtocols(protocols);
@@ -285,12 +289,61 @@ public class SslParametersTest extends GridCommonAbstractTest {
         );
     }
 
+    @Test
+    public void testConnectionFailBeforeSslHandshake() {
+        ForkJoinPool.commonPool().execute(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(10901)) {
+                Socket socket = serverSocket.accept();
+                Thread.sleep(100);
+                socket.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        ClientConfiguration cfg = getClientConfiguration()
+                .setAddresses("127.0.0.1:10901")
+                .setTimeout(3000);
+
+        GridTestUtils.assertThrowsAnyCause(
+                null,
+                () -> Ignition.startClient(cfg),
+                ClientConnectionException.class,
+                "SSL handshake failed (connection closed)."
+        );
+    }
+
+    @Test
+    public void testSslHandshakeTimeout() {
+        ForkJoinPool.commonPool().execute(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(10902)) {
+                Socket socket = serverSocket.accept();
+                Thread.sleep(500);
+                socket.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        ClientConfiguration cfg = getClientConfiguration()
+                .setAddresses("127.0.0.1:10902")
+                .setTimeout(100);
+
+        GridTestUtils.assertThrowsAnyCause(
+                null,
+                () -> Ignition.startClient(cfg),
+                ClientConnectionException.class,
+                "Timeout was reached before computation completed."
+        );
+    }
+
     /**
      * @param cipherSuites list of cipher suites
      * @param protocols list of protocols
-     * @throws Exception If failed.
      */
-    private void checkSuccessfulClientStart(String[] cipherSuites, String[] protocols) throws Exception {
+    private void checkSuccessfulClientStart(String[] cipherSuites, String[] protocols) {
         this.cipherSuites = F.isEmpty(cipherSuites) ? null : cipherSuites;
         this.protocols = F.isEmpty(protocols) ? null : protocols;
 
