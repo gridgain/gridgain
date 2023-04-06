@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Services
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cluster;
