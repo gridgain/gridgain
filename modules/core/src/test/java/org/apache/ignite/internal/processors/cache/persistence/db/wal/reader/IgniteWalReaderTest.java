@@ -160,7 +160,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
      * @return Ignite Configuration.
      * @throws Exception
      */
-    private IgniteConfiguration getConfiguration(String gridName, boolean mixed) throws Exception{
+    private IgniteConfiguration getConfiguration(String gridName, boolean mixed) throws Exception {
 
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
@@ -172,7 +172,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         ccfg.setIndexedTypes(Integer.class, IndexedObject.class);
         ccfg.setBackups(backupCnt);
 
-        if(mixed) {
+        if (mixed) {
             CacheConfiguration<Integer, IndexedObject> ccfgInMem = new CacheConfiguration();
             ccfgInMem.setName(IN_MEM_CACHE_NAME);
             ccfgInMem.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
@@ -187,7 +187,6 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         else
             cfg.setCacheConfiguration(ccfg);
 
-
         cfg.setIncludeEventTypes(EVT_WAL_SEGMENT_ARCHIVED, EVT_WAL_SEGMENT_COMPACTED);
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration()
@@ -200,7 +199,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             .setWalMode(customWalMode != null ? customWalMode : WALMode.BACKGROUND)
             .setWalCompactionEnabled(enableWalCompaction);
 
-        if(mixed) {
+        if (mixed) {
             dsCfg.setDataRegionConfigurations(new DataRegionConfiguration()
                 .setPersistenceEnabled(false)
                 .setMaxSize(1024L * 1024 * 1024)
@@ -1483,7 +1482,6 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             cachePersistent.put(1, 1);
             cacheInMem.put(2, 2);
 
-
             cachePersistent.put(3, 3);
 
             tx.rollback();
@@ -1510,7 +1508,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         WALIterator iter = factory.iterator(params.filesOrDirs(workDir));
         IgniteBiTuple<List<TxRecord>, Set<DataRecord>> res = iterateAndGetTxRecords(iter);
 
-        if(states != null) {
+        if (states != null) {
             assertEquals(states.length, res.get1().size());
             int i = 0;
             for (TxRecord record : res.get1()) {
