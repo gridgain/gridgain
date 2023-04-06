@@ -466,7 +466,8 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
                                 continue;
                         }
 
-                        msg = String.format("File=%s, page=%d", pageStore.getFileAbsolutePath(), n);
+                        msg = String.format("File=%s, page=%d, CRC=%d, keyId=%d, pageId=%d", pageStore.getFileAbsolutePath(), n,
+                            pageCrc, pageKeyId, pageId);
                         assertEquals(msg, expKeyId, pageKeyId);
                     }
                 }
