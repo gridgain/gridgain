@@ -94,6 +94,11 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         thickClient = startClientGrid(1);
 
+        // TODO: Thin client fails on start
+        // 1. Client connector processor has started on TCP port 10801 (server)
+        // 2. Client connector processor has started on TCP port 10802 (thick client)
+        // Therefore, some other node is on port 10800, from a previous test?
+        // Additionally, we have exceptions in the server log "Failed to parse incoming packet" from the REST listener
         thinClient = Ignition.startClient(new ClientConfiguration().setAddresses("127.0.0.1:10800"));
 
         jdbcConn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800");
