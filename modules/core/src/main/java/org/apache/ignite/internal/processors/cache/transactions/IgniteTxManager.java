@@ -2873,14 +2873,19 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     }
 
     /** Checks if a record belongs to a persistent cache with WAL enabled. */
-    private static boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
         IgniteTxState state = tx.txState();
 
-        for (IgniteTxEntry txEntry : state.allEntries()) {
-            GridCacheContext<?, ?> cctx = txEntry.context();
-            if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+        assert state.cacheIds() != null;
+
+        for (int i = 0; i < state.cacheIds().size(); i++) {
+            int cacheId = state.cacheIds().get(i);
+
+            GridCacheContext ctx = cctx.cacheContext(cacheId);
+            if (ctx.group().persistenceEnabled() && ctx.group().walEnabled())
                 return true;
         }
+
         return false;
     }
 
