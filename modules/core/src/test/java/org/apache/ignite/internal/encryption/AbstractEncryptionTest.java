@@ -462,8 +462,11 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
                             while (pageBuf.hasRemaining() && !emptyPage)
                                 emptyPage = pageBuf.getLong() == 0;
 
-                            if (emptyPage)
+                            if (emptyPage) {
+                                info("Skipping page " + n + " because it is empty");
+
                                 continue;
+                            }
                         }
 
                         msg = String.format("File=%s, page=%d, CRC=%d, keyId=%d, pageId=%d", pageStore.getFileAbsolutePath(), n,
