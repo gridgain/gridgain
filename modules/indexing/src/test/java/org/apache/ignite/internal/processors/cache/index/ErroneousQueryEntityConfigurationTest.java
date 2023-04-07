@@ -97,16 +97,10 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
         return res;
     }
 
-    /**
-     * @return Grid count used in test.
-     */
-    protected int gridCount() {
-        return 1;
-    }
-
     /** Start client node with erroneous configuration, if persistence enabled -
      * check persistent server node is correctly restart. */
-    private void startClientWithErroneousConfig() throws Exception {
+    @Test
+    public void testErroneousCacheConfigFromClientNode() throws Exception {
         Ignite ignite = startGrid("srv1");
 
         TcpDiscoverySpi discoConf = (TcpDiscoverySpi)ignite.configuration().getDiscoverySpi();
@@ -129,38 +123,27 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
             startGrid("srv1");
     }
 
-    /** */
-    @Test
-    public void testErroneousCacheConfigFromClientNode() throws Exception {
-        startClientWithErroneousConfig();
-    }
-
-
     /** Try to start client with erroneous cache configs through dynamic caches. */
-    private void startErroneousCacheConfigThroughDynamicCaches() throws Exception {
+    @Test
+    public void teststartErroneousCacheConfigThroughDynamicCaches() throws Exception {
         IgniteEx server = startGrid();
 
         IgniteEx client = startGrid(CLIENT_NAME);
 
         Collection<CacheConfiguration> ccfgs = makeMultipleCachesConfig(false);
 
-        GridTestUtils.assertThrows(log, () -> {
-            client.cluster().state(ClusterState.ACTIVE);
+        client.cluster().state(ClusterState.ACTIVE);
 
+        GridTestUtils.assertThrows(log, () -> {
             client.getOrCreateCaches(ccfgs);
         }, CacheException.class, "Duplicate index name");
 
         server.cluster().state(ClusterState.ACTIVE);
     }
 
-    /** */
-    @Test
-    public void teststartErroneousCacheConfigThroughDynamicCaches() throws Exception {
-        startErroneousCacheConfigThroughDynamicCaches();
-    }
-
     /** Check that joining node with already configured index name on different cache will not joined.*/
-    private void startEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
+    @Test
+    public void testEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
         IgniteEx server = startGrid("srv1");
 
         TcpDiscoverySpi discoConf = (TcpDiscoverySpi)server.configuration().getDiscoverySpi();
@@ -204,12 +187,6 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
 
             startGrid("srv1");
         }
-    }
-
-    /** */
-    @Test
-    public void testEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
-        startEqualIndexAreConfiguredOnServerAndJoinedNode();
     }
 
     /**

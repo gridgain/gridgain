@@ -535,7 +535,7 @@ public final class GridTestUtils {
      * @param log Logger (optional).
      * @param run Runnable.
      * @param cls Exception class.
-     * @param msg Exception message (optional). Check that raised exception message contain this substring.
+     * @param msg Exception message (optional). Check that raised exception message contains this substring.
      * @return Thrown throwable.
      */
     public static <T extends Throwable> T assertThrows(

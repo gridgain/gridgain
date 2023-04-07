@@ -316,7 +316,7 @@ public class GridLocalConfigManager {
     }
 
     /**
-     * Validates already processed cache configuration instead newly defined.
+     * Validates already processed cache configuration instead a newly defined.
      *
      * @param cacheConfigs Already processed caches.
      * @param cfg Currently processed cache config.
