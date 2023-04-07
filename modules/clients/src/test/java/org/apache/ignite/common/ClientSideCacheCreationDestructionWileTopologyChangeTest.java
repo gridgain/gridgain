@@ -43,11 +43,13 @@ public class ClientSideCacheCreationDestructionWileTopologyChangeTest extends Cl
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        procTopChanges.set(false);
+        try {
+            procTopChanges.set(false);
 
-        topChangeProcFut.get();
-
-        super.afterTest();
+            topChangeProcFut.get();
+        } finally {
+            super.afterTest();
+        }
     }
 
     /**
