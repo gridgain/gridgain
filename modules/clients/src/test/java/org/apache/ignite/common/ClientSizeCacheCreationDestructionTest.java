@@ -47,6 +47,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLIENT_LISTENER_PORT;
+
 /**
  * Tests for cache creation and destruction from servers and clients: thin, thick, jdbc and rest.
  * Including simultaneous operations. Mainly within same cache group.
@@ -91,12 +93,17 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
         super.beforeTest();
 
         srv = startGrid("server");
+        int port = (Integer) srv.cluster().localNode().attributes().get(CLIENT_LISTENER_PORT);
 
         thickClient = startClientGrid(1);
 
-        thinClient = Ignition.startClient(new ClientConfiguration().setAddresses("127.0.0.1:10800"));
+        ClientConfiguration clientCfg = new ClientConfiguration()
+                .setAddresses("127.0.0.1:" + port)
+                .setClusterDiscoveryEnabled(false);
 
-        jdbcConn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800");
+        thinClient = Ignition.startClient(clientCfg);
+
+        jdbcConn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:" + port);
     }
 
     /** {@inheritDoc} */
@@ -111,6 +118,13 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         if (jdbcConn != null)
             jdbcConn.close();
+
+        stopAllGrids();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
 
         stopAllGrids();
     }
