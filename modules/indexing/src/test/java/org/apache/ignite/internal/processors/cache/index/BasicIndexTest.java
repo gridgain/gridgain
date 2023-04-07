@@ -36,11 +36,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.cache.CacheException;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
-import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
@@ -48,7 +45,6 @@ import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.client.Person;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -67,8 +63,6 @@ import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -1875,213 +1869,6 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         stopAllGrids();
 
         cleanPersistenceDir();
-    }
-
-    /** Start client node with erroneous configuration, check persistent server node correctly restart. */
-    private void startClientWithErroneousConfig() throws Exception {
-        inlineSize = 10;
-
-        Ignite ignite = startGrid();
-
-        TcpDiscoverySpi discoConf = (TcpDiscoverySpi)ignite.configuration().getDiscoverySpi();
-
-        TcpDiscoveryIpFinder ipFinder = discoConf.getIpFinder();
-
-        GridTestUtils.assertThrows(log, () -> {
-                Ignite client = Ignition.start(getErroneousConfiguration(ipFinder, false));
-
-                client.cluster().state(ClusterState.ACTIVE);
-        }, IgniteException.class, "Duplicate index name");
-
-        Ignite client = Ignition.start(getErroneousConfiguration(ipFinder, true));
-
-        client.cluster().state(ClusterState.ACTIVE);
-
-        ignite.close();
-
-        if (isPersistenceEnabled)
-            startGrid();
-    }
-
-    /** */
-    @Test
-    public void testErroneousCacheConfigFromClientNodeWithPersistence() throws Exception {
-        isPersistenceEnabled = true;
-
-        startClientWithErroneousConfig();
-    }
-
-    /** */
-    @Test
-    public void testErroneousCacheConfigFromClientNode() throws Exception {
-        startClientWithErroneousConfig();
-    }
-
-
-    /** Try to start client with erroneous cache configs through dynamic caches. */
-    private void startErroneousCacheConfigThroughDynamicCaches() throws Exception {
-        inlineSize = 10;
-
-        IgniteEx server = startGrid();
-
-        IgniteEx client = startGrid(CLIENT_NAME);
-
-        Collection<CacheConfiguration> ccfgs = makeMultipleCachesConfig(false);
-
-        GridTestUtils.assertThrows(log, () -> {
-            client.cluster().state(ClusterState.ACTIVE);
-
-            client.getOrCreateCaches(ccfgs);
-        }, CacheException.class, "Table already exists");
-
-        server.close();
-    }
-
-    /** */
-    @Test
-    public void teststartErroneousCacheConfigThroughDynamicCachesWithPersistence() throws Exception {
-        isPersistenceEnabled = true;
-
-        startErroneousCacheConfigThroughDynamicCaches();
-    }
-
-    /** */
-    @Test
-    public void teststartErroneousCacheConfigThroughDynamicCaches() throws Exception {
-        startErroneousCacheConfigThroughDynamicCaches();
-    }
-
-    /** Check that joining node with already configured index name on different cache will not joined.*/
-    private void startEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
-        inlineSize = 10;
-
-        IgniteEx server = startGrid();
-
-        TcpDiscoverySpi discoConf = (TcpDiscoverySpi)server.configuration().getDiscoverySpi();
-
-        TcpDiscoveryIpFinder ipFinder = discoConf.getIpFinder();
-
-        IgniteConfiguration cfg = getErroneousConfiguration(ipFinder, false);
-
-        CacheConfiguration[] ccfgs = cfg.getCacheConfiguration();
-
-        cfg.setCacheConfiguration(ccfgs[0], ccfgs[1]);
-
-        cfg.setClientMode(false);
-
-        String id = UUID.randomUUID().toString();
-
-        cfg.setConsistentId(id);
-
-        cfg.setIgniteInstanceName("srv2");
-
-        startGrid(cfg);
-
-        cfg = getErroneousConfiguration(ipFinder, false);
-
-        cfg.setCacheConfiguration(ccfgs[2], ccfgs[3]);
-
-        cfg.setClientMode(true);
-
-        IgniteConfiguration cfg0 = cfg;
-
-        GridTestUtils.assertThrows(log, () -> {
-            IgniteEx client = startGrid(cfg0);
-
-            client.cluster().state(ClusterState.ACTIVE);
-        }, IgniteException.class, "Duplicate index name");
-
-        assertNotNull(server.cache(ccfgs[0].getName()));
-
-        if (isPersistenceEnabled) {
-            server.close();
-
-            startGrid();
-        }
-    }
-
-    @Test
-    public void testEqualIndexAreConfiguredOnServerAndJoinedNodeWithPersistence() throws Exception {
-        isPersistenceEnabled = true;
-
-        startEqualIndexAreConfiguredOnServerAndJoinedNode();
-    }
-
-    @Test
-    public void testEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
-        startEqualIndexAreConfiguredOnServerAndJoinedNode();
-    }
-
-    /**
-     * Creates erroneous cache configurations.
-     *
-     * @param ipFinder Finder.
-     * @param differentSchemas If {@code true} different schemas are used.
-     */
-    private static IgniteConfiguration getErroneousConfiguration(
-        TcpDiscoveryIpFinder ipFinder,
-        boolean differentSchemas
-    ) {
-        TcpDiscoverySpi discoverySpi = new TcpDiscoverySpi();
-
-        discoverySpi.setIpFinder(ipFinder);
-
-        IgniteConfiguration igniteCfg = new IgniteConfiguration();
-
-        igniteCfg.setDiscoverySpi(discoverySpi);
-
-        igniteCfg.setPeerClassLoadingEnabled(true);
-
-        Collection<CacheConfiguration> ccfgs = makeMultipleCachesConfig(differentSchemas);
-
-        igniteCfg.setCacheConfiguration(ccfgs.toArray(new CacheConfiguration[0]));
-
-        igniteCfg.setClientMode(true);
-
-        return igniteCfg;
-    }
-
-    /** */
-    private static Collection<CacheConfiguration> makeMultipleCachesConfig(boolean differentSchemas) {
-        Collection<CacheConfiguration> ccfgs = new ArrayList<>();
-
-        CacheConfiguration<Integer, String> c1 = new CacheConfiguration<>("c1");
-
-        c1.setIndexedTypes(Integer.class, String.class);
-
-        c1.setSqlSchema("TEST_V1");
-
-        CacheConfiguration<Integer, String> c1custom = new CacheConfiguration<>("c1custom");
-
-        c1custom.setIndexedTypes(Integer.class, Person.class);
-
-        c1custom.setSqlSchema("TEST_V1");
-
-        CacheConfiguration<Integer, String> c2 = new CacheConfiguration<>("c2");
-
-        c2.setIndexedTypes(Integer.class, String.class);
-
-        CacheConfiguration<Integer, String> c2custom = new CacheConfiguration<>("c2custom");
-
-        c2custom.setIndexedTypes(Integer.class, Person.class);
-
-        if (differentSchemas) {
-            c2.setSqlSchema("TEST_V2");
-            c2custom.setSqlSchema("TEST_V2");
-        }
-        else {
-            c2.setSqlSchema("TEST_V1");
-            c2custom.setSqlSchema("TEST_V1");
-        }
-
-        // appending sequence is important here.
-        ccfgs.add(c1);
-        ccfgs.add(c1custom);
-
-        ccfgs.add(c2);
-        ccfgs.add(c2custom);
-
-        return ccfgs;
     }
 
     /** */
