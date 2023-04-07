@@ -2639,7 +2639,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 }
             }
 
-            for (PartitionsExchangeAware comp : cctx.exchange().exchangeAwareComponents())
+            List<PartitionsExchangeAware> listeners = cctx.exchange().exchangeAwareComponents();
+            log.info("Going to notify about completion, failed: " + isFailed()
+                + ", activateCluster: " + activateCluster() + ", localJoinExchange: " + localJoinExchange()
+                + ", listeners: " + listeners);
+            for (PartitionsExchangeAware comp : listeners)
                 comp.onDoneAfterTopologyUnlock(this);
 
             if (firstDiscoEvt instanceof DiscoveryCustomEvent)

@@ -366,8 +366,6 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
     protected void checkGroupKey(int grpId, int expKeyId, long timeout) throws Exception {
         awaitEncryption(G.allGrids(), grpId, timeout);
 
-        Thread.sleep(10000);
-
         info("Reencryption finished for group " + grpId);
 
         for (Ignite g : G.allGrids()) {
