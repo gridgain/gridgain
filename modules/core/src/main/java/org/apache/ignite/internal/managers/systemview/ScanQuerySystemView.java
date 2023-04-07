@@ -18,9 +18,11 @@ package org.apache.ignite.internal.managers.systemview;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -146,7 +148,11 @@ public class ScanQuerySystemView<K, V> extends AbstractSystemView<ScanQueryView>
 
                     reqMap = next.getValue();
 
-                    qriesIter = next.getValue().entrySet().iterator();
+                    Set<Map.Entry<Long, GridFutureAdapter<GridCacheQueryManager.QueryResult<K, V>>>> cpOfEntries =
+                        new HashSet<>(reqMap.entrySet());
+
+                    qriesIter = cpOfEntries.iterator();
+
                 }
                 else {
                     nodeId = cctx.localNodeId();
