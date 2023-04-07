@@ -3530,11 +3530,29 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         if (task instanceof ForceRebalanceExchangeTask)
                             forcedRebFut = ((ForceRebalanceExchangeTask)task).forcedRebalanceFuture();
 
+                        log.error(String.format(
+                            "asshole before rebalance [forcedRebFut=%s, assignsSet=%s]",
+                            forcedRebFut != null,
+                            assignsSet.descendingSet().stream().map(CacheGroupContext::name).collect(Collectors.toList())
+                        ));
+
                         for (CacheGroupContext grp : assignsSet.descendingSet()) {
                             boolean disableRebalance = cctx.snapshot().partitionsAreFrozen(grp);
 
-                            if (disableRebalance)
+                            log.error(String.format(
+                                "asshole before rebalance in cycle [forcedRebFut=%s, assignsSet=%s]",
+                                forcedRebFut != null,
+                                assignsSet.descendingSet().stream().map(CacheGroupContext::cacheOrGroupName).collect(Collectors.toList())
+                            ));
+
+                            if (disableRebalance) {
+                                log.error(String.format(
+                                    "asshole before rebalance in cycle disabled [grpName=%s]",
+                                    grp.cacheOrGroupName()
+                                ));
+
                                 continue;
+                            }
 
                             RebalanceFuture cur = grp.preloader().prepare(exchId,
                                 exchFut,
@@ -3543,8 +3561,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 forcedRebFut,
                                 rebFut);
 
-                            if (cur != null)
+                            if (cur != null) {
                                 next = cur;
+
+                                log.error(String.format(
+                                    "asshole before rebalance in cycle new next [grpName=%s]",
+                                    grp.cacheOrGroupName()
+                                ));
+                            }
                         }
 
                         rebFut.markInitialized();

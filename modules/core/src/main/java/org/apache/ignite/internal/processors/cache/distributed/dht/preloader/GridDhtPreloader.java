@@ -411,8 +411,20 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         GridDhtPreloaderAssignments assigns = null;
 
         // Don't delay for dummy reassigns to avoid infinite recursion.
-        if (delay == 0 || forceRebalance)
+        if (delay == 0 || forceRebalance) {
             assigns = generateAssignments(exchId, exchFut);
+
+            log.error(String.format(
+                "asshole before rebalance in prepare calculate assignments " +
+                    "[grpName=%s, delay=%s, forceRebalance=%s, assigns.cancelled=%s, assigns.size=%s, assigns=%s]",
+                grp.cacheOrGroupName(),
+                delay,
+                forceRebalance,
+                assigns.cancelled(),
+                assigns.size(),
+                assigns
+            ));
+        }
 
         return demander.addAssignments(assigns, forceRebalance, rebalanceId, next, forcedRebFut, compatibleRebFut);
     }

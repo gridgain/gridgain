@@ -466,6 +466,11 @@ public class GridDhtPartitionDemander {
                 @Override public void onTimeout() {
                     exchFut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                         @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> f) {
+                            log.error(String.format(
+                                "asshole before rebalance schedule force rebalnce [grpName=%s]",
+                                grp.cacheOrGroupName()
+                            ));
+
                             ctx.exchange().forceRebalance(exchFut.exchangeId());
                         }
                     });
