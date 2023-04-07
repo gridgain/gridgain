@@ -598,6 +598,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
         Map<Integer, Object> encKeysFromCluster = (Map<Integer, Object>)data.commonData();
 
+        log.info("encKeysFromCluster: " + encKeysFromCluster);
+
         if (F.isEmpty(encKeysFromCluster))
             return;
 
@@ -1075,6 +1077,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             return null;
         });
 
+        log.info("reencryptGroupsForced is " + reencryptGroupsForced);
+
         for (Map.Entry<Integer, Integer> entry : reencryptGroupsForced.entrySet()) {
             int grpId = entry.getKey();
 
@@ -1506,6 +1510,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      */
     public void applyReencryptionStartRecord(ReencryptionStartRecord rec) {
         assert !writeToMetaStoreEnabled;
+
+        log.info("applyReencryptionStartRecord: " + rec.groups());
 
         for (Map.Entry<Integer, Byte> e : rec.groups().entrySet())
             reencryptGroupsForced.put(e.getKey(), e.getValue() & 0xff);
