@@ -202,8 +202,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
             GroupScanTask prevState = grps.get(grpId);
 
             if (prevState != null && !prevState.isDone()) {
-                if (log.isDebugEnabled())
-                    log.debug("Reencryption already scheduled [grpId=" + grpId + "]");
+                if (log.isInfoEnabled())
+                    log.info("Reencryption already scheduled [grpId=" + grpId + "]");
 
                 return prevState;
             }
