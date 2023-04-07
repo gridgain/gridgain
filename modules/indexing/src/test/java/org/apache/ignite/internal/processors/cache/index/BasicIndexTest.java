@@ -1917,6 +1917,101 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         startClientWithErroneousConfig();
     }
 
+
+    /** Try to start client with erroneous cache configs through dynamic caches. */
+    private void startErroneousCacheConfigThroughDynamicCaches() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx server = startGrid();
+
+        IgniteEx client = startGrid(CLIENT_NAME);
+
+        Collection<CacheConfiguration> ccfgs = makeMultipleCachesConfig(false);
+
+        GridTestUtils.assertThrows(log, () -> {
+            client.cluster().state(ClusterState.ACTIVE);
+
+            client.getOrCreateCaches(ccfgs);
+        }, CacheException.class, "Table already exists");
+
+        server.close();
+    }
+
+    /** */
+    @Test
+    public void teststartErroneousCacheConfigThroughDynamicCachesWithPersistence() throws Exception {
+        isPersistenceEnabled = true;
+
+        startErroneousCacheConfigThroughDynamicCaches();
+    }
+
+    /** */
+    @Test
+    public void teststartErroneousCacheConfigThroughDynamicCaches() throws Exception {
+        startErroneousCacheConfigThroughDynamicCaches();
+    }
+
+    /** Check that joining node with already configured index name on different cache will not joined.*/
+    private void startEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
+        inlineSize = 10;
+
+        IgniteEx server = startGrid();
+
+        TcpDiscoverySpi discoConf = (TcpDiscoverySpi)server.configuration().getDiscoverySpi();
+
+        TcpDiscoveryIpFinder ipFinder = discoConf.getIpFinder();
+
+        IgniteConfiguration cfg = getErroneousConfiguration(ipFinder, false);
+
+        CacheConfiguration[] ccfgs = cfg.getCacheConfiguration();
+
+        cfg.setCacheConfiguration(ccfgs[0], ccfgs[1]);
+
+        cfg.setClientMode(false);
+
+        String id = UUID.randomUUID().toString();
+
+        cfg.setConsistentId(id);
+
+        cfg.setIgniteInstanceName("srv2");
+
+        startGrid(cfg);
+
+        cfg = getErroneousConfiguration(ipFinder, false);
+
+        cfg.setCacheConfiguration(ccfgs[2], ccfgs[3]);
+
+        cfg.setClientMode(true);
+
+        IgniteConfiguration cfg0 = cfg;
+
+        GridTestUtils.assertThrows(log, () -> {
+            IgniteEx client = startGrid(cfg0);
+
+            client.cluster().state(ClusterState.ACTIVE);
+        }, IgniteException.class, "Duplicate index name");
+
+        assertNotNull(server.cache(ccfgs[0].getName()));
+
+        if (isPersistenceEnabled) {
+            server.close();
+
+            startGrid();
+        }
+    }
+
+    @Test
+    public void testEqualIndexAreConfiguredOnServerAndJoinedNodeWithPersistence() throws Exception {
+        isPersistenceEnabled = true;
+
+        startEqualIndexAreConfiguredOnServerAndJoinedNode();
+    }
+
+    @Test
+    public void testEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
+        startEqualIndexAreConfiguredOnServerAndJoinedNode();
+    }
+
     /**
      * Creates erroneous cache configurations.
      *
@@ -1936,6 +2031,19 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         igniteCfg.setDiscoverySpi(discoverySpi);
 
         igniteCfg.setPeerClassLoadingEnabled(true);
+
+        Collection<CacheConfiguration> ccfgs = makeMultipleCachesConfig(differentSchemas);
+
+        igniteCfg.setCacheConfiguration(ccfgs.toArray(new CacheConfiguration[0]));
+
+        igniteCfg.setClientMode(true);
+
+        return igniteCfg;
+    }
+
+    /** */
+    private static Collection<CacheConfiguration> makeMultipleCachesConfig(boolean differentSchemas) {
+        Collection<CacheConfiguration> ccfgs = new ArrayList<>();
 
         CacheConfiguration<Integer, String> c1 = new CacheConfiguration<>("c1");
 
@@ -1966,17 +2074,14 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             c2custom.setSqlSchema("TEST_V1");
         }
 
-        igniteCfg.setCacheConfiguration(c1, c1custom, c2, c2custom);
+        // appending sequence is important here.
+        ccfgs.add(c1);
+        ccfgs.add(c1custom);
 
-        String id = UUID.randomUUID().toString();
+        ccfgs.add(c2);
+        ccfgs.add(c2custom);
 
-        igniteCfg.setConsistentId(id);
-
-        igniteCfg.setIgniteInstanceName(id);
-
-        igniteCfg.setClientMode(true);
-
-        return igniteCfg;
+        return ccfgs;
     }
 
     /** */

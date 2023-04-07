@@ -41,6 +41,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteUuid;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
@@ -271,7 +272,15 @@ public class GridLocalConfigManager {
 
         CU.validateCacheName(cacheName);
 
-        validateIncomingConfiguration(caches, cfg);
+        Collection<CacheConfiguration<?, ?>> ccfgs = new ArrayList<>(caches.size());
+
+        for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : caches.values())
+            ccfgs.add(cacheInfo.cacheData().config());
+
+        String err = validateIncomingConfiguration(ccfgs, cfg);
+
+        if (err != null)
+            throw new IgniteException(err);
 
         cacheProcessor.cloneCheckSerializable(cfg);
 
@@ -309,19 +318,20 @@ public class GridLocalConfigManager {
     /**
      * Validates already processed cache configuration instead newly defined.
      *
-     * @param caches Already processed caches.
+     * @param cacheConfigs Already processed caches.
      * @param cfg Currently processed cache config.
+     * @return Error message, if supplied configuration is incorrect.
+     * @throws IgniteException If misconfigured.
      */
-    private void validateIncomingConfiguration(
-        Map<String, CacheJoinNodeDiscoveryData.CacheInfo> caches,
+    @Nullable public static String validateIncomingConfiguration(
+        Collection<CacheConfiguration<?, ?>> cacheConfigs,
         CacheConfiguration<?, ?> cfg
     ) {
         Map<String, String> idxNamesPerCache = new HashMap<>();
 
         String schemaName = normalizeSchemaName(cfg.getName(), cfg.getSqlSchema());
 
-        for (CacheJoinNodeDiscoveryData.CacheInfo info : caches.values()) {
-            CacheConfiguration<?, ?> conf0 = info.cacheData().config();
+        for (CacheConfiguration<?, ?> conf0 : cacheConfigs) {
             Collection<QueryEntity> entrs = conf0.getQueryEntities();
             String cacheName = conf0.getName();
             String cacheSchemaName = normalizeSchemaName(conf0.getName(), conf0.getSqlSchema());
@@ -338,7 +348,7 @@ public class GridLocalConfigManager {
         }
 
         if (idxNamesPerCache.isEmpty())
-            return;
+            return null;
 
         Collection<QueryEntity> entrs = cfg.getQueryEntities();
 
@@ -351,12 +361,14 @@ public class GridLocalConfigManager {
                 String cacheName = idxNamesPerCache.get(normalizedIdxName);
 
                 if (cacheName != null) {
-                    throw new IgniteException("Duplicate index name for [cache=" + cfg.getName() +
+                    return "Duplicate index name for [cache=" + cfg.getName() +
                         ", idxName=" + idx.getName() + "], an equal index name is already configured for [cache=" +
-                        cacheName + ']');
+                        cacheName + ']';
                 }
             }
         }
+
+        return null;
     }
 
     /**

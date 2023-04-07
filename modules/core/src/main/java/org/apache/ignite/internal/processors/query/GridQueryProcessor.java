@@ -2193,7 +2193,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                         QueryIndexDescriptorImpl oldIdx = idxs.putIfAbsent(idxKey, idx);
 
-                        if (oldIdx != null) {
+                        if (oldIdx != null ) {
                             throw new IgniteException("Duplicate index name [cache=" + cacheName +
                                 ", schemaName=" + schemaName + ", idxName=" + idx.name() +
                                 ", existingTable=" + oldIdx.typeDescriptor().tableName() +
