@@ -476,8 +476,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
          * @param cnt Count of pages to scan.
          */
         private void scanPartition(int partId, int off, int cnt) throws IgniteCheckedException {
-            if (log.isDebugEnabled()) {
-                log.debug("Partition reencryption is started [grpId=" + grp.groupId() +
+            if (log.isInfoEnabled()) {
+                log.info("Partition reencryption is started [grpId=" + grp.groupId() +
                     ", p=" + partId + ", remain=" + (cnt - off) + ", total=" + cnt + "]");
             }
 
@@ -505,8 +505,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
                 ctx.encryption().setEncryptionState(grp, partId, off, cnt);
             }
 
-            if (log.isDebugEnabled()) {
-                log.debug("Partition reencryption is finished " +
+            if (log.isInfoEnabled()) {
+                log.info("Partition reencryption is finished " +
                     "[grpId=" + grp.groupId() +
                     ", p=" + partId +
                     ", remain=" + (cnt - off) +

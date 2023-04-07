@@ -366,6 +366,8 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
     protected void checkGroupKey(int grpId, int expKeyId, long timeout) throws Exception {
         awaitEncryption(G.allGrids(), grpId, timeout);
 
+        info("Reencryption finished for group " + grpId);
+
         for (Ignite g : G.allGrids()) {
             IgniteEx grid = (IgniteEx)g;
 
@@ -415,6 +417,9 @@ public abstract class AbstractEncryptionTest extends GridCommonAbstractTest {
             int encryptionBlockSize = grp.shared().kernalContext().config().getEncryptionSpi().blockSize();
 
             for (int p : parts) {
+                info("Validating encryption key on partition [node=" + g.cluster().localNode().id() + ", grp="
+                    + grpId + ", part=" + p + "]");
+
                 FilePageStore pageStore =
                     (FilePageStore)((FilePageStoreManager)grp.shared().pageStore()).getStore(grpId, p);
 

@@ -344,7 +344,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    //@Test
+    @Test
     public void testPartitionEvictionDuringReencryption() throws Exception {
         backups = 1;
         pageScanRate = 1;
