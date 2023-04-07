@@ -131,7 +131,7 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
 
     /** */
     @Test
-    public void testErroneousCacheConfigFromClientNodeWithPersistence() throws Exception {
+    public void testErroneousCacheConfigFromClientNode() throws Exception {
         startClientWithErroneousConfig();
     }
 
@@ -155,7 +155,7 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
 
     /** */
     @Test
-    public void teststartErroneousCacheConfigThroughDynamicCachesWithPersistence() throws Exception {
+    public void teststartErroneousCacheConfigThroughDynamicCaches() throws Exception {
         startErroneousCacheConfigThroughDynamicCaches();
     }
 
@@ -208,7 +208,7 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
 
     /** */
     @Test
-    public void testEqualIndexAreConfiguredOnServerAndJoinedNodeWithPersistence() throws Exception {
+    public void testEqualIndexAreConfiguredOnServerAndJoinedNode() throws Exception {
         startEqualIndexAreConfiguredOnServerAndJoinedNode();
     }
 
