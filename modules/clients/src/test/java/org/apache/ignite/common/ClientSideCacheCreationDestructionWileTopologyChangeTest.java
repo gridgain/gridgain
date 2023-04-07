@@ -46,7 +46,8 @@ public class ClientSideCacheCreationDestructionWileTopologyChangeTest extends Cl
         try {
             procTopChanges.set(false);
 
-            topChangeProcFut.get();
+            if (topChangeProcFut != null)
+                topChangeProcFut.get();
         } finally {
             super.afterTest();
         }
