@@ -47,6 +47,8 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.processors.odbc.ClientListenerProcessor.CLIENT_LISTENER_PORT;
+
 /**
  * Tests for cache creation and destruction from servers and clients: thin, thick, jdbc and rest.
  * Including simultaneous operations. Mainly within same cache group.
@@ -91,19 +93,17 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
         super.beforeTest();
 
         srv = startGrid("server");
+        int port = (Integer) srv.cluster().localNode().attributes().get(CLIENT_LISTENER_PORT);
 
         thickClient = startClientGrid(1);
 
-        // https://ggtc.gridgain.com/buildConfiguration/GridGain8_Test_CommunityEdition_JavaClient/8877550?buildTab=tests&status=failed&suite=org.apache.ignite.internal.client.suite.IgniteClientTestSuite%3A+&expandedTest=build%3A%28id%3A8877550%29%2Cid%3A83481
-        // TODO: Thin client fails on start
-        // 1. Client connector processor has started on TCP port 10801 (server)
-        // 2. Client connector processor has started on TCP port 10802 (thick client)
-        // Therefore, some other node is on port 10800, from a previous test?
-        // Additionally, we have exceptions in the server log "Failed to parse incoming packet" from the REST listener
-        // TODO 2: Server nodes are not stopped, which causes ClientSideCacheCreationDestructionWileTopologyChangeTest to fail. Add afterAll() method?
-        thinClient = Ignition.startClient(new ClientConfiguration().setAddresses("127.0.0.1:10800"));
+        ClientConfiguration clientCfg = new ClientConfiguration()
+                .setAddresses("127.0.0.1:" + port)
+                .setClusterDiscoveryEnabled(false);
 
-        jdbcConn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:10800");
+        thinClient = Ignition.startClient(clientCfg);
+
+        jdbcConn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1:" + port);
     }
 
     /** {@inheritDoc} */
@@ -118,6 +118,13 @@ public class ClientSizeCacheCreationDestructionTest extends GridCommonAbstractTe
 
         if (jdbcConn != null)
             jdbcConn.close();
+
+        stopAllGrids();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
 
         stopAllGrids();
     }
