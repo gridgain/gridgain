@@ -542,4 +542,6 @@ public interface GridQueryIndexing {
         Runnable cancellationChecker,
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException;
+
+    void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexName);
 }

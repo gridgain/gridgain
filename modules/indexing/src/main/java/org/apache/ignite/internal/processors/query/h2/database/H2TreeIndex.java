@@ -1101,8 +1101,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
      *
      * @return {@code true} if mark was successfull, and {@code false} if index was already marked as destroyed.
      */
-    private boolean markDestroyed() {
+    public boolean markDestroyed() {
         return destroyed.compareAndSet(false, true);
+    }
+
+    public String getTreeName() {
+        return treeName;
     }
 
     /**

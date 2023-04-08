@@ -1,0 +1,158 @@
+/*
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.ignite.internal.processors.cache.persistence.db;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTaskState;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Test;
+
+import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+
+@WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
+public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
+
+    private final ListeningTestLogger listeningLog = new ListeningTestLogger(log);
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration configuration = super.getConfiguration(gridName);
+
+        DataStorageConfiguration cfg = new DataStorageConfiguration();
+
+        cfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+            .setPersistenceEnabled(true)
+            .setMaxSize(10 * 1024 * 1024));
+
+        configuration.setDataStorageConfiguration(cfg);
+
+        configuration.setGridLogger(listeningLog);
+
+        return configuration;
+    }
+
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
+    static String tableName(String cacheName) {
+        return cacheName + "_table";
+    }
+
+    static String create(String cacheName) {
+        return "CREATE TABLE IF NOT EXISTS " + tableName(cacheName) + " (\n" +
+            "    ID VARCHAR NOT NULL,\n" +
+            "    NAME VARCHAR NOT NULL,\n" +
+            "    PRIMARY KEY (ID)\n" +
+            ")\n" +
+            "WITH \"\n" +
+            "    CACHE_NAME=" + cacheName + ",\n" +
+            "    KEY_TYPE=ORGANIZATION_KEY_TYPE,\n" +
+            "    VALUE_TYPE=ORGANIZATION_VALUE_TYPE,\n" +
+            "    WRAP_KEY=TRUE,\n" +
+            "    WRAP_VALUE=TRUE\n" +
+            "\";";
+    }
+
+    static String insertQueryString(String cacheName) {
+        return "INSERT INTO " + tableName(cacheName) + "(ID, NAME)\n" +
+            "VALUES(?, ?)";
+    }
+
+    static SqlFieldsQuery insertQuery(String cacheName, int id) {
+        return new SqlFieldsQuery(insertQueryString(cacheName)).setArgs(
+            id, "name-" + id
+        );
+    }
+
+    @Test
+    public void test() throws Exception {
+        LogListener lsnr = LogListener.matches("Could not execute durable background task: drop-sql-index-test-").times(0).build();
+
+        listeningLog.registerListener(lsnr);
+
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        IgniteCache<Object, Object> queryCache = ignite.getOrCreateCache("queryCache");
+
+        String cacheName = "test";
+
+        ignite.getOrCreateCache(cacheName);
+
+        try (IgniteDataStreamer<Object, Object> streamer = ignite.dataStreamer(cacheName)) {
+            streamer.addData(1, 1);
+            streamer.flush();
+        }
+
+        queryCache.query(new SqlFieldsQuery(create(cacheName))).getAll();
+
+        stopGrid(0, true);
+
+        ignite = startGrid(0);
+
+        ignite.cluster().state(ClusterState.ACTIVE);
+
+        IgniteEx finalIgnite = ignite;
+
+        assertTrue(GridTestUtils.waitForCondition(
+            () -> {
+                Collection<DurableBackgroundTaskState<?>> tasks =
+                    tasks(finalIgnite.context().durableBackgroundTask()).values();
+
+                if (tasks.isEmpty())
+                    return true;
+
+                return tasks.stream().allMatch(state -> state.state() == DurableBackgroundTaskState.State.COMPLETED);
+            },
+            TimeUnit.SECONDS.toMillis(5)
+        ));
+
+        assertTrue(lsnr.check());
+    }
+
+    private Map<String, DurableBackgroundTaskState<?>> tasks(DurableBackgroundTasksProcessor proc) {
+        return getFieldValue(proc, "tasks");
+    }
+}

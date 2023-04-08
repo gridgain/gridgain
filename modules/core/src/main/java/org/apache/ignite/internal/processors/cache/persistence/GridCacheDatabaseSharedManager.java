@@ -2995,6 +2995,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
 
                         if (cacheCtx != null) {
+                            cacheCtx.kernalContext().query().getIndexing().invalidateIndex(cacheCtx, record.oldTreeName());
+
                             IgniteCacheOffheapManager offheap = cacheCtx.offheap();
 
                             for (int i = 0; i < record.segments(); i++)
