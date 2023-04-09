@@ -358,7 +358,7 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexName) {
+    @Override public void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
         // No-op.
     }
 }

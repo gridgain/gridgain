@@ -547,7 +547,7 @@ public interface GridQueryIndexing {
      * Marks index as destroyed.
      *
      * @param cacheCtx Cache context.
-     * @param indexName Index name.
+     * @param indexTreeName Index tree name.
      */
-    void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexName);
+    void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexTreeName);
 }
