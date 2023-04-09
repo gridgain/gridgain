@@ -38,9 +38,17 @@ import org.junit.Test;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 
+/**
+ * Tests destruction of the index without checkpoint afterwards.
+ * In this scenario, index destruction will start again on restart (after PME). The index root page will be found
+ * because we search for indexes after binary restore and index rename is a logical record.
+ * Previous destruction will also be started after logical recovery (because durable task is read from the metastorage).
+ * This way we will have two tasks destroying the same index, which leads to assertion error or SIGSEGV (if assertions
+ * are disabled).
+ */
 @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
 public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
-
+    /** */
     private final ListeningTestLogger listeningLog = new ListeningTestLogger(log);
 
     /** {@inheritDoc} */
@@ -79,35 +87,31 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         return cacheName + "_table";
     }
 
-    static String create(String cacheName) {
+    static String createTable(String cacheName) {
         return "CREATE TABLE IF NOT EXISTS " + tableName(cacheName) + " (\n" +
             "    ID VARCHAR NOT NULL,\n" +
             "    NAME VARCHAR NOT NULL,\n" +
             "    PRIMARY KEY (ID)\n" +
             ")\n" +
             "WITH \"\n" +
-            "    CACHE_NAME=" + cacheName + ",\n" +
-            "    KEY_TYPE=ORGANIZATION_KEY_TYPE,\n" +
-            "    VALUE_TYPE=ORGANIZATION_VALUE_TYPE,\n" +
-            "    WRAP_KEY=TRUE,\n" +
-            "    WRAP_VALUE=TRUE\n" +
+            "    CACHE_NAME=" + cacheName + "\n" +
             "\";";
     }
 
-    static String insertQueryString(String cacheName) {
-        return "INSERT INTO " + tableName(cacheName) + "(ID, NAME)\n" +
-            "VALUES(?, ?)";
+    static String insertQuery(String cacheName) {
+        return "INSERT INTO " + tableName(cacheName) + "(ID, NAME) VALUES(?, ?)";
     }
 
     static SqlFieldsQuery insertQuery(String cacheName, int id) {
-        return new SqlFieldsQuery(insertQueryString(cacheName)).setArgs(
-            id, "name-" + id
-        );
+        return new SqlFieldsQuery(insertQuery(cacheName)).setArgs(id, "name-" + id);
     }
 
     @Test
     public void test() throws Exception {
-        LogListener lsnr = LogListener.matches("Could not execute durable background task: drop-sql-index-test-").times(0).build();
+        // Listen for failure of the drop index tasks.
+        LogListener lsnr = LogListener.matches(
+            "Could not execute durable background task: drop-sql-index-test-"
+        ).times(0).build();
 
         listeningLog.registerListener(lsnr);
 
@@ -115,19 +119,25 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
 
         ignite.cluster().state(ClusterState.ACTIVE);
 
+        // Cache for SQL queries.
         IgniteCache<Object, Object> queryCache = ignite.getOrCreateCache("queryCache");
 
         String cacheName = "test";
 
+        // Create "test" cache.
         ignite.getOrCreateCache(cacheName);
 
+        // Put data.
         try (IgniteDataStreamer<Object, Object> streamer = ignite.dataStreamer(cacheName)) {
             streamer.addData(1, 1);
             streamer.flush();
         }
 
-        queryCache.query(new SqlFieldsQuery(create(cacheName))).getAll();
+        // Create table over "test" cache. This triggers index rebuild and subsequently drop of
+        // older indexes.
+        queryCache.query(new SqlFieldsQuery(createTable(cacheName))).getAll();
 
+        // Restart grid.
         stopGrid(0, true);
 
         ignite = startGrid(0);
@@ -136,6 +146,7 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
 
         IgniteEx finalIgnite = ignite;
 
+        // Wait until completion of all the background durable tasks.
         assertTrue(GridTestUtils.waitForCondition(
             () -> {
                 Collection<DurableBackgroundTaskState<?>> tasks =
@@ -144,11 +155,14 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
                 if (tasks.isEmpty())
                     return true;
 
+                // Tasks whose states are saved in the metastorage are only purged on checkpoint, so
+                // check if all tasks are completed.
                 return tasks.stream().allMatch(state -> state.state() == DurableBackgroundTaskState.State.COMPLETED);
             },
             TimeUnit.SECONDS.toMillis(5)
         ));
 
+        // Check that there were no errors in background tasks.
         assertTrue(lsnr.check());
     }
 

@@ -3547,9 +3547,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 .filter(index -> index instanceof H2TreeIndex)
                 .map(H2TreeIndex.class::cast)
                 .filter(index -> indexName.equals(index.getTreeName())).findFirst()
-                .ifPresent(index -> {
-                    index.markDestroyed();
-                });
+                .ifPresent(H2TreeIndex::markDestroyed);
         });
     }
 

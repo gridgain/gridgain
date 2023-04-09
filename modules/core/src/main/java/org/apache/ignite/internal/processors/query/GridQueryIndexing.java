@@ -543,5 +543,11 @@ public interface GridQueryIndexing {
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException;
 
+    /**
+     * Marks index as destroyed.
+     *
+     * @param cacheCtx Cache context.
+     * @param indexName Index name.
+     */
     void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexName);
 }
