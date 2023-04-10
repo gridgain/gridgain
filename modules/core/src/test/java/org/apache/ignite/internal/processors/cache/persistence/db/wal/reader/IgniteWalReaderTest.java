@@ -1397,6 +1397,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         for (int i = 0; i < 10; i++)
             cache.put(i, new IndexedObject(i));
 
+        ignite0.cluster().state(ClusterState.INACTIVE);
+
         verifyTxRecords(ignite0, 0, null);
         verifyTxRecords(ignite1, 0, null);
     }
@@ -1427,6 +1429,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
             tx.commit();
         }
 
+        ignite0.cluster().state(ClusterState.INACTIVE);
+
         verifyTxRecords(ignite0, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
         verifyTxRecords(ignite1, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
     }
@@ -1454,6 +1458,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
             tx.rollback();
         }
+
+        ignite0.cluster().state(ClusterState.INACTIVE);
 
         verifyTxRecords(ignite0, 0, null);
         verifyTxRecords(ignite1, 0, null);
@@ -1486,6 +1492,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
             tx.rollback();
         }
+
+        ignite0.cluster().state(ClusterState.INACTIVE);
 
         verifyTxRecords(ignite0, 0, TransactionState.ROLLED_BACK);
         verifyTxRecords(ignite1, 0, TransactionState.ROLLED_BACK);
