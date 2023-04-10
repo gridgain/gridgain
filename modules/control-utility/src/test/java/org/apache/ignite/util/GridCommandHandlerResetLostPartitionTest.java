@@ -119,7 +119,6 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
     /** */
     @Test
     public void testCacheResetLostPartitionsAll() throws Exception {
-
         injectTestSystemOut();
 
         doRebalanceAfterPartitionsWereLost();
@@ -134,14 +133,14 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheTwo', id = -433499286), caches ([cacheTwo]).");
         assertContains(log, out, "Reset LOST-partitions performed successfully. Cache group (name = 'cacheThree', id = 18573116), caches ([cacheThree]).");
 
-        grid(0).cluster().active(false);
-        grid(0).cluster().active(true);
-
         // Check all nodes report same lost partitions.
         for (String cacheName : CACHE_NAMES) {
             for (Ignite grid : G.allGrids())
                 assertTrue(grid.cache(cacheName).lostPartitions().isEmpty());
         }
+
+        stopAllGrids();
+        startGrids(3);
 
         // All data was back.
         assertEquals(CACHE_NAMES.length * CACHE_SIZE, averageSizeAroundAllNodes());

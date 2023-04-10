@@ -1563,6 +1563,24 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /** */
     @Test
+    public void testCacheResetLostPartitionsNoArgs() {
+        autoConfirmation = false;
+
+        Ignite ignite = crd;
+
+        createCacheAndPreload(ignite, 100);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--cache", "reset_lost_partitions"));
+
+        final String out = testOut.toString();
+
+        assertContains(log, out, "Check arguments. Expected either [--all] or [cacheName1,...,cacheNameN]");
+    }
+
+    /** */
+    @Test
     public void testCacheResetLostPartitions() {
         Ignite ignite = crd;
 

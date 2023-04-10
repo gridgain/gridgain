@@ -38,7 +38,6 @@ import org.apache.ignite.internal.commandline.cache.reset_lost_partitions.CacheR
 import org.apache.ignite.internal.commandline.cache.reset_lost_partitions.CacheResetLostPartitionsTaskResult;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 
-import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.TaskExecutor.BROADCAST_UUID;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
@@ -47,16 +46,16 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.RESE
 import static org.apache.ignite.internal.commandline.cache.argument.ResetLostPartitionsCommandArg.ALL_CACHES_MODE;
 
 /**
- * Command for resetting lost partition state.
+ * Command for reset lost partition state.
  */
 public class ResetLostPartitions extends AbstractCommand<Set<String>> {
+    private static String CACHES = "cacheName1,...,cacheNameN";
+
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        String CACHES = "cacheName1,...,cacheNameN";
         String description = "Reset the state of lost partitions for the specified or all affected caches.";
 
-        usageCache(logger, RESET_LOST_PARTITIONS, description, null, CACHES,
-            or(optional(ALL_CACHES_MODE)));
+        usageCache(logger, RESET_LOST_PARTITIONS, description, null, or(CACHES, ALL_CACHES_MODE));
     }
 
     /**
@@ -106,7 +105,7 @@ public class ResetLostPartitions extends AbstractCommand<Set<String>> {
             }
         }
 
-        if (caches.size() > 0)
+        if (!caches.isEmpty())
             logger.info("The following caches have LOST partitions: " + CommandLogger.join(",", caches) + ".");
         else
             logger.info("No caches with LOST partition has been found found.");
@@ -114,8 +113,7 @@ public class ResetLostPartitions extends AbstractCommand<Set<String>> {
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-
-        String nextArg = argIter.nextArg("");
+        String nextArg = argIter.nextArg("Expected either [" + ALL_CACHES_MODE + "] or [" + CACHES + "]");
 
         ResetLostPartitionsCommandArg arg = CommandArgUtils.of(nextArg, ResetLostPartitionsCommandArg.class);
 
