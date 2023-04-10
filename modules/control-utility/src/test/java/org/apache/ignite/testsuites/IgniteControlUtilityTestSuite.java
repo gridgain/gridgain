@@ -52,6 +52,7 @@ import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationTxPersist
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationTxTest;
 import org.apache.ignite.util.GridCommandHandlerPropertiesTest;
 import org.apache.ignite.util.GridCommandHandlerRUTest;
+import org.apache.ignite.util.GridCommandHandlerResetLostPartitionTest;
 import org.apache.ignite.util.GridCommandHandlerSslTest;
 import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
@@ -116,7 +117,9 @@ import org.junit.runners.Suite;
     IgniteWalConverterSensitiveDataTest.class,
     GridCommandHandlerDefragmentationTest.class,
 
-    GridCommandHandlerCheckpointingTest.class
+    GridCommandHandlerCheckpointingTest.class,
+
+    GridCommandHandlerResetLostPartitionTest.class
 })
 public class IgniteControlUtilityTestSuite {
 }
