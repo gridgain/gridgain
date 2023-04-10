@@ -295,9 +295,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
                         msg.partitions().addFull(p);
 
-                        if (TEST_FULL_PARTS.equals(msg.partitions().fullSet())) {
+                        if (TEST_FULL_PARTS.equals(msg.partitions().fullSet()))
                             log.error("asshole generateAssignments contains all partitions assignments=" + assignments, new Exception());
-                        }
                     }
                 }
             }
