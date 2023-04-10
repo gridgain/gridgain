@@ -2846,8 +2846,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     @Nullable WALPointer logTxRecord(IgniteTxAdapter tx) {
         BaselineTopology baselineTop;
 
-        // Log tx state change to WAL.
+        // Skip logging tx state change to WAL if required.
         if (cctx.wal() == null
+            || !containsCacheWithEnabledWal(tx)
             || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
             || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
             return null;
@@ -2869,6 +2870,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
         }
+    }
+
+    /** Checks if a record belongs to a persistent cache with WAL enabled. */
+    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+        IgniteTxState state = tx.txState();
+
+        assert state.cacheIds() != null;
+
+        for (int i = 0; i < state.cacheIds().size(); i++) {
+            int cacheId = state.cacheIds().get(i);
+
+            GridCacheContext ctx = cctx.cacheContext(cacheId);
+            if (ctx.group().persistenceEnabled() && ctx.group().walEnabled())
+                return true;
+        }
+
+        return false;
     }
 
     /**
