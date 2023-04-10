@@ -1443,7 +1443,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         boolean crd,
         final GridDhtPartitionsExchangeFuture fut,
         Collection<DynamicCacheDescriptor> descs
-    ) throws IgniteCheckedException {
+    ) {
         IgniteInternalFuture<?> res = cachesRegistry.addUnregistered(descs);
 
         if (fut.context().mergeExchanges())
