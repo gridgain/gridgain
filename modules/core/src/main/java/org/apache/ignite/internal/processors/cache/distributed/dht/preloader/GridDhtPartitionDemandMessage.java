@@ -152,7 +152,7 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
         cp.topVer = topVer;
         cp.parts = parts;
 
-        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", this), new Exception());
+        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", cp), new Exception());
 
         return cp;
     }
