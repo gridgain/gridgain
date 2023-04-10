@@ -706,7 +706,7 @@ public class GridDhtPartitionDemander {
                 GridDhtPartitionDemandMessage d = new GridDhtPartitionDemandMessage(
                     supplyMsg.rebalanceId(),
                     supplyMsg.topologyVersion(),
-                    grp.groupId());
+                    grp.groupId(), log);
 
                 d.timeout(grp.preloader().timeout());
 
@@ -1741,7 +1741,7 @@ public class GridDhtPartitionDemander {
                 // with the same positive id must be cleaned up at the supply node.
                 -rebalanceId,
                 this.topologyVersion(),
-                grp.groupId());
+                grp.groupId(), log);
 
             d.timeout(grp.preloader().timeout());
 

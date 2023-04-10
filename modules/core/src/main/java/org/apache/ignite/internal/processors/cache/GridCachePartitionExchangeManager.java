@@ -507,7 +507,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 }
                                 else if (m instanceof GridDhtPartitionDemandLegacyMessage) {
                                     grp.preloader().handleDemandMessage(idx, id,
-                                        new GridDhtPartitionDemandMessage((GridDhtPartitionDemandLegacyMessage)m));
+                                        new GridDhtPartitionDemandMessage((GridDhtPartitionDemandLegacyMessage)m, log));
 
                                     return;
                                 }

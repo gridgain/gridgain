@@ -259,7 +259,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         assignments.put(histSupplier, msg = new GridDhtPartitionDemandMessage(
                             top.updateSequence(),
                             assignments.topologyVersion(),
-                            grp.groupId())
+                            grp.groupId(), log)
                         );
                     }
 
@@ -285,7 +285,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                             assignments.put(n, msg = new GridDhtPartitionDemandMessage(
                                 top.updateSequence(),
                                 assignments.topologyVersion(),
-                                grp.groupId()));
+                                grp.groupId(), log));
                         }
 
                         msg.partitions().addFull(p);
