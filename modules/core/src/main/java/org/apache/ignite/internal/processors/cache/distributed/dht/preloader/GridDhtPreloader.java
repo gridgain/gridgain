@@ -19,12 +19,9 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -67,8 +64,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * DHT cache preloader.
  */
 public class GridDhtPreloader extends GridCachePreloaderAdapter {
-    public static final Set<Integer> TEST_FULL_PARTS = IntStream.range(0, 16).boxed().collect(Collectors.toSet());
-
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
@@ -264,7 +259,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         assignments.put(histSupplier, msg = new GridDhtPartitionDemandMessage(
                             top.updateSequence(),
                             assignments.topologyVersion(),
-                            grp.groupId(), log)
+                            grp.groupId())
                         );
                     }
 
@@ -290,13 +285,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                             assignments.put(n, msg = new GridDhtPartitionDemandMessage(
                                 top.updateSequence(),
                                 assignments.topologyVersion(),
-                                grp.groupId(), log));
+                                grp.groupId()));
                         }
 
                         msg.partitions().addFull(p);
-
-                        if (TEST_FULL_PARTS.equals(msg.partitions().fullSet()))
-                            log.error("asshole generateAssignments contains all partitions assignments=" + assignments, new Exception());
                     }
                 }
             }
@@ -419,20 +411,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         GridDhtPreloaderAssignments assigns = null;
 
         // Don't delay for dummy reassigns to avoid infinite recursion.
-        if (delay == 0 || forceRebalance) {
+        if (delay == 0 || forceRebalance)
             assigns = generateAssignments(exchId, exchFut);
-
-            log.error(String.format(
-                "asshole before rebalance in prepare calculate assignments " +
-                    "[grpName=%s, delay=%s, forceRebalance=%s, assigns.cancelled=%s, assigns.size=%s, assigns=%s]",
-                grp.cacheOrGroupName(),
-                delay,
-                forceRebalance,
-                assigns.cancelled(),
-                assigns.size(),
-                assigns
-            ));
-        }
 
         return demander.addAssignments(assigns, forceRebalance, rebalanceId, next, forcedRebFut, compatibleRebFut);
     }

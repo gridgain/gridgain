@@ -398,7 +398,7 @@ public class GridDhtPartitionDemander {
             // Partition states cannot be changed from now on by previous incompatible rebalancing.
             // Retain only moving partitions. Assignment can become empty as a result.
             // Delayed partition owning happens in the exchange worker as well, so no race with delayed owning here.
-            assignments.retainMoving(grp.topology(), log);
+            assignments.retainMoving(grp.topology());
 
             // Skip rebalanced group.
             if (assignments.isEmpty())
@@ -466,11 +466,6 @@ public class GridDhtPartitionDemander {
                 @Override public void onTimeout() {
                     exchFut.listen(new CI1<IgniteInternalFuture<AffinityTopologyVersion>>() {
                         @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> f) {
-                            log.error(String.format(
-                                "asshole before rebalance schedule force rebalnce [grpName=%s]",
-                                grp.cacheOrGroupName()
-                            ));
-
                             ctx.exchange().forceRebalance(exchFut.exchangeId());
                         }
                     });
@@ -706,7 +701,7 @@ public class GridDhtPartitionDemander {
                 GridDhtPartitionDemandMessage d = new GridDhtPartitionDemandMessage(
                     supplyMsg.rebalanceId(),
                     supplyMsg.topologyVersion(),
-                    grp.groupId(), log);
+                    grp.groupId());
 
                 d.timeout(grp.preloader().timeout());
 
@@ -1741,7 +1736,7 @@ public class GridDhtPartitionDemander {
                 // with the same positive id must be cleaned up at the supply node.
                 -rebalanceId,
                 this.topologyVersion(),
-                grp.groupId(), log);
+                grp.groupId());
 
             d.timeout(grp.preloader().timeout());
 

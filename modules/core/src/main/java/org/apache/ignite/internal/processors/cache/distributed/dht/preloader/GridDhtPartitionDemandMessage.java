@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.io.Externalizable;
 import java.nio.ByteBuffer;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridDirectTransient;
 import org.apache.ignite.internal.IgniteCodeGeneratingFail;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
@@ -80,8 +79,8 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
      * @param topVer Topology version.
      * @param grpId Cache group ID.
      */
-    GridDhtPartitionDemandMessage(long rebalanceId, @NotNull AffinityTopologyVersion topVer, int grpId, IgniteLogger log) {
-        this(rebalanceId, topVer, grpId, new IgniteDhtDemandedPartitionsMap(), log);
+    GridDhtPartitionDemandMessage(long rebalanceId, @NotNull AffinityTopologyVersion topVer, int grpId) {
+        this(rebalanceId, topVer, grpId, new IgniteDhtDemandedPartitionsMap());
     }
 
     /**
@@ -91,19 +90,17 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
      * @param parts Demand partiton map.
      */
     GridDhtPartitionDemandMessage(long rebalanceId, @NotNull AffinityTopologyVersion topVer, int grpId,
-        IgniteDhtDemandedPartitionsMap parts, IgniteLogger log) {
+        IgniteDhtDemandedPartitionsMap parts) {
         this.grpId = grpId;
         this.rebalanceId = rebalanceId;
         this.topVer = topVer;
         this.parts = parts;
-
-        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", this), new Exception());
     }
 
     /**
      * @param cp Message to copy from.
      */
-    public GridDhtPartitionDemandMessage(GridDhtPartitionDemandLegacyMessage cp, IgniteLogger log) {
+    public GridDhtPartitionDemandMessage(GridDhtPartitionDemandLegacyMessage cp) {
         grpId = cp.groupId();
         rebalanceId = cp.updateSequence();
         topic = cp.topic();
@@ -125,8 +122,6 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
         partMap.historicalMap().trim();
 
         parts = partMap;
-
-        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", this), new Exception());
     }
 
     /**
@@ -142,7 +137,7 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
      * @param parts New partitions map.
      * @return Copy of message with new partitions map.
      */
-    public GridDhtPartitionDemandMessage withNewPartitionsMap(@NotNull IgniteDhtDemandedPartitionsMap parts, IgniteLogger log) {
+    public GridDhtPartitionDemandMessage withNewPartitionsMap(@NotNull IgniteDhtDemandedPartitionsMap parts) {
         GridDhtPartitionDemandMessage cp = new GridDhtPartitionDemandMessage();
         cp.grpId = grpId;
         cp.rebalanceId = rebalanceId;
@@ -151,9 +146,6 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
         cp.workerId = workerId;
         cp.topVer = topVer;
         cp.parts = parts;
-
-        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", cp), new Exception());
-
         return cp;
     }
 
