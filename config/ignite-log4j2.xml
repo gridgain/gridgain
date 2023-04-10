@@ -70,6 +70,8 @@
 
         <Logger name="com.amazonaws" level="WARN"/>
 
+        <Logger name="org.gridgain.control.awssdk" level="WARN"/>
+
         <Root level="INFO">
             <!-- Uncomment to enable logging to console. -->
             <!--

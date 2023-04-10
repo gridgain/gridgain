@@ -642,7 +642,7 @@ public class IgniteFutureImplTest extends GridCommonAbstractTest {
 
         IgniteFuture<Integer> chained2 = createFuture(ffut0).chainAsync(chainClos, customExec);
 
-        chained2.listen(new TestClosure(latch1));
+        chained2.listenAsync(new TestClosure(latch1), customExec);
 
         chained2.get(100, TimeUnit.MILLISECONDS);
 

@@ -127,7 +127,7 @@
         <dependency>
             <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-core</artifactId>
-            <version>0.12</version>
+            <version>0.14</version>
         </dependency>
 
         <dependency>
