@@ -140,6 +140,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointe
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.compress.CompressionProcessor;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
@@ -367,8 +368,11 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Data regions which should be checkpointed. */
     protected final Set<DataRegion> checkpointedDataRegions = new GridConcurrentHashSet<>();
 
+    /** Checkpoint frequency dynamic property (measured in ms). */
+    private DistributedChangeableProperty<Long> cpFreq;
+
     /** Checkpoint frequency deviation. */
-    private SimpleDistributedProperty<Integer> cpFreqDeviation;
+    private DistributedChangeableProperty<Integer> cpFreqDeviation;
 
     /** WAL rebalance threshold. */
     private final SimpleDistributedProperty<Integer> historicalRebalanceThreshold =
@@ -530,9 +534,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         if (!kernalCtx.clientNode()) {
             kernalCtx.internalSubscriptionProcessor().registerDatabaseListener(new MetastorageRecoveryLifecycle());
 
+            cpFreq = new SimpleDistributedProperty<>("checkpoint.frequency", Long::parseLong);
             cpFreqDeviation = new SimpleDistributedProperty<>("checkpoint.deviation", Integer::parseInt);
 
             kernalCtx.internalSubscriptionProcessor().registerDistributedConfigurationListener(dispatcher -> {
+                cpFreq.addListener((name, oldVal, newVal) -> {
+                    U.log(log, "Checkpoint frequency changed [oldVal=" + oldVal + ", newVal=" + newVal + "]");
+
+                    forceCheckpoint("checkpoint-frequency-changed");
+                });
+
+                dispatcher.registerProperty(cpFreq);
+
                 cpFreqDeviation.addListener((name, oldVal, newVal) ->
                     U.log(log, "Checkpoint frequency deviation changed [oldVal=" + oldVal + ", newVal=" + newVal + "]"));
 
@@ -557,6 +570,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 kernalCtx.longJvmPauseDetector(),
                 kernalCtx.failure(),
                 kernalCtx.cache(),
+                cpFreq::get,
                 cpFreqDeviation::get,
                 kernalCtx.pools().getSystemExecutorService()
             );

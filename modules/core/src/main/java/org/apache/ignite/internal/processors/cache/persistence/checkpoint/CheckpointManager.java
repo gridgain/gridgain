@@ -105,6 +105,7 @@ public class CheckpointManager {
      * @param longJvmPauseDetector Long JVM pause detector.
      * @param failureProcessor Failure processor.
      * @param cacheProcessor Cache processor.
+     * @param cpFreqOverride Override of checkpoint frequency (ms) via a distributed property.
      * @param cpFreqDeviation Distributed checkpoint frequency deviation.
      * @param checkpointMapSnapshotExecutor Checkpoint map snapshot executor.
      * @throws IgniteCheckedException if fail.
@@ -127,6 +128,7 @@ public class CheckpointManager {
         LongJVMPauseDetector longJvmPauseDetector,
         FailureProcessor failureProcessor,
         GridCacheProcessor cacheProcessor,
+        Supplier<Long> cpFreqOverride,
         Supplier<Integer> cpFreqDeviation,
         Executor checkpointMapSnapshotExecutor
     ) throws IgniteCheckedException {
@@ -197,6 +199,7 @@ public class CheckpointManager {
             checkpointPagesWriterFactory,
             persistenceCfg.getCheckpointFrequency(),
             persistenceCfg.getCheckpointThreads(),
+            cpFreqOverride,
             cpFreqDeviation
         );
 

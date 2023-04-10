@@ -5953,6 +5953,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** */
         private int row = -1;
 
+        /**
+         * Last read value from {@link #fillFromBuffer0(long, BPlusIO, int, int)}, used to advance the cursor in
+         * {@link #reinitialize()}.
+         */
+        private L nextLowerBound;
+
         /** */
         private final TreeRowClosure<L, T> c;
 
@@ -5967,6 +5973,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
             this.c = c;
             this.x = x;
+            this.nextLowerBound = lowerBound;
         }
 
         /** {@inheritDoc} */
@@ -5999,8 +6006,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             if (resCnt == 0) {
                 rows = (T[])EMPTY;
 
+                // Preserve last read row to avoid inifinite retries or weird assertions.
+                nextLowerBound = getRow(io, pageAddr, cnt - 1, x);
+
                 return false;
-            }
+            } else
+                nextLowerBound = rows[resCnt - 1];
 
             GridArrays.clearTail(rows, resCnt);
 
@@ -6042,11 +6053,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                 return true;
             }
 
-            T lastRow = clearLastRow();
+            clearLastRow();
 
             row = 0;
 
-            return nextPage(lastRow);
+            assert nextLowerBound != null || nextPageId == 0L;
+
+            return nextPage(nextLowerBound);
         }
 
         /**
@@ -6079,6 +6092,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         /** {@inheritDoc} */
         @Override public void close() {
             rows = null;
+
+            nextLowerBound = null;
         }
     }
 

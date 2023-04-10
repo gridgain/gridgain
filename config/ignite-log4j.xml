@@ -120,6 +120,10 @@
         <level value="WARN"/>
     </category>
 
+    <category name="org.gridgain.control.awssdk">
+        <level value="WARN"/>
+    </category>
+
     <!-- Default settings. -->
     <root>
         <!-- Print out all info by default. -->

@@ -63,12 +63,17 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
     /** */
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
+    /** */
+    private final int timeout;
+
     /**
      * Constructor.
      *
      * @param cfg Client config.
      */
     public GridNioClientConnectionMultiplexer(ClientConfiguration cfg) {
+        timeout = cfg.getTimeout();
+
         IgniteLogger gridLog = new NullLogger();
 
         GridNioFilter[] filters;
@@ -141,7 +146,7 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
 
         try {
             SocketChannel ch = SocketChannel.open();
-            ch.socket().connect(new InetSocketAddress(addr.getHostName(), addr.getPort()), Integer.MAX_VALUE);
+            ch.socket().connect(new InetSocketAddress(addr.getHostName(), addr.getPort()), timeout);
 
             Map<Integer, Object> meta = new HashMap<>();
             GridNioFuture<?> sslHandshakeFut = null;
@@ -157,10 +162,14 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
             if (sesFut.error() != null)
                 sesFut.get();
 
-            if (sslHandshakeFut != null)
-                sslHandshakeFut.get();
+            if (sslHandshakeFut != null) {
+                if (timeout <= 0)
+                    sslHandshakeFut.get();
+                else
+                    sslHandshakeFut.get(timeout);
+            }
 
-            GridNioSession ses = sesFut.get();
+            GridNioSession ses = timeout <= 0 ? sesFut.get() : sesFut.get(timeout);
 
             return new GridNioClientConnection(ses, msgHnd, stateHnd);
         }
