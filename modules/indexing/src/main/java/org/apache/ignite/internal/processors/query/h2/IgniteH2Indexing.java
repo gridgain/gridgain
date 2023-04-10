@@ -3550,8 +3550,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 if (index instanceof H2TreeIndex) {
                     H2TreeIndex treeIndex = (H2TreeIndex)index;
 
-                    if (indexTreeName.equals(treeIndex.getTreeName())) {
-                        treeIndex.markDestroyed();
+                    if (indexTreeName.equals(treeIndex.treeName())) {
+                        treeIndex.markInvalid();
 
                         break;
                     }

@@ -183,10 +183,6 @@ public class IndexStorageImpl implements IndexStorage {
 
         final IndexItem row = metaTree.findOne(new IndexItem(idxNameBytes, 0));
 
-//        long pagePtr = pageMem.acquirePage(grpId, row.pageId, IoStatisticsHolderNoOp.INSTANCE);
-
-//        long pageAddr = pageMem.readLock(cacheId, row.pageId, pagePtr);
-
         return row != null ? new RootPage(new FullPageId(row.pageId, grpId), false) : null;
     }
 

@@ -42,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendi
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTaskResult;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -280,11 +281,13 @@ public class DurableBackgroundCleanupIndexTreeTaskV2 extends IgniteDataTransferO
 
     /**
      * Renames index's trees.
+     * Synchronized because can be called in parallel by this task and
+     * by the {@link H2TreeIndex#destroy0(boolean, boolean)}.
      *
      * @param grpCtx Cache group context.
      * @throws IgniteCheckedException If failed to rename index's trees.
      */
-    public void renameIndexTrees(CacheGroupContext grpCtx) throws IgniteCheckedException {
+    public synchronized void renameIndexTrees(CacheGroupContext grpCtx) throws IgniteCheckedException {
         renameIndexRootPages(grpCtx, cacheName, oldTreeName, newTreeName, segments);
 
         needToRen = false;

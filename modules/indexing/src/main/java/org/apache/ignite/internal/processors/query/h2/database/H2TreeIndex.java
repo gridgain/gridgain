@@ -665,6 +665,24 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
+     * Marks index as invalid, closing its resources.
+     */
+    public void markInvalid() {
+        if (!markDestroyed())
+            return;
+
+        if (cctx.affinityNode()) {
+            for (H2Tree segment : segments) {
+                segment.markDestroyed();
+
+                segment.close();
+            }
+
+            ctx.metric().remove(stats.metricRegistryName());
+        }
+    }
+
+    /**
      * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
      *
      * @param rmvIdx Flag remove.
@@ -696,11 +714,15 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         segments
                     );
 
+                    cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
+
                     if (renameImmediately) {
+                        // If not renamed immediately, then index rebuild tasks will see old RootPageId
+                        // stored in the IndexStorage which may be a root of a broken tree.
+                        // NB: First the task will be written to MS (and WAL) and only after that the
+                        // RenameRecord.
                         task.renameIndexTrees(cctx.group());
                     }
-
-                    cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
                 }
             }
         }
@@ -1097,16 +1119,21 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
+     * Returns the tree name of this index.
+     *
+     * @return Tree name of the index.
+     */
+    public String treeName() {
+        return treeName;
+    }
+
+    /**
      * Marks this index as destroyed.
      *
      * @return {@code true} if mark was successfull, and {@code false} if index was already marked as destroyed.
      */
-    public boolean markDestroyed() {
+    private boolean markDestroyed() {
         return destroyed.compareAndSet(false, true);
-    }
-
-    public String getTreeName() {
-        return treeName;
     }
 
     /**

@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -87,7 +86,7 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         return cacheName + "_table";
     }
 
-    static String createTable(String cacheName) {
+    static String createTable(String cacheName, boolean multipleSegments) {
         return "CREATE TABLE IF NOT EXISTS " + tableName(cacheName) + " (\n" +
             "    ID VARCHAR NOT NULL,\n" +
             "    NAME VARCHAR NOT NULL,\n" +
@@ -95,6 +94,7 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
             ")\n" +
             "WITH \"\n" +
             "    CACHE_NAME=" + cacheName + "\n" +
+            (multipleSegments ? ",PARALLELISM=2" : "") +
             "\";";
     }
 
@@ -107,7 +107,16 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
     }
 
     @Test
+    public void testMultipleSegments() throws Exception {
+        test(true);
+    }
+
+    @Test
     public void test() throws Exception {
+        test(false);
+    }
+
+    private void test(boolean multipleSegments) throws Exception {
         // Listen for failure of the drop index tasks.
         LogListener lsnr = LogListener.matches(
             "Could not execute durable background task: drop-sql-index-test-"
@@ -125,17 +134,14 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         String cacheName = "test";
 
         // Create "test" cache.
-        ignite.getOrCreateCache(cacheName);
+        IgniteCache<Object, Object> cache = ignite.getOrCreateCache(cacheName);
 
         // Put data.
-        try (IgniteDataStreamer<Object, Object> streamer = ignite.dataStreamer(cacheName)) {
-            streamer.addData(1, 1);
-            streamer.flush();
-        }
+        cache.put(1, 1);
 
         // Create table over "test" cache. This triggers index rebuild and subsequently drop of
         // older indexes.
-        queryCache.query(new SqlFieldsQuery(createTable(cacheName))).getAll();
+        queryCache.query(new SqlFieldsQuery(createTable(cacheName, multipleSegments))).getAll();
 
         // Restart grid.
         stopGrid(0, true);
@@ -151,9 +157,6 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
             () -> {
                 Collection<DurableBackgroundTaskState<?>> tasks =
                     tasks(finalIgnite.context().durableBackgroundTask()).values();
-
-                if (tasks.isEmpty())
-                    return true;
 
                 // Tasks whose states are saved in the metastorage are only purged on checkpoint, so
                 // check if all tasks are completed.

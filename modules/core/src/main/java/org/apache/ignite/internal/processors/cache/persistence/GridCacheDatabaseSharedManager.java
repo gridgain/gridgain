@@ -2999,7 +2999,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             // hew destruction task. Existance of this record means that
                             // DurableBackgroundTask that destroys indexes is already in metastorage and
                             // that it will destroy index.
-                            cacheCtx.kernalContext().query().getIndexing().invalidateIndex(cacheCtx, record.oldTreeName());
+                            GridQueryProcessor qryProc = cacheCtx.kernalContext().query();
+
+                            qryProc.getIndexing().invalidateIndex(cacheCtx, record.oldTreeName());
 
                             IgniteCacheOffheapManager offheap = cacheCtx.offheap();
 
