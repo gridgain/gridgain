@@ -1146,7 +1146,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     public void setEncryptionState(CacheGroupContext grp, int partId, int idx, int total) {
         // The last element of the array is used to store the status of the index partition.
         long[] states = reencryptGroups.computeIfAbsent(grp.groupId(), v -> {
-            log.info("setEncryptionState for grp " + v);
+            log.error("setEncryptionState for grp " + v + " part=" + partId + ", idx=" + idx + ", total=" + total,
+                new Exception("tracking"));
 
             return new long[grp.affinity().partitions() + 1];
         });
