@@ -544,10 +544,10 @@ public interface GridQueryIndexing {
     ) throws IgniteCheckedException;
 
     /**
-     * Marks index as destroyed.
+     * Marks index as renamed.
      *
      * @param cacheCtx Cache context.
      * @param indexTreeName Index tree name.
      */
-    void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexTreeName);
+    void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName);
 }

@@ -3001,7 +3001,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                             // that it will destroy index.
                             GridQueryProcessor qryProc = cacheCtx.kernalContext().query();
 
-                            qryProc.getIndexing().invalidateIndex(cacheCtx, record.oldTreeName());
+                            qryProc.getIndexing().markIndexRenamed(cacheCtx, record.oldTreeName());
 
                             IgniteCacheOffheapManager offheap = cacheCtx.offheap();
 

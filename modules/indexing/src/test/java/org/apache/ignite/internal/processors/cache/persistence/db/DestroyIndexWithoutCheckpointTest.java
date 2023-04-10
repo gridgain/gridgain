@@ -57,8 +57,7 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         DataStorageConfiguration cfg = new DataStorageConfiguration();
 
         cfg.setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-            .setPersistenceEnabled(true)
-            .setMaxSize(10 * 1024 * 1024));
+            .setPersistenceEnabled(true));
 
         configuration.setDataStorageConfiguration(cfg);
 
@@ -118,11 +117,17 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
 
     private void test(boolean multipleSegments) throws Exception {
         // Listen for failure of the drop index tasks.
-        LogListener lsnr = LogListener.matches(
+        LogListener lsnrBackgroundFailure = LogListener.matches(
             "Could not execute durable background task: drop-sql-index-test-"
         ).times(0).build();
 
-        listeningLog.registerListener(lsnr);
+        // Listen for failure of the drop index tasks.
+        LogListener lsnrConcurrentDestruction = LogListener.matches(
+            "Tree is being concurrently destroyed"
+        ).times(0).build();
+
+        listeningLog.registerListener(lsnrBackgroundFailure);
+        listeningLog.registerListener(lsnrConcurrentDestruction);
 
         IgniteEx ignite = startGrid(0);
 
@@ -142,6 +147,10 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         // Create table over "test" cache. This triggers index rebuild and subsequently drop of
         // older indexes.
         queryCache.query(new SqlFieldsQuery(createTable(cacheName, multipleSegments))).getAll();
+
+        // Add a record so that on logical restore index rename would be first and then this record.
+        // This way we try to trigger a write to an index that is already renamed.
+        queryCache.query(insertQuery("test", 100)).getAll();
 
         // Restart grid.
         stopGrid(0, true);
@@ -166,7 +175,10 @@ public class DestroyIndexWithoutCheckpointTest extends GridCommonAbstractTest {
         ));
 
         // Check that there were no errors in background tasks.
-        assertTrue(lsnr.check());
+        assertTrue(lsnrBackgroundFailure.check());
+
+        // Check that there were no concurrent tree destructions.
+        assertTrue(lsnrConcurrentDestruction.check());
     }
 
     private Map<String, DurableBackgroundTaskState<?>> tasks(DurableBackgroundTasksProcessor proc) {

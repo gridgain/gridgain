@@ -174,8 +174,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** Query context registry. */
     private final QueryContextRegistry qryCtxRegistry;
 
-    /** If {code true} then this index is already marked as destroyed. */
+    /** If {@code true} then this index is already marked as destroyed. */
     private final AtomicBoolean destroyed = new AtomicBoolean();
+
+    /**
+     * If {@code true} then this index was renamed and soon will be destroyed.
+     * No need to start new destruction task.
+     */
+    private final AtomicBoolean renamed = new AtomicBoolean();
 
     /** IO statistics holder. */
     private final IoStatisticsHolderIndex stats;
@@ -665,21 +671,11 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
-     * Marks index as invalid, closing its resources.
+     * Marks index as renamed, meaning on destruction there is no need to
+     * run {@link DurableBackgroundCleanupIndexTreeTaskV2}.
      */
-    public void markInvalid() {
-        if (!markDestroyed())
-            return;
-
-        if (cctx.affinityNode()) {
-            for (H2Tree segment : segments) {
-                segment.markDestroyed();
-
-                segment.close();
-            }
-
-            ctx.metric().remove(stats.metricRegistryName());
-        }
+    public void markRenamed() {
+        renamed.set(true);
     }
 
     /**
@@ -701,6 +697,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 }
 
                 ctx.metric().remove(stats.metricRegistryName());
+
+                if (renamed.get()) {
+                    // Already renamed, this means that DurableBackgroundCleanupIndexTreeTaskV2 was already started
+                    // (maybe before restart and there was no checkpoint, but this task will be read from WAL).
+                    return;
+                }
 
                 if (cctx.group().persistenceEnabled() ||
                     cctx.shared().kernalContext().state().clusterState().state() != INACTIVE) {

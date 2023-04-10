@@ -3537,7 +3537,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void invalidateIndex(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
+    @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
         Collection<H2TableDescriptor> descriptors = schemaManager().tablesForCache(cacheCtx.name());
 
         for (H2TableDescriptor descriptor : descriptors) {
@@ -3551,7 +3551,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     H2TreeIndex treeIndex = (H2TreeIndex)index;
 
                     if (indexTreeName.equals(treeIndex.treeName())) {
-                        treeIndex.markInvalid();
+                        treeIndex.markRenamed();
 
                         break;
                     }
