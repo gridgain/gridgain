@@ -345,6 +345,54 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
     /** @throws Exception If failed. */
     @Test
+    public void test() throws Exception {
+        backups = 1;
+        pageScanRate = 1e-6;
+
+        CountDownLatch rebalanceFinished = new CountDownLatch(1);
+
+        T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
+
+        IgniteEx node0 = nodes.get1();
+        IgniteEx node1 = nodes.get2();
+
+        createEncryptedCache(node0, node1, cacheName(), null);
+
+        loadData(100_000);
+
+        IgniteEx node2 = startGrid(GRID_2);
+
+        node2.events().localListen(evt -> {
+            rebalanceFinished.countDown();
+
+            return true;
+        }, EventType.EVT_CACHE_REBALANCE_STOPPED);
+
+        resetBaselineTopology();
+
+        rebalanceFinished.await();
+
+        stopGrid(GRID_2);
+
+        resetBaselineTopology();
+
+        int grpId = CU.cacheId(cacheName());
+
+        node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
+
+        forceCheckpoint();
+
+        stopAllGrids();
+
+        pageScanRate = DFLT_REENCRYPTION_RATE_MBPS;
+
+        startTestGrids(false);
+
+        checkGroupKey(grpId, INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
     public void testPartitionEvictionDuringReencryption() throws Exception {
         backups = 1;
         pageScanRate = 1;
