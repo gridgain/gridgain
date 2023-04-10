@@ -142,7 +142,7 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
      * @param parts New partitions map.
      * @return Copy of message with new partitions map.
      */
-    public GridDhtPartitionDemandMessage withNewPartitionsMap(@NotNull IgniteDhtDemandedPartitionsMap parts) {
+    public GridDhtPartitionDemandMessage withNewPartitionsMap(@NotNull IgniteDhtDemandedPartitionsMap parts, IgniteLogger log) {
         GridDhtPartitionDemandMessage cp = new GridDhtPartitionDemandMessage();
         cp.grpId = grpId;
         cp.rebalanceId = rebalanceId;
@@ -151,6 +151,9 @@ public class GridDhtPartitionDemandMessage extends GridCacheGroupIdMessage {
         cp.workerId = workerId;
         cp.topVer = topVer;
         cp.parts = parts;
+
+        log.error(String.format("asshole new GridDhtPartitionDemandMessage=%s", this), new Exception());
+
         return cp;
     }
 

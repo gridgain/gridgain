@@ -398,7 +398,7 @@ public class GridDhtPartitionDemander {
             // Partition states cannot be changed from now on by previous incompatible rebalancing.
             // Retain only moving partitions. Assignment can become empty as a result.
             // Delayed partition owning happens in the exchange worker as well, so no race with delayed owning here.
-            assignments.retainMoving(grp.topology());
+            assignments.retainMoving(grp.topology(), log);
 
             // Skip rebalanced group.
             if (assignments.isEmpty())

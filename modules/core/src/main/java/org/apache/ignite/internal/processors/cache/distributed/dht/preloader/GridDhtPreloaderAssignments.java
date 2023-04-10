@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -123,7 +124,7 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
      *
      * @param top Topology.
      */
-    public void retainMoving(GridDhtPartitionTopology top) {
+    public void retainMoving(GridDhtPartitionTopology top, IgniteLogger log) {
         Iterator<Entry<ClusterNode, GridDhtPartitionDemandMessage>> it = entrySet().iterator();
 
         while (it.hasNext()) {
@@ -195,7 +196,7 @@ public class GridDhtPreloaderAssignments extends ConcurrentHashMap<ClusterNode, 
                 if (newMap.isEmpty())
                     it.remove();
                 else
-                    mapping.setValue(val.withNewPartitionsMap(newMap));
+                    mapping.setValue(val.withNewPartitionsMap(newMap, log));
             }
         }
     }
