@@ -19,9 +19,12 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
@@ -64,6 +67,8 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  * DHT cache preloader.
  */
 public class GridDhtPreloader extends GridCachePreloaderAdapter {
+    public static final Set<Integer> TEST_FULL_PARTS = IntStream.range(0, 16).boxed().collect(Collectors.toSet());
+
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
 
@@ -289,6 +294,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         }
 
                         msg.partitions().addFull(p);
+
+                        if (TEST_FULL_PARTS.equals(msg.partitions().fullSet())) {
+                            log.error("asshole generateAssignments contains all partitions assignments=" + assignments, new Exception());
+                        }
                     }
                 }
             }
