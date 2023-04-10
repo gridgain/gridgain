@@ -283,7 +283,6 @@ public class GridH2Table extends TableBase {
     /**
      * @return Information about all indexes related to the table.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     public List<IndexInformation> indexesInformation() {
         List<IndexInformation> res = new ArrayList<>();
 
@@ -729,7 +728,6 @@ public class GridH2Table extends TableBase {
 
             database.removeMeta(ses, getId());
             invalidate();
-
         }
         finally {
             unlock(true);

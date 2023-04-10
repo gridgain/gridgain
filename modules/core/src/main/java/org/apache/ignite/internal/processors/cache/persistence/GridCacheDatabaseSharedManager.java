@@ -2995,6 +2995,14 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         GridCacheContext cacheCtx = cctx.cacheContext(cacheId);
 
                         if (cacheCtx != null) {
+                            // Index was destroyed before restart, mark it as invalid, so that we don't start
+                            // hew destruction task. Existance of this record means that
+                            // DurableBackgroundTask that destroys indexes is already in metastorage and
+                            // that it will destroy index.
+                            GridQueryProcessor qryProc = cacheCtx.kernalContext().query();
+
+                            qryProc.getIndexing().markIndexRenamed(cacheCtx, record.oldTreeName());
+
                             IgniteCacheOffheapManager offheap = cacheCtx.offheap();
 
                             for (int i = 0; i < record.segments(); i++)

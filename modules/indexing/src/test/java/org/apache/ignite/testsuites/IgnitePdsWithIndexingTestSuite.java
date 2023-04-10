@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.index.ResumeCreateIndexTest;
 import org.apache.ignite.internal.processors.cache.index.ResumeRebuildIndexTest;
 import org.apache.ignite.internal.processors.cache.index.StopRebuildIndexTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsIndexingDefragmentationTest;
+import org.apache.ignite.internal.processors.cache.persistence.db.DestroyIndexWithoutCheckpointTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgniteTcBotInitNewPageTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IndexingMultithreadedLoadContinuousRestartTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.LongDestroyDurableBackgroundTaskTest;
@@ -73,7 +74,8 @@ import org.junit.runners.Suite;
     RenameIndexTreeTest.class,
     DropIndexTest.class,
     AffinityIndexShadowingTest.class,
-    MaintenanceRebuildIndexUtilsSelfTest.class
+    MaintenanceRebuildIndexUtilsSelfTest.class,
+    DestroyIndexWithoutCheckpointTest.class
 })
 public class IgnitePdsWithIndexingTestSuite {
 }

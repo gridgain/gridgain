@@ -542,4 +542,12 @@ public interface GridQueryIndexing {
         Runnable cancellationChecker,
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException;
+
+    /**
+     * Marks index as renamed.
+     *
+     * @param cacheCtx Cache context.
+     * @param indexTreeName Index tree name.
+     */
+    void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName);
 }
