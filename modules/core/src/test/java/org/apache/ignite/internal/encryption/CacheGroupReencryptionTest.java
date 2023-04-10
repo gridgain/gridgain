@@ -380,7 +380,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
 
         node0.encryption().changeCacheGroupKey(Collections.singleton(cacheName())).get();
 
-        forceCheckpoint();
+//        forceCheckpoint();
 
         stopAllGrids();
 
