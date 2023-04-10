@@ -1564,6 +1564,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     /** */
     @Test
     public void testCacheResetLostPartitionsNoArgs() {
+        // Avoid "--yes" to be treated as a cache name.
         autoConfirmation = false;
 
         Ignite ignite = crd;

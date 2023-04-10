@@ -24,10 +24,11 @@ import org.apache.ignite.testframework.GridTestUtils;
  */
 public class GridCommandHandlerTestUtils {
     public static void addSslParams(List<String> params) {
-        params.add("--keystore");
-        params.add(GridTestUtils.keyStorePath("node01"));
-        params.add("--keystore-password");
-        params.add(GridTestUtils.keyStorePassword());
+        // Adding SSL args to the beginning to prevent false positive test failures.
+        params.add(0, "--keystore");
+        params.add(1, GridTestUtils.keyStorePath("node01"));
+        params.add(2, "--keystore-password");
+        params.add(3, GridTestUtils.keyStorePassword());
     }
 
     /** */
