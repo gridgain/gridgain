@@ -1546,9 +1546,6 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             try {
                 sock.connect(new InetSocketAddress(addr, port), connTimeout);
 
-                if (sock instanceof SSLSocket)
-                    ((SSLSocket)sock).startHandshake();
-
                 out = sock.getOutputStream();
 
                 in = sock.getInputStream();
