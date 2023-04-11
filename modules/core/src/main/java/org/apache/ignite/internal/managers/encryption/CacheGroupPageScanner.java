@@ -202,8 +202,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
             GroupScanTask prevState = grps.get(grpId);
 
             if (prevState != null && !prevState.isDone()) {
-                if (log.isInfoEnabled())
-                    log.info("Reencryption already scheduled [grpId=" + grpId + "]");
+                if (log.isDebugEnabled())
+                    log.debug("Reencryption already scheduled [grpId=" + grpId + "]");
 
                 return prevState;
             }
@@ -233,7 +233,7 @@ public class CacheGroupPageScanner implements CheckpointListener {
             singleExecSvc.submit(grpScan);
 
             if (log.isInfoEnabled())
-                log.error("Scheduled reencryption [grpId=" + grpId + "]", new Exception("Tracking"));
+                log.info("Scheduled reencryption [grpId=" + grpId + "]", new Exception("Tracking"));
 
             grps.put(grpId, grpScan);
 
@@ -476,8 +476,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
          * @param cnt Count of pages to scan.
          */
         private void scanPartition(int partId, int off, int cnt) throws IgniteCheckedException {
-            if (log.isInfoEnabled()) {
-                log.info("Partition reencryption is started [grpId=" + grp.groupId() +
+            if (log.isDebugEnabled()) {
+                log.debug("Partition reencryption is started [grpId=" + grp.groupId() +
                     ", p=" + partId + ", remain=" + (cnt - off) + ", total=" + cnt + "]");
             }
 
@@ -505,8 +505,8 @@ public class CacheGroupPageScanner implements CheckpointListener {
                 ctx.encryption().setEncryptionState(grp, partId, off, cnt);
             }
 
-            if (log.isInfoEnabled()) {
-                log.info("Partition reencryption is finished " +
+            if (log.isDebugEnabled()) {
+                log.debug("Partition reencryption is finished " +
                     "[grpId=" + grp.groupId() +
                     ", p=" + partId +
                     ", remain=" + (cnt - off) +
