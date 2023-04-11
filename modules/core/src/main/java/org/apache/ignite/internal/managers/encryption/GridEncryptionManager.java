@@ -772,43 +772,50 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         for (int i = 0; i < grpIds.length; i++)
             encryptionStatus.put(grpIds[i], keyIds[i]);
 
-        WALPointer ptr = ctx.cache().context().wal().log(new ReencryptionStartRecord(encryptionStatus));
+        ctx.cache().context().database().checkpointReadLock();
 
-        log.info("Logged ReencryptionStartRecord: " + encryptionStatus);
+        try {
+            WALPointer ptr = ctx.cache().context().wal().log(new ReencryptionStartRecord(encryptionStatus));
 
-        if (ptr != null)
-            ctx.cache().context().wal().flush(ptr, false);
+            log.info("Logged ReencryptionStartRecord: " + encryptionStatus);
 
-        for (int i = 0; i < grpIds.length; i++) {
-            int grpId = grpIds[i];
-            int newKeyId = keyIds[i] & 0xff;
+            if (ptr != null)
+                ctx.cache().context().wal().flush(ptr, false);
 
-            withMasterKeyChangeReadLock(() -> {
-                synchronized (metaStorageMux) {
-                    // Set new key as key for writing. Note that we cannot pass the encrypted key here because the master
-                    // key may have changed in which case we will not be able to decrypt the cache encryption key.
-                    GroupKey prevGrpKey = grpKeys.changeActiveKey(grpId, newKeyId);
+            for (int i = 0; i < grpIds.length; i++) {
+                int grpId = grpIds[i];
+                int newKeyId = keyIds[i] & 0xff;
 
-                    writeGroupKeysToMetaStore(grpId, grpKeys.getAll(grpId));
+                withMasterKeyChangeReadLock(() -> {
+                    synchronized (metaStorageMux) {
+                        // Set new key as key for writing. Note that we cannot pass the encrypted key here because the master
+                        // key may have changed in which case we will not be able to decrypt the cache encryption key.
+                        GroupKey prevGrpKey = grpKeys.changeActiveKey(grpId, newKeyId);
 
-                    if (ptr == null)
-                        return null;
+                        writeGroupKeysToMetaStore(grpId, grpKeys.getAll(grpId));
 
-                    grpKeys.reserveWalKey(grpId, prevGrpKey.unsignedId(), ctx.cache().context().wal().currentSegment());
+                        if (ptr == null)
+                            return null;
 
-                    writeTrackedWalIdxsToMetaStore();
-                }
+                        grpKeys.reserveWalKey(grpId, prevGrpKey.unsignedId(),
+                            ctx.cache().context().wal().currentSegment());
 
-                return null;
-            });
+                        writeTrackedWalIdxsToMetaStore();
+                    }
 
-            CacheGroupContext grp = ctx.cache().cacheGroup(grpId);
+                    return null;
+                });
 
-            if (grp != null && grp.affinityNode())
-                reencryptGroups.put(grpId, pageScanner.pagesCount(grp));
+                CacheGroupContext grp = ctx.cache().cacheGroup(grpId);
 
-            if (log.isInfoEnabled())
-                log.info("New encryption key for group was added [grpId=" + grpId + ", keyId=" + newKeyId + ']');
+                if (grp != null && grp.affinityNode())
+                    reencryptGroups.put(grpId, pageScanner.pagesCount(grp));
+
+                if (log.isInfoEnabled())
+                    log.info("New encryption key for group was added [grpId=" + grpId + ", keyId=" + newKeyId + ']');
+            }
+        } finally {
+            ctx.cache().context().database().checkpointReadUnlock();
         }
 
         startReencryption(encryptionStatus.keySet());
