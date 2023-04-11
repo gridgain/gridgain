@@ -1820,6 +1820,14 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         }
         catch (IgniteCheckedException e) {
             err = e;
+
+            // Surprisingly, even at this point TLS handshake make not have been finished (thanks to TLS 1.3)
+            // even considering the fact that we sent a message on socket open.
+            // That's why we need to check the IOException if it exists.
+            IOException ioException = e.getCause(IOException.class);
+
+            if (ioException != null)
+                err = new IgniteCheckedException(clearUpSslEssence(sock, ioException));
         }
         finally {
             boolean cancelled = obj.cancel();
