@@ -233,7 +233,7 @@ public class CacheGroupPageScanner implements CheckpointListener {
             singleExecSvc.submit(grpScan);
 
             if (log.isInfoEnabled())
-                log.info("Scheduled reencryption [grpId=" + grpId + "]", new Exception("Tracking"));
+                log.info("Scheduled reencryption [grpId=" + grpId + "]");
 
             grps.put(grpId, grpScan);
 
