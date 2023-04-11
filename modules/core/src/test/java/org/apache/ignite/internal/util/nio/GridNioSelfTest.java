@@ -1616,7 +1616,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             catch (IOException e) {
                 e.printStackTrace();
             }
-            U.closeQuiet(sock);
+//            U.closeQuiet(sock);
         }
     }
 
