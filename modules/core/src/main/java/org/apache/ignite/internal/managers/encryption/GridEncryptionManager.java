@@ -777,8 +777,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         try {
             WALPointer ptr = ctx.cache().context().wal().log(new ReencryptionStartRecord(encryptionStatus));
 
-            log.info("Logged ReencryptionStartRecord: " + encryptionStatus);
-
             if (ptr != null)
                 ctx.cache().context().wal().flush(ptr, false);
 
@@ -807,8 +805,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
                 });
 
                 CacheGroupContext grp = ctx.cache().cacheGroup(grpId);
-
-                log.info("Just before new encryption key for group is added [grpId=" + grpId + ", keyId=" + newKeyId + ']');
 
                 if (grp != null && grp.affinityNode())
                     reencryptGroups.put(grpId, pageScanner.pagesCount(grp));
@@ -1088,8 +1084,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
             return null;
         });
 
-        log.info("reencryptGroupsForced is " + reencryptGroupsForced);
-
         for (Map.Entry<Integer, Integer> entry : reencryptGroupsForced.entrySet()) {
             int grpId = entry.getKey();
 
@@ -1136,7 +1130,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
     /** {@inheritDoc} */
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
         if (!fut.isFailed() && (fut.activateCluster() || fut.localJoinExchange())) {
-            log.info("Reencrypt groups: " + reencryptGroups.keySet());
             try {
                 startReencryption(reencryptGroups.keySet());
             }
@@ -1156,12 +1149,7 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      */
     public void setEncryptionState(CacheGroupContext grp, int partId, int idx, int total) {
         // The last element of the array is used to store the status of the index partition.
-        long[] states = reencryptGroups.computeIfAbsent(grp.groupId(), v -> {
-            log.error("setEncryptionState for grp " + v + " part=" + partId + ", idx=" + idx + ", total=" + total,
-                new Exception("tracking"));
-
-            return new long[grp.affinity().partitions() + 1];
-        });
+        long[] states = reencryptGroups.computeIfAbsent(grp.groupId(), v -> new long[grp.affinity().partitions() + 1]);
 
         states[Math.min(partId, states.length - 1)] = ReencryptStateUtils.state(idx, total);
     }
@@ -1526,8 +1514,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
      */
     public void applyReencryptionStartRecord(ReencryptionStartRecord rec) {
         assert !writeToMetaStoreEnabled;
-
-        log.info("applyReencryptionStartRecord: " + rec.groups());
 
         for (Map.Entry<Integer, Byte> e : rec.groups().entrySet())
             reencryptGroupsForced.put(e.getKey(), e.getValue() & 0xff);
