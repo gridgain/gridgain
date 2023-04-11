@@ -772,6 +772,9 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
         for (int i = 0; i < grpIds.length; i++)
             encryptionStatus.put(grpIds[i], keyIds[i]);
 
+        // Taking the checkpoint readlock to make sure that logging a ReencryptionStartRecord and marking
+        // groups for recryption (by putting them to reencryptGroups) are executed as an atomic piece of work
+        // with respect to checkpointing.
         ctx.cache().context().database().checkpointReadLock();
 
         try {
