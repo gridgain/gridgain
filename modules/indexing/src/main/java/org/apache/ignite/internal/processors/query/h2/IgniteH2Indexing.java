@@ -3536,6 +3536,30 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         defragmentation.defragment(grpCtx, newCtx, partPageMem, mappingByPart, cpLock, cancellationChecker, log, defragmentationThreadPool);
     }
 
+    /** {@inheritDoc} */
+    @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
+        Collection<H2TableDescriptor> descriptors = schemaManager().tablesForCache(cacheCtx.name());
+
+        for (H2TableDescriptor descriptor : descriptors) {
+            // We only know index's tree name, so we need to iterate over
+            // all the cache's tables.
+            GridH2Table tbl = descriptor.table();
+
+            for (Index index : tbl.getIndexes()) {
+                // Find index with matching tree name.
+                if (index instanceof H2TreeIndex) {
+                    H2TreeIndex treeIndex = (H2TreeIndex)index;
+
+                    if (indexTreeName.equals(treeIndex.treeName())) {
+                        treeIndex.markRenamed();
+
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Cancel rebuilding indexes for the cache through a future.
      *
