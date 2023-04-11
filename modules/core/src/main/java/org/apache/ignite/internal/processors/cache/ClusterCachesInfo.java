@@ -1043,6 +1043,11 @@ public class ClusterCachesInfo {
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
 
+        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
+
         String conflictErr = checkCacheConflict(req.startCacheConfiguration());
 
         if (conflictErr != null) {
@@ -1050,11 +1055,6 @@ public class ClusterCachesInfo {
 
             err = new IgniteCheckedException("Failed to start cache. " + conflictErr);
         }
-
-        if (!validateStartNewCache(err, persistedCfgs, res, req))
-            return false;
-
-        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
 
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;

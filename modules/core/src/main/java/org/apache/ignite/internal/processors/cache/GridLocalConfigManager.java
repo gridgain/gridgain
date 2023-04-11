@@ -336,7 +336,8 @@ public class GridLocalConfigManager {
             String cacheName = conf0.getName();
             String cacheSchemaName = normalizeSchemaName(conf0.getName(), conf0.getSqlSchema());
 
-            if (!Objects.equals(cacheSchemaName, schemaName) || CU.isSystemCache(cacheName))
+            if (!Objects.equals(cacheSchemaName, schemaName) || CU.isSystemCache(cacheName) ||
+                (Objects.equals(cacheSchemaName, schemaName) && Objects.equals(cfg.getName(), cacheName)))
                 continue;
 
             for (QueryEntity ent : entrs) {
