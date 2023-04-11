@@ -808,6 +808,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
                 CacheGroupContext grp = ctx.cache().cacheGroup(grpId);
 
+                log.info("Just before new encryption key for group is added [grpId=" + grpId + ", keyId=" + newKeyId + ']');
+
                 if (grp != null && grp.affinityNode())
                     reencryptGroups.put(grpId, pageScanner.pagesCount(grp));
 
