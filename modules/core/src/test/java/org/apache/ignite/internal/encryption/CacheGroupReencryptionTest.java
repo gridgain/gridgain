@@ -153,7 +153,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      *
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testPhysicalRecovery() throws Exception {
         T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
 
@@ -197,7 +197,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    @Test/*reg*/
+    @Test
     public void testPhysicalRecoveryWithUpdates() throws Exception {
         pageScanRate = 1.5;
 
@@ -262,7 +262,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      *
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testLogicalRecovery() throws Exception {
         T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
 
@@ -304,7 +304,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    @Test/*reg*/
+    @Test
     public void testCacheStopDuringReencryption() throws Exception {
         pageScanRate = 1;
 
@@ -344,7 +344,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    @Test/*focus*/
+    @Test
     public void testPartitionEvictionDuringReencryption() throws Exception {
         backups = 1;
         pageScanRate = 1;
@@ -389,113 +389,12 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
         checkGroupKey(grpId, INITIAL_KEY_ID + 1, MAX_AWAIT_MILLIS);
     }
 
-    /***/ @Test/*focus*/ public void test1() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test2() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test3() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test4() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test5() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test6() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test7() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test8() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test9() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test10() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test11() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test12() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test13() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test14() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test15() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test16() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test17() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test18() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test19() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test20() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test21() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test22() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test23() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test24() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test25() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test26() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test27() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test28() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test29() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test30() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test31() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test32() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test33() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test34() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test35() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test36() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test37() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test38() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test39() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test40() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test41() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test42() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test43() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test44() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test45() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test46() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test47() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test48() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test49() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test50() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test51() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test52() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test53() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test54() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test55() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test56() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test57() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test58() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test59() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test60() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test61() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test62() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test63() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test64() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test65() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test66() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test67() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test68() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test69() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test70() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test71() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test72() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test73() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test74() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test75() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test76() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test77() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test78() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test79() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test80() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test81() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test82() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test83() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test84() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test85() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test86() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test87() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test88() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test89() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test90() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test91() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test92() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test93() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test94() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test95() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test96() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test97() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test98() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test99() throws Exception { testPartitionEvictionDuringReencryption(); }
-    /***/ @Test/*focus*/ public void test100() throws Exception { testPartitionEvictionDuringReencryption(); }
-
     /**
      * Test that partition files are reused correctly.
      *
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testPartitionFileDestroy() throws Exception {
         backups = 1;
         pageScanRate = 0.2;
@@ -534,7 +433,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
      *
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testPartitionFileDestroyAndRecreate() throws Exception {
         backups = 1;
         pageScanRate = 1;
@@ -586,7 +485,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /**
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testNotBltNodeJoin() throws Exception {
         backups = 1;
         pageScanRate = 1;
@@ -642,7 +541,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /**
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testReencryptionStartsAfterNodeRestart() throws Exception {
         pageScanRate = 0.000000001;
 
@@ -683,7 +582,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /**
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
     public void testReencryptionOnUnstableTopology() throws Exception {
         backups = 1;
@@ -757,7 +656,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /**
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testDeactivation() throws Exception {
         pageScanRate = 1;
 
@@ -797,7 +696,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     /**
      * @throws Exception If failed.
      */
-    @Test/*reg*/
+    @Test
     public void testChangeBaseline() throws Exception {
         backups = 1;
         pageScanRate = 2;
@@ -849,7 +748,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    @Test/*reg*/
+    @Test
     public void testKeyCleanup() throws Exception {
         T2<IgniteEx, IgniteEx> nodes = startTestGrids(true);
 
@@ -892,7 +791,7 @@ public class CacheGroupReencryptionTest extends AbstractEncryptionTest {
     }
 
     /** @throws Exception If failed. */
-    @Test/*reg*/
+    @Test
     public void testReencryptionMetrics() throws Exception {
         pageScanRate = 0.000000001;
 
