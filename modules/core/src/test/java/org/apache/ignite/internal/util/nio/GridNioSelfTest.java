@@ -1613,8 +1613,8 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             try {
                 out.flush();
             }
-            catch (IOException ignored) {
-                // No-op.
+            catch (IOException e) {
+                e.printStackTrace();
             }
             U.closeQuiet(sock);
         }
