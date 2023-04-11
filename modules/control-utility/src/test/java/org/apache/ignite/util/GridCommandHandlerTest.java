@@ -3224,6 +3224,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
         assertEquals(ACTIVE, ignite.cluster().state());
     }
+
     /**
      * @param ignite Ignite to execute task on.
      * @param delFoundGarbage If clearing mode should be used.
