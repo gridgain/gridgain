@@ -491,9 +491,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 io.getEncryptedPageCount(partMetaPageAddr),
                                 io.getTombstonesCount(partMetaPageAddr)
                             ));
-
-                        if (grp.config().isEncryptionEnabled() && store.partId() == 0)
-                            log.info("Logged MetaPageUpdatePartitionDataRecordV4 for part0");
                     }
                     finally {
                         pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null, changed);
@@ -2422,11 +2419,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 int encrPageCnt = io.getEncryptedPageCount(pageAddr);
 
                                 if (encrPageCnt > 0) {
-                                    log.info("Setting encryption state on start for " + grpId);
                                     ctx.kernalContext().encryption().setEncryptionState(
                                         grp, partId, io.getEncryptedPageIndex(pageAddr), encrPageCnt);
-                                } else if (grp.cacheOrGroupName().contains("encry") && partId == 0) {
-                                    log.info("NOT setting encryption state on start for " + grpId);
                                 }
 
                                 grp.offheap().globalRemoveId().setIfGreater(io.getGlobalRemoveId(pageAddr));
