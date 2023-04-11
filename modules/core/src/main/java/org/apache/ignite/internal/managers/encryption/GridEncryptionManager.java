@@ -774,6 +774,8 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
         WALPointer ptr = ctx.cache().context().wal().log(new ReencryptionStartRecord(encryptionStatus));
 
+        log.info("Logged ReencryptionStartRecord: " + encryptionStatus);
+
         if (ptr != null)
             ctx.cache().context().wal().flush(ptr, false);
 

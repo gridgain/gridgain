@@ -491,6 +491,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                 io.getEncryptedPageCount(partMetaPageAddr),
                                 io.getTombstonesCount(partMetaPageAddr)
                             ));
+
+                        if (grp.config().isEncryptionEnabled() && store.partId() == 0)
+                            log.info("Logged MetaPageUpdatePartitionDataRecordV4 for part0");
                     }
                     finally {
                         pageMem.writeUnlock(grpId, partMetaId, partMetaPage, null, changed);
