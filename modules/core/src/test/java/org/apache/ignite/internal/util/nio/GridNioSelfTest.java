@@ -1610,6 +1610,12 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
          * Closes the test client.
          */
         @Override public void close() {
+            try {
+                out.flush();
+            }
+            catch (IOException ignored) {
+                // No-op.
+            }
             U.closeQuiet(sock);
         }
     }
