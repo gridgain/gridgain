@@ -156,7 +156,6 @@ public class ScanQuerySystemView<K, V> extends AbstractSystemView<ScanQueryView>
                     }
 
                     qriesIter = cpOfEntries.iterator();
-
                 }
                 else {
                     nodeId = cctx.localNodeId();
