@@ -1979,8 +1979,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         // Print warning if _key is of custom user type and no key fields are configured, thus
         // key object can't be created and used for COPY FROM operation.
-        // Note: QueryEntity can't be properly validated instantly due to compatibility reasons, and
-        // warning can't be printed in QE due to absence of logger.
+        // Note: QueryEntity can't be properly validated due to compatibility reasons, and a warning can't be printed
+        // from inside QueryEntity class due to absence of the logger.
         if (type.keyClass() == Object.class && F.isEmpty(type.primaryKeyFields())) {
             log.warning("Key of user type has no fields configured for table=" + type.tableName());
         }
