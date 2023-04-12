@@ -1485,12 +1485,13 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
         IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
 
+        Integer primaryKeyPersist = primaryKey(cachePersistent);
+        Integer primaryKeyInMem = primaryKey(cacheInMem);
+
         try (Transaction tx = transactions.txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.SERIALIZABLE)) {
 
-            cachePersistent.put(1, 1);
-            cacheInMem.put(2, 2);
-
-            cachePersistent.put(3, 3);
+            cachePersistent.put(primaryKeyPersist, 1);
+            cacheInMem.put(primaryKeyInMem, 2);
 
             tx.rollback();
         }
