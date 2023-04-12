@@ -137,7 +137,6 @@ import static java.lang.Long.parseLong;
 import static java.util.Comparator.comparingLong;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
-import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.apache.ignite.testframework.config.GridTestProperties.getProperty;
 import static org.junit.Assert.assertFalse;
@@ -2070,7 +2069,7 @@ public final class GridTestUtils {
      * @throws IOException If keystore cannot be accessed.
      */
     public static SSLContext sslContext() throws GeneralSecurityException, IOException {
-        SSLContext ctx = SSLContext.getInstance(DFLT_SSL_PROTOCOL);
+        SSLContext ctx = SSLContext.getInstance("TLSv1.3");
 
         char[] storePass = keyStorePassword().toCharArray();
 

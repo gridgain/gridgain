@@ -19,11 +19,11 @@ package org.apache.ignite.internal.util.nio;
 import java.net.Socket;
 import java.nio.ByteOrder;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Test;
 
 /**
  * Tests for new NIO server with SSL enabled.
@@ -42,11 +42,7 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
     /** {@inheritDoc} */
     @Override protected Socket createSocket() throws IgniteCheckedException {
         try {
-            SSLSocket socket = (SSLSocket)sslCtx.getSocketFactory().createSocket();
-
-            socket.setEnabledProtocols(new String[]{"TLSv1.3"});
-
-            return socket;
+            return sslCtx.getSocketFactory().createSocket();
         }
         catch (Exception e) {
             throw new IgniteCheckedException(e);
@@ -79,14 +75,14 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
     }
 
     /** {@inheritDoc} */
-    //@Test
+    @Test
     @Override public void testWriteTimeout() throws Exception {
         // Skip base test because it enables "skipWrite" mode in the GridNioServer
         // which makes SSL handshake impossible.
     }
 
     /** {@inheritDoc} */
-    //@Test
+    @Test
     @Override public void testAsyncSendReceive() throws Exception {
         // No-op, do not want to mess with SSL channel.
     }
