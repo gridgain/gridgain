@@ -1417,14 +1417,16 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ACTIVE);
 
-        IgniteTransactions transactions = ignite0.transactions();
-        try (Transaction tx = transactions.txStart()) {
-            IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
-            IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
+        IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
 
-            cachePersistent.put(1, 1);
+        Integer primaryKeyPersist = primaryKey(cachePersistent);
+        Integer primaryKeyInMem = primaryKey(cacheInMem);
 
-            cacheInMem.put(2, 2);
+        try (Transaction tx = ignite0.transactions().txStart()) {
+            cachePersistent.put(primaryKeyPersist, 1);
+
+            cacheInMem.put(primaryKeyInMem, 2);
 
             tx.commit();
         }
