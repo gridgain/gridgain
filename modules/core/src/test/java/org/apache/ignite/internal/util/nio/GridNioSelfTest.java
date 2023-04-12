@@ -1582,7 +1582,6 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
         public void sendMessage(byte[] data, int len) throws IOException {
             out.write(U.intToBytes(len));
             out.write(data, 0, len);
-            out.flush();
         }
 
         /**
@@ -1626,12 +1625,6 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
          * Closes the test client.
          */
         @Override public void close() {
-            try {
-                out.flush();
-            }
-            catch (IOException ignored) {
-                // No-op.
-            }
             U.closeQuiet(sock);
         }
     }
