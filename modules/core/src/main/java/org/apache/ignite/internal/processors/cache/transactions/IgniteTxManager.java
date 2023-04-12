@@ -2892,7 +2892,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
                 GridCacheContext cctx = this.cctx.cacheContext(cacheId);
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled()) {
-                    U.dumpStack(log, ">>>>> TxRecord cacheids");
+                    //U.dumpStack(log, ">>>>> TxRecord cacheids");
                     return true;
                 }
             }
@@ -2903,12 +2903,13 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             for (IgniteTxEntry txEntry : state.allEntries()) {
                 GridCacheContext cctx = txEntry.context();
                 if (cctx.group().persistenceEnabled() && cctx.group().walEnabled()) {
-                    U.dumpStack(log, ">>>>> TxRecord allEntries");
+                    //U.dumpStack(log, ">>>>> TxRecord allEntries");
                     return true;
                 }
             }
         }
 
+        //U.dumpStack(log, ">>>>> TxRecord skip [rec=" + tx + ']');
         return false;
     }
 

@@ -1399,8 +1399,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ClusterState.INACTIVE);
 
-        verifyTxRecords(ignite0, 0, null);
-        verifyTxRecords(ignite1, 0, null);
+        verifyTxRecords(ignite0, 0, 0, null);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
@@ -1433,8 +1433,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ClusterState.INACTIVE);
 
-        verifyTxRecords(ignite0, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
-        verifyTxRecords(ignite1, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
+        verifyTxRecords(ignite0, 0, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
+        verifyTxRecords(ignite1, 1, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
     }
 
     /**
@@ -1463,8 +1463,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ClusterState.INACTIVE);
 
-        verifyTxRecords(ignite0, 0, null);
-        verifyTxRecords(ignite1, 0, null);
+        verifyTxRecords(ignite0, 0, 0, null);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
@@ -1498,8 +1498,8 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ClusterState.INACTIVE);
 
-        verifyTxRecords(ignite0, 0, TransactionState.ROLLED_BACK);
-        verifyTxRecords(ignite1, 0, TransactionState.ROLLED_BACK);
+        verifyTxRecords(ignite0, 0, 0, TransactionState.ROLLED_BACK);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
@@ -1508,15 +1508,23 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
      * @param states Expected TxRecord ordered sequence.
      * @throws IgniteCheckedException
      */
-    private void verifyTxRecords(Ignite ignite, int expDataCnt, TransactionState... states) throws IgniteCheckedException {
+    private void verifyTxRecords(Ignite ignite, int nodeIdx, int expDataCnt, TransactionState... states) throws IgniteCheckedException {
         String workDir = U.defaultWorkDirectory();
-        String subfolderName = genDbSubfolderName(ignite, 0);
+        String subfolderName = genDbSubfolderName(ignite, nodeIdx);
 
         IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
 
         IteratorParametersBuilder params = createIteratorParametersBuilder(workDir, subfolderName);
+/*
+                .filesOrDirs(
+                    workDir + "/db/wal/" + subfolderName1,
+                    workDir + "/db/wal/archive/" + subfolderName1
+                ),
 
-        WALIterator iter = factory.iterator(params.filesOrDirs(workDir));
+ */
+        params = params.filesOrDirs(workDir + "/db/wal/" + subfolderName, workDir + "/db/wal/archive/" + subfolderName);
+
+        WALIterator iter = factory.iterator(params/*.filesOrDirs(workDir)*/);
         IgniteBiTuple<List<TxRecord>, Set<DataRecord>> res = iterateAndGetTxRecords(iter);
 
         if (states != null) {
