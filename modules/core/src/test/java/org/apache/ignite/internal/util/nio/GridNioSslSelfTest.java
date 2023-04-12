@@ -41,7 +41,15 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
     /** {@inheritDoc} */
     @Override protected Socket createSocket() throws IgniteCheckedException {
         try {
-            return sslCtx.getSocketFactory().createSocket();
+            Socket socket = sslCtx.getSocketFactory().createSocket();
+
+            socket.setTcpNoDelay(true);
+
+            socket.setSoLinger(true, 5);
+
+            socket.setKeepAlive(true);
+
+            return socket;
         }
         catch (Exception e) {
             throw new IgniteCheckedException(e);
