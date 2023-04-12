@@ -208,8 +208,8 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
             Event failEv = (Event)evSet.get(eventCls);
 
             assertNotNull(failEv);
-            assertEquals(failEv.connectionDescription().protocol(), "ProtocolContext [version=" + ProtocolVersion.V1_7_1
-                + ", features=[]]");
+            assertEquals("ProtocolContext [version=" + ProtocolVersion.V1_7_0 + ", features=[]]",
+                    failEv.connectionDescription().protocol());
             assertEquals(LOCALHOST, failEv.connectionDescription().remoteAddress().getAddress());
             assertEquals(SRV_PORT, failEv.connectionDescription().remoteAddress().getPort());
             assertEquals(LOCALHOST, failEv.connectionDescription().localAddress().getAddress());
