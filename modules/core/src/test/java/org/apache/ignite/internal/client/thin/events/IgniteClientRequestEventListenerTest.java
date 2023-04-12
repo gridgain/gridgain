@@ -57,22 +57,29 @@ public class IgniteClientRequestEventListenerTest extends AbstractThinClientTest
     /** {@inheritDoc} */
     @Override protected ClientConfiguration getClientConfiguration() {
         return super.getClientConfiguration()
-            .setEventListeners(new RequestEventListener() {
-                @Override public void onRequestStart(RequestStartEvent event) {
-                    if (event.operationCode() != ClientOperation.GET_BINARY_CONFIGURATION.code())
-                        evSet.put(event.getClass(), event);
-                }
+                .setEventListeners(new RequestEventListener() {
+                    @Override public void onRequestStart(RequestStartEvent event) {
+                        if (!isImplicitOperation(event.operationCode()))
+                            evSet.put(event.getClass(), event);
+                    }
 
-                @Override public void onRequestSuccess(RequestSuccessEvent event) {
-                    if (event.operationCode() != ClientOperation.GET_BINARY_CONFIGURATION.code())
-                        evSet.put(event.getClass(), event);
-                }
+                    @Override public void onRequestSuccess(RequestSuccessEvent event) {
+                        if (!isImplicitOperation(event.operationCode()))
+                            evSet.put(event.getClass(), event);
+                    }
 
-                @Override public void onRequestFail(RequestFailEvent event) {
-                    if (event.operationCode() != ClientOperation.GET_BINARY_CONFIGURATION.code())
-                        evSet.put(event.getClass(), event);
-                }
-            });
+                    @Override public void onRequestFail(RequestFailEvent event) {
+                        if (!isImplicitOperation(event.operationCode()))
+                            evSet.put(event.getClass(), event);
+                    }
+                });
+    }
+
+    /** */
+    private boolean isImplicitOperation(short code) {
+        return code == ClientOperation.GET_BINARY_CONFIGURATION.code()
+                || code == ClientOperation.CACHE_PARTITIONS.code()
+                || code == ClientOperation.CLUSTER_GROUP_GET_NODE_ENDPOINTS.code();
     }
 
     /** */
