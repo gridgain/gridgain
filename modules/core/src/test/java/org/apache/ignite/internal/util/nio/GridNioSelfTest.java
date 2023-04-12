@@ -1546,20 +1546,8 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             try {
                 sock.connect(new InetSocketAddress(addr, port), connTimeout);
 
-                if (sock instanceof SSLSocket) {
-                    SSLSocket socket = (SSLSocket)sock;
-                    CountDownLatch latch = new CountDownLatch(1);
-                    socket.addHandshakeCompletedListener(event -> {
-                        latch.countDown();
-                    });
-                    socket.startHandshake();
-                    try {
-                        latch.await();
-                    }
-                    catch (InterruptedException e) {
-                        throw new IOException("Failed to wait for handshake", e);
-                    }
-                }
+                if (sock instanceof SSLSocket)
+                    ((SSLSocket)sock).startHandshake();
 
                 out = sock.getOutputStream();
 
