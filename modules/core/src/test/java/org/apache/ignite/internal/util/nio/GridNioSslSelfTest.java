@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util.nio;
 import java.net.Socket;
 import java.nio.ByteOrder;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.nio.ssl.GridNioSslFilter;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -41,7 +42,9 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
     /** {@inheritDoc} */
     @Override protected Socket createSocket() throws IgniteCheckedException {
         try {
-            Socket socket = sslCtx.getSocketFactory().createSocket();
+            SSLSocket socket = (SSLSocket)sslCtx.getSocketFactory().createSocket();
+
+            socket.setEnabledProtocols(new String[]{"TLSv1.3"});
 
             return socket;
         }
