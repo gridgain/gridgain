@@ -399,7 +399,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
-    public void testNonFffinityServerWithUnavailableClassJoinsTopology() throws Exception {
+    public void testNonAffinityServerWithUnavailableClassJoinsTopology() throws Exception {
         clsLoader = CONFIGURATION_CLASS_LOADER;
 
         IgniteEx srv0 = startGrid(0);

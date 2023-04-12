@@ -16,6 +16,8 @@
 
 package org.apache.ignite.tests.p2p.cache;
 
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
+
 /**
  * Class represents a piece of custom configuration that can be passed to
  * {@link org.apache.ignite.configuration.CacheConfiguration#setSqlFunctionClasses(Class[])} property.
@@ -27,4 +29,9 @@ package org.apache.ignite.tests.p2p.cache;
  * without compromizing stability of the rest of the cluster.
  */
 public class UnavailableToServerCustomSqlFunctionsClass {
+    /** */
+    @QuerySqlFunction
+    public static long secondsToMillis(long sec) {
+        return sec * 1_000;
+    }
 }
