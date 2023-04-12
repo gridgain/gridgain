@@ -357,7 +357,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                     throw err;
                 }
 
-                fut = new ClientRequestFuture();
+                fut = new ClientRequestFuture(id, op, startTimeNanos);
 
                 pendingReqs.put(id, fut);
             }
@@ -715,7 +715,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 if (closed())
                     throw new ClientConnectionException("Channel is closed");
 
-                fut = new ClientRequestFuture();
+                fut = new ClientRequestFuture(requestId, ClientOperation.HANDSHAKE);
 
                 pendingReqs.put(requestId, fut);
             }
