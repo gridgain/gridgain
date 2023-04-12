@@ -4579,7 +4579,6 @@ public abstract class IgniteUtils {
         try {
             // Avoid java 12 bug see https://bugs.openjdk.java.net/browse/JDK-8219658
             sock.shutdownInput();
-            sock.shutdownOutput();
         }
         catch (Exception ignored) {
             // No-op.
