@@ -1582,6 +1582,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
         public void sendMessage(byte[] data, int len) throws IOException {
             out.write(U.intToBytes(len));
             out.write(data, 0, len);
+            out.flush();
         }
 
         /**
