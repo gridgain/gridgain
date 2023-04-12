@@ -598,8 +598,6 @@ public class GridEncryptionManager extends GridManagerAdapter<EncryptionSpi> imp
 
         Map<Integer, Object> encKeysFromCluster = (Map<Integer, Object>)data.commonData();
 
-        log.info("encKeysFromCluster: " + encKeysFromCluster);
-
         if (F.isEmpty(encKeysFromCluster))
             return;
 
