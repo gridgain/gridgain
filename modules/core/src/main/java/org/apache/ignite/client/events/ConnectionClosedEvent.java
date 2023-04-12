@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import org.jetbrains.annotations.Nullable;
 
-/** */
+/**
+ * Event that is fired when a connection is closed.
+ */
 public class ConnectionClosedEvent extends ConnectionEvent {
     /** */
     private final Throwable throwable;

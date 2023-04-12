@@ -20,7 +20,9 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 import org.jetbrains.annotations.Nullable;
 
-/** */
+/**
+ * Connection description.
+ */
 public class ConnectionDescription {
     /** Local connection address. */
     private final InetSocketAddress locAddr;

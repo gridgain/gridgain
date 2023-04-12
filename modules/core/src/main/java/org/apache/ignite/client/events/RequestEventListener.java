@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.EventListener;
 
-/** */
+/**
+ * Listener for request events.
+ */
 public interface RequestEventListener extends EventListener {
     /**
      * @param event Request start event.

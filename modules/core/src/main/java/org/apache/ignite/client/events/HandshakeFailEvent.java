@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.concurrent.TimeUnit;
 
-/** */
+/**
+ * Event that is fired when a connection handshake fails.
+ */
 public class HandshakeFailEvent extends ConnectionEvent {
     /** */
     private final long elapsedTimeNanos;

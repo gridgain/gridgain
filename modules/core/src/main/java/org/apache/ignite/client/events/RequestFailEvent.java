@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.concurrent.TimeUnit;
 
-/** */
+/**
+ * Event that is fired when a request fails.
+ */
 public class RequestFailEvent extends RequestEvent {
     /** */
     private final long elapsedTimeNanos;

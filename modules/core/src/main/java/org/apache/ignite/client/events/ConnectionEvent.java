@@ -16,7 +16,9 @@
 
 package org.apache.ignite.client.events;
 
-/** */
+/**
+ * Base class for connection events.
+ */
 public abstract class ConnectionEvent {
     /** */
     private final ConnectionDescription conn;

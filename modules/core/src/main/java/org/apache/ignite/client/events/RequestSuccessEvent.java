@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.concurrent.TimeUnit;
 
-/** */
+/**
+ * Event that is fired when a request is started.
+ */
 public class RequestSuccessEvent extends RequestEvent {
     /** */
     private final long elapsedTimeNanos;

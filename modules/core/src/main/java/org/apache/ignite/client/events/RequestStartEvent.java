@@ -16,7 +16,9 @@
 
 package org.apache.ignite.client.events;
 
-/** */
+/**
+ * Event that is fired when a request is started.
+ */
 public class RequestStartEvent extends RequestEvent {
     /**
      * @param conn Connection description.

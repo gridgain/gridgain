@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.concurrent.TimeUnit;
 
-/** */
+/**
+ * Event that is fired when a handshake is completed successfully.
+ */
 public class HandshakeSuccessEvent extends ConnectionEvent {
     /** */
     private final long elapsedTimeNanos;

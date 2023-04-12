@@ -16,7 +16,9 @@
 
 package org.apache.ignite.client.events;
 
-/** */
+/**
+ * Event that is fired when a handshake is started.
+ */
 public class HandshakeStartEvent extends ConnectionEvent {
     /**
      * @param conn Connection description.

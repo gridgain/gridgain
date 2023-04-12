@@ -18,7 +18,9 @@ package org.apache.ignite.client.events;
 
 import java.util.EventListener;
 
-/** */
+/**
+ * Listener for connection events.
+ */
 public interface ConnectionEventListener extends EventListener {
     /**
      * @param event Handshake start event.
