@@ -1546,6 +1546,21 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             try {
                 sock.connect(new InetSocketAddress(addr, port), connTimeout);
 
+                if (sock instanceof SSLSocket) {
+                    SSLSocket socket = (SSLSocket)sock;
+                    CountDownLatch latch = new CountDownLatch(1);
+                    socket.addHandshakeCompletedListener(event -> {
+                        latch.countDown();
+                    });
+                    socket.startHandshake();
+                    try {
+                        latch.await();
+                    }
+                    catch (InterruptedException e) {
+                        throw new IOException("Failed to wait for handshake", e);
+                    }
+                }
+
                 out = sock.getOutputStream();
 
                 in = sock.getInputStream();
@@ -1613,10 +1628,10 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
             try {
                 out.flush();
             }
-            catch (IOException e) {
-                e.printStackTrace();
+            catch (IOException ignored) {
+                // No-op.
             }
-//            U.closeQuiet(sock);
+            U.closeQuiet(sock);
         }
     }
 
