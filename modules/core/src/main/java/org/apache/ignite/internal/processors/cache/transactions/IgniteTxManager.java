@@ -2864,18 +2864,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             record = new TxRecord(tx.state(), tx.nearXidVersion(), tx.writeVersion(), nodes);
 
         try {
-            WALPointer ptr = cctx.wal().log(record);
-            log.warning(">>>>> successfully wrote TXRecord [rec=" + record + ", ptr=" + ptr + ']');
-            return ptr;
+            return cctx.wal().log(record);
         }
         catch (IgniteCheckedException e) {
             U.error(log, "Failed to log TxRecord: " + record, e);
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
-        }
-        catch (Throwable t) {
-            t.printStackTrace();
-            throw t;
         }
     }
 
@@ -2891,10 +2885,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                 int cacheId = cacheIds.get(i);
 
                 GridCacheContext cctx = this.cctx.cacheContext(cacheId);
-                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled()) {
-                    //U.dumpStack(log, ">>>>> TxRecord cacheids");
+                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
-                }
             }
         }
         else if (!state.allEntries().isEmpty()) {
@@ -2902,14 +2894,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             // TODO https://ggsystems.atlassian.net/browse/GG-36536
             for (IgniteTxEntry txEntry : state.allEntries()) {
                 GridCacheContext cctx = txEntry.context();
-                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled()) {
-                    //U.dumpStack(log, ">>>>> TxRecord allEntries");
+                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
                     return true;
-                }
             }
         }
 
-        //U.dumpStack(log, ">>>>> TxRecord skip [rec=" + tx + ']');
         return false;
     }
 
