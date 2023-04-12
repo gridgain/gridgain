@@ -1614,6 +1614,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
          */
         @Override public void close() {
             try {
+                // TLS 1.3 fix. We need to read before closing the socket.
                 sock.setSoTimeout(1);
                 sock.getInputStream().read();
             }
