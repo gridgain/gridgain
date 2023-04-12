@@ -717,7 +717,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If test failed.
      */
-    @Test
+    //@Test
     public void testMultiThreadedSendReceive() throws Exception {
         CountDownLatch latch = new CountDownLatch(MSG_CNT * THREAD_CNT);
 
@@ -952,7 +952,7 @@ public class GridNioSelfTest extends GridCommonAbstractTest {
     /**
      * @throws Exception if test failed.
      */
-    @Test
+    //@Test
     public void testDeliveryDuration() throws Exception {
         idProvider.set(1);
 

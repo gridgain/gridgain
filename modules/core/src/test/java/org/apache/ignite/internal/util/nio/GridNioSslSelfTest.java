@@ -43,12 +43,6 @@ public class GridNioSslSelfTest extends GridNioSelfTest {
         try {
             Socket socket = sslCtx.getSocketFactory().createSocket();
 
-            socket.setTcpNoDelay(true);
-
-            socket.setSoLinger(true, 5);
-
-            socket.setKeepAlive(true);
-
             return socket;
         }
         catch (Exception e) {
