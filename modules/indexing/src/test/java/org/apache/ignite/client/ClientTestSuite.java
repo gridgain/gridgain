@@ -33,6 +33,8 @@ import org.apache.ignite.internal.client.thin.ThinClientEnpointsDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessDiscoveryTest;
 import org.apache.ignite.internal.client.thin.ThinClientPartitionAwarenessResourceReleaseTest;
 import org.apache.ignite.internal.client.thin.TimeoutTest;
+import org.apache.ignite.internal.client.thin.events.IgniteClientConnectionEventListenerTest;
+import org.apache.ignite.internal.client.thin.events.IgniteClientRequestEventListenerTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -74,6 +76,8 @@ import org.junit.runners.Suite;
     BinaryConfigurationTest.class,
     IgniteSetTest.class,
     ThinClientEnpointsDiscoveryTest.class,
+    IgniteClientConnectionEventListenerTest.class,
+    IgniteClientRequestEventListenerTest.class
 })
 public class ClientTestSuite {
     // No-op.
