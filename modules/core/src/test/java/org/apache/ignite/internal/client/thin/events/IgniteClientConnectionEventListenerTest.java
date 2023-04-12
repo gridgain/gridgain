@@ -86,7 +86,7 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
 
             long startNano = System.nanoTime();
             try (IgniteClient ignored = startClient(lsnr)) {
-                GridTestUtils.waitForCondition(() -> evSet.size() == 2, GridTestUtils.DFLT_TEST_TIMEOUT);
+                GridTestUtils.waitForCondition(() -> evSet.size() == 2, 5000);
 
                 HandshakeStartEvent hsStartEv = (HandshakeStartEvent)evSet.get(HandshakeStartEvent.class);
 
@@ -107,7 +107,7 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
                 assertTrue(System.nanoTime() - startNano >= hsSuccEv.elapsedTime(TimeUnit.NANOSECONDS));
             }
 
-            GridTestUtils.waitForCondition(() -> evSet.size() == 3, GridTestUtils.DFLT_TEST_TIMEOUT);
+            GridTestUtils.waitForCondition(() -> evSet.size() == 3, 5000);
 
             ConnectionClosedEvent closedEv = (ConnectionClosedEvent)evSet.get(ConnectionClosedEvent.class);
 
@@ -202,7 +202,7 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
                 hsErr = e;
             }
 
-            GridTestUtils.waitForCondition(() -> !evSet.isEmpty(), GridTestUtils.DFLT_TEST_TIMEOUT);
+            GridTestUtils.waitForCondition(() -> !evSet.isEmpty(), 5000);
             assertEquals(1, evSet.size());
 
             Event failEv = (Event)evSet.get(eventCls);
