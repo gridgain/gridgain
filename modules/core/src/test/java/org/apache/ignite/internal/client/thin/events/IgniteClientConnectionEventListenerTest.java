@@ -132,7 +132,8 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
                 assertTrue(System.nanoTime() - startNano >= event.elapsedTime(TimeUnit.NANOSECONDS));
                 assertEquals(hsErr, event.throwable());
             },
-            HandshakeFailEvent.class
+            HandshakeFailEvent.class,
+            ProtocolVersion.V1_7_1
         );
     }
 
@@ -141,14 +142,21 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
     public void testHandshakeFail() {
         Stream.of(FakeIgniteServer.ErrorType.HANDSHAKE_CONNECTION_ERROR, FakeIgniteServer.ErrorType.HANDSHAKE_ERROR,
             FakeIgniteServer.ErrorType.AUTHENTICATION_ERROR).forEach(errType -> {
+                System.out.println(errType);
                 AtomicLong startNano = new AtomicLong(System.nanoTime());
+
+                ProtocolVersion expectedVer = errType == FakeIgniteServer.ErrorType.HANDSHAKE_ERROR
+                        ? ProtocolVersion.V1_7_0
+                        : ProtocolVersion.V1_7_1;
+
                 testFail(
                     () -> new FakeIgniteServer(LOCALHOST, SRV_PORT, log(), EnumSet.of(errType)),
                     (HandshakeFailEvent event, Throwable hsErr) -> {
                         assertTrue(System.nanoTime() - startNano.get() >= event.elapsedTime(TimeUnit.NANOSECONDS));
                         assertEquals(hsErr, event.throwable());
                     },
-                    HandshakeFailEvent.class
+                    HandshakeFailEvent.class,
+                    expectedVer
                 );
             });
     }
@@ -160,7 +168,8 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
             () -> new FakeIgniteServer(LOCALHOST, SRV_PORT, log(), EnumSet.of(FakeIgniteServer.ErrorType.CONNECTION_ERROR)),
             IgniteClient::cacheNames,
             (ev, t) -> {},
-            ConnectionClosedEvent.class
+            ConnectionClosedEvent.class,
+            ProtocolVersion.V1_7_0
         );
     }
 
@@ -168,9 +177,10 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
     private <Event extends ConnectionEvent> void testFail(
         Supplier<FakeIgniteServer> srvFactory,
         BiConsumer<Event, Throwable> checkEventAction,
-        Class<Event> eventCls
+        Class<Event> eventCls,
+        ProtocolVersion expectedProtoVer
     ) {
-        testFail(srvFactory, client -> fail(), checkEventAction, eventCls);
+        testFail(srvFactory, client -> fail(), checkEventAction, eventCls, expectedProtoVer);
     }
 
     /** */
@@ -178,7 +188,8 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
         Supplier<FakeIgniteServer> srvFactory,
         Consumer<IgniteClient> clientAction,
         BiConsumer<Event, Throwable> checkEventAction,
-        Class<Event> eventCls
+        Class<Event> eventCls,
+        ProtocolVersion expectedProtoVer
     ) {
         try (FakeIgniteServer srv = srvFactory.get()) {
             srv.start();
@@ -208,7 +219,7 @@ public class IgniteClientConnectionEventListenerTest extends GridCommonAbstractT
             Event failEv = (Event)evSet.get(eventCls);
 
             assertNotNull(failEv);
-            assertEquals("ProtocolContext [version=" + ProtocolVersion.V1_7_0 + ", features=[]]",
+            assertEquals("ProtocolContext [version=" + expectedProtoVer + ", features=[]]",
                     failEv.connectionDescription().protocol());
             assertEquals(LOCALHOST, failEv.connectionDescription().remoteAddress().getAddress());
             assertEquals(SRV_PORT, failEv.connectionDescription().remoteAddress().getPort());
