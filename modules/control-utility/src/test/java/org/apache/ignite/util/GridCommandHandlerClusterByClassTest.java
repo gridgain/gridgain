@@ -458,9 +458,19 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
                 String line = outputLines.get(i).replaceAll("\\s+$", "");
 
                 if (cLine.contains(ANY)) {
-                    String cuttedCLine = cLine.substring(0, cLine.length() - ANY.length());
 
-                    assertTrue("line: " + i, line.startsWith(cuttedCLine));
+                    String[] lineChunks = line.split("\\s");
+                    String[] cLineChunks = cLine.split("\\s");
+
+                    assertTrue("line: " + i + ", wrong words count", lineChunks.length == cLineChunks.length);
+
+                    for (int j = 0; j < cLineChunks.length; j++) {
+                        String cLineChunk = cLineChunks[j];
+                        if (cLineChunk.equals(ANY))
+                            continue;
+
+                        assertTrue("line: " + i, lineChunks[j].equals(cLineChunk));
+                    }
                 }
                 else
                     assertEquals("line: " + i, cLine, line);
