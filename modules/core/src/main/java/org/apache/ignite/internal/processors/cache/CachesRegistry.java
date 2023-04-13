@@ -289,7 +289,7 @@ public class CachesRegistry {
                 if (!cctx.kernalContext().isStopping()) {
                     cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
 
-                    U.error(log, "Failed to initialize cache work directory for " + data.config(), e);
+                    U.warn(log, "Failed to initialize cache work directory for " + data.config(), e);
                 }
             }
         }
