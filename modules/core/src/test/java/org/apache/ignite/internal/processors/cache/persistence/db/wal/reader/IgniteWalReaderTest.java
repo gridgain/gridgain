@@ -51,7 +51,6 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -85,8 +84,6 @@ import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
-import org.apache.ignite.transactions.TransactionConcurrency;
-import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -97,6 +94,7 @@ import org.junit.Test;
 import static java.util.Arrays.fill;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SENSITIVE_DATA_LOGGING;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.events.EventType.EVT_WAL_SEGMENT_ARCHIVED;
 import static org.apache.ignite.events.EventType.EVT_WAL_SEGMENT_COMPACTED;
 import static org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType.DATA_RECORD_V2;
@@ -105,6 +103,8 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CRE
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.DELETE;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.filename.PdsFolderResolver.genNewStyleSubfolderName;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  * Test suite for WAL segments reader and event generator.
@@ -371,7 +371,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         final IgniteEvents evts = ignite.events();
 
@@ -413,7 +413,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         IgniteEvents evts = ignite.events();
 
@@ -458,7 +458,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         final IgniteEvents evts = ignite.events();
 
@@ -844,9 +844,9 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
-        ignite.cluster().active(false);
+        ignite.cluster().state(INACTIVE);
 
         final String subfolderName = genDbSubfolderName(ignite, 0);
 
@@ -877,7 +877,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
     public void testIteratorWithCurrentKernelContext() throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         int cntEntries = 100;
 
@@ -986,11 +986,11 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
     private void runRemoveOperationTest(CacheAtomicityMode mode) throws Exception {
         Ignite ignite = startGrid();
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         createCache2(ignite, mode);
 
-        ignite.cluster().active(false);
+        ignite.cluster().state(INACTIVE);
 
         String subfolderName = genDbSubfolderName(ignite, 0);
 
@@ -1084,7 +1084,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         cache.putAll(map);
 
-        ignite.cluster().active(false);
+        ignite.cluster().state(INACTIVE);
 
         String subfolderName1 = genDbSubfolderName(ignite, 0);
         String subfolderName2 = genDbSubfolderName(ignite1, 1);
@@ -1248,7 +1248,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         Ignite ignite = startGrid("node0");
         Ignite ignite1 = startGrid(1);
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         Map<Object, IndexedObject> map = new TreeMap<>();
 
@@ -1259,7 +1259,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite.cache(CACHE_NAME).putAll(map);
 
-        ignite.cluster().active(false);
+        ignite.cluster().state(INACTIVE);
 
         String subfolderName1 = genDbSubfolderName(ignite, 0);
         String subfolderName2 = genDbSubfolderName(ignite1, 1);
@@ -1356,7 +1356,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite.cache(CACHE_NAME).putAll(map);
 
-        ignite.cluster().state(ClusterState.INACTIVE);
+        ignite.cluster().state(INACTIVE);
 
         String workDir = U.defaultWorkDirectory();
 
@@ -1397,10 +1397,10 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         for (int i = 0; i < 10; i++)
             cache.put(i, new IndexedObject(i));
 
-        ignite0.cluster().state(ClusterState.INACTIVE);
+        ignite0.cluster().state(INACTIVE);
 
-        verifyTxRecords(ignite0, 0, null);
-        verifyTxRecords(ignite1, 0, null);
+        verifyTxRecords(ignite0, 0, 0, null);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
@@ -1417,22 +1417,24 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ACTIVE);
 
-        IgniteTransactions transactions = ignite0.transactions();
-        try (Transaction tx = transactions.txStart()) {
-            IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
-            IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
+        IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
 
-            cachePersistent.put(1, 1);
+        Integer primaryKeyPersist = primaryKey(cachePersistent);
+        Integer primaryKeyInMem = primaryKey(cacheInMem);
 
-            cacheInMem.put(2, 2);
+        try (Transaction tx = ignite0.transactions().txStart()) {
+            cachePersistent.put(primaryKeyPersist, 1);
+
+            cacheInMem.put(primaryKeyInMem, 2);
 
             tx.commit();
         }
 
-        ignite0.cluster().state(ClusterState.INACTIVE);
+        ignite0.cluster().state(INACTIVE);
 
-        verifyTxRecords(ignite0, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
-        verifyTxRecords(ignite1, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
+        verifyTxRecords(ignite0, 0, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
+        verifyTxRecords(ignite1, 1, 1, TransactionState.PREPARED, TransactionState.COMMITTED);
     }
 
     /**
@@ -1452,17 +1454,17 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
         IgniteTransactions transactions = ignite0.transactions();
         IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
 
-        try (Transaction tx = transactions.txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.SERIALIZABLE)) {
+        try (Transaction tx = transactions.txStart(PESSIMISTIC, SERIALIZABLE)) {
 
             cacheInMem.put(2, 2);
 
             tx.rollback();
         }
 
-        ignite0.cluster().state(ClusterState.INACTIVE);
+        ignite0.cluster().state(INACTIVE);
 
-        verifyTxRecords(ignite0, 0, null);
-        verifyTxRecords(ignite1, 0, null);
+        verifyTxRecords(ignite0, 0, 0, null);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
@@ -1479,41 +1481,42 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ACTIVE);
 
-        IgniteTransactions transactions = ignite0.transactions();
         IgniteCache<Object, Object> cachePersistent = ignite0.cache(CACHE_NAME);
         IgniteCache<Object, Object> cacheInMem = ignite0.cache(IN_MEM_CACHE_NAME);
 
-        try (Transaction tx = transactions.txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.SERIALIZABLE)) {
+        Integer primaryKeyPersist = primaryKey(cachePersistent);
+        Integer primaryKeyInMem = primaryKey(cacheInMem);
 
-            cachePersistent.put(1, 1);
-            cacheInMem.put(2, 2);
-
-            cachePersistent.put(3, 3);
+        try (Transaction tx = ignite0.transactions().txStart(PESSIMISTIC, SERIALIZABLE)) {
+            cachePersistent.put(primaryKeyPersist, 1);
+            cacheInMem.put(primaryKeyInMem, 2);
 
             tx.rollback();
         }
 
-        ignite0.cluster().state(ClusterState.INACTIVE);
+        ignite0.cluster().state(INACTIVE);
 
-        verifyTxRecords(ignite0, 0, TransactionState.ROLLED_BACK);
-        verifyTxRecords(ignite1, 0, TransactionState.ROLLED_BACK);
+        verifyTxRecords(ignite0, 0, 0, TransactionState.ROLLED_BACK);
+        verifyTxRecords(ignite1, 1, 0, null);
     }
 
     /**
      * @param ignite Ignite instance.
+     * @param nodeIdx Node index.
      * @param expDataCnt Expected DataRecord count.
      * @param states Expected TxRecord ordered sequence.
      * @throws IgniteCheckedException
      */
-    private void verifyTxRecords(Ignite ignite, int expDataCnt, TransactionState... states) throws IgniteCheckedException {
+    private void verifyTxRecords(Ignite ignite, int nodeIdx, int expDataCnt, TransactionState... states) throws IgniteCheckedException {
         String workDir = U.defaultWorkDirectory();
-        String subfolderName = genDbSubfolderName(ignite, 0);
+        String subfolderName = genDbSubfolderName(ignite, nodeIdx);
 
         IgniteWalIteratorFactory factory = new IgniteWalIteratorFactory(new NullLogger());
 
-        IteratorParametersBuilder params = createIteratorParametersBuilder(workDir, subfolderName);
+        IteratorParametersBuilder params = createIteratorParametersBuilder(workDir, subfolderName)
+            .filesOrDirs(workDir + "/db/wal/" + subfolderName, workDir + "/db/wal/archive/" + subfolderName);
 
-        WALIterator iter = factory.iterator(params.filesOrDirs(workDir));
+        WALIterator iter = factory.iterator(params);
         IgniteBiTuple<List<TxRecord>, Set<DataRecord>> res = iterateAndGetTxRecords(iter);
 
         if (states != null) {
@@ -1536,7 +1539,7 @@ public class IgniteWalReaderTest extends GridCommonAbstractTest {
     public void testCheckBoundsIterator() throws Exception {
         Ignite ignite = startGrid("node0");
 
-        ignite.cluster().active(true);
+        ignite.cluster().state(ACTIVE);
 
         try (IgniteDataStreamer<Integer, IndexedObject> st = ignite.dataStreamer(CACHE_NAME)) {
             st.allowOverwrite(true);
