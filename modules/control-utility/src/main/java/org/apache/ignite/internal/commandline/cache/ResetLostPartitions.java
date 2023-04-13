@@ -113,7 +113,10 @@ public class ResetLostPartitions extends AbstractCommand<Set<String>> {
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
-        String nextArg = argIter.nextArg("Expected either [" + ALL_CACHES_MODE + "] or [" + CACHES + "]");
+        if (!argIter.hasNextSubArg())
+            throw new IllegalArgumentException("Expected either [" + ALL_CACHES_MODE + "] or [" + CACHES + "]");
+
+        String nextArg = argIter.nextArg("");
 
         ResetLostPartitionsCommandArg arg = CommandArgUtils.of(nextArg, ResetLostPartitionsCommandArg.class);
 
