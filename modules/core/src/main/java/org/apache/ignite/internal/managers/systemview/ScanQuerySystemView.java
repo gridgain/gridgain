@@ -18,13 +18,12 @@ package org.apache.ignite.internal.managers.systemview;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.managers.systemview.walker.ScanQueryViewWalker;
@@ -152,7 +151,7 @@ public class ScanQuerySystemView<K, V> extends AbstractSystemView<ScanQueryView>
                     Set<Map.Entry<Long, GridFutureAdapter<GridCacheQueryManager.QueryResult<K, V>>>> cpOfEntries;
                     // It should prevent concurrent modification of the map while a snapshot of the current state is in progress
                     synchronized (reqMap) {
-                        cpOfEntries = new HashSet<>(reqMap.entrySet());
+                        cpOfEntries = new LinkedHashSet(reqMap.entrySet());
                     }
 
                     qriesIter = cpOfEntries.iterator();
