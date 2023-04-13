@@ -223,6 +223,7 @@ public class GridClientNioTcpConnection extends GridClientConnection {
 
             sock.setTcpNoDelay(tcpNoDelay);
             sock.setKeepAlive(true);
+            sock.setSoTimeout(connectTimeout / 2);
 
             final long startConnTime = System.currentTimeMillis();
 
