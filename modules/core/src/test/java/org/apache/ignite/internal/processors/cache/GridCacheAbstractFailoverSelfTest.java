@@ -26,8 +26,10 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePartialUpdateException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.CA;
 import org.apache.ignite.internal.util.typedef.CIX1;
@@ -44,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Failover tests for cache.
@@ -159,7 +162,7 @@ public abstract class GridCacheAbstractFailoverSelfTest extends GridCacheAbstrac
 
         Ignite g = startGrid(NEW_IGNITE_INSTANCE_NAME);
 
-        check(cache(g), ENTRY_CNT);
+        check(grid(0), cache(g), ENTRY_CNT, true);
 
         int half = ENTRY_CNT / 2;
 
@@ -377,11 +380,45 @@ public abstract class GridCacheAbstractFailoverSelfTest extends GridCacheAbstrac
      * @throws Exception If failed.
      */
     private void check(final IgniteCache<String, Integer> cache, final int expSize) throws Exception {
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                return cache.size() >= expSize;
-            }
-        }, 5000);
+        check(grid(0), cache, expSize, false);
+    }
+
+    /**
+     * @param g Coordinator node.
+     * @param cache Cache.
+     * @param expSize Minimum expected cache size.
+     * @param waitForLateAffAssignment If {@code true} then method will wait for the late affinity assignment is completed.
+     * @throws Exception If failed.
+     */
+    private void check(
+        IgniteEx g,
+        final IgniteCache<String, Integer> cache,
+        final int expSize,
+        boolean waitForLateAffAssignment
+    ) throws Exception {
+        if (waitForLateAffAssignment) {
+            AffinityTopologyVersion currMajorVer = new AffinityTopologyVersion(g.context().discovery().topologyVersion(), 0);
+            AffinityTopologyVersion waitVer = currMajorVer.nextMinorVersion();
+
+            assertTrue(
+                "Failed to wait for the topology [topVer=" + waitVer + ']',
+                waitForCondition(() -> {
+                    for (Ignite n : G.allGrids()) {
+                        AffinityTopologyVersion readyTopVer = ((IgniteEx)n).context().cache().context().exchange().readyAffinityVersion();
+                        if (readyTopVer.compareTo(waitVer) < 0)
+                            return false;
+                    }
+
+                    return true;
+                }, 5_000));
+        }
+        else {
+            waitForCondition(new GridAbsPredicate() {
+                @Override public boolean apply() {
+                    return cache.size() >= expSize;
+                }
+            }, 5000);
+        }
 
         int size = cache.size();
 
