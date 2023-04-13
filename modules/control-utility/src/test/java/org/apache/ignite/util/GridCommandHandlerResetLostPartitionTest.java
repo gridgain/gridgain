@@ -16,9 +16,10 @@
 package org.apache.ignite.util;
 
 import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -50,7 +51,7 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
     private static final String[] CACHE_NAMES = {"cacheOne", "cacheTwo", "cacheThree"};
 
     /** Cache size */
-    public static final int CACHE_SIZE = 100000 / CACHE_NAMES.length;
+    public static final int CACHE_SIZE = 10000 / CACHE_NAMES.length;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -155,10 +156,11 @@ public class GridCommandHandlerResetLostPartitionTest extends GridCommandHandler
         grid(0).cluster().active(true);
 
         for (String cacheName : CACHE_NAMES) {
-            try (IgniteDataStreamer<Object, Object> st = grid(0).dataStreamer(cacheName)) {
-                for (int j = 0; j < CACHE_SIZE; j++)
-                    st.addData(Integer.toString(j), "Value" + j);
-            }
+            Map<String, String> putMap = new LinkedHashMap<>();
+            for (int i = 0; i < CACHE_SIZE; i++)
+                putMap.put(Integer.toString(i), "Value" + i);
+
+            grid(0).cache(cacheName).putAll(putMap);
         }
 
         String g1Name = grid(1).name();
