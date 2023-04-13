@@ -349,12 +349,17 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     @Override public synchronized T dump() {
         boolean needRelease = acquireSafePoint();
 
-        awaitLocks();
+        T dump0;
 
-        T dump0 = snapshot();
+        try {
+            awaitLocks();
 
-        if (needRelease)
-            releaseSafePoint();
+            dump0 = snapshot();
+        }
+        finally {
+            if (needRelease)
+                releaseSafePoint();
+        }
 
         return dump0;
     }
