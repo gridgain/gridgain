@@ -218,6 +218,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         try {
             // We are inside close, and waiting for the lock in CacheContinuousQueryManager#unregisterListener.
             // Which, in turn, waits for all evaluate() calls to finish.
+            // Read lock is probably taken by GridCacheMapEntry#lockListenerReadLock - TODO double check
             close0();
         }
         finally {
