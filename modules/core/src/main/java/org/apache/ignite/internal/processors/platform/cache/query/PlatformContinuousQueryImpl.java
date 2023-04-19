@@ -198,7 +198,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         if (javaFilter != null)
             return javaFilter.evaluate(evt);
 
-        // Make sure that the query is fully initialized.
+        // First, use startLatch to ensure full initialization.
         try {
             startLatch.await();
         } catch (InterruptedException e) {
