@@ -193,6 +193,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
             return javaFilter.evaluate(evt);
 
         // Can't get a lock here, because query is closing (write lock taken on line 216)
+        // TODO: Failure to acquire a lock here can happen on start too! Need a flag?
         if (!lock.readLock().tryLock()) {
             throw new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
         }
