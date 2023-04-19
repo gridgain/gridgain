@@ -91,7 +91,7 @@
         <javax.cache.version>1.0.0</javax.cache.version>
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
-        <jetty.version>9.4.48.v20220622</jetty.version>
+        <jetty.version>9.4.51.v20230217</jetty.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>
@@ -872,7 +872,7 @@
 [INFO] ------------------------------------------------------------------------
 [ERROR] You are trying to compile Apache Ignite with inappropriate JDK version!
 [ERROR] Detected JDK Version: ${java.runtime.version}
-[ERROR] JDK version should be 1.7.0-* or >= 1.8.0-u40.
+[ERROR] JDK version should be 1.7.0-* or &gt;= 1.8.0-u40.
                             </message>
                             <version>[1.7,1.8),[1.8.0-40,)</version>
                         </requireJavaVersion>
@@ -1501,7 +1501,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1514,7 +1514,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1528,7 +1528,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                     </pluginExecutions>
