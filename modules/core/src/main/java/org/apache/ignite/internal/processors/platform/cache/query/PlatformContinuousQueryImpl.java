@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.cache.query;
 import java.io.ObjectStreamException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.cache.Cache;
@@ -27,6 +28,7 @@ import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListenerException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.Query;
@@ -71,6 +73,9 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
     /** Lock for concurrency control. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /** Start latch. */
+    private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /** Wrapped initial qry cursor. */
     private PlatformAbstractQueryCursor initialQryCur;
@@ -169,6 +174,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         }
         finally {
             lock.writeLock().unlock();
+            startLatch.countDown();
         }
     }
 
@@ -194,13 +200,19 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
         // Can't get a lock here, because query is closing (write lock taken on line 216)
         // TODO: Failure to acquire a lock here can happen on start too! Need a flag?
+        try {
+            startLatch.await();
+        } catch (InterruptedException e) {
+            throw new IgniteInterruptedException(e);
+        }
+
         if (!lock.readLock().tryLock()) {
-            throw new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
+            throw closedException();
         }
 
         try {
             if (ptr == 0)
-                throw new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
+                throw closedException();
 
             return !hasFilter || PlatformUtils.evaluateContinuousQueryEvent(platformCtx, ptr, evt);
         }
@@ -321,5 +333,12 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
             return javaFilter;
 
         return filter == null ? null : platformCtx.createContinuousQueryFilter(filter);
+    }
+
+    /**
+     * @return Closed exception.
+     */
+    private static CacheEntryListenerException closedException() {
+        return new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
     }
 }
