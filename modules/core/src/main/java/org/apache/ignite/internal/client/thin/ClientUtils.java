@@ -487,7 +487,7 @@ public final class ClientUtils {
 
                                     LinkedHashMap<String, Boolean> fields = ClientUtils.collection(
                                         in,
-                                        unused5 -> new SimpleEntry<>(reader.readString(), reader.readBoolean())
+                                        unused5 -> new SimpleEntry<>(reader.readString(), !reader.readBoolean())
                                     ).stream().collect(Collectors.toMap(
                                             SimpleEntry::getKey,
                                             SimpleEntry::getValue,
