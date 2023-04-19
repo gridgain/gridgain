@@ -198,14 +198,18 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         if (javaFilter != null)
             return javaFilter.evaluate(evt);
 
-        // Can't get a lock here, because query is closing (write lock taken on line 216)
-        // TODO: Failure to acquire a lock here can happen on start too! Need a flag?
+        // Make sure that the query is fully initialized.
         try {
             startLatch.await();
         } catch (InterruptedException e) {
             throw new IgniteInterruptedException(e);
         }
 
+        // After start latch is released, the only reason for a failed tryLock() is that the query is being closed.
+        // Don't use readLock().lock() to avoid deadlock with CacheContinuousQueryManager#unregisterListener:
+        // - close() takes PlatformContinuousQueryImpl.lock, then listenerLock deeper in the call stack;
+        // - evaluate() is called under listenerLock up the stack, then takes PlatformContinuousQueryImpl.lock.
+        // We cannot ensure the same order of locks in both cases, so we use tryLock() here.
         if (!lock.readLock().tryLock()) {
             throw closedException();
         }
@@ -231,9 +235,6 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         lock.writeLock().lock();
 
         try {
-            // We are inside close, and waiting for the lock in CacheContinuousQueryManager#unregisterListener.
-            // Which, in turn, waits for all evaluate() calls to finish.
-            // Read lock is probably taken by GridCacheMapEntry#lockListenerReadLock - TODO double check
             close0();
         }
         finally {
