@@ -348,7 +348,7 @@ public final class ClientUtils {
                                 w.writeInt(i.getInlineSize());
                                 ClientUtils.collection(i.getFields().entrySet(), out, (unused5, f) -> {
                                             w.writeString(f.getKey());
-                                            w.writeBoolean(f.getValue());
+                                            w.writeBoolean(!f.getValue());
                                         }
                                 );
                             });
