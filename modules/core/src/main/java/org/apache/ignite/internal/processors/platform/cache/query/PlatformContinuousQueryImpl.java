@@ -192,6 +192,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         if (javaFilter != null)
             return javaFilter.evaluate(evt);
 
+        // Can't get a lock here, because query is closing (write lock taken on line 216)
         lock.readLock().lock();
 
         try {
@@ -215,6 +216,8 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         lock.writeLock().lock();
 
         try {
+            // We are inside close, and waiting for the lock in CacheContinuousQueryManager#unregisterListener.
+            // Which, in turn, waits for all evaluate() calls to finish.
             close0();
         }
         finally {
