@@ -348,7 +348,7 @@ public final class ClientUtils {
                                 w.writeInt(i.getInlineSize());
                                 ClientUtils.collection(i.getFields().entrySet(), out, (unused5, f) -> {
                                             w.writeString(f.getKey());
-                                            w.writeBoolean(f.getValue());
+                                            w.writeBoolean(!f.getValue());
                                         }
                                 );
                             });
@@ -487,7 +487,7 @@ public final class ClientUtils {
 
                                     LinkedHashMap<String, Boolean> fields = ClientUtils.collection(
                                         in,
-                                        unused5 -> new SimpleEntry<>(reader.readString(), reader.readBoolean())
+                                        unused5 -> new SimpleEntry<>(reader.readString(), !reader.readBoolean())
                                     ).stream().collect(Collectors.toMap(
                                             SimpleEntry::getKey,
                                             SimpleEntry::getValue,
