@@ -180,6 +180,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
     /** {@inheritDoc} */
     @Override public void onUpdated(Iterable evts) throws CacheEntryListenerException {
+        // onUpdated is not under listenerLock, so there is no deadlock possibility like in evaluate
         lock.readLock().lock();
 
         try {
@@ -210,9 +211,8 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         // - close() takes PlatformContinuousQueryImpl.lock, then listenerLock deeper in the call stack;
         // - evaluate() is called under listenerLock up the stack, then takes PlatformContinuousQueryImpl.lock.
         // We cannot ensure the same order of locks in both cases, so we use tryLock() here.
-        if (!lock.readLock().tryLock()) {
+        if (!lock.readLock().tryLock())
             throw closedException();
-        }
 
         try {
             if (ptr == 0)
