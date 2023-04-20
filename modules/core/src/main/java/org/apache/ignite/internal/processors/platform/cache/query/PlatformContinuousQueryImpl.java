@@ -180,8 +180,15 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
     /** {@inheritDoc} */
     @Override public void onUpdated(Iterable evts) throws CacheEntryListenerException {
-        // onUpdated is not under listenerLock, so there is no deadlock possibility like in evaluate
-        lock.readLock().lock();
+        // First, use startLatch to ensure full initialization.
+        try {
+            startLatch.await();
+        } catch (InterruptedException e) {
+            throw new IgniteInterruptedException(e);
+        }
+
+        if (!lock.readLock().tryLock())
+            return; // Query is being closed (see tryLock reasoning in #evaluate).
 
         try {
             if (ptr == 0)
