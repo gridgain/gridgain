@@ -18,6 +18,9 @@ package org.apache.ignite.internal.processors.cache.persistence.wal;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.processors.cache.persistence.wal.aware.SegmentAware;
 
@@ -86,6 +89,25 @@ public class SegmentRouter {
         }
 
         return fd;
+    }
+
+    public List<FileDescriptor> findSegment1(long segmentId) {
+        FileDescriptor fd;
+
+        if (segmentAware.lastArchivedAbsoluteIndex() >= segmentId || !isArchiverEnabled())
+            fd = new FileDescriptor(new File(walArchiveDir, fileName(segmentId)));
+        else
+            fd = new FileDescriptor(new File(walWorkDir, fileName(segmentId % dsCfg.getWalSegments())), segmentId);
+
+        List<FileDescriptor> fileDescriptors = Arrays.asList(
+            fd,
+            new FileDescriptor(new File(walWorkDir, fileName(segmentId % dsCfg.getWalSegments())), segmentId),
+            new FileDescriptor(new File(walArchiveDir, fileName(fd.idx()) + ZIP_SUFFIX))
+        );
+
+        return fileDescriptors.stream()
+            .filter(fileDescriptor -> fileDescriptor.file().exists())
+            .collect(Collectors.toList());
     }
 
     /**

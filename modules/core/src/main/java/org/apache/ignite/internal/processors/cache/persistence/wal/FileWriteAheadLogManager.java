@@ -75,6 +75,7 @@ import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RolloverType;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
+import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -108,6 +109,8 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.debug.DebugUtils;
+import org.apache.ignite.internal.util.debug.WalRecordCyclicBufferByThread;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.io.GridFileUtils;
@@ -822,6 +825,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    private final WalRecordCyclicBufferByThread walRecordCyclicBufferByThread = new WalRecordCyclicBufferByThread(1_000_000);
+
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec) throws IgniteCheckedException {
         return log(rec, RolloverType.NONE);
@@ -829,6 +834,37 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
+        WALPointer ptr = log0(rec, rolloverType);
+
+        if (ptr == null)
+            return ptr;
+
+        walRecordCyclicBufferByThread.add(rec);
+
+        if (rec instanceof TxRecord) {
+            try {
+                WALRecord read = read(ptr);
+
+                assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
+            }
+            catch (Throwable t) {
+                walRecordCyclicBufferByThread.stop();
+
+                long absSegIdx = ((FileWALPointer)ptr).index();
+
+                DebugUtils.dumpWalRecords(
+                    ptr,
+                    walRecordCyclicBufferByThread.getSortedListWalRecords(absSegIdx),
+                    t,
+                    log
+                );
+            }
+        }
+
+        return ptr;
+    }
+
+    private WALPointer log0(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         if (serializer == null || mode == WALMode.NONE)
             return null;
 

@@ -21,7 +21,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
@@ -36,7 +38,9 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.io.SegmentIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
+import org.apache.ignite.internal.util.debug.DebugUtils;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
+import org.apache.ignite.internal.util.debug.FilesToArtifacts;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -295,6 +299,20 @@ public abstract class AbstractWalRecordsIterator
             }
 
             return null;
+        }
+        catch (OutOfMemoryError oom) {
+            List<FileDescriptor> segments = ((FileWriteAheadLogManager)sharedCtx.wal()).getSegmentRouter().findSegment1(actualFilePtr.index());
+
+            log.error(String.format(
+                "!!!!! AbstractWalRecordsIterator OutOfMemoryError [actualFilePtr=%s, hnd=%s, segments=%s]",
+                actualFilePtr,
+                hnd,
+                segments.stream().map(FileDescriptor::file).map(File::getAbsolutePath).collect(Collectors.toList())
+            ));
+
+            FilesToArtifacts.addFilesToArtifacts(segments.stream().map(FileDescriptor::file));
+
+            throw oom;
         }
     }
 

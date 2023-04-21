@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxPr
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgniteWalRebalanceTest;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.debug.FilesToArtifacts;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -209,6 +210,8 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
         super.afterTest();
 
         stopAllGrids();
+
+        FilesToArtifacts.saveFilesToArtifactsAsZip(log);
 
         cleanPersistenceDir();
     }
