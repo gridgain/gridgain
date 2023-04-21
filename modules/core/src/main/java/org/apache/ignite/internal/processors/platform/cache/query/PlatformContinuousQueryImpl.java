@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.platform.cache.query;
 import java.io.ObjectStreamException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.cache.Cache;
@@ -27,6 +28,7 @@ import javax.cache.event.CacheEntryEventFilter;
 import javax.cache.event.CacheEntryListenerException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.cache.CacheEntryEventSerializableFilter;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.Query;
@@ -71,6 +73,9 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
     /** Lock for concurrency control. */
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /** Start latch. */
+    private final CountDownLatch startLatch = new CountDownLatch(1);
 
     /** Wrapped initial qry cursor. */
     private PlatformAbstractQueryCursor initialQryCur;
@@ -169,16 +174,25 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         }
         finally {
             lock.writeLock().unlock();
+            startLatch.countDown();
         }
     }
 
     /** {@inheritDoc} */
     @Override public void onUpdated(Iterable evts) throws CacheEntryListenerException {
-        lock.readLock().lock();
+        // First, use startLatch to ensure full initialization.
+        try {
+            startLatch.await();
+        } catch (InterruptedException e) {
+            throw new IgniteInterruptedException(e);
+        }
+
+        if (!lock.readLock().tryLock())
+            return; // Query is being closed (see tryLock reasoning in #evaluate).
 
         try {
             if (ptr == 0)
-                throw new CacheEntryListenerException("Failed to notify listener because it has been closed.");
+                return;
 
             PlatformUtils.applyContinuousQueryEvents(platformCtx, ptr, evts);
         }
@@ -192,11 +206,24 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
         if (javaFilter != null)
             return javaFilter.evaluate(evt);
 
-        lock.readLock().lock();
+        // First, use startLatch to ensure full initialization.
+        try {
+            startLatch.await();
+        } catch (InterruptedException e) {
+            throw new IgniteInterruptedException(e);
+        }
+
+        // After start latch is released, the only reason for a failed tryLock() is that the query is being closed.
+        // Don't use readLock().lock() to avoid deadlock with CacheContinuousQueryManager#unregisterListener:
+        // - close() takes PlatformContinuousQueryImpl.lock, then listenerLock deeper in the call stack;
+        // - evaluate() is called under listenerLock up the stack, then takes PlatformContinuousQueryImpl.lock.
+        // We cannot ensure the same order of locks in both cases, so we use tryLock() here.
+        if (!lock.readLock().tryLock())
+            throw closedException();
 
         try {
             if (ptr == 0)
-                throw new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
+                throw closedException();
 
             return !hasFilter || PlatformUtils.evaluateContinuousQueryEvent(platformCtx, ptr, evt);
         }
@@ -314,5 +341,12 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
             return javaFilter;
 
         return filter == null ? null : platformCtx.createContinuousQueryFilter(filter);
+    }
+
+    /**
+     * @return Closed exception.
+     */
+    private static CacheEntryListenerException closedException() {
+        return new CacheEntryListenerException("Failed to evaluate the filter because it has been closed.");
     }
 }
