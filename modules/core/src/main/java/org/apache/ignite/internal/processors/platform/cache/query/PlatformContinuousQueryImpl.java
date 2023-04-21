@@ -192,7 +192,7 @@ public class PlatformContinuousQueryImpl implements PlatformContinuousQuery {
 
         try {
             if (ptr == 0)
-                throw new CacheEntryListenerException("Failed to notify listener because it has been closed.");
+                return;
 
             PlatformUtils.applyContinuousQueryEvents(platformCtx, ptr, evts);
         }
