@@ -75,7 +75,7 @@ public class DebugUtils {
         File dumpFile = createFile(LOG_DIR, "wal_records_dump", ".txt");
 
         try (FileOutputStream fileOutputStream = new FileOutputStream(dumpFile)) {
-            fileOutputStream.write(("failed=" + failed + U.nl()).getBytes(UTF_8));
+            fileOutputStream.write(("failed=" + failed + U.nl() + U.nl()).getBytes(UTF_8));
 
             for (IgniteBiTuple<Thread, WALRecord> record : records) {
                 String s = record.get2().position() + "    thread=" + record.get1().getName() + "    record=" + record.get2() + U.nl();

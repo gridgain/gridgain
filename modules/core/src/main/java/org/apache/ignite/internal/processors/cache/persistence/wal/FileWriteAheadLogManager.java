@@ -858,6 +858,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                     t,
                     log
                 );
+
+                throw t;
             }
         }
 
