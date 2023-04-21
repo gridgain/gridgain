@@ -1047,7 +1047,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
     /**
      * @param metaPageAddr Meta page address. If equals {@code 0}, it means that we should do read lock on
-     * meta page and get meta page address. Otherwise we will not do the lock and will use the given address.
+     * meta page and get meta page address. Otherwise, we will not do the lock and will use the given address.
      * @return Tree meta data.
      * @throws IgniteCheckedException If failed.
      */

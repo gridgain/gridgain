@@ -254,7 +254,10 @@ public enum IgniteFeatures {
     MUTABLE_CACHE_AFFINITY_CHANGE_MESSAGE(66),
 
     /** New DR FST commands handling approach. */
-    NEW_DR_FST_COMMANDS(67);
+    NEW_DR_FST_COMMANDS(67),
+
+    /** This feature enables checking a cache generation for incoming cache messages (see GridCacheIdMessage). */
+    CHECK_CACHE_GENERATION(68);
 
     /**
      * Unique feature identifier.

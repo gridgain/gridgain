@@ -95,6 +95,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.transactions.TxDeadlockDetection.TxDeadlockFuture;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.lang.gridfunc.ReadOnlyCollectionView2X;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteOutClosure;
@@ -2846,8 +2847,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     @Nullable WALPointer logTxRecord(IgniteTxAdapter tx) {
         BaselineTopology baselineTop;
 
-        // Log tx state change to WAL.
+        // Skip logging tx state change to WAL if required.
         if (cctx.wal() == null
+            || !containsCacheWithEnabledWal(tx)
             || (baselineTop = cctx.kernalContext().state().clusterState().baselineTopology()) == null
             || !baselineTop.consistentIds().contains(cctx.localNode().consistentId()))
             return null;
@@ -2869,6 +2871,35 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
 
             throw new IgniteException("Failed to log TxRecord: " + record, e);
         }
+    }
+
+    /** Checks if a record belongs to a persistent cache with WAL enabled. */
+    private boolean containsCacheWithEnabledWal(IgniteTxAdapter tx) {
+        IgniteTxState state = tx.txState();
+        GridIntList cacheIds = state.cacheIds();
+
+        assert cacheIds != null;
+
+        if (!cacheIds.isEmpty()) {
+            for (int i = 0; i < cacheIds.size(); i++) {
+                int cacheId = cacheIds.get(i);
+
+                GridCacheContext cctx = this.cctx.cacheContext(cacheId);
+                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                    return true;
+            }
+        }
+        else if (!state.allEntries().isEmpty()) {
+            // There can be a transaction with no #activeCaches specified, let's check entries individually.
+            // TODO https://ggsystems.atlassian.net/browse/GG-36536
+            for (IgniteTxEntry txEntry : state.allEntries()) {
+                GridCacheContext cctx = txEntry.context();
+                if (cctx.group().persistenceEnabled() && cctx.group().walEnabled())
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /**

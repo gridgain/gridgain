@@ -31,6 +31,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.schema.SchemaOperationException;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -134,9 +136,13 @@ public class ErroneousQueryEntityConfigurationTest extends AbstractIndexingCommo
 
         client.cluster().state(ClusterState.ACTIVE);
 
-        GridTestUtils.assertThrows(log, () -> {
+        CacheException th = GridTestUtils.assertThrows(log, () -> {
             client.getOrCreateCaches(ccfgs);
-        }, CacheException.class, "Duplicate index name");
+        }, CacheException.class, null);
+
+        SchemaOperationException e = X.cause(th, SchemaOperationException.class);
+
+        assertEquals(SchemaOperationException.CODE_TABLE_EXISTS, e.code());
 
         server.cluster().state(ClusterState.ACTIVE);
     }

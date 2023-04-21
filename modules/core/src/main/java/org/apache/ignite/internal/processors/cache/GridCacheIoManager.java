@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -101,6 +102,9 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE;
+import static org.apache.ignite.internal.IgniteFeatures.CHECK_CACHE_GENERATION;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion.NONE;
 import static org.apache.ignite.internal.util.IgniteUtils.nl;
 
 /**
@@ -115,6 +119,9 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
     /** */
     private static final int MAX_STORED_PENDING_MESSAGES = 100;
+
+    /** Common message handler identifier that does not correspond to any particular cache. */
+    public static final int COMMON_MESSAGE_HANDLER_ID = 0;
 
     /** Delay in milliseconds between retries. */
     private long retryDelay;
@@ -315,7 +322,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      * @param plc Message policy.
      */
     private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, byte plc) {
-        handleMessage(nodeId, cacheMsg, cacheMsg.cacheGroupMessage() ? grpHandlers : cacheHandlers, plc);
+        handleMessage(nodeId, cacheMsg, cacheMsg.cacheGroupMessage() ? grpHandlers : cacheHandlers, plc, false);
     }
 
     /**
@@ -323,9 +330,11 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      * @param cacheMsg Message.
      * @param msgHandlers Message handlers.
      * @param plc Message policy.
+     * @param skipTopologyCheck If {@code true} then the incoming message will be handled regardless of the start topology version
+     *                         defined in a message handler.
      */
     @SuppressWarnings("unchecked")
-    private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, MessageHandlers msgHandlers, byte plc) {
+    private void handleMessage(UUID nodeId, GridCacheMessage cacheMsg, MessageHandlers msgHandlers, byte plc, boolean skipTopologyCheck) {
         Lock lock = rw.readLock();
 
         lock.lock();
@@ -333,22 +342,30 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         try {
             int msgIdx = cacheMsg.lookupIndex();
 
+            AffinityTopologyVersion msgTopVer = cacheMsg.topologyVersion();
+
             IgniteBiInClosure<UUID, GridCacheMessage> c = null;
 
             if (msgIdx >= 0) {
-                Map<Integer, IgniteBiInClosure[]> idxClsHandlers0 = msgHandlers.idxClsHandlers;
+                Map<Integer, IndexedClassHandler> idxClsHandlers0 = msgHandlers.idxClsHandlers;
 
-                IgniteBiInClosure[] cacheClsHandlers = idxClsHandlers0.get(cacheMsg.handlerId());
+                IndexedClassHandler cacheClsHandlers = idxClsHandlers0.get(cacheMsg.handlerId());
 
-                if (cacheClsHandlers != null)
-                    c = cacheClsHandlers[msgIdx];
+                if (cacheClsHandlers != null &&
+                    (skipTopologyCheck || NONE.equals(msgTopVer) || !msgTopVer.before(cacheClsHandlers.startTopVer)))
+                    c = cacheClsHandlers.hndls[msgIdx];
             }
 
-            if (c == null)
-                c = msgHandlers.clsHandlers.get(new ListenerKey(cacheMsg.handlerId(), cacheMsg.getClass()));
+            if (c == null) {
+                RegularClassHandler rHnd = msgHandlers.clsHandlers.get(
+                        new ListenerKey(cacheMsg.handlerId(), cacheMsg.getClass()));
+
+                if (rHnd != null && (skipTopologyCheck || NONE.equals(msgTopVer) || !msgTopVer.before(rHnd.startTopVer)))
+                    c = rHnd.hnd;
+            }
 
             if (c == null) {
-                if (processMissedHandler(nodeId, cacheMsg))
+                if (processMissedHandler(nodeId, cacheMsg, msgHandlers, plc, skipTopologyCheck))
                     return;
 
                 IgniteLogger log = cacheMsg.messageLogger(cctx);
@@ -364,10 +381,10 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
 
                 msg0.append(nl()).append("Registered listeners:");
 
-                Map<Integer, IgniteBiInClosure[]> idxClsHandlers0 = msgHandlers.idxClsHandlers;
+                Map<Integer, IndexedClassHandler> idxClsHandlers0 = msgHandlers.idxClsHandlers;
 
-                for (Map.Entry<Integer, IgniteBiInClosure[]> e : idxClsHandlers0.entrySet())
-                    msg0.append(nl()).append(e.getKey()).append("=").append(Arrays.toString(e.getValue()));
+                for (Map.Entry<Integer, IndexedClassHandler> e : idxClsHandlers0.entrySet())
+                    msg0.append(nl()).append(e.getKey()).append("=").append(Arrays.toString(e.getValue().hndls));
 
                 if (cctx.kernalContext().isStopping()) {
                     if (log.isDebugEnabled())
@@ -399,9 +416,19 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
     /**
      * @param nodeId Node ID.
      * @param cacheMsg Message.
+     * @param msgHandlers Message handlers.
+     * @param plc Message policy.
+     * @param skipTopologyCheck If {@code true} then the incoming message will be handled regardless of the start topology version
+     *                         defined in a message handler.
      * @return {@code True} if message processed.
      */
-    private boolean processMissedHandler(UUID nodeId, GridCacheMessage cacheMsg) {
+    private boolean processMissedHandler(
+        UUID nodeId,
+        GridCacheMessage cacheMsg,
+        MessageHandlers msgHandlers,
+        byte plc,
+        boolean skipTopologyCheck
+    ) {
         // It is possible to receive reader update after client near cache was closed.
         if (cacheMsg instanceof GridDhtAtomicAbstractUpdateRequest) {
             GridDhtAtomicAbstractUpdateRequest req = (GridDhtAtomicAbstractUpdateRequest)cacheMsg;
@@ -438,6 +465,15 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
                         req.nearNodeId(),
                         GridIoPolicy.SYSTEM_POOL);
                 }
+
+                return true;
+            }
+        }
+
+        // Due to a bug, GridCacheQueryRequest messages were always mapped to the cache start topology version instead of an actual one.
+        if (cacheMsg instanceof GridCacheQueryRequest && !skipTopologyCheck) {
+            if (!nodeSupports(cctx.kernalContext(), cctx.discovery().node(nodeId), CHECK_CACHE_GENERATION)) {
+                handleMessage(nodeId, cacheMsg, msgHandlers, plc, true);
 
                 return true;
             }
@@ -1401,12 +1437,30 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      */
     public <Msg extends GridCacheMessage> void addCacheHandler(
         int hndId,
+        AffinityTopologyVersion startTopVer,
         Class<Msg> type,
         IgniteBiInClosure<UUID, ? super Msg> c
     ) {
         assert !type.isAssignableFrom(GridCacheGroupIdMessage.class) : type;
 
-        addHandler(hndId, type, c, cacheHandlers);
+        addHandler(hndId, startTopVer, type, c, cacheHandlers);
+    }
+
+    /**
+     * Registers a new message handler for the given message {@code type}.
+     * This method is equivalent to {@link #addCacheHandler(int, AffinityTopologyVersion, Class, IgniteBiInClosure)} where is
+     * the handler id equals to {@link #COMMON_MESSAGE_HANDLER_ID} and deployment id is {@code null}.
+     *
+     * @param type Type of message.
+     * @param c Handler.
+     */
+    public <Msg extends GridCacheMessage> void addCacheHandler(
+        Class<Msg> type,
+        IgniteBiInClosure<UUID, ? super Msg> c
+    ) {
+        assert !type.isAssignableFrom(GridCacheGroupIdMessage.class) : type;
+
+        addHandler(COMMON_MESSAGE_HANDLER_ID, NONE, type, c, cacheHandlers);
     }
 
     /**
@@ -1421,7 +1475,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
     ) {
         assert !type.isAssignableFrom(GridCacheIdMessage.class) : type;
 
-        addHandler(hndId, type, c, grpHandlers);
+        addHandler(hndId, NONE, type, c, grpHandlers);
     }
 
     /**
@@ -1432,6 +1486,7 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
      */
     private <Msg extends GridCacheMessage> void addHandler(
         int hndId,
+        AffinityTopologyVersion startTopVer,
         Class<Msg> type,
         IgniteBiInClosure<UUID, ? super Msg> c,
         MessageHandlers msgHandlers
@@ -1439,16 +1494,16 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         int msgIdx = messageIndex(type);
 
         if (msgIdx != -1) {
-            Map<Integer, IgniteBiInClosure[]> idxClsHandlers0 = msgHandlers.idxClsHandlers;
+            Map<Integer, IndexedClassHandler> idxClsHandlers0 = msgHandlers.idxClsHandlers;
 
-            IgniteBiInClosure[] cacheClsHandlers = idxClsHandlers0.compute(hndId, (key, clsHandlers) -> {
+            IndexedClassHandler cacheClsHandlers = idxClsHandlers0.compute(hndId, (key, clsHandlers) -> {
                 if (clsHandlers == null)
-                    clsHandlers = new IgniteBiInClosure[GridCacheMessage.MAX_CACHE_MSG_LOOKUP_INDEX];
+                    clsHandlers = new IndexedClassHandler(startTopVer);
 
-                if (clsHandlers[msgIdx] != null)
+                if (clsHandlers.hndls[msgIdx] != null || !Objects.equals(clsHandlers.startTopVer, startTopVer))
                     return null;
 
-                clsHandlers[msgIdx] = c;
+                clsHandlers.hndls[msgIdx] = c;
 
                 return clsHandlers;
             });
@@ -1461,11 +1516,12 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         }
         else {
             ListenerKey key = new ListenerKey(hndId, type);
+            RegularClassHandler regHnd = new RegularClassHandler(startTopVer, (IgniteBiInClosure<UUID, GridCacheMessage>)c);
 
-            if (msgHandlers.clsHandlers.putIfAbsent(key,
-                (IgniteBiInClosure<UUID, GridCacheMessage>)c) != null)
+            if (msgHandlers.clsHandlers.putIfAbsent(key, regHnd) != null) {
                 assert false : "Handler for class already registered [hndId=" + hndId + ", cls=" + type +
                     ", old=" + msgHandlers.clsHandlers.get(key) + ", new=" + c + ']';
+            }
         }
 
         IgniteLogger log0 = log;
@@ -1670,16 +1726,62 @@ public class GridCacheIoManager extends GridCacheSharedManagerAdapter {
         X.println(">>>   cacheGrpOrderedHandlersSize: " + grpHandlers.orderedHandlers.size());
     }
 
+    /** */
+    abstract static class MessageHandler {
+        /** Start topology version. */
+        final AffinityTopologyVersion startTopVer;
+
+        /**
+         * Creates a new message handler descriptor.
+         *
+         * @param startTopVer Start affinity topology version.
+         */
+        MessageHandler(AffinityTopologyVersion startTopVer) {
+            this.startTopVer = startTopVer;
+        }
+    }
+
+    /** */
+    static class IndexedClassHandler extends MessageHandler {
+        /** Actual handlers. */
+        final IgniteBiInClosure[] hndls = new IgniteBiInClosure[GridCacheMessage.MAX_CACHE_MSG_LOOKUP_INDEX];
+
+        /**
+         * Creates a new message handler descriptor.
+         *
+         * @param startTopVer Start affinity topology version.
+         */
+        IndexedClassHandler(AffinityTopologyVersion startTopVer) {
+            super(startTopVer);
+        }
+    }
+
+    /** */
+    static class RegularClassHandler extends MessageHandler {
+        /** Actual handler. */
+        IgniteBiInClosure<UUID, GridCacheMessage> hnd;
+
+        /**
+         * Creates a new message handler descriptor.
+         *
+         * @param startTopVer Start affinity topology version.
+         */
+        RegularClassHandler(AffinityTopologyVersion startTopVer, IgniteBiInClosure<UUID, GridCacheMessage> hnd) {
+            super(startTopVer);
+
+            this.hnd = hnd;
+        }
+    }
+
     /**
      *
      */
     static class MessageHandlers {
         /** Indexed class handlers. */
-        volatile Map<Integer, IgniteBiInClosure[]> idxClsHandlers = new ConcurrentHashMap<>();
+        volatile Map<Integer, IndexedClassHandler> idxClsHandlers = new ConcurrentHashMap<>();
 
         /** Handler registry. */
-        ConcurrentMap<ListenerKey, IgniteBiInClosure<UUID, GridCacheMessage>>
-            clsHandlers = new ConcurrentHashMap<>();
+        ConcurrentMap<ListenerKey, RegularClassHandler> clsHandlers = new ConcurrentHashMap<>();
 
         /** Ordered handler registry. */
         ConcurrentMap<Object, IgniteBiInClosure<UUID, ? extends GridCacheMessage>> orderedHandlers =

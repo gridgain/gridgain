@@ -174,8 +174,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
     /** Query context registry. */
     private final QueryContextRegistry qryCtxRegistry;
 
-    /** If {code true} then this index is already marked as destroyed. */
+    /** If {@code true} then this index is already marked as destroyed. */
     private final AtomicBoolean destroyed = new AtomicBoolean();
+
+    /**
+     * If {@code true} then this index was renamed and soon will be destroyed.
+     * No need to start new destruction task.
+     */
+    private final AtomicBoolean renamed = new AtomicBoolean();
 
     /** IO statistics holder. */
     private final IoStatisticsHolderIndex stats;
@@ -665,6 +671,14 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     /**
+     * Marks index as renamed, meaning on destruction there is no need to
+     * run {@link DurableBackgroundCleanupIndexTreeTaskV2}.
+     */
+    public void markRenamed() {
+        renamed.set(true);
+    }
+
+    /**
      * Internal method for destroying index. For {@link H2TreeIndex} destroy operation is asynchronous.
      *
      * @param rmvIdx Flag remove.
@@ -684,6 +698,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
                 ctx.metric().remove(stats.metricRegistryName());
 
+                if (renamed.get()) {
+                    // Already renamed, this means that DurableBackgroundCleanupIndexTreeTaskV2 was already started
+                    // (maybe before restart and there was no checkpoint, but this task will be read from WAL).
+                    return;
+                }
+
                 if (cctx.group().persistenceEnabled() ||
                     cctx.shared().kernalContext().state().clusterState().state() != INACTIVE) {
                     DurableBackgroundCleanupIndexTreeTaskV2 task = new DurableBackgroundCleanupIndexTreeTaskV2(
@@ -696,11 +716,15 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         segments
                     );
 
+                    cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
+
                     if (renameImmediately) {
+                        // If not renamed immediately, then index rebuild tasks will see old RootPageId
+                        // stored in the IndexStorage which may be a root of a broken tree.
+                        // NB: First the task will be written to MS (and WAL) and only after that the
+                        // RenameRecord.
                         task.renameIndexTrees(cctx.group());
                     }
-
-                    cctx.kernalContext().durableBackgroundTask().executeAsync(task, cctx.config());
                 }
             }
         }
@@ -1094,6 +1118,15 @@ public class H2TreeIndex extends H2TreeIndexBase {
         }
 
         return ret;
+    }
+
+    /**
+     * Returns the tree name of this index.
+     *
+     * @return Tree name of the index.
+     */
+    public String treeName() {
+        return treeName;
     }
 
     /**

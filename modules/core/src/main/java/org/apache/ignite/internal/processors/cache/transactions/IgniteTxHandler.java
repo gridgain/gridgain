@@ -215,87 +215,71 @@ public class IgniteTxHandler {
         txPrepareMsgLog = ctx.logger(CU.TX_MSG_PREPARE_LOG_CATEGORY);
         txFinishMsgLog = ctx.logger(CU.TX_MSG_FINISH_LOG_CATEGORY);
 
-        ctx.io().addCacheHandler(0, GridNearTxPrepareRequest.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridNearTxPrepareRequest.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processNearTxPrepareRequest(nodeId, (GridNearTxPrepareRequest)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridNearTxPrepareResponse.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridNearTxPrepareResponse.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processNearTxPrepareResponse(nodeId, (GridNearTxPrepareResponse)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridNearTxFinishRequest.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridNearTxFinishRequest.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processNearTxFinishRequest(nodeId, (GridNearTxFinishRequest)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridNearTxFinishResponse.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridNearTxFinishResponse.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processNearTxFinishResponse(nodeId, (GridNearTxFinishResponse)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridDhtTxPrepareRequest.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridDhtTxPrepareRequest.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processDhtTxPrepareRequest(nodeId, (GridDhtTxPrepareRequest)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridDhtTxPrepareResponse.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridDhtTxPrepareResponse.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processDhtTxPrepareResponse(nodeId, (GridDhtTxPrepareResponse)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridDhtTxFinishRequest.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridDhtTxFinishRequest.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processDhtTxFinishRequest(nodeId, (GridDhtTxFinishRequest)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridDhtTxOnePhaseCommitAckRequest.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridDhtTxOnePhaseCommitAckRequest.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processDhtTxOnePhaseCommitAckRequest(nodeId, (GridDhtTxOnePhaseCommitAckRequest)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridDhtTxFinishResponse.class, new CI2<UUID, GridCacheMessage>() {
+        ctx.io().addCacheHandler(GridDhtTxFinishResponse.class, new CI2<UUID, GridCacheMessage>() {
             @Override public void apply(UUID nodeId, GridCacheMessage msg) {
                 processDhtTxFinishResponse(nodeId, (GridDhtTxFinishResponse)msg);
             }
         });
 
-        ctx.io().addCacheHandler(0, GridCacheTxRecoveryRequest.class,
-            new CI2<UUID, GridCacheTxRecoveryRequest>() {
-                @Override public void apply(UUID nodeId, GridCacheTxRecoveryRequest req) {
-                    processCheckPreparedTxRequest(nodeId, req);
-                }
-            });
+        ctx.io().addCacheHandler(GridCacheTxRecoveryRequest.class,
+            (CI2<UUID, GridCacheTxRecoveryRequest>)this::processCheckPreparedTxRequest);
 
-        ctx.io().addCacheHandler(0, GridCacheTxRecoveryResponse.class,
-            new CI2<UUID, GridCacheTxRecoveryResponse>() {
-                @Override public void apply(UUID nodeId, GridCacheTxRecoveryResponse res) {
-                    processCheckPreparedTxResponse(nodeId, res);
-                }
-            });
+        ctx.io().addCacheHandler(GridCacheTxRecoveryResponse.class,
+            (CI2<UUID, GridCacheTxRecoveryResponse>)this::processCheckPreparedTxResponse);
 
-        ctx.io().addCacheHandler(0, PartitionCountersNeighborcastRequest.class,
-            new CI2<UUID, PartitionCountersNeighborcastRequest>() {
-                @Override public void apply(UUID nodeId, PartitionCountersNeighborcastRequest req) {
-                    processPartitionCountersRequest(nodeId, req);
-                }
-            });
+        ctx.io().addCacheHandler(PartitionCountersNeighborcastRequest.class,
+            (CI2<UUID, PartitionCountersNeighborcastRequest>)this::processPartitionCountersRequest);
 
-        ctx.io().addCacheHandler(0, PartitionCountersNeighborcastResponse.class,
-            new CI2<UUID, PartitionCountersNeighborcastResponse>() {
-                @Override public void apply(UUID nodeId, PartitionCountersNeighborcastResponse res) {
-                    processPartitionCountersResponse(nodeId, res);
-                }
-            });
+        ctx.io().addCacheHandler(PartitionCountersNeighborcastResponse.class,
+            (CI2<UUID, PartitionCountersNeighborcastResponse>)this::processPartitionCountersResponse);
     }
 
     /**

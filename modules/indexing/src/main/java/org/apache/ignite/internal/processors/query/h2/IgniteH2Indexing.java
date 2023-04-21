@@ -1976,6 +1976,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @Override public boolean registerType(GridCacheContextInfo cacheInfo, GridQueryTypeDescriptor type, boolean isSql)
         throws IgniteCheckedException {
         validateTypeDescriptor(type);
+
+        // Print warning if _key is of custom user type and no key fields are configured, thus
+        // key object can't be created and used for COPY FROM operation.
+        // Note: QueryEntity can't be properly validated due to compatibility reasons, and a warning can't be printed
+        // from inside QueryEntity class due to absence of the logger.
+        if (type.keyClass() == Object.class && F.isEmpty(type.primaryKeyFields())) {
+            log.warning("Key of user type has no fields configured for table=" + type.tableName());
+        }
+
         schemaMgr.onCacheTypeCreated(cacheInfo, this, type, isSql);
 
         return true;
@@ -3534,6 +3543,30 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         IgniteThreadPoolExecutor defragmentationThreadPool
     ) throws IgniteCheckedException {
         defragmentation.defragment(grpCtx, newCtx, partPageMem, mappingByPart, cpLock, cancellationChecker, log, defragmentationThreadPool);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void markIndexRenamed(GridCacheContext<?, ?> cacheCtx, String indexTreeName) {
+        Collection<H2TableDescriptor> descriptors = schemaManager().tablesForCache(cacheCtx.name());
+
+        for (H2TableDescriptor descriptor : descriptors) {
+            // We only know index's tree name, so we need to iterate over
+            // all the cache's tables.
+            GridH2Table tbl = descriptor.table();
+
+            for (Index index : tbl.getIndexes()) {
+                // Find index with matching tree name.
+                if (index instanceof H2TreeIndex) {
+                    H2TreeIndex treeIndex = (H2TreeIndex)index;
+
+                    if (indexTreeName.equals(treeIndex.treeName())) {
+                        treeIndex.markRenamed();
+
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     /**

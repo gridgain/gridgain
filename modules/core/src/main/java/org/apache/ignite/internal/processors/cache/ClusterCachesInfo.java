@@ -1043,18 +1043,18 @@ public class ClusterCachesInfo {
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
 
-        String conflictErr = checkCacheConflict(req.startCacheConfiguration());
+        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
+
+        if (!validateStartNewCache(err, persistedCfgs, res, req))
+            return false;
+
+        String conflictErr = checkCacheConflict(req.startCacheConfiguration(), false);
 
         if (conflictErr != null) {
             U.warn(log, "Ignore cache start request. " + conflictErr);
 
             err = new IgniteCheckedException("Failed to start cache. " + conflictErr);
         }
-
-        if (!validateStartNewCache(err, persistedCfgs, res, req))
-            return false;
-
-        err = QueryUtils.checkQueryEntityConflicts(req.startCacheConfiguration(), registeredCaches.values());
 
         if (!validateStartNewCache(err, persistedCfgs, res, req))
             return false;
@@ -1520,7 +1520,7 @@ public class ClusterCachesInfo {
         if (joinDiscoData != null) {
             for (Map.Entry<String, CacheJoinNodeDiscoveryData.CacheInfo> e : joinDiscoData.caches().entrySet()) {
                 if (!registeredCaches.containsKey(e.getKey())) {
-                    conflictErr = checkCacheConflict(e.getValue().cacheData().config());
+                    conflictErr = checkCacheConflict(e.getValue().cacheData().config(), true);
 
                     if (conflictErr != null) {
                         conflictErr = "Failed to start configured cache due to conflict with started caches. " +
@@ -2009,7 +2009,7 @@ public class ClusterCachesInfo {
                     CacheConfiguration<?, ?> cfg = cacheInfo.cacheData().config();
 
                     if (!registeredCaches.containsKey(cfg.getName())) {
-                        String conflictErr = checkCacheConflict(cfg);
+                        String conflictErr = checkCacheConflict(cfg, true);
 
                         if (conflictErr != null) {
                             U.warn(log, "Ignore cache received from joining node. " + conflictErr);
@@ -2066,16 +2066,19 @@ public class ClusterCachesInfo {
      * Checks cache configuration on conflict with already registered caches and cache groups.
      *
      * @param cfg Cache configuration.
+     * @param checkIndexes If {@code true} check indexes conflicts.
      * @return {@code null} if validation passed, error message in other case.
      */
-    private String checkCacheConflict(CacheConfiguration<?, ?> cfg) {
-        Collection<CacheConfiguration<?, ?>> processedCfgs = F.viewReadOnly(registeredCaches.values(),
-            (C1<DynamicCacheDescriptor, CacheConfiguration<?, ?>>)DynamicCacheDescriptor::cacheConfiguration);
+    private String checkCacheConflict(CacheConfiguration<?, ?> cfg, boolean checkIndexes) {
+        if (checkIndexes) {
+            Collection<CacheConfiguration<?, ?>> processedCfgs = F.viewReadOnly(registeredCaches.values(),
+                (C1<DynamicCacheDescriptor, CacheConfiguration<?, ?>>)DynamicCacheDescriptor::cacheConfiguration);
 
-        String err = validateIncomingConfiguration(processedCfgs, cfg);
+            String err = validateIncomingConfiguration(processedCfgs, cfg);
 
-        if (err != null)
-            return err;
+            if (err != null)
+                return err;
+        }
 
         int cacheId = CU.cacheId(cfg.getName());
 
@@ -2139,7 +2142,7 @@ public class ClusterCachesInfo {
             CacheConfiguration<?, ?> cfg = cacheInfo.cacheData().config();
 
             if (!registeredCaches.containsKey(cfg.getName())) {
-                String conflictErr = checkCacheConflict(cfg);
+                String conflictErr = checkCacheConflict(cfg, true);
 
                 if (conflictErr != null) {
                     if (locJoin)

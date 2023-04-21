@@ -48,6 +48,7 @@ import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientReconnectedException;
+import org.apache.ignite.client.events.ConnectionDescription;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
@@ -58,6 +59,7 @@ import org.apache.ignite.internal.binary.streams.BinaryByteBufferInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryOutputStream;
+import org.apache.ignite.internal.client.monitoring.EventListenerDemultiplexer;
 import org.apache.ignite.internal.client.thin.io.ClientConnection;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionStateHandler;
@@ -167,6 +169,12 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Log. */
     private final IgniteLogger log;
 
+    /** */
+    private final EventListenerDemultiplexer eventListener;
+
+    /** */
+    private final ConnectionDescription connDesc;
+
     /** Last send operation timestamp. */
     private volatile long lastSendMillis;
 
@@ -176,6 +184,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         validateConfiguration(cfg);
 
         log = NullLogger.whenNull(cfg.getLogger());
+
+        eventListener = cfg.eventListener();
 
         for (ClientNotificationType type : ClientNotificationType.values()) {
             if (type.keepNotificationsWithoutListener())
@@ -225,6 +235,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
 
         assert protocolCtx != null : "Protocol context after handshake is null";
 
+        connDesc = new ConnectionDescription(sock.localAddress(), sock.remoteAddress(), protocolCtx.toString(), srvNodeId);
+
         heartbeatTimer = protocolCtx.isFeatureSupported(HEARTBEAT) && cfg.getHeartbeatEnabled()
                 ? initHeartbeat(cfg.getHeartbeatInterval())
                 : null;
@@ -255,6 +267,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
      */
     private void close(Exception cause) {
         if (closed.compareAndSet(false, true)) {
+            // Skip notification if handshake is not successful or completed.
+            ConnectionDescription connDesc0 = connDesc;
+            if (connDesc0 != null)
+                eventListener.onConnectionClosed(connDesc0, cause);
+
             if (heartbeatTimer != null)
                 heartbeatTimer.cancel();
 
@@ -335,16 +352,20 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 if (closed()) {
                     ClientConnectionException err = new ClientConnectionException("Channel is closed");
 
+                    eventListener.onRequestFail(connDesc, id, op.code(), op.name(), System.nanoTime() - startTimeNanos, err);
+
                     throw err;
                 }
 
-                fut = new ClientRequestFuture();
+                fut = new ClientRequestFuture(id, op, startTimeNanos);
 
                 pendingReqs.put(id, fut);
             }
             finally {
                 pendingReqsLock.readLock().unlock();
             }
+
+            eventListener.onRequestStart(connDesc, id, op.code(), op.name());
 
             BinaryOutputStream req = payloadCh.out();
 
@@ -367,6 +388,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             // Potential double-close is handled in PayloadOutputChannel.
             payloadCh.close();
 
+            eventListener.onRequestFail(connDesc, id, op.code(), op.name(), System.nanoTime() - startTimeNanos, t);
+
             throw t;
         }
     }
@@ -378,6 +401,10 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
      */
     private <T> T receive(ClientRequestFuture pendingReq, Function<PayloadInputChannel, T> payloadReader)
         throws ClientException {
+        long requestId = pendingReq.requestId;
+        ClientOperation op = pendingReq.operation;
+        long startTimeNanos = pendingReq.startTimeNanos;
+
         try {
             ByteBuffer payload = timeout > 0 ? pendingReq.get(timeout) : pendingReq.get();
 
@@ -385,12 +412,18 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
             if (payload != null && payloadReader != null)
                 res = payloadReader.apply(new PayloadInputChannel(this, payload));
 
+            eventListener.onRequestSuccess(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos);
+
             return res;
         }
         catch (IgniteCheckedException e) {
             log.warning("Failed to process response: " + e.getMessage(), e);
 
-            throw convertException(e);
+            RuntimeException err = convertException(e);
+
+            eventListener.onRequestFail(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos, err);
+
+            throw err;
         }
     }
 
@@ -403,6 +436,9 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
      */
     private <T> CompletableFuture<T> receiveAsync(ClientRequestFuture pendingReq, Function<PayloadInputChannel, T> payloadReader) {
         CompletableFuture<T> fut = new CompletableFuture<>();
+        long requestId = pendingReq.requestId;
+        ClientOperation op = pendingReq.operation;
+        long startTimeNanos = pendingReq.startTimeNanos;
 
         pendingReq.listen(payloadFut -> asyncContinuationExecutor.execute(() -> {
             try {
@@ -412,12 +448,18 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 if (payload != null && payloadReader != null)
                     res = payloadReader.apply(new PayloadInputChannel(this, payload));
 
+                eventListener.onRequestSuccess(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos);
+
                 fut.complete(res);
             }
             catch (Throwable t) {
                 log.warning("Failed to process response: " + t.getMessage(), t);
 
-                fut.completeExceptionally(convertException(t));
+                RuntimeException err = convertException(t);
+
+                eventListener.onRequestFail(connDesc, requestId, op.code(), op.name(), System.nanoTime() - startTimeNanos, err);
+
+                fut.completeExceptionally(err);
             }
         }));
 
@@ -662,6 +704,10 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     private void handshake(ProtocolVersion ver, String user, String pwd, Map<String, String> userAttrs)
         throws ClientConnectionException, ClientAuthenticationException, ClientProtocolError {
         long requestId = -1L;
+        long startTime = System.nanoTime();
+
+        eventListener.onHandshakeStart(new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
+                new ProtocolContext(ver).toString(), null));
 
         while (true) {
             ClientRequestFuture fut;
@@ -672,7 +718,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 if (closed())
                     throw new ClientConnectionException("Channel is closed");
 
-                fut = new ClientRequestFuture();
+                fut = new ClientRequestFuture(requestId, ClientOperation.HANDSHAKE);
 
                 pendingReqs.put(requestId, fut);
             }
@@ -706,6 +752,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                         if (log.isDebugEnabled())
                             log.debug("Handshake succeeded [protocolVersion=" + protocolCtx.version() + ", srvNodeId=" + srvNodeId + ']');
 
+                        eventListener.onHandshakeSuccess(
+                                new ConnectionDescription(sock.localAddress(), sock.remoteAddress(), protocolCtx.toString(), srvNodeId),
+                                System.nanoTime() - startTime
+                        );
+
                         break;
                     }
                     else {
@@ -738,6 +789,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                         }
 
                         if (resultErr != null) {
+                            ConnectionDescription connDesc = new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
+                                    new ProtocolContext(ver).toString(), null);
+
+                            long elapsedNanos = System.nanoTime() - startTime;
+
+                            eventListener.onHandshakeFail(connDesc, elapsedNanos, resultErr);
+
                             throw resultErr;
                         }
                         else {
@@ -756,6 +814,12 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                     err = handleIOError((IOException)e);
                 else
                     err = new ClientConnectionException(e.getMessage(), e);
+
+                eventListener.onHandshakeFail(
+                        new ConnectionDescription(sock.localAddress(), sock.remoteAddress(), new ProtocolContext(ver).toString(), null),
+                        System.nanoTime() - startTime,
+                        err
+                );
 
                 throw err;
             }
@@ -887,10 +951,28 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         return res;
     }
 
-    /**
-     *
-     */
+    /** */
     private static class ClientRequestFuture extends GridFutureAdapter<ByteBuffer> {
+        /** */
+        final long startTimeNanos;
+
+        /** */
+        final long requestId;
+
+        /** */
+        final ClientOperation operation;
+
+        /** */
+        ClientRequestFuture(long requestId, ClientOperation op) {
+            this(requestId, op, System.nanoTime());
+        }
+
+        /** */
+        ClientRequestFuture(long requestId, ClientOperation op, long startTimeNanos) {
+            this.requestId = requestId;
+            operation = op;
+            this.startTimeNanos = startTimeNanos;
+        }
     }
 
     /**

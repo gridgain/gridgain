@@ -185,7 +185,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      */
     @Test
     public void testCacheConfiguration() throws Exception {
-        try (Ignite ignored = Ignition.start(Config.getServerConfiguration());
+        try (Ignite server = Ignition.start(Config.getServerConfiguration());
              IgniteClient client = Ignition.startClient(getClientConfiguration())
         ) {
             final String CACHE_NAME = "testCacheConfiguration";
@@ -230,10 +230,15 @@ public class FunctionalTest extends GridCommonAbstractTest {
                     .setExpiryPolicy(new PlatformExpiryPolicy(10, 20, 30));
 
             ClientCache<Object, Object> cache = client.createCache(cacheCfg);
+            ClientCacheConfiguration clientCfg = cache.getConfiguration();
+            CacheConfiguration serverCfg = server.cache(CACHE_NAME).getConfiguration(CacheConfiguration.class);
 
             assertEquals(CACHE_NAME, cache.getName());
+            assertTrue(Comparers.equal(cacheCfg, clientCfg));
 
-            assertTrue(Comparers.equal(cacheCfg, cache.getConfiguration()));
+            QueryEntity clientQueryEntity = clientCfg.getQueryEntities()[0];
+            QueryEntity serverQueryEntity = (QueryEntity) serverCfg.getQueryEntities().iterator().next();
+            assertEquals(clientQueryEntity.getIndexes(), serverQueryEntity.getIndexes());
         }
     }
 
