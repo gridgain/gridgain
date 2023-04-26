@@ -1,12 +1,11 @@
 package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -15,7 +14,8 @@ import java.net.URLClassLoader;
 import java.util.Collections;
 
 /**
- *
+ * Test class implements scenarios for integration testing of how indexing code works
+ * with classes containing custom SQL functions.
  */
 public class P2PCustomClassesAvailabilityTest extends GridCommonAbstractTest {
     /** Test class loader. */
@@ -69,8 +69,17 @@ public class P2PCustomClassesAvailabilityTest extends GridCommonAbstractTest {
     /** */
     private CacheConfiguration<?, ?> staticCacheCfg;
 
+    /**
+     * Test verifies the case when a class with custom SQL functions is available only on a coordinator.
+     *
+     * This allows a client node with the class available on its classpath to pass validation and join topology, but
+     * later on the other nodes in the topology fail to process client's requests because of class locally unavailable.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void testTest() throws Exception {
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36586")
+    public void testSqlFunctionsClassAvailableOnCoordinatorOnly() throws Exception {
         clsLoader = CONFIGURATION_CLASS_LOADER;
 
         startGrid(0);
@@ -88,22 +97,10 @@ public class P2PCustomClassesAvailabilityTest extends GridCommonAbstractTest {
             .setSqlFunctionClasses(CONFIGURATION_CLASS_LOADER.loadClass(UNAVAILABLE_TO_SERVER_SQL_FUNCTIONS_CLASS_NAME));
 
         try {
-            IgniteEx cl0 = startClientGrid(2);
+            startClientGrid(2);
         }
         catch (Throwable t) {
-
+            fail("Unexpected exception was thrown: " + t);
         }
-
-        awaitPartitionMapExchange();
-
-        checkTopology(3);
-
-//        executeQuery(cl0, "select secondsToMillis(_val) from " + CACHE_NAME);
-    }
-
-    private void executeQuery(IgniteEx ign, String sqlTxt) {
-        SqlFieldsQuery sqlQuery = new SqlFieldsQuery(sqlTxt);
-
-        ign.context().query().querySqlFields(sqlQuery, false).getAll();
     }
 }
