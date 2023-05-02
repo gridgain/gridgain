@@ -841,26 +841,27 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         walRecordCyclicBufferByThread.add(rec);
 
-        if (rec instanceof TxRecord) {
-            try {
-                WALRecord read = read0((FileWALPointer)ptr);
+        if (!(ptr instanceof TxRecord))
+            return ptr;
 
-                assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
-            }
-            catch (Throwable t) {
-                walRecordCyclicBufferByThread.stop();
+        try {
+            WALRecord read = read0((FileWALPointer)ptr);
 
-                long absSegIdx = ((FileWALPointer)ptr).index();
+            assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
+        }
+        catch (Throwable t) {
+            walRecordCyclicBufferByThread.stop();
 
-                DebugUtils.dumpWalRecords(
-                    ptr,
-                    walRecordCyclicBufferByThread.getSortedListWalRecords(absSegIdx),
-                    t,
-                    log
-                );
+            long absSegIdx = ((FileWALPointer)ptr).index();
 
-                throw t;
-            }
+            DebugUtils.dumpWalRecords(
+                ptr,
+                walRecordCyclicBufferByThread.getSortedListWalRecords(absSegIdx),
+                t,
+                log
+            );
+
+            throw t;
         }
 
         return ptr;
