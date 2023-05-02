@@ -843,7 +843,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         if (rec instanceof TxRecord) {
             try {
-                WALRecord read = read(ptr);
+                WALRecord read = read0((FileWALPointer)ptr);
 
                 assert rec.type() == read.type() : "rec=" + rec + ", read=" + read;
             }
@@ -987,6 +987,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
+    /** */
+    private WALRecord read0(FileWALPointer ptr) throws IgniteCheckedException {
+        FileWALPointer end = new FileWALPointer(ptr.index(), ptr.fileOffset() + ptr.length(), 0);
+
+        try (WALIterator it = replay0(ptr, end, null)) {
+            IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
+
+            if (rec != null && rec.get2().position().equals(ptr))
+                return rec.get2();
+            else
+                throw new StorageException("Failed to read record by pointer [ptr=" + ptr + ", rec=" + rec + "]");
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
         return replay(start, null);
@@ -997,13 +1011,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         WALPointer start,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
     ) throws IgniteCheckedException, StorageException {
+        return replay0(start, null, recordDeserializeFilter);
+    }
+
+    /** */
+    private WALIterator replay0(
+        WALPointer start,
+        @Nullable FileWALPointer end,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+    ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
         FileWriteHandle hnd = currentHandle();
 
-        FileWALPointer end = null;
-
-        if (hnd != null)
+        if (end == null && hnd != null)
             end = hnd.position();
 
         RecordsIterator iter = new RecordsIterator(
@@ -3114,6 +3135,25 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         @Override protected AbstractReadFileHandle createReadFileHandle(SegmentIO fileIO,
             RecordSerializer ser, FileInput in) {
             return new ReadFileHandle(fileIO, ser, in, segmentAware);
+        }
+
+        @Override protected IgniteBiTuple<WALPointer, WALRecord> advanceRecord(
+            @Nullable AbstractReadFileHandle hnd
+        ) throws IgniteCheckedException {
+            long hndPos = hnd == null ? -1 : hnd.in().position();
+
+            if (start != null && end != null && end.fileOffset() == start.fileOffset() + start.length()
+                && hnd != null && hnd.in().position() > start.fileOffset())
+                return null;
+
+            try {
+                return super.advanceRecord(hnd);
+            }
+            catch (Throwable t) {
+                log.error(">>>>> ON ADVANCE RECORD: [start=" + start + ", end=" + end + ", hndPos=" + hndPos + ']');
+
+                throw t;
+            }
         }
     }
 
