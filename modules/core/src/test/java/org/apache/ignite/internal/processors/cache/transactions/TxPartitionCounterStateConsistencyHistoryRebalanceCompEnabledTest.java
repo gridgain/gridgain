@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.Test;
 
@@ -30,6 +31,8 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
         cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
         cfg.getDataStorageConfiguration().setWalSegments(200);
+
+        cfg.getDataStorageConfiguration().setMaxWalArchiveSize(DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE);
 
         return cfg;
     }

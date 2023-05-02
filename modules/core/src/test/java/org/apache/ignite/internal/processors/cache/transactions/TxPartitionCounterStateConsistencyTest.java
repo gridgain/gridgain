@@ -405,7 +405,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
-                doSleep(1_000);
+                doSleep(100);
 
                 Ignite restartNode = grid(1);
 
@@ -422,7 +422,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     awaitPartitionMapExchange();
 
-                    doSleep(5_000);
+                    doSleep(500);
 
                     startGrid(name);
 
