@@ -74,7 +74,7 @@ public class JavaLoggerFormatter extends Formatter {
     }
 
     @NotNull
-    private static DateTimeFormatter resolveDateFormat() {
+    static DateTimeFormatter resolveDateFormat() {
         String customDateFormat = IgniteSystemProperties.getString(IGNITE_JUL_DATE_FORMAT_PROPERTY);
         if (customDateFormat != null) {
             try {

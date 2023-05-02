@@ -27,6 +27,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -83,6 +84,30 @@ public class JavaLoggerFormatterTest {
         // then
         final String expected = buildExpectedString(msg, category) + "\njava.lang.RuntimeException: " + exceptionMsg;
         assertSimilar(expected, result);
+    }
+
+    @Test
+    public void testCorrectCustomFormatProperty() {
+        // given
+        System.setProperty("IGNITE_JAVA_LOGGER_DATE_FORMAT", "yyyy/MM/dd HH:mm:ss");
+
+        // when
+        DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
+
+        // then
+        assertEquals("2000/01/01 01:01:01", fmt.format(Instant.ofEpochMilli(BASE_MILLIS)));
+    }
+
+    @Test
+    public void testIncorrectCustomFormatProperty() {
+        // given
+        System.setProperty("IGNITE_JAVA_LOGGER_DATE_FORMAT", "foobar");
+
+        // when
+        DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
+
+        // then
+        assertEquals(BASE_DATE, fmt.format(Instant.ofEpochMilli(BASE_MILLIS)));
     }
 
     void assertFormattedOutput(String msg, String category, String expectedCategory) {
