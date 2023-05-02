@@ -43,26 +43,41 @@ public class JavaLoggerFormatterTest {
         formatter = new JavaLoggerFormatter();
     }
 
+    /**
+     * Null category should fall back to anonymous
+     */
     @Test
     public void testNullCategory() {
         assertFormattedOutput(null, JavaLoggerFormatter.ANONYMOUS_LOGGER_NAME);
     }
 
+    /**
+     * Empty (zero-length) category should fall back to anonymous
+     */
     @Test
     public void testEmptyCategory() {
         assertFormattedOutput("", JavaLoggerFormatter.ANONYMOUS_LOGGER_NAME);
     }
 
+    /**
+     * Should use specified literal as category
+     */
     @Test
     public void testSimpleCategory() {
         assertFormattedOutput("foo", "foo");
     }
 
+    /**
+     * Should use classname as category
+     */
     @Test
     public void testClassCategory() {
         assertFormattedOutput(JavaLoggerFormatterTest.class.getName(), "JavaLoggerFormatterTest");
     }
 
+    /**
+     * Should append stack trace to log message
+     */
     @Test
     public void testThrowable() {
         // given
@@ -86,6 +101,9 @@ public class JavaLoggerFormatterTest {
         assertSimilar(expected, result);
     }
 
+    /**
+     * Should use date format from property
+     */
     @Test
     public void testCorrectCustomFormatProperty() {
         // given
@@ -98,6 +116,9 @@ public class JavaLoggerFormatterTest {
         assertEquals("2000/01/01 01:01:01", fmt.format(Instant.ofEpochMilli(BASE_MILLIS)));
     }
 
+    /**
+     * Should use default when date format from property is invalid
+     */
     @Test
     public void testIncorrectCustomFormatProperty() {
         // given
