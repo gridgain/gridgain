@@ -691,6 +691,11 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         catch (IgniteInterruptedCheckedException e) {
             U.error(log, "Failed to gracefully shutdown WAL components, thread was interrupted.", e);
         }
+
+        log.error(String.format(
+            ">>>>> Stop WAL: [lawWritePtr=%s, archiver=%s]",
+            lastWritePointer(), archiver != null
+        ));
     }
 
     /** {@inheritDoc} */

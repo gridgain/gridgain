@@ -403,6 +403,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertTrue(prim == grid(0));
 
+        log.error(">>>>> Before run node-restarter thread");
+
         IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
             while (U.currentTimeMillis() < stop) {
                 doSleep(100);
@@ -412,6 +414,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 assertFalse(prim == restartNode);
 
                 String name = restartNode.name();
+
+                log.error(">>>>> Stop grid: " + name + ", lastWalSegment=" + walMgr((IgniteEx)restartNode).lastWritePointer());
 
                 stopGrid(true, name);
 
@@ -423,6 +427,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                     awaitPartitionMapExchange();
 
                     doSleep(500);
+
+                    log.error(">>>>> Start grid: " + name);
 
                     startGrid(name);
 

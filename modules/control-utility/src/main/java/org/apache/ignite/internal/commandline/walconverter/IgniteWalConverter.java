@@ -152,7 +152,7 @@ public class IgniteWalConverter {
                     final String recordStr = toString(record, params.includeSensitive());
 
                     if (print && (F.isEmpty(params.hasText()) || recordStr.contains(params.hasText())))
-                        out.println(recordStr);
+                        out.println(recordStr + ": " + record.position());
                 }
             }
         }
