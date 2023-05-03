@@ -40,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
  * on an error but tries to read further.
  */
 public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecordsIterator {
+    private volatile @Nullable WALPointer lastReadPointer;
 
     /** */
     public StandaloneWalRecordsIteratorIgnoreError(@NotNull IgniteLogger log,
@@ -70,6 +71,8 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
         while (result == null) {
             FileWALPointer actualFilePtr = new FileWALPointer(hnd.idx(), (int)hnd.in().position(), 0);
 
+            lastReadPointer = actualFilePtr;
+
             try {
                 WALRecord rec = hnd.ser().readRecord(hnd.in(), actualFilePtr);
 
@@ -78,7 +81,7 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
                 result = new IgniteBiTuple<>(actualFilePtr, postProcessRecord(rec));
             }
             catch (SegmentEofException | EOFException eof) {
-                log.error("Critical exception has happened during WAL was scanned", eof);
+                log.error("Critical exception has happened during WAL was scanned: " + lastReadPointer, eof);
 
                 break;
             }
@@ -110,5 +113,9 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
             }
         }
         return result;
+    }
+
+    @Override public @Nullable WALPointer lastReadPointer() {
+        return lastReadPointer;
     }
 }

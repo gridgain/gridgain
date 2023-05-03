@@ -513,6 +513,11 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                         walWriter.force();
 
                     lastFsyncPos = written;
+
+                    log.error(String.format(
+                        ">>>>> Final fsync: [mmap=%s, lastFsyncPos=%s]",
+                        mmap, lastFsyncPos
+                    ));
                 }
 
                 walWriter.close();

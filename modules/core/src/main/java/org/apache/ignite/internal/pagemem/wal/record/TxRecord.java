@@ -18,6 +18,7 @@ package org.apache.ignite.internal.pagemem.wal.record;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -124,6 +125,11 @@ public class TxRecord extends TimeStampRecord {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(TxRecord.class, this, "super", super.toString());
+        String participatingNodes = null;
+
+        if (this.participatingNodes != null)
+            participatingNodes = "size=" + this.participatingNodes.size() + " " + this.participatingNodes.values().stream().map(Collection::size).collect(Collectors.toList());
+
+        return S.toString(TxRecord.class, this, "super", super.toString(), "participatingNodes", participatingNodes);
     }
 }

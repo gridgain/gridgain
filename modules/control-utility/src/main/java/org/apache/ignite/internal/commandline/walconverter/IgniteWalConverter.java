@@ -122,7 +122,11 @@ public class IgniteWalConverter {
 
         boolean printAlways = F.isEmpty(params.getRecordTypes());
 
+        WALIterator walIterator = null;
+
         try (WALIterator stIt = walIterator(factory.iterator(iteratorParametersBuilder), params.getPages())) {
+            walIterator = stIt;
+
             String currentWalPath = null;
 
             while (stIt.hasNextX()) {
@@ -156,7 +160,10 @@ public class IgniteWalConverter {
                 }
             }
         }
-        catch (Exception e) {
+        catch (Throwable e) {
+            if (walIterator != null)
+                out.println("Last read pointer: " + walIterator.lastReadPointer());
+
             e.printStackTrace(out);
         }
 

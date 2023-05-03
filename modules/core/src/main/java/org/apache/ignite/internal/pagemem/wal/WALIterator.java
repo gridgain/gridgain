@@ -22,6 +22,7 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.reader.Ignite
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
@@ -33,4 +34,8 @@ public interface WALIterator extends GridCloseableIterator<IgniteBiTuple<WALPoin
      * pointer to the last valid record returned.
      */
     public Optional<WALPointer> lastRead();
+
+    default @Nullable WALPointer lastReadPointer() {
+        return null;
+    }
 }
