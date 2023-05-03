@@ -34,6 +34,8 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest e
 
         cfg.getDataStorageConfiguration().setMaxWalArchiveSize(DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE);
 
+        cfg.getDataStorageConfiguration().setWalArchivePath(cfg.getDataStorageConfiguration().getWalPath());
+
         return cfg;
     }
 
