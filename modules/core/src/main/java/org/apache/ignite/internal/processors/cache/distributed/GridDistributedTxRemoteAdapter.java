@@ -852,8 +852,13 @@ public abstract class GridDistributedTxRemoteAdapter extends IgniteTxAdapter
                         state(UNKNOWN);
 
                         if (X.hasCause(ex, NodeStoppingException.class)) {
-                            U.warn(log, "Failed to commit transaction, node is stopping [tx=" + CU.txString(this) +
-                                ", err=" + ex + ']', ex);
+                            U.warn(log,
+                                String.format(
+                                    "Failed to commit transaction, node is stopping [tx=%s, err=%s, lastWritePtr=%s]",
+                                    CU.txString(this), ex, cctx.wal().lastWritePointer()
+                                ),
+                                ex
+                            );
 
                             return;
                         }

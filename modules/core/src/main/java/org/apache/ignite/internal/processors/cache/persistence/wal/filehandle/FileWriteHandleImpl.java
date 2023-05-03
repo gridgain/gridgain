@@ -515,8 +515,8 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
                     lastFsyncPos = written;
 
                     log.error(String.format(
-                        ">>>>> Final fsync: [mmap=%s, lastFsyncPos=%s]",
-                        mmap, lastFsyncPos
+                        ">>>>> Final fsync: [mmap=%s, segId=%s, lastFsyncPos=%s]",
+                        mmap, getSegmentId(), lastFsyncPos
                     ));
                 }
 

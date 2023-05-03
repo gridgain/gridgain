@@ -415,6 +415,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                 String name = restartNode.name();
 
+                Thread.currentThread().setName("restart-node-" + name);
+
                 log.error(">>>>> Stop grid: " + name + ", lastWalSegment=" + walMgr((IgniteEx)restartNode).lastWritePointer());
 
                 stopGrid(true, name);

@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -837,12 +838,21 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         return log(rec, RolloverType.NONE);
     }
 
+    private final AtomicBoolean firstLogRec = new AtomicBoolean();
+
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         WALPointer ptr = log0(rec, rolloverType);
 
         if (ptr == null || !(rec instanceof TxRecord))
             return ptr;
+
+        if (firstLogRec.compareAndSet(false, true)) {
+            log.error(String.format(
+                ">>>>> First log record: [ptr=%s, rec=%s]",
+                ptr, rec
+            ));
+        }
 
         walRecordCyclicBufferByThread.add(rec);
 
