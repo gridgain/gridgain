@@ -241,6 +241,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 };
 
                 writer.Write(val);
+                marsh.FinishMarshal(writer);
 
                 if (hashCode != null && !hasAffinityKey)
                 {
