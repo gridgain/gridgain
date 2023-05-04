@@ -142,16 +142,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 }
             };
 
-            var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
-            Assert.DoesNotThrow(() => cache.Put(new TestKeyWithAffinity(1, "1"), 1));
-
             var logger = (ListLogger)Client.GetConfiguration().Logger;
+            logger.Clear();
+
+            var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
+            cache.Put(new TestKeyWithAffinity(1, "1"), 1);
+            cache.Put(new TestKeyWithAffinity(1, "1"), 1);
 
             Assert.AreEqual(
                 "Failed to compute partition awareness hash code for type " +
                 "`Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinity`. " +
                 "Types with affinity keys and multidimensional arrays are not supported.",
-                logger.Entries.Last().Message);
+                logger.Entries.Single().Message);
         }
 
         [Test]
