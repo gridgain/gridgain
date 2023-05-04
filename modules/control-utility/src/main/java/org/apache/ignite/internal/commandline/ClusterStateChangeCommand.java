@@ -72,6 +72,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState clientState = client.state();
+            
             if (!clientState.state().equals(INACTIVE))
                 clusterName = clientState.clusterName();
         }
