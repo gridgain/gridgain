@@ -146,6 +146,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             logger.Clear();
 
             var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
+
+            // Two operations, single warning.
             cache.Put(new TestKeyWithAffinity(1, "1"), 1);
             cache.Put(new TestKeyWithAffinity(2, "2"), 2);
 
@@ -164,6 +166,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             var cache = Client.GetOrCreateCache<int[,], int>(TestUtils.TestName);
 
+            // Two operations, single warning.
             cache.Put(new int[1, 1], 1);
             cache.Put(new int[2, 2], 2);
 
