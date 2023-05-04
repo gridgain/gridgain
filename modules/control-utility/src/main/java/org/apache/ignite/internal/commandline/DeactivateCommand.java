@@ -45,6 +45,7 @@ public class DeactivateCommand extends AbstractCommand<Void> {
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState clientState = client.state();
+            
             if (!clientState.state().equals(INACTIVE))
                 clusterName = clientState.clusterName();
         }
