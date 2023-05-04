@@ -127,7 +127,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         [Test]
-        public void CachePut_UserDefinedTypeWithAffinityKey_ThrowsIgniteException()
+        public void CachePut_UserDefinedTypeWithAffinityKey_LogsWarningAndBypassesPartitionAwareness()
         {
             // Note: annotation-based configuration is not supported on Java side.
             // Use manual configuration instead.
@@ -141,14 +141,17 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                     }
                 }
             };
+
             var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
+            Assert.DoesNotThrow(() => cache.Put(new TestKeyWithAffinity(1, "1"), 1));
 
-            var ex = Assert.Throws<IgniteException>(() => cache.Put(new TestKeyWithAffinity(1, "1"), 1));
+            var logger = (ListLogger)Client.GetConfiguration().Logger;
 
-            var expected = string.Format("Affinity keys are not supported. Object '{0}' has an affinity key.",
-                typeof(TestKeyWithAffinity));
-
-            Assert.AreEqual(expected, ex.Message);
+            Assert.AreEqual(
+                "Failed to compute partition awareness hash code for type " +
+                "`Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinity`. " +
+                "Types with affinity keys and multidimensional arrays are not supported.",
+                logger.Entries.Last().Message);
         }
 
         [Test]
