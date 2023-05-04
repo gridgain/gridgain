@@ -821,7 +821,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     // Log warning only once for the given type.
                     _logger.Warn(
-                        "Failed to compute partition awareness hash code for type `{0}`. " +
+                        "Failed to compute partition awareness hash code for type '{0}'. " +
                         "Types with affinity keys and multidimensional arrays are not supported.",
                         keyType);
                 }

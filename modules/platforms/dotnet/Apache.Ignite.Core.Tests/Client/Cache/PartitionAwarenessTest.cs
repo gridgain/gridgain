@@ -131,7 +131,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             // Note: annotation-based configuration is not supported on Java side.
             // Use manual configuration instead.
-            var cacheClientConfiguration = new CacheClientConfiguration("c_custom_key_aff")
+            var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
             {
                 KeyConfiguration = new List<CacheKeyConfiguration>
                 {
@@ -147,11 +147,29 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
             cache.Put(new TestKeyWithAffinity(1, "1"), 1);
-            cache.Put(new TestKeyWithAffinity(1, "1"), 1);
+            cache.Put(new TestKeyWithAffinity(2, "2"), 2);
 
             Assert.AreEqual(
                 "Failed to compute partition awareness hash code for type " +
-                "`Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinity`. " +
+                "'Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinity'. " +
+                "Types with affinity keys and multidimensional arrays are not supported.",
+                logger.Entries.Single().Message);
+        }
+
+        [Test]
+        public void CachePut_MultidimensionalArrayKey_LogsWarningAndBypassesPartitionAwareness()
+        {
+            var logger = (ListLogger)Client.GetConfiguration().Logger;
+            logger.Clear();
+
+            var cache = Client.GetOrCreateCache<int[,], int>(TestUtils.TestName);
+
+            cache.Put(new int[1, 1], 1);
+            cache.Put(new int[2, 2], 2);
+
+            Assert.AreEqual(
+                "Failed to compute partition awareness hash code for type " +
+                "'System.Int32[,]'. " +
                 "Types with affinity keys and multidimensional arrays are not supported.",
                 logger.Entries.Single().Message);
         }
