@@ -28,7 +28,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Client.DataStructures;
-    using Apache.Ignite.Core.Common;
     using NUnit.Framework;
 
     /// <summary>
