@@ -24,10 +24,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
         private string _s;
 
-        public TestKeyWithAffinityBinarizable(int i, string s)
+        private readonly bool _skipKey;
+
+        public TestKeyWithAffinityBinarizable(int i, string s, bool skipKey = false)
         {
             _i = i;
             _s = s;
+            _skipKey = skipKey;
         }
 
         private bool Equals(TestKeyWithAffinityBinarizable other)
@@ -55,7 +58,11 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         public void WriteBinary(IBinaryWriter writer)
         {
             writer.WriteString("str", _s);
-            writer.WriteInt("id", _i);
+
+            if (!_skipKey)
+            {
+                writer.WriteInt("id", _i);
+            }
         }
 
         public void ReadBinary(IBinaryReader reader)

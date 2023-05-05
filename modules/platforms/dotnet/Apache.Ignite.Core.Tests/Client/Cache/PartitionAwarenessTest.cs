@@ -180,6 +180,33 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         [Test]
+        public void CachePut_UserDefinedTypeWithAffinityKeyBinarizable_SkipKey_LogsWarningAndBypassesPartitionAwareness()
+        {
+            var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
+            {
+                KeyConfiguration = new List<CacheKeyConfiguration>
+                {
+                    new CacheKeyConfiguration(typeof(TestKeyWithAffinityBinarizable))
+                    {
+                        AffinityKeyFieldName = "id"
+                    }
+                }
+            };
+
+            var cache = Client.GetOrCreateCache<TestKeyWithAffinityBinarizable, int>(cacheClientConfiguration);
+
+            var logger = (ListLogger)Client.GetConfiguration().Logger;
+            logger.Clear();
+
+            cache.Put(new TestKeyWithAffinityBinarizable(123, Guid.NewGuid().ToString(), skipKey: true), 123);
+
+            Assert.AreEqual(
+                "Failed to compute partition awareness hash code for type " +
+                "'Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinityBinarizable'",
+                logger.Entries.Single().Message);
+        }
+
+        [Test]
         [TestCase(1, 0)]
         [TestCase(2, 0)]
         [TestCase(3, 0)]
@@ -220,9 +247,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             cache.Put(new int[2, 2], 2);
 
             Assert.AreEqual(
-                "Failed to compute partition awareness hash code for type " +
-                "'System.Int32[,]'. " +
-                "Types with affinity keys and multidimensional arrays are not supported.",
+                "Failed to compute partition awareness hash code for type 'System.Int32[,]'",
                 logger.Entries.Single().Message);
         }
 
