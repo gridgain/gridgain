@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.IO;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
 
@@ -234,8 +235,6 @@ namespace Apache.Ignite.Core.Impl.Binary
                     // 1. Affinity key field id (get from map)
                     // 2. Schema to get field position
                     // 3. Then just seek the stream and do _marsh.Unmarshal<T>(stream, BinaryMode.ForceBinary, builder)
-                    header.SchemaOffset
-
                     if (affinityKeyFieldIds != null && affinityKeyFieldIds.ContainsKey(header.TypeId))
                     {
                         hasAffinityKey = true;
@@ -248,6 +247,17 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 writer.Write(val);
                 marsh.FinishMarshal(writer);
+
+                if (hasAffinityKey)
+                {
+                    // TODO: This is suboptimal, we have all the info in OnObjectWritten - offsets, descriptor, etc.
+                    // Ideally, we can infer affinity key right there.
+                    stream.Seek(0, SeekOrigin.Begin);
+                    var binObj = marsh.Unmarshal<BinaryObject>(stream, BinaryMode.ForceBinary);
+                    var affKey = binObj.GetField<object>(affinityKeyFieldIds[binObj.TypeId]);
+
+                    return GetHashCode(affKey, marsh, affinityKeyFieldIds);
+                }
 
                 if (hashCode != null && !hasAffinityKey)
                 {
