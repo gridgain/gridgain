@@ -120,19 +120,6 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
         }
 
-        /// <summary>
-        /// Gets field value by id.
-        /// </summary>
-        /// <param name="fieldId">Field id.</param>
-        /// <returns>Field value.</returns>
-        public T GetField<T>(int fieldId)
-        {
-            var desc = _marsh.GetDescriptor(true, _header.TypeId);
-            InitializeFields(desc);
-
-            return GetField<T>(_fields[fieldId], null);
-        }
-
         /** <inheritdoc /> */
         public T Deserialize<T>()
         {
