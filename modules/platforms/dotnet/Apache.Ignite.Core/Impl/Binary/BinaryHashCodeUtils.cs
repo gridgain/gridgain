@@ -230,6 +230,11 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 writer.OnObjectWritten += (header, obj) =>
                 {
+                    // TODO: We need
+                    // 1. Affinity key field id (get from map)
+                    // 2. Schema to get field position
+                    // 3. Then just seek the stream and do _marsh.Unmarshal<T>(stream, BinaryMode.ForceBinary, builder)
+
                     if (affinityKeyFieldIds != null && affinityKeyFieldIds.ContainsKey(header.TypeId))
                     {
                         hasAffinityKey = true;
