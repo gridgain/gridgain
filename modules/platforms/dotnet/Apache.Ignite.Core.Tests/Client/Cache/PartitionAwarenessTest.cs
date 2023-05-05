@@ -127,7 +127,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         [Test]
-        public void CachePut_UserDefinedTypeWithAffinityKey_LogsWarningAndBypassesPartitionAwareness()
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        [TestCase(3, 0)]
+        [TestCase(4, 1)]
+        [TestCase(5, 1)]
+        [TestCase(6, 2)]
+        public void CachePut_UserDefinedTypeWithAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
         {
             // Note: annotation-based configuration is not supported on Java side.
             // Use manual configuration instead.
@@ -142,20 +148,10 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 }
             };
 
-            var logger = (ListLogger)Client.GetConfiguration().Logger;
-            logger.Clear();
-
             var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
 
-            // Two operations, single warning.
-            cache.Put(new TestKeyWithAffinity(1, "1"), 1);
-            cache.Put(new TestKeyWithAffinity(2, "2"), 2);
-
-            Assert.AreEqual(
-                "Failed to compute partition awareness hash code for type " +
-                "'Apache.Ignite.Core.Tests.Client.Cache.TestKeyWithAffinity'. " +
-                "Types with affinity keys and multidimensional arrays are not supported.",
-                logger.Entries.Single().Message);
+            cache.Put(new TestKeyWithAffinity(key, "1"), key);
+            Assert.AreEqual(gridIdx, GetClientRequestGridIndex("Put"));
         }
 
         [Test]
