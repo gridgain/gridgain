@@ -162,6 +162,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase(6, 1)]
         public void CachePut_UserDefinedTypeWithUserTypeAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
         {
+            // TODO: Test with IBinarizable and custom field names.
             var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
             {
                 KeyConfiguration = new List<CacheKeyConfiguration>

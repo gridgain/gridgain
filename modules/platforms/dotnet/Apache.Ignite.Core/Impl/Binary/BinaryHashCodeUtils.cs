@@ -265,7 +265,10 @@ namespace Apache.Ignite.Core.Impl.Binary
                     }
 
                     stream.Seek(affKeyOffset.Value, SeekOrigin.Begin);
-                    var affKey = marsh.Unmarshal<object>(stream, BinaryMode.KeepBinary);
+
+                    // Use ForceBinary to avoid deserializing the object. Only primitives will be deserialized.
+                    // For complex objects we can access BinaryObject hash code directly.
+                    var affKey = marsh.Unmarshal<object>(stream, BinaryMode.ForceBinary);
 
                     return GetHashCode(affKey, marsh, affKeyFieldIds);
                 }
