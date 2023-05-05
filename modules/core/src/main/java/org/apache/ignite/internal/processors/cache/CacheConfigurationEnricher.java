@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.lang.reflect.Field;
+import java.util.function.Function;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -111,9 +113,26 @@ public class CacheConfigurationEnricher {
      *
      * @return Enriched cache configuration.
      */
+    public CacheConfiguration<?, ?> enrich(CacheConfiguration<?, ?> ccfg,
+                                           @Nullable CacheConfigurationEnrichment enrichment,
+                                           boolean affinityNode) {
+        return enrich(ccfg, enrichment, (s) -> true, affinityNode);
+    }
+
+    /**
+     * Enriches cache configuration fields with deserialized values from given {@code enrichment}.
+     *
+     * @param ccfg Cache configuration to enrich.
+     * @param enrichment Cache configuration enrichment.
+     * @param fieldsFilterFunc Function providing a white list of fields to be deserialized.
+     * @param affinityNode {@code true} if enrichment is happened on affinity node.
+     *
+     * @return Enriched cache configuration.
+     */
     public CacheConfiguration<?, ?> enrich(
         CacheConfiguration<?, ?> ccfg,
         @Nullable CacheConfigurationEnrichment enrichment,
+        Function<String, Boolean> fieldsFilterFunc,
         boolean affinityNode
     ) {
         if (enrichment == null)
@@ -123,6 +142,9 @@ public class CacheConfigurationEnricher {
 
         try {
             for (String filedName : enrichment.fields()) {
+                if (!fieldsFilterFunc.apply(filedName))
+                    continue;
+
                 try {
                     if (!affinityNode && skipDeserialization(ccfg, filedName))
                         continue;

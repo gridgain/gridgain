@@ -167,6 +167,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Queries detail metrics eviction frequency. */
     private static final int QRY_DETAIL_METRICS_EVICTION_FREQ = 3_000;
 
+    /** Name of field in CacheConfiguration containing classes with custom SQL functions. */
+    public static final String SQL_FUNCTIONS_FIELD_NAME = "sqlFuncCls";
+
     /** */
     private static final ThreadLocal<AffinityTopologyVersion> requestTopVer = new ThreadLocal<>();
 
@@ -1100,8 +1103,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param cacheDesc {@link DynamicCacheDescriptor} to check and enrich if needed.
      */
     private void enrichConfiguration(DynamicCacheDescriptor cacheDesc) {
-        CacheConfiguration<?, ?> enrichedCfg = ctx.cache().enricher().enrich(cacheDesc.cacheConfiguration(),
+        CacheConfiguration<?, ?> enrichedCfg = ctx.cache().enricher().enrich(
+            cacheDesc.cacheConfiguration(),
             cacheDesc.cacheConfigurationEnrichment(),
+            (s) -> SQL_FUNCTIONS_FIELD_NAME.equals(s),
             false);
 
         cacheDesc.cacheConfiguration(enrichedCfg);

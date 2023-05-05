@@ -179,18 +179,19 @@ public class ValidationOnNodeJoinUtils {
                     }
                 }
 
-                //check is performed only on affinity nodes for the cache requested to start
-                if (CU.affinityNode(ctx.discovery().localNode(), joiningNodeCacheCfg.getNodeFilter())) {
-                    try {
-                        enricher.enrich(joiningNodeCacheCfg,
-                            cacheInfo.cacheData().cacheConfigurationEnrichment(),
-                            true);
-                    } catch (IgniteException e) {
-                        ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+                //This check is performed only on coordinator node for the caches configured statically.
+                //In that case we require that classpath on all server nodes is the same, so the coordinator has
+                //the same set of classes and is able to validate client node for all classes the client may have
+                //in its configuration.
+                try {
+                    enricher.enrich(joiningNodeCacheCfg,
+                        cacheInfo.cacheData().cacheConfigurationEnrichment(),
+                        true);
+                } catch (IgniteException e) {
+                    ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
 
-                        if (cnfE != null)
-                            errorMsg.append(e.getMessage() + ": class " + cnfE.getMessage() + " not found.");
-                    }
+                    if (cnfE != null)
+                        errorMsg.append(e.getMessage() + ": class " + cnfE.getMessage() + " not found.");
                 }
 
                 DynamicCacheDescriptor locDesc = cacheDescProvider.apply(joiningNodeCacheCfg.getName());
