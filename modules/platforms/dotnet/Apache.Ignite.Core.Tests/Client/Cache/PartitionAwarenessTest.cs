@@ -154,6 +154,32 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         }
 
         [Test]
+        [TestCase(1, 1)]
+        [TestCase(2, 0)]
+        [TestCase(3, 0)]
+        [TestCase(4, 1)]
+        [TestCase(5, 1)]
+        [TestCase(6, 2)]
+        public void CachePut_UserDefinedTypeWithAffinityKeyBinarizable_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
+        {
+            var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
+            {
+                KeyConfiguration = new List<CacheKeyConfiguration>
+                {
+                    new CacheKeyConfiguration(typeof(TestKeyWithAffinityBinarizable))
+                    {
+                        AffinityKeyFieldName = "id"
+                    }
+                }
+            };
+
+            var cache = Client.GetOrCreateCache<TestKeyWithAffinityBinarizable, int>(cacheClientConfiguration);
+
+            cache.Put(new TestKeyWithAffinityBinarizable(key, Guid.NewGuid().ToString()), key);
+            Assert.AreEqual(gridIdx, GetClientRequestGridIndex("Put"));
+        }
+
+        [Test]
         [TestCase(1, 0)]
         [TestCase(2, 0)]
         [TestCase(3, 0)]
@@ -162,7 +188,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase(6, 1)]
         public void CachePut_UserDefinedTypeWithUserTypeAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
         {
-            // TODO: Test with IBinarizable and custom field names.
             var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
             {
                 KeyConfiguration = new List<CacheKeyConfiguration>
