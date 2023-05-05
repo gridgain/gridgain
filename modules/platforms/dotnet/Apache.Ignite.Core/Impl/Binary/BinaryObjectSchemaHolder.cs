@@ -119,5 +119,22 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             return result;
         }
+
+        /// <summary>
+        /// Gets the field offset.
+        /// </summary>
+        /// <param name="schemaOffset">Schema offset.</param>
+        /// <param name="fieldId">Field id.</param>
+        /// <returns>Field offset.</returns>
+        public int GetFieldOffset(int schemaOffset, int fieldId)
+        {
+            for (int i = schemaOffset; i < _idx; i++)
+            {
+                if (_fields[i].Id == fieldId)
+                    return _fields[i].Offset;
+            }
+
+            return -1;
+        }
     }
 }

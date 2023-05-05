@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Invoked when binary object writing finishes.
         /// </summary>
-        internal event Action<BinaryObjectHeader, IBinaryTypeDescriptor, int[]> OnObjectWritten;
+        internal event Action<BinaryObjectHeader, BinaryObjectSchemaHolder, int> OnObjectWritten;
 
         /// <summary>
         /// Write named boolean value.
@@ -1297,10 +1297,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 BinaryObjectHeader.Write(header, _stream, pos);
 
-                if (OnObjectWritten != null)
-                {
-                    OnObjectWritten(header, desc, schema);
-                }
+                OnObjectWritten?.Invoke(header, _schema, schemaIdx);
 
                 Stream.Seek(pos + len, SeekOrigin.Begin); // Seek to the end
             }

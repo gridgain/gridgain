@@ -219,25 +219,28 @@ namespace Apache.Ignite.Core.Impl.Binary
             return res;
         }
 
-        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-        private static int? GetComplexTypeHashCode<T>(T val, Marshaller marsh, IDictionary<int, int> affinityKeyFieldIds)
+        private static int? GetComplexTypeHashCode<T>(T val, Marshaller marsh, IDictionary<int, int> affKeyFieldIds)
         {
             using (var stream = new BinaryHeapStream(128))
             {
                 var writer = marsh.StartMarshal(stream);
 
                 int? hashCode = null;
-                bool hasAffinityKey = false;
+                int? affKeyOffset = null;
+                var multipleAffKeys = false;
 
-                writer.OnObjectWritten += (header, desc, schema) =>
+                writer.OnObjectWritten += (header, schema, schemaIdx) =>
                 {
-                    // TODO: We need
-                    // 1. Affinity key field id (get from map)
-                    // 2. Schema to get field position
-                    // 3. Then just seek the stream and do _marsh.Unmarshal<T>(stream, BinaryMode.ForceBinary, builder)
-                    if (affinityKeyFieldIds != null && affinityKeyFieldIds.ContainsKey(header.TypeId))
+                    if (affKeyFieldIds != null &&
+                        affKeyFieldIds.TryGetValue(header.TypeId, out var affKeyFieldId))
                     {
-                        hasAffinityKey = true;
+                        if (affKeyOffset != null)
+                        {
+                            multipleAffKeys = true;
+                            return;
+                        }
+
+                        affKeyOffset = schema.GetFieldOffset(schemaIdx, affKeyFieldId);
                         return;
                     }
 
@@ -248,24 +251,26 @@ namespace Apache.Ignite.Core.Impl.Binary
                 writer.Write(val);
                 marsh.FinishMarshal(writer);
 
-                if (hasAffinityKey)
+                if (multipleAffKeys)
                 {
-                    // TODO: This is suboptimal, we have all the info in OnObjectWritten - offsets, descriptor, etc.
-                    // Ideally, we can infer affinity key right there.
-                    stream.Seek(0, SeekOrigin.Begin);
-                    var binObj = marsh.Unmarshal<BinaryObject>(stream, BinaryMode.ForceBinary);
-                    var affKey = binObj.GetField<object>(affinityKeyFieldIds[binObj.TypeId]);
-
-                    return GetHashCode(affKey, marsh, affinityKeyFieldIds);
+                    return null;
                 }
 
-                if (hashCode != null && !hasAffinityKey)
+                if (affKeyOffset != null)
                 {
-                    return hashCode.Value;
+                    if (affKeyOffset < 0)
+                    {
+                        // Could not find the field in the written data.
+                        return null;
+                    }
+
+                    stream.Seek(affKeyOffset.Value, SeekOrigin.Begin);
+                    var affKey = marsh.Unmarshal<object>(stream, BinaryMode.KeepBinary);
+
+                    return GetHashCode(affKey, marsh, affKeyFieldIds);
                 }
 
-                // Can't compute hash code for this object.
-                return null;
+                return hashCode;
             }
         }
 
