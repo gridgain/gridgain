@@ -135,7 +135,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase(6, 2)]
         public void CachePut_UserDefinedTypeWithAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
         {
-            // TODO: Same test with other data types: string, TestKey
             // Note: annotation-based configuration is not supported on Java side.
             // Use manual configuration instead.
             var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
@@ -151,7 +150,35 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             var cache = Client.GetOrCreateCache<TestKeyWithAffinity, int>(cacheClientConfiguration);
 
-            cache.Put(new TestKeyWithAffinity(key, "1"), key);
+            cache.Put(new TestKeyWithAffinity(key, Guid.NewGuid().ToString()), key);
+            Assert.AreEqual(gridIdx, GetClientRequestGridIndex("Put"));
+        }
+
+        [Test]
+        [TestCase(1, 0)]
+        [TestCase(2, 0)]
+        [TestCase(3, 0)]
+        [TestCase(4, 2)]
+        [TestCase(5, 2)]
+        [TestCase(6, 1)]
+        public void CachePut_UserDefinedTypeWithUserTypeAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
+        {
+            var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
+            {
+                KeyConfiguration = new List<CacheKeyConfiguration>
+                {
+                    new CacheKeyConfiguration(typeof(TestKeyWithUserObjectAffinity))
+                    {
+                        AffinityKeyFieldName = "_key"
+                    }
+                }
+            };
+
+            var cache = Client.GetOrCreateCache<TestKeyWithUserObjectAffinity, int>(cacheClientConfiguration);
+
+            var keyObj = new TestKeyWithUserObjectAffinity(new TestKey(key, key.ToString()), Guid.NewGuid().ToString());
+            cache.Put(keyObj, key);
+
             Assert.AreEqual(gridIdx, GetClientRequestGridIndex("Put"));
         }
 
