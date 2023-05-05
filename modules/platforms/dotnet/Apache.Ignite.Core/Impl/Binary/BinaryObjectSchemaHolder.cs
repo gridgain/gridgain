@@ -119,26 +119,5 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             return result;
         }
-
-        /// <summary>
-        /// Gets the schema.
-        /// </summary>
-        /// <param name="schemaOffset">The schema offset.</param>
-        /// <returns>Current schema as a dictionary.</returns>
-        public Dictionary<int, int> GetFullSchema(int schemaOffset)
-        {
-            var size = _idx - schemaOffset;
-
-            var result = new Dictionary<int, int>(size);
-
-            for (int i = schemaOffset; i < _idx; i++)
-            {
-                var fld = _fields[i];
-
-                result[fld.Id] = fld.Offset;
-            }
-
-            return result;
-        }
     }
 }

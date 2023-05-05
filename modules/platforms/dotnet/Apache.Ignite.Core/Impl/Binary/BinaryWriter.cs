@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Invoked when binary object writing finishes.
         /// </summary>
-        internal event Action<BinaryObjectHeader, object> OnObjectWritten;
+        internal event Action<BinaryObjectHeader, IBinaryTypeDescriptor, int[]> OnObjectWritten;
 
         /// <summary>
         /// Write named boolean value.
@@ -1262,6 +1262,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                     flags |= BinaryObjectHeader.Flag.CompactFooter;
 
                 var hasSchema = _schema.WriteSchema(_stream, schemaIdx, out schemaId, ref flags);
+                int[] schema = null;
 
                 if (hasSchema)
                 {
@@ -1272,9 +1273,11 @@ namespace Apache.Ignite.Core.Impl.Binary
                         _stream.WriteInt(_frame.RawPos - pos); // raw offset is in the last 4 bytes
 
                     // Update schema in type descriptor
-                    if (desc.Schema.Get(schemaId) == null)
+                    schema = desc.Schema.Get(schemaId);
+                    if (schema == null)
                     {
-                        desc.Schema.Add(schemaId, _schema.GetSchema(schemaIdx));
+                        schema = _schema.GetSchema(schemaIdx);
+                        desc.Schema.Add(schemaId, schema);
                         isNewSchema = true;
                     }
                 }
@@ -1296,7 +1299,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 if (OnObjectWritten != null)
                 {
-                    OnObjectWritten(header, obj);
+                    OnObjectWritten(header, desc, schema);
                 }
 
                 Stream.Seek(pos + len, SeekOrigin.Begin); // Seek to the end
