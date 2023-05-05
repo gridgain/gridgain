@@ -135,6 +135,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [TestCase(6, 2)]
         public void CachePut_UserDefinedTypeWithAffinityKey_RequestIsRoutedToPrimaryNode(int key, int gridIdx)
         {
+            // TODO: Same test with other data types: string, TestKey
             // Note: annotation-based configuration is not supported on Java side.
             // Use manual configuration instead.
             var cacheClientConfiguration = new CacheClientConfiguration(TestUtils.TestName)
