@@ -54,14 +54,14 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
         public void WriteBinary(IBinaryWriter writer)
         {
-            writer.WriteInt("id", _i);
             writer.WriteString("str", _s);
+            writer.WriteInt("id", _i);
         }
 
         public void ReadBinary(IBinaryReader reader)
         {
-            _i = reader.ReadInt("id");
             _s = reader.ReadString("str");
+            _i = reader.ReadInt("id");
         }
     }
 }
