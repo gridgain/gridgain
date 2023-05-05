@@ -21,6 +21,7 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -43,7 +44,10 @@ public class DeactivateCommand extends AbstractCommand<Void> {
     /** {@inheritDoc} */
     @Override public void prepareConfirmation(GridClientConfiguration clientCfg) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            clusterName = client.state().clusterName();
+            GridClientClusterState clientState = client.state();
+            
+            if (!clientState.state().equals(INACTIVE))
+                clusterName = clientState.clusterName();
         }
     }
 
