@@ -18,8 +18,13 @@ package org.apache.ignite.sqltests;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.query.annotations.QuerySqlField;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -31,7 +36,6 @@ import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-
 /**
  * Check that illegal joins of partitioned tables are warned.
  *
@@ -39,6 +43,9 @@ import org.junit.runners.Parameterized;
  */
 @RunWith(Enclosed.class)
 public class CheckWarnJoinPartitionedTablesTest extends GridCommonAbstractTest {
+
+    static final String FOO_TABLE = "\"foo\".Foo f";
+    static final String BAR_TABLE = "\"bar\".Bar b";
 
     /** Utility class with basic stuff. */
     @Ignore
@@ -67,6 +74,26 @@ public class CheckWarnJoinPartitionedTablesTest extends GridCommonAbstractTest {
         /** {@inheritDoc} */
         @Override protected void afterTest() throws Exception {
             stopAllGrids();
+        }
+
+        void createCachesWithPlainKey() {
+            createCachesWithKeyType(PlainKey.class, () -> new PlainKey(0));
+        }
+
+        void createCachesWithAffinityKey() {
+            createCachesWithKeyType(AffinityKey.class, () -> new AffinityKey(0));
+        }
+
+        <K> void createCachesWithKeyType(Class<K> keyCls, Supplier<K> keyProducer) {
+            CacheConfiguration<K, Foo> fooCfg = new CacheConfiguration<K, Foo>("foo")
+                .setIndexedTypes(keyCls, Foo.class);
+            IgniteCache<K, Foo> fooCache = crd.getOrCreateCache(fooCfg);
+            fooCache.put(keyProducer.get(), new Foo());
+
+            CacheConfiguration<K, Bar> barCfg = new CacheConfiguration<K, Bar>("bar")
+                .setIndexedTypes(keyCls, Bar.class);
+            IgniteCache<K, Bar> barCache = crd.getOrCreateCache(barCfg);
+            barCache.put(keyProducer.get(), new Bar());
         }
 
         /** Verify that expected message appeared in logs and vice versa */
@@ -112,6 +139,30 @@ public class CheckWarnJoinPartitionedTablesTest extends GridCommonAbstractTest {
             // PRICE = ID
             checkLogListener(false,
                 "SELECT a1.* FROM A a1 LEFT JOIN A a2 on a1.PRICE = a2.ID and a1.TITLE = a2.TITLE and a1.ID = a2.PRICE;");
+        }
+
+        /** Should not print warning since both tables have exactly same PKs and affinity keys and use them for join */
+        @Test
+        public void implicitInnerJoinOnIndexedTypesWithoutExplicitAffinityField() {
+            createCachesWithPlainKey();
+
+            checkJoinIndexedTypes();
+        }
+
+        /** Should not print warning since both tables have exactly same PKs and affinity keys and use them for join */
+        @Test
+        public void implicitInnerJoinOnIndexedTypesWithExplicitAffinityField() {
+            createCachesWithAffinityKey();
+
+            checkJoinIndexedTypes();
+        }
+
+        public void checkJoinIndexedTypes() {
+            checkLogListener(false,
+                "SELECT * FROM " + FOO_TABLE + ", " + BAR_TABLE + " WHERE f.id = b.id");
+
+            checkLogListener(false,
+                "SELECT * FROM " + FOO_TABLE + ", " + BAR_TABLE + " WHERE f.id = b.id and f.deposit = b.amount");
         }
     }
 
@@ -530,5 +581,113 @@ public class CheckWarnJoinPartitionedTablesTest extends GridCommonAbstractTest {
             checkLogListener(true,
                 "SELECT * FROM A a " + joinType + " B b where a.k1 = ? and b.ak2 = ?", "1", "1");
         }
+
+        /** Should not print warning since both tables have exactly same PKs and affinity keys and use them for join */
+        @Test
+        public void joinOnIndexedTypesWithoutExplicitAffinityField() {
+            createCachesWithPlainKey();
+
+            checkJoinIndexedTypes();
+        }
+
+        /** Should not print warning since both tables have exactly same PKs and affinity keys and use them for join */
+        @Test
+        public void joinOnIndexedTypesWithExplicitAffinityField() {
+            createCachesWithAffinityKey();
+
+            checkJoinIndexedTypes();
+        }
+
+        /** */
+        private void checkJoinIndexedTypes() {
+            checkLogListener(false,
+                "SELECT * FROM " + FOO_TABLE + " " + joinType + " " + BAR_TABLE + " on f.id = b.id");
+
+            checkLogListener(false,
+                "SELECT * FROM " + FOO_TABLE + " " + joinType + " " + BAR_TABLE + " on f.id = b.id WHERE f.deposit = b.amount");
+        }
     }
+
+    /** Key without explicit affinity declaration. */
+    static class PlainKey {
+
+        @QuerySqlField(index = true)
+        private final long id;
+
+        public PlainKey(long id) {
+            this.id = id;
+        }
+
+        public long getId() {
+            return id;
+        }
+    }
+
+    /** Key without explicit affinity declaration. */
+    static class AffinityKey {
+
+        @AffinityKeyMapped
+        @QuerySqlField(index = true)
+        private final long id;
+
+        public AffinityKey(long id) {
+            this.id = id;
+        }
+
+        public long getId() {
+            return id;
+        }
+
+    }
+
+    static class Foo {
+
+        @QuerySqlField(index = true)
+        private String name;
+
+        @QuerySqlField(index = true)
+        private long deposit;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public long getDeposit() {
+            return deposit;
+        }
+
+        public void setDeposit(long deposit) {
+            this.deposit = deposit;
+        }
+    }
+
+    static class Bar {
+
+        @QuerySqlField(index = true)
+        private String name;
+
+        @QuerySqlField(index = true)
+        private long amount;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public long getAmount() {
+            return amount;
+        }
+
+        public void setAmount(long amount) {
+            this.amount = amount;
+        }
+    }
+
 }
