@@ -29,6 +29,7 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.Nullable;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -61,9 +62,9 @@ public class DebugUtils {
     }
 
     public static void dumpWalRecords(
-        WALPointer failed,
+        @Nullable WALPointer failed,
         List<IgniteBiTuple<Thread, WALRecord>> records,
-        Throwable t,
+        @Nullable Throwable t,
         IgniteLogger log
     ) {
         if (records.isEmpty()) {

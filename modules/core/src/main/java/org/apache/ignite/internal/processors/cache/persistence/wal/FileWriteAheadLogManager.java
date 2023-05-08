@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.regex.Pattern;
+import java.util.stream.LongStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -693,9 +694,23 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             U.error(log, "Failed to gracefully shutdown WAL components, thread was interrupted.", e);
         }
 
+        FileWALPointer lastWritePointer = (FileWALPointer)lastWritePointer();
+
+        if (lastWritePointer != null) {
+            long index = lastWritePointer.index();
+
+            List<IgniteBiTuple<Thread, WALRecord>> allRecords = LongStream.of(index - 1, index, index + 1)
+                .filter(i -> i >= 0)
+                .mapToObj(walRecordCyclicBufferByThread::getSortedListWalRecords)
+                .flatMap(Collection::stream)
+                .collect(toList());
+
+            DebugUtils.dumpWalRecords(lastWritePointer, allRecords, null, log);
+        }
+
         log.error(String.format(
             ">>>>> Stop WAL: [lawWritePtr=%s, archiver=%s]",
-            lastWritePointer(), archiver != null
+            lastWritePointer, archiver != null
         ));
     }
 
@@ -831,7 +846,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         }
     }
 
-    private final WalRecordCyclicBufferByThread walRecordCyclicBufferByThread = new WalRecordCyclicBufferByThread(1_000_000);
+    private final WalRecordCyclicBufferByThread walRecordCyclicBufferByThread = new WalRecordCyclicBufferByThread(1_000);
 
     /** {@inheritDoc} */
     @Override public WALPointer log(WALRecord rec) throws IgniteCheckedException {
@@ -844,7 +859,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     @Override public WALPointer log(WALRecord rec, RolloverType rolloverType) throws IgniteCheckedException {
         WALPointer ptr = log0(rec, rolloverType);
 
-        if (ptr == null || !(rec instanceof TxRecord))
+        if (ptr == null)
             return ptr;
 
         if (firstLogRec.compareAndSet(false, true)) {
@@ -854,6 +869,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             ));
         }
 
+        if (!(rec instanceof TxRecord))
+            return ptr;
+
+        // TODO: GG-34721 maybe log all wal records, don't forget bufferSize
         walRecordCyclicBufferByThread.add(rec);
 
         try {
