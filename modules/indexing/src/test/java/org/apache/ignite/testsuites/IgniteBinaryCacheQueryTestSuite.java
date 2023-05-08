@@ -154,7 +154,7 @@ import org.apache.ignite.internal.sql.SqlParserKillQuerySelfTest;
 import org.apache.ignite.internal.sql.SqlParserMultiStatementSelfTest;
 import org.apache.ignite.internal.sql.SqlParserSetStreamingSelfTest;
 import org.apache.ignite.internal.sql.SqlParserTransactionalKeywordsSelfTest;
-import org.apache.ignite.sqltests.CheckWarnJoinPartitionedTables;
+import org.apache.ignite.sqltests.CheckWarnJoinPartitionedTablesTest;
 import org.apache.ignite.sqltests.DeletionDuringRebalanceTest;
 import org.apache.ignite.sqltests.PartitionedSqlTest;
 import org.apache.ignite.sqltests.ReplicatedSqlCustomPartitionsTest;
@@ -181,7 +181,7 @@ import org.junit.runners.Suite;
     PartitionedSqlTest.class,
     ReplicatedSqlTest.class,
     ReplicatedSqlCustomPartitionsTest.class,
-    CheckWarnJoinPartitionedTables.class,
+    CheckWarnJoinPartitionedTablesTest.class,
     DeletionDuringRebalanceTest.class,
 
     SqlParserCreateIndexSelfTest.class,
