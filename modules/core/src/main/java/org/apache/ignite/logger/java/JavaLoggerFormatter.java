@@ -41,7 +41,7 @@ public class JavaLoggerFormatter extends Formatter {
     /** Log message date-time formatter. */
     static final DateTimeFormatter DATE_FMT = resolveDateFormat();
 
-    /** Property for overriding default dat-time format. */
+    /** Property for overriding default date-time format. */
     static final String IGNITE_JUL_DATE_FORMAT_PROPERTY = "IGNITE_JAVA_LOGGER_DATE_FORMAT";
 
     /** {@inheritDoc} */
@@ -50,7 +50,7 @@ public class JavaLoggerFormatter extends Formatter {
 
         String logName = record.getLoggerName();
 
-        if (logName == null || logName.equals(""))
+        if (logName == null || logName.isEmpty())
             logName = ANONYMOUS_LOGGER_NAME;
         else if (logName.contains("."))
             logName = logName.substring(logName.lastIndexOf('.') + 1);
@@ -79,7 +79,7 @@ public class JavaLoggerFormatter extends Formatter {
         if (customDateFormat != null) {
             try {
                 return DateTimeFormatter.ofPattern(customDateFormat).withZone(ZoneId.systemDefault());
-            } catch (Exception e) {
+            } catch (Exception ignore) {
                 System.err.println("Incorrect JavaLogger date-time format: " + customDateFormat);
             }
         }

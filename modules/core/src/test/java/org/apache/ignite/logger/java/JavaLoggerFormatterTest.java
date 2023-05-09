@@ -17,34 +17,30 @@
 package org.apache.ignite.logger.java;
 
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertThat;
 
 /**
  * Java log formatter test.
  */
 @GridCommonTest(group = "Logger")
-public class JavaLoggerFormatterTest {
+public class JavaLoggerFormatterTest extends GridCommonAbstractTest {
 
-    private static JavaLoggerFormatter formatter;
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        formatter = new JavaLoggerFormatter();
-    }
+    private static final JavaLoggerFormatter formatter = new JavaLoggerFormatter();
 
     /**
-     * Null category should fall back to anonymous
+     * Null category should fall back to anonymous.
      */
     @Test
     public void testNullCategory() {
@@ -52,7 +48,7 @@ public class JavaLoggerFormatterTest {
     }
 
     /**
-     * Empty (zero-length) category should fall back to anonymous
+     * Empty (zero-length) category should fall back to anonymous.
      */
     @Test
     public void testEmptyCategory() {
@@ -60,7 +56,7 @@ public class JavaLoggerFormatterTest {
     }
 
     /**
-     * Should use specified literal as category
+     * Should use specified literal as category.
      */
     @Test
     public void testSimpleCategory() {
@@ -68,7 +64,7 @@ public class JavaLoggerFormatterTest {
     }
 
     /**
-     * Should use classname as category
+     * Should use classname as category.
      */
     @Test
     public void testClassCategory() {
@@ -76,7 +72,7 @@ public class JavaLoggerFormatterTest {
     }
 
     /**
-     * Should append stack trace to log message
+     * Should append stack trace to log message.
      */
     @Test
     public void testThrowable() {
@@ -86,52 +82,43 @@ public class JavaLoggerFormatterTest {
         final String exceptionMsg = "Not enough minerals";
 
         LogRecord record = buildLogRecord(msg, category);
-        try {
-            throw new RuntimeException(exceptionMsg);
-        }
-        catch (Throwable t) {
-            record.setThrown(t);
-        }
+        record.setThrown(new RuntimeException(exceptionMsg));
 
         // when
         String result = formatter.format(record);
 
         // then
         final String expected = buildExpectedString(msg, category) + "\njava.lang.RuntimeException: " + exceptionMsg;
-        assertSimilar(expected, result);
+        assertStartsWith(expected, result);
     }
 
     /**
-     * Should use date format from property
+     * Should use date format from property.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_JAVA_LOGGER_DATE_FORMAT", value = "yyyy/MM/dd HH:mm:ss")
     public void testCorrectCustomFormatProperty() {
-        // given
-        System.setProperty("IGNITE_JAVA_LOGGER_DATE_FORMAT", "yyyy/MM/dd HH:mm:ss");
-
         // when
         DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
 
         // then
-        assertEquals("2000/01/01 01:01:01", fmt.format(Instant.ofEpochMilli(BASE_MILLIS)));
+        assertEquals("2000/01/01 01:01:01", fmt.format(BASE_INSTANT));
     }
 
     /**
-     * Should use default when date format from property is invalid
+     * Should use default when date format from property is invalid.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_JAVA_LOGGER_DATE_FORMAT", value = "foobar")
     public void testIncorrectCustomFormatProperty() {
-        // given
-        System.setProperty("IGNITE_JAVA_LOGGER_DATE_FORMAT", "foobar");
-
         // when
         DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
 
         // then
-        assertEquals(BASE_DATE, fmt.format(Instant.ofEpochMilli(BASE_MILLIS)));
+        assertEquals(BASE_DATE, fmt.format(BASE_INSTANT));
     }
 
-    void assertFormattedOutput(String msg, String category, String expectedCategory) {
+    private static void assertFormattedOutput(String msg, String category, String expectedCategory) {
         // given
         LogRecord record = buildLogRecord(msg, category);
 
@@ -139,30 +126,27 @@ public class JavaLoggerFormatterTest {
         String result = formatter.format(record);
 
         // then
-        assertSimilar(buildExpectedString(msg, expectedCategory), result);
+        assertStartsWith(buildExpectedString(msg, expectedCategory), result);
     }
 
-    void assertFormattedOutput(String category, String expectedCategory) {
+    private static void assertFormattedOutput(String category, String expectedCategory) {
         assertFormattedOutput("Power overwhelming", category, expectedCategory);
     }
 
-    static final DateTimeFormatter ISO_DATE_FORMAT =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss,SSS").withZone(ZoneId.systemDefault());
+    private static final String BASE_DATE = "2000-01-01T01:01:01,001";
 
-    static final String BASE_DATE = "2000-01-01T01:01:01,001";
+    private static final Instant BASE_INSTANT = Instant.from(IgniteUtils.ISO_DATE_FMT.parse(BASE_DATE));
 
-    static final long BASE_MILLIS = Instant.from(ISO_DATE_FORMAT.parse(BASE_DATE)).toEpochMilli();
-
-    static LogRecord buildLogRecord(@NotNull String message, @Nullable String category) {
+    private static LogRecord buildLogRecord(@NotNull String message, @Nullable String category) {
         LogRecord record = new LogRecord(Level.INFO, message);
-        record.setMillis(BASE_MILLIS);
+        record.setMillis(BASE_INSTANT.toEpochMilli());
         record.setThreadID(Math.toIntExact(Thread.currentThread().getId()));
         record.setLoggerName(category);
 
         return record;
     }
 
-    static String buildExpectedString(@NotNull String message, @Nullable String category) {
+    private static String buildExpectedString(@NotNull String message, @Nullable String category) {
         return "[" +
             BASE_DATE + "][" +
             Level.INFO + "][" +
@@ -171,8 +155,7 @@ public class JavaLoggerFormatterTest {
             message;
     }
 
-    static void assertSimilar(String expected, String actual) {
-        assertTrue("\nExpected: " + expected + "\nActual:   " + actual, actual.startsWith(expected));
+    private static void assertStartsWith(String expected, String actual) {
+        assertThat(actual, startsWith(expected));
     }
-
 }
