@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedByInterruptException;
@@ -41,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -706,6 +708,12 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 .collect(toList());
 
             DebugUtils.dumpWalRecords(lastWritePointer, allRecords, null, log);
+
+            List<File> segments = getSegmentRouter().findSegment1(lastWritePointer.index()).stream()
+                .map(FileDescriptor::file)
+                .collect(toList());
+
+            DebugUtils.dumpWalSegments(lastWritePointer, segments, log);
         }
 
         log.error(String.format(
@@ -874,6 +882,10 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
         // TODO: GG-34721 maybe log all wal records, don't forget bufferSize
         walRecordCyclicBufferByThread.add(rec);
+
+        // TODO: GG-34721 maybe remove this if
+        if (rec != null)
+            return ptr;
 
         try {
             WALRecord read = read0((FileWALPointer)ptr);
@@ -3091,6 +3103,20 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** {@inheritDoc} */
         @Override protected IgniteCheckedException handleRecordException(Exception e, @Nullable FileWALPointer ptr) {
             if (e instanceof IgniteCheckedException && X.hasCause(e, IgniteDataIntegrityViolationException.class)) {
+                Integer pos = Optional.of(currWalSegment)
+                    .map(AbstractReadFileHandle::in)
+                    .map(ByteBufferBackedDataInput::buffer)
+                    .map(Buffer::position)
+                    .orElse(null);
+
+                log.error(
+                    String.format(
+                        ">>>>> ON handleRecordException: [start=%s, end=%s, ptr=%s, curWalSegmIdx=%s, lastReadPointer=%s, pos=%s]",
+                        start, end, ptr, curWalSegmIdx, lastReadPointer(), pos
+                    ),
+                    e
+                );
+
                 // This means that there is no explicit last segment, so we iterate until the very end.
                 if (end == null) {
                     long nextWalSegmentIdx = curWalSegmIdx + 1;

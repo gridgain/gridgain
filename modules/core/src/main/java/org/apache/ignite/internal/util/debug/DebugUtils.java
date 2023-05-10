@@ -21,12 +21,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
@@ -92,5 +95,40 @@ public class DebugUtils {
 
             log.error(String.format("!!!!! dumpWalRecords error: [file=%s, failed=%s]", dumpFile, failed), e);
         }
+    }
+
+    public static void dumpWalSegments(FileWALPointer segment, Collection<File> walSegmentFiles, IgniteLogger log) {
+        if (walSegmentFiles.isEmpty()) {
+            log.error("!!!!! dumpWalSegments empty: " + segment);
+
+            return;
+        }
+
+        List<File> dumpWalSegmentFile = new ArrayList<>();
+
+        for (File walSegmentFile : walSegmentFiles) {
+            File dumpFile = createFile(LOG_DIR, "wal_segment_dump_" + walSegmentFile.getName(), "");
+
+            try {
+                U.copy(walSegmentFile, dumpFile, false);
+
+                dumpWalSegmentFile.add(dumpFile);
+            } catch (IOException e) {
+                log.error(
+                    String.format(
+                        "!!!!! dumpWalSegments error: [segment=%s, walSegmentFile=%s, dumpFile=%s]",
+                        segment, walSegmentFile, dumpFile
+                    ),
+                    e
+                );
+            }
+        }
+
+        log.error(
+            String.format(
+                "!!!!! dumpWalSegments: [segment=%s, walSegmentFiles=%s, dumpFiles=%s]",
+                segment, walSegmentFiles, dumpWalSegmentFile
+            )
+        );
     }
 }
