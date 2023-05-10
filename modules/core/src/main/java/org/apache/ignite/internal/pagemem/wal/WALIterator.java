@@ -38,4 +38,8 @@ public interface WALIterator extends GridCloseableIterator<IgniteBiTuple<WALPoin
     default @Nullable WALPointer lastReadPointer() {
         return null;
     }
+
+    default void printDebugInfo() {
+        // No-op.
+    }
 }

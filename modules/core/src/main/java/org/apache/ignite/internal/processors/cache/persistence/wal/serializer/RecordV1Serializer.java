@@ -144,7 +144,7 @@ public class RecordV1Serializer implements RecordSerializer {
 
             if (recType.purpose() != WALRecord.RecordPurpose.INTERNAL
                 && recordFilter != null && !recordFilter.apply(rec.type(), ptr))
-                return FilteredRecord.INSTANCE;
+                return new FilteredRecord(recType);
             else if (marshalledMode) {
                 ByteBuffer buf = heapTlb.get();
 

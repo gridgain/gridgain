@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -38,8 +39,8 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.io.SegmentIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.SegmentHeader;
-import org.apache.ignite.internal.util.debug.DebugUtils;
 import org.apache.ignite.internal.util.GridCloseableIteratorAdapter;
+import org.apache.ignite.internal.util.debug.CyclicBuffer;
 import org.apache.ignite.internal.util.debug.FilesToArtifacts;
 import org.apache.ignite.internal.util.typedef.P2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -104,6 +105,8 @@ public abstract class AbstractWalRecordsIterator
     /** Position of last read valid record. */
     private WALPointer lastRead;
 
+    private final CyclicBuffer<IgniteBiTuple<WALRecord.RecordType, FileWALPointer>> lastReadCyclicBuffer = new CyclicBuffer<>(10);
+
     /**
      * @param log Logger.
      * @param sharedCtx Shared context.
@@ -163,6 +166,16 @@ public abstract class AbstractWalRecordsIterator
         }
     }
 
+    private void addLastRead(IgniteBiTuple<WALPointer, WALRecord> curRec) {
+        if (curRec == null || curRec.get1() == null)
+            return;
+
+        lastReadCyclicBuffer.add(new IgniteBiTuple<>(
+            curRec.get2().type0(),
+            (FileWALPointer)curRec.get1()
+        ));
+    }
+
     /**
      * Switches records iterator to the next record. <ul> <li>{@link #curRec} will be updated.</li> <li> If end of
      * segment reached, switch to new segment is called. {@link #currWalSegment} will be updated.</li> </ul>
@@ -172,8 +185,11 @@ public abstract class AbstractWalRecordsIterator
      * @throws IgniteCheckedException If failed.
      */
     protected void advance() throws IgniteCheckedException {
-        if (curRec != null)
+        if (curRec != null) {
             lastRead = curRec.get1();
+
+            addLastRead(curRec);
+        }
 
         while (true) {
             try {
@@ -182,6 +198,8 @@ public abstract class AbstractWalRecordsIterator
                 if (curRec != null) {
                     if (curRec.get2().type() == null) {
                         lastRead = curRec.get1();
+
+                        addLastRead(curRec);
 
                         continue; // Record was skipped by filter of current serializer, should read next record.
                     }
@@ -210,6 +228,17 @@ public abstract class AbstractWalRecordsIterator
                 return;
             }
         }
+    }
+
+    @Override public void printDebugInfo() {
+        log.error(String.format(
+            ">>>>> printDebugInfo: [cls=%s, lastRead=%s, lastReadBuffer=%s]",
+            getClass().getSimpleName(),
+            lastRead,
+            lastReadCyclicBuffer.stream()
+                .sorted(Comparator.comparing(IgniteBiTuple::get2))
+                .collect(Collectors.toList())
+        ));
     }
 
     /** {@inheritDoc} */

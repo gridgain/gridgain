@@ -2332,6 +2332,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             it.close();
 
             awaitApplyComplete(exec, applyError);
+
+            it.printDebugInfo();
         }
 
         if (!finalizeState)

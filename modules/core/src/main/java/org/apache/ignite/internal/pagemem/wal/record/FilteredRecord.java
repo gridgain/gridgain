@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.pagemem.wal.record;
 
 import org.apache.ignite.internal.processors.cache.persistence.wal.AbstractWalRecordsIterator;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Special type of WAL record. Shouldn't be stored in file.
@@ -24,10 +25,20 @@ import org.apache.ignite.internal.processors.cache.persistence.wal.AbstractWalRe
  */
 public class FilteredRecord extends WALRecord {
     /** Instance. */
-    public static final FilteredRecord INSTANCE = new FilteredRecord();
+    public static final FilteredRecord INSTANCE = new FilteredRecord(null);
+
+    private final @Nullable RecordType type0;
+
+    public FilteredRecord(RecordType type0) {
+        this.type0 = type0;
+    }
 
     /** {@inheritDoc} */
     @Override public RecordType type() {
         return null;
+    }
+
+    @Override public @Nullable RecordType type0() {
+        return type0;
     }
 }

@@ -36,6 +36,7 @@ import org.apache.ignite.internal.pagemem.wal.record.TimeStampRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.FilteredWalIterator;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer;
@@ -63,6 +64,12 @@ public class IgniteWalConverter {
      * @throws Exception If failed.
      */
     public static void main(String[] args) {
+        args = new String[] {
+            "--wal-dir", "c:/test/wal",
+            "--skip-crc",
+            "--record-types", "TX_RECORD"
+        };
+
         final IgniteWalConverterArguments parameters = IgniteWalConverterArguments.parse(System.out, args);
 
         if (parameters != null)
@@ -140,7 +147,7 @@ public class IgniteWalConverter {
 
                 IgniteBiTuple<WALPointer, WALRecord> next = stIt.nextX();
 
-                final WALPointer pointer = next.get1();
+                final FileWALPointer pointer = (FileWALPointer)next.get1();
 
                 final WALRecord record = next.get2();
 
