@@ -17,11 +17,9 @@
 package org.apache.ignite.logger.java;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.jetbrains.annotations.NotNull;
@@ -64,7 +62,7 @@ public class JavaLoggerFormatterTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Should use classname as category.
+     * Should use classname as category (cut off package name).
      */
     @Test
     public void testClassCategory() {
@@ -92,32 +90,6 @@ public class JavaLoggerFormatterTest extends GridCommonAbstractTest {
         assertStartsWith(expected, result);
     }
 
-    /**
-     * Should use date format from property.
-     */
-    @Test
-    @WithSystemProperty(key = "IGNITE_JAVA_LOGGER_DATE_FORMAT", value = "yyyy/MM/dd HH:mm:ss")
-    public void testCorrectCustomFormatProperty() {
-        // when
-        DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
-
-        // then
-        assertEquals("2000/01/01 01:01:01", fmt.format(BASE_INSTANT));
-    }
-
-    /**
-     * Should use default when date format from property is invalid.
-     */
-    @Test
-    @WithSystemProperty(key = "IGNITE_JAVA_LOGGER_DATE_FORMAT", value = "foobar")
-    public void testIncorrectCustomFormatProperty() {
-        // when
-        DateTimeFormatter fmt = JavaLoggerFormatter.resolveDateFormat();
-
-        // then
-        assertEquals(BASE_DATE, fmt.format(BASE_INSTANT));
-    }
-
     private static void assertFormattedOutput(String msg, String category, String expectedCategory) {
         // given
         LogRecord record = buildLogRecord(msg, category);
@@ -133,9 +105,7 @@ public class JavaLoggerFormatterTest extends GridCommonAbstractTest {
         assertFormattedOutput("Power overwhelming", category, expectedCategory);
     }
 
-    private static final String BASE_DATE = "2000-01-01T01:01:01,001";
-
-    private static final Instant BASE_INSTANT = Instant.from(IgniteUtils.ISO_DATE_FMT.parse(BASE_DATE));
+    private static final String BASE_DATE = "2000-01-01T01:01:01.001";
 
     private static LogRecord buildLogRecord(@NotNull String message, @Nullable String category) {
         LogRecord record = new LogRecord(Level.INFO, message);
@@ -154,6 +124,8 @@ public class JavaLoggerFormatterTest extends GridCommonAbstractTest {
             category + "] " +
             message;
     }
+
+    private static final Instant BASE_INSTANT = Instant.from(IgniteUtils.ISO_DATE_FMT.parse(BASE_DATE));
 
     private static void assertStartsWith(String expected, String actual) {
         assertThat(actual, startsWith(expected));

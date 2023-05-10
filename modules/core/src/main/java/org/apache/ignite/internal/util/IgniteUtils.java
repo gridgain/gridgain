@@ -294,6 +294,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
 
+import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 import static java.util.Objects.isNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_HOSTNAME_VERIFIER;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_HOME;
@@ -558,8 +559,7 @@ public abstract class IgniteUtils {
         DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss z").withZone(ZoneId.systemDefault());
 
     /** ISO-8601 compliant date-time format. */
-    public static final DateTimeFormatter ISO_DATE_FMT =
-        DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss,SSS").withZone(ZoneId.systemDefault());
+    public static final DateTimeFormatter ISO_DATE_FMT = ISO_LOCAL_DATE_TIME.withZone(ZoneId.systemDefault());
 
     /** Cached local host address to make sure that every time the same local host is returned. */
     private static InetAddress locHost;

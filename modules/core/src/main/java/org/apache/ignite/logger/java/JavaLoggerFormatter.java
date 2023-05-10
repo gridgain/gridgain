@@ -19,11 +19,9 @@ package org.apache.ignite.logger.java;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.NotNull;
@@ -35,14 +33,8 @@ public class JavaLoggerFormatter extends Formatter {
     /** Name for anonymous loggers. */
     static final String ANONYMOUS_LOGGER_NAME = "UNKNOWN";
 
-    /** Default date-time format. */
-    static final DateTimeFormatter DEFAULT_DATE_FMT = IgniteUtils.ISO_DATE_FMT;
-
     /** Log message date-time formatter. */
-    static final DateTimeFormatter DATE_FMT = resolveDateFormat();
-
-    /** Property for overriding default date-time format. */
-    static final String IGNITE_JUL_DATE_FORMAT_PROPERTY = "IGNITE_JAVA_LOGGER_DATE_FORMAT";
+    static final DateTimeFormatter DATE_FMT = IgniteUtils.ISO_DATE_FMT;
 
     /** {@inheritDoc} */
     @Override public String format(LogRecord record) {
@@ -71,20 +63,6 @@ public class JavaLoggerFormatter extends Formatter {
         }
 
         return sw.toString();
-    }
-
-    @NotNull
-    static DateTimeFormatter resolveDateFormat() {
-        String customDateFormat = IgniteSystemProperties.getString(IGNITE_JUL_DATE_FORMAT_PROPERTY);
-        if (customDateFormat != null) {
-            try {
-                return DateTimeFormatter.ofPattern(customDateFormat).withZone(ZoneId.systemDefault());
-            } catch (Exception ignore) {
-                System.err.println("Incorrect JavaLogger date-time format: " + customDateFormat);
-            }
-        }
-
-        return DEFAULT_DATE_FMT;
     }
 
     /** {@inheritDoc} */
