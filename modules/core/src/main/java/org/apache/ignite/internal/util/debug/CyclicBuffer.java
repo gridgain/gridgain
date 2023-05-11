@@ -30,7 +30,7 @@ public class CyclicBuffer<T> {
     }
 
     public void add(T t) {
-        buffer[(int)(++size % buffer.length)] = t;
+        buffer[(int)(size++ % buffer.length)] = t;
     }
 
     public Stream<T> stream() {

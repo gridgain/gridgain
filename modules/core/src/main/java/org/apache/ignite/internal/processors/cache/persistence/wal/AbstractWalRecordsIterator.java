@@ -132,7 +132,7 @@ public abstract class AbstractWalRecordsIterator
 
         buf = new ByteBufferExpander(initialReadBufferSize, ByteOrder.nativeOrder());
 
-        lastReadCyclicBuffer = debug ? new CyclicBuffer<>(10) : null;
+        lastReadCyclicBuffer = debug ? new CyclicBuffer<>(1_000) : null;
     }
 
     /** {@inheritDoc} */
