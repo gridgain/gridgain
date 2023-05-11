@@ -105,7 +105,7 @@ public abstract class AbstractWalRecordsIterator
     /** Position of last read valid record. */
     private WALPointer lastRead;
 
-    private final CyclicBuffer<IgniteBiTuple<WALRecord.RecordType, FileWALPointer>> lastReadCyclicBuffer = new CyclicBuffer<>(10);
+    private final @Nullable CyclicBuffer<IgniteBiTuple<WALRecord.RecordType, FileWALPointer>> lastReadCyclicBuffer;
 
     /**
      * @param log Logger.
@@ -121,7 +121,9 @@ public abstract class AbstractWalRecordsIterator
         @NotNull final RecordSerializerFactory serializerFactory,
         @NotNull final FileIOFactory ioFactory,
         final int initialReadBufferSize,
-        SegmentFileInputFactory segmentFileInputFactory) {
+        SegmentFileInputFactory segmentFileInputFactory,
+        boolean debug
+    ) {
         this.log = log;
         this.sharedCtx = sharedCtx;
         this.serializerFactory = serializerFactory;
@@ -129,6 +131,8 @@ public abstract class AbstractWalRecordsIterator
         this.segmentFileInputFactory = segmentFileInputFactory;
 
         buf = new ByteBufferExpander(initialReadBufferSize, ByteOrder.nativeOrder());
+
+        lastReadCyclicBuffer = debug ? new CyclicBuffer<>(10) : null;
     }
 
     /** {@inheritDoc} */
@@ -167,7 +171,7 @@ public abstract class AbstractWalRecordsIterator
     }
 
     private void addLastRead(IgniteBiTuple<WALPointer, WALRecord> curRec) {
-        if (curRec == null || curRec.get1() == null)
+        if (lastReadCyclicBuffer == null || curRec == null || curRec.get1() == null)
             return;
 
         lastReadCyclicBuffer.add(new IgniteBiTuple<>(
@@ -235,7 +239,7 @@ public abstract class AbstractWalRecordsIterator
             ">>>>> printDebugInfo: [cls=%s, lastRead=%s, lastReadBuffer=%s]",
             getClass().getSimpleName(),
             lastRead,
-            lastReadCyclicBuffer.stream()
+            lastReadCyclicBuffer == null ? null : lastReadCyclicBuffer.stream()
                 .sorted(Comparator.comparing(IgniteBiTuple::get2))
                 .collect(Collectors.toList())
         ));

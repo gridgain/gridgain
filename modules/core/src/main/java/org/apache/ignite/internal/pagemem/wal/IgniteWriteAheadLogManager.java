@@ -128,6 +128,14 @@ public interface IgniteWriteAheadLogManager extends GridCacheSharedManager, Igni
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
     ) throws IgniteCheckedException, StorageException;
 
+    default WALIterator replay(
+        WALPointer start,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        boolean debug
+    ) throws IgniteCheckedException, StorageException {
+        return null;
+    }
+
     /**
      * Invoke this method to reserve WAL history since provided pointer and prevent it's deletion.
      *

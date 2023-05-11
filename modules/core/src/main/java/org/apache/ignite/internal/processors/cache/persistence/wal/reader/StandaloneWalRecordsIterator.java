@@ -128,7 +128,8 @@ public class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
             new RecordSerializerFactoryImpl(sharedCtx, readTypeFilter),
             ioFactory,
             initialReadBufferSize,
-            FILE_INPUT_FACTORY
+            FILE_INPUT_FACTORY,
+            false
         );
 
         if (strictBoundsCheck)

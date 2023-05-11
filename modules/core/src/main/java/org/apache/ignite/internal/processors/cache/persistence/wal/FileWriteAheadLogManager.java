@@ -1035,7 +1035,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     private WALRecord read0(FileWALPointer ptr) throws IgniteCheckedException {
         FileWALPointer end = new FileWALPointer(ptr.index(), ptr.fileOffset() + ptr.length(), 0);
 
-        try (WALIterator it = replay0(ptr, end, null)) {
+        try (WALIterator it = replay0(ptr, end, null, true)) {
             IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
 
             if (rec != null && rec.get2().position().equals(ptr))
@@ -1055,14 +1055,23 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         WALPointer start,
         @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
     ) throws IgniteCheckedException, StorageException {
-        return replay0(start, null, recordDeserializeFilter);
+        return replay0(start, null, recordDeserializeFilter, false);
+    }
+
+    @Override public WALIterator replay(
+        WALPointer start,
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        boolean debug
+    ) throws IgniteCheckedException, StorageException {
+        return replay0(start, null, recordDeserializeFilter, debug);
     }
 
     /** */
     private WALIterator replay0(
         WALPointer start,
         @Nullable FileWALPointer end,
-        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        boolean debug
     ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
@@ -1085,7 +1094,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             log,
             segmentAware,
             segmentRouter,
-            lockedSegmentFileInputFactory
+            lockedSegmentFileInputFactory,
+            debug
         );
 
         try {
@@ -2904,7 +2914,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             IgniteLogger log,
             SegmentAware segmentAware,
             SegmentRouter segmentRouter,
-            SegmentFileInputFactory segmentFileInputFactory
+            SegmentFileInputFactory segmentFileInputFactory,
+            boolean debug
         ) throws IgniteCheckedException {
             super(
                 log,
@@ -2912,7 +2923,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 serializerFactory,
                 ioFactory,
                 dsCfg.getWalRecordIteratorBufferSize(),
-                segmentFileInputFactory
+                segmentFileInputFactory,
+                debug
             );
 
             this.walArchiveDir = walArchiveDir;
