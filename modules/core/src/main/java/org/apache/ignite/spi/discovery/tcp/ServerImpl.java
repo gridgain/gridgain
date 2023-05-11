@@ -17,6 +17,7 @@
 package org.apache.ignite.spi.discovery.tcp;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectStreamException;
@@ -57,16 +58,19 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSocket;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.ShutdownPolicy;
 import org.apache.ignite.cache.CacheMetrics;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
@@ -78,6 +82,8 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
@@ -97,6 +103,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -110,6 +117,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
@@ -163,6 +171,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_NODE_IDS_HISTORY_SIZE;
@@ -1167,8 +1176,16 @@ class ServerImpl extends TcpDiscoveryImpl {
                     throw spi.duplicateIdError((TcpDiscoveryDuplicateIdMessage)joinRes.get());
                 else if (spiState == AUTH_FAILED)
                     throw spi.authenticationFailedError((TcpDiscoveryAuthFailedMessage)joinRes.get());
-                else if (spiState == CHECK_FAILED)
-                    throw spi.checkFailedError((TcpDiscoveryCheckFailedMessage)joinRes.get());
+                else if (spiState == CHECK_FAILED) {
+                    TcpDiscoveryCheckFailedMessage chackFailedMsg = (TcpDiscoveryCheckFailedMessage)joinRes.get();
+
+                    if (!IgniteSystemProperties.getBoolean(IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK) &&
+                        chackFailedMsg.error().contains("Joining node has caches with data which are not presented on cluster")) {
+                        scheduleMaintenanceTaskToClearCacheFolders(chackFailedMsg);
+                    }
+
+                    throw spi.checkFailedError(chackFailedMsg);
+                }
                 else if (spiState == RING_FAILED) {
                     throw new IgniteSpiException("Unable to connect to next nodes in a ring, it seems local node is " +
                         "experiencing connectivity issues or the rest of the cluster is undergoing massive restarts. " +
@@ -1212,6 +1229,46 @@ class ServerImpl extends TcpDiscoveryImpl {
             .addTag(SpanTags.tag(SpanTags.NODE, SpanTags.ORDER), () -> String.valueOf(locNode.order()))
             .addLog(() -> "Joined to ring")
             .end();
+    }
+
+    /**
+     * Schedules a maintenance task to clear cache folders based on the exception message.
+     *
+     * @param chackFailedMsg Exception message.
+     */
+    private void scheduleMaintenanceTaskToClearCacheFolders(TcpDiscoveryCheckFailedMessage chackFailedMsg) {
+        ArrayList<CacheConfiguration> cacheCfgs = new ArrayList<>();
+
+        for (String cacheName : chackFailedMsg.error()
+            .replaceFirst("^.*\\[", "")
+            .replaceFirst("\\].*", "")
+            .split(", ")) {
+             CacheConfiguration cc =  gridKernalContext().cache().context().cacheContext(CU.cacheId(cacheName)).config();
+
+             cacheCfgs.add(cc);
+        }
+
+        FilePageStoreManager pageStore = (FilePageStoreManager) gridKernalContext().cache().context().pageStore();
+
+        try {
+            String params = cacheCfgs.stream()
+                .map(ccfg -> pageStore.cacheWorkDir(ccfg).getName())
+                .collect(Collectors.joining(File.separator));
+
+            log.info("Task params: " + params + " sep: " + File.separator);
+
+            gridKernalContext().maintenanceRegistry()
+                .registerMaintenanceTask(
+                    new MaintenanceTask(
+                        ClearFolderWorkflow.CLEAR_FOLDER_TASK,
+                        "Corrupted cache groups are already removed from other nodes",
+                        params
+                    )
+                );
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Culd not create a maintenace task to remove data.");
+        }
     }
 
     /**
