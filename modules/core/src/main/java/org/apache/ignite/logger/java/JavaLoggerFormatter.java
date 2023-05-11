@@ -19,17 +19,22 @@ package org.apache.ignite.logger.java;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Formatter for JUL logger.
  */
 public class JavaLoggerFormatter extends Formatter {
     /** Name for anonymous loggers. */
-    public static final String ANONYMOUS_LOGGER_NAME = "UNKNOWN";
+    static final String ANONYMOUS_LOGGER_NAME = "UNKNOWN";
+
+    /** Log message date-time formatter. */
+    static final DateTimeFormatter DATE_FMT = IgniteUtils.ISO_DATE_FMT;
 
     /** {@inheritDoc} */
     @Override public String format(LogRecord record) {
@@ -37,29 +42,27 @@ public class JavaLoggerFormatter extends Formatter {
 
         String logName = record.getLoggerName();
 
-        if (logName == null)
+        if (logName == null || logName.isEmpty())
             logName = ANONYMOUS_LOGGER_NAME;
         else if (logName.contains("."))
             logName = logName.substring(logName.lastIndexOf('.') + 1);
 
-        String ex = null;
-
-        if (record.getThrown() != null) {
-            StringWriter sw = new StringWriter();
-
-            record.getThrown().printStackTrace(new PrintWriter(sw));
-
-            String stackTrace = sw.toString();
-
-            ex = "\n" + stackTrace;
-        }
-
-        return "[" + IgniteUtils.DEBUG_DATE_FMT.format(Instant.ofEpochMilli(record.getMillis())) + "][" +
+        return "[" + DATE_FMT.format(Instant.ofEpochMilli(record.getMillis())) + "][" +
             record.getLevel() + "][" +
             threadName + "][" +
             logName + "] " +
             formatMessage(record) +
-            (ex == null ? "\n" : ex);
+            (record.getThrown() == null ? '\n' : formatStackTrace(record.getThrown()));
+    }
+
+    private static String formatStackTrace(@NotNull Throwable t) {
+        StringWriter sw = new StringWriter();
+        try (PrintWriter pw = new PrintWriter(sw)) {
+            pw.println();
+            t.printStackTrace(new PrintWriter(sw));
+        }
+
+        return sw.toString();
     }
 
     /** {@inheritDoc} */
