@@ -16,21 +16,28 @@
 
 package org.apache.ignite.internal.util.debug;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
-import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-public class WalRecordCyclicBuffer extends ConcurrentCyclicBuffer<WALRecord> {
-    public WalRecordCyclicBuffer(int size) {
-        super(size);
+public class ConcurrentCyclicBuffer<T> {
+    private final AtomicLong size = new AtomicLong();
+
+    private final AtomicReferenceArray<T> buffer;
+
+    public ConcurrentCyclicBuffer(int size) {
+        buffer = new AtomicReferenceArray<>(size);
     }
 
-    public List<WALRecord> getSortedList(long absSegIdx) {
-        return stream()
-            .filter(walRecord -> ((FileWALPointer)walRecord.position()).index() == absSegIdx)
-            .sorted(Comparator.comparingInt(walRecord -> ((FileWALPointer)walRecord.position()).fileOffset()))
-            .collect(Collectors.toList());
+    public void add(T t) {
+        buffer.set((int)(size.getAndIncrement() % buffer.length()), t);
+    }
+
+    public Stream<T> stream() {
+        return IntStream.range(0, buffer.length())
+            .mapToObj(buffer::get)
+            .filter(Objects::nonNull);
     }
 }

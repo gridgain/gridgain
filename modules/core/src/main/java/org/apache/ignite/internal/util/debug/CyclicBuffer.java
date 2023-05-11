@@ -16,28 +16,25 @@
 
 package org.apache.ignite.internal.util.debug;
 
+import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CyclicBuffer<T> {
-    private final AtomicLong size = new AtomicLong();
+    private long size = 0;
 
-    private final AtomicReferenceArray<T> buffer;
+    private final T[] buffer;
 
     public CyclicBuffer(int size) {
-        buffer = new AtomicReferenceArray<>(size);
+        buffer = (T[])new Object[size];
     }
 
     public void add(T t) {
-        buffer.set((int)(size.getAndIncrement() % buffer.length()), t);
+        buffer[(int)(++size % buffer.length)] = t;
     }
 
     public Stream<T> stream() {
-        return IntStream.range(0, buffer.length())
-            .mapToObj(buffer::get)
+        return Arrays.stream(buffer)
             .filter(Objects::nonNull);
     }
 }
