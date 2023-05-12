@@ -127,7 +127,6 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
@@ -166,6 +165,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.maintenance.MaintenanceRegistry;
+import org.apache.ignite.maintenance.MaintenanceTask;
 import org.apache.ignite.mxbean.DataStorageMetricsMXBean;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.NotNull;
@@ -1945,23 +1945,20 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         MaintenanceRegistry mntcRegistry = kctx.maintenanceRegistry();
 
-        ctx.maintenanceRegistry().registerWorkflowCallbackIfTaskExists(ClearFolderWorkflow.CLEAR_FOLDER_TASK, task -> {
+        MaintenanceTask mntcTask = mntcRegistry.activeMaintenanceTask(CORRUPTED_DATA_FILES_MNTC_TASK_NAME);
+
+        if (mntcTask != null) {
             log.warning("Maintenance task found, stop restoring memory");
 
             File workDir = ((FilePageStoreManager) cctx.pageStore()).workDir();
 
-            return new ClearFolderWorkflow(ctx, workDir,
-                Arrays.asList(task.parameters().split(Pattern.quote(File.separator))));
-        });
+            mntcRegistry.registerWorkflowCallback(CORRUPTED_DATA_FILES_MNTC_TASK_NAME,
+                new CorruptedPdsMaintenanceCallback(workDir,
+                    Arrays.asList(mntcTask.parameters().split(Pattern.quote(File.separator))))
+            );
 
-        ctx.maintenanceRegistry().registerWorkflowCallbackIfTaskExists(CORRUPTED_DATA_FILES_MNTC_TASK_NAME, task -> {
-            log.warning("Maintenance task found, stop restoring memory");
-
-            File workDir = ((FilePageStoreManager) cctx.pageStore()).workDir();
-
-            return new CorruptedPdsMaintenanceCallback(workDir,
-                    Arrays.asList(task.parameters().split(Pattern.quote(File.separator))));
-        });
+            return;
+        }
 
         checkpointReadLock();
 
