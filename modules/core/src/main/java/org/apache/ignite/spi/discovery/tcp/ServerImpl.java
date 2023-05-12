@@ -1243,9 +1243,9 @@ class ServerImpl extends TcpDiscoveryImpl {
             .replaceFirst("^.*\\[", "")
             .replaceFirst("\\].*", "")
             .split(", ")) {
-             CacheConfiguration cc =  gridKernalContext().cache().context().cacheContext(CU.cacheId(cacheName)).config();
+            CacheConfiguration cc = gridKernalContext().cache().context().cacheContext(CU.cacheId(cacheName)).config();
 
-             cacheCfgs.add(cc);
+            cacheCfgs.add(cc);
         }
 
         FilePageStoreManager pageStore = (FilePageStoreManager) gridKernalContext().cache().context().pageStore();
