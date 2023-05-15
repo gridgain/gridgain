@@ -26,6 +26,7 @@ import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
 import org.apache.ignite.internal.client.GridClientFactory;
@@ -218,19 +219,22 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
             }
         };
 
-        runAsync(() -> {
+        IgniteInternalFuture<?> startFut = runAsync(() -> {
             startGrid(0);
         });
 
         assertTrue("Failed to wait for starting node.", startLatch.await(10, SECONDS));
 
         try (GridClient client = GridClientFactory.start(getGridClientConfiguration())) {
-            assertTrue("Client is not connected.", client.connected());
+            err.set(client.checkLastError());
         }
 
         contLatch.countDown();
 
+        startFut.get();
+
         Exception unexpectedErr = err.get();
+
         assertNull("Unexpected error [err=" + unexpectedErr + ']', unexpectedErr);
     }
 }
