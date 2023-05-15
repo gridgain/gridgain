@@ -316,7 +316,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
     /** {@inheritDoc} */
     @Override public void onLocalJoin() {
-        assert ctx.discovery().localNode() != null;
+        assert ctx.discovery().localNode() != null : "Cluster node is not initialized.";
 
         curSecCtx = ThreadLocal.withInitial(this::localSecurityContext);
     }
