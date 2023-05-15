@@ -608,7 +608,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
                         ctx.addNodeAttribute(key, p.getValue());
                     }
                 }
-            proto.onProcessorStart();
+
+                proto.onProcessorStart();
             }
         }
     }

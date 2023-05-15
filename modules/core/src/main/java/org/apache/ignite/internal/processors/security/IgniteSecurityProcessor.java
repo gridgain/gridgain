@@ -53,6 +53,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
+import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
+import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_NODE;
 
 /**
  * Default {@code IgniteSecurity} implementation.
@@ -140,7 +142,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
                 .orElseGet(() -> ctx.discovery().historicalNode(senderNodeId));
 
             if (checkSenderNodeSubject && (senderNode == null || senderNode.isClient())) {
-                SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
+                SecuritySubjectType type = node != null ? REMOTE_NODE : REMOTE_CLIENT;
 
                 log.warning("Switched to the 'deny all' policy because a client node tries to execute a request on behalf of another node " +
                     "[senderNodeId=" + senderNodeId + ", subjId=" + subjId + ", type=" + type + ']');
@@ -171,7 +173,7 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
         }
 
         if (res == null) {
-            SecuritySubjectType type = node != null ? SecuritySubjectType.REMOTE_NODE : SecuritySubjectType.REMOTE_CLIENT;
+            SecuritySubjectType type = node != null ? REMOTE_NODE : REMOTE_CLIENT;
 
             log.warning("Switched to the 'deny all' policy because of failing to find a security context " +
                 "[subjId=" + subjId + ", type=" + type + ']');
@@ -313,8 +315,14 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
     }
 
     /** {@inheritDoc} */
-    @Override public @Nullable IgniteInternalFuture<?> onReconnected(
-        boolean clusterRestarted) throws IgniteCheckedException {
+    @Override public void onLocalJoin() {
+        assert ctx.discovery().localNode() != null;
+
+        curSecCtx = ThreadLocal.withInitial(this::localSecurityContext);
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) throws IgniteCheckedException {
         curSecCtx = ThreadLocal.withInitial(this::localSecurityContext);
 
         return secPrc.onReconnected(clusterRestarted);
@@ -326,7 +334,12 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
      * @return Security context of local node.
      */
     private SecurityContext localSecurityContext() {
-        return nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), ctx.discovery().localNode());
+        ClusterNode node = ctx.discovery().localNode();
+
+        if (node != null)
+            return nodeSecurityContext(marsh, U.resolveClassLoader(ctx.config()), node);
+        else
+            return new DenyAllSecurityContext(UUID.randomUUID(), REMOTE_CLIENT);
     }
 
     /**
