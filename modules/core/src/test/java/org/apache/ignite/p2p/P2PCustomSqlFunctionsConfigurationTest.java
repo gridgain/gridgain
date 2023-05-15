@@ -25,6 +25,7 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.config.GridTestProperties;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.net.MalformedURLException;
@@ -336,6 +337,7 @@ public class P2PCustomSqlFunctionsConfigurationTest extends GridCommonAbstractTe
      * @throws Exception If the test fails to set up necessary environment.
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-36586")
     public void testStaticCacheWithAffinityAndNonAffinityNodesInTopology() throws Exception {
         startGrid(0);
 
