@@ -92,6 +92,11 @@ import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeS
  * Util class for joining node validation.
  */
 public class ValidationOnNodeJoinUtils {
+    /** {@link CacheConfiguration} field name to deserialize during node validation to check that node is allowed
+     * to join the cluster.
+     */
+    private static final String SQL_FUNCTIONS_FIELD_NAME = "sqlFuncCls";
+
     /** Template of message of conflicts of sql schema name. */
     private static final String SQL_SCHEMA_CONFLICTS_MESSAGE =
         "Failed to join node to the active cluster, configuration conflict for cache '%s': " +
@@ -186,6 +191,7 @@ public class ValidationOnNodeJoinUtils {
                 try {
                     enricher.enrich(joiningNodeCacheCfg,
                         cacheInfo.cacheData().cacheConfigurationEnrichment(),
+                        SQL_FUNCTIONS_FIELD_NAME::equals,
                         true);
                 } catch (IgniteException e) {
                     ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
