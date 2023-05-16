@@ -25,9 +25,9 @@ import org.jetbrains.annotations.Nullable;
 /**
  * The action clears storage folders with all data files.
  */
-public class CleanFolderAction implements MaintenanceAction<Void> {
+public class ClearFolderAction implements MaintenanceAction<Void> {
     /** */
-    public static final String ACTION_NAME = "clean_forder";
+    public static final String ACTION_NAME = "clearForder";
 
     /** */
     private final File rootStoreDir;
@@ -45,7 +45,7 @@ public class CleanFolderAction implements MaintenanceAction<Void> {
      * @param rootStoreDir Root storage directory.
      * @param cacheStoreFolders Cache folder names.
      */
-    public CleanFolderAction(GridKernalContext ctx, File rootStoreDir, String[] cacheStoreFolders) {
+    public ClearFolderAction(GridKernalContext ctx, File rootStoreDir, String[] cacheStoreFolders) {
         this.ctx = ctx;
         this.rootStoreDir = rootStoreDir;
         this.cacheStoreFolders = cacheStoreFolders;
@@ -77,6 +77,8 @@ public class CleanFolderAction implements MaintenanceAction<Void> {
 
     /** {@inheritDoc} */
     @Override public @Nullable String description() {
-        return "Clear cache folders with all cache storage files";
+        return "Clearing cache folders on disk [rootStoreDir=" + rootStoreDir +
+            ", cacheStoreFolders=(" + String.join(",", cacheStoreFolders) + ')' +
+            ']';
     }
 }

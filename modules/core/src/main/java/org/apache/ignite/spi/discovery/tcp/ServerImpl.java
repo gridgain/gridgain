@@ -82,6 +82,7 @@ import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
@@ -1177,14 +1178,14 @@ class ServerImpl extends TcpDiscoveryImpl {
                 else if (spiState == AUTH_FAILED)
                     throw spi.authenticationFailedError((TcpDiscoveryAuthFailedMessage)joinRes.get());
                 else if (spiState == CHECK_FAILED) {
-                    TcpDiscoveryCheckFailedMessage chackFailedMsg = (TcpDiscoveryCheckFailedMessage)joinRes.get();
+                    TcpDiscoveryCheckFailedMessage checkFailedMsg = (TcpDiscoveryCheckFailedMessage)joinRes.get();
 
                     if (!IgniteSystemProperties.getBoolean(IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK) &&
-                        chackFailedMsg.error().contains("Joining node has caches with data which are not presented on cluster")) {
-                        scheduleMaintenanceTaskToClearCacheFolders(chackFailedMsg);
+                        checkFailedMsg.error().contains("Joining node has caches with data which are not presented on cluster")) {
+                        scheduleMaintenanceTaskToClearCacheFolders(checkFailedMsg);
                     }
 
-                    throw spi.checkFailedError(chackFailedMsg);
+                    throw spi.checkFailedError(checkFailedMsg);
                 }
                 else if (spiState == RING_FAILED) {
                     throw new IgniteSpiException("Unable to connect to next nodes in a ring, it seems local node is " +
@@ -1234,40 +1235,45 @@ class ServerImpl extends TcpDiscoveryImpl {
     /**
      * Schedules a maintenance task to clear cache folders based on the exception message.
      *
-     * @param chackFailedMsg Exception message.
+     * @param checkFailedMsg Exception message.
      */
-    private void scheduleMaintenanceTaskToClearCacheFolders(TcpDiscoveryCheckFailedMessage chackFailedMsg) {
-        ArrayList<CacheConfiguration> cacheCfgs = new ArrayList<>();
-
-        for (String cacheName : chackFailedMsg.error()
-            .replaceFirst("^.*\\[", "")
-            .replaceFirst("\\].*", "")
-            .split(", ")) {
-            CacheConfiguration cc = gridKernalContext().cache().context().cacheContext(CU.cacheId(cacheName)).config();
-
-            cacheCfgs.add(cc);
-        }
-
-        FilePageStoreManager pageStore = (FilePageStoreManager) gridKernalContext().cache().context().pageStore();
-
+    private void scheduleMaintenanceTaskToClearCacheFolders(TcpDiscoveryCheckFailedMessage checkFailedMsg) {
         try {
+            ArrayList<CacheConfiguration> cacheCfgs = new ArrayList<>();
+            GridCacheSharedContext sharedCacheContext = gridKernalContext().cache().context();
+
+            for (String cacheName : checkFailedMsg.error()
+                .replaceFirst("^.*\\[", "")
+                .replaceFirst("\\].*", "")
+                .split(", ")) {
+                CacheConfiguration cc = sharedCacheContext.cacheContext(CU.cacheId(cacheName)).config();
+
+                cacheCfgs.add(cc);
+            }
+
+            FilePageStoreManager pageStore = (FilePageStoreManager)sharedCacheContext.pageStore();
+
             String params = cacheCfgs.stream()
                 .map(ccfg -> pageStore.cacheWorkDir(ccfg).getName())
                 .collect(Collectors.joining(File.separator));
 
-            log.info("Task params: " + params + " sep: " + File.separator);
+            log.warning("The node won't join the cluster, because it has some several caches, that were removed" +
+                " from the cluster. The node scheduled a maintenance task to remove data connected with the caches." +
+                " The node is restarting in maintenance mode and starting clearing automatically. When the task will" +
+                " be finished, the node may be restarted again and join the cluster.");
 
             gridKernalContext().maintenanceRegistry()
                 .registerMaintenanceTask(
                     new MaintenanceTask(
                         ClearFolderWorkflow.CLEAR_FOLDER_TASK,
-                        "Corrupted cache groups are already removed from other nodes",
+                        "The node has several caches that are already removed from the cluster",
                         params
                     )
                 );
         }
-        catch (IgniteCheckedException e) {
-            log.warning("Culd not create a maintenace task to remove data.");
+        catch (Throwable e) {
+            log.warning("Could not create a maintenance task to remove stale caches data. " +
+                "The cache folders should be removed manually before trying to join the cluster again", e);
         }
     }
 

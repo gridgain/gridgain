@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * The workflow is used for {@link CleanFolderAction} in maitanace mode.
+ * The workflow is used for {@link ClearFolderAction} in maintenance mode.
  */
 public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** Task name. */
@@ -59,10 +59,7 @@ public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
         for (String cacheStoreDirName : folders) {
             File cacheStoreDir = new File(workDir, cacheStoreDirName);
 
-            if (cacheStoreDir.exists()
-                && cacheStoreDir.isDirectory()
-                && cacheStoreDir.listFiles().length > 0
-            ) {
+            if (cacheStoreDir.exists() && cacheStoreDir.isDirectory()) {
                 return true;
             }
         }
@@ -73,12 +70,12 @@ public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** {@inheritDoc} */
     @Override public @NotNull List<MaintenanceAction<?>> allActions() {
         return Arrays.asList(
-            new CleanFolderAction(ctx, workDir, folders.toArray(new String[0]))
+            new ClearFolderAction(ctx, workDir, folders.toArray(new String[0]))
         );
     }
 
     /** {@inheritDoc} */
     @Override public @Nullable MaintenanceAction<?> automaticAction() {
-        return new CleanFolderAction(ctx, workDir, folders.toArray(new String[0]));
+        return new ClearFolderAction(ctx, workDir, folders.toArray(new String[0]));
     }
 }

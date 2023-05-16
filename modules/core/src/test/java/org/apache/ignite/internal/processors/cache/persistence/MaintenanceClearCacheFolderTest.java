@@ -32,6 +32,8 @@ import org.junit.Test;
 
 /**
  * Test for {@link ClearFolderWorkflow}.
+ * The tests demonstrait behaviior of a node which has stale caches. The node should receive an exception on joint
+ * to cluster and either to restart in maintenance mode in the next start or has a possibility to start alone only.
  */
 public class MaintenanceClearCacheFolderTest extends GridCommonAbstractTest {
 
@@ -115,7 +117,7 @@ public class MaintenanceClearCacheFolderTest extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK, value = "true")
-    public void testDisbaleMaintenanceTask() throws Exception {
+    public void testDistributedMaintenanceTask() throws Exception {
         IgniteEx ignite0 = startGrids(2);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
@@ -148,21 +150,20 @@ public class MaintenanceClearCacheFolderTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Start cacge and loads data.
+     * Starts cache and loads data.
      *
      * @param cahceName Cache name.
      */
-    private void startCacheAndPreload(String cahceName) {
+    private void startCacheAndPreload(String cacheName) {
         IgniteEx ignite = ignite(0);
 
-        ignite.createCache(new CacheConfiguration<>(cahceName)
+        ignite.createCache(new CacheConfiguration<>(cacheName)
             .setAffinity(new RendezvousAffinityFunction(false, 8))
             .setBackups(1));
 
-        try (IgniteDataStreamer streamer = ignite.dataStreamer(cahceName)) {
-            for (int i = 0; i < 100; i++) {
+        try (IgniteDataStreamer streamer = ignite.dataStreamer(cacheName)) {
+            for (int i = 0; i < 100; i++)
                 streamer.addData(i, i);
-            }
         }
     }
 
@@ -171,13 +172,12 @@ public class MaintenanceClearCacheFolderTest extends GridCommonAbstractTest {
      *
      * @param cahceName Cache name.
      */
-    private void checkCacheData(String cahceName) {
+    private void checkCacheData(String cacheName) {
         IgniteEx ignite = ignite(0);
 
-        IgniteCache cache = ignite.cache(cahceName);
+        IgniteCache cache = ignite.cache(cacheName);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++)
             assertEquals(i, cache.get(i));
-        }
     }
 }
