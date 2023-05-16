@@ -53,8 +53,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
     private LifecycleBean lifecycleBean;
 
     /** {@inheritDoc} */
-    @Override
-    protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String instanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(instanceName);
 
         if (lifecycleBean != null)
