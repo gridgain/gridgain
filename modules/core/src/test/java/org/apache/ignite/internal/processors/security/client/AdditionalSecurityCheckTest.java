@@ -29,9 +29,11 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientAuthenticationException;
+import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lifecycle.LifecycleBean;
 import org.apache.ignite.lifecycle.LifecycleEventType;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -206,7 +208,7 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
                                 try {
                                     startLatch.countDown();
 
-                                    if (contLatch.await(10, SECONDS))
+                                    if (!contLatch.await(30, SECONDS))
                                         throw new RuntimeException("Failed to wait for a latch to continue node start.");
                                 }
                                 catch (Exception e) {
@@ -224,13 +226,18 @@ public class AdditionalSecurityCheckTest extends CommonSecurityCheckTest {
 
         assertTrue("Failed to wait for starting node.", startLatch.await(10, SECONDS));
 
-        try (GridClient client = GridClientFactory.start(getGridClientConfiguration())) {
-            err.set(client.checkLastError());
+        try (GridClient client = GridClientFactory.start(getGridClientConfiguration().setConnectTimeout(3_000))) {
+            GridClientException clientErr = client.checkLastError();
+
+            contLatch.countDown();
+
+            assertFalse(X.hasCause(
+                clientErr,
+                "Failed to process client request: Ouch! Argument cannot be null: node",
+                GridClientException.class));
         }
 
-        contLatch.countDown();
-
-        startFut.get();
+        startFut.get(30, SECONDS);
 
         Exception unexpectedErr = err.get();
 
