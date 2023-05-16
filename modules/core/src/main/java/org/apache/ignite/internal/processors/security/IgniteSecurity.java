@@ -136,4 +136,11 @@ public interface IgniteSecurity {
      * false if it's used a default NoOp implementation.
      */
     public boolean enabled();
+
+    /**
+     * Callback for local join events for which the regular events are not generated.
+     * <p/>
+     * Local join event is expected in cases of joining to topology or client reconnect.
+     */
+    public void onLocalJoin();
 }

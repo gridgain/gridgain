@@ -154,6 +154,11 @@ public class NoOpIgniteSecurityProcessor extends GridProcessorAdapter implements
     }
 
     /** {@inheritDoc} */
+    @Override public void onLocalJoin() {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
         IgniteNodeValidationResult res = validateSecProcClass(node);
 
