@@ -129,7 +129,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
     /**
      * Tries to serialize and deserialize all available wal records.
      *
-     * @param useEncryption enables chacking od encrypted cache.
+     * @param useEncryption enables checking of encrypted cache.
      *
      * @throws Exception If fail.
      */

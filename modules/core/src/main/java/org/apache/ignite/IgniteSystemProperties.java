@@ -2206,6 +2206,10 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_STRICT_CONSISTENCY_CHECK =
         "IGNITE_STRICT_CONSISTENCY_CHECK";
 
+    @SystemProperty(value = "Disable a maintenance task for removing storage folders", defaults = "false")
+    public static final String IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK =
+        "IGNITE_DISABLE_MAINTENANCE_CLEAR_FOLDER_TASK";
+
     /**
      * Enforces singleton.
      */
