@@ -19,8 +19,8 @@ package org.apache.ignite.internal.processors.cache.persistence.maintenance;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.maintenance.MaintenanceAction;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.maintenance.MaintenanceWorkflowCallback;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** Task name. */
-    public static final String CLEAR_FOLDER_TASK = "clean_forder_task";
+    public static final String CLEAR_FOLDER_TASK = "cleanForderTask";
 
     /** Work directory. */
     private final File workDir;
@@ -38,18 +38,18 @@ public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** Folders to clear. */
     private final List<String> folders;
 
-    /** Grid context. */
-    private final GridKernalContext ctx;
+    /** Maintenance registry. */
+    private final MaintenanceRegistry maintenanceRegistry;
 
     /**
      * The constructor.
      *
-     * @param ctx Kernal contest.
+     * @param ctx Maintenance registry.
      * @param workDir Root storage directory.
      * @param foldersToClear Cache folder names.
      */
-    public ClearFolderWorkflow(GridKernalContext ctx, File workDir, List<String> foldersToClear) {
-        this.ctx = ctx;
+    public ClearFolderWorkflow(MaintenanceRegistry maintenanceRegistry, File workDir, List<String> foldersToClear) {
+        this.maintenanceRegistry = maintenanceRegistry;
         this.workDir = workDir;
         this.folders = foldersToClear;
     }
@@ -70,12 +70,12 @@ public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** {@inheritDoc} */
     @Override public @NotNull List<MaintenanceAction<?>> allActions() {
         return Arrays.asList(
-            new ClearFolderAction(ctx, workDir, folders.toArray(new String[0]))
+            new ClearFolderAction(maintenanceRegistry, workDir, folders.toArray(new String[0]))
         );
     }
 
     /** {@inheritDoc} */
     @Override public @Nullable MaintenanceAction<?> automaticAction() {
-        return new ClearFolderAction(ctx, workDir, folders.toArray(new String[0]));
+        return new ClearFolderAction(maintenanceRegistry, workDir, folders.toArray(new String[0]));
     }
 }

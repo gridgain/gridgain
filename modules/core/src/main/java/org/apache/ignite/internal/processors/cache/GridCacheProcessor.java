@@ -16,7 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -43,6 +45,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -119,6 +122,7 @@ import org.apache.ignite.internal.processors.cache.persistence.checkpoint.Checkp
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.PagesList;
+import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -178,6 +182,7 @@ import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.lifecycle.LifecycleAware;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.mxbean.CacheGroupMetricsMXBean;
@@ -631,6 +636,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             this::pagesListViewSupplier,
             Function.identity()
         );
+
+        MaintenanceRegistry maintenanceRegistry = ctx.maintenanceRegistry();
+
+        maintenanceRegistry.registerWorkflowCallbackIfTaskExists(ClearFolderWorkflow.CLEAR_FOLDER_TASK, task -> {
+            File workDir = ((FilePageStoreManager) ctx.cache().context().pageStore()).workDir();
+
+            return new ClearFolderWorkflow(maintenanceRegistry, workDir,
+                Arrays.asList(task.parameters().split(Pattern.quote(File.separator))));
+        });
     }
 
     /**

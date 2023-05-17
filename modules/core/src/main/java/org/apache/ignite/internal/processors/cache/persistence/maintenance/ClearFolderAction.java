@@ -17,8 +17,8 @@
 package org.apache.ignite.internal.processors.cache.persistence.maintenance;
 
 import java.io.File;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.maintenance.MaintenanceAction;
+import org.apache.ignite.maintenance.MaintenanceRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,18 +35,18 @@ public class ClearFolderAction implements MaintenanceAction<Void> {
     /** */
     private final String[] cacheStoreFolders;
 
-    /** Grid context. */
-    private final GridKernalContext ctx;
+    /** Maintenance registry. */
+    private final MaintenanceRegistry maintenanceRegistry;
 
     /**
      * The constructor.
      *
-     * @param ctx Kernal contest.
+     * @param ctx Maintenance registry.
      * @param rootStoreDir Root storage directory.
      * @param cacheStoreFolders Cache folder names.
      */
-    public ClearFolderAction(GridKernalContext ctx, File rootStoreDir, String[] cacheStoreFolders) {
-        this.ctx = ctx;
+    public ClearFolderAction(MaintenanceRegistry maintenanceRegistry, File rootStoreDir, String[] cacheStoreFolders) {
+        this.maintenanceRegistry = maintenanceRegistry;
         this.rootStoreDir = rootStoreDir;
         this.cacheStoreFolders = cacheStoreFolders;
     }
@@ -65,7 +65,7 @@ public class ClearFolderAction implements MaintenanceAction<Void> {
             }
         }
 
-        ctx.maintenanceRegistry().unregisterMaintenanceTask(ClearFolderWorkflow.CLEAR_FOLDER_TASK);
+        maintenanceRegistry.unregisterMaintenanceTask(ClearFolderWorkflow.CLEAR_FOLDER_TASK);
 
         return null;
     }

@@ -53,7 +53,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Pattern;
 import javax.cache.CacheException;
 import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
@@ -140,9 +139,7 @@ import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProce
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessorImpl;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.filename.PdsConsistentIdProcessor;
-import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.cluster.ClusterProcessor;
@@ -1216,13 +1213,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
                 if (isFeatureEnabled(IGNITE_DISTRIBUTED_META_STORAGE_FEATURE))
                     ((DistributedMetaStorageImpl)ctx.distributedMetastorage()).inMemoryReadyForRead();
-
-                mntcProcessor.registerWorkflowCallbackIfTaskExists(ClearFolderWorkflow.CLEAR_FOLDER_TASK, task -> {
-                    File workDir = ((FilePageStoreManager) ctx.cache().context().pageStore()).workDir();
-
-                    return new ClearFolderWorkflow(ctx, workDir,
-                        Arrays.asList(task.parameters().split(Pattern.quote(File.separator))));
-                });
 
                 startTimer.finishGlobalStage("Init metastore");
 
