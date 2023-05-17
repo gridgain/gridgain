@@ -32,8 +32,8 @@ import org.junit.Test;
 
 /**
  * Test for {@link ClearFolderWorkflow}.
- * The tests demonstrait behaviior of a node which has stale caches. The node should receive an exception on joint
- * to cluster and either to restart in maintenance mode in the next start or has a possibility to start alone only.
+ * The tests demonstrate behavior of a node which has stale caches. The node should receive an exception on joining
+ * the cluster and either to restart in maintenance mode in the next start or has a possibility to start alone only.
  */
 public class MaintenanceClearCacheFolderTest extends GridCommonAbstractTest {
 

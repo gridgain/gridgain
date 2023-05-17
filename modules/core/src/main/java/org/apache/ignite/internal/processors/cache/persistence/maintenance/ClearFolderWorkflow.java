@@ -30,7 +30,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ClearFolderWorkflow implements MaintenanceWorkflowCallback {
     /** Task name. */
-    public static final String CLEAR_FOLDER_TASK = "cleanForderTask";
+    public static final String CLEAR_FOLDER_TASK = "clearFolderAction";
 
     /** Work directory. */
     private final File workDir;

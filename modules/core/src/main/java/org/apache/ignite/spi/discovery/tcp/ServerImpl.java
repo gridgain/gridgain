@@ -1257,10 +1257,11 @@ class ServerImpl extends TcpDiscoveryImpl {
                 .map(ccfg -> pageStore.cacheWorkDir(ccfg).getName())
                 .collect(Collectors.joining(File.separator));
 
-            log.warning("The node won't join the cluster, because it has some several caches, that were removed" +
-                " from the cluster. The node scheduled a maintenance task to remove data connected with the caches." +
-                " The node is restarting in maintenance mode and starting clearing automatically. When the task will" +
-                " be finished, the node may be restarted again and join the cluster.");
+            log.warning("The node won't join the cluster, because it has several caches, that were removed" +
+                " from the cluster. The node is going to enter maintenance mode after restart and will clear files of" +
+                " stale caches automatically. The node is restarting in maintenance mode and starting clearing" +
+                " automatically. When the task is finished, node has to be restarted once again to leave maintenance" +
+                " mode and join the cluster back.");
 
             gridKernalContext().maintenanceRegistry()
                 .registerMaintenanceTask(

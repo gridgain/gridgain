@@ -27,7 +27,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ClearFolderAction implements MaintenanceAction<Void> {
     /** */
-    public static final String ACTION_NAME = "clearForder";
+    public static final String ACTION_NAME = "clearFolder";
 
     /** */
     private final File rootStoreDir;
