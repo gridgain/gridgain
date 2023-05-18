@@ -45,7 +45,7 @@ public class DeactivateCommand extends AbstractCommand<Void> {
         try (GridClient client = Command.startClient(clientCfg)) {
             GridClientClusterState clientState = client.state();
 
-                clusterName = clientState.clusterName();
+            clusterName = clientState.clusterName();
         }
     }
 
