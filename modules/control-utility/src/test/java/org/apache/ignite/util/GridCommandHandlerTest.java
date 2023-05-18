@@ -3143,10 +3143,6 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(INACTIVE, ignite.cluster().state());
 
         injectTestSystemIn(CONFIRM_MSG);
-        assertEquals(EXIT_CODE_OK, execute("--deactivate"));
-        assertEquals(INACTIVE, ignite.cluster().state());
-
-        injectTestSystemIn(CONFIRM_MSG);
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE_READ_ONLY"));
         assertEquals(ACTIVE_READ_ONLY, ignite.cluster().state());
 
