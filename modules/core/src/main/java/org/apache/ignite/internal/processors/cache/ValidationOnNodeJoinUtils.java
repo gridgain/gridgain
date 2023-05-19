@@ -30,6 +30,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.QueryEntity;
@@ -57,6 +58,7 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
@@ -90,6 +92,11 @@ import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeS
  * Util class for joining node validation.
  */
 public class ValidationOnNodeJoinUtils {
+    /** {@link CacheConfiguration} field name to deserialize during node validation to check that node is allowed
+     * to join the cluster.
+     */
+    private static final String SQL_FUNCTIONS_FIELD_NAME = "sqlFuncCls";
+
     /** Template of message of conflicts of sql schema name. */
     private static final String SQL_SCHEMA_CONFLICTS_MESSAGE =
         "Failed to join node to the active cluster, configuration conflict for cache '%s': " +
@@ -123,13 +130,17 @@ public class ValidationOnNodeJoinUtils {
      * @param marsh Marsh.
      * @param ctx Context.
      * @param cacheDescProvider Cache descriptor provider.
+     * @param enricher Enricher to fully deserialize {@link CacheConfiguration} including fields annotated with
+     *                 {@link org.apache.ignite.configuration.SerializeSeparately} to make sure that
+     *                 full deserialization is possible.
      */
     @Nullable static IgniteNodeValidationResult validateNode(
         ClusterNode node,
         DiscoveryDataBag.JoiningNodeDiscoveryData discoData,
         Marshaller marsh,
         GridKernalContext ctx,
-        Function<String, DynamicCacheDescriptor> cacheDescProvider
+        Function<String, DynamicCacheDescriptor> cacheDescProvider,
+        CacheConfigurationEnricher enricher
     ) {
         if (discoData.hasJoiningNodeData() && discoData.joiningNodeData() instanceof CacheJoinNodeDiscoveryData) {
             CacheJoinNodeDiscoveryData nodeData = (CacheJoinNodeDiscoveryData)discoData.joiningNodeData();
@@ -159,9 +170,11 @@ public class ValidationOnNodeJoinUtils {
             }
 
             for (CacheJoinNodeDiscoveryData.CacheInfo cacheInfo : nodeData.caches().values()) {
+                CacheConfiguration<?, ?> joiningNodeCacheCfg = cacheInfo.cacheData().config();
+
                 if (secCtx != null && cacheInfo.cacheType() == CacheType.USER) {
                     try (OperationSecurityContext s = ctx.security().withContext(secCtx)) {
-                        GridCacheProcessor.authorizeCacheCreate(ctx.security(), cacheInfo.cacheData().config());
+                        GridCacheProcessor.authorizeCacheCreate(ctx.security(), joiningNodeCacheCfg);
                     }
                     catch (SecurityException ex) {
                         if (errorMsg.length() > 0)
@@ -171,12 +184,28 @@ public class ValidationOnNodeJoinUtils {
                     }
                 }
 
-                DynamicCacheDescriptor locDesc = cacheDescProvider.apply(cacheInfo.cacheData().config().getName());
+                //This check is performed only on coordinator node for the caches configured statically.
+                //In that case we require that classpath on all server nodes is the same, so the coordinator has
+                //the same set of classes and is able to validate client node for all classes the client may have
+                //in its configuration.
+                try {
+                    enricher.enrich(joiningNodeCacheCfg,
+                        cacheInfo.cacheData().cacheConfigurationEnrichment(),
+                        SQL_FUNCTIONS_FIELD_NAME::equals,
+                        true);
+                } catch (IgniteException e) {
+                    ClassNotFoundException cnfE = X.cause(e, ClassNotFoundException.class);
+
+                    if (cnfE != null)
+                        errorMsg.append(e.getMessage() + ": class " + cnfE.getMessage() + " not found.");
+                }
+
+                DynamicCacheDescriptor locDesc = cacheDescProvider.apply(joiningNodeCacheCfg.getName());
 
                 if (locDesc == null)
                     continue;
 
-                String joinedSchema = cacheInfo.cacheData().config().getSqlSchema();
+                String joinedSchema = joiningNodeCacheCfg.getSqlSchema();
                 Collection<QueryEntity> joinedQryEntities = cacheInfo.cacheData().queryEntities();
                 String locSchema = locDesc.cacheConfiguration().getSqlSchema();
 
@@ -206,7 +235,7 @@ public class ValidationOnNodeJoinUtils {
                 // This check must be done on join, otherwise group encryption key will be
                 // written to metastore regardless of validation check and could trigger WAL write failures.
                 boolean locEnc = locDesc.cacheConfiguration().isEncryptionEnabled();
-                boolean rmtEnc = cacheInfo.cacheData().config().isEncryptionEnabled();
+                boolean rmtEnc = joiningNodeCacheCfg.isEncryptionEnabled();
 
                 if (locEnc != rmtEnc) {
                     if (errorMsg.length() > 0)

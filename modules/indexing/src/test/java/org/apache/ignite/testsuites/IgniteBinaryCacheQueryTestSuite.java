@@ -56,6 +56,7 @@ import org.apache.ignite.internal.processors.cache.IgniteDynamicEnableIndexingRe
 import org.apache.ignite.internal.processors.cache.IgniteDynamicSqlRestoreTest;
 import org.apache.ignite.internal.processors.cache.IgniteErrorOnRebalanceTest;
 import org.apache.ignite.internal.processors.cache.IncorrectQueryEntityTest;
+import org.apache.ignite.internal.processors.cache.P2PCustomClassesAvailabilityTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheAtomicNearEnabledQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCacheAtomicQuerySelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.near.IgniteCachePartitionedQueryEvtsDisabledSelfTest;
@@ -229,6 +230,7 @@ import org.junit.runners.Suite;
     IncorrectQueryEntityTest.class,
     IgniteDynamicSqlRestoreTest.class,
     IgniteDynamicEnableIndexingRestoreTest.class,
+    P2PCustomClassesAvailabilityTest.class,
 
     // Queries tests.
     IgniteQueryTableLockAndConnectionPoolLazyModeOnTest.class,

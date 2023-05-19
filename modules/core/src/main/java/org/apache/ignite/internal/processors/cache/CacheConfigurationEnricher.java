@@ -17,12 +17,15 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.lang.reflect.Field;
+import java.util.function.Function;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.SerializeSeparately;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.marshaller.Marshaller;
@@ -110,9 +113,26 @@ public class CacheConfigurationEnricher {
      *
      * @return Enriched cache configuration.
      */
+    public CacheConfiguration<?, ?> enrich(CacheConfiguration<?, ?> ccfg,
+                                           @Nullable CacheConfigurationEnrichment enrichment,
+                                           boolean affinityNode) {
+        return enrich(ccfg, enrichment, (s) -> true, affinityNode);
+    }
+
+    /**
+     * Enriches cache configuration fields with deserialized values from given {@code enrichment}.
+     *
+     * @param ccfg Cache configuration to enrich.
+     * @param enrichment Cache configuration enrichment.
+     * @param fieldsFilterFunc Function providing a white list of fields to be deserialized.
+     * @param affinityNode {@code true} if enrichment is happened on affinity node.
+     *
+     * @return Enriched cache configuration.
+     */
     public CacheConfiguration<?, ?> enrich(
         CacheConfiguration<?, ?> ccfg,
         @Nullable CacheConfigurationEnrichment enrichment,
+        Function<String, Boolean> fieldsFilterFunc,
         boolean affinityNode
     ) {
         if (enrichment == null)
@@ -122,6 +142,9 @@ public class CacheConfigurationEnricher {
 
         try {
             for (String filedName : enrichment.fields()) {
+                if (!fieldsFilterFunc.apply(filedName))
+                    continue;
+
                 try {
                     if (!affinityNode && skipDeserialization(ccfg, filedName))
                         continue;
@@ -141,7 +164,15 @@ public class CacheConfigurationEnricher {
             }
         }
         catch (Exception e) {
-            throw new IgniteException("Failed to enrich cache configuration [cacheName=" + ccfg.getName() + "]", e);
+            StringBuilder msgBldr = new StringBuilder("Failed to enrich cache configuration [cacheName=")
+                .append(ccfg.getName()).append(']');
+
+            if (X.hasCause(e, ClassNotFoundException.class)) {
+                msgBldr.append("; class needed for deserialization was not found: " +
+                    X.cause(e, ClassNotFoundException.class).getMessage());
+            }
+
+            throw new IgniteException(msgBldr.toString(), e);
         }
 
         return enrichedCp;

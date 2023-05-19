@@ -3171,7 +3171,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (validationRes != null)
             return new IgniteNodeValidationResult(node.id(), validationRes);
 
-        return ValidationOnNodeJoinUtils.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor);
+        return ValidationOnNodeJoinUtils.validateNode(node, discoData, marsh, ctx, this::cacheDescriptor,
+            enricher());
     }
 
     /**
@@ -4254,9 +4255,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         }
 
         if (msg instanceof DynamicCacheChangeBatch) {
-            boolean changeRequested = cachesInfo.onCacheChangeRequested((DynamicCacheChangeBatch)msg, topVer);
+            DynamicCacheChangeBatch batchMsg = (DynamicCacheChangeBatch) msg;
 
-            ctx.query().onCacheChangeRequested((DynamicCacheChangeBatch)msg);
+            boolean changeRequested = cachesInfo.onCacheChangeRequested(batchMsg, topVer);
+
+            ctx.query().onCacheChangeRequested(batchMsg);
 
             return changeRequested;
         }

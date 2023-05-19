@@ -40,6 +40,7 @@ import org.apache.ignite.p2p.GridP2PScanQueryWithTransformerTest;
 import org.apache.ignite.p2p.GridP2PTimeoutSelfTest;
 import org.apache.ignite.p2p.GridP2PUndeploySelfTest;
 import org.apache.ignite.p2p.P2PClassLoadingFailureHandlingTest;
+import org.apache.ignite.p2p.P2PCustomSqlFunctionsConfigurationTest;
 import org.apache.ignite.p2p.P2PScanQueryUndeployTest;
 import org.apache.ignite.p2p.P2PStreamingClassLoaderTest;
 import org.apache.ignite.p2p.P2PUnsupportedClassVersionTest;
@@ -80,7 +81,8 @@ import org.junit.runners.Suite;
     GridP2PContinuousDeploymentClientDisconnectTest.class,
     P2PUnsupportedClassVersionTest.class,
     P2PClassLoadingFailureHandlingTest.class,
-    P2PClassLoadingIssuesTest.class
+    P2PClassLoadingIssuesTest.class,
+    P2PCustomSqlFunctionsConfigurationTest.class
 })
 public class IgniteP2PSelfTestSuite {
 }
