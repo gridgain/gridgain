@@ -622,7 +622,7 @@ public class SchemaManager {
         throws IgniteCheckedException {
         GridH2Table h2Tbl = desc.table();
 
-        h2Tbl.proposeUserIndex(h2Idx);
+        h2Tbl.proposeUserIndex(h2Idx, false);
 
         try {
             String sql = H2Utils.indexCreateSql(desc.fullTableName(), h2Idx, false);
@@ -686,7 +686,10 @@ public class SchemaManager {
         boolean ifNotExists,
         SchemaIndexCacheVisitor cacheVisitor
     ) throws IgniteCheckedException {
-        h2Tbl.proposeUserIndex(h2Idx);
+        boolean proposed = h2Tbl.proposeUserIndex(h2Idx, ifNotExists);
+
+        if (!proposed)
+            return;
 
         try {
             if (h2Tbl.cacheInfo().affinityNode()) {
