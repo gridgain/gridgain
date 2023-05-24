@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -39,6 +39,9 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.CacheState;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheGroupContextSupplier;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry.GroupState;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.EarliestCheckpointMapSnapshot.GroupStateSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -50,6 +53,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_MAX_CHECKPOINT_MEMORY_HISTORY_SIZE;
 
 /**
@@ -75,9 +79,6 @@ public class CheckpointHistory {
     /** Should WAL be truncated */
     private final boolean isWalTruncationEnabled;
 
-    /** Map stores the earliest checkpoint for each partition from particular group. */
-    private final Map<GroupPartitionId, CheckpointEntry> earliestCp = new ConcurrentHashMap<>();
-
     /** Write ahead log manager. */
     private final IgniteWriteAheadLogManager wal;
 
@@ -87,6 +88,12 @@ public class CheckpointHistory {
     /** It is available or not to reserve checkpoint(deletion protection). */
     private final boolean reservationDisabled;
 
+    /** Cache group IDs for which the earliest checkpoint timestamp is known. */
+    private final Set<Integer> earliestCpGrps = ConcurrentHashMap.newKeySet();
+
+    /** Cache group context supplier. */
+    private final CacheGroupContextSupplier cacheGrpCtxSupplier;
+
     /**
      * Constructor.
      *
@@ -94,16 +101,19 @@ public class CheckpointHistory {
      * @param logFun Function for getting a logger.
      * @param wal WAL manager.
      * @param inapplicable Checkpoint inapplicable filter.
+     * @param cacheGrpCtxSupplier Cache group context supplier.
      */
     CheckpointHistory(
         DataStorageConfiguration dsCfg,
         Function<Class<?>, IgniteLogger> logFun,
         IgniteWriteAheadLogManager wal,
-        IgniteThrowableBiPredicate<Long, Integer> inapplicable
+        IgniteThrowableBiPredicate<Long, Integer> inapplicable,
+        CacheGroupContextSupplier cacheGrpCtxSupplier
     ) {
         this.log = logFun.apply(getClass());
         this.wal = wal;
         this.checkpointInapplicable = inapplicable;
+        this.cacheGrpCtxSupplier = cacheGrpCtxSupplier;
 
         isWalTruncationEnabled = dsCfg.getMaxWalArchiveSize() != DataStorageConfiguration.UNLIMITED_WAL_ARCHIVE;
 
@@ -220,46 +230,48 @@ public class CheckpointHistory {
     }
 
     /**
-     * Update map which stored the earliest checkpoint each partitions for groups.
+     * Update map which stored the earliest checkpoint for groups.
      *
-     * @param entry Checkpoint entry.
-     * @param groupStateMapFromSnapshot Group state map from the snapshot.
+     * @param cp Checkpoint entry.
+     * @param statesFromSnapshot Group state map from the snapshot.
      */
     private void updateEarliestCpMap(
-        CheckpointEntry entry,
-        @Nullable Map<Integer, GroupState> groupStateMapFromSnapshot
+        CheckpointEntry cp,
+        @Nullable Map<Integer, GroupState> statesFromSnapshot
     ) {
         try {
-            Map<Integer, GroupState> states = groupStateMapFromSnapshot != null ?
-                groupStateMapFromSnapshot : entry.groupState(wal);
+            Map<Integer, GroupState> states = statesFromSnapshot != null ? statesFromSnapshot : cp.groupState(wal);
 
-            Iterator<Map.Entry<GroupPartitionId, CheckpointEntry>> iter = earliestCp.entrySet().iterator();
+            Iterator<Integer> it = earliestCpGrps.iterator();
 
-            while (iter.hasNext()) {
-                Map.Entry<GroupPartitionId, CheckpointEntry> grpPartCp = iter.next();
+            while (it.hasNext()) {
+                int grpId = it.next();
 
-                int grpId = grpPartCp.getKey().getGroupId();
+                if (!isCheckpointApplicableForGroup(grpId, cp)) {
+                    it.remove();
 
-                if (!isCheckpointApplicableForGroup(grpId, entry)) {
-                    iter.remove();
+                    clearEarliestCpTsOfGrp(grpId);
 
                     continue;
                 }
 
-                int part = grpPartCp.getKey().getPartitionId();
+                CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
 
-                int pIdx = states.get(grpId).indexByPartition(part);
+                if (grpCtx == null)
+                    continue;
 
-                if (pIdx < 0)
-                    iter.remove();
+                for (GridDhtLocalPartition localPart : grpCtx.topology().localPartitions()) {
+                    if (states.get(grpId).indexByPartition(localPart.id()) < 0)
+                        localPart.earliestCpTs(0);
+                }
             }
 
-            addCpGroupStatesToEarliestCpMap(entry, states);
+            addCpGroupStatesToEarliestCpMap(cp, states);
         }
         catch (IgniteCheckedException ex) {
-            U.warn(log, "Failed to process checkpoint: " + entry, ex);
+            U.warn(log, "Failed to process checkpoint: " + cp, ex);
 
-            earliestCp.clear();
+            earliestCpGrps.clear();
         }
     }
 
@@ -271,10 +283,12 @@ public class CheckpointHistory {
      * @return Latest checkpoint in the history.
      */
     public CheckpointEntry removeFromEarliestCheckpoints(Integer grpId) {
-        synchronized (earliestCp) {
+        synchronized (earliestCpGrps) {
             CheckpointEntry lastCp = lastCheckpoint();
 
-            earliestCp.keySet().removeIf(grpPart -> grpId.equals(grpPart.getGroupId()));
+            earliestCpGrps.remove(grpId);
+
+            clearEarliestCpTsOfGrp(grpId);
 
             return lastCp;
         }
@@ -291,11 +305,9 @@ public class CheckpointHistory {
             CacheState cacheState = cacheStates.get(grpId);
 
             for (int pIdx = 0; pIdx < cacheState.size(); pIdx++) {
-                int part = cacheState.partitionByIndex(pIdx);
+                int partId = cacheState.partitionByIndex(pIdx);
 
-                GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
-
-                addPartitionToEarliestCheckpoints(grpPartKey, entry);
+                setLocalPartitionEarliestCpTs(grpId, partId, entry.timestamp());
             }
         }
     }
@@ -314,24 +326,11 @@ public class CheckpointHistory {
             GroupState grpState = cacheGrpStates.get(grpId);
 
             for (int pIdx = 0; pIdx < grpState.size(); pIdx++) {
-                int part = grpState.getPartitionByIndex(pIdx);
+                int partId = grpState.getPartitionByIndex(pIdx);
 
-                GroupPartitionId grpPartKey = new GroupPartitionId(grpId, part);
-
-                addPartitionToEarliestCheckpoints(grpPartKey, entry);
+                setLocalPartitionEarliestCpTs(grpId, partId, entry.timestamp());
             }
         }
-    }
-
-    /**
-     * Add entry to earliest checkpoint map. Ignore is such key is already present.
-     *
-     * @param grpPartKey Key that consists of cache group id and partition index.
-     * @param entry Checkpoint entry.
-     */
-    private void addPartitionToEarliestCheckpoints(GroupPartitionId grpPartKey, CheckpointEntry entry) {
-        if (!earliestCp.containsKey(grpPartKey))
-            earliestCp.put(grpPartKey, entry);
     }
 
     /**
@@ -387,10 +386,10 @@ public class CheckpointHistory {
     }
 
     /**
-     * Remove checkpoint from history
+     * Remove checkpoint from history.
      *
-     * @param checkpoint Checkpoint to be removed
-     * @return Whether checkpoint was removed from history
+     * @param checkpoint Checkpoint to be removed.
+     * @return Whether checkpoint was removed from history.
      */
     private boolean removeCheckpoint(CheckpointEntry checkpoint) {
         if (wal.reserved(checkpoint.checkpointMark())) {
@@ -400,15 +399,17 @@ public class CheckpointHistory {
             return false;
         }
 
-        synchronized (earliestCp) {
+        synchronized (earliestCpGrps) {
             CheckpointEntry deletedCpEntry = histMap.remove(checkpoint.timestamp());
 
-            CheckpointEntry oldestCpInHistory = firstCheckpoint();
+            CheckpointEntry oldestCpInHist = firstCheckpoint();
 
-            for (Map.Entry<GroupPartitionId, CheckpointEntry> grpPartPerCp : earliestCp.entrySet()) {
-                if (grpPartPerCp.getValue() == deletedCpEntry)
-                    grpPartPerCp.setValue(oldestCpInHistory);
-            }
+            earliestCpGrps.stream()
+                .map(cacheGrpCtxSupplier::get)
+                .filter(Objects::nonNull)
+                .flatMap(grpCtx -> grpCtx.topology().localPartitions().stream())
+                .filter(localPart -> localPart.earliestCpTs() == deletedCpEntry.timestamp())
+                .forEach(localPart -> localPart.earliestCpTs(oldestCpInHist.timestamp()));
         }
 
         return true;
@@ -739,33 +740,47 @@ public class CheckpointHistory {
 
         CheckpointEntry oldestCpForReservation = null;
 
-        synchronized (earliestCp) {
+        synchronized (earliestCpGrps) {
             CheckpointEntry oldestHistCpEntry = firstCheckpoint();
 
-            for (Integer grpId : groupsAndPartitions.keySet()) {
+            for (Map.Entry<Integer, Set<Integer>> e0 : groupsAndPartitions.entrySet()) {
                 CheckpointEntry oldestGrpCpEntry = null;
 
-                for (Integer part : groupsAndPartitions.get(grpId)) {
-                    CheckpointEntry cpEntry = earliestCp.get(new GroupPartitionId(grpId, part));
+                Integer grpId = e0.getKey();
 
-                    if (cpEntry == null)
+                CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
+
+                if (grpCtx == null || !earliestCpGrps.contains(grpId))
+                    continue;
+
+                for (Integer partId : e0.getValue()) {
+                    GridDhtLocalPartition localPart = grpCtx.topology().localPartition(partId);
+
+                    if (localPart == null)
                         continue;
 
-                    if (oldestCpForReservation == null || oldestCpForReservation.timestamp() > cpEntry.timestamp())
-                        oldestCpForReservation = cpEntry;
+                    CheckpointEntry cp = histMap.get(localPart.earliestCpTs());
 
-                    if (oldestGrpCpEntry == null || oldestGrpCpEntry.timestamp() > cpEntry.timestamp())
-                        oldestGrpCpEntry = cpEntry;
+                    if (cp == null)
+                        continue;
 
-                    res.computeIfAbsent(grpId, partCpMap ->
-                        new T2<>(ReservationReason.NO_MORE_HISTORY, new HashMap<>()))
-                        .get2().put(part, cpEntry);
+                    if (oldestCpForReservation == null || oldestCpForReservation.timestamp() > cp.timestamp())
+                        oldestCpForReservation = cp;
+
+                    if (oldestGrpCpEntry == null || oldestGrpCpEntry.timestamp() > cp.timestamp())
+                        oldestGrpCpEntry = cp;
+
+                    res.computeIfAbsent(
+                        grpId,
+                        partCpMap -> new T2<>(ReservationReason.NO_MORE_HISTORY, new HashMap<>())
+                    ).get2().put(partId, cp);
                 }
 
-                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistCpEntry)
+                if (oldestGrpCpEntry == null || oldestGrpCpEntry != oldestHistCpEntry) {
                     res.computeIfAbsent(grpId, (partCpMap) ->
-                        new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
+                            new T2<>(ReservationReason.CHECKPOINT_NOT_APPLICABLE, null))
                         .set1(ReservationReason.CHECKPOINT_NOT_APPLICABLE);
+                }
             }
         }
 
@@ -798,44 +813,42 @@ public class CheckpointHistory {
     }
 
     /**
-     * Creates a snapshot of {@link #earliestCp} map.
+     * Creates a snapshot of map that stores the earliest checkpoint for each partition from a particular group.
      * Guarded by checkpoint read lock.
      *
      * @return Snapshot of a map.
      */
     public EarliestCheckpointMapSnapshot earliestCheckpointsMapSnapshot() {
-        Map<UUID, Map<Integer, GroupStateSnapshot>> data = new HashMap<>();
+        Map<UUID, Map<Integer, GroupStateSnapshot>> earliestCp = new HashMap<>();
 
-        synchronized (earliestCp) {
-            Collection<CheckpointEntry> values = earliestCp.values();
+        synchronized (earliestCpGrps) {
+            for (Integer grpId : earliestCpGrps) {
+                CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
 
-            for (CheckpointEntry cp : values) {
-                UUID checkpointId = cp.checkpointId();
-
-                if (data.containsKey(checkpointId))
+                if (grpCtx == null)
                     continue;
 
-                Map<Integer, GroupState> map = cp.groupStates();
+                for (GridDhtLocalPartition localPart : grpCtx.topology().localPartitions()) {
+                    long earliestCpTs = localPart.earliestCpTs();
 
-                if (map != null) {
-                    Map<Integer, GroupStateSnapshot> groupStates = new HashMap<>();
+                    if (earliestCpTs == 0)
+                        continue;
 
-                    map.forEach((k, v) ->
-                        groupStates.put(k, new GroupStateSnapshot(
-                            v.partitionIds(),
-                            v.partitionCounters(),
-                            v.size()
-                        ))
-                    );
+                    CheckpointEntry cp = histMap.get(earliestCpTs);
 
-                    data.put(checkpointId, groupStates);
+                    if (cp == null || cp.groupStates() == null || earliestCp.containsKey(cp.checkpointId()))
+                        continue;
+
+                    earliestCp.put(cp.checkpointId(), createSnapshot(cp.groupStates()));
                 }
             }
         }
 
-        Set<UUID> ids = histMap.values().stream().map(CheckpointEntry::checkpointId).collect(Collectors.toSet());
+        Set<UUID> histCpIds = histMap.values().stream()
+            .map(CheckpointEntry::checkpointId)
+            .collect(toSet());
 
-        return new EarliestCheckpointMapSnapshot(ids, data);
+        return new EarliestCheckpointMapSnapshot(histCpIds, earliestCp);
     }
 
     /**
@@ -843,6 +856,51 @@ public class CheckpointHistory {
      */
     void clear() {
         histMap.clear();
-        earliestCp.clear();
+        earliestCpGrps.clear();
+    }
+
+    /** */
+    private static Map<Integer, GroupStateSnapshot> createSnapshot(Map<Integer, GroupState> stateByGrpId) {
+        Map<Integer, GroupStateSnapshot> snapshot = new HashMap<>();
+
+        for (Map.Entry<Integer, GroupState> e : stateByGrpId.entrySet()) {
+            GroupState grpState = e.getValue();
+
+            GroupStateSnapshot grpStateSnapshot = new GroupStateSnapshot(
+                grpState.partitionIds(),
+                grpState.partitionCounters(),
+                grpState.size()
+            );
+
+            snapshot.put(e.getKey(), grpStateSnapshot);
+        }
+
+        return snapshot;
+    }
+
+    /** */
+    private void clearEarliestCpTsOfGrp(int grpId) {
+        CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
+
+        if (grpCtx != null)
+            grpCtx.topology().localPartitions().forEach(localPart -> localPart.earliestCpTs(0));
+    }
+
+    /** */
+    private void setLocalPartitionEarliestCpTs(int grpId, int partId, long earliestCpTs) {
+        CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
+
+        if (grpCtx == null)
+            return;
+
+        GridDhtLocalPartition locPart = grpCtx.topology().localPartition(partId);
+
+        if (locPart == null)
+            return;
+
+        earliestCpGrps.add(grpId);
+
+        if (locPart.earliestCpTs() == 0)
+            locPart.earliestCpTs(earliestCpTs);
     }
 }
