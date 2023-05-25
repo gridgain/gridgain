@@ -860,6 +860,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                 fillWalDisabledGroups();
 
+                checkpointManager.initializeStorage();
+
                 notifyMetastorageReadyForRead();
 
                 cctx.kernalContext().maintenanceRegistry()
@@ -908,12 +910,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         snapshotMgr = cctx.snapshot();
 
+        checkpointManager.init();
+
         super.onActivate(ctx);
 
         if (!cctx.kernalContext().clientNode())
             finishRecovery();
-
-        checkpointManager.init();
     }
 
     /** {@inheritDoc} */
@@ -3872,5 +3874,10 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 return cctx.cache().cacheGroup(grpId);
             }
         };
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareCachesStopOnDeActivate() {
+        checkpointManager.prepareCachesStopOnDeActivate();
     }
 }

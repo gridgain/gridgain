@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -88,11 +89,14 @@ public class CheckpointHistory {
     /** It is available or not to reserve checkpoint(deletion protection). */
     private final boolean reservationDisabled;
 
-    /** Cache group IDs for which the earliest checkpoint timestamp is known. */
+    /** Cache group IDs for which the earliest checkpoint timestamp for partitions is known. */
     private final Set<Integer> earliestCpGrps = ConcurrentHashMap.newKeySet();
 
     /** Cache group context supplier. */
     private final CacheGroupContextSupplier cacheGrpCtxSupplier;
+
+    /** Internal snapshot of the earliest checkpoint to restore from. */
+    private final AtomicReference<EarliestCheckpointMapSnapshot> earliestCpSnapshot = new AtomicReference<>();
 
     /**
      * Constructor.
@@ -124,38 +128,32 @@ public class CheckpointHistory {
     }
 
     /**
+     * Initializes the checkpoint history.
+     *
+     * <p>Updates internal structures.
+     *
      * @param checkpoints Checkpoints.
      * @param snapshot Earliest checkpoint map snapshot.
      */
-    public void initialize(
+    void initialize(
         List<CheckpointEntry> checkpoints,
         EarliestCheckpointMapSnapshot snapshot
     ) {
         for (CheckpointEntry e : checkpoints)
             histMap.put(e.timestamp(), e);
 
-        for (Long timestamp : checkpoints(false)) {
-            try {
-                CheckpointEntry entry = entry(timestamp);
+        boolean casRes = earliestCpSnapshot.compareAndSet(null, snapshot);
 
-                UUID checkpointId = entry.checkpointId();
+        assert casRes;
+    }
 
-                Map<Integer, GroupState> groupStateMap = snapshot.groupState(checkpointId);
-
-                // Ignore checkpoint that was present at the time of the snapshot and whose group
-                // states map was not persisted (that means this checkpoint wasn't a part of earliestCp map)
-                if (snapshot.checkpointWasPresent(checkpointId) && groupStateMap == null)
-                    continue;
-
-                if (groupStateMap != null)
-                    entry.fillStore(groupStateMap);
-
-                updateEarliestCpMap(entry, groupStateMap);
-            }
-            catch (IgniteCheckedException e) {
-                U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
-            }
-        }
+    /**
+     * Starts checkpoint history.
+     *
+     * <p>Applies a previously taken (on initialization or deactivation) snapshot of the earliest checkpoint.
+     */
+    void start() {
+        applyEarliestCpSnapshot();
     }
 
     /**
@@ -902,5 +900,45 @@ public class CheckpointHistory {
 
         if (locPart.earliestCpTs() == 0)
             locPart.earliestCpTs(earliestCpTs);
+    }
+
+    /** */
+    private void applyEarliestCpSnapshot() {
+        EarliestCheckpointMapSnapshot snapshot = earliestCpSnapshot.getAndSet(null);
+
+        if (snapshot == null)
+            return;
+
+        for (Long timestamp : checkpoints(false)) {
+            try {
+                CheckpointEntry entry = entry(timestamp);
+
+                UUID checkpointId = entry.checkpointId();
+
+                Map<Integer, GroupState> groupStateMap = snapshot.groupState(checkpointId);
+
+                // Ignore checkpoint that was present at the time of the snapshot and whose group
+                // states map was not persisted (that means this checkpoint wasn't a part of earliestCp map)
+                if (snapshot.checkpointWasPresent(checkpointId) && groupStateMap == null)
+                    continue;
+
+                if (groupStateMap != null)
+                    entry.fillStore(groupStateMap);
+
+                updateEarliestCpMap(entry, groupStateMap);
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, "Failed to process checkpoint, happened at " + U.format(timestamp) + '.', e);
+            }
+        }
+    }
+
+    /**
+     * Creates a snapshot of the earliest checkpoint to recover on {@link #start()}, in memory without saving to disk.
+     */
+    void createInMemoryEarliestCpSnapshot() {
+        EarliestCheckpointMapSnapshot snapshot = earliestCheckpointsMapSnapshot();
+
+        earliestCpSnapshot.set(snapshot);
     }
 }

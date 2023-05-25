@@ -312,6 +312,13 @@ public class CheckpointManager {
     }
 
     /**
+     * Initialize checkpoint storage.
+     */
+    public void initializeStorage() throws IgniteCheckedException {
+        checkpointMarkersStorage.initialize();
+    }
+
+    /**
      * Wal truncate callback.
      *
      * @param highBound Upper bound.
@@ -415,10 +422,10 @@ public class CheckpointManager {
     /**
      * Checkpoint starts to do their work after this method.
      */
-    public void start() throws IgniteCheckedException {
+    public void start() {
         assert checkpointer != null : "Checkpointer can't be null during the start";
 
-        checkpointMarkersStorage.initialize();
+        checkpointMarkersStorage.start();
 
         this.checkpointer.start();
     }
@@ -429,5 +436,12 @@ public class CheckpointManager {
      */
     public void unblockCheckpointLock() {
         checkpointTimeoutLock.start();
+    }
+
+    /**
+     * Prepares to stop caches and groups before deactivating the cluster.
+     */
+    public void prepareCachesStopOnDeActivate() {
+        checkpointMarkersStorage.history().createInMemoryEarliestCpSnapshot();
     }
 }
