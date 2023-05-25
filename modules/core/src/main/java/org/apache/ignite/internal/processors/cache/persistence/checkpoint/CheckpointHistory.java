@@ -817,6 +817,11 @@ public class CheckpointHistory {
      * @return Snapshot of a map.
      */
     public EarliestCheckpointMapSnapshot earliestCheckpointsMapSnapshot() {
+        EarliestCheckpointMapSnapshot snapshot = earliestCpSnapshot.get();
+
+        if (snapshot != null)
+            return snapshot;
+
         Map<UUID, Map<Integer, GroupStateSnapshot>> earliestCp = new HashMap<>();
 
         synchronized (earliestCpGrps) {
