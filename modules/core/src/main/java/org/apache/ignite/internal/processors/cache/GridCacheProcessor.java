@@ -2850,7 +2850,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             if (!exchActions.cacheStopRequests().isEmpty())
                 removeOffheapListenerAfterCheckpoint(grpsToStop);
 
-            if(exchActions.deactivate())
+            if (exchActions.deactivate())
                 sharedCtx.database().prepareCachesStopOnDeActivate();
 
             doInParallel(
