@@ -228,7 +228,7 @@ public class CheckpointHistory {
     }
 
     /**
-     * Update map which stored the earliest checkpoint for groups.
+     * Update map which stores the earliest checkpoint for groups.
      *
      * @param cp Checkpoint entry.
      * @param statesFromSnapshot Group state map from the snapshot.
