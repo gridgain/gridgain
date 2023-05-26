@@ -28,7 +28,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -109,7 +108,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private final IgniteLogger timeLog;
 
     /** */
-    private final AtomicReferenceArray<GridDhtLocalPartition> locParts;
+    private final GridDhtLocalPartition[] locParts;
 
     /** Node to partition map. */
     private GridDhtPartitionFullMap node2part;
@@ -174,9 +173,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         timeLog = ctx.logger(GridDhtPartitionsExchangeFuture.EXCHANGE_LOG);
 
-        locParts = new AtomicReferenceArray<>(grp.affinityFunction().partitions());
+        locParts = new GridDhtLocalPartition[grp.affinityFunction().partitions()];
 
-        cntrMap = new CachePartitionFullCountersMap(locParts.length());
+        cntrMap = new CachePartitionFullCountersMap(locParts.length);
 
         partFactory = GridDhtLocalPartition::new;
     }
@@ -431,7 +430,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     for (int p = 0; p < partitions; p++) {
                         if (localNode(p, affAssignment)) {
                             // Partition is created first time, so it's safe to own it.
-                            boolean shouldOwn = locParts.get(p) == null;
+                            boolean shouldOwn = locParts[p] == null;
 
                             GridDhtLocalPartition locPart = getOrCreatePartition(p);
 
@@ -451,7 +450,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         }
                         else {
                             // Apply partitions not belonging by affinity to partition map.
-                            GridDhtLocalPartition locPart = locParts.get(p);
+                            GridDhtLocalPartition locPart = locParts[p];
 
                             if (locPart != null) {
                                 needRefresh = true;
@@ -533,7 +532,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         for (int p = 0; p < partitions; p++) {
             if (node2part != null && node2part.valid()) {
                 if (localNode(p, aff)) {
-                    GridDhtLocalPartition locPart = locParts.get(p);
+                    GridDhtLocalPartition locPart = locParts[p];
 
                     if (locPart != null) {
                         if (locPart.state() == RENTING) {
@@ -885,7 +884,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         assert ctx.database().checkpointLockIsHeldByThread();
 
-        GridDhtLocalPartition loc = locParts.get(p);
+        GridDhtLocalPartition loc = locParts[p];
 
         if (loc == null || loc.state() == EVICTED) {
             boolean recreate = false;
@@ -894,7 +893,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (loc != null)
                 recreate = true;
 
-            locParts.set(p, loc = partFactory.create(ctx, grp, p, false));
+            loc = partFactory.create(ctx, grp, p, false);
+
+            locParts[p] = loc;
 
             if (recreate)
                 loc.resetUpdateCounter();
@@ -917,7 +918,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         lock.writeLock().lock();
 
         try {
-            GridDhtLocalPartition part = locParts.get(p);
+            GridDhtLocalPartition part = locParts[p];
 
             boolean recreate = false;
 
@@ -933,7 +934,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (recreate)
                 part.resetUpdateCounter();
 
-            locParts.set(p, part);
+            locParts[p] = part;
 
             return part;
         }
@@ -954,9 +955,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         AffinityTopologyVersion topVer,
         boolean create,
         boolean showRenting) {
-        GridDhtLocalPartition loc;
-
-        loc = locParts.get(p);
+        GridDhtLocalPartition loc = locParts[p];
 
         GridDhtPartitionState state = loc != null ? loc.state() : null;
 
@@ -966,15 +965,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (!create)
             return null;
 
-        boolean created = false;
-
         ctx.database().checkpointReadLock();
 
         try {
             lock.writeLock().lock();
 
             try {
-                loc = locParts.get(p);
+                loc = locParts[p];
 
                 state = loc != null ? loc.state() : null;
 
@@ -985,7 +982,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (loc != null && state == EVICTED) {
                     recreate = true;
 
-                    locParts.set(p, loc = null);
+                    loc = null;
+
+                    locParts[p] = loc;
 
                     if (!belongs) {
                         throw new GridDhtInvalidPartitionException(p, "Adding entry to evicted partition " +
@@ -1009,14 +1008,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             "[grp=" + grp.cacheOrGroupName() + ", part=" + p + ", topVer=" + topVer +
                             ", this.topVer=" + this.readyTopVer + ']');
 
-                    locParts.set(p, loc = partFactory.create(ctx, grp, p, false));
+                    loc = partFactory.create(ctx, grp, p, false);
+
+                    locParts[p] = loc;
 
                     if (recreate)
                         loc.resetUpdateCounter();
 
                     this.updateSeq.incrementAndGet();
-
-                    created = true;
                 }
             }
             finally {
@@ -1036,7 +1035,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         assert parts.length > 0;
 
         for (int i = 0; i < parts.length; i++) {
-            GridDhtLocalPartition part = locParts.get(parts[i]);
+            GridDhtLocalPartition part = locParts[parts[i]];
 
             if (part != null)
                 part.release();
@@ -1045,15 +1044,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public GridDhtLocalPartition localPartition(int part) {
-        return locParts.get(part);
+        return locParts[part];
     }
 
     /** {@inheritDoc} */
     @Override public List<GridDhtLocalPartition> localPartitions() {
-        List<GridDhtLocalPartition> list = new ArrayList<>(locParts.length());
+        List<GridDhtLocalPartition> list = new ArrayList<>(locParts.length);
 
-        for (int i = 0; i < locParts.length(); i++) {
-            GridDhtLocalPartition part = locParts.get(i);
+        for (int i = 0; i < locParts.length; i++) {
+            GridDhtLocalPartition part = locParts[i];
 
             if (part != null && part.state().active())
                 list.add(part);
@@ -1087,13 +1086,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public GridDhtPartitionMap localPartitionMap() {
-        GridPartitionStateMap map = new GridPartitionStateMap(locParts.length());
+        GridPartitionStateMap map = new GridPartitionStateMap(locParts.length);
 
         lock.readLock().lock();
 
         try {
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part == null)
                     continue;
@@ -1207,7 +1206,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         ClusterNode n = ctx.discovery().node(entry.getKey());
 
-                        if (n != null && state != null && (state == MOVING || state == OWNING || state == RENTING)
+                        if (n != null && (state == MOVING || state == OWNING || state == RENTING)
                             && !nodes.contains(n) && (topVer.topologyVersion() < 0 || n.order() <= topVer.topologyVersion()))
                             nodes.add(n);
                     }
@@ -1435,10 +1434,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 if (incomeCntrMap != null) {
                     // update local counters in partitions
-                    for (int i = 0; i < locParts.length(); i++) {
+                    for (int i = 0; i < locParts.length; i++) {
                         cntrMap.updateCounter(i, incomeCntrMap.updateCounter(i));
 
-                        GridDhtLocalPartition part = locParts.get(i);
+                        GridDhtLocalPartition part = locParts[i];
 
                         if (part == null)
                             continue;
@@ -1641,7 +1640,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         GridDhtPartitionState state = e.getValue();
 
                         if (state == OWNING) {
-                            GridDhtLocalPartition locPart = locParts.get(p);
+                            GridDhtLocalPartition locPart = locParts[p];
 
                             assert locPart != null : grp.cacheOrGroupName();
 
@@ -1654,7 +1653,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             }
                         }
                         else if (state == MOVING) {
-                            GridDhtLocalPartition locPart = locParts.get(p);
+                            GridDhtLocalPartition locPart = locParts[p];
 
                             GridDhtPartitionState prevState = locPart.state();
 
@@ -1771,8 +1770,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (stopping)
                 return;
 
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part == null)
                     continue;
@@ -2528,8 +2527,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         UUID locId = ctx.localNodeId();
 
-        for (int p = 0; p < locParts.length(); p++) {
-            GridDhtLocalPartition part = locParts.get(p);
+        for (int p = 0; p < locParts.length; p++) {
+            GridDhtLocalPartition part = locParts[p];
 
             if (part == null || !part.state().active())
                 continue;
@@ -2860,7 +2859,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             try {
                 for (int p : parts) {
-                    GridDhtLocalPartition part = locParts.get(p);
+                    GridDhtLocalPartition part = locParts[p];
 
                     if (part != null && part.state().active()) {
                         // We need to close all gaps in partition update counters sequence. We assume this finalizing is
@@ -2937,8 +2936,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         try {
             int locPartCnt = 0;
 
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part != null)
                     locPartCnt++;
@@ -2946,8 +2945,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             CachePartitionPartialCountersMap res = new CachePartitionPartialCountersMap(locPartCnt);
 
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part == null)
                     continue;
@@ -2977,8 +2976,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         try {
             int locPartCnt = 0;
 
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part != null)
                     locPartCnt++;
@@ -2986,8 +2985,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             Map<Integer, Long> map = U.newHashMap(locPartCnt);
 
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part == null)
                     continue;
@@ -3013,8 +3012,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         try {
             Map<Integer, Long> partitionSizes = new HashMap<>();
 
-            for (int p = 0; p < locParts.length(); p++) {
-                GridDhtLocalPartition part = locParts.get(p);
+            for (int p = 0; p < locParts.length; p++) {
+                GridDhtLocalPartition part = locParts[p];
                 if (part == null || part.fullSize() == 0)
                     continue;
 
@@ -3095,8 +3094,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (!grp.sharedGroup())
             return;
 
-        for (int i = 0; i < locParts.length(); i++) {
-            GridDhtLocalPartition part = locParts.get(i);
+        for (int i = 0; i < locParts.length; i++) {
+            GridDhtLocalPartition part = locParts[i];
 
             if (part != null)
                 part.onCacheStopped(cacheId);
@@ -3111,8 +3110,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         lock.readLock().lock();
 
         try {
-            for (int i = 0; i < locParts.length(); i++) {
-                GridDhtLocalPartition part = locParts.get(i);
+            for (int i = 0; i < locParts.length; i++) {
+                GridDhtLocalPartition part = locParts[i];
 
                 if (part == null)
                     continue;
@@ -3279,8 +3278,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     private String dumpPartitionStates() {
         SB sb = new SB();
 
-        for (int p = 0; p < locParts.length(); p++) {
-            GridDhtLocalPartition part = locParts.get(p);
+        for (int p = 0; p < locParts.length; p++) {
+            GridDhtLocalPartition part = locParts[p];
 
             if (part == null)
                 continue;
@@ -3317,8 +3316,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
          * Try to advance to next partition.
          */
         private void advance() {
-            while (nextIdx < locParts.length()) {
-                GridDhtLocalPartition part = locParts.get(nextIdx);
+            while (nextIdx < locParts.length) {
+                GridDhtLocalPartition part = locParts[nextIdx];
 
                 if (part != null && part.state().active()) {
                     nextPart = part;

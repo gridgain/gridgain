@@ -51,6 +51,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -333,18 +334,19 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
      * @param upper Upper bound.
      * @return A number of entries added to a evict queue.
      */
-    private int fillEvictQueue(boolean tombstone, long upper) {
+    private T2<Integer, Long> fillEvictQueue(boolean tombstone, long upper) {
         int total = 0;
+        long nextExpirationTask = Long.MAX_VALUE;
         FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
 
         // Only refill queue if it's empty.
         if (!queue.isEmptyx())
-            return 0;
+            return new T2<>(total, nextExpirationTask);
 
         try {
             for (GroupEvictionContext ctx0 : evictionGroupsMap.values()) {
                 if (cctx.kernalContext().isStopping())
-                    return 0;
+                    return new T2<>(total, nextExpirationTask);
 
                 if (!ctx0.busyLock.readLock().tryLock())
                     continue;
@@ -356,12 +358,15 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 try {
                     if (amount > 0) {
                         try {
-                            cnt = ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
+                            T2<Integer, Long> res = ctx0.grp.offheap().fillQueue(tombstone, amount, upper, key -> {
                                 queue.addLast(key);
 
                                 // Stop on queue overflow.
                                 return queue.sizex() > MAX_EVICT_QUEUE_SIZE ? 1 : 0;
                             });
+
+                            cnt = res.get1();
+                            nextExpirationTask = Math.min(nextExpirationTask, res.get2());
                         }
                         catch (IgniteCheckedException e) {
                             log.error("Failed to expire entries", e);
@@ -389,7 +394,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             log.error("Failed to fill eviction queue [tombstone=" + tombstone + ']', e);
         }
 
-        return total;
+        return new T2<>(total, nextExpirationTask);
     }
 
     /**
@@ -886,9 +891,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         /**
          * @param tombstone The tombstone flag.
          */
-        public FillEvictQueueTask(boolean tombstone) {
-            super(tombstone ? FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE : FILL_EVICT_QUEUE_TASK_ID_TTL,
-                PROCESS_EMPTY_EVICT_QUEUE_FREQ);
+        FillEvictQueueTask(boolean tombstone) {
+            this(tombstone, 0);
+        }
+
+        FillEvictQueueTask(boolean tombstone, int timeout) {
+            super(
+                tombstone ? FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE : FILL_EVICT_QUEUE_TASK_ID_TTL,
+                timeout < PROCESS_EMPTY_EVICT_QUEUE_FREQ ? PROCESS_EMPTY_EVICT_QUEUE_FREQ : timeout
+            );
+
             this.tombstone = tombstone;
         }
 
@@ -898,11 +910,16 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 @Override public void run() {
                     FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
 
-                    fillEvictQueue(tombstone, U.currentTimeMillis());
+                    long now = U.currentTimeMillis();
+
+                    T2<Integer, Long> res = fillEvictQueue(tombstone, now);
 
                     if (queue.isEmptyx() && PROCESS_EMPTY_EVICT_QUEUE_FREQ > 0) {
+                        long nextExpirationTask = Math.min(res.get2(), now + PROCESS_EMPTY_EVICT_QUEUE_FREQ * 100L) + PROCESS_EMPTY_EVICT_QUEUE_FREQ;
+                        int nextTimeout =  (int) (nextExpirationTask - now);
+
                         // Queue is empty, try again later.
-                        cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone));
+                        cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone, nextTimeout));
                     }
                 }
             });
