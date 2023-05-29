@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,6 +160,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     /** All rows after this version are skipped during full partition clearing (before rebalancing).
      * Can be replaced with LWM comparison. */
     private volatile long clearVer;
+
+    /** Earliest checkpoint timestamp. */
+    private volatile long earliestCpTs;
 
     /**
      * @param ctx Context.
@@ -1374,5 +1377,21 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         }
 
         buf.a(']');
+    }
+
+    /**
+     * Returns the earliest checkpoint timestamp, {@code 0} if not set.
+     */
+    public long earliestCpTs() {
+        return earliestCpTs;
+    }
+
+    /**
+     * Sets the earliest checkpoint timestamp.
+     *
+     * @param earliestCpTs Earliest checkpoint timestamp
+     */
+    public void earliestCpTs(long earliestCpTs) {
+        this.earliestCpTs = earliestCpTs;
     }
 }

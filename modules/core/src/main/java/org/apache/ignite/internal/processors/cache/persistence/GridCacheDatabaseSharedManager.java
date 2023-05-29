@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +98,7 @@ import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionDestroyRecor
 import org.apache.ignite.internal.pagemem.wal.record.delta.PartitionMetaStateRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheGroupContextSupplier;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -562,7 +563,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 storeMgr,
                 this::isCheckpointInapplicableForWalRebalance,
                 this::checkpointedDataRegions,
-                this::cacheGroupContexts,
+                cacheGrpCtxSupplier(),
                 this::getPageMemoryForCacheGroup,
                 resolveThrottlingPolicy(),
                 snapshotMgr,
@@ -683,11 +684,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** */
     public Collection<DataRegion> checkpointedDataRegions() {
         return checkpointedDataRegions;
-    }
-
-    /** */
-    private Collection<CacheGroupContext> cacheGroupContexts() {
-        return cctx.cache().cacheGroups();
     }
 
     /**
@@ -3865,5 +3861,23 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 }
             }
         );
+    }
+
+    /** */
+    private CacheGroupContextSupplier cacheGrpCtxSupplier() {
+        return new CacheGroupContextSupplier() {
+            @Override public Collection<CacheGroupContext> getAll() {
+                return cctx.cache().cacheGroups();
+            }
+
+            @Override public @Nullable CacheGroupContext get(int grpId) {
+                return cctx.cache().cacheGroup(grpId);
+            }
+        };
+    }
+
+    /** {@inheritDoc} */
+    @Override public void prepareCachesStopOnDeActivate() {
+        checkpointManager.prepareCachesStopOnDeActivate();
     }
 }

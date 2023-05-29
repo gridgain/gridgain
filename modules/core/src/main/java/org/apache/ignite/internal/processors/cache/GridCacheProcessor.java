@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -2849,6 +2849,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             if (!exchActions.cacheStopRequests().isEmpty())
                 removeOffheapListenerAfterCheckpoint(grpsToStop);
+
+            if (exchActions.deactivate())
+                sharedCtx.database().prepareCachesStopOnDeActivate();
 
             doInParallel(
                 parallelismLvl,

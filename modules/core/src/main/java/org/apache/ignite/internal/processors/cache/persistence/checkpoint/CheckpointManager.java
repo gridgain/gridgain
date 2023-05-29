@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import org.apache.ignite.internal.LongJVMPauseDetector;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.CacheGroupContextSupplier;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataStorageMetricsImpl;
@@ -97,7 +98,7 @@ public class CheckpointManager {
      * @param pageStoreManager File page store manager.
      * @param checkpointInapplicableChecker Checker of checkpoints.
      * @param dataRegions Data regions.
-     * @param cacheGroupContexts Cache group contexts.
+     * @param cacheGrpCtxSupplier Cache group context supplier.
      * @param pageMemoryGroupResolver Page memory resolver.
      * @param throttlingPolicy Throttling policy.
      * @param snapshotMgr Snapshot manager.
@@ -120,7 +121,7 @@ public class CheckpointManager {
         FilePageStoreManager pageStoreManager,
         IgniteThrowableBiPredicate<Long, Integer> checkpointInapplicableChecker,
         Supplier<Collection<DataRegion>> dataRegions,
-        Supplier<Collection<CacheGroupContext>> cacheGroupContexts,
+        CacheGroupContextSupplier cacheGrpCtxSupplier,
         IgniteThrowableFunction<Integer, PageMemoryEx> pageMemoryGroupResolver,
         PageMemoryImpl.ThrottlingPolicy throttlingPolicy,
         IgniteCacheSnapshotManager snapshotMgr,
@@ -136,7 +137,8 @@ public class CheckpointManager {
             persistenceCfg,
             logger,
             wal,
-            checkpointInapplicableChecker
+            checkpointInapplicableChecker,
+            cacheGrpCtxSupplier
         );
 
         FileIOFactory ioFactory = persistenceCfg.getFileIOFactory();
@@ -161,7 +163,7 @@ public class CheckpointManager {
             lock,
             persistenceCfg.getCheckpointWriteOrder(),
             dataRegions,
-            cacheGroupContexts,
+            cacheGrpCtxSupplier::getAll,
             persistenceCfg.getCheckpointThreads(),
             igniteInstanceName
         );
@@ -423,6 +425,8 @@ public class CheckpointManager {
     public void start() {
         assert checkpointer != null : "Checkpointer can't be null during the start";
 
+        checkpointMarkersStorage.start();
+
         this.checkpointer.start();
     }
 
@@ -432,5 +436,12 @@ public class CheckpointManager {
      */
     public void unblockCheckpointLock() {
         checkpointTimeoutLock.start();
+    }
+
+    /**
+     * Prepares to stop caches and groups before deactivating the cluster.
+     */
+    public void prepareCachesStopOnDeActivate() {
+        checkpointMarkersStorage.history().createInMemoryEarliestCpSnapshot();
     }
 }
