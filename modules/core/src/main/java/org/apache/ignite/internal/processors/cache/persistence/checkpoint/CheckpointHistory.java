@@ -907,10 +907,18 @@ public class CheckpointHistory {
         if (locPart == null)
             return;
 
-        earliestCpGrps.add(grpId);
+        long locEarliestCpTs = locPart.earliestCpTs();
 
-        if (locPart.earliestCpTs() == 0)
+        assert earliestCpTs > locEarliestCpTs : String.format(
+            "Invalid new earliestCpTs: [grpId=%s, partId=%s, localEarliestCpTs=%s, earliestCpTs=%s]",
+            grpId, partId, locEarliestCpTs, earliestCpTs
+        );
+
+        if (locEarliestCpTs == 0) {
+            earliestCpGrps.add(grpId);
+
             locPart.earliestCpTs(earliestCpTs);
+        }
     }
 
     /** */
