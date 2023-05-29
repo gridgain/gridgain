@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.StreamSupport;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
@@ -258,7 +259,7 @@ public class CheckpointHistory {
                 if (grpCtx == null)
                     continue;
 
-                for (GridDhtLocalPartition localPart : grpCtx.topology().localPartitions()) {
+                for (GridDhtLocalPartition localPart : grpCtx.topology().currentLocalPartitions()) {
                     if (states.get(grpId).indexByPartition(localPart.id()) < 0)
                         localPart.earliestCpTs(0);
                 }
@@ -405,7 +406,10 @@ public class CheckpointHistory {
             earliestCpGrps.stream()
                 .map(cacheGrpCtxSupplier::get)
                 .filter(Objects::nonNull)
-                .flatMap(grpCtx -> grpCtx.topology().localPartitions().stream())
+                .flatMap(grpCtx -> StreamSupport.stream(
+                    grpCtx.topology().currentLocalPartitions().spliterator(),
+                    false)
+                )
                 .filter(localPart -> localPart.earliestCpTs() == deletedCpEntry.timestamp())
                 .forEach(localPart -> localPart.earliestCpTs(oldestCpInHist.timestamp()));
         }
@@ -752,12 +756,12 @@ public class CheckpointHistory {
                     continue;
 
                 for (Integer partId : e0.getValue()) {
-                    GridDhtLocalPartition localPart = grpCtx.topology().localPartition(partId);
+                    GridDhtLocalPartition locPart = grpCtx.topology().localPartition(partId);
 
-                    if (localPart == null)
+                    if (locPart == null || locPart.earliestCpTs() == 0)
                         continue;
 
-                    CheckpointEntry cp = histMap.get(localPart.earliestCpTs());
+                    CheckpointEntry cp = histMap.get(locPart.earliestCpTs());
 
                     if (cp == null)
                         continue;
@@ -831,7 +835,7 @@ public class CheckpointHistory {
                 if (grpCtx == null)
                     continue;
 
-                for (GridDhtLocalPartition localPart : grpCtx.topology().localPartitions()) {
+                for (GridDhtLocalPartition localPart : grpCtx.topology().currentLocalPartitions()) {
                     long earliestCpTs = localPart.earliestCpTs();
 
                     if (earliestCpTs == 0)
@@ -885,8 +889,10 @@ public class CheckpointHistory {
     private void clearEarliestCpTsOfGrp(int grpId) {
         CacheGroupContext grpCtx = cacheGrpCtxSupplier.get(grpId);
 
-        if (grpCtx != null)
-            grpCtx.topology().localPartitions().forEach(localPart -> localPart.earliestCpTs(0));
+        if (grpCtx != null) {
+            for (GridDhtLocalPartition localPart : grpCtx.topology().currentLocalPartitions())
+                localPart.earliestCpTs(0);
+        }
     }
 
     /** */
