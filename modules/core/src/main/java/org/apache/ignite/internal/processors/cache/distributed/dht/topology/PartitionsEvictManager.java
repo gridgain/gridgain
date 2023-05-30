@@ -93,13 +93,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     private static final int MAX_EVICT_QUEUE_SIZE = getInteger("MAX_EVICT_QUEUE_SIZE", 10_000);
 
     /** */
-    private static final int PROCESS_EMPTY_EVICT_QUEUE_FREQ = getInteger("PROCESS_EMPTY_EVICT_QUEUE_FREQ", 500);
-
-    /** */
     private static final IgniteUuid FILL_EVICT_QUEUE_TASK_ID_TTL = IgniteUuid.randomUuid();
 
     /** */
     private static final IgniteUuid FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE = IgniteUuid.randomUuid();
+
+    /** */
+    private final int processEmptyEvictQueueFreq = getInteger("PROCESS_EMPTY_EVICT_QUEUE_FREQ", 500);
 
     /** Last time of show eviction progress. */
     private long lastShowProgressTimeNanos = System.nanoTime() - U.millisToNanos(evictionProgressFreqMs);
@@ -297,7 +297,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
         executor = (IgniteThreadPoolExecutor) cctx.kernalContext().pools().getRebalanceExecutorService();
 
-        if (PROCESS_EMPTY_EVICT_QUEUE_FREQ <= 0)
+        if (processEmptyEvictQueueFreq <= 0)
             return;
 
         // Start processing tombstones.
@@ -456,8 +456,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     break;
             }
 
-            if (cleared > 0 && log.isDebugEnabled()) {
-                log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
+            if (cleared > 0 && log.isInfoEnabled()) {
+                log.info("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
                     ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
             }
 
@@ -902,7 +902,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         FillEvictQueueTask(boolean tombstone, int timeout) {
             super(
                 tombstone ? FILL_EVICT_QUEUE_TASK_ID_TOMBSTONE : FILL_EVICT_QUEUE_TASK_ID_TTL,
-                timeout < PROCESS_EMPTY_EVICT_QUEUE_FREQ ? PROCESS_EMPTY_EVICT_QUEUE_FREQ : timeout
+                timeout < processEmptyEvictQueueFreq ? processEmptyEvictQueueFreq : timeout
             );
 
             this.tombstone = tombstone;
@@ -916,8 +916,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                     long nextExpireTs = fillEvictQueue(tombstone, now);
 
-                    if (PROCESS_EMPTY_EVICT_QUEUE_FREQ > 0) {
-                        long nextExpirationTask = Math.min(nextExpireTs, now + PROCESS_EMPTY_EVICT_QUEUE_FREQ * 10L);
+                    if (processEmptyEvictQueueFreq > 0) {
+                        long nextExpirationTask = Math.min(nextExpireTs, now + processEmptyEvictQueueFreq * 10L);
 
                         int nextTimeout = (int)(nextExpirationTask - now);
 

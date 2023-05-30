@@ -108,6 +108,7 @@ import static org.junit.Assume.assumeTrue;
 /** */
 @RunWith(Parameterized.class)
 @WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
+@WithSystemProperty(key = "PROCESS_EMPTY_EVICT_QUEUE_FREQ", value="50") // Frequency of scan pending tree.
 public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
