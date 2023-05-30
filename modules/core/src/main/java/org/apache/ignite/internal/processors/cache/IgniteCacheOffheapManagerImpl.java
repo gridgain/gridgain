@@ -114,7 +114,6 @@ import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -1418,33 +1417,27 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /**
      * @param tombstone {@code True} to process tomstones.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param upper Upper bound.
      * @param c Closure.
-     * @return A number of scanned entries.
+     * @return Next entry expiration timestamp.
      * @throws IgniteCheckedException If failed.
      */
-    @Override public T2<Integer, Long> fillQueue(
+    @Override public long fillQueue(
         boolean tombstone,
-        int amount,
         long upper,
         ToIntFunction<PendingRow> c
     ) throws IgniteCheckedException {
-        int cnt = 0;
         long nextExpirationTask = Long.MAX_VALUE;
 
         if (!busyLock.enterBusy())
-            return new T2<>(cnt, nextExpirationTask);
+            return nextExpirationTask;
 
         // Adjust upper bound if tombstone limit is exceeded.
         if (tombstone) {
             long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-            if (tsCnt > tsLimit) {
-                amount = (int) Math.min(tsCnt - tsLimit, amount);
-
+            if (tsCnt > tsLimit)
                 upper = Long.MAX_VALUE;
-            }
         }
 
         try {
@@ -1452,14 +1445,19 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 if (!ctx.started())
                     continue;
 
-                T2<Integer, Long> res = fillQueueInternal(pendingEntries, ctx, grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
-                    tombstone, amount - cnt, upper, c);
+                long nextCacheEntryExpireTs = fillQueueInternal(
+                    pendingEntries,
+                    ctx,
+                    grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
+                    tombstone,
+                    upper,
+                    c
+                );
 
-                cnt += res.get1();
+                nextExpirationTask = Math.min(nextExpirationTask, nextCacheEntryExpireTs);
 
-                nextExpirationTask = Math.min(nextExpirationTask, res.get2());
-
-                if (cnt >= amount)
+                // Stop the scanning of pending tree due to the expiration queue is overflowed.
+                if (nextExpirationTask <= upper)
                     break;
             }
         }
@@ -1467,7 +1465,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             busyLock.leaveBusy();
         }
 
-        return new T2<>(cnt, nextExpirationTask);
+        return nextExpirationTask;
     }
 
     /**
@@ -1478,32 +1476,31 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param amount The amount to fill.
      * @param upper Upper limit.
      * @param c Fill closure.
+     * @return Next entry expiration timestamp.
      */
-    protected T2<Integer /*Scanned rows*/, Long /*New scan time*/> fillQueueInternal(
+    protected long fillQueueInternal(
         PendingEntriesTree pendingEntries,
         GridCacheContext ctx,
         int cacheId,
         boolean tombstone,
-        int amount,
         long upper,
         ToIntFunction<PendingRow> c
     ) throws IgniteCheckedException {
-        int scanned = 0;
         long nextExpirationTask = Long.MAX_VALUE;
 
         if (pendingEntries == null)
-            return new T2<>(scanned, nextExpirationTask);
+            return nextExpirationTask;
 
         GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
                 new PendingRow(cacheId, tombstone, Long.MAX_VALUE, 0));
 
         if (!cur.next())
-            return new T2<>(scanned, nextExpirationTask);
+            return nextExpirationTask;
 
         do {
             PendingRow row = cur.get();
 
-            if (scanned >= amount || row.expireTime > upper) {
+            if (row.expireTime > upper) {
                 nextExpirationTask = row.expireTime;
 
                 break;
@@ -1519,14 +1516,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
 
-            if (c.applyAsInt(row) != 0)
-                break;
+            if (c.applyAsInt(row) != 0) {
+                nextExpirationTask = row.expireTime;
 
-            scanned++;
+                break;
+            }
         }
         while (cur.next());
 
-        return new T2<>(scanned, nextExpirationTask);
+        return nextExpirationTask;
     }
 
     /** {@inheritDoc} */

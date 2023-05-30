@@ -51,7 +51,6 @@ import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.lang.IgniteClosure2X;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
@@ -182,13 +181,12 @@ public interface IgniteCacheOffheapManager {
      * Fills the expiration queue by scanning suitable rows in PendingTree.
      *
      * @param tombstone {@code True} to process tombstones.
-     * @param amount The amount.
      * @param upper Upper limit.
      * @param c Fill closure.
-     * @return The number of entries loaded to expiration queue.
+     * @return Next entry expiration timestamp.
      * @throws IgniteCheckedException If failed.
      */
-    public T2<Integer, Long> fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
+    public long fillQueue(boolean tombstone, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException;
 
     /**
      * Gets the number of entries pending expire.
