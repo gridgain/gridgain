@@ -1416,7 +1416,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (!ctx.started())
                             continue;
 
-
                         long nextCacheEntryExpireTs = fillQueueInternal(
                             store.pendingTree(),
                             ctx,
