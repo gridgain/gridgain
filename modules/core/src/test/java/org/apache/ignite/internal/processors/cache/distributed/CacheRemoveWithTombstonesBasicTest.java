@@ -108,7 +108,7 @@ import static org.junit.Assume.assumeTrue;
 /** */
 @RunWith(Parameterized.class)
 @WithSystemProperty(key = "IGNITE_SENSITIVE_DATA_LOGGING", value = "plain")
-@WithSystemProperty(key = "PROCESS_EMPTY_EVICT_QUEUE_FREQ", value="50") // Frequency of scan pending tree.
+@WithSystemProperty(key = "PROCESS_EMPTY_EVICT_QUEUE_FREQ", value = "50") // Frequency of scan pending tree.
 public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
     /** */
     public static final int PARTS = 64;
@@ -426,6 +426,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
 
+            waitForExpiration(pk, ctx0, true);
+            waitForExpiration(pk, ctx0, true);
+
             assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
             assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
 
@@ -435,6 +438,37 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
             validateCache(ctx0.group(), pk, 0, 0);
             validateCache(ctx1.group(), pk, 0, 0);
         }
+    }
+
+    /**
+     * Waits of expiration entries.
+     *
+     * @param part Partiton id.
+     * @param ctx Cache context.
+     * @param tombstone True for tombstouns, false for
+     * @throws IgniteInterruptedCheckedException If failed.
+     */
+    private static void waitForExpiration(
+        Integer part,
+        GridCacheContext<Object, Object> ctx,
+        boolean tombstone
+    ) throws IgniteInterruptedCheckedException {
+        assertTrue(GridTestUtils.waitForCondition(
+            () -> {
+                try {
+                    PendingEntriesTree pendingEntries = ctx.offheap().dataStore(ctx.topology().localPartition(part)).pendingTree();
+
+                    return !pendingEntries.find(new PendingRow(ctx.cacheId(), tombstone, U.currentTimeMillis(), 0),
+                        new PendingRow(ctx.cacheId(), tombstone, Long.MAX_VALUE, 0)).next();
+                }
+                catch (IgniteCheckedException e) {
+                    log.error("Exception is caught in waiting for expiration entries", e);
+
+                    return false;
+                }
+            },
+            10_000
+        ));
     }
 
     /**
@@ -502,6 +536,9 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
             GridCacheContext<Object, Object> ctx1 = grid(1).cachex(DEFAULT_CACHE_NAME).context();
             validateCache(ctx1.group(), pk, 1, 0);
+
+            waitForExpiration(pk, ctx0, true);
+            waitForExpiration(pk, ctx0, true);
 
             assertTrue(GridTestUtils.waitForCondition(() -> !ctx0.shared().evict().evictQueue(true).isEmptyx(), 1_000));
             assertTrue(GridTestUtils.waitForCondition(() -> !ctx1.shared().evict().evictQueue(true).isEmptyx(), 1_000));
@@ -791,7 +828,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         CacheConfiguration<Object, Object> cacheCfg = cacheConfiguration(ATOMIC);
         cacheCfg.setNearConfiguration(new NearCacheConfiguration<>());
 
-        IgniteCache<Object, Object> cache = crd.createCache(cacheCfg);
+        crd.createCache(cacheCfg);
         awaitPartitionMapExchange();
 
         int part = 0;
@@ -1606,8 +1643,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         final String cacheName1 = "cache1";
 
-        IgniteCache<Object, Object> cache1 =
-            crd.createCache(cacheConfiguration(atomicityMode).setName(cacheName1).setGroupName("test"));
+        crd.createCache(cacheConfiguration(atomicityMode).setName(cacheName1).setGroupName("test"));
 
         final String cacheName2 = "cache2";
 
@@ -1677,29 +1713,62 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
 
         assertEquals(keys.size(), tree.size());
 
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            !crd.context().cache().context().evict().evictQueue(true).isEmptyx(), 1_000));
-        assertTrue(GridTestUtils.waitForCondition(() ->
-            !crd.context().cache().context().evict().evictQueue(false).isEmptyx(), 1_000));
-
-        assertTrue(ttl.expire(4));
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
 
         // 8 tombstones, 4 expired rows remaining.
         assertEquals(keys.size() - 8, tree.size());
 
-        assertTrue(ttl.expire(5));
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, true);
+        checkEntryAndExpire(grpCtx0, true, false);
 
         // 3 tombstones, 0 expired rows remaining.
         assertEquals(keys.size() - 8 - 9, tree.size());
 
-        assertTrue(ttl.expire(2));
+        checkEntryAndExpire(grpCtx0, true, false);
+        checkEntryAndExpire(grpCtx0, true, false);
+
+        // 1 tombstones, 0 expired rows remaining.
+        assertEquals(keys.size() - 8 - 11, tree.size());
 
         // 1 tombstone remaining
-        assertFalse(ttl.expire(2));
+        checkEntryAndExpire(grpCtx0, true, false);
+        assertFalse(ttl.expire(1));
 
         assertEquals(0, tree.size());
 
         assertFalse(ttl.expire(1));
+    }
+
+    /**
+     * Checks an entry to ready to expire and manually invokes the expiration process.
+     *
+     * @param grpCtx Cache context.
+     * @param tombstoun True if the entry is tombstoun.
+     * @param data True if the entry is data expired entry.
+     * @throws IgniteInterruptedCheckedException If failed.
+     */
+    private static void checkEntryAndExpire(
+        CacheGroupContext grpCtx,
+        boolean tombstoun,
+        boolean data
+    ) throws IgniteInterruptedCheckedException {
+        GridCacheTtlManager ttl = grpCtx.caches().get(0).ttl();
+
+        if (tombstoun)
+            assertTrue(GridTestUtils.waitForCondition(() ->
+                !grpCtx.shared().evict().evictQueue(true).isEmptyx(), 1_000));
+
+        if (data)
+            assertTrue(GridTestUtils.waitForCondition(() ->
+                !grpCtx.shared().evict().evictQueue(false).isEmptyx(), 1_000));
+
+        ttl.expire(1);
     }
 
     /** */
@@ -1786,32 +1855,32 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         }
 
         CacheGroupContext grpCtx0 = crd.context().cache().cacheGroup(CU.cacheId("test"));
-        GridCacheTtlManager ttl = grpCtx0.caches().get(0).ttl();
         PendingEntriesTree t0 = grpCtx0.topology().localPartition(part).dataStore().pendingTree();
 
         assertEquals(6, t0.size());
 
         doSleep(2100);
 
-        PartitionsEvictManager evict = crd.context().cache().context().evict();
+        for (String cache : caches) {
+            checkEntryAndExpire(crd.cachex(cache).context().group(), false, true);
+        }
 
-        assertTrue(GridTestUtils.waitForCondition(() -> !evict.evictQueue(false).isEmptyx(), 1_000));
+        PartitionsEvictManager evict = crd.context().cache().context().evict();
 
         Deque<PendingRow> ttlQueue = evict.evictQueue(false);
         Deque<PendingRow> tsQueue = evict.evictQueue(true);
 
-        assertEquals(3, ttlQueue.size());
-        assertEquals(0, tsQueue.size());
-
-        ttl.expire(3);
-
         assertEquals(0, ttlQueue.size());
+        assertEquals(0, tsQueue.size());
 
         doSleep(5000);
 
-        ttl.expire(3);
+        for (String cache : caches) {
+            checkEntryAndExpire(crd.cachex(cache).context().group(), false, true);
+        }
 
         assertEquals(0, ttlQueue.size());
+        assertEquals(0, tsQueue.size());
     }
 
     /**
@@ -1871,7 +1940,7 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         /**
          * @param newVal New value.
          */
-        public InsertClosure(Object newVal) {
+        InsertClosure(Object newVal) {
             this.newVal = newVal;
         }
 

@@ -456,17 +456,13 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                     break;
             }
 
-            if (cleared > 0 && log.isInfoEnabled()) {
-                log.info("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
+            if (cleared > 0 && log.isDebugEnabled()) {
+                log.debug("After the expiration [cleared=" + cleared + ", tombstone=" + tombstone +
                     ", initialSize=" + before + ", remaining=" + queue.sizex() + ']');
             }
 
-            if (queue.isEmptyx()) {
-                if (cleared > 0)
-                    processEvictions(tombstone);
-
+            if (queue.isEmptyx())
                 return false;
-            }
 
             return amount != -1 && cleared == amount;
         }
