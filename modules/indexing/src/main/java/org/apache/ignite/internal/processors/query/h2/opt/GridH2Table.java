@@ -1073,10 +1073,10 @@ public class GridH2Table extends TableBase {
      * promoted.
      *
      * @param idx Index to add.
-     * @return {@code true} If index not intersects by name with already exists one.
+     * @return {@code true} If index not intersects by name with an existing one.
      * @throws IgniteCheckedException If failed.
      */
-    public boolean proposeUserIndex(Index idx, boolean ifNotExists) throws IgniteCheckedException {
+    public boolean proposeUserIndex(Index idx) throws IgniteCheckedException {
         assert idx instanceof GridH2IndexBase;
 
         lock(true);

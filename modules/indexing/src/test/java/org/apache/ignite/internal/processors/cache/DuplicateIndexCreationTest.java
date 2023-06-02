@@ -30,6 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import static java.lang.String.format;
 
 /** Duplicate index tests. */
 public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
@@ -70,13 +71,26 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
         node.cluster().state(ClusterState.ACTIVE);
 
         IgniteCache<Object, Object> cache = node.cache(DEFAULT_CACHE_NAME);
-        String sqlQuery = "CREATE INDEX ON PUBLIC.PERSON (NAME)";
+        String sqlCreateIndexTemplate = "CREATE INDEX %s ON PUBLIC.PERSON (NAME)";
 
-        SqlFieldsQuery sqlFieldsQuery = new SqlFieldsQuery(sqlQuery);
+        SqlFieldsQuery queryCreateIndex = new SqlFieldsQuery(format(sqlCreateIndexTemplate, ""));
+        SqlFieldsQuery queryCreateIndexIfNotExist = new SqlFieldsQuery(format(sqlCreateIndexTemplate, "IF NOT EXISTS"));
 
-        cache.query(sqlFieldsQuery).getAll();
+        cache.query(queryCreateIndex).getAll();
 
-        GridTestUtils.assertThrows(log, () -> cache.query(sqlFieldsQuery).getAll(), CacheException.class, null);
+        GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndex).getAll(), CacheException.class, null);
+        GridTestUtils.assertThrows(log, () -> cache.query(queryCreateIndexIfNotExist).getAll(), CacheException.class, null);
+
+        stopGrid(0);
+        startGrid(0);
+
+        stopGrid(0);
+        cleanPersistenceDir();
+
+        node = startGrid(0);
+        node.cluster().state(ClusterState.ACTIVE);
+        IgniteCache<Object, Object> cache1 = node.cache(DEFAULT_CACHE_NAME);
+        cache1.query(queryCreateIndexIfNotExist).getAll();
 
         stopGrid(0);
         startGrid(0);
@@ -86,14 +100,8 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
      * Person class.
      */
     private static class Person implements Serializable {
-        /** Name (indexed). */
+        /** Indexed name. */
         @QuerySqlField(index = true)
-        //@QuerySqlField
         public String name;
-
-        /** Default constructor. */
-        public Person() {
-            // No-op.
-        }
     }
 }
