@@ -686,10 +686,7 @@ public class SchemaManager {
         boolean ifNotExists,
         SchemaIndexCacheVisitor cacheVisitor
     ) throws IgniteCheckedException {
-        boolean proposed = h2Tbl.proposeUserIndex(h2Idx);
-
-        if (!proposed)
-            return;
+        h2Tbl.proposeUserIndex(h2Idx);
 
         try {
             if (h2Tbl.cacheInfo().affinityNode()) {
