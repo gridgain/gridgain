@@ -1,0 +1,27 @@
+[Unit]
+Description={{ GridGainRelease }}
+After=syslog.target network.target
+
+[Service]
+Type=simple
+
+User={{ GridGainUser }}
+Group={{ GridGainGroup }}
+
+LimitNOFILE=65536
+LimitNPROC=65536
+
+EnvironmentFile={{ GridGainHome }}/config/service.properties
+ExecStart={{ JavaHome }} $JVM_OPTS $JMX_OPTS $QUIET $IGNITE_HOME $GC_OPTS $GC_ENGINE $IP_OPTS $CP $MAIN_CLASS $CONFIG
+KillSignal=SIGTERM
+
+StandardOutput=null
+StandardError=file:/var/log/{{ GridGainRelease }}/service_err.log
+
+TimeoutSec=180
+
+#Restart=always
+#RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
