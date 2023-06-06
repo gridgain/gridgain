@@ -1385,9 +1385,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         if (tombstone) {
             long tombstonesCount = tombstonesCount();
 
-            long tsCnt = tombstonesCount, tsLimit = ctx.ttl().tombstonesLimit();
+            long tsLimit = ctx.ttl().tombstonesLimit();
 
-            if (tsCnt > tsLimit)
+            if (tombstonesCount > tsLimit)
                 upper = Long.MAX_VALUE;
         }
 
