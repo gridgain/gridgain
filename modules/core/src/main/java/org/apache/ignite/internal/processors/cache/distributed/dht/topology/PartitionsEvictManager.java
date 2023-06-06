@@ -149,6 +149,12 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
             evictionGroupsMap.computeIfAbsent(grp.groupId(), p -> new GroupEvictionContext(grp));
 
         grpEvictionCtx.stop(new CacheStoppedException(grp.cacheOrGroupName()));
+
+        log.info(S.toString("Eviction queues state during cache group stop",
+            "group", grp.cacheOrGroupName(), false,
+            "tombstones", tombstoneEvictQueue.sizex(), false,
+            "ttl", ttlEvictQueue.sizex(), false
+        ));
     }
 
     /**
@@ -898,7 +904,32 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                 @Override public void run() {
                     FastSizeDeque<PendingRow> queue = evictQueue(tombstone);
 
-                    fillEvictQueue(tombstone, U.currentTimeMillis());
+                    int sizeBefore = queue.sizex();
+
+                    try {
+                        fillEvictQueue(tombstone, U.currentTimeMillis());
+                    }
+                    catch (Throwable t) {
+                        log.info(S.toString("Filled evict queue on timeout",
+                            "tombstone", tombstone, false,
+                            "sizeBefore", sizeBefore, false,
+                            "sizeAfter", queue.sizex(), false,
+                            "evictManager", PartitionsEvictManager.this.hashCode(), false
+                        ));
+
+                        throw t;
+                    }
+
+                    int sizeAfter = queue.sizex();
+
+                    if (sizeBefore != 0 || sizeAfter != 0) {
+                        log.info(S.toString("Filled evict queue on timeout",
+                            "tombstone", tombstone, false,
+                            "sizeBefore", sizeBefore, false,
+                            "sizeAfter", sizeAfter, false,
+                            "evictManager", PartitionsEvictManager.this.hashCode(), false
+                        ));
+                    }
 
                     if (queue.isEmptyx() && PROCESS_EMPTY_EVICT_QUEUE_FREQ > 0) {
                         // Queue is empty, try again later.
