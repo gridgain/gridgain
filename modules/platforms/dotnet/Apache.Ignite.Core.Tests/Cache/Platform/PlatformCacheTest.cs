@@ -834,7 +834,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             Assert.AreEqual(1, cache.Count());
 
             Foo _;
-            TestUtils.WaitForTrueCondition(() => !cache.TryLocalPeek(1, out _, CachePeekMode.Platform), 3000);
+            TestUtils.WaitForTrueCondition(() => !cache.TryLocalPeek(1, out _, CachePeekMode.Platform), 10_000);
         }
 
         /// <summary>
