@@ -43,7 +43,6 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.messaging.MessagingListenActor;
 import org.apache.ignite.mxbean.ClusterMetricsMXBean;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
@@ -51,6 +50,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -177,11 +177,19 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
         // Let metrics update twice.
         awaitMetricsUpdate(2);
 
+        long metricsLastUpdateTimeBeforeFinishTask = getLocalMetrics(ignite).getLastUpdateTime();
+
         taskLatch.countDown();
 
         taskFut.get(getTestTimeout());
 
         awaitMetricsUpdate(1);
+
+        // We need to make sure that the metric has been updated to avoid race.
+        assertTrue(waitForCondition(
+            () -> getLocalMetrics(ignite).getLastUpdateTime() > metricsLastUpdateTimeBeforeFinishTask,
+            getTestTimeout()
+        ));
 
         ClusterMetrics metrics = ignite.cluster().localNode().metrics();
 
@@ -327,7 +335,7 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
         final Ignite ignite0 = grid();
         final Ignite ignite1 = startGrid(1);
 
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
+        waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return ignite0.cluster().nodes().size() == 2 && ignite1.cluster().nodes().size() == 2;
             }
@@ -524,5 +532,10 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
 
             return (Set<UUID>)mbeanSrv.invoke(mbean, "nodeIdsForAttribute", params, signature);
         }
+    }
+
+    /**  */
+    private static ClusterMetrics getLocalMetrics(Ignite node) {
+        return node.cluster().localNode().metrics();
     }
 }
