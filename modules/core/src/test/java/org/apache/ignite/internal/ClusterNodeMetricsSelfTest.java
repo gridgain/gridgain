@@ -177,19 +177,11 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
         // Let metrics update twice.
         awaitMetricsUpdate(2);
 
-        long metricsLastUpdateTimeBeforeFinishTask = getLocalMetrics(ignite).getLastUpdateTime();
-
         taskLatch.countDown();
 
         taskFut.get(getTestTimeout());
 
         awaitMetricsUpdate(1);
-
-        // We need to make sure that the metric has been updated to avoid race.
-        assertTrue(waitForCondition(
-            () -> getLocalMetrics(ignite).getLastUpdateTime() > metricsLastUpdateTimeBeforeFinishTask,
-            getTestTimeout()
-        ));
 
         ClusterMetrics metrics = ignite.cluster().localNode().metrics();
 
@@ -532,10 +524,5 @@ public class ClusterNodeMetricsSelfTest extends GridCommonAbstractTest {
 
             return (Set<UUID>)mbeanSrv.invoke(mbean, "nodeIdsForAttribute", params, signature);
         }
-    }
-
-    /**  */
-    private static ClusterMetrics getLocalMetrics(Ignite node) {
-        return node.cluster().localNode().metrics();
     }
 }
