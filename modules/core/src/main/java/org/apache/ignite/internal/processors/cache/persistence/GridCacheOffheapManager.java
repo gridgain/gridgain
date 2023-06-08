@@ -1375,23 +1375,20 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     }
 
     /** {@inheritDoc} */
-    @Override public int fillQueue(boolean tombstone, int amount, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException {
+    @Override public long fillQueue(boolean tombstone, long upper, ToIntFunction<PendingRow> c) throws IgniteCheckedException {
+        long nextExpirationTask = Long.MAX_VALUE;
+
         if (!busyLock.enterBusy())
-            return 0;
-
-        int cnt = 0;
-
-        long upper0 = upper;
+            return nextExpirationTask;
 
         // Adjust upper bound if tombstone limit is exceeded.
         if (tombstone) {
-            long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
+            long tombstonesCount = tombstonesCount();
 
-            if (tsCnt > tsLimit) {
-                amount = (int) (tsCnt - tsLimit);
+            long tsLimit = ctx.ttl().tombstonesLimit();
 
-                upper0 = Long.MAX_VALUE;
-            }
+            if (tombstonesCount > tsLimit)
+                upper = Long.MAX_VALUE;
         }
 
         try {
@@ -1419,10 +1416,19 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         if (!ctx.started())
                             continue;
 
-                        cnt += fillQueueInternal(store.pendingTree(), ctx, grp.sharedGroup() ? ctx.cacheId() :
-                            CU.UNDEFINED_CACHE_ID, tombstone, amount - cnt, upper0, c);
+                        long nextCacheEntryExpireTs = fillQueueInternal(
+                            store.pendingTree(),
+                            ctx,
+                            grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
+                            tombstone,
+                            upper,
+                            c
+                        );
 
-                        if (amount != -1 && cnt >= amount)
+                        nextExpirationTask = Math.min(nextExpirationTask, nextCacheEntryExpireTs);
+
+                        // Stop the scanning of pending tree due to the expiration queue is overflowed.
+                        if (nextExpirationTask <= upper)
                             break;
                     }
                 }
@@ -1436,7 +1442,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             busyLock.leaveBusy();
         }
 
-        return cnt;
+        return nextExpirationTask;
     }
 
     /**

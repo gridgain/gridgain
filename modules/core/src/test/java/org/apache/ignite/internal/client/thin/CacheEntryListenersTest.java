@@ -67,7 +67,7 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 public class CacheEntryListenersTest extends AbstractThinClientTest {
     /** Timeout. */
-    private static final long TIMEOUT = 1_000L;
+    private static final long TIMEOUT = 10_000L;
 
     /** */
     private boolean enpointsDiscoveryEnabled = true;

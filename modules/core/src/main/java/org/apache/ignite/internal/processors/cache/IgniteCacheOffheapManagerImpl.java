@@ -1417,45 +1417,47 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
     /**
      * @param tombstone {@code True} to process tomstones.
-     * @param amount Limit of processed entries by single call, {@code -1} for no limit.
      * @param upper Upper bound.
      * @param c Closure.
-     * @return A number of scanned entries.
+     * @return Next entry expiration timestamp.
      * @throws IgniteCheckedException If failed.
      */
-    @Override public int fillQueue(
+    @Override public long fillQueue(
         boolean tombstone,
-        int amount,
         long upper,
         ToIntFunction<PendingRow> c
     ) throws IgniteCheckedException {
-        if (!busyLock.enterBusy())
-            return 0;
+        long nextExpirationTask = Long.MAX_VALUE;
 
-        long upper0 = upper;
+        if (!busyLock.enterBusy())
+            return nextExpirationTask;
 
         // Adjust upper bound if tombstone limit is exceeded.
         if (tombstone) {
             long tsCnt = tombstonesCount(), tsLimit = ctx.ttl().tombstonesLimit();
 
-            if (tsCnt > tsLimit) {
-                amount = (int) (tsCnt - tsLimit);
-
-                upper0 = Long.MAX_VALUE;
-            }
+            if (tsCnt > tsLimit)
+                upper = Long.MAX_VALUE;
         }
-
-        int cnt = 0;
 
         try {
             for (GridCacheContext ctx : grp.caches()) {
                 if (!ctx.started())
                     continue;
 
-                cnt += fillQueueInternal(pendingEntries, ctx, grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
-                    tombstone, amount - cnt, upper0, c);
+                long nextCacheEntryExpireTs = fillQueueInternal(
+                    pendingEntries,
+                    ctx,
+                    grp.sharedGroup() ? ctx.cacheId() : CU.UNDEFINED_CACHE_ID,
+                    tombstone,
+                    upper,
+                    c
+                );
 
-                if (amount != -1 && cnt >= amount)
+                nextExpirationTask = Math.min(nextExpirationTask, nextCacheEntryExpireTs);
+
+                // Stop the scanning of pending tree due to the expiration queue is overflowed.
+                if (nextExpirationTask <= upper)
                     break;
             }
         }
@@ -1463,7 +1465,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             busyLock.leaveBusy();
         }
 
-        return cnt;
+        return nextExpirationTask;
     }
 
     /**
@@ -1474,32 +1476,35 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
      * @param amount The amount to fill.
      * @param upper Upper limit.
      * @param c Fill closure.
+     * @return Next entry expiration timestamp.
      */
-    protected int fillQueueInternal(
+    protected long fillQueueInternal(
         PendingEntriesTree pendingEntries,
         GridCacheContext ctx,
         int cacheId,
         boolean tombstone,
-        int amount,
         long upper,
         ToIntFunction<PendingRow> c
     ) throws IgniteCheckedException {
+        long nextExpirationTask = Long.MAX_VALUE;
+
         if (pendingEntries == null)
-            return 0;
+            return nextExpirationTask;
 
         GridCursor<PendingRow> cur = pendingEntries.find(new PendingRow(cacheId, tombstone, 0, 0),
-                new PendingRow(cacheId, tombstone, upper, 0));
+                new PendingRow(cacheId, tombstone, Long.MAX_VALUE, 0));
 
         if (!cur.next())
-            return 0;
-
-        int scanned = 0;
+            return nextExpirationTask;
 
         do {
-            if (amount != -1 && scanned >= amount)
-                break;
-
             PendingRow row = cur.get();
+
+            if (row.expireTime > upper) {
+                nextExpirationTask = row.expireTime;
+
+                break;
+            }
 
             if (row.cacheId == CU.UNDEFINED_CACHE_ID)
                 row.cacheId = ctx.cacheId();
@@ -1511,14 +1516,15 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             assert row.key != null && row.link != 0 && row.expireTime != 0 : row;
 
-            if (c.applyAsInt(row) != 0)
-                break;
+            if (c.applyAsInt(row) != 0) {
+                nextExpirationTask = row.expireTime;
 
-            scanned++;
+                break;
+            }
         }
         while (cur.next());
 
-        return scanned;
+        return nextExpirationTask;
     }
 
     /** {@inheritDoc} */

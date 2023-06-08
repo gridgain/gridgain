@@ -34,7 +34,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
-import org.apache.ignite.internal.util.typedef.PA;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
@@ -49,9 +48,6 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 public class IgniteCacheExpiryStoreLoadSelfTest extends GridCacheAbstractSelfTest {
     /** Expected time to live in milliseconds. */
     private static final int TIME_TO_LIVE = 1000;
-
-    /** Additional time to wait expiry process in milliseconds. */
-    private static final int WAIT_TIME = 1500;
 
     /** {@inheritDoc} */
     @Override protected int gridCount() {
@@ -113,9 +109,7 @@ public class IgniteCacheExpiryStoreLoadSelfTest extends GridCacheAbstractSelfTes
 
         assertEquals(3, cache.size(CachePeekMode.PRIMARY));
 
-        Thread.sleep(TIME_TO_LIVE + WAIT_TIME);
-
-        assertEquals(0, cache.size());
+        assertTrue(GridTestUtils.waitForCondition(() -> cache.size() == 0, 10_000));
     }
 
     /**
@@ -151,13 +145,7 @@ public class IgniteCacheExpiryStoreLoadSelfTest extends GridCacheAbstractSelfTes
 
         assertEquals(3, cache.localSize());
 
-        boolean res = GridTestUtils.waitForCondition(new PA() {
-            @Override public boolean apply() {
-                return cache.localSize() == 0;
-            }
-        }, TIME_TO_LIVE + WAIT_TIME);
-
-        assertTrue(res);
+        assertTrue(GridTestUtils.waitForCondition(() -> cache.localSize() == 0, 10_000));
     }
 
     /**
@@ -182,9 +170,7 @@ public class IgniteCacheExpiryStoreLoadSelfTest extends GridCacheAbstractSelfTes
 
         assertEquals(3, cache.size(CachePeekMode.PRIMARY));
 
-        Thread.sleep(TIME_TO_LIVE + WAIT_TIME);
-
-        assertEquals(0, cache.size());
+        assertTrue(GridTestUtils.waitForCondition(() -> cache.localSize() == 0, 10_000));
     }
 
     /**

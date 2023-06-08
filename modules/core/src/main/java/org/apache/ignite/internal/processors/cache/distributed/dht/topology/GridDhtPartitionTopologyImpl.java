@@ -954,9 +954,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         AffinityTopologyVersion topVer,
         boolean create,
         boolean showRenting) {
-        GridDhtLocalPartition loc;
-
-        loc = locParts.get(p);
+        GridDhtLocalPartition loc = locParts.get(p);
 
         GridDhtPartitionState state = loc != null ? loc.state() : null;
 
@@ -965,8 +963,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         if (!create)
             return null;
-
-        boolean created = false;
 
         ctx.database().checkpointReadLock();
 
@@ -1015,8 +1011,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         loc.resetUpdateCounter();
 
                     this.updateSeq.incrementAndGet();
-
-                    created = true;
                 }
             }
             finally {
@@ -1207,7 +1201,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         ClusterNode n = ctx.discovery().node(entry.getKey());
 
-                        if (n != null && state != null && (state == MOVING || state == OWNING || state == RENTING)
+                        if (n != null && (state == MOVING || state == OWNING || state == RENTING)
                             && !nodes.contains(n) && (topVer.topologyVersion() < 0 || n.order() <= topVer.topologyVersion()))
                             nodes.add(n);
                     }
