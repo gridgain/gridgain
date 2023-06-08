@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 GridGain Systems, Inc. and Contributors.
+ * Copyright 2023 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -1133,6 +1133,11 @@ public class GridJobProcessor extends GridProcessorAdapter {
 
         for (GridJobWorker jobWorker : activeJobs.values()) {
             assert !jobWorker.isInternal();
+
+            IgniteUuid jobId = jobWorker.getJobId();
+
+            if (finishedJobs.contains(jobId) || cancelledJobs.containsKey(jobId))
+                continue;
 
             cnt++;
 
