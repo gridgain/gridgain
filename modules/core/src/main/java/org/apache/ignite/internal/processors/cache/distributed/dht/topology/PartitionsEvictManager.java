@@ -359,9 +359,8 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         try {
                             long nextGrpEntryExpireTs = ctx0.grp.offheap().fillQueue(tombstone, upper, key -> {
                                 // Stop on queue overflow.
-                                if (queue.sizex() >= MAX_EVICT_QUEUE_SIZE) {
+                                if (queue.sizex() >= MAX_EVICT_QUEUE_SIZE)
                                     return 1;
-                                }
 
                                 queue.addLast(key);
 
@@ -917,7 +916,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
                         int nextTimeout = (int)(nextExpirationTask - now);
 
-                        // Queue is empty, try again later.
+                        // Try again later.
                         cctx.kernalContext().timeout().addTimeoutObject(new FillEvictQueueTask(tombstone, nextTimeout));
                     }
                 }
