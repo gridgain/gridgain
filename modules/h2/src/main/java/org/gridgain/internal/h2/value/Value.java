@@ -1503,6 +1503,8 @@ public abstract class Value extends VersionedValue {
 
     private ValueJson convertToJson() {
         switch (getValueType()) {
+        case BOOLEAN:
+            return ValueJson.get(getBoolean());
         case BYTE:
         case SHORT:
         case INT:
