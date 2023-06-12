@@ -247,9 +247,14 @@ public abstract class Value extends VersionedValue {
     public static final int ROW = 39;
 
     /**
+     * The value type for JSON values.
+     */
+    public static final int JSON = 40;
+
+    /**
      * The number of value types.
      */
-    public static final int TYPE_COUNT = ROW + 1;
+    public static final int TYPE_COUNT = JSON + 1;
 
     private static SoftReference<Value[]> softCache;
 
@@ -441,6 +446,8 @@ public abstract class Value extends VersionedValue {
             return 44_000;
         case ENUM:
             return 45_000;
+        case JSON:
+            return 46_000;
         case ARRAY:
             return 50_000;
         case ROW:
@@ -813,6 +820,8 @@ public abstract class Value extends VersionedValue {
             case Value.INTERVAL_HOUR_TO_SECOND:
             case Value.INTERVAL_MINUTE_TO_SECOND:
                 return convertToIntervalDayTime(targetType, column);
+            case Value.JSON:
+                return new ValueJson(getString());
             case ARRAY:
                 return convertToArray();
             case ROW:
