@@ -821,7 +821,7 @@ public abstract class Value extends VersionedValue {
             case Value.INTERVAL_MINUTE_TO_SECOND:
                 return convertToIntervalDayTime(targetType, column);
             case Value.JSON:
-                return new ValueJson(getString());
+                return convertToJson();
             case ARRAY:
                 return convertToArray();
             case ROW:
@@ -1499,6 +1499,21 @@ public abstract class Value extends VersionedValue {
         }
         return IntervalUtils.intervalFromAbsolute(IntervalQualifier.valueOf(targetType - INTERVAL_YEAR),
             bigDecimal.multiply(BigDecimal.valueOf(multiplier)).setScale(0, RoundingMode.HALF_UP).toBigInteger());
+    }
+
+    private ValueJson convertToJson() {
+        switch (getValueType()) {
+        case BYTES:
+        case BLOB:
+            return new ValueJson(getBytesNoCopy());
+        case STRING:
+        case STRING_IGNORECASE:
+        case STRING_FIXED:
+        case CLOB:
+            return new ValueJson(getString());
+        default:
+            throw getDataConversionError(Value.JSON);
+        }
     }
 
     private ValueArray convertToArray() {
