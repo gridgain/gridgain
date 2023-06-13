@@ -29,9 +29,6 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -40,13 +37,14 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  *
  */
 public class IgniteCacheEntryListenerExpiredEventsTest extends GridCommonAbstractTest {
     /** */
-    private static AtomicInteger evtCntr;
+    private AtomicInteger evtCntr;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -98,15 +96,7 @@ public class IgniteCacheEntryListenerExpiredEventsTest extends GridCommonAbstrac
             for (int i = 0; i < 10; i++)
                 cache.get(i);
 
-            boolean wait = GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                @Override public boolean apply() {
-                    return evtCntr.get() > 0;
-                }
-            }, 5000);
-
-            assertTrue(wait);
-
-            U.sleep(100);
+            assertTrue(waitForCondition(() -> evtCntr.get() > 0, 10_000));
 
             assertEquals(1, evtCntr.get());
         }
@@ -139,7 +129,7 @@ public class IgniteCacheEntryListenerExpiredEventsTest extends GridCommonAbstrac
     /**
      *
      */
-    private static class ExpiredListenerFactory implements Factory<CacheEntryListener<Object, Object>> {
+    private class ExpiredListenerFactory implements Factory<CacheEntryListener<Object, Object>> {
         /** {@inheritDoc} */
         @Override public CacheEntryListener<Object, Object> create() {
             return new ExpiredListener();
@@ -149,10 +139,10 @@ public class IgniteCacheEntryListenerExpiredEventsTest extends GridCommonAbstrac
     /**
      *
      */
-    private static class ExpiredListener implements CacheEntryExpiredListener<Object, Object> {
+    private class ExpiredListener implements CacheEntryExpiredListener<Object, Object> {
         /** {@inheritDoc} */
         @Override public void onExpired(Iterable<CacheEntryEvent<?, ?>> evts) {
-            for (CacheEntryEvent<?, ?> evt : evts)
+            for (CacheEntryEvent<?, ?> ignored : evts)
                 evtCntr.incrementAndGet();
         }
     }

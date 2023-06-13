@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.expiry;
 import java.util.concurrent.TimeUnit;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -30,12 +29,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheLocalConcurrentMap;
 import org.apache.ignite.internal.processors.cache.IgniteCacheAbstractTest;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  *
@@ -82,14 +80,12 @@ public class IgniteCacheClientNearCacheExpiryTest extends IgniteCacheAbstractTes
      */
     @Test
     public void testExpirationOnClient() throws Exception {
-        Ignite ignite = grid(NODES - 1);
+        IgniteEx ignite = grid(NODES - 1);
 
-        // Check size of near entries via reflection because entries is filtered for size() API call.
-        IgniteEx igniteEx = (IgniteEx)ignite;
+        GridCacheAdapter internalCache = ignite.context().cache().internalCache(DEFAULT_CACHE_NAME);
 
-        GridCacheAdapter internalCache = igniteEx.context().cache().internalCache(DEFAULT_CACHE_NAME);
-
-        GridCacheLocalConcurrentMap map = GridTestUtils.getFieldValue(internalCache, GridCacheAdapter.class, "map");
+        // Check size of the cache map directly because entries is filtered for size() API call.
+        GridCacheLocalConcurrentMap map = (GridCacheLocalConcurrentMap)internalCache.map();
 
         assertTrue(ignite.configuration().isClientMode());
 
@@ -112,11 +108,9 @@ public class IgniteCacheClientNearCacheExpiryTest extends IgniteCacheAbstractTes
 
         assertEquals(KEYS_COUNT * 2, map.publicSize(internalCache.context().cacheId()));
 
-        U.sleep(1500);
-
-        assertEquals(KEYS_COUNT, map.publicSize(internalCache.context().cacheId()));
-
-        assertEquals(KEYS_COUNT, cache.size());
+        assertTrue(waitForCondition(() ->
+                map.publicSize(internalCache.context().cacheId()) == KEYS_COUNT && cache.size() == KEYS_COUNT,
+            10_000));
 
         for (int i = 0; i < KEYS_COUNT; i++)
             assertEquals(i, cacheWithExpiry.localPeek(i));
