@@ -151,9 +151,11 @@ import org.gridgain.internal.h2.constraint.ConstraintActionType;
 import org.gridgain.internal.h2.engine.DbSettings;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.Format.FormatEnum;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.ExpressionList;
+import org.gridgain.internal.h2.expression.Format;
 import org.gridgain.internal.h2.expression.Parameter;
 import org.gridgain.internal.h2.expression.Rownum;
 import org.gridgain.internal.h2.expression.SequenceValue;
@@ -4229,6 +4231,15 @@ public class Parser {
                 function.setDataType(col);
                 function.setParameter(0, r);
                 r = function;
+            }
+        }
+        int index = lastParseIndex;
+        if (readIf("FORMAT")) {
+            if (readIf("JSON")) {
+                return new Format(r, FormatEnum.JSON);
+            } else {
+                parseIndex = index;
+                read();
             }
         }
         return r;
