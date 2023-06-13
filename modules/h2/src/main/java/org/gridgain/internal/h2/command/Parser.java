@@ -183,6 +183,7 @@ import org.gridgain.internal.h2.expression.condition.ConditionIn;
 import org.gridgain.internal.h2.expression.condition.ConditionInParameter;
 import org.gridgain.internal.h2.expression.condition.ConditionInSelect;
 import org.gridgain.internal.h2.expression.condition.ConditionNot;
+import org.gridgain.internal.h2.expression.condition.IsJsonPredicate;
 import org.gridgain.internal.h2.expression.condition.TypePredicate;
 import org.gridgain.internal.h2.expression.function.Function;
 import org.gridgain.internal.h2.expression.function.FunctionCall;
@@ -190,6 +191,7 @@ import org.gridgain.internal.h2.expression.function.JavaFunction;
 import org.gridgain.internal.h2.expression.function.TableFunction;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.geometry.EWKTUtils;
+import org.gridgain.internal.h2.util.json.JSONItemType;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.api.Trigger;
@@ -2906,6 +2908,8 @@ public class Parser {
                         read(FROM);
                         r = new Comparison(session, Comparison.EQUAL_NULL_SAFE,
                                 r, readConcat());
+                    } else if (readIf("JSON")) {
+                        r = readJsonPredicate(r, true);
                     } else if (readIf("OF")) {
                         r = readTypePredicate(r, true);
                     } else {
@@ -2918,6 +2922,8 @@ public class Parser {
                     read(FROM);
                     r = new Comparison(session, Comparison.NOT_EQUAL_NULL_SAFE,
                             r, readConcat());
+                } else if (readIf("JSON")) {
+                    r = readJsonPredicate(r, false);
                 } else if (readIf("OF")) {
                     r = readTypePredicate(r, false);
                 } else {
@@ -3017,6 +3023,31 @@ public class Parser {
             typeList.add(parseColumnWithType(null, false).getType());
         } while (readIfMore(true));
         return new TypePredicate(r, not, typeList.toArray(new TypeInfo[0]));
+    }
+
+    private Expression readJsonPredicate(Expression r, boolean not) {
+        JSONItemType itemType;
+        if (readIf("VALUE")) {
+            itemType = JSONItemType.VALUE;
+        } else if (readIf(ARRAY)) {
+            itemType = JSONItemType.ARRAY;
+        } else if (readIf("OBJECT")) {
+            itemType = JSONItemType.OBJECT;
+        } else if (readIf("SCALAR")) {
+            itemType = JSONItemType.SCALAR;
+        } else {
+            itemType = JSONItemType.VALUE;
+        }
+        boolean unique = false;
+        if (readIf(WITH)) {
+            read(UNIQUE);
+            readIf("KEYS");
+            unique = true;
+        } else if (readIf("WITHOUT")) {
+            read(UNIQUE);
+            readIf("KEYS");
+        }
+        return new IsJsonPredicate(r, not, unique, itemType);
     }
 
     private Expression readConcat() {
