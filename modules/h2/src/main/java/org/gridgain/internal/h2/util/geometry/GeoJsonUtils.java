@@ -5,15 +5,15 @@
  */
 package org.gridgain.internal.h2.util.geometry;
 
-import static org.h2.util.geometry.GeometryUtils.DIMENSION_SYSTEM_XYM;
-import static org.h2.util.geometry.GeometryUtils.DIMENSION_SYSTEM_XYZ;
-import static org.h2.util.geometry.GeometryUtils.GEOMETRY_COLLECTION;
-import static org.h2.util.geometry.GeometryUtils.LINE_STRING;
-import static org.h2.util.geometry.GeometryUtils.MULTI_LINE_STRING;
-import static org.h2.util.geometry.GeometryUtils.MULTI_POINT;
-import static org.h2.util.geometry.GeometryUtils.MULTI_POLYGON;
-import static org.h2.util.geometry.GeometryUtils.POINT;
-import static org.h2.util.geometry.GeometryUtils.POLYGON;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.DIMENSION_SYSTEM_XYM;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.DIMENSION_SYSTEM_XYZ;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.GEOMETRY_COLLECTION;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.LINE_STRING;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.MULTI_LINE_STRING;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.MULTI_POINT;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.MULTI_POLYGON;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.POINT;
+import static org.gridgain.internal.h2.util.geometry.GeometryUtils.POLYGON;
 
 import java.math.BigDecimal;
 
@@ -97,7 +97,6 @@ public final class GeoJsonUtils {
 
         @Override
         protected void startPolygonInner(int numInner) {
-            output.valueSeparator();
             output.startArray();
             if (numInner == 0) {
                 output.endArray();
@@ -122,9 +121,6 @@ public final class GeoJsonUtils {
 
         @Override
         protected Target startCollectionItem(int index, int total) {
-            if (index != 0) {
-                output.valueSeparator();
-            }
             if (inMultiLine) {
                 output.startArray();
             }
@@ -167,19 +163,13 @@ public final class GeoJsonUtils {
                     writeStartObject(POINT);
                 }
             }
-            if (index > 0) {
-                output.valueSeparator();
-            }
             output.startArray();
             writeDouble(x);
-            output.valueSeparator();
             writeDouble(y);
             if ((dimensionSystem & DIMENSION_SYSTEM_XYZ) != 0) {
-                output.valueSeparator();
                 writeDouble(z);
             }
             if ((dimensionSystem & DIMENSION_SYSTEM_XYM) != 0) {
-                output.valueSeparator();
                 writeDouble(m);
             }
             output.endArray();
@@ -192,7 +182,6 @@ public final class GeoJsonUtils {
             output.startObject();
             output.member("type");
             output.valueString(TYPES[type - 1]);
-            output.valueSeparator();
             output.member(type != GEOMETRY_COLLECTION ? "coordinates" : "geometries");
             if (type != POINT) {
                 output.startArray();
@@ -200,7 +189,9 @@ public final class GeoJsonUtils {
         }
 
         private void writeDouble(double v) {
-            output.valueNumber(BigDecimal.valueOf(GeometryUtils.checkFinite(v)).stripTrailingZeros());
+            BigDecimal d = BigDecimal.valueOf(GeometryUtils.checkFinite(v));
+            // stripTrailingZeros() does not work with 0.0 on Java 7
+            output.valueNumber(d.signum() != 0 ? d.stripTrailingZeros() : BigDecimal.ZERO);
         }
 
     }
