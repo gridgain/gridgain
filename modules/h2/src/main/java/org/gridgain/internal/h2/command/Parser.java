@@ -3586,34 +3586,39 @@ public class Parser {
             break;
         }
         case Function.TRIM: {
-            Expression space = null;
+            int flags;
+            boolean needFrom = false;
             if (readIf("LEADING")) {
-                function = Function.getFunction(database, "LTRIM");
+                flags = Function.TRIM_LEADING;
+                needFrom = true;
+            } else if (readIf("TRAILING")) {
+                flags = Function.TRIM_TRAILING;
+                needFrom = true;
+            } else {
+                needFrom = readIf("BOTH");
+                flags = Function.TRIM_LEADING | Function.TRIM_TRAILING;
+            }
+            Expression p0, space = null;
+            function.setFlags(flags);
+            if (needFrom) {
                 if (!readIf(FROM)) {
                     space = readExpression();
                     read(FROM);
                 }
-            }
-            else if (readIf("TRAILING")) {
-                function = Function.getFunction(database, "RTRIM");
-                if (!readIf(FROM)) {
-                    space = readExpression();
-                    read(FROM);
-                }
-            }
-            else if (readIf("BOTH")) {
-                if (!readIf(FROM)) {
-                    space = readExpression();
-                    read(FROM);
-                }
-            }
-            Expression p0 = readExpression();
-            if (readIf(COMMA)) {
-                space = readExpression();
-            }
-            else if (readIf(FROM)) {
-                space = p0;
                 p0 = readExpression();
+            } else {
+                if (readIf(FROM)) {
+                    p0 = readExpression();
+                } else {
+                    p0 = readExpression();
+                    if (readIf(FROM)) {
+                        space = p0;
+                        p0 = readExpression();
+                    }
+                }
+            }
+            if (!needFrom && space == null && readIf(COMMA)) {
+                space = readExpression();
             }
             function.setParameter(0, p0);
             if (space != null) {
