@@ -5439,7 +5439,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 preparePageStore(cacheDescriptor, true);
 
                 time -= System.currentTimeMillis();
-                log.debug("Page store preparation for [cache="
+
+                if (log.isDebugEnabled())
+                    log.debug("Page store preparation for [cache="
                         + cacheDescriptor.cacheName() + "] completed in "
                         + Math.abs(time) + " ms.");
             }
