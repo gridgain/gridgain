@@ -1051,7 +1051,7 @@ public class Data {
         }
         case JSON: {
             String s = readString();
-            return ValueJson.get(s);
+            return ValueJson.fromJson(s);
         }
         case AGG_DATA_COUNT: {
             boolean all = readByte() == BOOLEAN_TRUE;
