@@ -12,6 +12,7 @@ import org.gridgain.internal.h2.expression.ValueExpression;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.table.ColumnResolver;
 import org.gridgain.internal.h2.table.TableFilter;
+import org.gridgain.internal.h2.util.json.JSONBytesSource;
 import org.gridgain.internal.h2.util.json.JSONItemType;
 import org.gridgain.internal.h2.util.json.JSONStringSource;
 import org.gridgain.internal.h2.util.json.JSONValidationTarget;
@@ -91,7 +92,7 @@ public class IsJsonPredicate extends Condition {
             JSONValidationTarget target = withUniqueKeys ? new JSONValidationTargetWithUniqueKeys()
                     : new JSONValidationTargetWithoutUniqueKeys();
             try {
-                JSONStringSource.parse(bytes, target);
+                JSONBytesSource.parse(bytes, target);
                 result = itemType.includes(target.getResult()) ^ not;
             } catch (RuntimeException ex) {
                 result = not;
