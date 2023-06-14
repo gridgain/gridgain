@@ -517,6 +517,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             CacheStoreHolder holder = initDir(
                 new File(storeWorkDir, META_STORAGE_NAME),
                 grpId,
+                MetaStorage.METASTORAGE_CACHE_NAME,
                 PageIdAllocator.METASTORE_PARTITION + 1,
                 pageMetrics,
                 false,
