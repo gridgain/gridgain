@@ -87,7 +87,6 @@
         <module>modules/hibernate-4.2</module>
         <module>modules/hibernate-5.1</module>
         <module>modules/hibernate-5.3</module>
-        <module>modules/geospatial</module>
         <module>modules/geospatial/geospatial</module>
         <module>modules/geospatial/examples</module>
         <module>modules/schedule</module>
@@ -102,7 +101,6 @@
                 <module>examples-ml</module>
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
-                <module>modules/geospatial</module>
                 <module>modules/geospatial/geospatial</module>
                 <module>modules/geospatial/examples</module>
                 <module>modules/hibernate-4.2</module>
