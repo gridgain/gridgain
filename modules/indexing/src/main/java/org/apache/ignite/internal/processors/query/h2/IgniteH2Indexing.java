@@ -2163,6 +2163,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         String cacheName = cctx.name();
 
+        boolean recreate = pageStore == null || !pageStore.hasIndexStore(cctx.groupId());
+
         if (pageStore != null && pageStore.hasIndexStore(cctx.groupId()) && !force) {
             boolean required = false;
 
@@ -2184,6 +2186,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Closure prepared, do rebuild.
         markIndexRebuild(cacheName, true);
 
+        if (recreate) {
+            cctx.kernalContext().query().markIndexRecreate(cctx);
+
+            cctx.group().indexWalEnabled(false);
+
+            if (log.isInfoEnabled()) {
+                log.info("WAL disabled for index partition " +
+                    "[name=" + cctx.group().name() + ", id=" + cctx.groupId() + ']');
+            }
+        }
+
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
         // To avoid possible data race.
@@ -2200,15 +2213,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Check that the previous rebuild is completed.
         assert prevIntRebFut == null;
 
-        cctx.kernalContext().query().onStartRebuildIndexes(cctx);
-
         try {
             prepareIndexesForRebuild(cacheName);
         } catch (IgniteCheckedException e) {
             rebuildCacheIdxFut.onDone(e);
         }
 
-        if (pageStore == null || !pageStore.hasIndexStore(cctx.groupId())) {
+        if (recreate) {
             // If there are no index store, rebuild all indexes.
             clo = new IndexRebuildFullClosure(cctx.queries(), cctx.mvccEnabled());
         }
@@ -2245,6 +2256,28 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 cctx.kernalContext().query().onFinishRebuildIndexes(cctx);
 
             idxRebuildFuts.remove(cctx.cacheId(), intRebFut);
+
+            if (recreate) {
+                boolean recreateContinues = false;
+
+                for (GridCacheContext<?, ?> cctx0 : cctx.group().caches()) {
+                    if (idxRebuildFuts.containsKey(cctx0.cacheId())) {
+                        recreateContinues = true;
+
+                        break;
+                    }
+                }
+
+                if (!recreateContinues) {
+                    cctx.group().indexWalEnabled(true);
+
+                    if (log.isInfoEnabled()) {
+                        log.info("WAL enabled for index partition " +
+                            "[name=" + cctx.group().name() + ", id=" + cctx.group().groupId() + ']');
+                    }
+                }
+            }
+
             intRebFut.onDone(err);
 
             outRebuildCacheIdxFut.onDone(err);
