@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.managers.indexing.IndexesRebuildTask;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -38,7 +37,6 @@ public class IndexRebuildCacheInfo extends IgniteDataTransferObject {
 
     /**
      * {@code True} if index.bin recreating, {@code false} otherwise.
-     * @see IndexesRebuildTask
      */
     private boolean recreate;
 
