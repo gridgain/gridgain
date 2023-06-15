@@ -4195,8 +4195,12 @@ public class Parser {
             r = new ExpressionColumn(database, null, null, Column.ROWID, true);
             break;
         case VALUE:
-            r = ValueExpression.get(currentValue);
-            read();
+            if (currentValue.getValueType() == Value.STRING) {
+                r = ValueExpression.get(readCharacterStringLiteral());
+            } else {
+                r = ValueExpression.get(currentValue);
+                read();
+            }
             break;
         case VALUES:
             if (database.getMode().onDuplicateKeyUpdate) {
@@ -4402,6 +4406,20 @@ public class Parser {
             break;
         }
         return new ExpressionColumn(database, null, null, name, false);
+    }
+
+    private Value readCharacterStringLiteral() {
+        Value value = currentValue;
+        read();
+        if (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING) {
+            StringBuilder builder = new StringBuilder(value.getString());
+            do {
+                builder.append(currentValue.getString());
+                read();
+            } while (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING);
+            return ValueString.get(builder.toString());
+        }
+        return value;
     }
 
     private Expression readInterval() {
