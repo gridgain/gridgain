@@ -27,7 +27,7 @@
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-geospatial-parent</artifactId>
         <version>8.8.127-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
+        <relativePath>..</relativePath>
     </parent>
 
     <artifactId>ignite-geospatial-examples</artifactId>
