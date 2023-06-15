@@ -151,6 +151,7 @@ import org.gridgain.internal.h2.constraint.ConstraintActionType;
 import org.gridgain.internal.h2.engine.DbSettings;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.ConcatenationOperation;
 import org.gridgain.internal.h2.expression.Format.FormatEnum;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
@@ -3057,7 +3058,7 @@ public class Parser {
         Expression r = readSum();
         while (true) {
             if (readIf(CONCATENATION)) {
-                r = new BinaryOperation(BinaryOperation.OpType.CONCAT, r, readSum());
+                r = new ConcatenationOperation(r, readSum());
             } else if (readIf(TILDE)) {
                 if (readIf(ASTERISK)) {
                     Function function = Function.getFunction(database, "CAST");
