@@ -1959,7 +1959,7 @@ TRUE
 "
 
 "Literals","Bytes","
-X'hexWithSpaces' ['hexWithSpaces' [...]]
+X'hex' ['hex' [...]]
 ","
 A binary value. The hex value is not case sensitive and may contain space characters.
 ","
@@ -2014,7 +2014,7 @@ $$John's car$$
 "
 
 "Literals","Hex Number","
-[ + | - ] 0x hex
+[ + | - ] 0x { digit | a-f | A-F } [...]
 ","
 A number written in hexadecimal notation.
 ","
@@ -2679,15 +2679,6 @@ ID * 10
 "
 
 "Other Grammar","Hex","
-{ { digit | a-f | A-F } { digit | a-f | A-F } } [...]
-","
-The hexadecimal representation of a number or of bytes. Two characters are one
-byte.
-","
-cafe
-"
-
-"Other Grammar","Hex with spaces","
 [' ' [...]] { { digit | a-f | A-F } [' ' [...]] { digit | a-f | A-F } [' ' [...]] } [...]
 ","
 The hexadecimal representation of a number or of bytes with optional space characters.
