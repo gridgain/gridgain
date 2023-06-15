@@ -2237,7 +2237,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             msg.nl()
                 .a("Metrics for local node (to disable set 'metricsLogFrequency' to 0)").nl()
-                .a("    ^-- Node [id=").a(id).a(name() != null ? ", name=" + name() : "").a(", uptime=")
+                .a("    ^-- Node [id=").a(id).a(", consistentId=").a(localNode().consistentId()).a(name() != null ? ", name=" + name() : "").a(", uptime=")
                 .a(getUpTimeFormatted()).a("]").nl()
                 .a("    ^-- Cluster [hosts=").a(hosts).a(", CPUs=").a(cpus).a(", servers=").a(servers)
                 .a(", clients=").a(clients).a(", topVer=").a(topVer.topologyVersion())
