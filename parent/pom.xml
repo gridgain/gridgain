@@ -75,7 +75,7 @@
         <ezmorph.version>1.0.6</ezmorph.version>
         <flume.ng.version>1.7.0</flume.ng.version>
         <guava.retrying.version>2.0.0</guava.retrying.version>
-        <guava.version>25.1-jre</guava.version>
+        <guava.version>32.0.0-jre</guava.version>
         <hadoop.version>2.9.2</hadoop.version>
         <hamcrest.version>2.2</hamcrest.version>
         <httpclient.version>4.5.13</httpclient.version>
@@ -876,7 +876,7 @@
 [INFO] ------------------------------------------------------------------------
 [ERROR] You are trying to compile Apache Ignite with inappropriate JDK version!
 [ERROR] Detected JDK Version: ${java.runtime.version}
-[ERROR] JDK version should be 1.7.0-* or >= 1.8.0-u40.
+[ERROR] JDK version should be 1.7.0-* or &gt;= 1.8.0-u40.
                             </message>
                             <version>[1.7,1.8),[1.8.0-40,)</version>
                         </requireJavaVersion>
@@ -1505,7 +1505,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1518,7 +1518,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                         <pluginExecution>
@@ -1532,7 +1532,7 @@
                                                 </goals>
                                             </pluginExecutionFilter>
                                             <action>
-                                                <ignore></ignore>
+                                                <ignore/>
                                             </action>
                                         </pluginExecution>
                                     </pluginExecutions>
