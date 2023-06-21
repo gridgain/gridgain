@@ -168,15 +168,6 @@ public class Function extends Expression implements FunctionCall, ExpressionWith
      */
     public static final int H2VERSION = 231;
 
-    /**
-     * The flag for TRIM(LEADING ...) function.
-     */
-    public static final int TRIM_LEADING = 1;
-
-    /**
-     * The flag for TRIM(TRAILING ...) function.
-     */
-    public static final int TRIM_TRAILING = 2;
 
     /**
      * The ABSENT ON NULL flag for JSON_ARRAY and JSON_OBJECT functions.
@@ -1389,7 +1380,7 @@ public class Function extends Expression implements FunctionCall, ExpressionWith
             break;
         case TRIM:
             result = ValueString.get(StringUtils.trim(v0.getString(),
-                    (flags & TRIM_LEADING) != 0, (flags & TRIM_TRAILING) != 0, v1 == null ? " " : v1.getString()),
+                    true, true, v1 == null ? " " : v1.getString()),
                     database.getMode().treatEmptyStringsAsNull);
             break;
         case RTRIM:
@@ -1917,6 +1908,23 @@ public class Function extends Expression implements FunctionCall, ExpressionWith
         return ValueBytes.getNoCopy(b);
     }
 
+    private static String substring(String s, int start, int length) {
+        // not backported for compatibility, the old version of substring - h2 commit 8c4ab607
+        int len = s.length();
+        start--;
+        if (start < 0) {
+            start = 0;
+        }
+        if (length < 0) {
+            length = 0;
+        }
+        start = (start > len) ? len : start;
+        if (start + length > len) {
+            length = len - start;
+        }
+        return s.substring(start, start + length);
+    }
+
     private Value substring(Value stringValue, Value startValue, Value lengthValue) {
         if (type.getValueType() == Value.BYTES) {
             byte[] s = stringValue.getBytesNoCopy();
@@ -1943,24 +1951,15 @@ public class Function extends Expression implements FunctionCall, ExpressionWith
             }
             return ValueBytes.getNoCopy(Arrays.copyOfRange(s, start, end));
         } else {
+            // not backported for compatibility, the old version of substring - h2 commit 8c4ab607
             String s = stringValue.getString();
-            int sl = s.length();
-            int start = startValue.getInt();
-            // These compatibility conditions violate the Standard
-            if (start == 0) {
-                start = 1;
-            } else if (start < 0) {
-                start = sl + start + 1;
+            int offset = startValue.getInt();
+            if (offset < 0) {
+                offset = s.length() + offset + 1;
             }
-            int end = lengthValue == null ? Math.max(sl + 1, start) : start + lengthValue.getInt();
-            // SQL Standard requires "data exception - substring error" when
-            // end < start but H2 does not throw it for compatibility
-            start = Math.max(start, 1);
-            end = Math.min(end, sl + 1);
-            if (start > sl || end <= start) {
-                return database.getMode().treatEmptyStringsAsNull ? ValueNull.INSTANCE : ValueString.EMPTY;
-            }
-            return ValueString.get(s.substring(start - 1, end - 1), false);
+            int length = lengthValue == null ? s.length() : lengthValue.getInt();
+            return ValueString.get(substring(s, offset, length),
+                    database.getMode().treatEmptyStringsAsNull);
         }
     }
 
@@ -2887,30 +2886,6 @@ public class Function extends Expression implements FunctionCall, ExpressionWith
             builder.append('(');
         }
         switch (info.type) {
-        case SUBSTRING: {
-            args[0].getSQL(builder, alwaysQuote).append(" FROM ");
-            args[1].getSQL(builder, alwaysQuote);
-            if (args.length > 2) {
-                builder.append(" FOR ");
-                args[2].getSQL(builder, alwaysQuote);
-            }
-            break;
-        }
-        case TRIM: {
-            switch (flags) {
-            case TRIM_LEADING:
-                builder.append("LEADING ");
-                break;
-            case TRIM_TRAILING:
-                builder.append("TRAILING ");
-                break;
-            }
-            if (args.length > 1) {
-                args[1].getSQL(builder, alwaysQuote).append(" FROM ");
-            }
-            args[0].getSQL(builder, alwaysQuote);
-            break;
-        }
         case CAST: {
             args[0].getSQL(builder, alwaysQuote).append(" AS ").append(new Column(null, type).getCreateSQL());
             break;

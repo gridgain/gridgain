@@ -3581,12 +3581,11 @@ public class Parser {
             break;
         }
         case Function.SUBSTRING: {
-            // Standard variants are:
-            // SUBSTRING(X FROM 1)
-            // SUBSTRING(X FROM 1 FOR 1)
-            // Different non-standard variants include:
+            // Different variants include:
             // SUBSTRING(X,1)
             // SUBSTRING(X,1,1)
+            // SUBSTRING(X FROM 1 FOR 1) -- Postgres
+            // SUBSTRING(X FROM 1) -- Postgres
             // SUBSTRING(X FOR 1) -- Postgres
             function.setParameter(0, readExpression());
             if (readIf(FROM)) {
@@ -3618,39 +3617,31 @@ public class Parser {
             break;
         }
         case Function.TRIM: {
-            int flags;
-            boolean needFrom = false;
+            Expression space = null;
             if (readIf("LEADING")) {
-                flags = Function.TRIM_LEADING;
-                needFrom = true;
-            } else if (readIf("TRAILING")) {
-                flags = Function.TRIM_TRAILING;
-                needFrom = true;
-            } else {
-                needFrom = readIf("BOTH");
-                flags = Function.TRIM_LEADING | Function.TRIM_TRAILING;
-            }
-            Expression p0, space = null;
-            function.setFlags(flags);
-            if (needFrom) {
+                function = Function.getFunction(database, "LTRIM");
                 if (!readIf(FROM)) {
                     space = readExpression();
                     read(FROM);
                 }
-                p0 = readExpression();
-            } else {
-                if (readIf(FROM)) {
-                    p0 = readExpression();
-                } else {
-                    p0 = readExpression();
-                    if (readIf(FROM)) {
-                        space = p0;
-                        p0 = readExpression();
-                    }
+            } else if (readIf("TRAILING")) {
+                function = Function.getFunction(database, "RTRIM");
+                if (!readIf(FROM)) {
+                    space = readExpression();
+                    read(FROM);
+                }
+            } else if (readIf("BOTH")) {
+                if (!readIf(FROM)) {
+                    space = readExpression();
+                    read(FROM);
                 }
             }
-            if (!needFrom && space == null && readIf(COMMA)) {
+            Expression p0 = readExpression();
+            if (readIf(COMMA)) {
                 space = readExpression();
+            } else if (readIf(FROM)) {
+                space = p0;
+                p0 = readExpression();
             }
             function.setParameter(0, p0);
             if (space != null) {
