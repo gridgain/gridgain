@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-gce</artifactId>
-    <version>8.8.127-SNAPSHOT</version>
+    <version>8.8.31</version>
     <url>http://ignite.apache.org</url>
 
     <!-- Need to override this transitive dependency until google-api-client is updated. -->
