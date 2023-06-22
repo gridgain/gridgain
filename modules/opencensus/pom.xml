@@ -82,6 +82,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.android.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.opencensus</groupId>
             <artifactId>opencensus-exporter-trace-zipkin</artifactId>
             <version>${opencensus.version}</version>
