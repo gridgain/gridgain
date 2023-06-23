@@ -158,6 +158,7 @@ import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.IgniteCollectors;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.InitializationProtector;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -5430,8 +5431,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         /** {@inheritDoc} */
         @Override public void beforeBinaryMemoryRestore(
             IgniteCacheDatabaseSharedManager mgr) throws IgniteCheckedException {
-            for (DynamicCacheDescriptor cacheDescriptor : persistentCaches())
+
+            long time;
+
+            for (DynamicCacheDescriptor cacheDescriptor : persistentCaches()) {
+                time = System.nanoTime();
+
                 preparePageStore(cacheDescriptor, true);
+
+                time -= System.nanoTime();
+
+                if (log.isDebugEnabled())
+                    log.debug("Page store preparation for [cache="
+                        + cacheDescriptor.cacheName() + "] completed in "
+                        + IgniteUtils.nanosToMillis(Math.abs(time)) + " ms.");
+            }
         }
 
         /** {@inheritDoc} */
