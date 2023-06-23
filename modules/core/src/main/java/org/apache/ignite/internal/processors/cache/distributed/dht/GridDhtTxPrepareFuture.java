@@ -567,6 +567,10 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             }
             catch (GridCacheEntryRemovedException e) {
                 // Entry was unlocked by concurrent rollback.
+                U.error(log, "Getting exception during transaction for cache entry: " + cached
+                        + ", cacheName=" + cacheCtx.cache().name() + ", operation=" + txEntry.op()
+                        + ", txEntry=" + txEntry, e);
+
                 onError(tx.rollbackException());
             }
             finally {

@@ -853,6 +853,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
                 res = entryGetResult(null, resVer, reserve);
             }
+        } catch (GridCacheEntryRemovedException e) {
+            log.error("Entry was exprired [key=" + key + ", currentTime=" + U.currentTimeMillis() + ", expireTime=" + expireTimeExtras()+ ", ttl=" + ttlExtras() +
+                    ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
+                    ", expiryPlcForAccess=" + expiryPlc.forAccess() + ", cacheName=" + cctx.cache().name() +
+                    ", entry=" + System.identityHashCode(this) + ']');
+
+            throw e;
         }
         finally {
             unlockEntry();
@@ -860,6 +867,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         if (obsolete) {
             onMarkedObsolete();
+
+            log.error("Entry was exprired [key=" + key + ", currentTime=" + U.currentTimeMillis() + ", expireTime=" + expireTimeExtras()+ ", ttl=" + ttlExtras() +
+                    ", expiryPlcForCreate=" + expiryPlc.forCreate() + ", expiryPlcForUpdate=" + expiryPlc.forUpdate() +
+                    ", expiryPlcForAccess=" + expiryPlc.forAccess() + ", cacheName=" + cctx.cache().name() +
+                    ", entry=" + System.identityHashCode(this) + ']');
 
             throw new GridCacheEntryRemovedException();
         }
@@ -2971,8 +2983,11 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     protected void checkObsolete() throws GridCacheEntryRemovedException {
         assert lock.isHeldByCurrentThread();
 
-        if (obsoleteVersionExtras() != null)
+        if (obsoleteVersionExtras() != null) {
+            log.error("GridCacheEntryRemovedException was thrown during checking entry obsolete, key=" + key + ", cacheName=" + cctx.cache().name() +  ", extras=" + extras);
+
             throw new GridCacheEntryRemovedException();
+        }
     }
 
     /** {@inheritDoc} */
