@@ -34,6 +34,17 @@
     <artifactId>ignite-geospatial-parent</artifactId>
     <packaging>pom</packaging>
     <version>8.8.127-SNAPSHOT</version>
+    <url>http://ignite.apache.org</url>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.gridgain</groupId>
+                <artifactId>ignite-geospatial</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <modules>
         <module>geospatial</module>
