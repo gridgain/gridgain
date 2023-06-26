@@ -378,13 +378,13 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Gets the static discovery.
         /// </summary>
-        public static TcpDiscoverySpi GetStaticDiscovery(int? maxPort = null)
+        public static TcpDiscoverySpi GetStaticDiscovery(int maxPort = 47503)
         {
             return new TcpDiscoverySpi
             {
                 IpFinder = new TcpDiscoveryStaticIpFinder
                 {
-                    Endpoints = new[] { "127.0.0.1:47500" + (maxPort == null ? null : (".." + maxPort)) }
+                    Endpoints = new[] { $"127.0.0.1:47500..{maxPort}" }
                 },
                 SocketTimeout = TimeSpan.FromSeconds(0.3)
             };
