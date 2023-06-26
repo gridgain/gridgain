@@ -125,6 +125,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
         /// Tests that streamer does not lose data during random topology changes.
         /// </summary>
         [Test]
+        [Ignore("GG-36884 PME hang in TestStreamerDoesNotLoseDataOnRandomTopologyChanges")]
         public void TestStreamerDoesNotLoseDataOnRandomTopologyChanges()
         {
             const int maxNodes = 4;
