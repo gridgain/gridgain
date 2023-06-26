@@ -73,6 +73,7 @@ import org.gridgain.internal.h2.engine.FunctionAlias;
 import org.gridgain.internal.h2.engine.UserAggregate;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.ConcatenationOperation;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.ExpressionList;
@@ -172,6 +173,12 @@ public class GridSqlQueryParser {
 
     /** */
     private static final Getter<BinaryOperation, Expression> OPERATION_RIGHT = getter(BinaryOperation.class, "right");
+
+    /** */
+    private static final Getter<ConcatenationOperation, Expression> CONCATENATION_LEFT = getter(ConcatenationOperation.class, "left");
+
+    /** */
+    private static final Getter<ConcatenationOperation, Expression> CONCATENATION_RIGHT = getter(ConcatenationOperation.class, "right");
 
     /** */
     private static final Getter<Comparison, Integer> COMPARISON_TYPE = getter(Comparison.class, "compareType");
@@ -2154,9 +2161,6 @@ public class GridSqlQueryParser {
      */
     private static GridSqlOperationType mapOperationType(BinaryOperation.OpType opType) {
         switch (opType) {
-            case CONCAT:
-                return GridSqlOperationType.CONCAT;
-
             case PLUS:
                 return GridSqlOperationType.PLUS;
 
@@ -2212,6 +2216,14 @@ public class GridSqlQueryParser {
             return new GridSqlOperation(mapOperationType(type),
                 parseExpression(OPERATION_LEFT.get(operation), calcTypes),
                 parseExpression(OPERATION_RIGHT.get(operation), calcTypes));
+        }
+
+        if (expression instanceof ConcatenationOperation) {
+            ConcatenationOperation operation = (ConcatenationOperation)expression;
+
+            return new GridSqlOperation(GridSqlOperationType.CONCAT,
+                parseExpression(CONCATENATION_LEFT.get(operation), calcTypes),
+                parseExpression(CONCATENATION_RIGHT.get(operation), calcTypes));
         }
 
         if (expression instanceof UnaryOperation) {

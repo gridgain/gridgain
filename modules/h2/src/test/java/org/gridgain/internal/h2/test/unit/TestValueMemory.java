@@ -40,6 +40,7 @@ import org.gridgain.internal.h2.value.ValueGeometry;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.ValueJson;
 import org.gridgain.internal.h2.value.ValueLong;
 import org.gridgain.internal.h2.value.ValueNull;
 import org.gridgain.internal.h2.value.ValueResultSet;
@@ -246,6 +247,8 @@ public class TestValueMemory extends TestBase implements DataHandler {
         case Value.INTERVAL_HOUR_TO_MINUTE:
             return ValueInterval.from(IntervalQualifier.valueOf(type - Value.INTERVAL_YEAR),
                     random.nextBoolean(), random.nextInt(Integer.MAX_VALUE), random.nextInt(12));
+        case Value.JSON:
+            return ValueJson.fromJson("{\"key\":\"value\"}");
         default:
             throw new AssertionError("type=" + type);
         }

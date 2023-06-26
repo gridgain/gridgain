@@ -5,6 +5,7 @@
  */
 package org.gridgain.internal.h2.expression.aggregate;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,8 +23,10 @@ import org.gridgain.internal.h2.engine.Session;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.ExpressionVisitor;
+import org.gridgain.internal.h2.expression.ExpressionWithFlags;
 import org.gridgain.internal.h2.expression.Subquery;
 import org.gridgain.internal.h2.expression.analysis.Window;
+import org.gridgain.internal.h2.expression.function.Function;
 import org.gridgain.internal.h2.index.Cursor;
 import org.gridgain.internal.h2.index.Index;
 import org.gridgain.internal.h2.message.DbException;
@@ -42,6 +45,7 @@ import org.gridgain.internal.h2.value.ValueArray;
 import org.gridgain.internal.h2.value.ValueBoolean;
 import org.gridgain.internal.h2.value.ValueDouble;
 import org.gridgain.internal.h2.value.ValueInt;
+import org.gridgain.internal.h2.value.ValueJson;
 import org.gridgain.internal.h2.value.ValueLong;
 import org.gridgain.internal.h2.value.ValueNull;
 import org.gridgain.internal.h2.value.ValueRow;
@@ -50,7 +54,7 @@ import org.gridgain.internal.h2.value.ValueString;
 /**
  * Implements the integrated aggregate functions, such as COUNT, MAX, SUM.
  */
-public class Aggregate extends AbstractAggregate {
+public class Aggregate extends AbstractAggregate implements ExpressionWithFlags {
 
     private static final HashMap<String, AggregateType> AGGREGATES = new HashMap<>(64);
 
@@ -58,6 +62,8 @@ public class Aggregate extends AbstractAggregate {
 
     private ArrayList<SelectOrderBy> orderByList;
     private SortOrder orderBySort;
+
+    private int flags;
 
     /**
      * Create a new aggregate object.
@@ -128,6 +134,9 @@ public class Aggregate extends AbstractAggregate {
         // Oracle compatibility
         addAggregate("STATS_MODE", AggregateType.MODE);
         addAggregate("ENVELOPE", AggregateType.ENVELOPE);
+
+        addAggregate("JSON_OBJECTAGG", AggregateType.JSON_OBJECTAGG);
+        addAggregate("JSON_ARRAYAGG", AggregateType.JSON_ARRAYAGG);
     }
 
     private static void addAggregate(String name, AggregateType type) {
@@ -164,6 +173,16 @@ public class Aggregate extends AbstractAggregate {
      */
     public AggregateType getAggregateType() {
         return aggregateType;
+    }
+
+    @Override
+    public void setFlags(int flags) {
+        this.flags = flags;
+    }
+
+    @Override
+    public int getFlags() {
+        return flags;
     }
 
     private void sortWithOrderBy(Value[] array) {
@@ -228,6 +247,30 @@ public class Aggregate extends AbstractAggregate {
         case MODE:
             v = remembered != null ? remembered[0] : orderByList.get(0).expression.getValue(session);
             break;
+        case JSON_ARRAYAGG:
+            if (v != ValueNull.INSTANCE) {
+                v = updateCollecting(session, v, remembered);
+            } else if ((flags & Function.JSON_ABSENT_ON_NULL) == 0) {
+                v = updateCollecting(session, ValueJson.NULL, remembered);
+            } else {
+                return;
+            }
+            break;
+        case JSON_OBJECTAGG: {
+            Value key = v;
+            Value value = remembered != null ? remembered[1] : args[1].getValue(session);
+            if (key == ValueNull.INSTANCE) {
+                throw DbException.getInvalidValueException("JSON_OBJECTAGG key", "NULL");
+            }
+            if (value != ValueNull.INSTANCE) {
+                v = ValueArray.get(new Value[] { key, value });
+            } else if ((flags & Function.JSON_ABSENT_ON_NULL) == 0) {
+                v = ValueArray.get(new Value[] { key, ValueJson.NULL });
+            } else {
+                return;
+            }
+            break;
+        }
         default:
             // Use argument as is
         }
@@ -446,6 +489,42 @@ public class Aggregate extends AbstractAggregate {
         }
         case MODE:
             return getMode(session, data);
+        case JSON_ARRAYAGG: {
+            Value[] array = ((AggregateDataCollecting) data).getArray();
+            if (array == null) {
+                return ValueNull.INSTANCE;
+            }
+            if (orderByList != null) {
+                sortWithOrderBy(array);
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            baos.write('[');
+            for (Value v : array) {
+                if (orderByList != null) {
+                    v = ((ValueArray) v).getList()[0];
+                }
+                Function.jsonArrayAppend(baos, v, flags);
+            }
+            baos.write(']');
+            return ValueJson.getInternal(baos.toByteArray());
+        }
+        case JSON_OBJECTAGG: {
+            Value[] array = ((AggregateDataCollecting) data).getArray();
+            if (array == null) {
+                return ValueNull.INSTANCE;
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            baos.write('{');
+            for (Value v : array) {
+                Value[] row = ((ValueArray) v).getList();
+                String key = row[0].getString();
+                if (key == null) {
+                    throw DbException.getInvalidValueException("JSON_OBJECTAGG key", "NULL");
+                }
+                Function.jsonObjectAppend(baos, key, row[1]);
+            }
+            return Function.jsonObjectFinish(baos, flags);
+        }
         default:
             // Avoid compiler warning
         }
@@ -638,6 +717,7 @@ public class Aggregate extends AbstractAggregate {
             switch (aggregateType) {
             case ARRAY_AGG:
             case LISTAGG:
+            case JSON_ARRAYAGG:
                 offset = 1;
                 break;
             default:
@@ -729,6 +809,10 @@ public class Aggregate extends AbstractAggregate {
         case ENVELOPE:
             type = TypeInfo.TYPE_GEOMETRY;
             break;
+        case JSON_OBJECTAGG:
+        case JSON_ARRAYAGG:
+            type = TypeInfo.TYPE_JSON;
+            break;
         default:
             DbException.throwInternalError("type=" + aggregateType);
         }
@@ -743,17 +827,6 @@ public class Aggregate extends AbstractAggregate {
             }
         }
         super.setEvaluatable(tableFilter, b);
-    }
-
-    private StringBuilder getSQLArrayAggregate(StringBuilder builder, boolean alwaysQuote) {
-        builder.append("ARRAY_AGG(");
-        if (distinct) {
-            builder.append("DISTINCT ");
-        }
-        args[0].getSQL(builder, alwaysQuote);
-        Window.appendOrderBy(builder, orderByList, alwaysQuote);
-        builder.append(')');
-        return appendTailConditions(builder, alwaysQuote);
     }
 
     @Override
@@ -839,6 +912,10 @@ public class Aggregate extends AbstractAggregate {
         case ENVELOPE:
             text = "ENVELOPE";
             break;
+        case JSON_OBJECTAGG:
+            return getSQLJsonObjectAggregate(builder, alwaysQuote);
+        case JSON_ARRAYAGG:
+            return getSQLJsonArrayAggregate(builder, alwaysQuote);
         default:
             throw DbException.throwInternalError("type=" + aggregateType);
         }
@@ -865,6 +942,35 @@ public class Aggregate extends AbstractAggregate {
             Window.appendOrderBy(builder, orderByList, alwaysQuote);
             builder.append(')');
         }
+        return appendTailConditions(builder, alwaysQuote);
+    }
+
+    private StringBuilder getSQLArrayAggregate(StringBuilder builder, boolean alwaysQuote) {
+        builder.append("ARRAY_AGG(");
+        if (distinct) {
+            builder.append("DISTINCT ");
+        }
+        args[0].getSQL(builder, alwaysQuote);
+        Window.appendOrderBy(builder, orderByList, alwaysQuote);
+        builder.append(')');
+        return appendTailConditions(builder, alwaysQuote);
+    }
+
+    private StringBuilder getSQLJsonObjectAggregate(StringBuilder builder, boolean alwaysQuote) {
+        builder.append("JSON_OBJECTAGG(");
+        args[0].getSQL(builder, alwaysQuote).append(": ");
+        args[1].getSQL(builder, alwaysQuote);
+        Function.getJsonFunctionFlagsSQL(builder, flags, false);
+        builder.append(')');
+        return appendTailConditions(builder, alwaysQuote);
+    }
+
+    private StringBuilder getSQLJsonArrayAggregate(StringBuilder builder, boolean alwaysQuote) {
+        builder.append("JSON_ARRAYAGG(");
+        args[0].getSQL(builder, alwaysQuote);
+        Function.getJsonFunctionFlagsSQL(builder, flags, true);
+        Window.appendOrderBy(builder, orderByList, alwaysQuote);
+        builder.append(')');
         return appendTailConditions(builder, alwaysQuote);
     }
 

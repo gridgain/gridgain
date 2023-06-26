@@ -124,6 +124,7 @@ import org.gridgain.internal.h2.test.unit.TestFileLockSerialized;
 import org.gridgain.internal.h2.test.unit.TestFileSystem;
 import org.gridgain.internal.h2.test.unit.TestFtp;
 import org.gridgain.internal.h2.test.unit.TestJmx;
+import org.gridgain.internal.h2.test.unit.TestJsonUtils;
 import org.gridgain.internal.h2.test.unit.TestLocalResultFactory;
 import org.gridgain.internal.h2.test.unit.TestMode;
 import org.gridgain.internal.h2.test.unit.TestModifyOnWrite;
@@ -975,6 +976,7 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestIntArray());
         addTest(new TestIntIntHashMap());
         addTest(new TestIntPerfectHash());
+        addTest(new TestJsonUtils());
         addTest(new TestKeywords());
         addTest(new TestMathUtils());
         addTest(new TestMemoryUnmapper());

@@ -69,6 +69,7 @@ public class Transfer {
     private static final int ENUM = 25;
     private static final int INTERVAL = 26;
     private static final int ROW = 27;
+    private static final int JSON = 28;
 
     private Socket socket;
     private DataInputStream in;
@@ -606,6 +607,11 @@ public class Transfer {
                 writeString(v.getString());
             }
             break;
+        case Value.JSON: {
+            writeInt(JSON);
+            writeBytes(v.getBytesNoCopy());
+            break;
+        }
         default:
             if (JdbcUtils.customDataTypesHandler != null) {
                 writeInt(type);
@@ -778,6 +784,9 @@ public class Transfer {
             return ValueInterval.from(IntervalQualifier.valueOf(ordinal), negative, readLong(),
                     ordinal < 5 ? 0 : readLong());
         }
+        case JSON:
+            // Do not trust the value
+            return ValueJson.fromJson(readBytes());
         default:
             if (JdbcUtils.customDataTypesHandler != null) {
                 return JdbcUtils.customDataTypesHandler.convert(
