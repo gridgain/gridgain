@@ -304,7 +304,7 @@ namespace Apache.Ignite.Core.Tests
 
                 var disco = resCfg.DiscoverySpi as TcpDiscoverySpi;
                 Assert.IsNotNull(disco);
-                Assert.AreEqual(TimeSpan.FromMilliseconds(300), disco.SocketTimeout);
+                Assert.AreEqual(TimeSpan.FromMilliseconds(600), disco.SocketTimeout);
 
                 // DataStorage defaults.
                 CheckDefaultProperties(resCfg.DataStorageConfiguration);
