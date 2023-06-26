@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Tests.Client.Datastream
 
             for (int i = 0; i < topologyChanges; i++)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(300);
 
                 if (nodes.Count <= 2 || (nodes.Count < maxNodes && TestUtils.Random.Next(2) == 0))
                 {
