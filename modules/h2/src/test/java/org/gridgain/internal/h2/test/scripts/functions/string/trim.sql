@@ -14,3 +14,6 @@ select TRIM(BOTH '_' FROM '__A__') A, TRIM(LEADING FROM '    B    ') BS, TRIM(TR
 > - -- --
 > A B  xA
 > rows: 1
+
+DROP TABLE TEST;
+> ok

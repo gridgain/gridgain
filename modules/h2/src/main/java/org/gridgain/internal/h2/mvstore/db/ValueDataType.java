@@ -41,6 +41,7 @@ import org.gridgain.internal.h2.value.ValueGeometry;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueJavaObject;
+import org.gridgain.internal.h2.value.ValueJson;
 import org.gridgain.internal.h2.value.ValueLobDb;
 import org.gridgain.internal.h2.value.ValueLong;
 import org.gridgain.internal.h2.value.ValueNull;
@@ -101,6 +102,7 @@ public class ValueDataType implements DataType {
     private static final int BYTES_0_31 = 100;
     private static final int SPATIAL_KEY_2D = 132;
     private static final int CUSTOM_DATA_TYPE = 133;
+    private static final int JSON = 134;
 
     final DataHandler handler;
     final CompareMode compareMode;
@@ -500,6 +502,11 @@ public class ValueDataType implements DataType {
                 putVarLong(interval.getRemaining());
             break;
         }
+        case Value.JSON:{
+            byte[] b = v.getBytesNoCopy();
+            buff.put((byte) JSON).putVarInt(b.length).put(b);
+            break;
+        }
         default:
             if (JdbcUtils.customDataTypesHandler != null) {
                 byte[] b = v.getBytesNoCopy();
@@ -686,6 +693,12 @@ public class ValueDataType implements DataType {
             }
             throw DbException.get(ErrorCode.UNKNOWN_DATA_TYPE_1,
                     "No CustomDataTypesHandler has been set up");
+        }
+        case JSON: {
+            int len = readVarInt(buff);
+            byte[] b = Utils.newBytes(len);
+            buff.get(b, 0, len);
+            return ValueJson.getInternal(b);
         }
         default:
             if (type >= INT_0_15 && type < INT_0_15 + 16) {
