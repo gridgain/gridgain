@@ -63,6 +63,7 @@ import static org.gridgain.internal.h2.util.ParserUtil.WINDOW;
 import static org.gridgain.internal.h2.util.ParserUtil.WITH;
 import static org.gridgain.internal.h2.util.ParserUtil._ROWID_;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
@@ -151,9 +152,13 @@ import org.gridgain.internal.h2.constraint.ConstraintActionType;
 import org.gridgain.internal.h2.engine.DbSettings;
 import org.gridgain.internal.h2.expression.Alias;
 import org.gridgain.internal.h2.expression.BinaryOperation;
+import org.gridgain.internal.h2.expression.ConcatenationOperation;
+import org.gridgain.internal.h2.expression.Format.FormatEnum;
 import org.gridgain.internal.h2.expression.Expression;
 import org.gridgain.internal.h2.expression.ExpressionColumn;
 import org.gridgain.internal.h2.expression.ExpressionList;
+import org.gridgain.internal.h2.expression.ExpressionWithFlags;
+import org.gridgain.internal.h2.expression.Format;
 import org.gridgain.internal.h2.expression.Parameter;
 import org.gridgain.internal.h2.expression.Rownum;
 import org.gridgain.internal.h2.expression.SequenceValue;
@@ -183,6 +188,7 @@ import org.gridgain.internal.h2.expression.condition.ConditionIn;
 import org.gridgain.internal.h2.expression.condition.ConditionInParameter;
 import org.gridgain.internal.h2.expression.condition.ConditionInSelect;
 import org.gridgain.internal.h2.expression.condition.ConditionNot;
+import org.gridgain.internal.h2.expression.condition.IsJsonPredicate;
 import org.gridgain.internal.h2.expression.condition.TypePredicate;
 import org.gridgain.internal.h2.expression.function.Function;
 import org.gridgain.internal.h2.expression.function.FunctionCall;
@@ -190,6 +196,7 @@ import org.gridgain.internal.h2.expression.function.JavaFunction;
 import org.gridgain.internal.h2.expression.function.TableFunction;
 import org.gridgain.internal.h2.message.DbException;
 import org.gridgain.internal.h2.util.geometry.EWKTUtils;
+import org.gridgain.internal.h2.util.json.JSONItemType;
 import org.gridgain.internal.h2.api.ErrorCode;
 import org.gridgain.internal.h2.api.IntervalQualifier;
 import org.gridgain.internal.h2.api.Trigger;
@@ -237,6 +244,7 @@ import org.gridgain.internal.h2.value.ValueDate;
 import org.gridgain.internal.h2.value.ValueDecimal;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.gridgain.internal.h2.value.ValueInterval;
+import org.gridgain.internal.h2.value.ValueJson;
 import org.gridgain.internal.h2.value.ValueLong;
 import org.gridgain.internal.h2.value.ValueNull;
 import org.gridgain.internal.h2.value.ValueRow;
@@ -330,12 +338,12 @@ public class Parser {
     /**
      * The token "||".
      */
-    private static final int STRING_CONCAT = PLUS_SIGN + 1;
+    private static final int CONCATENATION = PLUS_SIGN + 1;
 
     /**
      * The token "(".
      */
-    private static final int OPEN_PAREN = STRING_CONCAT + 1;
+    private static final int OPEN_PAREN = CONCATENATION + 1;
 
     /**
      * The token ")".
@@ -2906,6 +2914,8 @@ public class Parser {
                         read(FROM);
                         r = new Comparison(session, Comparison.EQUAL_NULL_SAFE,
                                 r, readConcat());
+                    } else if (readIf("JSON")) {
+                        r = readJsonPredicate(r, true);
                     } else if (readIf("OF")) {
                         r = readTypePredicate(r, true);
                     } else {
@@ -2918,6 +2928,8 @@ public class Parser {
                     read(FROM);
                     r = new Comparison(session, Comparison.NOT_EQUAL_NULL_SAFE,
                             r, readConcat());
+                } else if (readIf("JSON")) {
+                    r = readJsonPredicate(r, false);
                 } else if (readIf("OF")) {
                     r = readTypePredicate(r, false);
                 } else {
@@ -3019,11 +3031,36 @@ public class Parser {
         return new TypePredicate(r, not, typeList.toArray(new TypeInfo[0]));
     }
 
+    private Expression readJsonPredicate(Expression r, boolean not) {
+        JSONItemType itemType;
+        if (readIf("VALUE")) {
+            itemType = JSONItemType.VALUE;
+        } else if (readIf(ARRAY)) {
+            itemType = JSONItemType.ARRAY;
+        } else if (readIf("OBJECT")) {
+            itemType = JSONItemType.OBJECT;
+        } else if (readIf("SCALAR")) {
+            itemType = JSONItemType.SCALAR;
+        } else {
+            itemType = JSONItemType.VALUE;
+        }
+        boolean unique = false;
+        if (readIf(WITH)) {
+            read(UNIQUE);
+            readIf("KEYS");
+            unique = true;
+        } else if (readIf("WITHOUT")) {
+            read(UNIQUE);
+            readIf("KEYS");
+        }
+        return new IsJsonPredicate(r, not, unique, itemType);
+    }
+
     private Expression readConcat() {
         Expression r = readSum();
         while (true) {
-            if (readIf(STRING_CONCAT)) {
-                r = new BinaryOperation(BinaryOperation.OpType.CONCAT, r, readSum());
+            if (readIf(CONCATENATION)) {
+                r = new ConcatenationOperation(r, readSum());
             } else if (readIf(TILDE)) {
                 if (readIf(ASTERISK)) {
                     Function function = Function.getFunction(database, "CAST");
@@ -3144,10 +3181,7 @@ public class Parser {
         case ARRAY_AGG: {
             boolean distinct = readDistinctAgg();
             r = new Aggregate(AggregateType.ARRAY_AGG, new Expression[] { readExpression() }, currentSelect, distinct);
-            if (readIf(ORDER)) {
-                read("BY");
-                r.setOrderByList(parseSimpleOrderList());
-            }
+            readAggregateOrderBy(r);
             break;
         }
         case RANK:
@@ -3190,6 +3224,27 @@ public class Parser {
                     readAggregateOrder(r, expr, false);
                 }
             }
+            break;
+        }
+        case JSON_OBJECTAGG: {
+            boolean withKey = readIf("KEY");
+            Expression key = readExpression();
+            if (withKey) {
+                read("VALUE");
+            } else if (!readIf("VALUE")) {
+                read(COLON);
+            }
+            Expression value = readExpression();
+            r = new Aggregate(AggregateType.JSON_OBJECTAGG, new Expression[] { key, value }, currentSelect, false);
+            readJsonObjectFunctionFlags(r, false);
+            break;
+        }
+        case JSON_ARRAYAGG: {
+            r = new Aggregate(AggregateType.JSON_ARRAYAGG, new Expression[] { readExpression() }, currentSelect,
+                    false);
+            readAggregateOrderBy(r);
+            r.setFlags(Function.JSON_ABSENT_ON_NULL);
+            readJsonObjectFunctionFlags(r, true);
             break;
         }
         default:
@@ -3238,6 +3293,13 @@ public class Parser {
         }
         orderList.add(order);
         r.setOrderByList(orderList);
+    }
+
+    private void readAggregateOrderBy(Aggregate r) {
+        if (readIf(ORDER)) {
+            read("BY");
+            r.setOrderByList(parseSimpleOrderList());
+        }
     }
 
     private ArrayList<SelectOrderBy> parseSimpleOrderList() {
@@ -3562,15 +3624,13 @@ public class Parser {
                     space = readExpression();
                     read(FROM);
                 }
-            }
-            else if (readIf("TRAILING")) {
+            } else if (readIf("TRAILING")) {
                 function = Function.getFunction(database, "RTRIM");
                 if (!readIf(FROM)) {
                     space = readExpression();
                     read(FROM);
                 }
-            }
-            else if (readIf("BOTH")) {
+            } else if (readIf("BOTH")) {
                 if (!readIf(FROM)) {
                     space = readExpression();
                     read(FROM);
@@ -3579,8 +3639,7 @@ public class Parser {
             Expression p0 = readExpression();
             if (readIf(COMMA)) {
                 space = readExpression();
-            }
-            else if (readIf(FROM)) {
+            } else if (readIf(FROM)) {
                 space = p0;
                 p0 = readExpression();
             }
@@ -3622,6 +3681,36 @@ public class Parser {
             }
             TableFunction tf = (TableFunction) function;
             tf.setColumns(columns);
+            break;
+        }
+        case Function.JSON_OBJECT: {
+            int i = 0;
+            if (!readJsonObjectFunctionFlags(function, false)) {
+                do {
+                    boolean withKey = readIf("KEY");
+                    function.setParameter(i++, readExpression());
+                    if (withKey) {
+                        read("VALUE");
+                    } else if (!readIf("VALUE")) {
+                        read(COLON);
+                    }
+                    function.setParameter(i++, readExpression());
+                } while (readIf(COMMA));
+                readJsonObjectFunctionFlags(function, false);
+            }
+            read(CLOSE_PAREN);
+            break;
+        }
+        case Function.JSON_ARRAY: {
+            function.setFlags(Function.JSON_ABSENT_ON_NULL);
+            int i = 0;
+            if (!readJsonObjectFunctionFlags(function, true)) {
+                do {
+                    function.setParameter(i++, readExpression());
+                } while (readIf(COMMA));
+                readJsonObjectFunctionFlags(function, true);
+            }
+            read(CLOSE_PAREN);
             break;
         }
         default:
@@ -3712,6 +3801,57 @@ public class Parser {
             read("NULLS");
             function.setIgnoreNulls(true);
         }
+    }
+
+    private boolean readJsonObjectFunctionFlags(ExpressionWithFlags function, boolean forArray) {
+        int start = lastParseIndex;
+        boolean result = false;
+        int flags = function.getFlags();
+        if (readIf(NULL)) {
+            if (readIf(ON)) {
+                read(NULL);
+                flags &= ~Function.JSON_ABSENT_ON_NULL;
+                result = true;
+            } else {
+                parseIndex = start;
+                read();
+                return false;
+            }
+        } else if (readIf("ABSENT")) {
+            if (readIf(ON)) {
+                read(NULL);
+                flags |= Function.JSON_ABSENT_ON_NULL;
+                result = true;
+            } else {
+                parseIndex = start;
+                read();
+                return false;
+            }
+        }
+        if (!forArray) {
+            if (readIf(WITH)) {
+                read(UNIQUE);
+                read("KEYS");
+                flags |= Function.JSON_WITH_UNIQUE_KEYS;
+                result = true;
+            } else if (readIf("WITHOUT")) {
+                if (readIf(UNIQUE)) {
+                    read("KEYS");
+                    flags &= ~Function.JSON_WITH_UNIQUE_KEYS;
+                    result = true;
+                } else if (result) {
+                    throw getSyntaxError();
+                } else {
+                    parseIndex = start;
+                    read();
+                    return false;
+                }
+            }
+        }
+        if (result) {
+            function.setFlags(flags);
+        }
+        return result;
     }
 
     private Expression readKeywordFunction(String name) {
@@ -4047,8 +4187,12 @@ public class Parser {
             r = new ExpressionColumn(database, null, null, Column.ROWID, true);
             break;
         case VALUE:
-            r = ValueExpression.get(currentValue);
-            read();
+            if (currentValue.getValueType() == Value.STRING) {
+                r = ValueExpression.get(readCharacterStringLiteral());
+            } else {
+                r = ValueExpression.get(currentValue);
+                read();
+            }
             break;
         case VALUES:
             if (database.getMode().onDuplicateKeyUpdate) {
@@ -4117,6 +4261,19 @@ public class Parser {
                 r = function;
             }
         }
+        for (;;) {
+            int index = lastParseIndex;
+            if (readIf("FORMAT")) {
+                if (readIf("JSON")) {
+                    r = new Format(r, FormatEnum.JSON);
+                    continue;
+                } else {
+                    parseIndex = index;
+                    read();
+                }
+            }
+            break;
+        }
         return r;
     }
 
@@ -4156,16 +4313,30 @@ public class Parser {
                 return ValueExpression.get(ValueString.get(text));
             }
             break;
+        case 'J':
+            if (currentTokenType == VALUE ) {
+                if (currentValue.getValueType() == Value.STRING && equalsToken("JSON", name)) {
+                    return ValueExpression.get(ValueJson.fromJson(readCharacterStringLiteral().getString()));
+                }
+            } else if (currentTokenType == IDENTIFIER && equalsToken("JSON", name) && equalsToken("X", currentToken)) {
+                int index = lastParseIndex;
+                read();
+                if (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING) {
+                    return ValueExpression.get(ValueJson.fromJson(readBinaryLiteral()));
+                } else {
+                    parseIndex = index;
+                    read();
+                }
+            }
+            break;
         case 'N':
             if (equalsToken("NEXT", name) && readIf("VALUE")) {
                 read(FOR);
                 return new SequenceValue(readSequence());
             } else if (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING
                     && equalsToken("N", name)) {
-                // SQL-92 "National Language" strings
-                String text = currentValue.getString();
-                read();
-                return ValueExpression.get(ValueString.get(text));
+                // National character string literal
+                return ValueExpression.get(readCharacterStringLiteral());
             }
             break;
         case 'S':
@@ -4231,13 +4402,34 @@ public class Parser {
             break;
         case 'X':
             if (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING && equalsToken("X", name)) {
-                byte[] buffer = StringUtils.convertHexToBytes(currentValue.getString());
-                read();
-                return ValueExpression.get(ValueBytes.getNoCopy(buffer));
+                return ValueExpression.get(ValueBytes.getNoCopy(readBinaryLiteral()));
             }
             break;
         }
         return new ExpressionColumn(database, null, null, name, false);
+    }
+
+    private byte[] readBinaryLiteral() {
+        ByteArrayOutputStream baos = null;
+        do {
+            baos = StringUtils.convertHexWithSpacesToBytes(baos, currentValue.getString());
+            read();
+        } while (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING);
+        return baos.toByteArray();
+    }
+
+    private Value readCharacterStringLiteral() {
+        Value value = currentValue;
+        read();
+        if (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING) {
+            StringBuilder builder = new StringBuilder(value.getString());
+            do {
+                builder.append(currentValue.getString());
+                read();
+            } while (currentTokenType == VALUE && currentValue.getValueType() == Value.STRING);
+            return ValueString.get(builder.toString());
+        }
+        return value;
     }
 
     private Expression readInterval() {
@@ -4594,9 +4786,9 @@ public class Parser {
         int[] types = characterTypes;
         lastParseIndex = parseIndex;
         int i = parseIndex;
-        int type = types[i];
-        while (type == 0) {
-            type = types[++i];
+        int type;
+        while ((type = types[i]) == 0) {
+            i++;
         }
         int start = i;
         char[] chars = sqlCommandChars;
@@ -4604,11 +4796,7 @@ public class Parser {
         currentToken = "";
         switch (type) {
         case CHAR_NAME:
-            while (true) {
-                type = types[i];
-                if (type != CHAR_NAME && type != CHAR_VALUE) {
-                    break;
-                }
+            while ((type = types[i]) == CHAR_NAME || type == CHAR_VALUE) {
                 i++;
             }
             currentTokenType = ParserUtil.getSaveTokenType(sqlCommand, !identifiersToUpper, start, i, false);
@@ -4621,21 +4809,19 @@ public class Parser {
             return;
         case CHAR_QUOTED: {
             String result = null;
-            while (true) {
-                for (int begin = i;; i++) {
-                    if (chars[i] == c) {
-                        if (result == null) {
-                            result = sqlCommand.substring(begin, i);
-                        } else {
-                            result += sqlCommand.substring(begin - 1, i);
-                        }
-                        break;
-                    }
+            for (;; i++) {
+                int begin = i;
+                while (chars[i] != c) {
+                    i++;
+                }
+                if (result == null) {
+                    result = sqlCommand.substring(begin, i);
+                } else {
+                    result += sqlCommand.substring(begin - 1, i);
                 }
                 if (chars[++i] != c) {
                     break;
                 }
-                i++;
             }
             currentToken = StringUtils.cache(result);
             parseIndex = i;
@@ -4658,35 +4844,11 @@ public class Parser {
             return;
         case CHAR_VALUE:
             if (c == '0' && (chars[i] == 'X' || chars[i] == 'x')) {
-                // hex number
-                long number = 0;
-                start += 2;
-                i++;
-                while (true) {
-                    c = chars[i];
-                    if (c >= '0' && c <= '9') {
-                        number = (number << 4) + c - '0';
-                    } else if (c >= 'A' && c <= 'F') {
-                        number = (number << 4) + c - ('A' - 10);
-                    } else if (c >= 'a' && c <= 'f') {
-                        number = (number << 4) + c - ('a' - 10);
-                    } else {
-                        checkLiterals(false);
-                        currentValue = ValueInt.get((int) number);
-                        currentTokenType = VALUE;
-                        currentToken = "0";
-                        parseIndex = i;
-                        return;
-                    }
-                    if (number > Integer.MAX_VALUE) {
-                        readHexDecimal(start, i);
-                        return;
-                    }
-                    i++;
-                }
+                readHexNumber(i + 1, start + 2, chars, types);
+                return;
             }
             long number = c - '0';
-            loop: while (true) {
+            loop: for (;; i++) {
                 c = chars[i];
                 if (c < '0' || c > '9') {
                     switch (c) {
@@ -4712,7 +4874,6 @@ public class Parser {
                     readDecimal(start, i, true);
                     break;
                 }
-                i++;
             }
             return;
         case CHAR_DOT:
@@ -4726,21 +4887,19 @@ public class Parser {
             return;
         case CHAR_STRING: {
             String result = null;
-            while (true) {
-                for (int begin = i;; i++) {
-                    if (chars[i] == '\'') {
-                        if (result == null) {
-                            result = sqlCommand.substring(begin, i);
-                        } else {
-                            result += sqlCommand.substring(begin - 1, i);
-                        }
-                        break;
-                    }
+            for (;; i++) {
+                int begin = i;
+                while (chars[i] != '\'') {
+                    i++;
+                }
+                if (result == null) {
+                    result = sqlCommand.substring(begin, i);
+                } else {
+                    result += sqlCommand.substring(begin - 1, i);
                 }
                 if (chars[++i] != '\'') {
                     break;
                 }
-                i++;
             }
             currentToken = "'";
             checkLiterals(true);
@@ -4773,26 +4932,20 @@ public class Parser {
 
     private void readParameterIndex() {
         int i = parseIndex;
-
         char[] chars = sqlCommandChars;
         char c = chars[i++];
         long number = c - '0';
-        while (true) {
-            c = chars[i];
-            if (c < '0' || c > '9') {
-                currentValue = ValueInt.get((int) number);
-                currentTokenType = VALUE;
-                currentToken = "0";
-                parseIndex = i;
-                break;
-            }
+        for (; (c = chars[i]) >= '0' && c <= '9'; i++) {
             number = number * 10 + (c - '0');
             if (number > Integer.MAX_VALUE) {
                 throw DbException.getInvalidValueException(
                         "parameter index", number);
             }
-            i++;
         }
+        currentValue = ValueInt.get((int) number);
+        currentTokenType = VALUE;
+        currentToken = "0";
+        parseIndex = i;
     }
 
     private void checkLiterals(boolean text) {
@@ -4805,32 +4958,70 @@ public class Parser {
         }
     }
 
-    private void readHexDecimal(int start, int i) {
-        char[] chars = sqlCommandChars;
-        char c;
-        do {
-            c = chars[++i];
-        } while ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'));
-        parseIndex = i;
-        String sub = sqlCommand.substring(start, i);
-        BigDecimal bd = new BigDecimal(new BigInteger(sub, 16));
-        checkLiterals(false);
-        currentValue = ValueDecimal.get(bd);
+    private void readHexNumber(int i, int start, char[] chars, int[] types) {
+        if (database.getMode().zeroExLiteralsAreBinaryStrings) {
+            for (char c; (c = chars[i]) >= '0' && c <= '9' || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'z';) {
+                i++;
+            }
+            if (types[i] == CHAR_NAME) {
+                throw DbException.get(ErrorCode.HEX_STRING_WRONG_1, sqlCommand.substring(i, i + 1));
+            }
+            checkLiterals(true);
+            currentValue = ValueBytes.getNoCopy(StringUtils.convertHexToBytes(sqlCommand.substring(start, i)));
+            parseIndex = i;
+        } else {
+            long number = 0;
+            for (;; i++) {
+                char c = chars[i];
+                if (c >= '0' && c <= '9') {
+                    number = (number << 4) + c - '0';
+                } else if (c >= 'A' && c <= 'F') {
+                    number = (number << 4) + c - ('A' - 10);
+                } else if (c >= 'a' && c <= 'f') {
+                    number = (number << 4) + c - ('a' - 10);
+                } else if (i == start) {
+                    parseIndex = i;
+                    addExpected("Hex number");
+                    throw getSyntaxError();
+                } else {
+                    currentValue = ValueInt.get((int) number);
+                    break;
+                }
+                if (number > Integer.MAX_VALUE) {
+                    do {
+                        c = chars[++i];
+                    } while ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F'));
+                    String sub = sqlCommand.substring(start, i);
+                    currentValue = ValueDecimal.get(new BigDecimal(new BigInteger(sub, 16)));
+                    break;
+                }
+            }
+            char c = chars[i];
+            if (c == 'L' || c == 'l') {
+                i++;
+            }
+            parseIndex = i;
+            if (types[i] == CHAR_NAME) {
+                addExpected("Hex number");
+                throw getSyntaxError();
+            }
+            checkLiterals(false);
+        }
         currentTokenType = VALUE;
+        currentToken = "0";
     }
 
     private void readDecimal(int start, int i, boolean integer) {
         char[] chars = sqlCommandChars;
         int[] types = characterTypes;
         // go until the first non-number
-        while (true) {
+        for (;; i++) {
             int t = types[i];
             if (t == CHAR_DOT) {
                 integer = false;
             } else if (t != CHAR_VALUE) {
                 break;
             }
-            i++;
         }
         char c = chars[i];
         if (c == 'E' || c == 'e') {
@@ -4912,11 +5103,7 @@ public class Parser {
                     // single line comment
                     changed = true;
                     startLoop = i;
-                    while (true) {
-                        c = command[i];
-                        if (c == '\n' || c == '\r' || i >= len - 1) {
-                            break;
-                        }
+                    while ((c = command[i]) != '\n' && c != '\r' && i < len - 1) {
                         command[i++] = ' ';
                         checkRunOver(i, len, startLoop);
                     }
@@ -4929,11 +5116,7 @@ public class Parser {
                     // single line comment
                     changed = true;
                     startLoop = i;
-                    while (true) {
-                        c = command[i];
-                        if (c == '\n' || c == '\r' || i >= len - 1) {
-                            break;
-                        }
+                    while ((c = command[i]) != '\n' && c != '\r' && i < len - 1) {
                         command[i++] = ' ';
                         checkRunOver(i, len, startLoop);
                     }
@@ -5178,7 +5361,7 @@ public class Parser {
             break;
         case '|':
             if (c1 == '|') {
-                return STRING_CONCAT;
+                return CONCATENATION;
             }
             break;
         case '&':
@@ -5595,7 +5778,7 @@ public class Parser {
             if (extTypeInfo == null) {
                 String[] enumerators = null;
                 if (readIf(OPEN_PAREN)) {
-                    java.util.List<String> enumeratorList = new ArrayList<>();
+                    ArrayList<String> enumeratorList = new ArrayList<>();
                     String enumerator0 = readString();
                     enumeratorList.add(enumerator0);
                     while (readIfMore(true)) {
