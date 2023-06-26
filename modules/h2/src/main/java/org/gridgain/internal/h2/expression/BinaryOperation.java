@@ -26,12 +26,6 @@ public class BinaryOperation extends Expression {
 
     public enum OpType {
         /**
-         * This operation represents a string concatenation as in
-         * 'Hello' || 'World'.
-         */
-        CONCAT,
-
-        /**
          * This operation represents an addition as in 1 + 2.
          */
         PLUS,
@@ -79,8 +73,6 @@ public class BinaryOperation extends Expression {
 
     private String getOperationToken() {
         switch (opType) {
-        case CONCAT:
-            return "||";
         case PLUS:
             return "+";
         case MINUS:
@@ -105,23 +97,6 @@ public class BinaryOperation extends Expression {
             r = r.convertTo(type, mode, null);
         }
         switch (opType) {
-        case CONCAT: {
-            if (l == ValueNull.INSTANCE) {
-                if (mode.nullConcatIsNull) {
-                    return ValueNull.INSTANCE;
-                }
-                return r;
-            } else if (r == ValueNull.INSTANCE) {
-                if (mode.nullConcatIsNull) {
-                    return ValueNull.INSTANCE;
-                }
-                return l;
-            }
-            String s1 = l.getString(), s2 = r.getString();
-            StringBuilder buff = new StringBuilder(s1.length() + s2.length());
-            buff.append(s1).append(s2);
-            return ValueString.get(buff.toString());
-        }
         case PLUS:
             if (l == ValueNull.INSTANCE || r == ValueNull.INSTANCE) {
                 return ValueNull.INSTANCE;
@@ -163,18 +138,6 @@ public class BinaryOperation extends Expression {
         left = left.optimize(session);
         right = right.optimize(session);
         switch (opType) {
-        case CONCAT: {
-            TypeInfo l = left.getType(), r = right.getType();
-            if (DataType.isStringType(l.getValueType()) && DataType.isStringType(r.getValueType())) {
-                long precision = l.getPrecision() + r.getPrecision();
-                if (precision >= 0 && precision < Integer.MAX_VALUE) {
-                    type = TypeInfo.getTypeInfo(Value.STRING, precision, 0, null);
-                    break;
-                }
-            }
-            type = TypeInfo.TYPE_STRING;
-            break;
-        }
         case PLUS:
         case MINUS:
         case MULTIPLY:
@@ -186,10 +149,8 @@ public class BinaryOperation extends Expression {
                     (l == Value.UNKNOWN && r == Value.UNKNOWN)) {
                 // (? + ?) - use decimal by default (the most safe data type) or
                 // string when text concatenation with + is enabled
-                if (opType == OpType.PLUS && session.getDatabase().
-                        getMode().allowPlusForStringConcat) {
-                    type = TypeInfo.TYPE_STRING;
-                    opType = OpType.CONCAT;
+                if (opType == OpType.PLUS && session.getDatabase().getMode().allowPlusForStringConcat) {
+                    return new ConcatenationOperation(left, right).optimize(session);
                 } else {
                     type = TypeInfo.TYPE_DECIMAL_DEFAULT;
                 }
@@ -204,7 +165,7 @@ public class BinaryOperation extends Expression {
                 } else {
                     type = TypeInfo.getTypeInfo(dataType);
                     if (DataType.isStringType(dataType) && session.getDatabase().getMode().allowPlusForStringConcat) {
-                        opType = OpType.CONCAT;
+                        return new ConcatenationOperation(left, right).optimize(session);
                     }
                 }
             }
