@@ -378,7 +378,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Gets the static discovery.
         /// </summary>
-        public static TcpDiscoverySpi GetStaticDiscovery(int maxPort = 47503)
+        public static TcpDiscoverySpi GetStaticDiscovery(int maxPort = 47502)
         {
             return new TcpDiscoverySpi
             {
@@ -386,7 +386,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     Endpoints = new[] { $"127.0.0.1:47500..{maxPort}" }
                 },
-                SocketTimeout = TimeSpan.FromSeconds(0.3)
+                SocketTimeout = TimeSpan.FromSeconds(0.6)
             };
         }
 
