@@ -32,6 +32,7 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
+    using Apache.Ignite.Core.Communication.Tcp;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Discovery.Tcp;
     using Apache.Ignite.Core.Discovery.Tcp.Static;
@@ -618,6 +619,10 @@ namespace Apache.Ignite.Core.Tests
             return new IgniteConfiguration
             {
                 DiscoverySpi = GetStaticDiscovery(),
+                CommunicationSpi = new TcpCommunicationSpi
+                {
+                    MessageQueueLimit = 512
+                },
                 Localhost = "127.0.0.1",
                 JvmOptions = TestJavaOptions(jvmDebug),
                 JvmClasspath = CreateTestClasspath(),
