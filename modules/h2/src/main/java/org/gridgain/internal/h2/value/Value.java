@@ -31,6 +31,7 @@ import org.gridgain.internal.h2.util.DateTimeUtils;
 import org.gridgain.internal.h2.util.IntervalUtils;
 import org.gridgain.internal.h2.util.JdbcUtils;
 import org.gridgain.internal.h2.util.StringUtils;
+import org.gridgain.internal.h2.util.geometry.GeoJsonUtils;
 
 /**
  * This is the base class for all value classes.
@@ -247,9 +248,14 @@ public abstract class Value extends VersionedValue {
     public static final int ROW = 39;
 
     /**
+     * The value type for JSON values.
+     */
+    public static final int JSON = 40;
+
+    /**
      * The number of value types.
      */
-    public static final int TYPE_COUNT = ROW + 1;
+    public static final int TYPE_COUNT = JSON + 1;
 
     private static SoftReference<Value[]> softCache;
 
@@ -441,6 +447,8 @@ public abstract class Value extends VersionedValue {
             return 44_000;
         case ENUM:
             return 45_000;
+        case JSON:
+            return 46_000;
         case ARRAY:
             return 50_000;
         case ROW:
@@ -813,6 +821,8 @@ public abstract class Value extends VersionedValue {
             case Value.INTERVAL_HOUR_TO_SECOND:
             case Value.INTERVAL_MINUTE_TO_SECOND:
                 return convertToIntervalDayTime(targetType, column);
+            case Value.JSON:
+                return convertToJson();
             case ARRAY:
                 return convertToArray();
             case ROW:
@@ -1202,9 +1212,10 @@ public abstract class Value extends VersionedValue {
         switch (getValueType()) {
         case JAVA_OBJECT:
         case BLOB:
+        case GEOMETRY:
+        case JSON:
             return ValueBytes.getNoCopy(getBytesNoCopy());
         case UUID:
-        case GEOMETRY:
             return ValueBytes.getNoCopy(getBytes());
         case BYTE:
             return ValueBytes.getNoCopy(new byte[] { getByte() });
@@ -1304,7 +1315,11 @@ public abstract class Value extends VersionedValue {
     private ValueLobDb convertToBlob() {
         switch (getValueType()) {
         case BYTES:
+        case GEOMETRY:
+        case JSON:
             return ValueLobDb.createSmallLob(Value.BLOB, getBytesNoCopy());
+        case UUID:
+            return ValueLobDb.createSmallLob(Value.BLOB, getBytes());
         case TIMESTAMP_TZ:
             throw getDataConversionError(BLOB);
         }
@@ -1346,6 +1361,17 @@ public abstract class Value extends VersionedValue {
             //$FALL-THROUGH$
         case TIMESTAMP_TZ:
             throw getDataConversionError(GEOMETRY);
+        case JSON: {
+            int srid = 0;
+            if (extTypeInfo != null) {
+                Integer s = extTypeInfo.getSrid();
+                if (s != null) {
+                    srid = s;
+                }
+            }
+            result = ValueGeometry.get(GeoJsonUtils.geoJsonToEwkb(getBytesNoCopy(), srid));
+            break;
+        }
         default:
             result = ValueGeometry.get(getString());
         }
@@ -1492,6 +1518,37 @@ public abstract class Value extends VersionedValue {
             bigDecimal.multiply(BigDecimal.valueOf(multiplier)).setScale(0, RoundingMode.HALF_UP).toBigInteger());
     }
 
+    private ValueJson convertToJson() {
+        switch (getValueType()) {
+        case BOOLEAN:
+            return ValueJson.get(getBoolean());
+        case BYTE:
+        case SHORT:
+        case INT:
+            return ValueJson.get(getInt());
+        case LONG:
+            return ValueJson.get(getLong());
+        case FLOAT:
+        case DOUBLE:
+        case DECIMAL:
+            return ValueJson.get(getBigDecimal());
+        case BYTES:
+        case BLOB:
+            return ValueJson.fromJson(getBytesNoCopy());
+        case STRING:
+        case STRING_IGNORECASE:
+        case STRING_FIXED:
+        case CLOB:
+            return ValueJson.get(getString());
+        case GEOMETRY: {
+            ValueGeometry vg = (ValueGeometry) this;
+            return ValueJson.getInternal(GeoJsonUtils.ewkbToGeoJson(vg.getBytesNoCopy(), vg.getDimensionSystem()));
+        }
+        default:
+            throw getDataConversionError(Value.JSON);
+        }
+    }
+
     private ValueArray convertToArray() {
         Value[] a;
         switch (getValueType()) {
@@ -1529,8 +1586,18 @@ public abstract class Value extends VersionedValue {
 
     private ValueResultSet convertToResultSet() {
         SimpleResult result = new SimpleResult();
-        result.addColumn("X", "X", getType());
-        result.addRow(this);
+        if (getValueType() == ROW) {
+            Value[] values = ((ValueRow) this).getList();
+            for (int i = 0; i < values.length;) {
+                Value v = values[i++];
+                String columnName = "C" + i;
+                result.addColumn(columnName, columnName, v.getType());
+            }
+            result.addRow(values);
+        } else {
+            result.addColumn("X", "X", getType());
+            result.addRow(this);
+        }
         return ValueResultSet.get(result);
     }
 
