@@ -387,7 +387,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     Endpoints = new[] { $"127.0.0.1:47500..{maxPort}" }
                 },
-                SocketTimeout = TimeSpan.FromSeconds(0.6)
+                SocketTimeout = TimeSpan.FromSeconds(0.3)
             };
         }
 
@@ -621,7 +621,7 @@ namespace Apache.Ignite.Core.Tests
                 DiscoverySpi = GetStaticDiscovery(),
                 CommunicationSpi = new TcpCommunicationSpi
                 {
-                    MessageQueueLimit = 512
+                    MessageQueueLimit = 5120
                 },
                 Localhost = "127.0.0.1",
                 JvmOptions = TestJavaOptions(jvmDebug),
