@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabase
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointListener;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -221,24 +222,6 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
         return cnt;
     }
 
-    /** */
-    private int colsCnt(IgniteEx node, String cacheName) {
-        DynamicCacheDescriptor desc = node.context().cache().cacheDescriptor(cacheName);
-
-        int cnt = 0;
-
-        if (desc != null) {
-            QuerySchema schema = desc.schema();
-            if (schema != null) {
-
-                for (QueryEntity entity : schema.entities())
-                    cnt += entity.getFields().size();
-            }
-        }
-
-        return cnt;
-    }
-
     /**
      * @param node Node whose checkpoint to wait for.
      * @return Latch released when checkpoint happens.
@@ -276,7 +259,8 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
                 .getAll();
 
         node.context().query().querySqlFields(
-            new SqlFieldsQuery("alter table \"Person\" add column (\"age\" int, \"city\" char)")
+            new SqlFieldsQuery("alter table \"Person\" add column (\"age\" int, \"city\" char, " +
+                "\"rate\" decimal not null, \"grade\" decimal(3, 1), \"alias\" varchar(10))")
             .setSchema(schema), false).getAll();
 
         node.context().query().querySqlFields(
@@ -292,7 +276,18 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
     private void checkDynamicSchemaChanges(IgniteEx node, String cacheName) {
         assertEquals(1, indexCnt(node, cacheName));
 
-        assertEquals(3, colsCnt(node, cacheName));
+        DynamicCacheDescriptor desc = node.context().cache().cacheDescriptor(cacheName);
+
+        QuerySchema schema = desc.schema();
+
+        assertEquals(1, schema.entities().size());
+
+        QueryEntity entity = F.first(schema.entities());
+
+        assertEquals(6, entity.getFields().size());
+        assertEquals(1, entity.getNotNullFields().size());
+        assertEquals(1, entity.getFieldsScale().size());
+        assertEquals(2, entity.getFieldsPrecision().size());
     }
 
     /**

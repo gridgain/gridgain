@@ -889,10 +889,30 @@ public class CommandProcessor {
                             }
                         }
 
+                        int precision = -1;
+                        int scale = -1;
+
+                        if (col.column().getType().getValueType() == Value.DECIMAL) {
+                            if (col.precision() < H2Utils.DECIMAL_DEFAULT_PRECISION) {
+                                precision = col.precision();
+                            }
+
+                            if (col.scale() < H2Utils.DECIMAL_DEFAULT_SCALE) {
+                                scale = col.scale();
+                            }
+                        }
+
+                        if ((col.column().getType().getValueType() == Value.STRING ||
+                            col.column().getType().getValueType() == Value.STRING_FIXED ||
+                            col.column().getType().getValueType() == Value.STRING_IGNORECASE) &&
+                            col.precision() < H2Utils.STRING_DEFAULT_PRECISION) {
+                            precision = col.precision();
+                        }
+
                         QueryField field = new QueryField(col.columnName(),
                             getTypeClassName(col),
                             col.column().isNullable(), col.defaultValue(),
-                            col.precision(), col.scale());
+                            precision, scale);
 
                         cols.add(field);
 

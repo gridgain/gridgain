@@ -280,6 +280,14 @@ public class QuerySchema implements Serializable {
                 for (QueryField field : op0.columns()) {
                     target.getFields().put(field.name(), field.typeName());
 
+                    if (field.precision() != -1) {
+                        target.getFieldsPrecision().put(field.name(), field.precision());
+                    }
+
+                    if (field.scale() != -1) {
+                        target.getFieldsScale().put(field.name(), field.scale());
+                    }
+
                     if (!field.isNullable()) {
                         if (!(target instanceof QueryEntityEx)) {
                             target = new QueryEntityEx(target);
