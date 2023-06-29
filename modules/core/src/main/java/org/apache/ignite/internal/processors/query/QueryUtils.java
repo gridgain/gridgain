@@ -1671,7 +1671,23 @@ public class QueryUtils {
      * @return {@code true} if the field is removed. Otherwise returns {@code false}.
      */
     public static boolean removeField(QueryEntity entity, String alias) {
-        return entity.getFields().remove(fieldNameByAlias(entity, alias)) != null;
+        String fieldName = fieldNameByAlias(entity, alias);
+
+        if (entity.getFields().remove(fieldName) != null) {
+            Set<String> notNUllFields = entity.getNotNullFields();
+
+            if (notNUllFields != null) {
+                notNUllFields.remove(fieldName);
+            }
+
+            entity.getDefaultFieldValues().remove(fieldName);
+            entity.getFieldsPrecision().remove(fieldName);
+            entity.getFieldsScale().remove(fieldName);
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
