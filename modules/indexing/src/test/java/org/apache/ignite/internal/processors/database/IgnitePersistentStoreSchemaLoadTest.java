@@ -188,14 +188,13 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
         CountDownLatch cnt = checkpointLatch(node);
 
         runSql("create table \"Person\" (" +
-                "\"id\" int primary key," +
-                "\"name\" varchar," +
-                "\"city\" int," +
-                "\"str1\" varchar," +
-                "\"str2\" char(10) not null default '1'," +
-                "\"num1\" decimal," +
-                "\"num2\" decimal(10, 2) not null default 1)"
-            , node, QueryUtils.DFLT_SCHEMA);
+            "\"id\" int primary key," +
+            "\"name\" varchar," +
+            "\"city\" int," +
+            "\"str1\" varchar," +
+            "\"str2\" char(10) not null default '1'," +
+            "\"num1\" decimal," +
+            "\"num2\" decimal(10, 2) not null default 1)", node, QueryUtils.DFLT_SCHEMA);
 
         checkOriginalSchema(node, SQL_CACHE_NAME, F.asList("str2", "num2"));
 
