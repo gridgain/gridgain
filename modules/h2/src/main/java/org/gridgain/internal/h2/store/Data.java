@@ -42,7 +42,6 @@ import org.gridgain.internal.h2.value.ValueGeometry;
 import org.gridgain.internal.h2.value.ValueInt;
 import org.gridgain.internal.h2.value.ValueInterval;
 import org.gridgain.internal.h2.value.ValueJavaObject;
-import org.gridgain.internal.h2.value.ValueJson;
 import org.gridgain.internal.h2.value.ValueLob;
 import org.gridgain.internal.h2.value.ValueLobDb;
 import org.gridgain.internal.h2.value.ValueLong;
@@ -127,7 +126,6 @@ public class Data {
     private static final int LOCAL_DATE = 133;
     private static final int LOCAL_TIMESTAMP = 134;
     private static final int CUSTOM_DATA_TYPE = 135;
-    private static final int JSON = 139;
 
     // Aggregates.
     private static final int AGG_DATA_COUNT = 136;
@@ -803,14 +801,6 @@ public class Data {
                     writeVarLong(interval.getRemaining());
                     break;
                 }
-                case Value.JSON: {
-                    writeByte((byte) JSON);
-                    byte[] b = v.getBytesNoCopy();
-                    int len = b.length;
-                    writeVarInt(len);
-                    write(b, 0, len);
-                    break;
-                }
                 default:
                     if (JdbcUtils.customDataTypesHandler != null) {
                         byte[] b = v.getBytesNoCopy();
@@ -1051,12 +1041,6 @@ public class Data {
             }
             throw DbException.get(ErrorCode.UNKNOWN_DATA_TYPE_1,
                     "No CustomDataTypesHandler has been set up");
-        }
-        case JSON: {
-            int len = readVarInt();
-            byte[] b = Utils.newBytes(len);
-            read(b, 0, len);
-            return ValueJson.getInternal(b);
         }
         case AGG_DATA_COUNT: {
             boolean all = readByte() == BOOLEAN_TRUE;
@@ -1360,10 +1344,6 @@ public class Data {
                 case Value.INTERVAL_MINUTE_TO_SECOND: {
                     ValueInterval interval = (ValueInterval)v;
                     return 2 + getVarLongLen(interval.getLeading()) + getVarLongLen(interval.getRemaining());
-                }
-                case Value.JSON: {
-                    byte[] b = v.getBytesNoCopy();
-                    return 1 + getVarIntLen(b.length) + b.length;
                 }
                 default:
                     if (JdbcUtils.customDataTypesHandler != null) {
