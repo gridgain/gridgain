@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.commandline;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +28,13 @@ import org.apache.ignite.internal.client.GridClientClusterState;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.client.GridClientNode;
+import org.apache.ignite.internal.commandline.baseline.BaselineArguments;
+import org.apache.ignite.internal.commandline.baseline.BaselineSubcommands;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineNode;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTask;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskArg;
+import org.apache.ignite.internal.visor.baseline.VisorBaselineTaskResult;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
@@ -39,6 +46,9 @@ import static org.apache.ignite.internal.commandline.CommandList.SET_STATE;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
+import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
+import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
+
 
 /**
  * Command to change cluster state.
@@ -55,6 +65,8 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /** If {@code true}, cluster deactivation will be forced. */
     private boolean forceDeactivation;
+    private Set<String> offlineNodes = new HashSet<>();
+    private boolean partialActivationCheckComplete = false;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
@@ -75,6 +87,8 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
             
             if (!clientState.state().equals(INACTIVE))
                 clusterName = clientState.clusterName();
+
+            if (state == ACTIVE) partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
         }
     }
 
@@ -116,6 +130,9 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 else
                     client.state().state(state);
 
+            if (state == ACTIVE && partialActivationCheckComplete == false)
+                partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
+
             log.info("Cluster state changed to " + state);
 
             return null;
@@ -149,6 +166,39 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 argIter.nextArg("");
             }
         }
+    }
+
+    private boolean partialActivationCheck (GridClient client, GridClientConfiguration clientCfg) throws GridClientException{
+
+        BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
+
+        VisorBaselineTaskResult res = executeTaskByNameOnNode(
+                client,
+                VisorBaselineTask.class.getName(),
+                new VisorBaselineTaskArg(
+                        args.getCmd().visorBaselineOperation(),
+                        args.getTopVer(),
+                        args.getConsistentIds()
+                ),
+                coordinatorId(client.compute()),
+                clientCfg
+        );
+
+        for (VisorBaselineNode node : res.getBaseline().values()){
+
+            String constId = node.getConsistentId();
+            VisorBaselineNode srvNode = res.getServers().get(constId);
+
+            if (srvNode == null) offlineNodes.add(constId);
+
+        }
+
+        if (!offlineNodes.isEmpty())
+            System.out.println("WARNING: PARTIAL ACTIVATION detected. Baseline has " +
+                    offlineNodes.size() + " offline node(s).\nOffline node(s) = " +
+                    offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.");
+
+        return true;
     }
 
     /** {@inheritDoc} */
