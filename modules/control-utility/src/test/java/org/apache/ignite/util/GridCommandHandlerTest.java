@@ -3156,6 +3156,45 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Message should appear to notify user about partial activation
+     * Case 1: Without prompt (--yes argument): message appears that user did a partial activation
+     * Case 2: With prompt: message appears that user will be doing partial activation during confirmation
+     *
+     *  @throws Exception If failed.
+     */
+    @Test
+    public void testPartialActivateMessageNoPrompt() throws Exception{
+        IgniteEx ignite = startGrids(5);
+        autoConfirmation = true;
+
+        ignite.cluster().state(ACTIVE);
+
+        stopAllGrids();
+        startGrid(4);
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
+        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected."        );
+        assertEquals(ACTIVE, ignite.cluster().state());
+    }
+
+    /**
+     *  @throws Exception If failed.
+     */
+    @Test
+    public void testPartialActivateMessageNoPrompt() throws Exception{
+        IgniteEx ignite = startGrids(5);
+        autoConfirmation = false;
+
+        ignite.cluster().state(ACTIVE);
+
+        stopAllGrids();
+        startGrid(4);
+
+        assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
+        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected."        );
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
