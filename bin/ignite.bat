@@ -199,11 +199,11 @@ if "%MAIN_CLASS%" == "" set MAIN_CLASS=org.apache.ignite.startup.cmdline.Command
 call "%SCRIPTS_HOME%\include\jvmdefaults.bat" %MAJOR_JAVA_VER% "%JVM_OPTS%" JVM_OPTS
 
 if "%INTERACTIVE%" == "1" (
-    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
+    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% %RESTART_SUCCESS_OPT% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS%
 ) else (
-    "%JAVA_HOME%\bin\java.exe" %JVM_OPTS% %QUIET% %RESTART_SUCCESS_OPT% ^
+    "%JAVA_HOME%\bin\java.exe" %QUIET% %JVM_OPTS% %RESTART_SUCCESS_OPT% ^
     -DIGNITE_UPDATE_NOTIFIER=false -DIGNITE_HOME="%IGNITE_HOME%" -DIGNITE_PROG_NAME="%PROG_NAME%" %JVM_XOPTS% ^
     -cp "%CP%" %MAIN_CLASS% "%CONFIG%"
 )
