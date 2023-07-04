@@ -35,9 +35,15 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
+//import java.util.concurrent.ExecutorService;
+//import java.util.concurrent.Executors;
+//import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+//import java.util.concurrent.ThreadLocalRandom;
+//import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
@@ -285,6 +291,8 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
     /** */
     private final AtomicBoolean remapOwning = new AtomicBoolean();
+
+    private final UUID datastreamerId = UUID.randomUUID();
 
     /**
      * @param ctx Grid kernal context.
@@ -984,6 +992,9 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                     if (cancelled)
                                                         closedException();
 
+                                                    log.warning(">>>>> starting remap job [id=" + datastreamerId +
+                                                        ", thread=" + Thread.currentThread().getName() +
+                                                        ", owning=" + remapOwning.get() + ']');
                                                     load0(entriesForNode, resFut, activeKeys, remaps + 1, node, topVer);
                                                 }
                                                 catch (Throwable ex) {
@@ -999,13 +1010,18 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                         dataToRemap.add(r);
 
                                         if (!remapOwning.get() && remapOwning.compareAndSet(false, true)) {
+                                            log.info(">>>>> remapOwning acquired [id=" + datastreamerId + ", thread=" + Thread.currentThread().getName() + ']');
                                             ctx.closure().callLocalSafe(new GPC<Boolean>() {
                                                 @Override public Boolean call() {
                                                     boolean locked = true;
 
+                                                    log.info(">>>>> starting sys task [id=" + datastreamerId + ", locked=true" + ", thread=" + Thread.currentThread().getName() + ']');
+
                                                     while (locked || !dataToRemap.isEmpty()) {
-                                                        if (!locked && !remapOwning.compareAndSet(false, true))
+                                                        if (!locked && !remapOwning.compareAndSet(false, true)) {
+                                                            log.info(">>>>> stopping sys task [id=" + datastreamerId + ", locked=false" + ", thread=" + Thread.currentThread().getName() + ']');
                                                             return false;
+                                                        }
 
                                                         try {
                                                             Runnable r = dataToRemap.poll();
@@ -1014,9 +1030,12 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                                 r.run();
                                                         }
                                                         finally {
-                                                            if (!dataToRemap.isEmpty())
+                                                            if (!dataToRemap.isEmpty()) {
+                                                                log.info(">>>>> prolongation sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=true" + ", thread=" + Thread.currentThread().getName() + ']');
                                                                 locked = true;
+                                                            }
                                                             else {
+                                                                log.info(">>>>> release owning sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=false" + ", thread=" + Thread.currentThread().getName() + ']');
                                                                 remapOwning.set(false);
 
                                                                 locked = false;
@@ -1024,6 +1043,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                         }
                                                     }
 
+                                                    log.info(">>>>> sys task completed [id=" + datastreamerId + ", locked=" + locked + ", thread=" + Thread.currentThread().getName() + ']');
                                                     return true;
                                                 }
                                             }, true);
@@ -2455,4 +2475,119 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
             // no-op
         }
     }
+
+//    static final AtomicInteger thIdSys = new AtomicInteger(0);
+//    static final ExecutorService sys = new ThreadPoolExecutor(2, 2,
+//        600_000L, TimeUnit.MILLISECONDS,
+//        new LinkedBlockingQueue<Runnable>(),
+//        r -> new Thread(r, "sys-" + thIdSys.getAndIncrement()));
+//    static final AtomicBoolean remapOwner = new AtomicBoolean();
+//    static final ConcurrentLinkedDeque<Runnable> remapBuff = new ConcurrentLinkedDeque<>();
+//    static final AtomicInteger cnt = new AtomicInteger(0);
+//    static final ConcurrentLinkedDeque<GridFutureAdapter<Void>> futures = new ConcurrentLinkedDeque<>();
+//
+//    public static void load00(int i, int remapCnt) {
+//        GridFutureAdapter<Void> fut = new GridFutureAdapter<>();
+//        fut.listen(f -> {
+//            Runnable job = () -> {
+//                try {
+//                    Integer curr = cnt.getAndIncrement();
+//                    System.out.println("Actual Run [jobCnt=" + i + ", remap=" + remapCnt + ", thread=" + Thread.currentThread().getName() + ", curr=" + curr + ']');
+//
+////                    ThreadLocalRandom r = ThreadLocalRandom.current();
+////                    try {
+////                        Thread.sleep(r.nextInt(100));
+////                    }
+////                    catch (InterruptedException e) {
+////                        e.printStackTrace();
+////                    }
+//                    if (remapCnt < 5) {
+////                        Thread t = new Thread(() -> {
+////                            load00(i, remapCnt + 1);
+////                        }, "remap-thread + " + Thread.currentThread().getName());
+////                        t.start();
+//                        load00(i, remapCnt + 1);
+//                    }
+//                }
+//                finally {
+//                    cnt.getAndDecrement();
+//                }
+//            };
+//
+//            remapBuff.add(job);
+//
+//            if (!remapOwner.get() && remapOwner.compareAndSet(false, true)) {
+//                sys.submit(() -> {
+//                    boolean locked = true;
+//
+//                    while (locked || !remapBuff.isEmpty()) {
+//                        if (!locked && !remapOwner.compareAndSet(false, true))
+//                            return;
+//
+//                        try {
+//                            Runnable j = remapBuff.poll();
+//
+//                            if (j != null)
+//                                j.run();
+//                        }
+//                        finally {
+//                            if (!remapBuff.isEmpty())
+//                                locked = true;
+//                            else {
+//                                remapOwner.set(false);
+//
+//                                try {
+//                                    if (Thread.currentThread().getName().endsWith("0"))
+//                                        Thread.sleep(25);
+//                                }
+//                                catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                                locked = false;
+//                            }
+//                        }
+//                    }
+//                });
+//            }
+//        });
+//        futures.add(fut);
+//    }
+//
+//    public static void main(String[] args) throws Exception {
+//        AtomicInteger thId = new AtomicInteger(0);
+//        ExecutorService initial = Executors.newFixedThreadPool(4, r -> {
+//            return new Thread(r, "initial-" + thId.getAndDecrement());
+//        });
+//
+//        for (int i = 0; i < 100; ++i) {
+//            final int j = i;
+//            initial.submit(() -> {
+//                load00(j, 0);
+//
+//            });
+//            ThreadLocalRandom r = ThreadLocalRandom.current();
+//            try {
+//                Thread.sleep(r.nextInt(20));
+//            }
+//            catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            if (i % 50 == 0)
+//                System.out.println(" initial submittion [cnt=" + i + ']');
+//        }
+//
+//        //initial.awaitTermination(10, TimeUnit.SECONDS);
+//
+//        System.out.println("initial tasks created");
+//        int i = 0;
+//        while (!futures.isEmpty()) {
+//            GridFutureAdapter<Void> f = futures.poll();
+//            if (f != null)
+//                f.onDone();
+//            i++;
+//            if (i % 25 == 0)
+//                Thread.sleep(5000);
+//        }
+//        System.out.println("all tasks");
+//    }
 }
