@@ -1674,10 +1674,10 @@ public class QueryUtils {
         String fieldName = fieldNameByAlias(entity, alias);
 
         if (entity.getFields().remove(fieldName) != null) {
-            Set<String> notNUllFields = entity.getNotNullFields();
+            Set<String> notNullFields = entity.getNotNullFields();
 
-            if (notNUllFields != null) {
-                notNUllFields.remove(fieldName);
+            if (notNullFields != null) {
+                notNullFields.remove(fieldName);
             }
 
             entity.getDefaultFieldValues().remove(fieldName);
