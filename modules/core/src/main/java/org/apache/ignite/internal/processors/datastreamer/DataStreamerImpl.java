@@ -992,9 +992,9 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                     if (cancelled)
                                                         closedException();
 
-                                                    log.warning(">>>>> starting remap job [id=" + datastreamerId +
-                                                        ", thread=" + Thread.currentThread().getName() +
-                                                        ", owning=" + remapOwning.get() + ']');
+//                                                    log.warning(">>>>> starting remap job [id=" + datastreamerId +
+//                                                        ", thread=" + Thread.currentThread().getName() +
+//                                                        ", owning=" + remapOwning.get() + ']');
                                                     load0(entriesForNode, resFut, activeKeys, remaps + 1, node, topVer);
                                                 }
                                                 catch (Throwable ex) {
@@ -1010,16 +1010,16 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                         dataToRemap.add(r);
 
                                         if (!remapOwning.get() && remapOwning.compareAndSet(false, true)) {
-                                            log.info(">>>>> remapOwning acquired [id=" + datastreamerId + ", thread=" + Thread.currentThread().getName() + ']');
+//                                            log.warning(">>>>> remapOwning acquired [id=" + datastreamerId + ", thread=" + Thread.currentThread().getName() + ']');
                                             ctx.closure().callLocalSafe(new GPC<Boolean>() {
                                                 @Override public Boolean call() {
                                                     boolean locked = true;
 
-                                                    log.info(">>>>> starting sys task [id=" + datastreamerId + ", locked=true" + ", thread=" + Thread.currentThread().getName() + ']');
+                                                    log.warning(">>>>> starting sys task [id=" + datastreamerId + ", locked=true" + ", thread=" + Thread.currentThread().getName() + ']');
 
                                                     while (locked || !dataToRemap.isEmpty()) {
                                                         if (!locked && !remapOwning.compareAndSet(false, true)) {
-                                                            log.info(">>>>> stopping sys task [id=" + datastreamerId + ", locked=false" + ", thread=" + Thread.currentThread().getName() + ']');
+//                                                            log.info(">>>>> stopping sys task [id=" + datastreamerId + ", locked=false" + ", thread=" + Thread.currentThread().getName() + ']');
                                                             return false;
                                                         }
 
@@ -1031,11 +1031,11 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                         }
                                                         finally {
                                                             if (!dataToRemap.isEmpty()) {
-                                                                log.info(">>>>> prolongation sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=true" + ", thread=" + Thread.currentThread().getName() + ']');
+//                                                                log.warning(">>>>> prolongation sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=true" + ", thread=" + Thread.currentThread().getName() + ']');
                                                                 locked = true;
                                                             }
                                                             else {
-                                                                log.info(">>>>> release owning sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=false" + ", thread=" + Thread.currentThread().getName() + ']');
+//                                                                log.warning(">>>>> release owning sys task [id=" + datastreamerId + ", locked=" + locked + ", locked2=false" + ", thread=" + Thread.currentThread().getName() + ']');
                                                                 remapOwning.set(false);
 
                                                                 locked = false;
@@ -1043,7 +1043,7 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
                                                         }
                                                     }
 
-                                                    log.info(">>>>> sys task completed [id=" + datastreamerId + ", locked=" + locked + ", thread=" + Thread.currentThread().getName() + ']');
+                                                    log.warning(">>>>> sys task completed [id=" + datastreamerId + ", locked=" + locked + ", thread=" + Thread.currentThread().getName() + ']');
                                                     return true;
                                                 }
                                             }, true);
