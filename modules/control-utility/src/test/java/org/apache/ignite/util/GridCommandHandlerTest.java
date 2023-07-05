@@ -3174,7 +3174,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         startGrid(4);
 
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
-        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected."        );
+        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
         assertEquals(ACTIVE, ignite.cluster().state());
     }
 
@@ -3182,7 +3182,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *  @throws Exception If failed.
      */
     @Test
-    public void testPartialActivateMessageNoPrompt() throws Exception{
+    public void testPartialActivateMessage() throws Exception{
         IgniteEx ignite = startGrids(5);
         autoConfirmation = false;
 
@@ -3193,7 +3193,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         startGrid(4);
 
         assertEquals(EXIT_CODE_OK, execute("--set-state", "ACTIVE"));
-        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected."        );
+        assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
     }
 
     /**
