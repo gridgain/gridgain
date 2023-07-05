@@ -3173,7 +3173,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         stopAllGrids();
         startGrid(4);
 
-        execute("--set-state", "ACTIVE"));
+        execute("--set-state", "ACTIVE");
         assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
     }
 
@@ -3191,7 +3191,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         stopAllGrids();
         startGrid(4);
 
-        execute("--set-state", "ACTIVE"));
+        execute("--set-state", "ACTIVE");
         assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
     }
 
