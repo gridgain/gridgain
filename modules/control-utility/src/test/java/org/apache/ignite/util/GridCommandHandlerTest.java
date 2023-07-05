@@ -3167,6 +3167,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteEx ignite = startGrids(5);
         autoConfirmation = true;
 
+        injectTestSystemOut();
         ignite.cluster().state(ACTIVE);
 
         stopAllGrids();
@@ -3185,6 +3186,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         IgniteEx ignite = startGrids(5);
         autoConfirmation = false;
 
+        injectTestSystemOut();
         ignite.cluster().state(ACTIVE);
 
         stopAllGrids();
