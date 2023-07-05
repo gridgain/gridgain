@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.database;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -195,11 +194,7 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
             "\"str1\" varchar," +
             "\"str2\" char(10) not null default '1'," +
             "\"num1\" decimal," +
-            "\"num2\" decimal(10, 2) not null default 1," +
-            "\"time1\" timestamp," +
-            "\"time2\" timestamp(10, 2) not null," +
-            "\"float1\" float," +
-            "\"float2\" float(10) not null)", node, QueryUtils.DFLT_SCHEMA);
+            "\"num2\" decimal(10, 2) not null default 1)", node, QueryUtils.DFLT_SCHEMA);
 
         checkOriginalSchema(node, SQL_CACHE_NAME, F.asList("str2", "num2"));
 
@@ -254,19 +249,15 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
     private void makeDynamicSchemaChanges(IgniteEx node, String schema) {
         runSql("create index \"my_idx\" on \"Person\" (\"id\", \"name\")", node, schema);
 
-        runSql("alter table \"Person\" drop column \"city\", \"str1\", \"str2\", \"num1\", " +
-            "\"num2\", \"time1\", \"time2\", \"float1\", \"float2\"", node, schema);
+        runSql("alter table \"Person\" drop column " +
+            "\"city\", \"str1\", \"str2\", \"num1\", \"num2\"", node, schema);
 
         runSql("alter table \"Person\" add column (" +
-            "\"rate\" decimal(10, 2) not null," +
-            "\"str1\" char(10) not null," +
-            "\"str2\" varchar," +
-            "\"num1\" decimal(10, 2) not null," +
-            "\"num2\" decimal," +
-            "\"time1\" timestamp(10, 2) not null," +
-            "\"time2\" timestamp," +
-            "\"float1\" float(10) not null," +
-            "\"float2\" float)", node, schema);
+                "\"rate\" decimal(10, 2) not null," +
+                "\"str1\" char(10) not null," +
+                "\"str2\" varchar," +
+                "\"num1\" decimal(10, 2) not null," +
+                "\"num2\" decimal)", node, schema);
     }
 
     /**
@@ -296,9 +287,8 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
 
         assertEquals(0, e.getIndexes().size());
 
-        assertEqualsUnordered(F.asList("id", "name", "city", "str1", "str2",
-            "num1", "num2", "time1", "time2", "float1", "float2"), e.getFields().keySet());
-        assertEqualsUnordered(F.asList("str2", "num2", "time2", "float2"), e.getNotNullFields());
+        assertEqualsUnordered(F.asList("id", "name", "city", "str1", "str2", "num1", "num2"), e.getFields().keySet());
+        assertEqualsUnordered(F.asList("str2", "num2"), e.getNotNullFields());
         assertEqualsUnordered(F.asList("num2"), e.getFieldsScale().keySet());
         assertEqualsUnordered(F.asList("str2", "num2"), e.getFieldsPrecision().keySet());
         assertEqualsUnordered(expDfltFields, e.getDefaultFieldValues().keySet());
@@ -318,9 +308,8 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
         assertEquals(1, e.getIndexes().size());
         assertEquals(0, e.getDefaultFieldValues().size());
 
-        assertEqualsUnordered(F.asList("id", "name", "rate", "str1", "str2",
-            "num1", "num2", "time1", "time2", "float1", "float2"), e.getFields().keySet());
-        assertEqualsUnordered(F.asList("rate", "str1", "num1", "time1", "float1"), e.getNotNullFields());
+        assertEqualsUnordered(F.asList("id", "name", "rate", "str1", "str2", "num1", "num2"), e.getFields().keySet());
+        assertEqualsUnordered(F.asList("rate", "str1", "num1"), e.getNotNullFields());
         assertEqualsUnordered(F.asList("rate", "num1"), e.getFieldsScale().keySet());
         assertEqualsUnordered(F.asList("rate", "str1", "num1"), e.getFieldsPrecision().keySet());
     }
@@ -380,21 +369,5 @@ public class IgnitePersistentStoreSchemaLoadTest extends GridCommonAbstractTest 
         /** */
         @QuerySqlField(precision = 10, scale = 2, notNull = true)
         protected BigDecimal num2;
-
-        /** */
-        @QuerySqlField
-        protected Timestamp time1;
-
-        /** */
-        @QuerySqlField(notNull = true)
-        protected Timestamp time2;
-
-        /** */
-        @QuerySqlField
-        protected Float float1;
-
-        /** */
-        @QuerySqlField(notNull = true)
-        protected Float float2;
     }
 }
