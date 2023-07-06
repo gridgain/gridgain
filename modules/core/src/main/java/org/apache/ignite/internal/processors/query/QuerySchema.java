@@ -280,11 +280,11 @@ public class QuerySchema implements Serializable {
                 for (QueryField field : op0.columns()) {
                     target.getFields().put(field.name(), field.typeName());
 
-                    if (field.precision() != -1) {
+                    if (field.precision() != QueryField.UNDEFINED_PRECISION) {
                         target.getFieldsPrecision().put(field.name(), field.precision());
                     }
 
-                    if (field.scale() != -1) {
+                    if (field.scale() != QueryField.UNDEFINED_SCALE) {
                         target.getFieldsScale().put(field.name(), field.scale());
                     }
 

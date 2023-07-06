@@ -1117,12 +1117,12 @@ public class CommandProcessor {
                 dfltValues.put(e.getKey(), dfltVal);
 
             int precisionVal = convertH2ColumnPrecision(col.getType());
-            if (precisionVal != -1) {
+            if (precisionVal != QueryField.UNDEFINED_PRECISION) {
                 precision.put(e.getKey(), precisionVal);
             }
 
             int scaleVal = convertH2ColumnScale(col.getType());
-            if (scaleVal != -1) {
+            if (scaleVal != QueryField.UNDEFINED_SCALE) {
                 scale.put(e.getKey(), scaleVal);
             }
         }
@@ -1216,7 +1216,7 @@ public class CommandProcessor {
                 return (int)type.getPrecision();
         }
 
-        return -1;
+        return QueryField.UNDEFINED_PRECISION;
     }
 
     private static int convertH2ColumnScale(TypeInfo type) {
@@ -1224,7 +1224,7 @@ public class CommandProcessor {
             type.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
             return type.getScale();
 
-        return -1;
+        return QueryField.UNDEFINED_SCALE;
     }
 
     /**
