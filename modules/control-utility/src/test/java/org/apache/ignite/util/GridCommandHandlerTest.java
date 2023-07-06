@@ -3164,13 +3164,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      */
     @Test
     public void testPartialActivateMessageNoPrompt() throws Exception{
-        IgniteEx ignite = startGrids(5);
+        IgniteEx ignite = startGrids(2);
 
         injectTestSystemOut();
         ignite.cluster().state(ACTIVE);
 
         stopAllGrids();
-        startGrid(4);
+        startGrid(1);
 
         autoConfirmation = true;
         execute("--set-state", "ACTIVE","--yes");
