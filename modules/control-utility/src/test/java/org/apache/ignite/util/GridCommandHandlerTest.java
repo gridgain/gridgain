@@ -3163,15 +3163,15 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      *  @throws Exception If failed.
      */
     @Test
-    public void testPartialActivateMessageNoPrompt() throws Exception{
+    public void testPartialActivateMessage() throws Exception{
         IgniteEx ignite = startGrids(5);
 
-        injectTestSystemOut();
         ignite.cluster().state(ACTIVE);
 
         stopAllGrids();
         startGrids(4);
 
+        injectTestSystemOut();
         autoConfirmation = true;
         execute("--set-state", "ACTIVE");
         assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
