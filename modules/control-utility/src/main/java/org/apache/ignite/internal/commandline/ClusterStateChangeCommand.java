@@ -49,7 +49,6 @@ import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CO
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
-
 /**
  * Command to change cluster state.
  */
@@ -65,7 +64,11 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /** If {@code true}, cluster deactivation will be forced. */
     private boolean forceDeactivation;
+
+    /** Offline nodes. */
     private Set<String> offlineNodes = new HashSet<>();
+
+    /** Flag to check partial activation */
     private boolean partialActivationCheckComplete = false;
 
     /** {@inheritDoc} */
@@ -130,7 +133,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 else
                     client.state().state(state);
 
-            if (state == ACTIVE && partialActivationCheckComplete == false)
+            if (state == ACTIVE && !partialActivationCheckComplete)
                 log.info(partialActivationCheck(client, clientCfg));
 
             log.info("Cluster state changed to " + state);
@@ -168,8 +171,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         }
     }
 
-    private String partialActivationCheck (GridClient client, GridClientConfiguration clientCfg) throws GridClientException{
-
+    private String partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
         BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
 
         partialActivationCheckComplete = true;
@@ -186,7 +188,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 clientCfg
         );
 
-        for (VisorBaselineNode node : res.getBaseline().values()){
+        for (VisorBaselineNode node : res.getBaseline().values()) {
 
             String constId = node.getConsistentId();
             VisorBaselineNode srvNode = res.getServers().get(constId);
