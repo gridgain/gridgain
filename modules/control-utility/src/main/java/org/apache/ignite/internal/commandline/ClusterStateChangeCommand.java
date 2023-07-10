@@ -91,7 +91,8 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
             if (!clientState.state().equals(INACTIVE))
                 clusterName = clientState.clusterName();
 
-            if (state == ACTIVE) System.out.println(partialActivationCheck(client, clientCfg));
+            if (state == ACTIVE)
+                partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
         }
     }
 
@@ -134,7 +135,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                     client.state().state(state);
 
             if (state == ACTIVE && !partialActivationCheckComplete)
-                log.info(partialActivationCheck(client, clientCfg));
+                partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
 
             log.info("Cluster state changed to " + state);
 
@@ -171,10 +172,8 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         }
     }
 
-    private String partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
+    private boolean partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
         BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
-
-        partialActivationCheckComplete = true;
 
         VisorBaselineTaskResult res = executeTaskByNameOnNode(
                 client,
@@ -198,12 +197,12 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         }
 
         if (!offlineNodes.isEmpty()) {
-            return ("WARNING: PARTIAL ACTIVATION detected. Baseline has " +
+            System.out.println("WARNING: PARTIAL ACTIVATION detected. Baseline has " +
                     offlineNodes.size() + " offline node(s).\nOffline node(s) = " +
                     offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.");
         }
 
-        return null;
+        return true;
     }
 
     /** {@inheritDoc} */
