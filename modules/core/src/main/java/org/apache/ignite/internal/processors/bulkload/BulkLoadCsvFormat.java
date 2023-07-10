@@ -29,7 +29,7 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
     @NotNull public static final Pattern DEFAULT_LINE_SEPARATOR = Pattern.compile("[\r\n]+");
 
     /** Field separator pattern. */
-    @NotNull public static final Pattern DEFAULT_FIELD_SEPARATOR = Pattern.compile(",");
+    @NotNull public static final String DEFAULT_FIELD_SEPARATOR = ",";
 
     /** Quote characters */
     @NotNull public static final String DEFAULT_QUOTE_CHARS = "\"";
@@ -53,7 +53,7 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
     @Nullable private Pattern lineSeparator;
 
     /** Field separator pattern. */
-    @Nullable private Pattern fieldSeparator;
+    @Nullable private String fieldSeparator;
 
     /** Set of quote characters. */
     @Nullable private String quoteChars;
@@ -105,7 +105,7 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
      *
      * @return The field separator pattern.
      */
-    @Nullable public Pattern fieldSeparator() {
+    @Nullable public String fieldSeparator() {
         return fieldSeparator;
     }
 
@@ -114,7 +114,7 @@ public class BulkLoadCsvFormat extends BulkLoadFormat {
      *
      * @param fieldSeparator The field separator pattern.
      */
-    public void fieldSeparator(@Nullable Pattern fieldSeparator) {
+    public void fieldSeparator(@Nullable String fieldSeparator) {
         this.fieldSeparator = fieldSeparator;
     }
 

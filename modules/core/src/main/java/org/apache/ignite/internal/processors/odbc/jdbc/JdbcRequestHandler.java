@@ -51,7 +51,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
+import org.apache.ignite.internal.processors.bulkload.LegacyBulkLoadProcessor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
@@ -183,6 +183,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param isLegacyCopyEnabled legacy copy command flag.
      * @param nestedTxMode Transactional mode.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
@@ -202,6 +203,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         boolean autoCloseCursors,
         boolean lazy,
         boolean skipReducerOnUpdate,
+        boolean isLegacyCopyEnabled,
         NestedTxMode nestedTxMode,
         @Nullable Boolean dataPageScanEnabled,
         @Nullable Integer updateBatchSize,
@@ -231,7 +233,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             dataPageScanEnabled,
             updateBatchSize,
-            maxMem
+            maxMem,
+            isLegacyCopyEnabled
         );
 
         this.busyLock = busyLock;
@@ -663,7 +666,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             if (fieldsCur instanceof BulkLoadContextCursor) {
                 BulkLoadContextCursor blCur = (BulkLoadContextCursor)fieldsCur;
 
-                BulkLoadProcessor blProcessor = blCur.bulkLoadProcessor();
+                LegacyBulkLoadProcessor blProcessor = blCur.bulkLoadProcessor();
                 BulkLoadAckClientParameters clientParams = blCur.clientParams();
 
                 JdbcBulkLoadProcessor processor = new JdbcBulkLoadProcessor(blProcessor, req.requestId());

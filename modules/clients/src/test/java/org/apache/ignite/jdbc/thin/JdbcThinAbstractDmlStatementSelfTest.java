@@ -173,7 +173,7 @@ public abstract class JdbcThinAbstractDmlStatementSelfTest extends JdbcThinAbstr
     /**
      * Person.
      */
-    static class Person implements Serializable {
+    protected static class Person implements Serializable {
         /** ID. */
         @QuerySqlField
         private final int id;

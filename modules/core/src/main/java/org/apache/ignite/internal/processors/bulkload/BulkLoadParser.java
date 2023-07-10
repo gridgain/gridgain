@@ -33,7 +33,7 @@ public abstract class BulkLoadParser {
      * (in most cases this is a list of strings).
      *
      * <p>Note that conversion between parsed and database table type is done by the other
-     * object (see {@link BulkLoadProcessor#dataConverter}) by the request processing code.
+     * object (see {@link LegacyBulkLoadProcessor#dataConverter}) by the request processing code.
      * This method is not obliged to do this conversion.
      *
      * @param batchData Data from the current batch.

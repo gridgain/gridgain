@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.IllegalCharsetNameException;
+import java.nio.charset.UnsupportedCharsetException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,10 +64,14 @@ import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadCacheWriter;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadParser;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadStreamerWriter;
+import org.apache.ignite.internal.processors.bulkload.CsvEngine;
+import org.apache.ignite.internal.processors.bulkload.LegacyBulkLoadProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccUtils;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -139,6 +145,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.tx;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.txStart;
+import static org.apache.ignite.internal.processors.query.h2.H2Utils.UPDATE_RESULT_META;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser.PARAM_WRAP_VALUE;
 
 /**
@@ -418,7 +425,11 @@ public class CommandProcessor {
             if (isDdl(cmdNative))
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
-                res = processBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
+                if(cliCtx != null && cliCtx.isLegacyCopyEnabled()) {
+                    res = processLegacyBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
+                } else {
+                    res = processBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
+                }
 
                 unregister = false;
             }
@@ -816,6 +827,7 @@ public class CommandProcessor {
                         ).get();
                     }
                     else {
+
                         ctx.query().dynamicTableCreate(
                             cmd.schemaName(),
                             e,
@@ -1404,14 +1416,14 @@ public class CommandProcessor {
     }
 
     /**
-     * Process bulk load COPY command.
+     * Process legacy bulk load COPY command.
      *
      * @param cmd The command.
      * @param qryId Query id.
      * @return The context (which is the result of the first request/response).
      * @throws IgniteCheckedException If something failed.
      */
-    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
+    private FieldsQueryCursor<List<?>> processLegacyBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
         throws IgniteCheckedException {
         if (cmd.packetSize() == null)
             cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
@@ -1435,11 +1447,72 @@ public class CommandProcessor {
 
         BulkLoadParser inputParser = BulkLoadParser.createParser(cmd.inputFormat());
 
-        BulkLoadProcessor processor = new BulkLoadProcessor(inputParser, dataConverter, outputWriter,
+        LegacyBulkLoadProcessor processor = new LegacyBulkLoadProcessor(inputParser, dataConverter, outputWriter,
             idx.runningQueryManager(), qryId, ctx.tracing());
 
         BulkLoadAckClientParameters params = new BulkLoadAckClientParameters(cmd.localFileName(), cmd.packetSize());
 
         return new BulkLoadContextCursor(processor, params);
     }
+
+    /**
+     * Process bulk load COPY command.
+     *
+     * @param cmd The command.
+     * @param qryId Query id.
+     * @return The context (which is the result of the first request/response).
+     * @throws IgniteCheckedException If something failed.
+     */
+    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId) throws IgniteCheckedException {
+        try {
+            if (cmd.packetSize() == null)
+                cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
+
+
+            GridH2Table tbl = schemaMgr.dataTable(cmd.schemaName(), cmd.tableName());
+
+            if (tbl == null) {
+                throw new IgniteSQLException("Table does not exist: " + cmd.tableName(),
+                        IgniteQueryErrorCode.TABLE_NOT_FOUND);
+            }
+
+            H2Utils.checkAndStartNotStartedCache(ctx, tbl);
+
+            UpdatePlan plan = UpdatePlanBuilder.planForBulkLoad(cmd, tbl);
+
+            IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter = new DmlBulkLoadDataConverter(plan);
+
+            IgniteDataStreamer<Object, Object> streamer = ctx.grid().dataStreamer(tbl.cacheName());
+
+            BulkLoadCacheWriter outputWriter = new BulkLoadStreamerWriter(streamer);
+
+            CsvEngine csvEngine = new CsvEngine(cmd.localFileName(), (BulkLoadCsvFormat) cmd.inputFormat());
+
+            BulkLoadProcessor processor = new BulkLoadProcessor(dataConverter, outputWriter);
+            while(csvEngine.hasNext()) {
+                processor.processBatch(csvEngine.getBatch());
+            }
+
+            QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList(
+                    Collections.singletonList(processor.getUpdateCnt())), null, false, false);
+
+            resCur.fieldsMeta(UPDATE_RESULT_META);
+            return resCur;
+        } catch (Exception e) {
+            if(e instanceof IgniteSQLException) {
+                throw (IgniteSQLException) e;
+            }
+            if(e instanceof IllegalCharsetNameException) {
+                throw new IgniteCheckedException("Unknown charset name: '" + e.getMessage() + "'", e);
+            }
+            if(e instanceof UnsupportedCharsetException) {
+                throw new IgniteCheckedException("Charset is not supported: '" + e.getMessage() + "'", e);
+            }
+            else {
+                throw new IgniteCheckedException(e.getMessage(), e);
+            }
+        }
+    }
+
+
 }

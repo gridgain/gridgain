@@ -26,7 +26,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
@@ -153,6 +152,7 @@ public class SqlBulkLoadCommand implements SqlCommand {
                 fmt.escapeChars(BulkLoadCsvFormat.DEFAULT_ESCAPE_CHARS);
                 fmt.nullString(BulkLoadCsvFormat.DEFAULT_NULL_STRING);
                 fmt.trim(BulkLoadCsvFormat.DEFAULT_TRIM_SPACES);
+                fmt.inputCharsetName(BulkLoadCsvFormat.DEFAULT_INPUT_CHARSET.toString());
 
                 parseCsvOptions(lex, fmt);
 
@@ -192,7 +192,7 @@ public class SqlBulkLoadCommand implements SqlCommand {
 
                     String delimiter = parseString(lex);
 
-                    format.fieldSeparator(Pattern.compile(delimiter));
+                    format.fieldSeparator(delimiter);
 
                     break;
                 }

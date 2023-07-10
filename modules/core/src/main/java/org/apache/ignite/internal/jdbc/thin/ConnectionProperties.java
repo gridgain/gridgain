@@ -592,4 +592,16 @@ public interface ConnectionProperties {
      * @param sslFactory Custom class name that implements Factory&lt;Map&lt;String, String&gt;&gt;.
      */
     public void setUserAttributesFactory(String sslFactory);
+
+    /**
+     * Enables legacy bulk load command implementation (JDBC thin client-only)
+     *
+     * @param isLegacyCopyEnabled
+     */
+    public void setIsLegacyCopyEnabled(boolean isLegacyCopyEnabled);
+
+    /**
+     * Is legacy bulk load implementation enabled
+     */
+    public boolean getIsLegacyCopyEnabled();
 }
