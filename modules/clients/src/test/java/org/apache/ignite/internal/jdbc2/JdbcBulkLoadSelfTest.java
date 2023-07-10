@@ -46,7 +46,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
     /** JDBC URL. */
     private static final String BASE_URL = CFG_URL_PREFIX +
-        "cache=default@modules/clients/src/test/config/jdbc-config.xml";
+            "cache=default@modules/clients/src/test/config/jdbc-config.xml";
 
     /** Connection. */
     protected Connection conn;
@@ -73,7 +73,7 @@ public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
         cache.setBackups(1);
         cache.setWriteSynchronizationMode(FULL_SYNC);
         cache.setIndexedTypes(
-            Integer.class, Person.class
+                Integer.class, Person.class
         );
 
         cfg.setCacheConfiguration(cache);
@@ -132,7 +132,7 @@ public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
 
                 try (Statement stmt = conn.createStatement()) {
                     stmt.executeUpdate("copy from 'dummy.csv' into Person" +
-                        " (_key, id, firstName, lastName) format csv");
+                            " (_key, id, firstName, lastName) format csv");
 
                     return null;
                 }

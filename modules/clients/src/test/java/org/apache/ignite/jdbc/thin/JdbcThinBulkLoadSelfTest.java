@@ -67,24 +67,24 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
     /** A CSV file with zero records. */
     private static final String BULKLOAD_EMPTY_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload0.csv"))
-            .getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload0.csv"))
+                    .getAbsolutePath();
 
     /** A CSV file with one record. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1.csv")).getAbsolutePath();
 
     /** A CSV file with two records. */
     private static final String BULKLOAD_TWO_LINES_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2.csv")).getAbsolutePath();
 
     /** A CSV file in UTF-8. */
     private static final String BULKLOAD_UTF8_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_utf8.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_utf8.csv")).getAbsolutePath();
 
     /** A CSV file in windows-1251. */
     private static final String BULKLOAD_CP1251_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_windows1251.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_windows1251.csv")).getAbsolutePath();
 
     /** A CSV file in windows-1251. */
     private static final String BULKLOAD_RFC4180_COMMA_CSV_FILE =
@@ -96,42 +96,42 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
     /** A CSV file with one record and unmatched quote at the start of field. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched1.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched1.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote at the end of the line. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched2.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched2.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote as the field content. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched3.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched3.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the unquoted field content. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched4.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched4.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the quoted field content. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched5.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched5.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the quoted field content. */
     private static final String BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the quoted field content. */
     private static final String BULKLOAD_WITH_NULL_STRING =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_null_string.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_null_string.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote in the quoted field content. */
     private static final String BULKLOAD_WITH_TRIM_OFF =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_trim_off.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_trim_off.csv")).getAbsolutePath();
 
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
-        "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
-            " into " + TBL_NAME +
-            " (_key, age, firstName, lastName)" +
-            " format csv";
+            "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
+                    " into " + TBL_NAME +
+                    " (_key, age, firstName, lastName)" +
+                    " format csv";
 
     /** JDBC statement. */
     private Statement stmt;
@@ -152,12 +152,12 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Parameterized.Parameters(name = "cacheMode={0}, atomicityMode={1}, isNear={2}")
     public static Collection<Object[]> runConfig() {
         return Arrays.asList(new Object[][] {
-            {PARTITIONED, ATOMIC, true},
-            {PARTITIONED, ATOMIC, false},
-            {PARTITIONED, TRANSACTIONAL, true},
-            {PARTITIONED, TRANSACTIONAL, false},
-            {REPLICATED, ATOMIC, false},
-            {REPLICATED, TRANSACTIONAL, false},
+                {PARTITIONED, ATOMIC, true},
+                {PARTITIONED, ATOMIC, false},
+                {PARTITIONED, TRANSACTIONAL, true},
+                {PARTITIONED, TRANSACTIONAL, false},
+                {REPLICATED, ATOMIC, false},
+                {REPLICATED, TRANSACTIONAL, false},
         });
     }
 
@@ -187,7 +187,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
             cache.setNearConfiguration(new NearCacheConfiguration());
 
         cache.setIndexedTypes(
-            String.class, Person.class
+                String.class, Person.class
         );
 
         return cache;
@@ -265,9 +265,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testEmptyFile() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_EMPTY_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_EMPTY_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
         assertEquals(0, updatesCnt);
 
@@ -282,9 +282,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testOneLineFile() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
         assertEquals(1, updatesCnt);
 
@@ -299,9 +299,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testThreeLineFileWithEmptyNumericColumn() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
         assertEquals(3, updatesCnt);
 
@@ -318,9 +318,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testThreeLineFileWithEmptyNumericColumnWithNullString() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv nullstring 'a'");
+                "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv nullstring 'a'");
 
         assertEquals(3, updatesCnt);
 
@@ -340,9 +340,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -364,9 +364,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv nullstring 'a' trim off");
+                        "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv nullstring 'a' trim off");
 
                 return null;
             }
@@ -384,9 +384,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testThreeLineFileWithEmptyNumericColumnWithNullStringAndTrimOn() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv nullstring 'a' trim on");
+                "copy from '" + BULKLOAD_WITH_NULL_STRING + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv nullstring 'a' trim on");
 
         assertEquals(3, updatesCnt);
 
@@ -402,9 +402,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testThreeLineFileWithEmptyNumericColumnWithTrimOff() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv nullstring 'a' trim off");
+                "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv nullstring 'a' trim off");
 
         assertEquals(3, updatesCnt);
 
@@ -422,9 +422,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 int updatesCnt = stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv nullstring 'a' trim on");
+                        "copy from '" + BULKLOAD_WITH_TRIM_OFF + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv nullstring 'a' trim on");
 
                 assertEquals(3, updatesCnt);
 
@@ -445,9 +445,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -466,9 +466,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -487,9 +487,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -508,9 +508,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -529,9 +529,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -548,9 +548,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from 'any.file' into Person " +
-                        "(_key, age, firstName, lastName) " +
-                        "format csv charset ''");
+                        "copy from 'any.file' into Person " +
+                                "(_key, age, firstName, lastName) " +
+                                "format csv charset ''");
 
                 return null;
             }
@@ -565,9 +565,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from 'any.file' into Person " +
-                        "(_key, age, firstName, lastName) " +
-                        "format csv charset 'nonexistent'");
+                        "copy from 'any.file' into Person " +
+                                "(_key, age, firstName, lastName) " +
+                                "format csv charset 'nonexistent'");
 
                 return null;
             }
@@ -582,9 +582,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from 'any.file' into Person " +
-                        "(_key, age, firstName, lastName) " +
-                        "format csv charset '8^)\'");
+                        "copy from 'any.file' into Person " +
+                                "(_key, age, firstName, lastName) " +
+                                "format csv charset '8^)\'");
 
                 return null;
             }
@@ -599,10 +599,10 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testAsciiCharset() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
-                " into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv charset 'ascii'");
+                "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
+                        " into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv charset 'ascii'");
 
         assertEquals(2, updatesCnt);
 
@@ -694,9 +694,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      */
     private void checkBulkLoadWithCharset(String fileName, String charsetName) throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + fileName + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv charset '" + charsetName + "'");
+                "copy from '" + fileName + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv charset '" + charsetName + "'");
 
         assertEquals(2, updatesCnt);
 
@@ -771,9 +771,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testDefaultCharset() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
         assertEquals(2, updatesCnt);
 
@@ -794,9 +794,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
             try (Statement stmt = con.createStatement()) {
                 int updatesCnt = stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 assertEquals(2, updatesCnt);
 
@@ -817,9 +817,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testDefaultCharsetPacketSize1() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv packet_size 1");
+                "copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv packet_size 1");
 
         assertEquals(2, updatesCnt);
 
@@ -834,9 +834,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from 'nonexistent' into Person" +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from 'nonexistent' into Person" +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -851,9 +851,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Peterson" +
-                        " (_key, age, firstName, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Peterson" +
+                                " (_key, age, firstName, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -868,9 +868,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Person" +
-                        " (_key, age, firstName, lostName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Person" +
+                                " (_key, age, firstName, lostName)" +
+                                " format csv");
 
                 return null;
             }
@@ -885,9 +885,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
-                    "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Person" +
-                        " (_key, firstName, age, lastName)" +
-                        " format csv");
+                        "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into Person" +
+                                " (_key, firstName, age, lastName)" +
+                                " format csv");
 
                 return null;
             }
@@ -902,10 +902,10 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testFieldsSubset() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
-                " into " + TBL_NAME +
-                " (_key, age, firstName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
+                        " into " + TBL_NAME +
+                        " (_key, age, firstName)" +
+                        " format csv");
 
         assertEquals(2, updatesCnt);
 
@@ -925,13 +925,13 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         String tblName = QueryUtils.DFLT_SCHEMA + ".\"PersonTbl\"";
 
         execute(conn, "create table " + tblName +
-            " (id int primary key, age int, firstName varchar(30), lastName varchar(30))");
+                " (id int primary key, age int, firstName varchar(30), lastName varchar(30))");
 
         try {
             int updatesCnt = stmt.executeUpdate(
-                "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into " + tblName +
-                    "(_key, age, firstName, lastName)" +
-                    " format csv");
+                    "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into " + tblName +
+                            "(_key, age, firstName, lastName)" +
+                            " format csv");
 
             assertEquals(2, updatesCnt);
 
@@ -974,12 +974,12 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
                 stmt.addBatch(BASIC_SQL_COPY_STMT);
 
                 stmt.addBatch("copy from '" + BULKLOAD_ONE_LINE_CSV_FILE + "' into " + TBL_NAME +
-                    " (_key, age, firstName, lastName)" +
-                    " format csv");
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
                 stmt.addBatch("copy from '" + BULKLOAD_UTF8_CSV_FILE + "' into " + TBL_NAME +
-                    " (_key, age, firstName, lastName)" +
-                    " format csv");
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
                 stmt.executeBatch();
 
@@ -1044,9 +1044,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 PreparedStatement pstmt = conn.prepareStatement(
-                    "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into " + TBL_NAME +
-                        " (_key, age, firstName, lastName)" +
-                        " format ?");
+                        "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "' into " + TBL_NAME +
+                                " (_key, age, firstName, lastName)" +
+                                " format ?");
 
                 pstmt.setString(1, "csv");
 
@@ -1125,7 +1125,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
             int id = rs.getInt("_key");
 
             SyntheticPerson sp = new SyntheticPerson(rs.getInt("age"),
-                rs.getString("firstName"), rs.getString("lastName"));
+                    rs.getString("firstName"), rs.getString("lastName"));
 
             if (id == 101)
                 sp.validateValues(0, "FirstName101 MiddleName101", "LastName101", checkLastName);
@@ -1151,7 +1151,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
                 sp.validateValues(78, "FirstName789 plus \"quoted\"", "LastName 789", checkLastName);
             else if (id == 101112)
                 sp.validateValues(1011, "FirstName 101112",
-                    "LastName\"" + delimiter + "\" 1011" + delimiter + " 12", checkLastName);
+                        "LastName\"" + delimiter + "\" 1011" + delimiter + " 12", checkLastName);
             else
                 fail("Wrong ID: " + id);
 
@@ -1187,7 +1187,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      * @throws SQLException When one of checks has failed.
      */
     private void checkRecodedNationalCacheContents(String tblName,
-        String csvCharsetName, String stmtCharsetName) throws SQLException {
+                                                   String csvCharsetName, String stmtCharsetName) throws SQLException {
         assert (csvCharsetName != null) == (stmtCharsetName != null);
 
         ResultSet rs = stmt.executeQuery("select _key, age, firstName, lastName from " + tblName);
@@ -1195,13 +1195,13 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
         assert rs != null;
 
         IgniteClosure<String, String> recoder =
-            (csvCharsetName != null)
-                ? new WrongCharsetRecoder(csvCharsetName, stmtCharsetName)
-                : new IgniteClosure<String, String>() {
-                @Override public String apply(String input) {
-                    return input;
-                }
-            };
+                (csvCharsetName != null)
+                        ? new WrongCharsetRecoder(csvCharsetName, stmtCharsetName)
+                        : new IgniteClosure<String, String>() {
+                    @Override public String apply(String input) {
+                        return input;
+                    }
+                };
 
         int cnt = 0;
 
@@ -1241,11 +1241,11 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      * @throws SQLException If failed.
      */
     private void checkBulkLoadWithWrongCharset(String csvFileName, String csvCharsetName, String stmtCharsetName)
-        throws SQLException {
+            throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + csvFileName + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv charset '" + stmtCharsetName + "'");
+                "copy from '" + csvFileName + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv charset '" + stmtCharsetName + "'");
 
         assertEquals(2, updatesCnt);
 

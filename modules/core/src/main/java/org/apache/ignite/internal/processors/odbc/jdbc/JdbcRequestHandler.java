@@ -183,6 +183,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param isLegacyCopyEnabled legacy copy command flag.
      * @param nestedTxMode Transactional mode.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
@@ -202,6 +203,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         boolean autoCloseCursors,
         boolean lazy,
         boolean skipReducerOnUpdate,
+        boolean isLegacyCopyEnabled,
         NestedTxMode nestedTxMode,
         @Nullable Boolean dataPageScanEnabled,
         @Nullable Integer updateBatchSize,
@@ -231,7 +233,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             dataPageScanEnabled,
             updateBatchSize,
-            maxMem
+            maxMem,
+            isLegacyCopyEnabled
         );
 
         this.busyLock = busyLock;
