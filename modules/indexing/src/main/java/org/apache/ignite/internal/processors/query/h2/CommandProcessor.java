@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
@@ -132,6 +131,7 @@ import org.gridgain.internal.h2.command.ddl.DropTable;
 import org.gridgain.internal.h2.command.dml.NoOperation;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.value.DataType;
+import org.gridgain.internal.h2.value.TypeInfo;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -889,10 +889,14 @@ public class CommandProcessor {
                             }
                         }
 
-                        QueryField field = new QueryField(col.columnName(),
+                        QueryField field = new QueryField(
+                            col.columnName(),
                             getTypeClassName(col),
-                            col.column().isNullable(), col.defaultValue(),
-                            col.precision(), col.scale());
+                            col.column().isNullable(),
+                            col.defaultValue(),
+                            convertH2ColumnPrecision(col.column().getType()),
+                            convertH2ColumnScale(col.column().getType())
+                        );
 
                         cols.add(field);
 
@@ -1112,19 +1116,15 @@ public class CommandProcessor {
             if (dfltVal != null)
                 dfltValues.put(e.getKey(), dfltVal);
 
-            if (col.getType().getValueType() == Value.DECIMAL) {
-                if (col.getType().getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getType().getPrecision());
-
-                if (col.getType().getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
-                    scale.put(e.getKey(), col.getType().getScale());
+            int precisionVal = convertH2ColumnPrecision(col.getType());
+            if (precisionVal != QueryField.UNDEFINED_PRECISION) {
+                precision.put(e.getKey(), precisionVal);
             }
 
-            if (col.getType().getValueType() == Value.STRING ||
-                col.getType().getValueType() == Value.STRING_FIXED ||
-                col.getType().getValueType() == Value.STRING_IGNORECASE)
-                if (col.getType().getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
-                    precision.put(e.getKey(), (int)col.getType().getPrecision());
+            int scaleVal = convertH2ColumnScale(col.getType());
+            if (scaleVal != QueryField.UNDEFINED_SCALE) {
+                scale.put(e.getKey(), scaleVal);
+            }
         }
 
         if (!F.isEmpty(dfltValues))
@@ -1202,6 +1202,29 @@ public class CommandProcessor {
             res.setAffinityKeyInlineSize(createTbl.affinityKeyInlineSize());
 
         return res;
+    }
+
+    private static int convertH2ColumnPrecision(TypeInfo type) {
+        if (type.getValueType() == Value.DECIMAL) {
+            if (type.getPrecision() < H2Utils.DECIMAL_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
+        }
+        else if (type.getValueType() == Value.STRING ||
+            type.getValueType() == Value.STRING_FIXED ||
+            type.getValueType() == Value.STRING_IGNORECASE) {
+            if (type.getPrecision() < H2Utils.STRING_DEFAULT_PRECISION)
+                return (int)type.getPrecision();
+        }
+
+        return QueryField.UNDEFINED_PRECISION;
+    }
+
+    private static int convertH2ColumnScale(TypeInfo type) {
+        if (type.getValueType() == Value.DECIMAL &&
+            type.getScale() < H2Utils.DECIMAL_DEFAULT_SCALE)
+            return type.getScale();
+
+        return QueryField.UNDEFINED_SCALE;
     }
 
     /**
