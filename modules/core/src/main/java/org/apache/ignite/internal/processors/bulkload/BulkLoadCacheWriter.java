@@ -29,4 +29,9 @@ public abstract class BulkLoadCacheWriter implements IgniteInClosure<IgniteBiTup
      * @return The number of cache entry updates.
      */
     public abstract long updateCnt();
+
+    /**
+     * Flush data to ensure that data is actually sent to cluster
+     */
+    public abstract void flush();
 }

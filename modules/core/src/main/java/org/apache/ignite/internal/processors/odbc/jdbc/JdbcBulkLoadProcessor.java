@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 import java.io.IOException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteIllegalStateException;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
+import org.apache.ignite.internal.processors.bulkload.LegacyBulkLoadProcessor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchRequest.CMD_CONTINUE;
@@ -27,7 +27,7 @@ import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchR
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchRequest.CMD_FINISHED_ERROR;
 
 /**
- * JDBC wrapper around {@link BulkLoadProcessor} that provides extra logic.
+ * JDBC wrapper around {@link LegacyBulkLoadProcessor} that provides extra logic.
  *
  * Unlike other "single shot" request-reply commands, the
  * COPY command the client-server interaction looks like this:
@@ -73,7 +73,7 @@ import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcBulkLoadBatchR
  */
 public class JdbcBulkLoadProcessor extends JdbcCursor {
     /** A core processor that handles incoming data packets. */
-    private final BulkLoadProcessor processor;
+    private final LegacyBulkLoadProcessor processor;
 
     /** Next batch index (for a very simple check that all batches were delivered to us). */
     protected long nextBatchIdx;
@@ -84,7 +84,7 @@ public class JdbcBulkLoadProcessor extends JdbcCursor {
      * @param processor Bulk load processor from the core to delegate calls to.
      * @param reqId Id of the request that created given processor.
      */
-    public JdbcBulkLoadProcessor(BulkLoadProcessor processor, long reqId) {
+    public JdbcBulkLoadProcessor(LegacyBulkLoadProcessor processor, long reqId) {
         super(reqId);
 
         this.processor = processor;
@@ -94,7 +94,7 @@ public class JdbcBulkLoadProcessor extends JdbcCursor {
     /**
      * Completely processes a bulk load batch request.
      *
-     * Calls {@link BulkLoadProcessor} wrapping around some JDBC-specific logic
+     * Calls {@link LegacyBulkLoadProcessor} wrapping around some JDBC-specific logic
      * (commands, bulk load batch index checking).
      *
      * @param req The current request.

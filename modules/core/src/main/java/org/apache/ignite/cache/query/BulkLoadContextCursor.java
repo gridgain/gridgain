@@ -17,7 +17,7 @@
 package org.apache.ignite.cache.query;
 
 import org.apache.ignite.internal.processors.bulkload.BulkLoadAckClientParameters;
-import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
+import org.apache.ignite.internal.processors.bulkload.LegacyBulkLoadProcessor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -32,7 +32,7 @@ import java.util.List;
  * */
 public class BulkLoadContextCursor implements FieldsQueryCursor<List<?>> {
     /** Bulk load context from SQL command. */
-    private final BulkLoadProcessor processor;
+    private final LegacyBulkLoadProcessor processor;
 
     /** Bulk load parameters to send to the client. */
     private final BulkLoadAckClientParameters clientParams;
@@ -43,7 +43,7 @@ public class BulkLoadContextCursor implements FieldsQueryCursor<List<?>> {
      * @param processor Bulk load context object to store.
      * @param clientParams Parameters to send to client.
      */
-    public BulkLoadContextCursor(BulkLoadProcessor processor, BulkLoadAckClientParameters clientParams) {
+    public BulkLoadContextCursor(LegacyBulkLoadProcessor processor, BulkLoadAckClientParameters clientParams) {
         this.processor = processor;
         this.clientParams = clientParams;
     }
@@ -53,7 +53,7 @@ public class BulkLoadContextCursor implements FieldsQueryCursor<List<?>> {
      *
      * @return a bulk load context.
      */
-    public BulkLoadProcessor bulkLoadProcessor() {
+    public LegacyBulkLoadProcessor bulkLoadProcessor() {
         return processor;
     }
 

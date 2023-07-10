@@ -92,6 +92,7 @@
         <jboss.rmi.version>1.0.6.Final</jboss.rmi.version>
         <jetbrains.annotations.version>16.0.3</jetbrains.annotations.version>
         <jetty.version>9.4.51.v20230217</jetty.version>
+        <opencsv.version>5.7.1</opencsv.version>
         <jmh.version>1.13</jmh.version>
         <jms.spec.version>1.1.1</jms.spec.version>
         <jna.version>4.5.2</jna.version>

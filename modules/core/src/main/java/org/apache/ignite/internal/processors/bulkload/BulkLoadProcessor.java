@@ -16,29 +16,15 @@
 
 package org.apache.ignite.internal.processors.bulkload;
 
-import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteIllegalStateException;
-import org.apache.ignite.internal.processors.query.GridRunningQueryInfo;
-import org.apache.ignite.internal.processors.query.RunningQueryManager;
-import org.apache.ignite.internal.processors.tracing.MTC;
-import org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
-import org.apache.ignite.internal.processors.tracing.NoopSpan;
-import org.apache.ignite.internal.processors.tracing.Span;
-import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.lang.IgniteClosureX;
 import org.apache.ignite.lang.IgniteBiTuple;
 
-import static org.apache.ignite.internal.processors.tracing.SpanType.SQL_BATCH_PROCESS;
+import java.util.List;
 
 /**
- * Bulk load (COPY) command processor used on server to keep various context data and process portions of input
- * received from the client side.
+ * Bulk load processor
  */
-public class BulkLoadProcessor implements AutoCloseable {
-    /** Parser of the input bytes. */
-    private final BulkLoadParser inputParser;
+public class BulkLoadProcessor {
 
     /**
      * Converter, which transforms the list of strings parsed from the input stream to the key+value entry to add to
@@ -49,112 +35,37 @@ public class BulkLoadProcessor implements AutoCloseable {
     /** Streamer that puts actual key/value into the cache. */
     private final BulkLoadCacheWriter outputStreamer;
 
-    /** Becomes true after {@link #close()} method is called. */
-    private boolean isClosed;
-
-    /** Running query manager. */
-    private final RunningQueryManager runningQryMgr;
-
-    /** Query id. */
-    private final Long qryId;
-
-    /** Exception, current load process ended with, or {@code null} if in progress or if succeded. */
-    private Exception failReason;
+    private long updateCnt;
 
     /** Tracing processor. */
-    private final Tracing tracing;
 
     /** Span of the running query. */
-    private final Span qrySpan;
 
-    /**
-     * Creates bulk load processor.
-     *
-     * @param inputParser Parser of the input bytes.
-     * @param dataConverter Converter, which transforms the list of strings parsed from the input stream to the
-     *     key+value entry to add to the cache.
-     * @param outputStreamer Streamer that puts actual key/value into the cache.
-     * @param runningQryMgr Running query manager.
-     * @param qryId Running query id.
-     * @param tracing Tracing processor.
-     */
-    public BulkLoadProcessor(BulkLoadParser inputParser, IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter,
-        BulkLoadCacheWriter outputStreamer, RunningQueryManager runningQryMgr, Long qryId, Tracing tracing) {
-        this.inputParser = inputParser;
+    public BulkLoadProcessor(IgniteClosureX<List<?>, IgniteBiTuple<?, ?>> dataConverter,
+                             BulkLoadCacheWriter outputStreamer) {
         this.dataConverter = dataConverter;
         this.outputStreamer = outputStreamer;
-        this.runningQryMgr = runningQryMgr;
-        this.qryId = qryId;
-        this.tracing = tracing;
+        this.updateCnt = 0;
 
-        GridRunningQueryInfo qryInfo = runningQryMgr.runningQueryInfo(qryId);
-
-        qrySpan = qryInfo == null ? NoopSpan.INSTANCE : qryInfo.span();
-
-        isClosed = false;
     }
 
     /**
-     * Returns the streamer that puts actual key/value into the cache.
-     *
-     * @return Streamer that puts actual key/value into the cache.
+     * Load read data ito GridGain cluster
+     * @param batch
      */
-    public BulkLoadCacheWriter outputStreamer() {
-        return outputStreamer;
+    public void processBatch(List<List<String>> batch) {
+        for (List<String> record : batch) {
+            IgniteBiTuple<?, ?> kv = dataConverter.apply(record);
+            outputStreamer.apply(kv);
+            this.updateCnt++;
+        }
+        outputStreamer.flush();
     }
 
     /**
-     * Processes the incoming batch and writes data to the cache by calling the data converter and output streamer.
-     *
-     * @param batchData Data from the current batch.
-     * @param isLastBatch true if this is the last batch.
-     * @throws IgniteIllegalStateException when called after {@link #close()}.
+     * @return number of inserted rows
      */
-    public void processBatch(byte[] batchData, boolean isLastBatch) throws IgniteCheckedException {
-        try (TraceSurroundings ignored = MTC.support(tracing.create(SQL_BATCH_PROCESS, qrySpan))) {
-            if (isClosed)
-                throw new IgniteIllegalStateException("Attempt to process a batch on a closed BulkLoadProcessor");
-
-            Iterable<List<Object>> inputRecords = inputParser.parseBatch(batchData, isLastBatch);
-
-            for (List<Object> record : inputRecords) {
-                IgniteBiTuple<?, ?> kv = dataConverter.apply(record);
-
-                outputStreamer.apply(kv);
-            }
-        }
-    }
-
-    /**
-     * Is called to notify processor, that bulk load execution, this processor is performing, failed with specified
-     * exception.
-     *
-     * @param failReason why current load failed.
-     */
-    public void onError(Exception failReason) {
-        this.failReason = failReason;
-    }
-
-    /**
-     * Aborts processing and closes the underlying objects ({@link IgniteDataStreamer}).
-     */
-    @Override public void close() throws Exception {
-        if (isClosed)
-            return;
-
-        try {
-            isClosed = true;
-
-            outputStreamer.close();
-        }
-        catch (Exception e) {
-            if (failReason == null)
-                failReason = e;
-
-            throw e;
-        }
-        finally {
-            runningQryMgr.unregister(qryId, failReason);
-        }
+    public long getUpdateCnt() {
+        return this.updateCnt;
     }
 }

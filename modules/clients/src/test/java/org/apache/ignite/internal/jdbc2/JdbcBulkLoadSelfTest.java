@@ -23,6 +23,8 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.jdbc.thin.JdbcAbstractBulkLoadSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinBulkLoadSelfTest;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -43,13 +45,10 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /** COPY command test for the regular JDBC driver. */
-public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
+public class JdbcBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
     /** JDBC URL. */
     private static final String BASE_URL = CFG_URL_PREFIX +
         "cache=default@modules/clients/src/test/config/jdbc-config.xml";
-
-    /** Connection. */
-    protected Connection conn;
 
     /** The logger. */
     protected transient IgniteLogger log;
@@ -93,8 +92,18 @@ public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
         return cfg;
     }
 
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stmt = conn.createStatement();
+
+        assertNotNull(stmt);
+        assertFalse(stmt.isClosed());
+    }
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+
         startGrids(2);
     }
 
@@ -104,7 +113,8 @@ public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
      * @return Connection to use for the test.
      * @throws Exception if failed.
      */
-    private Connection createConnection() throws Exception {
+    @Override
+    protected Connection createConnection() throws SQLException {
         Properties props = new Properties();
 
         return DriverManager.getConnection(BASE_URL, props);
@@ -117,64 +127,5 @@ public class JdbcBulkLoadSelfTest extends GridCommonAbstractTest {
         ignite(0).cache(DEFAULT_CACHE_NAME).clear();
 
         super.afterTest();
-    }
-
-    /**
-     * This is more a placeholder for implementation of IGNITE-7553.
-     *
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testBulkLoadThrows() throws Exception {
-        GridTestUtils.assertThrows(null, new Callable<Object>() {
-            @Override public Object call() throws Exception {
-                conn = createConnection();
-
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate("copy from 'dummy.csv' into Person" +
-                        " (_key, id, firstName, lastName) format csv");
-
-                    return null;
-                }
-            }
-        }, SQLException.class, "COPY command is currently supported only in thin JDBC driver.");
-    }
-
-    /**
-     * A test class for creating a query entity.
-     */
-    private static class Person implements Serializable {
-        /** ID. */
-        @QuerySqlField
-        private final int id;
-
-        /** First name. */
-        @QuerySqlField(index = false)
-        private final String firstName;
-
-        /** Last name. */
-        @QuerySqlField(index = false)
-        private final String lastName;
-
-        /** Age. */
-        @QuerySqlField
-        private final int age;
-
-        /**
-         * @param id ID.
-         * @param firstName First name
-         * @param lastName Last name
-         * @param age Age.
-         */
-        private Person(int id, String firstName, String lastName, int age) {
-            assert !F.isEmpty(firstName);
-            assert !F.isEmpty(lastName);
-            assert age > 0;
-
-            this.id = id;
-            this.firstName = firstName;
-            this.lastName = lastName;
-            this.age = age;
-        }
     }
 }
