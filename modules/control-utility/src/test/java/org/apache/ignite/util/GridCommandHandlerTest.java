@@ -3172,7 +3172,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         injectTestSystemOut();
 
-        autoConfirmation=false;
+        autoConfirmation = false;
 
         injectTestSystemIn(CONFIRM_MSG);
         execute("--set-state", "ACTIVE");
@@ -3181,7 +3181,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         stopAllGrids();
         startGrid(1);
 
-        autoConfirmation=true;
+        autoConfirmation = true;
 
         execute("--set-state", "ACTIVE");
         assertContains(log, testOut.toString(), "WARNING: PARTIAL ACTIVATION detected.");
