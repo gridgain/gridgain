@@ -22,7 +22,6 @@ public class RuleFixed implements Rule {
     public static final int HEX_START = 10, CONCAT = 11;
     public static final int AZ_UNDERSCORE = 12, AF = 13, DIGIT = 14;
     public static final int OPEN_BRACKET = 15, CLOSE_BRACKET = 16;
-    public static final int JSON_TEXT = 17;
 
     private final int type;
 
@@ -116,7 +115,6 @@ public class RuleFixed implements Rule {
             }
             break;
         case ANY_WORD:
-        case JSON_TEXT:
             while (s.length() > 0 && !Bnf.startWithSpace(s)) {
                 s = s.substring(1);
             }

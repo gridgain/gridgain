@@ -268,20 +268,20 @@ public class DataType {
         // Types.TIMESTAMP_WITH_TIMEZONE once Java 1.8 is required.
         add(Value.TIMESTAMP_TZ, 2014,
                 createDate(ValueTimestampTimeZone.MAXIMUM_PRECISION, ValueTimestampTimeZone.DEFAULT_PRECISION,
-                        "TIMESTAMP WITH TIME ZONE", true, ValueTimestampTimeZone.DEFAULT_SCALE,
+                        "TIMESTAMP_TZ", true, ValueTimestampTimeZone.DEFAULT_SCALE,
                         ValueTimestampTimeZone.MAXIMUM_SCALE),
                 new String[]{"TIMESTAMP WITH TIME ZONE"}
         );
         add(Value.BYTES, Types.VARBINARY,
-                createBinary(),
+                createString(false),
                 new String[]{"VARBINARY", "BINARY VARYING"}
         );
         add(Value.BYTES, Types.BINARY,
-                createBinary(),
+                createString(false),
                 new String[]{"BINARY", "RAW", "BYTEA", "LONG RAW"}
         );
         add(Value.BYTES, Types.LONGVARBINARY,
-                createBinary(),
+                createString(false),
                 new String[]{"LONGVARBINARY"}
         );
         dataType = new DataType();
@@ -297,12 +297,12 @@ public class DataType {
                 new String[]{"OTHER", "OBJECT", "JAVA_OBJECT"}
         );
         add(Value.BLOB, Types.BLOB,
-                createLob(false),
+                createLob(),
                 new String[]{"BLOB", "BINARY LARGE OBJECT", "TINYBLOB", "MEDIUMBLOB",
                     "LONGBLOB", "IMAGE", "OID"}
         );
         add(Value.CLOB, Types.CLOB,
-                createLob(true),
+                createLob(),
                 new String[]{"CLOB", "CHARACTER LARGE OBJECT", "TINYTEXT", "TEXT", "MEDIUMTEXT",
                     "LONGTEXT", "NTEXT", "NCLOB"}
         );
@@ -333,10 +333,6 @@ public class DataType {
         for (int i = Value.INTERVAL_YEAR; i <= Value.INTERVAL_MINUTE_TO_SECOND; i++) {
             addInterval(i);
         }
-        add(Value.JSON, Types.OTHER,
-                createString(true, "JSON '", "'"),
-                new String[]{"JSON"}
-        );
         // Row value doesn't have a type name
         dataType = new DataType();
         dataType.type = Value.ROW;
@@ -365,8 +361,8 @@ public class DataType {
         IntervalQualifier qualifier = IntervalQualifier.valueOf(type - Value.INTERVAL_YEAR);
         String name = qualifier.toString();
         DataType dataType = new DataType();
-        dataType.prefix = "INTERVAL '";
-        dataType.suffix = "' " + name;
+        dataType.prefix = "INTERVAL ";
+        dataType.suffix = ' ' + name;
         dataType.supportsPrecision = true;
         dataType.defaultPrecision = ValueInterval.DEFAULT_PRECISION;
         dataType.maxPrecision = ValueInterval.MAXIMUM_PRECISION;
@@ -483,17 +479,9 @@ public class DataType {
     }
 
     private static DataType createString(boolean caseSensitive) {
-        return createString(caseSensitive, "'", "'");
-    }
-
-    private static DataType createBinary() {
-        return createString(false, "X'", "'");
-    }
-
-    private static DataType createString(boolean caseSensitive, String prefix, String suffix) {
         DataType dataType = new DataType();
-        dataType.prefix = prefix;
-        dataType.suffix = suffix;
+        dataType.prefix = "'";
+        dataType.suffix = "'";
         dataType.params = "LENGTH";
         dataType.caseSensitive = caseSensitive;
         dataType.supportsPrecision = true;
@@ -502,8 +490,8 @@ public class DataType {
         return dataType;
     }
 
-    private static DataType createLob(boolean clob) {
-        DataType t = clob ? createString(true) : createBinary();
+    private static DataType createLob() {
+        DataType t = createString(true);
         t.maxPrecision = Long.MAX_VALUE;
         t.defaultPrecision = Long.MAX_VALUE;
         return t;
@@ -782,20 +770,6 @@ public class DataType {
                 return ValueInterval.from(interval.getQualifier(), interval.isNegative(),
                         interval.getLeading(), interval.getRemaining());
             }
-            case Value.JSON: {
-                Object x = rs.getObject(columnIndex);
-                if (x == null) {
-                    return ValueNull.INSTANCE;
-                }
-                Class<?> clazz = x.getClass();
-                if (clazz == byte[].class) {
-                    return ValueJson.fromJson((byte[]) x);
-                } else if (clazz == String.class) {
-                    return ValueJson.fromJson((String) x);
-                } else {
-                    return ValueJson.fromJson(x.toString());
-                }
-            }
             default:
                 if (JdbcUtils.customDataTypesHandler != null) {
                     return JdbcUtils.customDataTypesHandler.getValue(type,
@@ -863,7 +837,6 @@ public class DataType {
             return TimestampWithTimeZone.class.getName();
         case Value.BYTES:
         case Value.UUID:
-        case Value.JSON:
             // "[B", not "byte[]";
             return byte[].class.getName();
         case Value.STRING:
@@ -975,8 +948,6 @@ public class DataType {
             case Types.JAVA_OBJECT:
                 if (sqlTypeName.equalsIgnoreCase("geometry")) {
                     return Value.GEOMETRY;
-                } else if (sqlTypeName.equalsIgnoreCase("json")) {
-                    return Value.JSON;
                 }
         }
         return convertSQLTypeToValueType(sqlType);
@@ -1399,34 +1370,6 @@ public class DataType {
     }
 
     /**
-     * Check if the given value type is a binary string type.
-     *
-     * @param type the value type
-     * @return true if the value type is a binary string type
-     */
-    public static boolean isBinaryStringType(int type) {
-        return type == Value.BYTES || type == Value.BLOB;
-    }
-
-    /**
-     * Check if the given value type is a character string type.
-     *
-     * @param type the value type
-     * @return true if the value type is a character string type
-     */
-    public static boolean isCharacterStringType(int type) {
-        switch (type) {
-        case Value.STRING:
-        case Value.STRING_IGNORECASE:
-        case Value.CLOB:
-        case Value.STRING_FIXED:
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    /**
      * Check if the given value type is a String (VARCHAR,...).
      *
      * @param type the value type
@@ -1545,24 +1488,6 @@ public class DataType {
             }
             return false;
         }
-    }
-
-    /**
-     * Performs saturated addition of precision values.
-     *
-     * @param p1
-     *            the first summand
-     * @param p2
-     *            the second summand
-     * @return the sum of summands, or {@link Long#MAX_VALUE} if either argument
-     *         is negative or sum is out of range
-     */
-    public static long addPrecision(long p1, long p2) {
-        long sum = p1 + p2;
-        if ((p1 | p2 | sum) < 0) {
-            return Long.MAX_VALUE;
-        }
-        return sum;
     }
 
     /**
