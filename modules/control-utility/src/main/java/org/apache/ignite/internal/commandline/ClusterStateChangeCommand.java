@@ -16,10 +16,7 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
@@ -187,7 +184,11 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 clientCfg
         );
 
-        for (VisorBaselineNode node : res.getBaseline().values()) {
+        Map<String, VisorBaselineNode> baseline = res.getBaseline();
+
+        if (baseline == null) return true;
+
+        for (VisorBaselineNode node : baseline.values()) {
 
             String constId = node.getConsistentId();
             VisorBaselineNode srvNode = res.getServers().get(constId);
