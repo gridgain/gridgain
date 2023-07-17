@@ -1959,14 +1959,11 @@ TRUE
 "
 
 "Literals","Bytes","
-X'hex' [ 'hex' [...] ]
+X'hex'
 ","
-A binary value. The hex value is not case sensitive and may contain space characters.
+A binary value. The hex value is not case sensitive.
 ","
-X''
 X'01FF'
-X'01 bc 2a'
-X'01' '02'
 "
 
 "Literals","Date","
@@ -2014,7 +2011,7 @@ $$John's car$$
 "
 
 "Literals","Hex Number","
-[ + | - ] 0x { digit | a-f | A-F } [...]
+[ + | - ] 0x hex
 ","
 A number written in hexadecimal notation.
 ","
@@ -2027,19 +2024,6 @@ A number written in hexadecimal notation.
 The maximum integer number is 2147483647, the minimum is -2147483648.
 ","
 10
-"
-
-"Literals","JSON","
-JSON { bytes | string }
-","
-A binary or character string with a RFC 8259-compliant JSON text and data format.
-JSON text is parsed into internal representation.
-Order of object members is preserved as is.
-Duplicate object member names are allowed.
-","
-JSON '{""id"":10,""name"":""What''s this?""}'
-JSON '[1, ' '2]';
-JSON X'7472' '7565'
 "
 
 "Literals","Long","
@@ -2078,13 +2062,12 @@ SELECT -1.4e-10
 "
 
 "Literals","String","
-'anythingExceptSingleQuote' [ 'anythingExceptSingleQuote' [...] ]
+'anythingExceptSingleQuote'
 ","
 A string starts and ends with a single quote. Two single quotes can be used to
 create a single quote inside a string.
 ","
 'John''s car'
-'A' 'B' 'C'
 "
 
 "Literals","Time","
@@ -2520,8 +2503,6 @@ ID<>2
 compare { { { ALL | ANY | SOME } ( select ) } | operand }
     | IS [ NOT ] NULL
     | IS [ NOT ] [ DISTINCT FROM ] operand
-    | IS [ NOT ] JSON [ VALUE | ARRAY | OBJECT | SCALAR ]
-        [ [ WITH | WITHOUT ] UNIQUE [ KEYS ] ]
     | IS [ NOT ] OF (dataType [, dataType])
     | BETWEEN operand AND operand
     | IN ( { select | expression [,...] } )
@@ -2551,12 +2532,6 @@ If operand is NULL, the result is NULL.
 
 The conditions ""IS [ NOT ]"" and ""IS [ NOT ] DISTINCT FROM"" are null-safe, meaning
 NULL is considered the same as NULL, and the condition never evaluates to NULL.
-
-The conditions ""IS [ NOT ] JSON"" check whether value of the specified string,
-binary data, or a JSON is a valid JSON.
-If ""ARRAY"", ""OBJECT"", or ""SCALAR"" is specified, only JSON items of the specified type are considered as valid.
-If ""WITH UNIQUE [ KEYS ]"" is specified only JSON with unique keys is considered as valid.
-These conditions aren't null-safe, they return NULL if operand is NULL.
 
 When comparing with LIKE, the wildcards characters are ""_"" (any one character)
 and ""%"" (any characters). The database uses an index when comparing with LIKE
@@ -2680,14 +2655,12 @@ ID * 10
 "
 
 "Other Grammar","Hex","
-[' ' [...]] { { digit | a-f | A-F } [' ' [...]] { digit | a-f | A-F } [' ' [...]] } [...]
+{ { digit | a-f | A-F } { digit | a-f | A-F } } [...]
 ","
-The hexadecimal representation of a number or of bytes with optional space characters.
-Two hexadecimal digit characters are one byte.
+The hexadecimal representation of a number or of bytes. Two characters are one
+byte.
 ","
 cafe
-11 22 33
-a b  c d
 "
 
 "Other Grammar","Index Column","
@@ -2761,14 +2734,10 @@ TEST
 "Other Grammar","Operand","
 summand [ { || summand } [...] ]
 ","
-Performs the concatenation of character string, binary string, or array values.
+A value or a concatenation of values.
 In the default mode, the result is NULL if either parameter is NULL.
-In compatibility modes result of string concatenation with NULL parameter can be different.
 ","
 'Hi' || ' Eva'
-X'AB' || X'CD'
-ARRAY[1, 2] || 3
-ARRAY[1, 2] || ARRAY[3, 4]
 "
 
 "Other Grammar","Order","
@@ -3363,9 +3332,9 @@ second mapped to 1, and so on.
 
 Duplicate and empty values are not permitted.
 ","
+
 ENUM('clubs', 'diamonds', 'hearts', 'spades')
 "
-
 "Data Types","GEOMETRY Type","
 GEOMETRY
     [({ GEOMETRY |
@@ -3403,21 +3372,6 @@ GEOMETRY(POINT)
 GEOMETRY(POINT Z)
 GEOMETRY(POINT Z, 4326)
 GEOMETRY(GEOMETRY, 4326)
-"
-
-"Data Types","JSON Type","
-JSON
-","
-A RFC 8259-compliant JSON text.
-Mapped to ""byte[]"".
-To set a JSON value with ""java.lang.String"" in a PreparedStatement use a ""FORMAT JSON"" data format
-(""INSERT INTO TEST(ID, DATA) VALUES (?, ? FORMAT JSON)"").
-Without the data format VARCHAR values are converted to a JSON string values.
-
-Order of object members is preserved as is.
-Duplicate object member names are allowed.
-","
-JSON
 "
 
 "Data Types","INTERVAL Type","
@@ -3936,34 +3890,6 @@ If no rows are selected, the result is NULL.
 Aggregates are only allowed in select statements.
 ","
 ENVELOPE(X)
-"
-"Functions (Aggregate)","JSON_OBJECTAGG","
-JSON_OBJECTAGG(
-{[KEY] string VALUE value} | {string : value}
-[ { NULL | ABSENT } ON NULL ]
-[ { WITH | WITHOUT } UNIQUE KEYS ]
-)
-[FILTER (WHERE expression)] [OVER windowNameOrSpecification]
-","
-Aggregates the keys with values into a JSON object.
-If ABSENT ON NULL is specified properties with NULL value are not included in the object.
-If WITH UNIQUE KEYS is specified the constructed object is checked for uniqueness of keys,
-nested objects, if any, are checked too.
-If no values are selected, the result is SQL NULL value.
-","
-JSON_OBJECTAGG(NAME: VAL);
-JSON_OBJECTAGG(KEY NAME VALUE VAL);
-"
-
-"Functions (Aggregate)","JSON_ARRAYAGG","
-JSON_ARRAYAGG(expression [ { NULL | ABSENT } ON NULL ])
-[FILTER (WHERE expression)] [OVER windowNameOrSpecification]
-","
-Aggregates the values into a JSON array.
-If NULL ON NULL is specified NULL values are included in the array.
-If no values are selected, the result is SQL NULL value.
-","
-JSON_ARRAYAGG(NUMBER)
 "
 
 "Functions (Numeric)","ABS","
@@ -4719,15 +4645,14 @@ CALL UTF8TOSTRING(STRINGTOUTF8('This is a test'))
 "
 
 "Functions (String)","SUBSTRING","
-SUBSTRING ( {string|bytes} FROM startInt [ FOR lengthInt ] )
-    | { SUBSTRING | SUBSTR } ( {string|bytes}, startInt [, lengthInt ] )
+{ SUBSTRING | SUBSTR } ( string, startInt [, lengthInt ] )
 ","
 Returns a substring of a string starting at a position.
 If the start index is negative, then the start index is relative to the end of the string.
 The length is optional.
+Also supported is: ""SUBSTRING(string [FROM start] [FOR length])"".
 ","
-CALL SUBSTRING('[Hello]' FROM 2 FOR 5);
-CALL SUBSTRING('hour' FROM 2);
+CALL SUBSTR('[Hello]', 2, 5);
 CALL SUBSTR('Hello World', -5);
 "
 
@@ -5806,35 +5731,6 @@ Window ordering and window frame clauses are not allowed for this function.
 Window functions in H2 may require a lot of memory for large queries.
 ","
 SELECT X, RATIO_TO_REPORT(X) OVER (PARTITION BY CATEGORY), CATEGORY FROM TEST;
-"
-
-"Functions (JSON)","JSON_OBJECT","
-JSON_OBJECT(
-[{[KEY] string VALUE expression} | {string : expression} [,...]]
-[ { NULL | ABSENT } ON NULL ]
-[ { WITH | WITHOUT } UNIQUE KEYS ]
-)
-","
-Returns a JSON object constructed from the specified properties.
-If ABSENT ON NULL is specified properties with NULL value are not included in the object.
-If WITH UNIQUE KEYS is specified the constructed object is checked for uniqueness of keys,
-nested objects, if any, are checked too.
-","
-JSON_OBJECT('id': 100, 'name': 'Joe', 'groups': '[2,5]' FORMAT JSON);
-"
-
-"Functions (JSON)","JSON_ARRAY","
-JSON_ARRAY(
-[expression [,...]]|{(query) [FORMAT JSON]}
-[ { NULL | ABSENT } ON NULL ]
-)
-","
-Returns a JSON array constructed from the specified values or from the specified single-column subquery.
-If NULL ON NULL is specified NULL values are included in the array.
-","
-JSON_ARRAY(10, 15, 20);
-JSON_ARRAY(JSON_DATA_A FORMAT JSON, JSON_DATA_B FORMAT JSON);
-JSON_ARRAY((SELECT J FROM PROPS) FORMAT JSON);
 "
 
 "System Tables","Information Schema","

@@ -151,7 +151,7 @@ public class TestScript extends TestDb {
 
         for (String s : new String[] { "array", "bigint", "binary", "blob",
                 "boolean", "char", "clob", "date", "decimal", decimal2, "double", "enum",
-                "geometry", "identity", "int", "json", "interval", "other", "real", "row", "smallint",
+                "geometry", "identity", "int", "interval", "other", "real", "row", "smallint",
                 "time", "timestamp-with-timezone", "timestamp", "tinyint",
                 "uuid", "varchar", "varchar-ignorecase" }) {
             testScript("datatypes/" + s + ".sql");
@@ -169,14 +169,9 @@ public class TestScript extends TestDb {
             testScript("other/" + s + ".sql");
         }
         for (String s : new String[] { "any", "array-agg", "avg", "bit-and", "bit-or", "count", "envelope",
-                "every", "histogram",
-                "json_arrayagg", "json_objectagg",
-                "listagg", "max", "min", "mode", "percentile", "rank", "selectivity",
+                "every", "histogram", "listagg", "max", "min", "mode", "percentile", "rank", "selectivity",
                 "stddev-pop", "stddev-samp", "sum", "var-pop", "var-samp" }) {
             testScript("functions/aggregate/" + s + ".sql");
-        }
-        for (String s : new String[] { "json_array", "json_object" }) {
-            testScript("functions/json/" + s + ".sql");
         }
         for (String s : new String[] { "abs", "acos", "asin", "atan", "atan2",
                 "bitand", "bitget", "bitor", "bitxor", "ceil", "compress",

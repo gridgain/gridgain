@@ -147,11 +147,6 @@ public class TypeInfo {
      */
     public static final TypeInfo TYPE_ROW;
 
-    /**
-     * JSON type.
-     */
-    public static final TypeInfo TYPE_JSON;
-
     private static final TypeInfo[] TYPE_INFOS_BY_VALUE_TYPE;
 
     private final int valueType;
@@ -220,7 +215,6 @@ public class TypeInfo {
         TYPE_INTERVAL_DAY_TO_SECOND = infos[Value.INTERVAL_DAY_TO_SECOND];
         TYPE_INTERVAL_HOUR_TO_SECOND = infos[Value.INTERVAL_HOUR_TO_SECOND];
         infos[Value.ROW] = TYPE_ROW = new TypeInfo(Value.ROW, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null);
-        infos[Value.JSON] = TYPE_JSON = new TypeInfo(Value.JSON, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, null);
         TYPE_INFOS_BY_VALUE_TYPE = infos;
     }
 
@@ -282,15 +276,12 @@ public class TypeInfo {
         case Value.JAVA_OBJECT:
         case Value.UUID:
         case Value.ROW:
-        case Value.JSON:
             return TYPE_INFOS_BY_VALUE_TYPE[type];
         case Value.UNKNOWN:
             return TYPE_UNKNOWN;
         case Value.DECIMAL:
             if (precision < 0) {
                 precision = ValueDecimal.DEFAULT_PRECISION;
-            } else if (precision > Integer.MAX_VALUE) {
-                precision = Integer.MAX_VALUE;
             }
             if (scale < 0) {
                 scale = ValueDecimal.DEFAULT_SCALE;
@@ -321,21 +312,21 @@ public class TypeInfo {
             return new TypeInfo(Value.TIMESTAMP_TZ, d, scale, d, null);
         }
         case Value.BYTES:
-            if (precision < 0 || precision > Integer.MAX_VALUE) {
+            if (precision < 0) {
                 precision = Integer.MAX_VALUE;
             }
-            return new TypeInfo(Value.BYTES, precision, 0, MathUtils.convertLongToInt(precision * 2), null);
+            return new TypeInfo(Value.BYTES, precision, 0, MathUtils.convertLongToInt(precision) * 2, null);
         case Value.STRING:
-            if (precision < 0 || precision > Integer.MAX_VALUE) {
+            if (precision < 0) {
                 return TYPE_STRING;
             }
             //$FALL-THROUGH$
         case Value.STRING_FIXED:
         case Value.STRING_IGNORECASE:
-            if (precision < 0 || precision > Integer.MAX_VALUE) {
+            if (precision < 0) {
                 precision = Integer.MAX_VALUE;
             }
-            return new TypeInfo(type, precision, 0, (int) precision, null);
+            return new TypeInfo(type, precision, 0, MathUtils.convertLongToInt(precision), null);
         case Value.BLOB:
         case Value.CLOB:
             if (precision < 0) {
