@@ -145,14 +145,4 @@ public enum AggregateType {
      */
     ENVELOPE,
 
-    /**
-     * The aggregate type for JSON_OBJECTAGG(expression: expression).
-     */
-    JSON_OBJECTAGG,
-
-    /**
-     * The aggregate type for JSON_ARRAYAGG(expression).
-     */
-    JSON_ARRAYAGG,
-
 }
