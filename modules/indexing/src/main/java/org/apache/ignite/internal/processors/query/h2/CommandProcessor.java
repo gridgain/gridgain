@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
+import java.nio.file.NoSuchFileException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1509,6 +1510,9 @@ public class CommandProcessor {
             }
             if(e instanceof UnsupportedCharsetException) {
                 throw new IgniteCheckedException("Charset is not supported: '" + e.getMessage() + "'", e);
+            }
+            if(e instanceof NoSuchFileException) {
+                throw new IgniteCheckedException("File not found: '" + e.getMessage() + "'", e);
             }
             else {
                 throw new IgniteCheckedException(e.getMessage(), e);

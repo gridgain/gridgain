@@ -40,7 +40,6 @@ import java.util.Arrays;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -328,6 +327,54 @@ public class JdbcThinBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
     }
 
     /**
+     * Verifies that no error is reported and characters are converted improperly when we import
+     * UTF-8 as windows-1251.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testWrongCharset_Utf8AsWin1251() throws SQLException {
+        assumeTrue(isLegacyCopyEnabled);
+        checkBulkLoadWithWrongCharset(BULKLOAD_UTF8_CSV_FILE, "UTF-8", "windows-1251");
+    }
+
+    /**
+     * Verifies that no error is reported and characters are converted improperly when we import
+     * windows-1251 as UTF-8.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testWrongCharset_Win1251AsUtf8() throws SQLException {
+        assumeTrue(isLegacyCopyEnabled);
+        checkBulkLoadWithWrongCharset(BULKLOAD_CP1251_CSV_FILE, "windows-1251", "UTF-8");
+    }
+
+    /**
+     * Verifies that no error is reported and characters are converted improperly when we import
+     * UTF-8 as ASCII.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testWrongCharset_Utf8AsAscii() throws SQLException {
+        assumeTrue(isLegacyCopyEnabled);
+        checkBulkLoadWithWrongCharset(BULKLOAD_UTF8_CSV_FILE, "UTF-8", "ascii");
+    }
+
+    /**
+     * Verifies that no error is reported and characters are converted improperly when we import
+     * windows-1251 as ASCII.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testWrongCharset_Win1251AsAscii() throws SQLException {
+        assumeTrue(isLegacyCopyEnabled);
+        checkBulkLoadWithWrongCharset(BULKLOAD_CP1251_CSV_FILE, "windows-1251", "ascii");
+    }
+
+    /**
      * Checks cache contents after bulk loading data in the above tests: ASCII version.
      * <p>
      * Uses SQL SELECT command for querying entries.
@@ -339,6 +386,27 @@ public class JdbcThinBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
      */
     private void checkCacheContents(String tblName, boolean checkLastName, int recCnt) throws SQLException {
         checkCacheContents(tblName, checkLastName, recCnt, ',');
+    }
+
+    /**
+     * Checks that no error is reported and characters are converted improperly when we import
+     * file having a different charset than the one specified in the SQL statement.
+     *
+     * @param csvFileName Imported file name.
+     * @param csvCharsetName Imported file charset.
+     * @param stmtCharsetName Charset to specify in the SQL statement.
+     * @throws SQLException If failed.
+     */
+    private void checkBulkLoadWithWrongCharset(String csvFileName, String csvCharsetName, String stmtCharsetName)
+            throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+                "copy from '" + csvFileName + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv charset '" + stmtCharsetName + "'");
+
+        assertEquals(2, updatesCnt);
+
+        checkRecodedNationalCacheContents(TBL_NAME, csvCharsetName, stmtCharsetName);
     }
 
     /**
