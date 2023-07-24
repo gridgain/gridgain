@@ -1417,6 +1417,8 @@ public class CommandProcessor {
 
     /**
      * Process legacy bulk load COPY command.
+     * Legacy bulk load command only supports CSV import and thin client.
+     * Disabled by default, can be enabled by {@link org.apache.ignite.internal.jdbc.thin.ConnectionProperties.setLegacyCopyEnabled}
      *
      * @param cmd The command.
      * @param qryId Query id.

@@ -321,7 +321,7 @@ public class JdbcThinTcpIo {
         }
 
         if (ver.compareTo(VER_2_8_4) >= 0) {
-            writer.writeBoolean(connProps.getIsLegacyCopyEnabled());
+            writer.writeBoolean(connProps.isLegacyCopyEnabled());
         }
 
         if (!F.isEmpty(connProps.getUsername())) {

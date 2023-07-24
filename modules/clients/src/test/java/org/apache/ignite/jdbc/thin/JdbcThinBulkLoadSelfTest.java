@@ -24,7 +24,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Callable;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -52,72 +51,6 @@ import static org.junit.Assume.assumeTrue;
  */
 @RunWith(Parameterized.class)
 public class JdbcThinBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
-    /** Subdirectory with CSV files. */
-    private static final String CSV_FILE_SUBDIR = "/modules/clients/src/test/resources/";
-
-    /** Default table name. */
-    private static final String TBL_NAME = "Person";
-
-    /** A CSV file with zero records. */
-    private static final String BULKLOAD_EMPTY_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload0.csv"))
-            .getAbsolutePath();
-
-    /** A CSV file with one record. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1.csv")).getAbsolutePath();
-
-    /** A CSV file with two records. */
-    private static final String BULKLOAD_TWO_LINES_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2.csv")).getAbsolutePath();
-
-    /** A CSV file in UTF-8. */
-    private static final String BULKLOAD_UTF8_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_utf8.csv")).getAbsolutePath();
-
-    /** A CSV file in windows-1251. */
-    private static final String BULKLOAD_CP1251_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_windows1251.csv")).getAbsolutePath();
-
-    /** A CSV file in windows-1251. */
-    private static final String BULKLOAD_RFC4180_COMMA_CSV_FILE =
-            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_comma.csv")).getAbsolutePath();
-
-    /** A CSV file in windows-1251. */
-    private static final String BULKLOAD_RFC4180_PIPE_CSV_FILE_ =
-            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_pipe.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote at the start of field. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched1.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote at the end of the line. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched2.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote as the field content. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched3.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote in the unquoted field content. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched4.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote in the quoted field content. */
-    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched5.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote in the quoted field content. */
-    private static final String BULKLOAD_THREE_LINE_CSV_FILE_EMPTY_NUMERIC =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote in the quoted field content. */
-    private static final String BULKLOAD_WITH_NULL_STRING =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_null_string.csv")).getAbsolutePath();
-
-    /** A CSV file with one record and unmatched quote in the quoted field content. */
-    private static final String BULKLOAD_WITH_TRIM_OFF =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_empty_numeric_with_trim_off.csv")).getAbsolutePath();
 
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
