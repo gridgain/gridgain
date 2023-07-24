@@ -598,10 +598,10 @@ public interface ConnectionProperties {
      *
      * @param isLegacyCopyEnabled
      */
-    public void setIsLegacyCopyEnabled(boolean isLegacyCopyEnabled);
+    public void setLegacyCopyEnabled(boolean legacyCopyEnabled);
 
     /**
      * Is legacy bulk load implementation enabled
      */
-    public boolean getIsLegacyCopyEnabled();
+    public boolean isLegacyCopyEnabled();
 }

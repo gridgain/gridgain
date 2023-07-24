@@ -73,7 +73,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private BooleanProperty replicatedOnly = new BooleanProperty(
         "replicatedOnly", "Specify if the all queries contain only replicated tables", false, false);
 
-    private BooleanProperty isLegacyCopyEnabled = new BooleanProperty(
+    private BooleanProperty legacyCopyEnabled = new BooleanProperty(
             "isLegacyCopyEnabled", "Specify if legacy copy enabled", false, false);
 
     /** Auto close server cursor property. */
