@@ -22,10 +22,10 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,11 +81,10 @@ public class CsvEngine implements AutoCloseable {
         try {
             List<List<String>> res = new ArrayList<>();
             for (int i = 0; i < BATCH_SIZE; i++) {
-                if (iterator.hasNext()) {
+                if (iterator.hasNext())
                     res.add(Arrays.asList(processRow(iterator.next())));
-                } else {
+                else
                     return res;
-                }
             }
             return res;
         } catch (Exception ex) {
@@ -106,18 +105,16 @@ public class CsvEngine implements AutoCloseable {
     }
 
     private String processNullString(String val) {
-        if (fmt.nullString().equals(val)) {
+        if (fmt.nullString().equals(val))
             return null;
-        }
         return val;
     }
 
     private String processTrim(String val) {
-        if (fmt.trim()) {
+        if (fmt.trim())
             return val.trim();
-        } else {
+        else
             return val;
-        }
     }
 
     @Override public void close() throws Exception {

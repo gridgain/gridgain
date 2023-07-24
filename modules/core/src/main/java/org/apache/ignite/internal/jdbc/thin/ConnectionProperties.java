@@ -596,7 +596,7 @@ public interface ConnectionProperties {
     /**
      * Enables legacy bulk load command implementation (JDBC thin client-only)
      *
-     * @param isLegacyCopyEnabled
+     * @param legacyCopyEnabled
      */
     public void setLegacyCopyEnabled(boolean legacyCopyEnabled);
 

@@ -721,12 +721,12 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         userAttrsFactory.setValue(cls);
     }
 
-    @Override public void setIsLegacyCopyEnabled(boolean isLegacyCopyEnabled) {
-        this.isLegacyCopyEnabled.setValue(isLegacyCopyEnabled);
+    @Override public void setLegacyCopyEnabled(boolean legacyCopyEnabled) {
+        this.legacyCopyEnabled.setValue(legacyCopyEnabled);
     }
 
-    @Override public boolean getIsLegacyCopyEnabled() {
-        return this.isLegacyCopyEnabled.value();
+    @Override public boolean isLegacyCopyEnabled() {
+        return this.legacyCopyEnabled.value();
     }
 
     /**
@@ -748,7 +748,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             setPassword(props.getProperty("password"));
         }
         if (props0.get("ignite.jdbc.isLegacyCopyEnabled") != null) {
-            setIsLegacyCopyEnabled(Boolean.parseBoolean(props0.get("ignite.jdbc.isLegacyCopyEnabled").toString()));
+            setLegacyCopyEnabled(Boolean.parseBoolean(props0.get("ignite.jdbc.isLegacyCopyEnabled").toString()));
         }
     }
 
