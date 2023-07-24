@@ -103,7 +103,6 @@ public class JdbcBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-
         startGrids(2);
     }
 

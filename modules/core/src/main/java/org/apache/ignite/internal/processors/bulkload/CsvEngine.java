@@ -58,7 +58,7 @@ public class CsvEngine implements AutoCloseable {
 
         Charset charset = Charset.forName(fmt.inputCharsetName());
 
-        csvReader = new CSVReaderBuilder(new InputStreamReader(new FileInputStream(path), charset ))
+        csvReader = new CSVReaderBuilder(Files.newBufferedReader(Paths.get(path), charset ))
                 .withCSVParser(csvParser).build();
 
         try {
