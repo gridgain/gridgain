@@ -25,7 +25,7 @@ public class JdbcThinBulkLoadErrorMessageHelper {
      * @return wrong file name message
      */
     public static String getWrongFileNameMessage(boolean isLegacyBulkLoad) {
-        return (isLegacyBulkLoad) ? "Failed to read file: 'nonexistent'" : "nonexistent (No such file or directory)";
+        return (isLegacyBulkLoad) ? "Failed to read file: 'nonexistent'" : "File not found: 'nonexistent'";
     }
 
     /**
