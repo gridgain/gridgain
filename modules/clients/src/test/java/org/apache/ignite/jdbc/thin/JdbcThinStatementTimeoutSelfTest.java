@@ -48,7 +48,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
     private static final TcpDiscoveryIpFinder IP_FINDER = new TcpDiscoveryVmIpFinder(true);
 
     /** URL. */
-    private static final String URL = "jdbc:ignite:thin://127.0.0.1/";
+    private static final String URL = "jdbc:ignite:thin://127.0.0.1/?isLegacyCopyEnabled=true";
 
     /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
