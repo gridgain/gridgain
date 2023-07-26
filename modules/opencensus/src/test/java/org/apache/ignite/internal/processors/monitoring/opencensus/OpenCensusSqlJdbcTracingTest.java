@@ -64,7 +64,7 @@ public class OpenCensusSqlJdbcTracingTest extends OpenCensusSqlNativeTracingTest
         "/modules/clients/src/test/resources/bulkload2.csv")).getAbsolutePath();
 
     /** Number of bulk-load entries. */
-    private static final int BULKLOAD_ENTRIES = 2;
+    private static final int BULKLOAD_ENTRIES = 1;
 
     /**
      * Tests tracing of local SQL SELECT query.

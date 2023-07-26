@@ -1491,7 +1491,7 @@ public class CommandProcessor {
 
             CsvEngine csvEngine = new CsvEngine(cmd.localFileName(), (BulkLoadCsvFormat) cmd.inputFormat());
 
-            BulkLoadProcessor processor = new BulkLoadProcessor(dataConverter, outputWriter);
+            BulkLoadProcessor processor = new BulkLoadProcessor(dataConverter, outputWriter, idx.runningQueryManager(), qryId,ctx.tracing());
             while(csvEngine.hasNext()) {
                 processor.processBatch(csvEngine.getBatch());
             }
