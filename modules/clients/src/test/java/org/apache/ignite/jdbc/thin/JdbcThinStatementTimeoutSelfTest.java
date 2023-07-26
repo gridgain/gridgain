@@ -153,7 +153,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testNegativeQueryTimeout() throws SQLException {
         GridTestUtils.assertThrows(log, () -> {
-            try (final Connection conn = DriverManager.getConnection(URL + "?queryTimeout=-1")) {
+            try (final Connection conn = DriverManager.getConnection(URL + "&queryTimeout=-1")) {
                 try (final Statement stmt = conn.createStatement()) {
                     return null;
                 }

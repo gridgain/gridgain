@@ -587,7 +587,7 @@ public class RunningQueriesTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testCopyCommand() throws Exception {
-        try (Connection conn = GridTestUtils.connect(ignite, null); Statement stmt = conn.createStatement()) {
+        try (Connection conn = GridTestUtils.connect(ignite, "isLegacyCopyEnabled=true"); Statement stmt = conn.createStatement()) {
             conn.setSchema("\"default\"");
 
             newBarrier(1);
