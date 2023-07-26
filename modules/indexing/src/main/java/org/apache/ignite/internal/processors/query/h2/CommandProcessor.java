@@ -426,7 +426,7 @@ public class CommandProcessor {
             if (isDdl(cmdNative))
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
-                if(cliCtx != null && cliCtx.isLegacyCopyEnabled()) {
+                if (cliCtx != null && cliCtx.isLegacyCopyEnabled()) {
                     res = processLegacyBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
                 } else {
                     res = processBulkLoadCommand((SqlBulkLoadCommand) cmdNative, qryId);
@@ -1466,11 +1466,11 @@ public class CommandProcessor {
      * @return The context (which is the result of the first request/response).
      * @throws IgniteCheckedException If something failed.
      */
-    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId) throws IgniteCheckedException {
+    private FieldsQueryCursor<List<?>> processBulkLoadCommand(SqlBulkLoadCommand cmd, Long qryId)
+        throws IgniteCheckedException {
         try {
             if (cmd.packetSize() == null)
                 cmd.packetSize(BulkLoadAckClientParameters.DFLT_PACKET_SIZE);
-
 
             GridH2Table tbl = schemaMgr.dataTable(cmd.schemaName(), cmd.tableName());
 
@@ -1492,7 +1492,7 @@ public class CommandProcessor {
             CsvEngine csvEngine = new CsvEngine(cmd.localFileName(), (BulkLoadCsvFormat) cmd.inputFormat());
 
             BulkLoadProcessor processor = new BulkLoadProcessor(dataConverter, outputWriter, idx.runningQueryManager(), qryId,ctx.tracing());
-            while(csvEngine.hasNext()) {
+            while (csvEngine.hasNext()) {
                 processor.processBatch(csvEngine.getBatch());
             }
 
@@ -1502,16 +1502,16 @@ public class CommandProcessor {
             resCur.fieldsMeta(UPDATE_RESULT_META);
             return resCur;
         } catch (Exception e) {
-            if(e instanceof IgniteSQLException) {
+            if (e instanceof IgniteSQLException) {
                 throw (IgniteSQLException) e;
             }
-            if(e instanceof IllegalCharsetNameException) {
+            if (e instanceof IllegalCharsetNameException) {
                 throw new IgniteCheckedException("Unknown charset name: '" + e.getMessage() + "'", e);
             }
-            if(e instanceof UnsupportedCharsetException) {
+            if (e instanceof UnsupportedCharsetException) {
                 throw new IgniteCheckedException("Charset is not supported: '" + e.getMessage() + "'", e);
             }
-            if(e instanceof NoSuchFileException) {
+            if (e instanceof NoSuchFileException) {
                 throw new IgniteCheckedException("File not found: '" + e.getMessage() + "'", e);
             }
             else {
@@ -1519,6 +1519,4 @@ public class CommandProcessor {
             }
         }
     }
-
-
 }

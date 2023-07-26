@@ -17,28 +17,19 @@
 package org.apache.ignite.internal.jdbc2;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.jdbc.thin.JdbcAbstractBulkLoadSelfTest;
-import org.apache.ignite.jdbc.thin.JdbcThinBulkLoadSelfTest;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
-import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collections;
 import java.util.Properties;
-import java.util.concurrent.Callable;
-import org.junit.Test;
 
 import static org.apache.ignite.IgniteJdbcDriver.CFG_URL_PREFIX;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -112,8 +103,7 @@ public class JdbcBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
      * @return Connection to use for the test.
      * @throws Exception if failed.
      */
-    @Override
-    protected Connection createConnection() throws SQLException {
+    @Override protected Connection createConnection() throws SQLException {
         Properties props = new Properties();
 
         return DriverManager.getConnection(BASE_URL, props);

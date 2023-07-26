@@ -174,9 +174,8 @@ public class JdbcThinBulkLoadSelfTest extends JdbcAbstractBulkLoadSelfTest {
         super.afterTest();
     }
 
-    @Override
-    protected Connection createConnection() throws SQLException {
-        if(this.isLegacyCopyEnabledParam) {
+    @Override protected Connection createConnection() throws SQLException {
+        if (this.isLegacyCopyEnabledParam) {
             return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?isLegacyCopyEnabled=true");
         } else {
             return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/");
