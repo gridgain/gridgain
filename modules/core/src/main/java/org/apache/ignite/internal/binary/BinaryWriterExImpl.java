@@ -176,14 +176,14 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
     private void marshal0(Object obj, boolean enableReplace) throws BinaryObjectException {
         assert obj != null;
 
-        Class<?> cls = obj.getClass();
-
-        BinaryClassDescriptor desc = ctx.descriptorForClass(cls);
+        BinaryClassDescriptor desc = ctx.descriptorForObject(obj);
 
         if (!desc.registered()) {
-            if (failIfUnregistered)
+            if (failIfUnregistered) {
+                Class<?> cls = obj.getClass();
+
                 throw new UnregisteredClassException(cls);
-            else {
+            } else {
                 // Metadata is registered for OBJECT and BINARY during actual writing.
                 boolean registerMeta = !(desc.isObject() || desc.isBinary());
 

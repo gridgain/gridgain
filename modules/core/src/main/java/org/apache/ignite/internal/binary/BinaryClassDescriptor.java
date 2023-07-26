@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.binary;
 
 import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -127,6 +128,9 @@ public class BinaryClassDescriptor {
     /** Whether stable schema was published. */
     private volatile boolean stableSchemaPublished;
 
+    /** Real object holder. */
+    private final WeakReference<?> objHolder;
+
     /**
      * @param ctx Context.
      * @param cls Class.
@@ -163,7 +167,50 @@ public class BinaryClassDescriptor {
             serializer,
             metaDataEnabled,
             registered,
-            MarshallerExclusions.isExcluded(cls)
+            MarshallerExclusions.isExcluded(cls),
+            null
+        );
+    }
+
+    /**
+     * @param ctx Context.
+     * @param cls Class.
+     * @param userType User type flag.
+     * @param typeId Type ID.
+     * @param typeName Type name.
+     * @param affKeyFieldName Affinity key field name.
+     * @param mapper Mapper.
+     * @param serializer Serializer.
+     * @param metaDataEnabled Metadata enabled flag.
+     * @param registered Whether typeId has been successfully registered by MarshallerContext or not.
+     * @throws BinaryObjectException In case of error.
+     */
+    BinaryClassDescriptor(
+        BinaryContext ctx,
+        Class<?> cls,
+        boolean userType,
+        int typeId,
+        String typeName,
+        @Nullable String affKeyFieldName,
+        @Nullable BinaryInternalMapper mapper,
+        @Nullable BinarySerializer serializer,
+        boolean metaDataEnabled,
+        boolean registered,
+        Object obj
+    ) throws BinaryObjectException {
+        this(
+            ctx,
+            cls,
+            userType,
+            typeId,
+            typeName,
+            affKeyFieldName,
+            mapper,
+            serializer,
+            metaDataEnabled,
+            registered,
+            MarshallerExclusions.isExcluded(cls),
+            obj
         );
     }
 
@@ -192,7 +239,8 @@ public class BinaryClassDescriptor {
         @Nullable BinarySerializer serializer,
         boolean metaDataEnabled,
         boolean registered,
-        boolean excluded
+        boolean excluded,
+        Object obj
     ) throws BinaryObjectException {
         assert ctx != null;
         assert cls != null;
@@ -207,6 +255,7 @@ public class BinaryClassDescriptor {
         if (serializer instanceof BinaryReflectiveSerializer)
             serializer = null;
 
+        objHolder = new WeakReference<>(obj);
         this.ctx = ctx;
         this.cls = cls;
         this.typeId = typeId;
@@ -333,12 +382,12 @@ public class BinaryClassDescriptor {
                     if (BinaryUtils.FIELDS_SORTED_ORDER) {
                         fields0 = new TreeMap<>();
 
-                        stableFieldsMeta = metaDataEnabled ? new TreeMap<String, BinaryFieldMetadata>() : null;
+                        stableFieldsMeta = metaDataEnabled ? new TreeMap<>() : null;
                     }
                     else {
                         fields0 = new LinkedHashMap<>();
 
-                        stableFieldsMeta = metaDataEnabled ? new LinkedHashMap<String, BinaryFieldMetadata>() : null;
+                        stableFieldsMeta = metaDataEnabled ? new LinkedHashMap<>() : null;
                     }
 
                     Set<String> duplicates = duplicateFields(cls);
@@ -365,7 +414,22 @@ public class BinaryClassDescriptor {
                                 if (!ids.add(fieldId))
                                     throw new BinaryObjectException("Duplicate field ID: " + name);
 
-                                BinaryFieldAccessor fieldInfo = BinaryFieldAccessor.create(f, fieldId);
+                                Object obj0 = null;
+
+                                try {
+                                    if (obj != null)
+                                        obj0 = f.get(obj);
+
+                                    if (!(obj0 instanceof Set) && !(obj0 instanceof Map))
+                                        obj0 = null;
+                                }
+                                catch (IllegalAccessException ex) {
+                                    // no op.
+                                }
+
+                                Class<? extends Object> type = obj0 != null ? obj0.getClass() : null;
+
+                                BinaryFieldAccessor fieldInfo = BinaryFieldAccessor.create(f, type, fieldId);
 
                                 fields0.put(name, fieldInfo);
 
@@ -999,7 +1063,7 @@ public class BinaryClassDescriptor {
                 mapper,
                 initialSerializer,
                 stableFieldsMeta != null,
-                true);
+                true, objHolder.get());
     }
 
     /**

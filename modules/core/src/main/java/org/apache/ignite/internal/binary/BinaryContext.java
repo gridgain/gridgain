@@ -586,10 +586,22 @@ public class BinaryContext {
 
         BinaryClassDescriptor desc = descByCls.get(cls);
 
-        if (desc != null)
-            return desc;
-        else
-            return createDescriptorForClass(cls);
+        return desc != null ? desc : createDescriptorForClass(cls);
+    }
+
+    /**
+     * @param obj Class representation instance.
+     * @return A descriptor for the given object. If representing class hasn't been registered yet, then a new descriptor will be
+     * created, but its {@link BinaryClassDescriptor#registered()} will be {@code false}.
+     */
+    @NotNull BinaryClassDescriptor descriptorForObject(@NotNull Object obj) {
+        assert obj != null;
+
+        Class<?> cls = obj.getClass();
+
+        BinaryClassDescriptor desc = descByCls.get(cls);
+
+        return desc != null ? desc : createDescriptorForObject(obj);
     }
 
     /**
@@ -638,6 +650,60 @@ public class BinaryContext {
                 serializer,
                 true,
                 false
+            );
+        }
+    }
+
+    /**
+     * @param obj Instance representation.
+     * @return A descriptor for the given class. The descriptor needs to be registered in order to be used.
+     */
+    @NotNull private BinaryClassDescriptor createDescriptorForObject(Object obj) {
+        Class<?> cls = obj.getClass();
+
+        String clsName = cls.getName();
+
+        if (marshCtx.isSystemType(clsName)) {
+            BinarySerializer serializer = null;
+
+            if (BINARYLIZABLE_SYS_CLSS.contains(clsName))
+                serializer = new BinaryReflectiveSerializer();
+
+            return new BinaryClassDescriptor(this,
+                cls,
+                false,
+                clsName.hashCode(),
+                clsName,
+                null,
+                SIMPLE_NAME_LOWER_CASE_MAPPER,
+                serializer,
+                false,
+                false,
+                obj
+            );
+        }
+        else {
+            BinaryInternalMapper mapper = userTypeMapper(clsName);
+
+            final String typeName = mapper.typeName(clsName);
+
+            final int typeId = mapper.typeId(clsName);
+
+            BinarySerializer serializer = serializerForClass(cls);
+
+            String affFieldName = affinityFieldName(cls);
+
+            return new BinaryClassDescriptor(this,
+                cls,
+                true,
+                typeId,
+                typeName,
+                affFieldName,
+                mapper,
+                serializer,
+                true,
+                false,
+                obj
             );
         }
     }
@@ -1042,7 +1108,8 @@ public class BinaryContext {
             SIMPLE_NAME_LOWER_CASE_MAPPER,
             new BinaryReflectiveSerializer(),
             false,
-            registered /* registered */
+            registered /* registered */,
+            null
         );
 
         predefinedTypeNames.put(simpleClsName, id);
@@ -1129,7 +1196,8 @@ public class BinaryContext {
                 mapper,
                 serializer,
                 true,
-                true
+                true,
+                null
             );
 
             fieldsMeta = desc.fieldsMeta();
