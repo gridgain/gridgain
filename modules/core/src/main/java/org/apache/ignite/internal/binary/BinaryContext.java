@@ -809,7 +809,7 @@ public class BinaryContext {
             serializer,
             true,
             true,
-            false
+            false, null
         );
     }
 

@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.binary;
 
 import java.io.Serializable;
-import java.lang.ref.WeakReference;
+import java.lang.ref.SoftReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -129,7 +129,7 @@ public class BinaryClassDescriptor {
     private volatile boolean stableSchemaPublished;
 
     /** Real object holder. */
-    private final WeakReference<?> objHolder;
+    private final SoftReference<?> objHolder;
 
     /**
      * @param ctx Context.
@@ -255,7 +255,7 @@ public class BinaryClassDescriptor {
         if (serializer instanceof BinaryReflectiveSerializer)
             serializer = null;
 
-        objHolder = new WeakReference<>(obj);
+        objHolder = new SoftReference<>(obj);
         this.ctx = ctx;
         this.cls = cls;
         this.typeId = typeId;
