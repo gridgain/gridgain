@@ -1,0 +1,190 @@
+# name: test/sql/function/json/test_json_path.test
+# description: Test JSON path expression functions
+# group: [json]
+
+# IS_JSON Tests for a valid JSON value. This can be a JSON object, array, number, string or one of the three literal values (false, true, null)
+
+query R
+SELECT IS_JSON('{"a":[3]}');
+----
+true
+
+query R
+SELECT IS_JSON('[{"a":1}]');
+----
+true
+
+query R
+SELECT IS_JSON(1);
+----
+true
+
+query R
+SELECT IS_JSON('scalar string');
+----
+true
+
+query R
+SELECT IS_JSON(true);
+----
+true
+
+query R
+SELECT IS_JSON('{"a"');
+----
+false
+
+query R
+SELECT IS_JSON('["a"');
+----
+false
+
+query R
+SELECT IS_JSON(NULL);
+----
+null
+
+statement ok
+CREATE TABLE TEST (ID INT, J VARCHAR);
+
+statement ok
+INSERT INTO TEST VALUES (1, '{"info":{"type":1,"address":{"town":"Bristol","country":"England"},"tags":["Sport","Water polo"]}}');
+
+# JSON_VALUE extracts a scalar value
+
+query R
+SELECT JSON_VALUE(NULL, NULL);
+----
+null
+
+query R
+SELECT JSON_VALUE('{"town":"Bristol"}', '$.town');
+----
+Bristol
+
+query R
+SELECT JSON_VALUE(J, '$') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_VALUE(J, '$.info.type') FROM TEST;
+----
+1
+
+query R
+SELECT JSON_VALUE(J, '$.info.address.town') FROM TEST;
+----
+Bristol
+
+query R
+SELECT JSON_VALUE(J, '$.info.address') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_VALUE(J, '$.info.tags') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_VALUE(J, '$.info.type[0]') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_VALUE(J, '$.info.none') FROM TEST;
+----
+null
+
+# JSON_QUERY extracts an object or an array
+
+query R
+SELECT JSON_QUERY(NULL, NULL);
+----
+null
+
+query R
+SELECT JSON_QUERY('{"town":"Bristol"}', '$');
+----
+{"town":"Bristol"}
+
+query R
+SELECT JSON_QUERY(J, '$') FROM TEST;
+----
+{"info":{"type":1,"address":{"town":"Bristol","country":"England"},"tags":["Sport","Water polo"]}}
+
+query R
+SELECT JSON_QUERY(J, '$.info.type') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_QUERY(J, '$.info.address.town') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_QUERY(J, '$.info.address') FROM TEST;
+----
+{"town":"Bristol","country":"England"}
+
+query R
+SELECT JSON_QUERY(J, '$.info.tags') FROM TEST;
+----
+["Sport","Water polo"]
+
+query R
+SELECT JSON_QUERY(J, '$.info.type[0]') FROM TEST;
+----
+null
+
+query R
+SELECT JSON_QUERY(J, '$.info.none') FROM TEST;
+----
+null
+
+# JSON_MODIFY changes a value in a JSON string
+
+query R
+SELECT JSON_MODIFY(NULL, NULL, NULL);
+----
+null
+
+query R
+SELECT JSON_MODIFY('{"town":"Bristol"}', '$.town', 'London');
+----
+{"town":"London"}
+
+query R
+SELECT JSON_MODIFY(J, '$.info.address.town', 'London') FROM TEST;
+----
+{"info":{"type":1,"address":{"town":"London","country":"England"},"tags":["Sport","Water polo"]}}
+
+query R
+SELECT JSON_MODIFY(J, '$.info.type', 2) FROM TEST;
+----
+{"info":{"type":2,"address":{"town":"Bristol","country":"England"},"tags":["Sport","Water polo"]}}
+
+query R
+SELECT JSON_MODIFY(J, '$.info.tags', '["Sport"]') FROM TEST;
+----
+{"info":{"type":1,"address":{"town":"Bristol","country":"England"},"tags":["Sport"]}}
+
+query R
+SELECT JSON_MODIFY(J, '$.info', '{"name":"John"}') FROM TEST;
+----
+{"info":{"name":"John"}}
+
+query R
+SELECT JSON_MODIFY(J, '$.none', '{"name":"John"}') FROM TEST;
+----
+{"info":{"type":1,"address":{"town":"Bristol","country":"England"},"tags":["Sport","Water polo"]},"none":{"name":"John"}}
+
+query R
+SELECT JSON_MODIFY(J, '$.info.address', NULL) FROM TEST;
+----
+{"info":{"type":1,"tags":["Sport","Water polo"]}}
+
+statement ok
+DROP TABLE TEST;
