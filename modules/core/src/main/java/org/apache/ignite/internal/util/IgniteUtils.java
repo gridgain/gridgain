@@ -315,6 +315,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CACHE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_OFFHEAP_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_HOST_RAM_SIZE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_JVM_PID;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.util.GridUnsafe.objectFieldOffset;
@@ -1470,6 +1471,19 @@ public abstract class IgniteUtils {
         return roundedHeapSize(totalAllocatedPDS, precision);
     }
 
+    public static double hostRamSize(Iterable<ClusterNode> nodes, int precision) {
+        double totalHostRamSize = .0;
+
+        for (ClusterNode n : nodesPerHost(nodes)) {
+            Long val = n.<Long>attribute(ATTR_HOST_RAM_SIZE);
+
+            if (val != null)
+                totalHostRamSize += val;
+        }
+
+        return roundedHeapSize(totalHostRamSize, precision);
+    }
+
     /**
      * Returns one representative node for each JVM.
      *
@@ -1482,6 +1496,26 @@ public abstract class IgniteUtils {
         // Group by mac addresses and pid.
         for (ClusterNode node : nodes) {
             String grpId = node.attribute(ATTR_MACS) + "|" + node.attribute(ATTR_JVM_PID);
+
+            if (!grpMap.containsKey(grpId))
+                grpMap.put(grpId, node);
+        }
+
+        return grpMap.values();
+    }
+
+    /**
+     * Returns one representative node for each host.
+     *
+     * @param nodes Nodes.
+     * @return Collection which contains only one representative node for each host.
+     */
+    private static Iterable<ClusterNode> nodesPerHost(Iterable<ClusterNode> nodes) {
+        Map<String, ClusterNode> grpMap = new HashMap<>();
+
+        // Group by mac addresses and pid.
+        for (ClusterNode node : nodes) {
+            String grpId = node.attribute(ATTR_MACS);
 
             if (!grpMap.containsKey(grpId))
                 grpMap.put(grpId, node);
