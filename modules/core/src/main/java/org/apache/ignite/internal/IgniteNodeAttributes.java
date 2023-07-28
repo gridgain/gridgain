@@ -131,6 +131,9 @@ public final class IgniteNodeAttributes {
     /** Internal attribute name constant. */
     public static final String ATTR_DATA_REGIONS_OFFHEAP_SIZE = ATTR_PREFIX + ".data.regions.offheap.size";
 
+    /** Ingernal attribute name constant. */
+    public static final String ATTR_HOST_RAM_SIZE = ATTR_PREFIX + ".data.host.ram.size";
+
     /** Internal attribute name constant. */
     public static final String ATTR_DATA_REGIONS_TOTAL_ALLOCATED_SIZE = ATTR_PREFIX + ".data.regions.allocated.size";
 
