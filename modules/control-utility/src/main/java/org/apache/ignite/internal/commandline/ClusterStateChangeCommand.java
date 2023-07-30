@@ -16,7 +16,10 @@
 
 package org.apache.ignite.internal.commandline;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterState;
@@ -62,10 +65,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
     /** If {@code true}, cluster deactivation will be forced. */
     private boolean forceDeactivation;
 
-    /** Offline nodes. */
-    private Set<String> offlineNodes = new HashSet<>();
-
-    /** Flag to check partial activation */
+    /** Flag of completed partial activation check */
     private boolean partialActivationCheckComplete = false;
 
     /** {@inheritDoc} */
@@ -169,8 +169,15 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         }
     }
 
+    /**
+     * Check if all baseline nodes are online during activation.
+     * Partial activation message is printed if some nodes are offline.
+     * Returns {@code true} so check is completed only once
+     **/
     private boolean partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
         BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
+
+        Set<String> offlineNodes = new HashSet<>();
 
         VisorBaselineTaskResult res = executeTaskByNameOnNode(
                 client,
@@ -186,19 +193,19 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
         Map<String, VisorBaselineNode> baseline = res.getBaseline();
 
-        if (baseline == null) return true;
+        if (baseline == null)
+            return true;
 
         for (VisorBaselineNode node : baseline.values()) {
-
             String constId = node.getConsistentId();
             VisorBaselineNode srvNode = res.getServers().get(constId);
 
-            if (srvNode == null) offlineNodes.add(constId);
-
+            if (srvNode == null)
+                offlineNodes.add(constId);
         }
 
         if (!offlineNodes.isEmpty()) {
-            System.out.println("WARNING: PARTIAL ACTIVATION detected. Baseline has " +
+            System.out.println("Partial activation detected. Baseline has " +
                     offlineNodes.size() + " offline node(s).\nOffline node(s) = " +
                     offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.");
         }
