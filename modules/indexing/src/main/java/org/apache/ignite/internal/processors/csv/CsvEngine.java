@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.bulkload;
+package org.apache.ignite.internal.processors.csv;
 
 import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
+import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

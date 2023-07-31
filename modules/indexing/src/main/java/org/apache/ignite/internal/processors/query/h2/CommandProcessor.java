@@ -69,7 +69,7 @@ import org.apache.ignite.internal.processors.bulkload.BulkLoadCsvFormat;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadParser;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadProcessor;
 import org.apache.ignite.internal.processors.bulkload.BulkLoadStreamerWriter;
-import org.apache.ignite.internal.processors.bulkload.CsvEngine;
+import org.apache.ignite.internal.processors.csv.CsvEngine;
 import org.apache.ignite.internal.processors.bulkload.LegacyBulkLoadProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
