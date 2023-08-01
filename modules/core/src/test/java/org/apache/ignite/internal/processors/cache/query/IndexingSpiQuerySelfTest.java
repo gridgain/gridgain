@@ -24,21 +24,27 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.cache.Cache;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.IgniteTransactions;
+
+import org.apache.ignite.*;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SpiQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
+import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
+import org.apache.ignite.spi.communication.CommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -62,6 +68,7 @@ public class IndexingSpiQuerySelfTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setIndexingSpi(indexingSpi);
+        cfg.setCommunicationSpi(new TestTcpCommunicationSpi());
 
         return cfg;
     }
@@ -225,6 +232,63 @@ public class IndexingSpiQuerySelfTest extends GridCommonAbstractTest {
         }
     }
 
+    @Test
+    public void testSpiQueryPagination() throws Exception {
+        final int pageSize = 5;
+
+        final AtomicInteger queryPagesCount = new AtomicInteger(0);
+
+        indexingSpi = new MyIndexingSpi();
+
+        startGrid(0);
+
+        indexingSpi = new MyIndexingSpi();
+
+        Ignite ignite = startGrid(1);
+
+
+        CacheConfiguration<Integer, Integer> ccfg = cacheConfiguration(DEFAULT_CACHE_NAME);
+
+        IgniteCache<Integer, Integer> cache = ignite.createCache(ccfg);
+
+        for (int i = 0; i < 100; i++)
+            cache.put(i, i);
+
+        CommunicationSpi spi = ignite.configuration().getCommunicationSpi();
+
+        assert spi instanceof TestTcpCommunicationSpi;
+
+        TestTcpCommunicationSpi commSpi = (TestTcpCommunicationSpi)spi;
+
+        commSpi.messageFilter = new IgniteInClosure<Message>() {
+            @Override public void apply(Message msg) {
+                if (!(msg instanceof GridIoMessage))
+                    return;
+
+                Message msg0 = ((GridIoMessage)msg).message();
+
+                if (msg0 instanceof GridCacheQueryRequest) {
+                    assertEquals(pageSize, ((GridCacheQueryRequest)msg0).pageSize());
+
+                    queryPagesCount.incrementAndGet();
+                }
+                else if (msg0 instanceof GridCacheQueryResponse)
+                    assertTrue(((GridCacheQueryResponse)msg0).data().size() <= pageSize);
+            }
+        };
+
+        QueryCursor<Cache.Entry<Integer, Integer>> cursor = cache.query(
+                new SpiQuery<Integer, Integer>().setArgs(0, 101).setPageSize(pageSize));
+
+        for (Cache.Entry<Integer, Integer> entry : cursor)
+            System.out.println(entry);
+
+        int remoteSize = cache.size() - cache.localSize(CachePeekMode.PRIMARY);;
+
+        assert (pageSize * (queryPagesCount.get() - 1) <= remoteSize) &&
+                (pageSize * queryPagesCount.get() >= remoteSize);
+    }
+
     /**
      * Indexing Spi implementation for test
      */
@@ -358,6 +422,22 @@ public class IndexingSpiQuerySelfTest extends GridCommonAbstractTest {
         /** */
         Person(String name) {
             this.name = name;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class TestTcpCommunicationSpi extends TcpCommunicationSpi {
+        /** */
+        volatile IgniteInClosure<Message> messageFilter;
+
+        /** {@inheritDoc} */
+        @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) {
+            if (messageFilter != null)
+                messageFilter.apply(msg);
+
+            super.sendMessage(node, msg, ackC);
         }
     }
 }
