@@ -242,13 +242,10 @@ public class IndexingSpiQuerySelfTest extends GridCommonAbstractTest {
         final AtomicInteger queryPagesCount = new AtomicInteger(0);
 
         indexingSpi = new MyIndexingSpi();
-
         startGrid(0);
 
         indexingSpi = new MyIndexingSpi();
-
         Ignite ignite = startGrid(1);
-
 
         CacheConfiguration<Integer, Integer> ccfg = cacheConfiguration(DEFAULT_CACHE_NAME);
 
