@@ -555,7 +555,8 @@ public class IgniteCacheProxyImpl<K, V> extends AsyncSupportAdapter<IgniteCache<
         else if (filter instanceof SpiQuery) {
             qry = ctx.queries().createSpiQuery(isKeepBinary);
 
-            qry.pageSize(filter.getPageSize());
+            if (filter.getPageSize() > 0)
+                qry.pageSize(filter.getPageSize());
 
             if (grp != null)
                 qry.projection(grp);
