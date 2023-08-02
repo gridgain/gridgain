@@ -67,6 +67,8 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /** Flag of completed partial activation check */
     private boolean partialActivationCheckComplete = false;
+
+    /** If {@code null}, no partial activation message */
     private String partialActivationMsg = null;
 
     /** {@inheritDoc} */
