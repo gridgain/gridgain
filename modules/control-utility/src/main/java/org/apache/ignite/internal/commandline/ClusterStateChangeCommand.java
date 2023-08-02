@@ -67,6 +67,7 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /** Flag of completed partial activation check */
     private boolean partialActivationCheckComplete = false;
+    private String partialActivationMsg = null;
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
@@ -89,13 +90,18 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                 clusterName = clientState.clusterName();
 
             if (state == ACTIVE)
-                partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
+                partialActivationMsg = partialActivationCheck(client, clientCfg);
         }
     }
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
+        String prompt = "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
+
+        if (partialActivationMsg != null)
+            prompt = partialActivationMsg + "\n" + prompt;
+
+        return prompt;
     }
 
     /** {@inheritDoc} */
@@ -132,7 +138,10 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
                     client.state().state(state);
 
             if (state == ACTIVE && !partialActivationCheckComplete)
-                partialActivationCheckComplete = partialActivationCheck(client, clientCfg);
+                partialActivationMsg = partialActivationCheck(client, clientCfg);
+
+            if (partialActivationMsg != null)
+                log.warning(partialActivationMsg);
 
             log.info("Cluster state changed to " + state);
 
@@ -171,13 +180,15 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
 
     /**
      * Check if all baseline nodes are online during activation.
-     * Partial activation message is printed if some nodes are offline.
-     * Returns {@code true} so check is completed only once
+     * Partial activation message will be generated if some nodes are offline.
+     * Return {@code null} if no message shall be printed
      **/
-    private boolean partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
+    private String partialActivationCheck(GridClient client, GridClientConfiguration clientCfg) throws GridClientException {
         BaselineArguments args = new BaselineArguments.Builder(BaselineSubcommands.COLLECT).build();
 
         Set<String> offlineNodes = new HashSet<>();
+
+        partialActivationCheckComplete = true;
 
         VisorBaselineTaskResult res = executeTaskByNameOnNode(
                 client,
@@ -194,10 +205,11 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         Map<String, VisorBaselineNode> baseline = res.getBaseline();
 
         if (baseline == null)
-            return true;
+            return null;
 
         for (VisorBaselineNode node : baseline.values()) {
             String constId = node.getConsistentId();
+
             VisorBaselineNode srvNode = res.getServers().get(constId);
 
             if (srvNode == null)
@@ -205,12 +217,12 @@ public class ClusterStateChangeCommand extends AbstractCommand<ClusterState> {
         }
 
         if (!offlineNodes.isEmpty()) {
-            System.out.println("Partial activation detected. Baseline has " +
+            return "Partial activation detected. Baseline has " +
                     offlineNodes.size() + " offline node(s).\nOffline node(s) = " +
-                    offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.");
+                    offlineNodes + "\nThis may lead to partition loss. Please ensure that this is intended.";
         }
 
-        return true;
+        return null;
     }
 
     /** {@inheritDoc} */
