@@ -1474,12 +1474,10 @@ public class CommandProcessor {
         final GridRunningQueryInfo qryInfo = idx.runningQueryManager().runningQueryInfo(qryId);
         final Span qrySpan = qryInfo == null ? NoopSpan.INSTANCE : qryInfo.span();
 
-        BulkLoadFactory loadFactory = loadFactoryExtension(ctx);
-
         long count;
         try (MTC.TraceSurroundings ignored = MTC.support(ctx.tracing().create(SQL_BATCH_PROCESS, qrySpan));
-             Reader reader = loadFactory.reader(ctx, cmd);
-             Writer writer = loadFactory.writer(ctx, cmd)) {
+             Reader reader = bulkLoadFactory.reader(ctx, cmd);
+             Writer writer = bulkLoadFactory.writer(ctx, cmd)) {
 
             count = copy(reader, writer);
 

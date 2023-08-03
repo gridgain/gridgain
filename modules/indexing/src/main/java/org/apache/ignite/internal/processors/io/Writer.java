@@ -19,6 +19,12 @@ package org.apache.ignite.internal.processors.io;
 import java.io.Flushable;
 import java.util.List;
 
+/**
+ * Generic interface for writing data to a destination.
+ */
 public interface Writer extends AutoCloseable, Flushable {
+    /**
+     * Writes a batch of data to a destination.
+     */
     void writeAll(List<List<?>> batch);
 }

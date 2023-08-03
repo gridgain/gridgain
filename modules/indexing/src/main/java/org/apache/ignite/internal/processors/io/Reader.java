@@ -20,13 +20,17 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- *
+ * Generic interface for reading data from a source.
  */
 public interface Reader extends AutoCloseable {
+
+    /**
+     * @return true if there is more data to read
+     */
     boolean hasNext();
 
     /**
-     *
+     * returns next batch of data
      * @return
      * @throws IOException
      * @param batchSize size of a batch to read from source
