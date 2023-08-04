@@ -35,6 +35,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.DiscoverySpiTestListener;
 import org.apache.ignite.internal.IgniteClientReconnectAbstractTest;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -45,6 +46,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteClusterReadOnlyException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
@@ -1464,8 +1466,19 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
         assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == expNodesCnt, 30000L));
 
         // Stop all nodes participating in state change and not allow last node to finish exchange.
+        // There is a chance that the next node in the ring may detect that the previous coordinator is unresponsive
+        // and decide that it is a new coordinator and
+        // it may complete the corresponding PME before the test will try to simulate the failure on this node.
+        for (int i = 0; i < servers; i++) {
+            DiscoverySpiTestListener lsnr = new DiscoverySpiTestListener();
+
+            ((IgniteDiscoverySpi) grid(i).configuration().getDiscoverySpi()).setInternalListener(lsnr);
+
+            lsnr.blockCustomEvent(ChangeGlobalStateFinishMessage.class);
+        }
+
         for (int i = 0; i < servers; i++)
-            ((IgniteDiscoverySpi)ignite(i).configuration().getDiscoverySpi()).simulateNodeFailure();
+            ((IgniteDiscoverySpi) ignite(i).configuration().getDiscoverySpi()).simulateNodeFailure();
 
         for (int i = 0; i < servers; i++)
             stopGrid(getTestIgniteInstanceName(i), true, false);
@@ -1516,8 +1529,10 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         assertTrue(waitForCondition(() -> grid(0).cluster().nodes().size() == exceptedNodesCnt, 30000L));
 
-        for (int idx : restartNodes)
+        for (int idx : restartNodes) {
             stopGrid(getTestIgniteInstanceName(idx), true, false);
+            doSleep(5_000);
+        }
 
         fut.get();
 
