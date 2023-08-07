@@ -1,6 +1,6 @@
 *.log
 /out/
-/work_back/
+/work/
 */build/
 xcuserdata/
 *.iws
