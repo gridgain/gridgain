@@ -62,8 +62,7 @@ public class BulkLoadStreamerWriter extends BulkLoadCacheWriter {
         return updateCnt;
     }
 
-    @Override
-    public void flush() {
+    @Override public void flush() {
         streamer.flush();
     }
 }
