@@ -31,9 +31,3 @@ interested in):
     </dependencies>
     ...
 </project>
-
-Changes
--------
-* JSON functions was based on H2 1.4.200: JSON_ARRAY, JSON_OBJECT.
-* JSON functions use string type instead of json type as in 1.4.200.
-* JSON decomposition fuctions were added: IS_JSON, JSON_VALUE, JSON_QUERY, JSON_MODIFY.
