@@ -88,11 +88,11 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
     /** A CSV file in windows-1251. */
     private static final String BULKLOAD_RFC4180_COMMA_CSV_FILE =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_comma.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_comma.csv")).getAbsolutePath();
 
     /** A CSV file in windows-1251. */
     private static final String BULKLOAD_RFC4180_PIPE_CSV_FILE_ =
-        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_pipe.csv")).getAbsolutePath();
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_pipe.csv")).getAbsolutePath();
 
     /** A CSV file with one record and unmatched quote at the start of field. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 =
@@ -174,7 +174,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      */
     @SuppressWarnings("unchecked")
     private CacheConfiguration cacheConfigWithIndexedTypes() {
-        CacheConfiguration<?, ?> cache = defaultCacheConfiguration();
+        CacheConfiguration<?,?> cache = defaultCacheConfiguration();
 
         cache.setCacheMode(cacheMode);
         cache.setAtomicityMode(atomicityMode);
@@ -200,7 +200,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      * @return The cache configuration.
      */
     private CacheConfiguration cacheConfigWithQueryEntity() {
-        CacheConfiguration<?, ?> cache = defaultCacheConfiguration();
+        CacheConfiguration<?,?> cache = defaultCacheConfiguration();
 
         cache.setCacheMode(PARTITIONED);
         cache.setBackups(1);
@@ -618,9 +618,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testCsvLoadWithDefaultDelimiter() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv");
+                "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
 
         assertEquals(7, updatesCnt);
 
@@ -636,9 +636,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testCsvLoadWithCommaDelimiter() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv delimiter ','");
+                "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv delimiter ','");
 
         assertEquals(7, updatesCnt);
 
@@ -654,9 +654,9 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     @Test
     public void testCsvLoadWithPipeDelimiter() throws SQLException {
         int updatesCnt = stmt.executeUpdate(
-            "copy from '" + BULKLOAD_RFC4180_PIPE_CSV_FILE_ + "' into " + TBL_NAME +
-                " (_key, age, firstName, lastName)" +
-                " format csv delimiter '|'");
+                "copy from '" + BULKLOAD_RFC4180_PIPE_CSV_FILE_ + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv delimiter '|'");
 
         assertEquals(7, updatesCnt);
 
@@ -1114,8 +1114,7 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
      * @param delimiter The delimiter of fields.
      * @throws SQLException When one of checks has failed.
      */
-    private void checkCacheContents(String tblName, boolean checkLastName, int recCnt,
-        char delimiter) throws SQLException {
+    private void checkCacheContents(String tblName, boolean checkLastName, int recCnt, char delimiter) throws SQLException {
         ResultSet rs = stmt.executeQuery("select _key, age, firstName, lastName from " + tblName);
 
         assert rs != null;
