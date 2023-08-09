@@ -51,12 +51,6 @@ public final class FunctionInfo {
     final boolean requireParentheses;
 
     /**
-     * If arguments cannot be evaluated in normal way with
-     * {@link org.h2.expression.Expression#getValue(org.h2.engine.Session)}.
-     */
-    final boolean specialArguments;
-
-    /**
      * Creates new instance of built-in function information.
      *
      * @param name
@@ -78,13 +72,9 @@ public final class FunctionInfo {
      *            temporary file?
      * @param requireParentheses
      *            should the no-arg function require parentheses
-     * @param specialArguments
-     *            if arguments cannot be evaluated in normal way with
-     *            {@link org.h2.expression.Expression#getValue(org.h2.engine.Session)}.
      */
     public FunctionInfo(String name, int type, int parameterCount, int returnDataType, boolean nullIfParameterIsNull,
-            boolean deterministic, boolean bufferResultSetToLocalTemp, boolean requireParentheses,
-            boolean specialArguments) {
+            boolean deterministic, boolean bufferResultSetToLocalTemp, boolean requireParentheses) {
         this.name = name;
         this.type = type;
         this.parameterCount = parameterCount;
@@ -93,7 +83,6 @@ public final class FunctionInfo {
         this.deterministic = deterministic;
         this.bufferResultSetToLocalTemp = bufferResultSetToLocalTemp;
         this.requireParentheses = requireParentheses;
-        this.specialArguments = specialArguments;
     }
 
     /**
@@ -114,7 +103,6 @@ public final class FunctionInfo {
         deterministic = source.deterministic;
         bufferResultSetToLocalTemp = source.bufferResultSetToLocalTemp;
         requireParentheses = true;
-        specialArguments = source.specialArguments;
     }
 
 }
