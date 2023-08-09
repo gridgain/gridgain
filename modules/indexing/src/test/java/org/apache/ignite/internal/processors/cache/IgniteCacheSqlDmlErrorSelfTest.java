@@ -88,12 +88,12 @@ public class IgniteCacheSqlDmlErrorSelfTest extends AbstractIndexingCommonTest {
         String path = resolveIgnitePath("/modules/indexing/src/test/resources/bulkload_ok.csv").getAbsolutePath();
 
         GridTestUtils.assertThrows(
-                log(),
-                () -> execute("copy from '" + path + "' into Simple " +
-                        " (_key, name)" +
-                        " format csv"),
-                CacheException.class,
-                "COPY command is currently supported only in thin JDBC driver."
+            log(),
+            () -> execute("copy from '" + path + "' into Simple " +
+                " (_key, name)" +
+                " format csv"),
+            CacheException.class,
+            "COPY command is currently supported only in thin JDBC driver."
         );
     }
 
