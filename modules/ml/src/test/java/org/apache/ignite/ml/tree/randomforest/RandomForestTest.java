@@ -66,9 +66,9 @@ public class RandomForestTest {
     public void testNeedSplit() {
         TreeNode node = new TreeNode(1, 1);
         node.setImpurity(1.0);
-        assertTrue(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), minImpDelta * 1.01))));
-        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), minImpDelta * 0.5))));
-        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, node.getImpurity(), 0))));
+        assertTrue(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, minImpDelta * 1.01, node.getImpurity()))));
+        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, minImpDelta * 0.5, node.getImpurity()))));
+        assertFalse(rf.needSplit(node, Optional.of(new NodeSplit(0, 0, 0, node.getImpurity()))));
 
         TreeNode child = node.toConditional(0, 0).get(0);
         child.setImpurity(1.0);

@@ -43,14 +43,14 @@ public class NodeSplit implements Serializable {
      *
      * @param featureId Feature id.
      * @param val Feature split value.
-     * @param impurity Impurity value.
      * @param gain Gain value.
+     * @param impurity Impurity value.
      */
-    public NodeSplit(int featureId, double val, double impurity, double gain) {
+    public NodeSplit(int featureId, double val, double gain, double impurity) {
         this.featureId = featureId;
         this.val = val;
-        this.impurity = impurity;
         this.gain = gain;
+        this.impurity = impurity;
     }
 
     /**

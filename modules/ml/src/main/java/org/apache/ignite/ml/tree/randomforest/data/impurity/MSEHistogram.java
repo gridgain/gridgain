@@ -97,7 +97,6 @@ public class MSEHistogram extends ImpurityHistogram implements ImpurityComputer<
 
     /** {@inheritDoc} */
     @Override public Optional<NodeSplit> findBestSplit() {
-        double bestImpurity = Double.POSITIVE_INFINITY;
         double bestSplitVal = Double.NEGATIVE_INFINITY;
         int bestBucketId = -1;
         double bestGain = 0;
@@ -112,6 +111,8 @@ public class MSEHistogram extends ImpurityHistogram implements ImpurityComputer<
         double cntrMax = cntrDistrib.lastEntry().getValue();
         double ysMax = ysDistrib.lastEntry().getValue();
         double y2sMax = y2sDistrib.lastEntry().getValue();
+
+        double nodeImpurity = impurity(cntrMax, ysMax, y2sMax);
 
         double lastLeftCntrVal = 0.0;
         double lastLeftYVal = 0.0;
@@ -128,26 +129,23 @@ public class MSEHistogram extends ImpurityHistogram implements ImpurityComputer<
             double rightY = ysMax - leftY;
             double rightY2 = y2sMax - leftY2;
 
-            double impurity = 0.0;
+            double childrenImpurity = 0.0;
 
             if (leftCnt > 0)
-                impurity += impurity(leftCnt, leftY, leftY2);
+                childrenImpurity += impurity(leftCnt, leftY, leftY2);
             if (rightCnt > 0)
-                impurity += impurity(rightCnt, rightY, rightY2);
+                childrenImpurity += impurity(rightCnt, rightY, rightY2);
 
-            double parentImpurity = impurity(leftCnt + rightCnt, leftY + rightY, leftY2 + rightY2);
+            double gain = nodeImpurity - childrenImpurity;
 
-            double gain = parentImpurity - impurity;
-
-            if (impurity < bestImpurity) {
-                bestImpurity = impurity;
+            if (gain > bestGain) {
+                bestGain = gain;
                 bestSplitVal = bucketMeta.bucketIdToValue(bucketId);
                 bestBucketId = bucketId;
-                bestGain = gain;
             }
         }
 
-        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestImpurity, bestGain);
+        return checkAndReturnSplitValue(bestBucketId, bestSplitVal, bestGain, nodeImpurity);
     }
 
     /**
