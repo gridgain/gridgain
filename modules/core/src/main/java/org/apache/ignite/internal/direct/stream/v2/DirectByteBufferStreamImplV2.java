@@ -19,6 +19,7 @@ package org.apache.ignite.internal.direct.stream.v2;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Iterator;
@@ -271,10 +272,10 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
     private int readItems;
 
     /** */
-    private Object[] objArr;
+    Object[] objArr;
 
     /** */
-    private Collection<Object> col;
+    List<Object> col;
 
     /** */
     private Map<Object, Object> map;
@@ -1803,7 +1804,42 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(DirectByteBufferStreamImplV2.class, this);
+        return S.toString(DirectByteBufferStreamImplV2.class, this,
+            "colTypes", col == null ? null : lastTypesWithLimit(col),
+            "objArrTypes", objArr == null ? null : lastTypesWithLimit(Arrays.asList(objArr))
+        );
+    }
+
+    /**
+     * Builds a string showing the simple types of the elements of the list; if the list is longer than the
+     * limit, then only its final elements are considered and ellipsis represents the omitted part of the list.
+     *
+     * @param list List to represent.
+     * @return String like [Integer, String] if there are exactly 2 elements of types Integer and String, respectively.
+     */
+    private String lastTypesWithLimit(List<Object> list) {
+        int limit = 10;
+
+        StringBuilder buf = new StringBuilder();
+        buf.append('[');
+
+        if (list.size() > limit)
+            buf.append("..., ");
+
+        boolean first = true;
+        for (int i = Math.max(list.size() - limit, 0); i < list.size(); i++) {
+            if (!first)
+                buf.append(", ");
+
+            Object element = list.get(i);
+            buf.append(element == null ? null : element.getClass().getSimpleName());
+
+            first = false;
+        }
+
+        buf.append(']');
+
+        return buf.toString();
     }
 
     /**
