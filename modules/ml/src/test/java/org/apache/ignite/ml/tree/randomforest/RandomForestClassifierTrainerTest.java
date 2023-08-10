@@ -16,9 +16,9 @@
 
 package org.apache.ignite.ml.tree.randomforest;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import org.apache.ignite.ml.IgniteModel;
 import org.apache.ignite.ml.TestUtils;
 import org.apache.ignite.ml.common.TrainerTest;
 import org.apache.ignite.ml.composition.ModelsComposition;
@@ -29,10 +29,14 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
 import org.apache.ignite.ml.structures.LabeledVector;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
+import org.apache.ignite.ml.tree.randomforest.data.TreeNode;
+import org.apache.ignite.ml.tree.randomforest.data.TreeRoot;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.apache.ignite.ml.tree.randomforest.data.FeaturesCountSelectionStrategies.SQRT;
+import static org.apache.ignite.ml.tree.randomforest.data.TreeNode.Type.LEAF;
+import static org.junit.Assert.*;
 
 /**
  * Tests for {@link RandomForestClassifierTrainer}.
@@ -95,5 +99,81 @@ public class RandomForestClassifierTrainerTest extends TrainerTest {
         Vector v = VectorUtils.of(5, 0.5, 0.05, 0.005);
         assertEquals(originalMdl.predict(v), updatedOnSameDS.predict(v), 0.01);
         assertEquals(originalMdl.predict(v), updatedOnEmptyDS.predict(v), 0.01);
+    }
+
+    /**
+     * Test checks whether the tree has nodes duplication.
+     */
+    @Test
+    public void testDuplicateNodes() {
+        int sampleSize = 500;
+        Random rnd = new Random(1);
+        Map<Integer, LabeledVector<Double>> sample = new HashMap<>();
+        for (int i = 0; i < sampleSize; i++) {
+            sample.put(i, VectorUtils.of(rnd.nextDouble(), rnd.nextDouble(), rnd.nextDouble(), rnd.nextDouble())
+                    .labeled((double) i % 2));
+        }
+
+        ArrayList<FeatureMeta> meta = new ArrayList<>();
+        for (int i = 0; i < 4; i++)
+            meta.add(new FeatureMeta("", i, false));
+        DatasetTrainer<ModelsComposition, Double> trainer = new RandomForestClassifierTrainer(meta)
+                .withAmountOfTrees(1)
+                .withMaxDepth(10)
+                .withFeaturesCountSelectionStrgy(SQRT)
+                .withSeed(777)
+                .withEnvironmentBuilder(TestUtils.testEnvBuilder());
+
+        ModelsComposition mdl = trainer.fit(sample, parts, new LabeledDummyVectorizer<>());
+
+        List<IgniteModel<Vector, Double>> models = mdl.getModels();
+
+        assertEquals(1, mdl.getModels().size());
+
+        TreeRoot tree = (TreeRoot) models.get(0);
+
+        TreeNode repeatingNode = findDuplicatedNode(tree.getRootNode());
+
+        assertNull(repeatingNode);
+    }
+
+    /**
+     * Go through the tree and find a node branch that has repeating feature + value.
+     */
+    private static TreeNode findDuplicatedNode(TreeNode node) {
+        if (node.getType() == LEAF) {
+            return null;
+        }
+
+        TreeNode left = node.getLeft();
+        if (getFeatureId(node) == getFeatureId(left) && getVal(node) == getVal(left)) {
+            return left;
+        }
+
+        TreeNode inLeftBranch = findDuplicatedNode(left);
+        if (inLeftBranch != null) {
+            return inLeftBranch;
+        }
+
+        TreeNode right = node.getRight();
+        if (getFeatureId(node) == getFeatureId(right) && getVal(node) == getVal(right)) {
+            return right;
+        }
+
+        return findDuplicatedNode(right);
+    }
+
+    /**
+     * Get node's value
+     */
+    private static double getVal(TreeNode node) {
+        return GridTestUtils.getFieldValue(node, TreeNode.class, "val");
+    }
+
+    /**
+     * Get node's feature id
+     */
+    private static int getFeatureId(TreeNode node) {
+        return GridTestUtils.getFieldValue(node, TreeNode.class, "featureId");
     }
 }
