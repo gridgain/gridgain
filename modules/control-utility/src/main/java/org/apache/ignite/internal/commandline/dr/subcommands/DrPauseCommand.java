@@ -47,7 +47,8 @@ public class DrPauseCommand extends
             DrCacheCommand.SenderGroup.ALL,
             null,
             DrCacheCommand.Action.STOP,
-            argIter.nextByteArg("remoteDataCenterId")
+            argIter.nextByteArg("remoteDataCenterId"),
+            false
         );
     }
 

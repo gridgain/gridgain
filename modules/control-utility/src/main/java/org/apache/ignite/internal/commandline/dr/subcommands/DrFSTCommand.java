@@ -103,7 +103,7 @@ public class DrFSTCommand
                     StartParams params0 = (StartParams)params;
                     return new VisorDrFSTCmdArgs(action.ordinal(), params0.caches(), params0.snapshotId(),
                         params0.dcIds(), params0.senderGroup() == null ? VisorDrCacheTaskArgs.SENDER_GROUP_NAMED :
-                        params0.senderGroup().ordinal(), params0.senderGroupName());
+                        params0.senderGroup().ordinal(), params0.senderGroupName(), params0.isSyncMode());
                 }
 
                 case CANCEL:
@@ -161,7 +161,8 @@ public class DrFSTCommand
                 DrCacheCommand.SenderGroup.ALL,
                 null,
                 DrCacheCommand.Action.FULL_STATE_TRANSFER,
-                (byte)0
+                (byte)0,
+                false
             );
 
             return new DrFSTArguments(compatibilityArgs);
@@ -341,6 +342,9 @@ public class DrFSTCommand
         private Set<Byte> dcIds;
 
         /** */
+        private boolean syncMode;
+
+        /** */
         StartParams() {
             // No op.
         }
@@ -351,7 +355,8 @@ public class DrFSTCommand
             Set<String> caches,
             DrCacheCommand.SenderGroup senderGroup,
             String senderGroupName,
-            Set<Byte> dcIds
+            Set<Byte> dcIds,
+            boolean syncMode
         ) {
             if (snapshotId != null && (dcIds.size() != 1))
                 throw new IllegalArgumentException(INC_TRANSFER_WITHOUT_DC_ERR);
@@ -361,6 +366,7 @@ public class DrFSTCommand
             this.senderGroup = senderGroup;
             this.senderGroupName = senderGroupName;
             this.dcIds = dcIds;
+            this.syncMode = syncMode;
         }
 
         /**
@@ -396,6 +402,13 @@ public class DrFSTCommand
          */
         public Set<Byte> dcIds() {
             return dcIds;
+        }
+
+        /**
+         * @return Sync mode.
+         */
+        public boolean isSyncMode() {
+            return syncMode;
         }
     }
 
@@ -440,6 +453,8 @@ public class DrFSTCommand
         /** Data center id`s. */
         public static final String DATA_CENTERS = "--data-centers";
 
+        public static final String SYNC_MODE = "--sync";
+
         /** {@inheritDoc} */
         @Override public StartParams parse(CommandArgIterator argIter) {
             Set<String> caches = null;
@@ -447,6 +462,7 @@ public class DrFSTCommand
             DrCacheCommand.SenderGroup sndGrp = DrCacheCommand.SenderGroup.ALL;
             String sndGrpName = null;
             Set<Byte> dcIds = null;
+            boolean syncMode = false;
 
             while (argIter.hasNextSubArg()) {
                 String nextArg = argIter.nextArg("");
@@ -497,12 +513,17 @@ public class DrFSTCommand
 
                         break;
 
+                    case SYNC_MODE:
+                        syncMode = true;
+
+                        break;
+
                     default:
                         throw new IllegalArgumentException("Argument " + nextArg + " is not supported.");
                 }
             }
 
-            return new StartParams(snapshotId, caches, sndGrp, sndGrpName, dcIds);
+            return new StartParams(snapshotId, caches, sndGrp, sndGrpName, dcIds, syncMode);
         }
     }
 }

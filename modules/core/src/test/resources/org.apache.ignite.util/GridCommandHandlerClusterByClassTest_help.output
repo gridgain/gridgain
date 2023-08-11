@@ -126,10 +126,10 @@ This utility can do the following commands:
     control.(sh|bat) --dr cache <regExp> [--config] [--metrics] [--cache-filter ALL|SENDING|RECEIVING|PAUSED|ERROR] [--sender-group <groupName>|ALL|DEFAULT|NONE] [--action start|stop] [--yes]
 
   Deprecated command to start full state transfer:
-    control.(sh|bat) --dr cache <regExp> --action full-state-transfer [--yes]
+    control.(sh|bat) --dr cache <regExp> --action full-state-transfer [--sync] [--yes]
 
   Execute full state transfer, transfer all caches if not specified in params and data center is configured:
-    control.(sh|bat) --dr full-state-transfer [start] [--snapshot <snapshotId>] [--caches <cacheName1, ...>] [--sender-group <groupName>|ALL|DEFAULT|NONE] [--data-centers <dcId, ...>] [--yes]
+    control.(sh|bat) --dr full-state-transfer [start] [--snapshot <snapshotId>] [--caches <cacheName1, ...>] [--sender-group <groupName>|ALL|DEFAULT|NONE] [--data-centers <dcId, ...>] [--sync] [--yes]
 
   Cancel active full state transfer by id:
     control.(sh|bat) --dr full-state-transfer cancel <fullStateTransferUID> [--yes]
