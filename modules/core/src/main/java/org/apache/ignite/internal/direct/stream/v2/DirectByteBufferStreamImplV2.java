@@ -272,10 +272,10 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
     private int readItems;
 
     /** */
-    Object[] objArr;
+    private Object[] objArr;
 
     /** */
-    List<Object> col;
+    private List<Object> col;
 
     /** */
     private Map<Object, Object> map;

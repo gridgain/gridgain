@@ -19,6 +19,7 @@ package org.apache.ignite.internal.direct.stream.v2;
 import java.util.Arrays;
 import java.util.Collections;
 import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.containsString;
@@ -47,7 +48,7 @@ public class DirectByteBufferStreamImplV2Test {
      */
     @Test
     public void toStringColTypesContainsAllTypesWhenLessThan10() {
-        stream.col = Arrays.asList(1, "two");
+        GridTestUtils.setFieldValue(stream, "col", Arrays.asList(1, "two"));
 
         String str = stream.toString();
 
@@ -59,7 +60,7 @@ public class DirectByteBufferStreamImplV2Test {
      */
     @Test
     public void toStringColTypesContainsEllipsisWhenMoreThan10() {
-        stream.col = Collections.nCopies(11, 42);
+        GridTestUtils.setFieldValue(stream, "col", Collections.nCopies(11, 42));
 
         String str = stream.toString();
 
@@ -81,7 +82,7 @@ public class DirectByteBufferStreamImplV2Test {
      */
     @Test
     public void toStringObjArrTypesContainsAllTypesWhenLessThan10() {
-        stream.objArr = Arrays.asList(1, "two").toArray();
+        GridTestUtils.setFieldValue(stream, "objArr", Arrays.asList(1, "two").toArray());
 
         String str = stream.toString();
 
@@ -93,7 +94,7 @@ public class DirectByteBufferStreamImplV2Test {
      */
     @Test
     public void toStringObjArrTypesContainsEllipsisWhenMoreThan10() {
-        stream.objArr = Collections.nCopies(11, 42).toArray();
+        GridTestUtils.setFieldValue(stream, "objArr", Collections.nCopies(11, 42).toArray());
 
         String str = stream.toString();
 
