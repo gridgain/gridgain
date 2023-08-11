@@ -22,7 +22,10 @@ import org.apache.ignite.plugin.extensions.communication.IgniteMessageFactory;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static java.util.Collections.emptyList;
+import static org.apache.ignite.internal.direct.stream.v2.DirectByteBufferStreamImplV2.lastTypesWithLimit;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -99,5 +102,37 @@ public class DirectByteBufferStreamImplV2Test {
         String str = stream.toString();
 
         assertThat(str, containsString("objArrTypes=[..., Integer, "));
+    }
+
+    /**
+     * Tests that empty list is represented as [].
+     */
+    @Test
+    public void lastTypesWithLimitGivesEmptyBracketsForEmptyList() {
+        assertThat(lastTypesWithLimit(emptyList(), 1), is("[]"));
+    }
+
+    /**
+     * Tests that a list fitting the limit is represented with types of all its elements.
+     */
+    @Test
+    public void lastTypesWithLimitGivesTypesOfWholeListIfSizeFitsLimit() {
+        assertThat(lastTypesWithLimit(Arrays.asList(1, "two"), 2), is("[Integer, String]"));
+    }
+
+    /**
+     * Tests that a list not fitting the limit is represented as an ellipsis and the types of the elements of its tail.
+     */
+    @Test
+    public void lastTypesWithLimitGivesEllipsisIfListIsLongerThanLimit() {
+        assertThat(lastTypesWithLimit(Arrays.asList(1, "two", 3), 2), is("[..., String, Integer]"));
+    }
+
+    /**
+     * Tests that for {@code null} elements, 'null' is output as their representation instead of type names.
+     */
+    @Test
+    public void lastTypesWithLimitGivesNullsForNulls() {
+        assertThat(lastTypesWithLimit(Arrays.asList(1, null), 10), is("[Integer, null]"));
     }
 }

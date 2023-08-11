@@ -1805,20 +1805,21 @@ public class DirectByteBufferStreamImplV2 implements DirectByteBufferStream {
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(DirectByteBufferStreamImplV2.class, this,
-            "colTypes", col == null ? null : lastTypesWithLimit(col),
-            "objArrTypes", objArr == null ? null : lastTypesWithLimit(Arrays.asList(objArr))
+            "colTypes", col == null ? null : lastTypesWithLimit(col, 10),
+            "objArrTypes", objArr == null ? null : lastTypesWithLimit(Arrays.asList(objArr), 10)
         );
     }
 
     /**
-     * Builds a string showing the simple types of the elements of the list; if the list is longer than the
+     * Builds a string showing the simple type names of the elements of the list; if the list is longer than the
      * limit, then only its final elements are considered and ellipsis represents the omitted part of the list.
      *
      * @param list List to represent.
+     * @param limit Maximum number of elements to consider.
      * @return String like [Integer, String] if there are exactly 2 elements of types Integer and String, respectively.
      */
-    private String lastTypesWithLimit(List<Object> list) {
-        int limit = 10;
+    static String lastTypesWithLimit(List<Object> list, int limit) {
+        assert limit > 0;
 
         StringBuilder buf = new StringBuilder();
         buf.append('[');
