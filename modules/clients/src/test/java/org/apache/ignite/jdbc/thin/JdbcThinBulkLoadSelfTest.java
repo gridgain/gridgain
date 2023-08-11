@@ -150,10 +150,10 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
     public Boolean isNear;
 
     @Parameterized.Parameter(3)
-    public Boolean legacyCopyEnabled;
+    public Boolean serverBulkloadEnabled;
 
     /** Test run configurations: Cache mode, atomicity type, is near. */
-    @Parameterized.Parameters(name = "cacheMode={0}, atomicityMode={1}, isNear={2}, legacyCopyEnabled={3}")
+    @Parameterized.Parameters(name = "cacheMode={0}, atomicityMode={1}, isNear={2}, serverBulkloadEnabled={3}")
     public static Collection<Object[]> runConfig() {
         return Arrays.asList(new Object[][] {
             {PARTITIONED, ATOMIC, true, false},
@@ -205,8 +205,8 @@ public class JdbcThinBulkLoadSelfTest extends JdbcThinAbstractDmlStatementSelfTe
 
     @Override protected Connection createConnection() throws SQLException {
         String baseConnectionString = "jdbc:ignite:thin://127.0.0.1/";
-        if (legacyCopyEnabled) {
-            return DriverManager.getConnection(baseConnectionString + "?legacyCopyEnabled=true");
+        if (!serverBulkloadEnabled) {
+            return DriverManager.getConnection(baseConnectionString + "?disabledFeatures=SERVER_BULK_LOAD");
         }
         return DriverManager.getConnection(baseConnectionString);
     }

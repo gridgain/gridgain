@@ -97,8 +97,8 @@ public class SqlClientContext implements AutoCloseable {
      * the processing the last request. */
     private long totalProcessedOrderedReqs;
 
-    /** Is legacy copy (bulk load) enabled */
-    private boolean legacyCopyEnabled;
+    /** Is server copy (bulk load) enabled */
+    private boolean serverBulkLoadEnabled;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -120,7 +120,7 @@ public class SqlClientContext implements AutoCloseable {
         boolean distributedJoins, boolean enforceJoinOrder,
         boolean collocated, boolean replicatedOnly, boolean lazy, boolean skipReducerOnUpdate,
         @Nullable Boolean dataPageScanEnabled, @Nullable Integer updateBatchSize, long qryMaxMemory,
-        boolean legacyCopyEnabled) {
+        boolean serverBulkLoadEnabled) {
         this.ctx = ctx;
         this.orderedBatchWorkerFactory = orderedBatchWorkerFactory;
         this.distributedJoins = distributedJoins;
@@ -132,7 +132,7 @@ public class SqlClientContext implements AutoCloseable {
         this.dataPageScanEnabled = dataPageScanEnabled;
         this.updateBatchSize = updateBatchSize;
         this.qryMaxMemory = qryMaxMemory;
-        this.legacyCopyEnabled = legacyCopyEnabled;
+        this.serverBulkLoadEnabled = serverBulkLoadEnabled;
 
         log = ctx.log(SqlClientContext.class.getName());
     }
@@ -259,8 +259,8 @@ public class SqlClientContext implements AutoCloseable {
     /**
      * @return is legacy copy enabled.
      */
-    public boolean legacyCopyEnabled() {
-        return legacyCopyEnabled;
+    public boolean serverBulkLoadEnabled() {
+        return serverBulkLoadEnabled;
     }
 
     /**

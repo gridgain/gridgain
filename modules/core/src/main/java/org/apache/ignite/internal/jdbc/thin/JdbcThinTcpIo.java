@@ -317,10 +317,6 @@ public class JdbcThinTcpIo {
             }
         }
 
-        if (enabledFeatures().contains(JdbcThinFeature.LEGACY_BULKLOAD_PARAM)) {
-            writer.writeBoolean(connProps.legacyCopyEnabled());
-        }
-
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
 

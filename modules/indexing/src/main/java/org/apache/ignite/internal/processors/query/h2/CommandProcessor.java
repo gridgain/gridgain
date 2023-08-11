@@ -411,7 +411,7 @@ public class CommandProcessor {
                 runCommandNativeDdl(sql, cmdNative);
             else if (cmdNative instanceof SqlBulkLoadCommand) {
                 res = bulkLoadCommandProcessorFactory
-                    .getBulkLoadCommandProcessor(cliCtx.legacyCopyEnabled())
+                    .getBulkLoadCommandProcessor(cliCtx.serverBulkLoadEnabled())
                     .processBulkLoadCommand(ctx, idx, schemaMgr, (SqlBulkLoadCommand) cmdNative, qryId);
 
                 unregister = false;

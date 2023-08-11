@@ -54,11 +54,11 @@ public class BulkLoadCommandProcessorFactory {
     }
 
     /**
-     * Returns BulkLoadCommandProcessor implementation depending on enabled extensions and legacyCopyEnabled
+     * Returns BulkLoadCommandProcessor implementation depending on enabled extensions and serverBulkLoadEnabled
      * param
      */
-    public BulkLoadCommandProcessor getBulkLoadCommandProcessor(boolean legacyCopyEnabled) {
-        if (legacyCopyEnabled) {
+    public BulkLoadCommandProcessor getBulkLoadCommandProcessor(boolean serverBulkloadEnabled) {
+        if (!serverBulkloadEnabled) {
             return basicBulkLoadCommandProcessor;
         } else if (bulkLoadCommandProcessorExt != null) {
             return bulkLoadCommandProcessorExt;

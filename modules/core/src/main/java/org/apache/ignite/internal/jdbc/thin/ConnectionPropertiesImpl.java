@@ -73,9 +73,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private BooleanProperty replicatedOnly = new BooleanProperty(
         "replicatedOnly", "Specify if the all queries contain only replicated tables", false, false);
 
-    private BooleanProperty legacyCopyEnabled = new BooleanProperty(
-            "legacyCopyEnabled", "Specify if legacy copy enabled", false, false);
-
     /** Auto close server cursor property. */
     private BooleanProperty autoCloseServerCursor = new BooleanProperty(
         "autoCloseServerCursor", "Enable auto close server cursors when last piece of result set is retrieved. " +
@@ -721,14 +718,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         userAttrsFactory.setValue(cls);
     }
 
-    @Override public void setLegacyCopyEnabled(boolean legacyCopyEnabled) {
-        this.legacyCopyEnabled.setValue(legacyCopyEnabled);
-    }
-
-    @Override public boolean legacyCopyEnabled() {
-        return this.legacyCopyEnabled.value();
-    }
-
     /**
      * @param url URL connection.
      * @param props Environment properties.
@@ -746,9 +735,6 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         if (!F.isEmpty(props.getProperty("user"))) {
             setUsername(props.getProperty("user"));
             setPassword(props.getProperty("password"));
-        }
-        if (props0.get("ignite.jdbc.legacyCopyEnabled") != null) {
-            setLegacyCopyEnabled(Boolean.parseBoolean(props0.get("ignite.jdbc.legacyCopyEnabled").toString()));
         }
     }
 

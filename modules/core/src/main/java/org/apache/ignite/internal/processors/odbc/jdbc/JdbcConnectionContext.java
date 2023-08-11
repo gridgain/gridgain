@@ -101,9 +101,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Current protocol context. */
     private JdbcProtocolContext protoCtx;
 
-    /** Is legacy copy enbled */
-    private boolean legacyCopyEnabled;
-
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
@@ -229,10 +226,6 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         if (ver.compareTo(VER_2_8_3) >= 0)
             userAttrs = reader.readMap();
 
-        if (features.contains(JdbcThinFeature.LEGACY_BULKLOAD_PARAM)) {
-            legacyCopyEnabled = reader.readBoolean();
-        }
-
         if (ver.compareTo(VER_2_5_0) >= 0) {
             String user = null;
             String passwd = null;
@@ -273,8 +266,10 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
+        boolean serverBulkLoadEnabled = features.contains(JdbcThinFeature.SERVER_BULK_LOAD);
+
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
-            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, legacyCopyEnabled, nestedTxMode,
+            collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, serverBulkLoadEnabled, nestedTxMode,
             dataPageScanEnabled, updateBatchSize, actx, ver, this);
 
         handler.start();

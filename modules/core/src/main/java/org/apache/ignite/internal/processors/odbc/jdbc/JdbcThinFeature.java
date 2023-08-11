@@ -41,9 +41,9 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     QUERY_TIMEOUT(3),
 
     /**
-     * Ability to add legacyBulkLoadEnabled param to JDBC Thin connection string.
+     * Support for server bulk load feature.
      */
-    LEGACY_BULKLOAD_PARAM(4);
+    SERVER_BULK_LOAD(4);
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);
